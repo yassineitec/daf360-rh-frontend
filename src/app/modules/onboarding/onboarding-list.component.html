@@ -1,0 +1,84 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Onboarding RH</h1>
+    <p class="page-sub">Dossiers en attente de complétion</p>
+  </div>
+  <button class="btn-refresh" type="button" (click)="load()" [disabled]="loading()" aria-label="Rafraîchir">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    Rafraîchir
+  </button>
+</div>
+
+@if (error()) {
+  <div class="alert-error" role="alert">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <div class="table-container">
+    <div class="skel-header"></div>
+    <div class="row-skel"></div>
+    <div class="row-skel"></div>
+    <div class="row-skel"></div>
+  </div>
+} @else if (items().length === 0) {
+  <div class="empty-state">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)"
+         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="9 12 11 14 15 10"/>
+    </svg>
+    <p class="empty-title">Aucun dossier en attente</p>
+    <p class="empty-sub">Tous les dossiers ont été traités.</p>
+  </div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Employé</th>
+          <th>Email MS365</th>
+          <th>Entité</th>
+          <th>Début prévu</th>
+          <th>Statut candidat</th>
+          <th>MàJ</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of items(); track r.candidateId) {
+          <tr>
+            <td>
+              <p class="cell-name">{{ r.candidateFullName }}</p>
+              @if (r.appliedPosition) {
+                <p class="cell-pos">{{ r.appliedPosition }}</p>
+              }
+            </td>
+            <td class="cell-email">{{ r.ms365Email || '—' }}</td>
+            <td class="cell-entity">Entité #{{ r.paysId }}</td>
+            <td class="cell-date">{{ formatDate(r.expectedStartDate) }}</td>
+            <td>
+              <div class="status-cell">
+                <app-status-badge [status]="r.candidateStatus" />
+                @if (r.hasDraft) {
+                  <span class="badge-draft">Brouillon</span>
+                }
+              </div>
+            </td>
+            <td class="cell-date">
+              {{ r.draftSavedAt ? formatDate(r.draftSavedAt) : (r.ms365EmailCreatedAt ? formatDate(r.ms365EmailCreatedAt) : '—') }}
+            </td>
+            <td class="td-actions">
+              <button class="btn-complete" type="button" (click)="navigate(r.candidateId)">
+                Compléter →
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

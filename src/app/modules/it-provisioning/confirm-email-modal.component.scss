@@ -1,0 +1,67 @@
+.confirm-body {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.warn-icon {
+  margin-bottom: 16px;
+}
+
+.confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 12px;
+}
+
+.confirm-text {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.confirm-email {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-teal, #1a6b7c);
+  background: #f0f9f9;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin: 0 0 16px;
+  word-break: break-all;
+}
+
+.confirm-warning {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btn-cancel {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-confirm {
+  height: 36px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}

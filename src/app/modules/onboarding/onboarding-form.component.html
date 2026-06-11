@@ -1,0 +1,114 @@
+<!-- Back -->
+<button class="btn-back" (click)="goBack()">← Retour à la liste</button>
+
+@if (error()) {
+  <div class="alert alert-error">{{ error() }}</div>
+}
+@if (successMsg()) {
+  <div class="alert alert-success">{{ successMsg() }}</div>
+}
+
+<!-- Draft banner -->
+@if (!loading() && hasDraft() && draftSavedAt()) {
+  <div class="draft-banner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    Brouillon sauvegardé le {{ draftSavedAt()!.slice(0, 10) }}
+  </div>
+}
+
+@if (loading()) {
+  <div class="loading-wrap"><app-spinner /></div>
+}
+
+@if (!loading() && formData(); as fd) {
+
+  <!-- ── Stepper header ── -->
+  <div class="stepper-header">
+    @for (step of STEPS; track step.number; let last = $last) {
+      <div
+        class="step-item"
+        [class.step-active]="currentStep() === step.number"
+        [class.step-done]="currentStep() > step.number"
+        (click)="goToStep(step.number)"
+      >
+        <div class="step-bubble">
+          @if (currentStep() > step.number) {
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          } @else {
+            {{ step.number }}
+          }
+        </div>
+        <span class="step-name">{{ step.label }}</span>
+      </div>
+      @if (!last) {
+        <div class="step-line" [class.step-line-done]="currentStep() > step.number"></div>
+      }
+    }
+  </div>
+
+  <!-- ── Step content ── -->
+  <div class="step-content">
+
+    @if (currentStep() === 1) {
+      <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+    }
+    @if (currentStep() === 2) {
+      <app-step-contract [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+    }
+    @if (currentStep() === 3) {
+      <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+    }
+    @if (currentStep() === 4) {
+      <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+    }
+    @if (currentStep() === 5) {
+      <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+    }
+    @if (currentStep() === 6) {
+      <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+    }
+    @if (currentStep() === 7) {
+      <app-step-summary [data]="draftData()" [formInfo]="fd" (editStep)="goToStep($event)" />
+    }
+
+  </div>
+
+  <!-- ── Footer navigation ── -->
+  <div class="form-footer">
+    <div class="footer-left">
+      @if (currentStep() > 1) {
+        <button type="button" class="btn-prev" (click)="prevStep()">← Précédent</button>
+      }
+    </div>
+    <div class="footer-right">
+      <button type="button" class="btn-draft" [disabled]="saving()" (click)="onSaveDraft()">
+        @if (saving()) { Sauvegarde… } @else { Enregistrer le brouillon }
+      </button>
+      @if (currentStep() < 7) {
+        <button type="button" class="btn-next" (click)="nextStep()">Suivant →</button>
+      } @else {
+        <button type="button" class="btn-submit" (click)="showConfirmModal.set(true)">
+          Soumettre et créer le dossier
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Confirmation modal -->
+  <app-confirm-submit-modal
+    [visible]="showConfirmModal()"
+    [firstName]="firstName()"
+    [lastName]="lastName()"
+    [ms365Email]="ms365Email()"
+    [submitting]="submitting()"
+    (confirmed)="onSubmitConfirmed()"
+    (closed)="showConfirmModal.set(false)"
+  />
+
+} <!-- end @if formData -->

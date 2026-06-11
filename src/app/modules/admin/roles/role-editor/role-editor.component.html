@@ -1,0 +1,41 @@
+<div class="re-container">
+  <div class="re-tabs">
+    <button class="re-tab" [class.re-tab-active]="activeTab() === 'info'"
+            (click)="activeTab.set('info')" type="button">
+      Informations
+    </button>
+    <button class="re-tab" [class.re-tab-active]="activeTab() === 'permissions'"
+            (click)="activeTab.set('permissions')" type="button">
+      Permissions
+    </button>
+    <button class="re-tab" [class.re-tab-active]="activeTab() === 'users'"
+            (click)="activeTab.set('users')" type="button">
+      Utilisateurs
+      <span class="re-tab-count">{{ role().userCount }}</span>
+    </button>
+  </div>
+
+  <div class="re-content">
+    <!-- Use [hidden] not @if so components stay mounted and preserve state between tab switches -->
+    <div [hidden]="activeTab() !== 'info'">
+      <app-role-info-tab
+        [role]="role()"
+        [allRoles]="allRoles()"
+        (roleUpdated)="onRoleUpdated.emit($event)"
+        (roleDeleted)="onRoleDeleted.emit($event)"
+      />
+    </div>
+    <div [hidden]="activeTab() !== 'permissions'">
+      <app-role-permissions-tab
+        [role]="role()"
+        (permissionsUpdated)="onRoleUpdated.emit($event)"
+      />
+    </div>
+    <div [hidden]="activeTab() !== 'users'">
+      <app-role-users-tab
+        [role]="role()"
+        (usersChanged)="onUsersChanged($event)"
+      />
+    </div>
+  </div>
+</div>

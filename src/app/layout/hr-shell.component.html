@@ -1,0 +1,94 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     DAF360 HR Shell — Fixed header + collapsible sidebar + content
+     ══════════════════════════════════════════════════════════════ -->
+<div class="hr-shell" [class.sidebar-collapsed]="!sidebarOpen()">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="shell-header" role="banner">
+    <div class="header-left">
+      <button class="sidebar-toggle" (click)="toggleSidebar()" [attr.aria-label]="sidebarOpen() ? 'Fermer la navigation' : 'Ouvrir la navigation'">
+        <span [innerHTML]="icons['menu']" class="icon"></span>
+      </button>
+      <a routerLink="/hr/profiles" class="brand">
+        <span class="brand-tag">DAF360</span>
+        <span class="brand-sep">—</span>
+        <span class="brand-module">RH</span>
+      </a>
+    </div>
+
+    <div class="header-right">
+      <button class="header-btn bell-btn" aria-label="Notifications"
+              (click)="showNotifications.update(v => !v)"
+              [class.active]="showNotifications()">
+        <span [innerHTML]="icons['bell']" class="icon"></span>
+        @if (notificationCount() > 0) {
+          <span class="badge-dot">{{ notificationCount() }}</span>
+        }
+      </button>
+
+      <div class="user-chip">
+        <div class="avatar" [attr.aria-label]="user()?.fullName">
+          @if (user()?.photoUrl) {
+            <img [src]="user()!.photoUrl!" [alt]="user()!.fullName" />
+          } @else {
+            <span class="initials">{{ initials() }}</span>
+          }
+        </div>
+        <div class="user-info">
+          <span class="user-name">{{ user()?.fullName ?? '…' }}</span>
+          <span class="user-role">{{ user()?.roleName ?? '' }}</span>
+        </div>
+        <button class="logout-btn" (click)="logout()" aria-label="Se déconnecter">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Body ───────────────────────────────────────────────── -->
+  <div class="shell-body">
+
+    <!-- ── Sidebar ──────────────────────────────────────────── -->
+    <nav class="shell-sidebar" role="navigation" aria-label="Navigation principale">
+      <ul class="nav-list" role="list">
+        @for (item of visibleNavItems(); track item.path) {
+          <li>
+            <a
+              class="nav-item"
+              [routerLink]="item.path"
+              routerLinkActive="nav-item--active"
+              [routerLinkActiveOptions]="{ exact: false }"
+            >
+              <span class="nav-icon" [innerHTML]="icons[item.icon]" aria-hidden="true"></span>
+              <span class="nav-label">{{ item.label }}</span>
+              @if (item.path === '/hr/onboarding' && onboardingCount() > 0) {
+                <span class="nav-count-badge">{{ onboardingCount() }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+
+      <div class="sidebar-footer">
+        <span class="version">v0.1.0</span>
+      </div>
+    </nav>
+
+    <!-- ── Main content ─────────────────────────────────────── -->
+    <main class="shell-content" role="main">
+      <router-outlet />
+    </main>
+
+  </div><!-- /shell-body -->
+</div><!-- /hr-shell -->
+
+<!-- Notification slide-out panel (outside shell so it overlays everything) -->
+<app-notification-panel
+  [visible]="showNotifications()"
+  (close)="showNotifications.set(false)"
+  (unreadCountOut)="notificationCount.set($event)"
+/>

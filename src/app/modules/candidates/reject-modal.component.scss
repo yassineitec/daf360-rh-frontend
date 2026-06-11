@@ -1,0 +1,72 @@
+.reject-name {
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 16px;
+  font-size: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.required {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.reason-textarea {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-text);
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-primary);
+  }
+}
+
+.field-error {
+  font-size: 11px;
+  color: var(--color-error);
+  margin: 0;
+}
+
+.btn-cancel {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-reject {
+  height: 36px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

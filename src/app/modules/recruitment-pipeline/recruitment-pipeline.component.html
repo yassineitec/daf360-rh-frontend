@@ -1,0 +1,88 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Pipeline Recrutement</h1>
+    <p class="page-sub">Vue d'ensemble de tous les candidats par étape</p>
+  </div>
+  <button class="btn-refresh" type="button" (click)="load()" [disabled]="loading()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    Rafraîchir
+  </button>
+</div>
+
+@if (error()) {
+  <div class="alert-error" role="alert">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <div class="loading-wrap"><app-spinner /></div>
+}
+
+@if (!loading()) {
+
+  <!-- Funnel summary cards (exclude rejected) -->
+  <div class="funnel-row">
+    @for (s of counts(); track s.stage.key) {
+      @if (s.stage.key !== 'rejected') {
+        <div class="funnel-card" [style.border-top-color]="s.stage.color">
+          <span class="funnel-icon">{{ s.stage.icon }}</span>
+          <span class="funnel-count" [style.color]="s.stage.color">{{ s.count }}</span>
+          <span class="funnel-label">{{ s.stage.label }}</span>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Stage sections -->
+  @for (group of grouped(); track group.stage.key) {
+    @if (group.stage.key !== 'rejected' || group.candidates.length > 0) {
+      <div class="stage-section">
+        <div class="stage-header" [style.border-left-color]="group.stage.color">
+          <span class="stage-icon">{{ group.stage.icon }}</span>
+          <h2 class="stage-title">{{ group.stage.label }}</h2>
+          <span class="stage-count" [style.background]="group.stage.color">
+            {{ group.candidates.length }}
+          </span>
+        </div>
+
+        @if (group.candidates.length === 0) {
+          <p class="stage-empty">Aucun candidat à cette étape.</p>
+        } @else {
+          <div class="candidates-grid">
+            @for (c of group.candidates; track c.id) {
+              <div class="candidate-card" (click)="goToCandidate(c.id)">
+                <div class="card-top">
+                  <div class="card-info">
+                    <p class="cand-name">{{ c.firstName }} {{ c.lastName }}</p>
+                    <p class="cand-pos">{{ c.appliedPosition ?? '—' }}</p>
+                  </div>
+                  <app-status-badge [status]="c.status" />
+                </div>
+                <div class="card-meta">
+                  <span>{{ c.contractType ?? '—' }}</span>
+                  @if (c.expectedStartDate) {
+                    <span>·</span>
+                    <span>{{ c.expectedStartDate.slice(0,10) }}</span>
+                  }
+                </div>
+                @if (group.stage.nextRoute && group.stage.nextLabel) {
+                  <button
+                    class="card-action"
+                    type="button"
+                    [style.background]="group.stage.color"
+                    (click)="$event.stopPropagation(); navigate(group.stage.nextRoute!(c))"
+                  >
+                    {{ group.stage.nextLabel }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+}

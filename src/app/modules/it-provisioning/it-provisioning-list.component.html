@@ -1,0 +1,87 @@
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Provisioning IT</h1>
+    <p class="page-sub">Dossiers en attente de provisioning</p>
+  </div>
+  <button class="btn-refresh" type="button" (click)="load()" [disabled]="loading()" aria-label="Rafraîchir">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    Rafraîchir
+  </button>
+</div>
+
+@if (error()) {
+  <div class="error-msg" role="alert">{{ error() }}</div>
+}
+
+@if (loading()) {
+  <div class="loading-wrap"><app-spinner /></div>
+} @else if (items().length === 0) {
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="var(--color-border)">
+      <rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/>
+      <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
+    </svg>
+    <p>Aucun dossier en attente de provisioning.</p>
+  </div>
+} @else {
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Candidat</th>
+          <th>Email MS365</th>
+          <th>Statut</th>
+          <th>Début prévu</th>
+          <th>Matériel</th>
+          <th>Licences</th>
+          <th>AD</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of items(); track r.id) {
+          <tr>
+            <td>
+              <p class="cell-name">{{ r.candidateFullName }}</p>
+              @if (r.appliedPosition) {
+                <p class="cell-pos">{{ r.appliedPosition }}</p>
+              }
+            </td>
+            <td>
+              @if (r.ms365Email) {
+                <span class="email-set">{{ r.ms365Email }}</span>
+              } @else {
+                <span class="email-pending">— En attente —</span>
+              }
+            </td>
+            <td><app-status-badge [status]="r.status" /></td>
+            <td class="cell-date">{{ r.expectedStartDate ?? '—' }}</td>
+            <td>
+              <div class="progress-cell" [class.done]="hwProgress(r) === '6/6'">
+                {{ hwProgress(r) }}
+              </div>
+            </td>
+            <td>
+              <div class="progress-cell" [class.done]="licProgress(r) === '5/5'">
+                {{ licProgress(r) }}
+              </div>
+            </td>
+            <td>
+              <span class="ad-badge" [class.ad-done]="r.status === 'EMAIL_CREATED' || r.status === 'COMPLETED'">
+                {{ (r.status === 'EMAIL_CREATED' || r.status === 'COMPLETED') ? '✓' : '—' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn-open" type="button" (click)="navigate(r.id)">
+                Compléter →
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

@@ -1,0 +1,297 @@
+<app-modal
+  [title]="candidate() ? 'Modifier le candidat' : 'Nouveau candidat'"
+  [visible]="visible()"
+  (closed)="closed.emit()"
+  [hasFooter]="true"
+>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" id="candidate-form" novalidate>
+
+    <!-- ── Error banner ──────────────────────────────────────────────────── -->
+    @if (error()) {
+      <div class="form-error-banner">{{ error() }}</div>
+    }
+
+    <!-- ── Section: Identity ─────────────────────────────────────────────── -->
+    <fieldset class="form-section" formGroupName="identity">
+      <legend class="form-section-legend">Identité</legend>
+
+      <div class="form-grid">
+
+        <!-- firstName -->
+        <div class="form-group">
+          <label class="form-label" for="firstName">
+            Prénom <span class="required">*</span>
+          </label>
+          <input
+            id="firstName"
+            type="text"
+            class="form-input"
+            formControlName="firstName"
+            placeholder="Prénom"
+            autocomplete="given-name"
+          />
+          @if (identityGroup.get('firstName')?.invalid && identityGroup.get('firstName')?.touched) {
+            <span class="form-error">Le prénom est requis.</span>
+          }
+        </div>
+
+        <!-- lastName -->
+        <div class="form-group">
+          <label class="form-label" for="lastName">
+            Nom <span class="required">*</span>
+          </label>
+          <input
+            id="lastName"
+            type="text"
+            class="form-input"
+            formControlName="lastName"
+            placeholder="Nom de famille"
+            autocomplete="family-name"
+          />
+          @if (identityGroup.get('lastName')?.invalid && identityGroup.get('lastName')?.touched) {
+            <span class="form-error">Le nom est requis.</span>
+          }
+        </div>
+
+        <!-- emailPersonal -->
+        <div class="form-group">
+          <label class="form-label" for="emailPersonal">
+            Email personnel <span class="required">*</span>
+          </label>
+          <input
+            id="emailPersonal"
+            type="email"
+            class="form-input"
+            formControlName="emailPersonal"
+            placeholder="exemple@email.com"
+            autocomplete="email"
+          />
+          @if (identityGroup.get('emailPersonal')?.touched) {
+            @if (identityGroup.get('emailPersonal')?.hasError('required')) {
+              <span class="form-error">L'email est requis.</span>
+            } @else if (identityGroup.get('emailPersonal')?.hasError('email')) {
+              <span class="form-error">Format d'email invalide.</span>
+            }
+          }
+        </div>
+
+        <!-- phone -->
+        <div class="form-group">
+          <label class="form-label" for="phone">Téléphone</label>
+          <input
+            id="phone"
+            type="tel"
+            class="form-input"
+            formControlName="phone"
+            placeholder="+212 6XX XXX XXX"
+            autocomplete="tel"
+          />
+        </div>
+
+      </div>
+    </fieldset>
+
+    <!-- ── Section: Position ─────────────────────────────────────────────── -->
+    <fieldset class="form-section" formGroupName="position">
+      <legend class="form-section-legend">Poste</legend>
+
+      <div class="form-grid">
+
+        <!-- appliedPosition -->
+        <div class="form-group">
+          <label class="form-label" for="appliedPosition">
+            Poste souhaité <span class="required">*</span>
+          </label>
+          <input
+            id="appliedPosition"
+            type="text"
+            class="form-input"
+            formControlName="appliedPosition"
+            placeholder="Ex: Ingénieur structure"
+          />
+          @if (positionGroup.get('appliedPosition')?.invalid && positionGroup.get('appliedPosition')?.touched) {
+            <span class="form-error">Le poste est requis.</span>
+          }
+        </div>
+
+        <!-- departmentId -->
+        <div class="form-group">
+          <label class="form-label" for="departmentId">Département</label>
+          <select id="departmentId" class="form-select" formControlName="departmentId">
+            <option [ngValue]="null">— Sélectionner —</option>
+            @for (d of departments(); track d.id) {
+              <option [ngValue]="d.id">{{ d.labelFr }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- contractType -->
+        <div class="form-group">
+          <label class="form-label" for="contractType">
+            Type de contrat <span class="required">*</span>
+          </label>
+          <select id="contractType" class="form-select" formControlName="contractType">
+            <option value="" disabled>-- Sélectionner --</option>
+            @for (opt of contractTypeOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          @if (positionGroup.get('contractType')?.invalid && positionGroup.get('contractType')?.touched) {
+            <span class="form-error">Le type de contrat est requis.</span>
+          }
+        </div>
+
+        <!-- appliedGradeId -->
+        <div class="form-group">
+          <label class="form-label" for="appliedGradeId">Grade</label>
+          <select id="appliedGradeId" class="form-select" formControlName="appliedGradeId">
+            <option [ngValue]="null">— Sélectionner —</option>
+            @for (g of grades(); track g.id) {
+              <option [ngValue]="g.id">{{ g.labelFr }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- appliedDisciplineId -->
+        <div class="form-group">
+          <label class="form-label" for="appliedDisciplineId">Discipline</label>
+          <select id="appliedDisciplineId" class="form-select" formControlName="appliedDisciplineId">
+            <option [ngValue]="null">— Sélectionner —</option>
+            @for (d of disciplines(); track d.id) {
+              <option [ngValue]="d.id">{{ d.labelFr }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- nationalityId -->
+        <div class="form-group">
+          <label class="form-label" for="nationalityId">Nationalité</label>
+          <select id="nationalityId" class="form-select" formControlName="nationalityId">
+            <option [ngValue]="null">— Sélectionner —</option>
+            @for (n of nationalities(); track n.id) {
+              <option [ngValue]="n.id">{{ n.labelFr }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- expectedStartDate -->
+        <div class="form-group">
+          <label class="form-label" for="expectedStartDate">
+            Date de début prévue <span class="required">*</span>
+          </label>
+          <input
+            id="expectedStartDate"
+            type="date"
+            class="form-input"
+            formControlName="expectedStartDate"
+          />
+          @if (positionGroup.get('expectedStartDate')?.invalid && positionGroup.get('expectedStartDate')?.touched) {
+            <span class="form-error">La date de début est requise.</span>
+          }
+        </div>
+
+        <!-- contractEndDate — shown only for FIXED_TERM -->
+        @if (isFixedTerm) {
+          <div class="form-group">
+            <label class="form-label" for="contractEndDate">
+              Date de fin de contrat <span class="required">*</span>
+            </label>
+            <input
+              id="contractEndDate"
+              type="date"
+              class="form-input"
+              formControlName="contractEndDate"
+            />
+          </div>
+        }
+
+        <!-- paysId — read-only indicator -->
+        <div class="form-group">
+          <label class="form-label" for="paysId">Pays (ID)</label>
+          <input
+            id="paysId"
+            type="number"
+            class="form-input pays-readonly"
+            formControlName="paysId"
+            readonly
+            tabindex="-1"
+          />
+        </div>
+
+      </div>
+    </fieldset>
+
+    <!-- ── Notes (full width) ─────────────────────────────────────────────── -->
+    <div class="form-group form-full">
+      <label class="form-label" for="notes">Notes</label>
+      <textarea
+        id="notes"
+        class="form-textarea"
+        formControlName="notes"
+        rows="3"
+        placeholder="Observations, remarques…"
+      ></textarea>
+    </div>
+
+  </form>
+
+  <!-- ── CV upload (outside reactive form — handled separately) ───────────── -->
+  <div class="cv-upload-section">
+    <p class="cv-upload-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Curriculum Vitae
+      <span class="cv-optional">(optionnel)</span>
+    </p>
+
+    @if (cvFile()) {
+      <!-- File selected — show name + remove button -->
+      <div class="cv-selected">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#27ae60">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <span class="cv-selected-name">{{ cvFile()!.name }}</span>
+        <button type="button" class="cv-remove" (click)="cvFile.set(null)" aria-label="Retirer le fichier">✕</button>
+      </div>
+    } @else {
+      <!-- No file — show upload zone -->
+      <label class="cv-drop-zone">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-muted)">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Cliquer pour choisir un fichier</span>
+        <span class="cv-hint">PDF, DOC, DOCX — max 10 Mo</span>
+        <input type="file" accept=".pdf,.doc,.docx" (change)="onCvFileSelected($event)" hidden />
+      </label>
+    }
+
+    @if (cvError()) {
+      <p class="cv-error">{{ cvError() }}</p>
+    }
+  </div>
+
+  <!-- ── Footer slot ────────────────────────────────────────────────────── -->
+  <div slot="footer">
+    <button type="button" class="btn-cancel" (click)="closed.emit()">
+      Annuler
+    </button>
+    <button
+      type="button"
+      class="btn-submit"
+      [disabled]="saving()"
+      (click)="onSubmit()"
+    >
+      @if (saving()) {
+        @if (cvFile()) { Envoi du CV… } @else { Enregistrement… }
+      } @else {
+        @if (cvFile()) { Enregistrer + CV } @else { Enregistrer }
+      }
+    </button>
+  </div>
+
+</app-modal>

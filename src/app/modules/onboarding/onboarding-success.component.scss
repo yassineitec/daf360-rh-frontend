@@ -1,0 +1,127 @@
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.success-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 40px;
+}
+
+.success-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.check-wrap {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+}
+
+.check-svg {
+  width: 80px;
+  height: 80px;
+}
+
+// CSS draw-on animation
+.check-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.check-tick {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+}
+
+@keyframes stroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.success-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 8px;
+}
+
+.success-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0 0 16px;
+}
+
+.id-badge {
+  display: inline-block;
+  background: #e8f8f0;
+  color: #27ae60;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 auto 20px;
+}
+
+.success-email {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: 0 0 32px;
+  line-height: 1.6;
+}
+
+.email-hl {
+  color: #1a6b7c;
+}
+
+.success-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-profile {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #1a6b7c;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.btn-list {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-bg);
+  }
+}

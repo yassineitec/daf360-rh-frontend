@@ -1,0 +1,37 @@
+<div class="rl-container">
+  <div class="rl-header">
+    <span class="rl-title">Rôles ({{ roles().length }})</span>
+    <button class="rl-btn-new" type="button" (click)="createClicked.emit()">+ Nouveau rôle</button>
+  </div>
+  <div class="rl-search">
+    <input type="search" placeholder="Rechercher un rôle…"
+           [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
+  </div>
+  @if (loading()) {
+    <p class="rl-loading">Chargement…</p>
+  } @else {
+    <ul class="rl-list">
+      @for (r of filteredRoles(); track r.id) {
+        <li class="rl-item" [class.rl-active]="selectedRoleId() === r.id" (click)="roleSelected.emit(r)">
+          <div class="rl-item-main">
+            <span class="rl-item-name">{{ r.frenchName }}</span>
+            <div class="rl-item-meta">
+              <span class="rl-badge">{{ r.permissionCount }} permissions</span>
+              <span class="rl-badge rl-badge-users">{{ r.userCount }} utilisateurs</span>
+              @if (r.showAll) { <span class="rl-badge rl-badge-showall">Voir tout</span> }
+            </div>
+            @if (r.parentRoleName) {
+              <span class="rl-parent">↳ {{ r.parentRoleName }}</span>
+            }
+          </div>
+          <div class="rl-item-actions" (click)="$event.stopPropagation()">
+            <button class="rl-action-btn" type="button"
+                    [disabled]="r.userCount > 0"
+                    [title]="r.userCount > 0 ? r.userCount + ' utilisateurs — réassignez-les d\'abord' : 'Supprimer'"
+                    (click)="deleteClicked.emit(r)">🗑</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

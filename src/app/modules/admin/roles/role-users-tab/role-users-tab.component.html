@@ -1,0 +1,115 @@
+<div class="rut-container">
+
+  @if (error()) {
+    <div class="rut-error">{{ error() }}</div>
+  }
+
+  <!-- Header -->
+  <div class="rut-header">
+    <div class="rut-header-left">
+      <span class="rut-title">Utilisateurs — {{ role().frenchName }}</span>
+      <span class="rut-counter">{{ users().length }} utilisateur(s)</span>
+    </div>
+    <button class="rut-btn-add" type="button" (click)="showAddPanel.set(!showAddPanel())">
+      @if (showAddPanel()) { ✕ Fermer } @else { + Ajouter un utilisateur }
+    </button>
+  </div>
+
+  <!-- Add-user search panel -->
+  @if (showAddPanel()) {
+    <div class="rut-add-panel">
+      <div class="rut-search-wrap">
+        <input
+          class="rut-search-input"
+          type="search"
+          placeholder="Rechercher un utilisateur par nom ou email…"
+          [ngModel]="addQuery()"
+          (ngModelChange)="onAddQueryChange($event)"
+          autofocus
+        />
+        @if (searching()) {
+          <span class="rut-search-spinner">⟳</span>
+        }
+      </div>
+
+      @if (addQuery().length >= 2 && !searching()) {
+        @if (searchResults().length === 0) {
+          <p class="rut-no-results">Aucun utilisateur trouvé hors de ce rôle.</p>
+        } @else {
+          <ul class="rut-search-results">
+            @for (u of searchResults(); track u.userId) {
+              <li class="rut-result-item">
+                <div class="rut-result-info">
+                  <span class="rut-result-name">{{ u.fullName }}</span>
+                  <span class="rut-result-email">{{ u.email }}</span>
+                  @if (u.paysLabel) {
+                    <span class="rut-result-pays">{{ u.paysLabel }}</span>
+                  }
+                  @if (u.currentRoleName) {
+                    <span class="rut-result-role">Rôle actuel : {{ u.currentRoleName }}</span>
+                  } @else {
+                    <span class="rut-result-role rut-no-role">Sans rôle</span>
+                  }
+                </div>
+                <button
+                  class="rut-btn-assign"
+                  type="button"
+                  [disabled]="adding() === u.userId"
+                  (click)="assignUser(u)"
+                >
+                  @if (adding() === u.userId) { … } @else { Assigner }
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  }
+
+  <!-- Local filter -->
+  @if (users().length > 5) {
+    <div class="rut-local-search">
+      <input
+        type="search"
+        placeholder="Filtrer la liste…"
+        [ngModel]="localSearch()"
+        (ngModelChange)="localSearch.set($event)"
+      />
+    </div>
+  }
+
+  <!-- Users list -->
+  @if (loading()) {
+    <p class="rut-loading">Chargement…</p>
+  } @else if (filteredUsers().length === 0 && users().length === 0) {
+    <div class="rut-empty">
+      <p>Aucun utilisateur assigné à ce rôle.</p>
+      <p class="rut-empty-hint">Utilisez le bouton "Ajouter" pour assigner des utilisateurs.</p>
+    </div>
+  } @else if (filteredUsers().length === 0) {
+    <p class="rut-no-results">Aucun résultat pour "{{ localSearch() }}"</p>
+  } @else {
+    <ul class="rut-user-list">
+      @for (u of filteredUsers(); track u.userId) {
+        <li class="rut-user-item">
+          <div class="rut-user-avatar">{{ u.fullName.charAt(0).toUpperCase() }}</div>
+          <div class="rut-user-info">
+            <span class="rut-user-name">{{ u.fullName }}</span>
+            <span class="rut-user-email">{{ u.email }}</span>
+          </div>
+          @if (u.paysLabel) {
+            <span class="rut-user-pays">{{ u.paysLabel }}</span>
+          }
+          <button
+            class="rut-btn-remove"
+            type="button"
+            title="Retirer de ce rôle"
+            (click)="removeUser(u)"
+          >✕</button>
+        </li>
+      }
+    </ul>
+  }
+
+</div>

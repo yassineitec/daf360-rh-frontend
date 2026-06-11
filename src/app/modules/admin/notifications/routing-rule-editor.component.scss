@@ -1,0 +1,314 @@
+// ─── Color tokens ────────────────────────────────────────────────────────────
+$teal:          #1a6b7c;
+$teal-light:    #f0f9fb;
+$teal-border:   #99d6e0;
+$text:          #1e2a35;
+$text-muted:    #6b7a8d;
+$surface:       #ffffff;
+$border:        #e2e8f0;
+$border-radius: 10px;
+
+// ─── Container ───────────────────────────────────────────────────────────────
+.editor-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+.editor-loading {
+  font-size: 13px;
+  color: $text-muted;
+  padding: 16px 0;
+  text-align: center;
+}
+
+// ─── Section card ─────────────────────────────────────────────────────────────
+.editor-section {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $border-radius;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+
+  &--test {
+    background: #fafcff;
+  }
+}
+
+.editor-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: $text;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid $border;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// ─── Toggle row ───────────────────────────────────────────────────────────────
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+
+  & + .toggle-row {
+    border-top: 1px solid $border;
+  }
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: $text;
+  user-select: none;
+}
+
+.toggle-tooltip {
+  color: $text-muted;
+  font-size: 12px;
+}
+
+// ─── CSS sliding toggle switch ────────────────────────────────────────────────
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-track {
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    background: #cbd5e1;
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.2s;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,.18);
+      transition: transform 0.2s;
+    }
+  }
+
+  input:checked + .toggle-track {
+    background: $teal;
+
+    &::after {
+      transform: translateX(18px);
+    }
+  }
+
+  input:disabled + .toggle-track {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.toggle-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+// ─── Field groups ─────────────────────────────────────────────────────────────
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-muted;
+}
+
+.field-input,
+.field-textarea {
+  border: 1px solid $border;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $text;
+  background: $surface;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: #a0aec0;
+  }
+
+  &:focus {
+    border-color: $teal;
+    box-shadow: 0 0 0 3px rgba($teal, 0.08);
+  }
+}
+
+.field-textarea {
+  resize: vertical;
+  line-height: 1.5;
+
+  &.monospace {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+  }
+}
+
+// ─── Placeholder chips ────────────────────────────────────────────────────────
+.placeholder-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.placeholder-chip {
+  font-size: 11px;
+  background: $teal-light;
+  color: $teal;
+  border: 1px solid $teal-border;
+  border-radius: 4px;
+  padding: 2px 7px;
+  cursor: pointer;
+  font-family: 'Courier New', Courier, monospace;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: darken($teal-light, 4%);
+    border-color: $teal;
+  }
+}
+
+// ─── Actions row ─────────────────────────────────────────────────────────────
+.editor-actions {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn-save {
+  background: $teal;
+  color: #ffffff;
+  border: none;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: 0.01em;
+
+  &:hover:not(:disabled) {
+    background: darken($teal, 6%);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-test {
+  background: transparent;
+  color: $teal;
+  border: 1px solid $teal;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover:not(:disabled) {
+    background: $teal-light;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// ─── Email field sub-blocks ───────────────────────────────────────────────────
+.email-field-block {
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.email-field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-muted;
+  margin-bottom: 8px;
+}
+
+// ─── Banners ──────────────────────────────────────────────────────────────────
+.warning-banner {
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #92400e;
+  margin-top: 8px;
+}
+
+.success-banner {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #166534;
+  margin-bottom: 12px;
+}
+
+.error-banner {
+  background: #fff1f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #991b1b;
+  margin-bottom: 12px;
+}
+
+// ─── Test section ─────────────────────────────────────────────────────────────
+.test-description {
+  font-size: 12px;
+  color: $text-muted;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}

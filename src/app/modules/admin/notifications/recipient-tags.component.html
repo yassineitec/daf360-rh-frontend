@@ -1,0 +1,32 @@
+<div class="rt-section">
+  <p class="rt-title">{{ sectionTitle() }}</p>
+  <div class="rt-tags">
+    @for (r of recipients(); track r.id) {
+      <span class="rt-tag">
+        {{ r.roleName }}
+        <button class="rt-remove" type="button" (click)="onRemove(r.id)" title="Retirer">×</button>
+      </span>
+    }
+    @if (recipients().length === 0) {
+      <span class="rt-empty">Aucun rôle configuré</span>
+    }
+  </div>
+  <div class="rt-add">
+    @if (!showDropdown()) {
+      <button class="rt-add-btn" type="button" (click)="showDropdown.set(true)">
+        + Ajouter un rôle
+      </button>
+    } @else {
+      <div class="rt-add-row">
+        <select class="rt-select" [ngModel]="selectedRoleId()" (ngModelChange)="selectedRoleId.set($event ? +$event : null)">
+          <option [value]="null">-- Sélectionner un rôle --</option>
+          @for (r of unassignedRoles(); track r.id) {
+            <option [value]="r.id">{{ r.frenchName }}</option>
+          }
+        </select>
+        <button class="rt-confirm" type="button" (click)="onAdd()" [disabled]="!selectedRoleId()">Ajouter</button>
+        <button class="rt-cancel" type="button" (click)="showDropdown.set(false)">✕</button>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,98 @@
+<div class="confidential-notice">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+  Ces informations sont confidentielles et accessibles uniquement aux rôles autorisés.
+</div>
+
+<div class="form-grid">
+
+  <!-- Row 1: Banque | RIB -->
+  <div class="form-field">
+    <label class="form-label">Nom de la banque <span class="req">*</span></label>
+    <select
+      class="form-input"
+      [ngModel]="bankId()"
+      (ngModelChange)="bankId.set($event); emit()"
+    >
+      <option [ngValue]="null">— Sélectionner —</option>
+      @for (b of banks(); track b.id) {
+        <option [ngValue]="b.id">{{ b.labelFr }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">RIB <span class="req">*</span></label>
+    <input
+      class="form-input"
+      type="text"
+      placeholder="Ex. 00199999999999999999"
+      [ngModel]="rib()"
+      (ngModelChange)="rib.set($event); emit()"
+    />
+  </div>
+
+  <!-- Row 2: N° Compte | IBAN -->
+  <div class="form-field">
+    <label class="form-label">N° de compte bancaire</label>
+    <input
+      class="form-input"
+      type="text"
+      placeholder="Ex. 1234567890"
+      [ngModel]="bankAccountNumber()"
+      (ngModelChange)="bankAccountNumber.set($event); emit()"
+    />
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">IBAN</label>
+    <input
+      class="form-input"
+      type="text"
+      placeholder="Ex. TN59 0000 0000 0000 0000 00"
+      [ngModel]="iban()"
+      (ngModelChange)="iban.set($event); emit()"
+    />
+  </div>
+
+  <!-- Row 3: N° Sécu | N° Fiscal -->
+  <div class="form-field">
+    <label class="form-label">N° Sécurité sociale</label>
+    <input
+      class="form-input"
+      type="text"
+      placeholder="Ex. 1 85 07 75 123 456 78"
+      [ngModel]="socialSecurityNumber()"
+      (ngModelChange)="socialSecurityNumber.set($event); emit()"
+    />
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">N° Fiscal</label>
+    <input
+      class="form-input"
+      type="text"
+      placeholder="Ex. 1234567A"
+      [ngModel]="taxId()"
+      (ngModelChange)="taxId.set($event); emit()"
+    />
+  </div>
+
+  <!-- Row 4: IBAN attestation upload (full-width, disabled) -->
+  <div class="form-field form-full">
+    <label class="form-label">Attestation bancaire (RIB / IBAN)</label>
+    <div class="upload-slot">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span class="upload-label">Déposer un fichier</span>
+      <input type="file" accept=".pdf" disabled />
+    </div>
+    <p class="upload-hint">PDF uniquement, max 5 Mo (non implémenté)</p>
+  </div>
+
+</div>

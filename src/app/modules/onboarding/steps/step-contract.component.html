@@ -1,0 +1,157 @@
+<div class="step-contract">
+  <div class="step-header">
+    <h2 class="step-title">Poste &amp; Contrat</h2>
+    <p class="step-subtitle">Informations relatives au poste et aux conditions contractuelles</p>
+  </div>
+
+  <div class="form-grid">
+
+    <!-- Row 1: hireDate | contractType -->
+    <div class="form-field">
+      <label class="form-label">
+        Date d'embauche <span class="req">*</span>
+      </label>
+      <input
+        type="date"
+        class="form-input"
+        [ngModel]="hireDate()"
+        (ngModelChange)="hireDate.set($event); emit()"
+      />
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">
+        Type de contrat <span class="req">*</span>
+      </label>
+      <select
+        class="form-input form-select"
+        [ngModel]="contractType()"
+        (ngModelChange)="contractType.set($event); emit()"
+      >
+        @for (opt of contractOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Row 2: grade | discipline -->
+    <div class="form-field">
+      <label class="form-label">
+        Grade <span class="req">*</span>
+      </label>
+      <select
+        class="form-input"
+        [ngModel]="gradeId()"
+        (ngModelChange)="gradeId.set($event); emit()"
+      >
+        <option [ngValue]="null">— Sélectionner —</option>
+        @for (g of grades(); track g.id) {
+          <option [ngValue]="g.id">{{ g.labelFr }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">
+        Discipline <span class="req">*</span>
+      </label>
+      <select
+        class="form-input"
+        [ngModel]="disciplineId()"
+        (ngModelChange)="disciplineId.set($event); emit()"
+      >
+        <option [ngValue]="null">— Sélectionner —</option>
+        @for (d of disciplines(); track d.id) {
+          <option [ngValue]="d.id">{{ d.labelFr }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Row 3: department | nogLevel -->
+    <div class="form-field">
+      <label class="form-label">Département</label>
+      <select
+        class="form-input"
+        [ngModel]="departmentId()"
+        (ngModelChange)="departmentId.set($event); emit()"
+      >
+        <option [ngValue]="null">— Sélectionner —</option>
+        @for (dep of departments(); track dep.id) {
+          <option [ngValue]="dep.id">{{ dep.labelFr }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Niveau NOG</label>
+      <select
+        class="form-input"
+        [ngModel]="nogLevelId()"
+        (ngModelChange)="nogLevelId.set($event); emit()"
+      >
+        <option [ngValue]="null">— Sélectionner —</option>
+        @for (n of nogLevels(); track n.id) {
+          <option [ngValue]="n.id">{{ n.labelFr }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Row 4: isOnProbation checkbox (full-width) -->
+    <div class="form-field form-full">
+      <label class="probation-label">
+        <span class="checkbox-wrapper">
+          <input
+            type="checkbox"
+            class="form-checkbox"
+            [ngModel]="isOnProbation()"
+            (ngModelChange)="isOnProbation.set($event); emit()"
+          />
+          <span class="checkbox-custom"></span>
+        </span>
+        <span class="checkbox-text">Période d'essai</span>
+      </label>
+    </div>
+
+    <!-- Row 5: probationEndDate + contractEndDate (conditional) -->
+    @if (isOnProbation()) {
+      <div class="form-field">
+        <label class="form-label">Fin de période d'essai</label>
+        <input
+          type="date"
+          class="form-input"
+          [ngModel]="probationEndDate()"
+          (ngModelChange)="probationEndDate.set($event); emit()"
+        />
+      </div>
+
+      @if (contractType() === 'FIXED_TERM') {
+        <div class="form-field">
+          <label class="form-label">
+            Date fin contrat <span class="req">*</span>
+          </label>
+          <input
+            type="date"
+            class="form-input"
+            [ngModel]="contractEndDate()"
+            (ngModelChange)="contractEndDate.set($event); emit()"
+          />
+        </div>
+      }
+    }
+
+    @if (!isOnProbation() && contractType() === 'FIXED_TERM') {
+      <div class="form-field">
+        <label class="form-label">
+          Date fin contrat <span class="req">*</span>
+        </label>
+        <input
+          type="date"
+          class="form-input"
+          [ngModel]="contractEndDate()"
+          (ngModelChange)="contractEndDate.set($event); emit()"
+        />
+      </div>
+    }
+
+  </div>
+</div>

@@ -1,0 +1,168 @@
+.rl-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid var(--color-border);
+  background: white;
+}
+
+.rl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rl-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rl-btn-new {
+  background: #1a6b7c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #155f6e;
+  }
+}
+
+.rl-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+
+  input {
+    width: 100%;
+    height: 30px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0 8px;
+    font-size: 12px;
+    outline: none;
+    box-sizing: border-box;
+
+    &:focus {
+      border-color: #1a6b7c;
+    }
+  }
+}
+
+.rl-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.rl-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #f8fafb;
+  }
+
+  &.rl-active {
+    border-left: 3px solid #1a6b7c;
+    background: #f0f9fb;
+    padding-left: 9px;
+  }
+}
+
+.rl-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rl-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rl-item-meta {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.rl-badge {
+  font-size: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.rl-badge-users {
+  background: #e0f7f5;
+  color: #1a6b7c;
+}
+
+.rl-badge-showall {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.rl-parent {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.rl-item-actions {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.rl-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:disabled {
+    opacity: 0.15;
+    cursor: not-allowed;
+  }
+}
+
+.rl-loading {
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 13px;
+  padding: 20px;
+  text-align: center;
+}

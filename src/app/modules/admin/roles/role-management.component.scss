@@ -1,0 +1,34 @@
+.rm-layout {
+  display: flex;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.rm-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+}
+
+.rm-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.rm-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.rm-error {
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 0;
+}

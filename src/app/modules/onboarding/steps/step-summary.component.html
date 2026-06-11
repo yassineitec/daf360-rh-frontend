@@ -1,0 +1,176 @@
+<div class="warning-banner">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink:0;margin-top:1px">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+          fill="#f59e0b" stroke="#f59e0b" stroke-width="1"/>
+    <line x1="12" y1="9" x2="12" y2="13" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+    <line x1="12" y1="17" x2="12.01" y2="17" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <span>
+    Attention&nbsp;: Une fois soumis, un email de bienvenue sera envoyé à
+    <strong>{{ formInfo()?.ms365Email ?? '' }}</strong>
+    et le dossier employé sera créé officiellement. Cette action est irréversible.
+  </span>
+</div>
+
+<div class="summary-grid">
+
+  <!-- Card 1 — Identité -->
+  <div class="summary-card">
+    <div class="card-header">
+      <h4 class="card-title">Identité</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(1)">Modifier</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>Prénom</dt>
+        <dd>{{ val(data()?.firstName) }}</dd>
+
+        <dt>Nom</dt>
+        <dd>{{ val(data()?.lastName) }}</dd>
+
+        <dt>Date de naissance</dt>
+        <dd>{{ val(data()?.dateOfBirth) }}</dd>
+
+        <dt>Genre</dt>
+        <dd>{{ val(data()?.gender) }}</dd>
+
+        <dt>Nationalité</dt>
+        <dd>{{ val(data()?.nationality) }}</dd>
+
+        <dt>CIN / ID National</dt>
+        <dd>{{ val(data()?.nationalId) }}</dd>
+
+        <dt>Numéro de passeport</dt>
+        <dd>{{ val(data()?.passportNumber) }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Card 2 — Poste -->
+  <div class="summary-card">
+    <div class="card-header">
+      <h4 class="card-title">Poste & Contrat</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(2)">Modifier</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>Date d'embauche</dt>
+        <dd>{{ val(data()?.hireDate) }}</dd>
+
+        <dt>Type de contrat</dt>
+        <dd>{{ val(data()?.contractType) }}</dd>
+
+        <dt>Grade</dt>
+        <dd>{{ val(data()?.grade) }}</dd>
+
+        <dt>Discipline</dt>
+        <dd>{{ val(data()?.discipline) }}</dd>
+
+        <dt>Département</dt>
+        <dd>{{ val(data()?.department) }}</dd>
+
+        <dt>Niveau NOG</dt>
+        <dd>{{ val(data()?.nogLevel) }}</dd>
+
+        <dt>Fin de période d'essai</dt>
+        <dd>{{ val(data()?.probationEndDate) }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Card 3 — Régime -->
+  <div class="summary-card">
+    <div class="card-header">
+      <h4 class="card-title">Régime de travail</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(3)">Modifier</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>Régime</dt>
+        <dd>{{ val(formInfo()?.regimeLabel ?? data()?.regimeTemplateId) }}</dd>
+
+        <dt>Date de début du régime</dt>
+        <dd>{{ val(data()?.regimeStartDate) }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Card 4 — Informations personnelles -->
+  <div class="summary-card">
+    <div class="card-header">
+      <h4 class="card-title">Informations personnelles</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(4)">Modifier</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>N° CNSS</dt>
+        <dd>{{ val(data()?.cnssNumber) }}</dd>
+
+        <dt>Date d'affiliation CNSS</dt>
+        <dd>{{ val(data()?.cnssAffiliationDate) }}</dd>
+
+        <dt>Situation familiale</dt>
+        <dd>{{ val(data()?.maritalStatus) }}</dd>
+
+        <dt>Nombre d'enfants</dt>
+        <dd>{{ val(data()?.numberOfChildren) }}</dd>
+
+        <dt>Adresse domicile</dt>
+        <dd>{{ val(data()?.homeAddress) }}</dd>
+
+        <dt>Téléphone</dt>
+        <dd>{{ val(data()?.phone) }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Card 5 — Banque & Fiscalité -->
+  <div class="summary-card">
+    <div class="card-header">
+      <h4 class="card-title">Banque & Fiscalité</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(5)">Modifier</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>Banque</dt>
+        <dd>{{ val(data()?.bankName) }}</dd>
+
+        <dt>RIB</dt>
+        <dd>{{ val(data()?.rib) }}</dd>
+
+        <dt>Numéro de compte</dt>
+        <dd>{{ val(data()?.bankAccountNumber) }}</dd>
+
+        <dt>IBAN</dt>
+        <dd>{{ maskIban(data()?.iban) }}</dd>
+
+        <dt>N° Sécurité sociale</dt>
+        <dd>{{ val(data()?.socialSecurityNumber) }}</dd>
+
+        <dt>Identifiant fiscal</dt>
+        <dd>{{ val(data()?.taxId) }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Card 6 — Contact d'urgence -->
+  <div class="summary-card">
+    <div class="card-header">
+      <h4 class="card-title">Contact d'urgence</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(6)">Modifier</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>Nom du contact</dt>
+        <dd>{{ val(data()?.emergencyContactName) }}</dd>
+
+        <dt>Lien de parenté</dt>
+        <dd>{{ val(data()?.emergencyContactRelation) }}</dd>
+
+        <dt>Téléphone d'urgence</dt>
+        <dd>{{ val(data()?.emergencyContactPhone) }}</dd>
+      </dl>
+    </div>
+  </div>
+
+</div>

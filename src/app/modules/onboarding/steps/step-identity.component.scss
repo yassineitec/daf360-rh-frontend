@@ -1,0 +1,107 @@
+.step-identity {
+  padding: 4px 0;
+}
+
+// ── Two-column grid ──────────────────────────────────────────────────────────
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-full {
+  grid-column: 1 / -1;
+}
+
+// ── Form group ───────────────────────────────────────────────────────────────
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+// ── Label ────────────────────────────────────────────────────────────────────
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.req {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+// ── Input / Select ───────────────────────────────────────────────────────────
+.form-input {
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.7;
+  }
+
+  &:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(27, 71, 118, 0.1);
+  }
+
+  &:disabled {
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+// ── Photo slot ───────────────────────────────────────────────────────────────
+.photo-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .photo-input {
+    height: 36px;
+  }
+}
+
+.photo-note {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+  padding-left: 2px;
+}
+
+// ── Responsive: collapse to single column on narrow viewports ────────────────
+@media (max-width: 560px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-full {
+    grid-column: 1;
+  }
+}

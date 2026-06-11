@@ -1,0 +1,57 @@
+<div class="nr-container">
+  <!-- LEFT: event type list -->
+  <aside class="nr-sidebar">
+    <div class="nr-sidebar-header">
+      <h2 class="nr-sidebar-title">Événements</h2>
+      <input
+        class="nr-search"
+        type="search"
+        placeholder="Rechercher…"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+      />
+    </div>
+
+    @if (loadingTypes()) {
+      <p class="nr-loading">Chargement…</p>
+    } @else {
+      @for (group of grouped(); track group.module) {
+        <div class="nr-module-group">
+          <p class="nr-module-label">{{ group.module }}</p>
+          @for (type of group.types; track type.id) {
+            <button
+              class="nr-type-item"
+              [class.nr-type-active]="selectedType()?.id === type.id"
+              (click)="selectType(type)"
+              type="button"
+            >
+              <span class="nr-type-label">{{ type.labelFr }}</span>
+              <div class="nr-badges">
+                @if (type.sendInapp) {
+                  <span class="badge-inapp">IN-APP</span>
+                }
+                @if (type.sendEmail) {
+                  <span class="badge-email">EMAIL</span>
+                }
+                @if (type.isSystem) {
+                  <span class="badge-system">SYSTÈME</span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+      }
+    }
+  </aside>
+
+  <!-- RIGHT: routing rule editor -->
+  <main class="nr-content">
+    @if (!selectedType()) {
+      <div class="nr-placeholder">
+        <p>← Sélectionnez un événement pour configurer son routage</p>
+      </div>
+    } @else {
+      <app-routing-rule-editor [eventType]="selectedType()!" />
+    }
+  </main>
+</div>

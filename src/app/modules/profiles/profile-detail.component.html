@@ -1,0 +1,742 @@
+<!-- ── Breadcrumb ──────────────────────────────────────────────────────────── -->
+<nav class="breadcrumb" aria-label="Fil d'Ariane">
+  <a routerLink="/hr/profiles" class="bc-link">Profils</a>
+  <span class="bc-sep">›</span>
+  <span class="bc-current">Profil #{{ profileId }}</span>
+</nav>
+
+<!-- ── Loading / error ──────────────────────────────────────────────────────── -->
+@if (loading()) {
+  <div class="center-spinner"><app-spinner size="lg" /></div>
+} @else if (!profile()) {
+  <div class="error-state">
+    <p>Impossible de charger ce profil.</p>
+    <a routerLink="/hr/profiles" class="btn-ghost">Retour à la liste</a>
+  </div>
+} @else {
+
+  <!-- ── Profile header ───────────────────────────────────────────────────── -->
+  <div class="profile-header card">
+    <div class="ph-avatar" style="position:relative;">
+      @if (profile()!.photoUrl) {
+        <img [src]="photoUrl(profile()!.photoUrl)" alt="Photo" class="avatar-lg"
+             style="object-fit:cover;" />
+      } @else {
+        <span class="avatar-initials-lg">{{ profile()!.fullName ? (profile()!.fullName!.split(' ')[0]?.[0] || '') + (profile()!.fullName!.split(' ')[1]?.[0] || '') : ('P' + profile()!.id) }}</span>
+      }
+
+      <!-- Upload overlay — always visible for HR managers (not just edit mode) -->
+      @if (canEdit()) {
+        <label style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;gap:3px;"
+               onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"
+               [title]="photoUploading() ? 'Téléversement…' : 'Changer la photo'">
+          @if (!photoUploading()) {
+            <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">photo_camera</span>
+            <span style="font-size:10px;color:#fff;font-weight:600;">Modifier</span>
+          } @else {
+            <span class="material-symbols-outlined" style="font-size:18px;color:#fff;animation:spin .8s linear infinite;">progress_activity</span>
+          }
+          <input type="file" accept="image/jpeg,image/png,image/webp"
+                 (change)="onPhotoChange($event)"
+                 [disabled]="photoUploading()"
+                 hidden />
+        </label>
+      }
+    </div>
+
+    @if (photoError()) {
+      <div style="background:#fee2e2;border-radius:8px;padding:6px 12px;font-size:12px;color:#991b1b;margin-top:6px;max-width:200px;">
+        {{ photoError() }}
+      </div>
+    }
+    <div class="ph-info">
+      <h1 class="ph-name">{{ profile()!.fullName ?? ('Profil #' + profile()!.id) }}</h1>
+      @if (profile()!.matricule) {
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#e6f4f6;border-radius:8px;padding:3px 12px;margin-bottom:6px;">
+          <span class="material-symbols-outlined" style="font-size:14px;color:#0f4a57;">badge</span>
+          <span style="font-size:13px;font-weight:700;color:#0f4a57;font-family:monospace;letter-spacing:.5px;">{{ profile()!.matricule }}</span>
+        </div>
+      }
+      <div class="ph-meta">
+        <app-status-badge [status]="profile()!.lifecycleStatus" />
+        <span class="ph-sep">·</span>
+        <span>{{ profile()!.contractType ?? 'N/A' }}</span>
+        <span class="ph-sep">·</span>
+        <span>{{ profile()!.department ?? 'N/A' }}</span>
+        @if (profile()!.grade) {
+          <span class="ph-sep">·</span>
+          <span>{{ profile()!.grade }}</span>
+        }
+      </div>
+    </div>
+    <div class="ph-actions">
+      @if (canTransition()) {
+        <button class="btn-outline" (click)="openTransitionModal()">Changer le statut</button>
+      }
+      @if (canEdit()) {
+        <button class="btn-primary" (click)="editMode() ? editMode.set(false) : startEdit()">
+          {{ editMode() ? 'Annuler' : 'Modifier' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ── 8 Collapsible sections ───────────────────────────────────────────── -->
+  <div class="sections">
+
+    <!-- 1 · Identité ─────────────────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('identite')">
+      <button class="section-header" (click)="toggle('identite')" type="button">
+        <span class="section-title">Identité</span>
+        <span class="chevron" [class.open]="open('identite')">›</span>
+      </button>
+      @if (open('identite')) {
+        <div class="section-body">
+          <div class="field-grid">
+            @if (!editMode()) {
+              <app-field label="Date de naissance" [value]="fmt(profile()!.dateOfBirth)" />
+            }
+            @if (editMode()) {
+              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Date de naissance</label>
+                <input type="date" [(ngModel)]="editForm.dateOfBirth"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) {
+              <app-field label="Genre" [value]="profile()!.gender" />
+            }
+            @if (editMode()) {
+              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Genre</label>
+                <select [(ngModel)]="editForm.gender"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option value="">— Sélectionner —</option>
+                  <option value="Homme">Homme</option>
+                  <option value="Femme">Femme</option>
+                  <option value="Autre">Autre</option>
+                  <option value="Non précisé">Non précisé</option>
+                </select>
+              </div>
+            }
+
+            @if (!editMode()) {
+              <app-field label="Nationalité" [value]="profile()!.nationality" />
+            }
+            @if (editMode()) {
+              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Nationalité</label>
+                <select [(ngModel)]="editForm.nationalityId"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option [ngValue]="null">— Sélectionner —</option>
+                  @for (n of nationalities(); track n.id) {
+                    <option [ngValue]="n.id">{{ n.labelFr }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (!editMode()) {
+              <app-field label="N° carte d'identité" [value]="profile()!.nationalId" />
+            }
+            @if (editMode()) {
+              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° carte d'identité</label>
+                <input type="text" [(ngModel)]="editForm.nationalId"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) {
+              <app-field label="N° passeport" [value]="profile()!.passportNumber" />
+            }
+            @if (editMode()) {
+              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° passeport</label>
+                <input type="text" [(ngModel)]="editForm.passportNumber"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) {
+              <app-field label="Situation familiale" [value]="profile()!.maritalStatus" />
+            }
+            @if (!editMode()) {
+              <app-field label="Nombre d'enfants" [value]="profile()!.numberOfChildren?.toString()" />
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- 2 · Emploi ───────────────────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('emploi')">
+      <button class="section-header" (click)="toggle('emploi')" type="button">
+        <span class="section-title">Emploi</span>
+        <span class="chevron" [class.open]="open('emploi')">›</span>
+      </button>
+      @if (open('emploi')) {
+        <div class="section-body">
+          <div class="field-grid">
+            <!-- Matricule — toujours en lecture seule, généré automatiquement -->
+            <app-field label="Matricule" [value]="profile()!.matricule" />
+
+            @if (!editMode()) { <app-field label="Date d'embauche" [value]="fmt(profile()!.hireDate)" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Date d'embauche</label>
+                <input type="date" [(ngModel)]="editForm.hireDate" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Type de contrat" [value]="profile()!.contractType" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Type de contrat</label>
+                <select [(ngModel)]="editForm.contractType" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option value="">— Sélectionner —</option>
+                  <option value="PERMANENT">CDI</option>
+                  <option value="FIXED_TERM">CDD</option>
+                  <option value="INTERN">Stage</option>
+                  <option value="CONSULTANT">Consultant</option>
+                </select>
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Fin de contrat" [value]="fmt(profile()!.contractEndDate)" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Fin de contrat</label>
+                <input type="date" [(ngModel)]="editForm.contractEndDate" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Fin période d'essai" [value]="fmt(profile()!.probationEndDate)" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Fin période d'essai</label>
+                <input type="date" [(ngModel)]="editForm.probationEndDate" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="En période d'essai" [value]="profile()!.isOnProbation ? 'Oui' : 'Non'" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">En période d'essai</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:4px;cursor:pointer;">
+                  <input type="checkbox" [(ngModel)]="editForm.isOnProbation" /> Oui
+                </label>
+              </div>
+            }
+
+            @if (!editMode()) {
+              <app-field label="Prétention nette candidat"
+                [value]="profile()!.salaireNetCandidat != null ? profile()!.salaireNetCandidat + ' TND' : null" />
+            }
+            @if (!editMode()) {
+              <app-field label="Salaire net RH"
+                [value]="profile()!.salaireNetRh != null ? profile()!.salaireNetRh + ' TND' : null" />
+            }
+
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Prétention nette candidat (TND)</label>
+                <input type="number" step="1" min="0" [(ngModel)]="editForm.salaireNetCandidat"
+                  placeholder="ex: 2500"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Salaire net proposé RH (TND)</label>
+                <input type="number" step="1" min="0" [(ngModel)]="editForm.salaireNetRh"
+                  placeholder="ex: 2800"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- 3 · Poste ────────────────────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('poste')">
+      <button class="section-header" (click)="toggle('poste')" type="button">
+        <span class="section-title">Poste</span>
+        <span class="chevron" [class.open]="open('poste')">›</span>
+      </button>
+      @if (open('poste')) {
+        <div class="section-body">
+          <div class="field-grid">
+            @if (!editMode()) { <app-field label="Département" [value]="profile()!.department" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Département</label>
+                <select [(ngModel)]="editForm.departmentId"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option [ngValue]="null">— Sélectionner —</option>
+                  @for (d of departments(); track d.id) {
+                    <option [ngValue]="d.id">{{ d.labelFr }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Grade" [value]="profile()!.grade" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Grade</label>
+                <select [(ngModel)]="editForm.gradeId"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option [ngValue]="null">— Sélectionner —</option>
+                  @for (g of grades(); track g.id) {
+                    <option [ngValue]="g.id">{{ g.labelFr }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Discipline" [value]="profile()!.discipline" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Discipline</label>
+                <select [(ngModel)]="editForm.disciplineId"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option [ngValue]="null">— Sélectionner —</option>
+                  @for (d of disciplines(); track d.id) {
+                    <option [ngValue]="d.id">{{ d.labelFr }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Niveau NOG" [value]="profile()!.nogLevel" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Niveau NOG</label>
+                <select [(ngModel)]="editForm.nogLevelId"
+                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                  <option [ngValue]="null">— Sélectionner —</option>
+                  @for (n of nogLevels(); track n.id) {
+                    <option [ngValue]="n.id">{{ n.labelFr }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- 4 · Régime horaire ───────────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('regime')">
+      <button class="section-header" (click)="toggle('regime')" type="button">
+        <span class="section-title">Régime horaire</span>
+        <span class="chevron" [class.open]="open('regime')">›</span>
+      </button>
+      @if (open('regime')) {
+        <div class="section-body">
+          @if (isLoadingRegime()) {
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="height:16px;width:160px;border-radius:4px;background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
+              <div style="height:13px;width:220px;border-radius:4px;background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
+            </div>
+          }
+
+          @if (!isLoadingRegime() && resolvedRegime()) {
+            <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;">
+              <div style="flex:1;">
+                <p style="font-size:15px;font-weight:600;color:#1d2b3e;margin:0;">{{ resolvedRegime()!.regimeLabelFr }}</p>
+                <p style="font-size:13px;color:#44474c;margin:4px 0 0;">
+                  {{ resolvedRegime()!.hoursPerWeek }}h/semaine · {{ resolvedRegime()!.daysPerWeek }} jours
+                  @if (resolvedRegime()!.startTime && resolvedRegime()!.endTime) {
+                    · {{ resolvedRegime()!.startTime }} — {{ resolvedRegime()!.endTime }}
+                  }
+                  @if (resolvedRegime()!.breakDurationMin) {
+                    · Pause {{ resolvedRegime()!.breakDurationMin }}min
+                  }
+                </p>
+                @if (resolvedRegime()!.isFlexible) {
+                  <span style="display:inline-block;margin-top:8px;background:#ede9fe;color:#5b21b6;font-size:11px;padding:2px 10px;border-radius:999px;font-weight:700;">Horaires flexibles</span>
+                }
+              </div>
+              <span style="font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;"
+                [ngClass]="{
+                  'regime-override': resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE',
+                  'regime-role':     resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT',
+                  'regime-default':  resolvedRegime()!.assignmentLevel === 'DEFAULT'
+                }">
+                {{ resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'Override personnel'
+                   : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? 'Assignation par rôle'
+                   : 'Défaut entité' }}
+              </span>
+            </div>
+            @if (resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
+              <button type="button" (click)="removeEmployeeRegimeOverride()"
+                style="margin-top:12px;font-size:12px;color:#ba1a1a;font-weight:500;border:none;background:none;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
+                <span class="material-symbols-outlined" style="font-size:14px;">undo</span>
+                Supprimer l'override (revenir au régime du rôle)
+              </button>
+            }
+          }
+
+          @if (!isLoadingRegime() && !resolvedRegime()) {
+            <div style="display:flex;align-items:center;gap:8px;color:#f59e0b;">
+              <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
+              <p style="font-size:13px;margin:0;">Aucun régime configuré pour cet employé</p>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- 5 · Contact & Adresse ───────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('contact')">
+      <button class="section-header" (click)="toggle('contact')" type="button">
+        <span class="section-title">Contact & Adresse</span>
+        <span class="chevron" [class.open]="open('contact')">›</span>
+      </button>
+      @if (open('contact')) {
+        <div class="section-body">
+          <div class="field-grid">
+            @if (!editMode()) { <app-field label="Email personnel" [value]="profile()!.personalEmail" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Email personnel</label>
+                <input type="email" [(ngModel)]="editForm.personalEmail" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Téléphone" [value]="profile()!.phone" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Téléphone</label>
+                <input type="tel" [(ngModel)]="editForm.phone" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Adresse" [value]="profile()!.homeAddress" [wide]="true" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;grid-column:span 2;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Adresse</label>
+                <textarea [(ngModel)]="editForm.homeAddress" rows="2" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- 6 · Contact d'urgence ───────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('urgence')">
+      <button class="section-header" (click)="toggle('urgence')" type="button">
+        <span class="section-title">Contact d'urgence</span>
+        <span class="chevron" [class.open]="open('urgence')">›</span>
+      </button>
+      @if (open('urgence')) {
+        <div class="section-body">
+          <div class="field-grid">
+            @if (!editMode()) { <app-field label="Nom" [value]="profile()!.emergencyContactName" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Nom</label>
+                <input type="text" [(ngModel)]="editForm.emergencyContactName" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Relation" [value]="profile()!.emergencyContactRelation" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Relation</label>
+                <input type="text" [(ngModel)]="editForm.emergencyContactRelation" placeholder="ex: Conjoint, Parent…" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+
+            @if (!editMode()) { <app-field label="Téléphone" [value]="profile()!.emergencyContactPhone" /> }
+            @if (editMode()) {
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Téléphone</label>
+                <input type="tel" [(ngModel)]="editForm.emergencyContactPhone" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- 7 · Coordonnées bancaires — HR_MANAGER / FINANCE_OFFICER only ────── -->
+    @if (canViewSensitive()) {
+      <section class="section-card sensitive-section" [class.collapsed]="!open('bancaire')">
+        <button class="section-header" (click)="toggle('bancaire')" type="button">
+          <span class="section-title">
+            Coordonnées bancaires
+            <span class="sensitive-chip">Confidentiel</span>
+          </span>
+          <span class="chevron" [class.open]="open('bancaire')">›</span>
+        </button>
+        @if (open('bancaire')) {
+          <div class="section-body">
+            <div class="field-grid">
+              @if (!editMode()) { <app-field label="Banque" [value]="profile()!.bankName" /> }
+              @if (editMode()) {
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Banque</label>
+                  <select [(ngModel)]="editForm.bankId"
+                    style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
+                    <option [ngValue]="null">— Sélectionner —</option>
+                    @for (b of banks(); track b.id) {
+                      <option [ngValue]="b.id">{{ b.labelFr }}</option>
+                    }
+                  </select>
+                </div>
+              }
+
+              @if (!editMode()) { <app-field label="IBAN" [value]="profile()!.iban" /> }
+              @if (editMode()) {
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">IBAN</label>
+                  <input type="text" [(ngModel)]="editForm.iban" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;font-family:monospace;" />
+                </div>
+              }
+
+              @if (!editMode()) { <app-field label="N° de compte" [value]="profile()!.bankAccountNumber" /> }
+              @if (editMode()) {
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° de compte</label>
+                  <input type="text" [(ngModel)]="editForm.bankAccountNumber" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;font-family:monospace;" />
+                </div>
+              }
+
+              @if (!editMode()) { <app-field label="RIB" [value]="profile()!.rib" /> }
+              @if (editMode()) {
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">RIB</label>
+                  <input type="text" [(ngModel)]="editForm.rib" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;font-family:monospace;" />
+                </div>
+              }
+
+              @if (!editMode()) { <app-field label="N° sécurité sociale" [value]="profile()!.socialSecurityNumber" /> }
+              @if (editMode()) {
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° sécurité sociale</label>
+                  <input type="text" [(ngModel)]="editForm.socialSecurityNumber" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+                </div>
+              }
+
+              @if (!editMode()) { <app-field label="NIF" [value]="profile()!.taxId" /> }
+              @if (editMode()) {
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">NIF</label>
+                  <input type="text" [(ngModel)]="editForm.taxId" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
+                </div>
+              }
+
+              @if (!editMode()) { <app-field label="N° CNSS" [value]="profile()!.cnssNumber" /> }
+              @if (!editMode()) { <app-field label="Date affiliation CNSS" [value]="fmt(profile()!.cnssAffiliationDate)" /> }
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- Barre de sauvegarde — visible uniquement en mode édition -->
+    @if (editMode() && canEdit()) {
+      <div style="background:#fff;border:1px solid #eceef0;border-radius:14px;padding:18px 20px;display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(51,65,85,.06);">
+        <div style="flex:1;">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;display:block;margin-bottom:4px;">Raison de la modification *</label>
+          <input type="text" [(ngModel)]="editForm.reason"
+            placeholder="Ex: Mise à jour coordonnées, correction données contrat…"
+            style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
+          @if (editSaveError()) {
+            <p style="color:#ba1a1a;font-size:12px;margin:4px 0 0;">{{ editSaveError() }}</p>
+          }
+        </div>
+        <button type="button" (click)="saveProfile()" [disabled]="saving()"
+          style="padding:9px 24px;border-radius:10px;border:none;background:#1a6b7c;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;"
+          [style.opacity]="saving() ? '0.6' : '1'">
+          {{ saving() ? 'Enregistrement…' : '💾 Enregistrer les modifications' }}
+        </button>
+      </div>
+    }
+
+    <!-- 9 · Historique des contrats ────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('contrats')">
+      <button class="section-header" (click)="toggle('contrats')" type="button">
+        <span class="section-title">Historique des contrats</span>
+        <span class="chevron" [class.open]="open('contrats')">›</span>
+      </button>
+      @if (open('contrats')) {
+        <div class="section-body">
+          <app-contract-history
+            [profileId]="profile()!.id"
+            [canEdit]="canEdit()"
+          />
+        </div>
+      }
+    </section>
+
+    <!-- 8 · Documents ─────────────────────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('documents')">
+      <button class="section-header" (click)="toggle('documents'); loadDocuments()" type="button">
+        <span class="section-title">Documents
+          @if (documents().length > 0) { <span class="count-badge">{{ documents().length }}</span> }
+        </span>
+        <span class="chevron" [class.open]="open('documents')">›</span>
+      </button>
+      @if (open('documents')) {
+        <div class="section-body">
+          @if (docsLoading()) {
+            <app-spinner />
+          } @else {
+            @if (canEdit()) {
+              <div class="upload-bar">
+                <select class="filter-select" [(ngModel)]="uploadType">
+                  @for (t of docTypes; track t) { <option [value]="t">{{ t }}</option> }
+                </select>
+                <label class="upload-label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                  </svg>
+                  Importer un document
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileChange($event)" hidden />
+                </label>
+              </div>
+            }
+            @if (documents().length === 0) {
+              <p class="empty-docs">Aucun document enregistré.</p>
+            } @else {
+              <ul class="doc-list">
+                @for (doc of documents(); track doc.id) {
+                  <li class="doc-item">
+                    <svg class="doc-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <div class="doc-meta">
+                      <span class="doc-name">{{ doc.fileName ?? doc.documentType }}</span>
+                      @if (doc.fileSizeKb) { <span class="doc-size">{{ doc.fileSizeKb }} Ko</span> }
+                    </div>
+                    <app-status-badge [status]="doc.verificationStatus" />
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Documents RH — visible to HR managers and Admins only ────────────── -->
+    @if (canEdit()) {
+    <section class="profile-section">
+      <h2 class="section-title">Documents RH</h2>
+      @if (generatedDocs().length > 0) {
+        <div class="doc-history">
+          @for (doc of generatedDocs(); track doc.id) {
+            <div class="doc-history-row">
+              <span class="doc-type">{{ doc.documentType.replace('_', ' ') }}</span>
+              <span class="doc-date">{{ doc.generatedAt | slice:0:10 }}</span>
+              <code class="doc-code">{{ doc.verificationCode }}</code>
+              <app-pdf-download-button
+                label="Telecharger"
+                [endpoint]="'/api/hr/documents/download/' + doc.id"
+                [body]="null"
+                [filename]="doc.documentType.toLowerCase() + '.pdf'"
+                variant="outline"
+              />
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="empty-docs">Aucun document genere pour ce profil.</p>
+      }
+      <div class="doc-gen-grid">
+        <div class="doc-gen-card">
+          <div class="doc-gen-header">📄 <strong>Attestation de travail</strong></div>
+          <p class="doc-gen-desc">Certifie l'emploi au sein d'ARX Ingenierie</p>
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-travail" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-travail.pdf'" variant="outline" />
+        </div>
+        <div class="doc-gen-card">
+          <div class="doc-gen-header">📄 <strong>Attestation de salaire</strong></div>
+          <p class="doc-gen-desc">Certifie le salaire brut annuel</p>
+          <p class="doc-gen-note">Necessite une simulation de paie validee</p>
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-salaire" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-salaire.pdf'" variant="outline" />
+        </div>
+        <div class="doc-gen-card">
+          <div class="doc-gen-header">📄 <strong>Attestation non-benefice de pret</strong></div>
+          <p class="doc-gen-desc">Certifie l'absence d'emprunt en cours</p>
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-non-benefice-pret" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-pret.pdf'" variant="outline" />
+        </div>
+        <div class="doc-gen-card">
+          <div class="doc-gen-header">📄 <strong>Attestation de titularisation</strong></div>
+          <p class="doc-gen-desc">Certifie la titularisation en CDI</p>
+          <p class="doc-gen-note">Reservee aux contrats CDI</p>
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-titularisation" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-titularisation.pdf'" variant="outline" [disabled]="profile()!.contractType !== 'PERMANENT'" disabledTooltip="Reservee aux employes en CDI" />
+        </div>
+        <div class="doc-gen-card">
+          <div class="doc-gen-header">📄 <strong>Attestation de domiciliation de salaire</strong></div>
+          <p class="doc-gen-desc">Certifie la domiciliation bancaire du salaire</p>
+          <p class="doc-gen-note">Necessite les coordonnees bancaires</p>
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-domiciliation-salaire" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-domiciliation.pdf'" variant="outline" [disabled]="!profile()!.rib && !profile()!.bankName" disabledTooltip="Completez les coordonnees bancaires" />
+        </div>
+      </div>
+    </section>
+    } <!-- /canEdit — Documents RH -->
+
+  </div><!-- /sections -->
+}
+
+<!-- ── Lifecycle transition modal ────────────────────────────────────────────── -->
+<app-modal
+  title="Changer le statut du profil"
+  [visible]="showTransitionModal()"
+  [hasFooter]="true"
+  (closed)="showTransitionModal.set(false)"
+>
+  @if (profile()) {
+    <div class="transition-body">
+      <p class="t-label">Statut actuel</p>
+      <app-status-badge [status]="profile()!.lifecycleStatus" />
+
+      <p class="t-label" style="margin-top:20px">Nouveau statut *</p>
+      <div class="status-options">
+        @for (s of allowedTransitions(); track s) {
+          <button
+            type="button"
+            class="status-option"
+            [class.selected]="transitionTarget() === s"
+            (click)="transitionTarget.set(s)"
+          >
+            <app-status-badge [status]="s" />
+            <span>{{ lifecycleLabel(s) }}</span>
+          </button>
+        }
+      </div>
+
+      <label class="t-label" style="margin-top:16px;display:block">Raison *</label>
+      <textarea
+        class="reason-input"
+        [(ngModel)]="transitionReason"
+        placeholder="Préciser la raison de ce changement de statut…"
+        rows="3"
+      ></textarea>
+    </div>
+  }
+  <div slot="footer">
+    @if (profile()) {
+      <button class="btn-ghost" type="button" (click)="showTransitionModal.set(false)">Annuler</button>
+      <button
+        class="btn-primary"
+        type="button"
+        [disabled]="!transitionTarget() || !transitionReason.trim() || saving()"
+        (click)="confirmTransition()"
+      >
+        @if (saving()) { <app-spinner size="sm" /> }
+        Confirmer
+      </button>
+    }
+  </div>
+</app-modal>

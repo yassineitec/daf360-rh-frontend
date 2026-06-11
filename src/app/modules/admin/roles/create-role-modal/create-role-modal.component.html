@@ -1,0 +1,89 @@
+<app-modal
+  title="Créer un nouveau rôle"
+  [visible]="visible()"
+  [hasFooter]="true"
+  (closed)="closed.emit()"
+>
+  <div class="crm-body">
+    @if (error()) {
+      <div class="crm-error">{{ error() }}</div>
+    }
+
+    <!-- Nom du rôle -->
+    <div class="crm-field">
+      <label class="crm-label" for="crm-name">
+        Nom du rôle <span class="crm-required">*</span>
+      </label>
+      <input
+        id="crm-name"
+        class="crm-input"
+        type="text"
+        placeholder="Ex : Responsable paie"
+        [value]="frenchName()"
+        (input)="frenchName.set($any($event.target).value)"
+        [disabled]="saving()"
+        required
+        autofocus
+      />
+    </div>
+
+    <!-- Rôle parent -->
+    <div class="crm-field">
+      <label class="crm-label" for="crm-parent">Rôle parent</label>
+      <select
+        id="crm-parent"
+        class="crm-input crm-select"
+        [value]="parentRoleId() ?? ''"
+        (change)="onParentChange($any($event.target).value)"
+        [disabled]="saving()"
+      >
+        <option value="">— Aucun —</option>
+        @for (r of allRoles(); track r.id) {
+          <option [value]="r.id">{{ r.frenchName }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Voir toutes les entités -->
+    <div class="crm-field crm-field-toggle">
+      <label class="crm-toggle-label" for="crm-showall">
+        <span class="crm-toggle-text">
+          <span class="crm-label">Voir toutes les entités</span>
+          <span class="crm-hint">Ce rôle peut accéder aux données de toutes les entités</span>
+        </span>
+        <button
+          id="crm-showall"
+          type="button"
+          class="crm-toggle"
+          [class.crm-toggle-on]="showAll()"
+          (click)="showAll.set(!showAll())"
+          [disabled]="saving()"
+          role="switch"
+          [attr.aria-checked]="showAll()"
+        >
+          <span class="crm-toggle-thumb"></span>
+        </button>
+      </label>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div slot="footer">
+    <button
+      type="button"
+      class="crm-btn crm-btn-cancel"
+      (click)="closed.emit()"
+      [disabled]="saving()"
+    >
+      Annuler
+    </button>
+    <button
+      type="button"
+      class="crm-btn crm-btn-create"
+      (click)="create()"
+      [disabled]="saving() || !frenchName().trim()"
+    >
+      @if (saving()) { Création en cours… } @else { Créer le rôle }
+    </button>
+  </div>
+</app-modal>

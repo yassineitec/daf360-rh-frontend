@@ -1,0 +1,520 @@
+<!-- ── Page header ─────────────────────────────────────────────────────── -->
+<section class="page-header">
+  <div>
+    <h1 class="page-title">
+      <span class="material-symbols-outlined" style="font-size:26px;color:var(--color-primary)">group</span>
+      Suivi des Recrutements
+      @if (candidates()?.totalElements != null) {
+        <span class="count-badge">{{ candidates()!.totalElements }}</span>
+      }
+    </h1>
+    <p class="page-sub">Gestion du recrutement et du suivi des candidatures</p>
+  </div>
+
+  <a
+    *appHasPermission="'CREATE_CANDIDATE'"
+    class="btn-primary"
+    routerLink="/hr/candidates/new"
+  >
+    <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
+    Nouveau candidat
+  </a>
+</section>
+
+<!-- ── Stats cards ─────────────────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+
+  <!-- Total -->
+  <div class="glass-card" style="border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+    <div style="width:44px;height:44px;border-radius:12px;background:rgba(70,72,212,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <span class="material-symbols-outlined" style="font-size:22px;color:#4648d4">group</span>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Total candidats</div>
+      @if (isLoadingStats()) {
+        <span class="skeleton" style="width:48px;height:26px;display:inline-block;"></span>
+      } @else {
+        <div style="font-size:26px;font-weight:800;color:#1d2b3e;line-height:1;">{{ stats().total }}</div>
+      }
+    </div>
+  </div>
+
+  <!-- Pending -->
+  <div class="glass-card" style="border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+    <div style="width:44px;height:44px;border-radius:12px;background:rgba(146,64,14,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <span class="material-symbols-outlined" style="font-size:22px;color:#92400e">schedule</span>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">En attente</div>
+      @if (isLoadingStats()) {
+        <span class="skeleton" style="width:36px;height:26px;display:inline-block;"></span>
+      } @else {
+        <div style="font-size:26px;font-weight:800;color:#92400e;line-height:1;">{{ stats().pending }}</div>
+      }
+    </div>
+  </div>
+
+  <!-- Hired this month -->
+  <div class="glass-card" style="border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
+    <div style="width:44px;height:44px;border-radius:12px;background:rgba(20,83,45,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <span class="material-symbols-outlined" style="font-size:22px;color:#14532d">how_to_reg</span>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Embauchés ce mois</div>
+      @if (isLoadingStats()) {
+        <span class="skeleton" style="width:36px;height:26px;display:inline-block;"></span>
+      } @else {
+        <div style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">{{ stats().hiredThisMonth }}</div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- ── Table section ───────────────────────────────────────────────────── -->
+<div class="glass-panel" style="border-radius:16px;overflow:hidden;">
+
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.6);">
+    <div style="font-size:14px;font-weight:600;color:#1d2b3e;">
+      Liste des candidats
+    </div>
+    <button
+      type="button"
+      class="btn-primary"
+      style="height:32px;font-size:12px;gap:4px;padding:0 12px;"
+      (click)="toggleFilters()"
+    >
+      <span class="material-symbols-outlined" style="font-size:16px">tune</span>
+      {{ showFilters() ? 'Masquer filtres' : 'Filtres' }}
+    </button>
+  </div>
+
+  <!-- Filter panel -->
+  @if (showFilters()) {
+    <div style="padding:16px 20px;background:rgba(248,250,252,.8);border-bottom:1px solid rgba(226,232,240,.6);display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="search-wrap" style="flex:1;min-width:200px;">
+        <span class="material-symbols-outlined search-icon" style="font-size:18px;">search</span>
+        <input
+          class="search-input"
+          type="search"
+          placeholder="Nom, email, poste…"
+          [(ngModel)]="searchInput"
+          aria-label="Rechercher un candidat"
+          style="width:100%;"
+        />
+      </div>
+
+      <select
+        class="filter-select"
+        [(ngModel)]="statusFilter"
+        aria-label="Filtrer par statut"
+      >
+        <option value="">Tous les statuts</option>
+        <option value="PENDING">En attente</option>
+        <option value="ACCEPTED">Accepté(e)</option>
+        <option value="REJECTED">Refusé(e)</option>
+        <option value="IT_IN_PROGRESS">IT en cours</option>
+        <option value="EMAIL_RECEIVED">Email reçu</option>
+        <option value="HR_IN_PROGRESS">RH en cours</option>
+        <option value="HIRED">Embauché(e)</option>
+        <option value="ARCHIVED">Archivé(e)</option>
+      </select>
+
+      <button type="button" class="btn-primary" style="height:36px;" (click)="applyFilters()">
+        <span class="material-symbols-outlined" style="font-size:16px">search</span>
+        Appliquer
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        style="height:36px;background:var(--color-bg-secondary);color:var(--color-text);border:1px solid var(--color-border);"
+        (click)="clearFilters()"
+      >
+        <span class="material-symbols-outlined" style="font-size:16px">close</span>
+        Réinitialiser
+      </button>
+    </div>
+  }
+
+  <!-- Table -->
+  <div style="overflow-x:auto;">
+    <table aria-label="Liste des candidats" style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr>
+          <th scope="col">Candidat</th>
+          <th scope="col">Poste</th>
+          <th scope="col">Statut</th>
+          <th scope="col">Début prévu</th>
+          <th scope="col" style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Skeleton rows while loading -->
+        @if (isLoadingCandidates()) {
+          @for (row of skeletonRows; track row) {
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></span>
+                  <div>
+                    <span class="skeleton" style="width:120px;height:13px;display:block;margin-bottom:5px;"></span>
+                    <span class="skeleton" style="width:160px;height:11px;display:block;"></span>
+                  </div>
+                </div>
+              </td>
+              <td><span class="skeleton" style="width:100px;height:13px;display:block;"></span></td>
+              <td><span class="skeleton" style="width:80px;height:22px;border-radius:9999px;display:block;"></span></td>
+              <td><span class="skeleton" style="width:90px;height:13px;display:block;"></span></td>
+              <td style="text-align:right;"><span class="skeleton" style="width:60px;height:28px;border-radius:6px;display:inline-block;"></span></td>
+            </tr>
+          }
+        }
+
+        <!-- Actual rows -->
+        @if (!isLoadingCandidates()) {
+          @for (c of candidates()?.content ?? []; track c.id) {
+            <tr
+              class="candidate-row"
+              [ngClass]="{ 'selected-row': selectedId() === c.id }"
+              [style.background]="selectedId() === c.id ? 'rgba(70,72,212,.06)' : ''"
+              (click)="onRowClick(c.id)"
+              style="cursor:pointer;"
+            >
+              <!-- Candidat -->
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4648d4,#6366f1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:.5px;">
+                    {{ getInitials(c.firstName, c.lastName) }}
+                  </div>
+                  <div>
+                    <div class="cell-name">{{ c.firstName }} {{ c.lastName }}</div>
+                    <div class="cell-email">{{ c.emailPersonal }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Poste -->
+              <td>
+                @if (c.appliedPosition) {
+                  {{ c.appliedPosition }}
+                } @else {
+                  <span class="cell-muted">—</span>
+                }
+              </td>
+
+              <!-- Statut -->
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(c.status)">
+                  <span class="material-symbols-outlined" style="font-size:13px;">{{ getStatusIcon(c.status) }}</span>
+                  {{ getStatusLabel(c.status) }}
+                </span>
+              </td>
+
+              <!-- Début prévu -->
+              <td>{{ formatDateFr(c.expectedStartDate) }}</td>
+
+              <!-- Actions -->
+              <td style="text-align:right;">
+                <div class="row-actions" style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;" (click)="$event.stopPropagation()">
+
+                  <!-- Accept + Reject — PENDING only, permission required -->
+                  @if (c.status === 'PENDING' && canAcceptReject()) {
+                    <button type="button"
+                      (click)="quickAccept(c, $event)"
+                      [disabled]="isActioning()"
+                      style="padding:5px 12px;border-radius:8px;border:none;background:#dcfce7;color:#15803d;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                      <span class="material-symbols-outlined" style="font-size:13px;">check_circle</span>
+                      Accepter
+                    </button>
+                    <button type="button"
+                      (click)="openRejectModal(c, $event)"
+                      [disabled]="isActioning()"
+                      style="padding:5px 12px;border-radius:8px;border:none;background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                      <span class="material-symbols-outlined" style="font-size:13px;">cancel</span>
+                      Rejeter
+                    </button>
+                  }
+
+                  <a
+                    class="btn-action view"
+                    [routerLink]="['/hr/candidates', c.id]"
+                    title="Voir le dossier"
+                  >
+                    <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>
+                    Voir
+                  </a>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty state -->
+  @if (!isLoadingCandidates() && (candidates()?.content?.length ?? 0) === 0) {
+    <div class="empty-state">
+      <span class="material-symbols-outlined empty-icon" style="font-size:52px;">person_search</span>
+      <p class="empty-title">Aucun candidat trouvé</p>
+      <p class="empty-hint">Modifiez vos filtres ou ajoutez un nouveau candidat.</p>
+    </div>
+  }
+
+  <!-- Pagination -->
+  @if (!isLoadingCandidates() && (candidates()?.totalPages ?? 0) > 1) {
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(226,232,240,.6);font-size:13px;color:var(--color-text-muted);">
+      <span>
+        Page {{ (candidates()?.number ?? 0) + 1 }} sur {{ candidates()?.totalPages ?? 1 }}
+        &nbsp;·&nbsp;
+        {{ candidates()?.totalElements ?? 0 }} résultats
+      </span>
+      <div style="display:flex;gap:4px;">
+        <button
+          type="button"
+          class="btn-action view"
+          [disabled]="currentPage() === 0"
+          [style.opacity]="currentPage() === 0 ? '0.4' : '1'"
+          (click)="onPageChange(currentPage() - 1)"
+        >
+          <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
+        </button>
+        @for (p of [].constructor(candidates()?.totalPages ?? 0); track $index) {
+          <button
+            type="button"
+            class="btn-action"
+            [ngClass]="$index === currentPage() ? 'accept' : 'view'"
+            style="min-width:32px;padding:0 8px;"
+            (click)="onPageChange($index)"
+          >
+            {{ $index + 1 }}
+          </button>
+        }
+        <button
+          type="button"
+          class="btn-action view"
+          [disabled]="currentPage() >= (candidates()?.totalPages ?? 1) - 1"
+          [style.opacity]="currentPage() >= (candidates()?.totalPages ?? 1) - 1 ? '0.4' : '1'"
+          (click)="onPageChange(currentPage() + 1)"
+        >
+          <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ── Bottom grid: Section 3 (history) + Section 4 (workflow) ─────────── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+
+  <!-- SECTION 3: Historique des décisions ─────────────────────────── -->
+  <section class="glass-panel" style="border-radius:16px;padding:24px;">
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <span class="material-symbols-outlined" style="font-size:20px;color:#4648d4;">history</span>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1d2b3e;">
+          Historique des décisions
+          @if (selectedCandidate()) {
+            <span style="color:#4648d4;"> — {{ selectedCandidate()!.firstName }} {{ selectedCandidate()!.lastName }}</span>
+          }
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);">Cliquez sur un candidat pour voir son historique</div>
+      </div>
+    </div>
+
+    <!-- Empty state: no candidate selected -->
+    @if (!selectedId()) {
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 16px;text-align:center;">
+        <span class="material-symbols-outlined" style="font-size:52px;color:#c5c6cd;display:block;margin-bottom:12px;">history</span>
+        <p style="font-size:14px;color:#44474c;margin:0;">Sélectionnez un candidat</p>
+        <p style="font-size:12px;color:#75777d;margin-top:4px;">pour voir l'historique de ses décisions</p>
+      </div>
+    }
+
+    <!-- Skeleton loading -->
+    @if (selectedId() && isLoadingHistory()) {
+      <div class="timeline-container" style="display:flex;flex-direction:column;gap:16px;">
+        @for (row of skeletonRows; track row) {
+          <div style="display:flex;gap:12px;align-items:flex-start;padding-left:44px;">
+            <div class="skeleton" style="position:absolute;left:0;width:32px;height:32px;border-radius:50%;"></div>
+            <div style="flex:1;">
+              <span class="skeleton" style="width:160px;height:13px;display:block;margin-bottom:6px;"></span>
+              <span class="skeleton" style="width:240px;height:11px;display:block;"></span>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Timeline content -->
+    @if (selectedId() && !isLoadingHistory()) {
+      @if (history().length === 0) {
+        <div style="text-align:center;padding:32px;color:var(--color-text-muted);">
+          <span class="material-symbols-outlined" style="font-size:40px;opacity:.35;display:block;margin-bottom:8px;">event_note</span>
+          <span style="font-size:13px;">Aucun historique disponible</span>
+        </div>
+      }
+      @if (history().length > 0) {
+        <div class="timeline-container">
+          @for (item of history(); track item.id) {
+            <div class="timeline-item">
+              <div
+                style="position:absolute;left:0;top:2px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(51,65,85,.15);"
+                [ngStyle]="getTimelineDotStyle(item.action)"
+              >
+                <span class="material-symbols-outlined" style="font-size:15px;">{{ getTimelineIcon(item.action) }}</span>
+              </div>
+              <div style="background:rgba(248,250,252,.7);border-radius:10px;padding:12px 14px;border:1px solid rgba(226,232,240,.5);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">
+                  <span style="font-size:13px;font-weight:600;color:#1d2b3e;">{{ item.actionLabel || item.action }}</span>
+                  <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;flex-shrink:0;">{{ formatTimestamp(item.timestamp) }}</span>
+                </div>
+                @if (item.performedByName) {
+                  <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:3px;">
+                    <span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px;">person</span>
+                    {{ item.performedByName }}
+                  </div>
+                }
+                @if (item.resultingStatus) {
+                  <div style="margin-top:5px;">
+                    <span class="status-badge" [ngClass]="getStatusClass(item.resultingStatus)" style="font-size:11px;padding:2px 8px;">
+                      <span class="material-symbols-outlined" style="font-size:12px;">{{ getStatusIcon(item.resultingStatus) }}</span>
+                      {{ getStatusLabel(item.resultingStatus) }}
+                    </span>
+                  </div>
+                }
+                @if (item.comment) {
+                  <div style="font-size:12px;color:#475569;margin-top:6px;padding:8px 10px;background:rgba(241,245,249,.8);border-radius:6px;border-left:3px solid rgba(70,72,212,.3);font-style:italic;">
+                    "{{ item.comment }}"
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  </section>
+
+  <!-- SECTION 4: Automatisation du Workflow ───────────────────────── -->
+  <section class="glass-card" style="border-radius:16px;padding:24px;background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(242,244,246,.8));overflow:hidden;position:relative;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <div style="background:#4648d4;color:#fff;padding:8px;border-radius:10px;display:flex;">
+        <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1d2b3e;">Automatisation du Workflow</div>
+        <div style="font-size:11px;color:var(--color-text-muted);">Notifications automatiques à l'acceptation</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Trigger -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 1px 4px rgba(51,65,85,.06);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="material-symbols-outlined" style="font-size:20px;color:#004941;">task_alt</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#1d2b3e;">Candidat marqué comme 'Accepté'</div>
+          <div style="font-size:11px;color:var(--color-text-muted);">Déclencheur manuel HR</div>
+        </div>
+      </div>
+      <span class="material-symbols-outlined" style="font-size:18px;color:#4648d4;">arrow_forward</span>
+    </div>
+
+    <!-- Connector -->
+    <div style="display:flex;justify-content:center;margin:4px 0;">
+      <div style="height:28px;width:2px;background:rgba(70,72,212,.25);"></div>
+    </div>
+
+    <!-- Step 2: Notification card (dark) -->
+    <div style="background:#1d2b3e;color:#fff;border-radius:12px;padding:20px;box-shadow:0 8px 24px rgba(29,43,62,.3);transform:rotate(0.8deg);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9eadc5;">Notification IT automatique</span>
+        <span class="material-symbols-outlined" style="font-size:18px;color:#9eadc5;">lan</span>
+      </div>
+      <div style="font-family:monospace;font-size:12px;line-height:1.8;opacity:.9;">
+        <div><span style="color:#9eadc5;">OBJET : </span>Préparation équipement - Nouveau talent</div>
+        <div>
+          <span style="color:#9eadc5;">NOM : </span>
+          {{ selectedCandidate() ? (selectedCandidate()!.firstName + ' ' + selectedCandidate()!.lastName) : 'Aucun candidat sélectionné' }}
+        </div>
+        <div>
+          <span style="color:#9eadc5;">POSTE : </span>
+          {{ selectedCandidate()?.appliedPosition ?? '—' }}
+        </div>
+        <div>
+          <span style="color:#9eadc5;">START : </span>
+          {{ selectedCandidate()?.expectedStartDate ? formatDateFr(selectedCandidate()!.expectedStartDate!) : '—' }}
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);font-size:11px;">
+          Action : Création compte MS365 + Provisioning matériel demandés.
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+        @if (selectedCandidate()?.status === 'ACCEPTED'
+          || selectedCandidate()?.status === 'IT_IN_PROGRESS'
+          || selectedCandidate()?.status === 'EMAIL_RECEIVED'
+          || selectedCandidate()?.status === 'HR_IN_PROGRESS'
+          || selectedCandidate()?.status === 'HIRED') {
+          <span style="background:rgba(60,221,199,.2);color:#3cddc7;font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;">✓ Envoyé avec succès</span>
+        } @else {
+          <span style="background:rgba(158,173,197,.15);color:#9eadc5;font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;">En attente d'acceptation</span>
+        }
+      </div>
+    </div>
+
+    <!-- Footer note -->
+    <div style="display:flex;align-items:flex-start;gap:8px;margin-top:16px;color:#44474c;">
+      <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0;margin-top:1px;">info</span>
+      <p style="font-size:12px;line-height:1.5;margin:0;">
+        Chaque validation 'Acceptée' génère automatiquement une notification vers le département IT et crée un dossier de provisioning.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ── Reject modal ──────────────────────────────────────────────────────── -->
+@if (rejectTarget()) {
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <h3 style="font-size:17px;font-weight:700;color:#1d2b3e;margin:0 0 6px;">Rejeter le candidat</h3>
+      <p style="font-size:13px;color:#44474c;margin:0 0 20px;">
+        <strong>{{ rejectTarget()!.firstName }} {{ rejectTarget()!.lastName }}</strong>
+      </p>
+
+      @if (actionError()) {
+        <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:14px;">
+          {{ actionError() }}
+        </div>
+      }
+
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:20px;">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;">
+          Motif du rejet *
+        </label>
+        <textarea [(ngModel)]="rejectReason" rows="3"
+          placeholder="Expliquez la raison du rejet…"
+          style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:10px 12px;font-size:13px;outline:none;resize:none;box-sizing:border-box;">
+        </textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button"
+          (click)="rejectTarget.set(null)"
+          style="padding:9px 20px;border-radius:10px;border:1px solid #e5e7eb;background:none;font-size:13px;cursor:pointer;color:#44474c;">
+          Annuler
+        </button>
+        <button type="button"
+          (click)="confirmReject()"
+          [disabled]="isActioning() || !rejectReason.trim()"
+          style="padding:9px 20px;border-radius:10px;border:none;background:#b91c1c;color:#fff;font-size:13px;font-weight:700;cursor:pointer;"
+          [style.opacity]="(isActioning() || !rejectReason.trim()) ? '0.6' : '1'">
+          {{ isActioning() ? 'Rejet en cours…' : 'Confirmer le rejet' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

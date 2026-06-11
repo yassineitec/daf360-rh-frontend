@@ -1,0 +1,61 @@
+<div class="rpt-container">
+  @if (error()) {
+    <div class="rpt-error">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="rpt-success">{{ success() }}</div>
+  }
+
+  <div class="rpt-header">
+    <div class="rpt-header-left">
+      <span class="rpt-title">Permissions de {{ role().frenchName }}</span>
+      <span class="rpt-counter">{{ checkedCount() }} / {{ totalPermissions() }} actives</span>
+    </div>
+    <div class="rpt-header-actions">
+      <button class="rpt-link-btn" (click)="selectAll()" type="button">Tout sélectionner</button>
+      <button class="rpt-link-btn" (click)="clearAll()" type="button">Tout désélectionner</button>
+      <button class="rpt-btn-save" (click)="saveAll()" [disabled]="saving()" type="button">
+        @if (saving()) { Enregistrement… } @else { Enregistrer tout }
+      </button>
+    </div>
+  </div>
+
+  @if (loadingCatalog()) {
+    <p class="rpt-loading">Chargement du catalogue…</p>
+  } @else {
+    <div class="rpt-groups">
+      @for (group of catalog(); track group.groupName) {
+        <div class="rpt-group">
+          <button class="rpt-group-header" (click)="toggleGroup(group.groupName)" type="button">
+            <span class="rpt-group-name">{{ group.groupName }}</span>
+            <span class="rpt-group-count">{{ groupCheckedCount(group) }} / {{ group.permissions.length }}</span>
+            <span class="rpt-chevron">{{ isExpanded(group.groupName) ? '▲' : '▼' }}</span>
+          </button>
+          @if (isExpanded(group.groupName)) {
+            <div class="rpt-permissions">
+              @for (perm of group.permissions; track perm.code) {
+                <label
+                  class="rpt-perm-row"
+                  [class.rpt-perm-checked]="isChecked(perm.code)"
+                  [class.rpt-perm-pending]="isPending(perm.code)"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isChecked(perm.code)"
+                    (change)="toggle(perm.code)"
+                    [disabled]="isPending(perm.code)"
+                  />
+                  <span class="rpt-code">{{ perm.code }}</span>
+                  <span class="rpt-label">{{ perm.label }}</span>
+                  @if (isPending(perm.code)) {
+                    <span class="rpt-spinner">⟳</span>
+                  }
+                </label>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

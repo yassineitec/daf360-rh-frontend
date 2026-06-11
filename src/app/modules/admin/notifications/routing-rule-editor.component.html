@@ -1,0 +1,262 @@
+<div class="editor-container">
+
+  <!-- Loading state -->
+  @if (loading()) {
+    <div class="editor-loading">Chargement de la règle…</div>
+  }
+
+  <!-- Error banner (global) -->
+  @if (error()) {
+    <div class="error-banner">{{ error() }}</div>
+  }
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       SECTION 1 — Paramètres généraux
+  ──────────────────────────────────────────────────────────────────────── -->
+  <div class="editor-section">
+    <h3 class="editor-section-title">Paramètres généraux</h3>
+
+    <!-- In-app toggle -->
+    <div class="toggle-row">
+      <span class="toggle-label">Notification in-app</span>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          [checked]="sendInapp()"
+          (change)="sendInapp.set($any($event.target).checked)"
+        />
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <!-- Email toggle -->
+    <div class="toggle-row">
+      <span class="toggle-label">
+        Email
+        @if (!eventType().supportsEmail) {
+          <span class="toggle-tooltip" title="Ce type d'événement ne supporte pas l'envoi par email.">
+            &nbsp;(non disponible)
+          </span>
+        }
+      </span>
+      <label class="toggle-switch" [class.toggle-disabled]="!eventType().supportsEmail">
+        <input
+          type="checkbox"
+          [checked]="sendEmail()"
+          [disabled]="!eventType().supportsEmail"
+          (change)="sendEmail.set($any($event.target).checked)"
+        />
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       SECTION 2 — Modèles in-app
+  ──────────────────────────────────────────────────────────────────────── -->
+  @if (sendInapp()) {
+    <div class="editor-section">
+      <h3 class="editor-section-title">Modèles in-app</h3>
+
+      <!-- Titre -->
+      <div class="field-group">
+        <label class="field-label">Titre</label>
+        <input
+          class="field-input"
+          type="text"
+          [ngModel]="inappTitle()"
+          (ngModelChange)="inappTitle.set($event)"
+          placeholder="Titre de la notification…"
+        />
+        <div class="placeholder-chips">
+          @for (p of PLACEHOLDERS; track p) {
+            <button
+              type="button"
+              class="placeholder-chip"
+              (click)="insertPlaceholder(inappTitle, p)"
+            >{{ p }}</button>
+          }
+        </div>
+      </div>
+
+      <!-- Corps du message -->
+      <div class="field-group">
+        <label class="field-label">Corps du message</label>
+        <textarea
+          class="field-textarea"
+          rows="3"
+          [ngModel]="inappBody()"
+          (ngModelChange)="inappBody.set($event)"
+          placeholder="Corps de la notification…"
+        ></textarea>
+        <div class="placeholder-chips">
+          @for (p of PLACEHOLDERS; track p) {
+            <button
+              type="button"
+              class="placeholder-chip"
+              (click)="insertPlaceholder(inappBody, p)"
+            >{{ p }}</button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       SECTION 3 — Modèles email
+  ──────────────────────────────────────────────────────────────────────── -->
+  @if (sendEmail() && eventType().supportsEmail) {
+    <div class="editor-section">
+      <h3 class="editor-section-title">Modèles email</h3>
+
+      <!-- Sujet -->
+      <div class="field-group">
+        <label class="field-label">Sujet</label>
+        <input
+          class="field-input"
+          type="text"
+          [ngModel]="emailSubject()"
+          (ngModelChange)="emailSubject.set($event)"
+          placeholder="Sujet de l'email…"
+        />
+        <div class="placeholder-chips">
+          @for (p of PLACEHOLDERS; track p) {
+            <button
+              type="button"
+              class="placeholder-chip"
+              (click)="insertPlaceholder(emailSubject, p)"
+            >{{ p }}</button>
+          }
+        </div>
+      </div>
+
+      <!-- Corps email -->
+      <div class="field-group">
+        <label class="field-label">Corps de l'email</label>
+        <textarea
+          class="field-textarea monospace"
+          rows="8"
+          [ngModel]="emailBody()"
+          (ngModelChange)="emailBody.set($event)"
+          placeholder="Corps de l'email…"
+        ></textarea>
+        <div class="placeholder-chips">
+          @for (p of PLACEHOLDERS; track p) {
+            <button
+              type="button"
+              class="placeholder-chip"
+              (click)="insertPlaceholder(emailBody, p)"
+            >{{ p }}</button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Save button + banners -->
+  <div class="editor-actions">
+    <button
+      class="btn-save"
+      type="button"
+      [disabled]="saving()"
+      (click)="saveTemplates()"
+    >
+      @if (saving()) { Enregistrement… } @else { Enregistrer les modèles }
+    </button>
+  </div>
+
+  @if (success()) {
+    <div class="success-banner">{{ success() }}</div>
+  }
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       SECTION 4 — Destinataires in-app
+  ──────────────────────────────────────────────────────────────────────── -->
+  @if (sendInapp() && detail()) {
+    <div class="editor-section">
+      <h3 class="editor-section-title">Destinataires in-app</h3>
+      <app-recipient-tags
+        [recipients]="detail()!.inappRecipients"
+        [availableRoles]="detail()!.availableRoles"
+        sectionTitle="Notification in-app"
+        (addRecipient)="onInappRecipientAdded($event)"
+        (removeRecipient)="onInappRecipientRemoved($event)"
+      />
+    </div>
+  }
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       SECTION 5 — Destinataires email (TO / CC / BCC)
+  ──────────────────────────────────────────────────────────────────────── -->
+  @if (sendEmail() && eventType().supportsEmail && detail()) {
+    <div class="editor-section">
+      <h3 class="editor-section-title">Destinataires email</h3>
+
+      <!-- TO -->
+      <div class="email-field-block">
+        <app-recipient-tags
+          [recipients]="detail()!.emailToRecipients"
+          [availableRoles]="detail()!.availableRoles"
+          sectionTitle="À (TO)"
+          (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'TO' })"
+          (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'TO' })"
+        />
+        @if (detail()!.emailToRecipients.length === 0) {
+          <div class="warning-banner">
+            Attention : aucun destinataire en TO. L'email ne sera pas envoyé.
+          </div>
+        }
+      </div>
+
+      <!-- CC -->
+      <div class="email-field-block">
+        <app-recipient-tags
+          [recipients]="detail()!.emailCcRecipients"
+          [availableRoles]="detail()!.availableRoles"
+          sectionTitle="Copie (CC)"
+          (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'CC' })"
+          (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'CC' })"
+        />
+      </div>
+
+      <!-- BCC -->
+      <div class="email-field-block">
+        <app-recipient-tags
+          [recipients]="detail()!.emailBccRecipients"
+          [availableRoles]="detail()!.availableRoles"
+          sectionTitle="Copie cachée (BCC)"
+          (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'BCC' })"
+          (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'BCC' })"
+        />
+      </div>
+    </div>
+  }
+
+  <!-- ─────────────────────────────────────────────────────────────────────
+       SECTION 6 — Test
+  ──────────────────────────────────────────────────────────────────────── -->
+  @if (detail()) {
+    <div class="editor-section editor-section--test">
+      <h3 class="editor-section-title">Test de la configuration</h3>
+      <p class="test-description">
+        Simule l'envoi pour votre pays et affiche les destinataires résolus et les messages générés.
+      </p>
+      <button
+        type="button"
+        class="btn-test"
+        [disabled]="testLoading()"
+        (click)="runTest()"
+      >
+        @if (testLoading()) { Chargement… } @else { Tester la configuration }
+      </button>
+
+      <app-test-dispatch-modal
+        [visible]="showTestModal()"
+        [result]="testResult()"
+        [eventType]="eventType()"
+        (closed)="showTestModal.set(false)"
+      />
+    </div>
+  }
+
+</div>

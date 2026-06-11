@@ -1,0 +1,181 @@
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink }           from '@angular/router';
+
+import { CandidateService }      from './candidate.service';
+import { CandidateDetail }       from './candidate.model';
+import { CandidateFormComponent } from './candidate-form.component';
+import { RejectModalComponent }   from './reject-modal.component';
+import { StatusBadgeComponent }   from '../../shared/status-badge.component';
+import { SpinnerComponent }       from '../../shared/spinner.component';
+import { UserStore }              from '../../core/user.store';
+
+@Component({
+  selector: 'app-candidate-detail',
+  standalone: true,
+  imports: [
+    RouterLink,
+    StatusBadgeComponent,
+    SpinnerComponent,
+    CandidateFormComponent,
+    RejectModalComponent,
+  ],
+  templateUrl: './candidate-detail.component.html',
+  styleUrls: ['./candidate-detail.component.scss'],
+})
+export class CandidateDetailComponent implements OnInit {
+
+  private readonly candidateService = inject(CandidateService);
+  private readonly route            = inject(ActivatedRoute);
+  private readonly router           = inject(Router);
+  readonly userStore                = inject(UserStore);
+
+  candidate    = signal<CandidateDetail | null>(null);
+  loading      = signal(true);
+  error        = signal<string | null>(null);
+  showForm     = signal(false);
+  showReject   = signal(false);
+
+  // ── CV upload state ───────────────────────────────────────────────────────
+  cvUploading  = signal(false);
+  cvError      = signal<string | null>(null);
+  cvSuccess    = signal<string | null>(null);
+
+  private candidateId = 0;
+
+  readonly canAcceptReject = computed(() =>
+    this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'),
+  );
+
+  readonly canEdit = computed(() =>
+    this.userStore.hasPermission('EDIT_CANDIDATE'),
+  );
+
+  readonly showItSection = computed(() => {
+    const c = this.candidate();
+    const noProvisioning: string[] = ['PENDING', 'REJECTED'];
+    return c !== null && !noProvisioning.includes(c.status);
+  });
+
+  ngOnInit(): void {
+    const rawId = this.route.snapshot.paramMap.get('id');
+    if (!rawId || rawId === 'new') {
+      this.loading.set(false);
+      this.showForm.set(true);
+      return;
+    }
+    this.candidateId = +rawId;
+    this.loadCandidate();
+  }
+
+  private loadCandidate(): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.candidateService
+      .getById(this.candidateId)
+      .subscribe({
+        next: (data) => {
+          this.candidate.set(data);
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set(
+            err?.error?.message ?? 'Impossible de charger le candidat.',
+          );
+          this.loading.set(false);
+        },
+      });
+  }
+
+  onAccept(): void {
+    this.candidateService.accept(this.candidateId).subscribe({
+      next: () => this.loadCandidate(),
+      error: (err) =>
+        this.error.set(err?.error?.message ?? 'Erreur lors de l\'acceptation.'),
+    });
+  }
+
+  onFormClosed(): void {
+    this.showForm.set(false);
+    if (!this.candidateId) {
+      this.router.navigate(['/hr/candidates']);
+    }
+  }
+
+  onFormSaved(): void {
+    this.showForm.set(false);
+    if (!this.candidateId) {
+      this.router.navigate(['/hr/candidates']);
+      return;
+    }
+    this.loadCandidate();
+  }
+
+  onRejected(): void {
+    this.showReject.set(false);
+    this.loadCandidate();
+  }
+
+  readonly canManageIt = computed(() =>
+    this.userStore.hasPermission('IT_PROVISIONING'),
+  );
+
+  readonly canOnboard = computed(() =>
+    this.userStore.hasPermission('HR_ONBOARDING'),
+  );
+
+  goBack(): void {
+    this.router.navigate(['/hr/candidates']);
+  }
+
+  goToProvisioning(provId: number): void {
+    this.router.navigate(['/hr/it-provisioning', provId]);
+  }
+
+  goToOnboarding(): void {
+    this.router.navigate(['/hr/onboarding', this.candidateId]);
+  }
+
+  // ── CV ────────────────────────────────────────────────────────────────────
+
+  onCvFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file  = input.files?.[0];
+    if (!file) return;
+
+    const allowed = ['application/pdf',
+                     'application/msword',
+                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowed.includes(file.type)) {
+      this.cvError.set('Format non supporté — PDF, DOC ou DOCX uniquement');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      this.cvError.set('Fichier trop volumineux — max 10 Mo');
+      return;
+    }
+
+    this.cvError.set(null);
+    this.cvSuccess.set(null);
+    this.cvUploading.set(true);
+
+    this.candidateService.uploadCv(this.candidateId, file).subscribe({
+      next: (updated) => {
+        this.candidate.set(updated);
+        this.cvUploading.set(false);
+        this.cvSuccess.set(`CV "${file.name}" téléversé avec succès.`);
+        setTimeout(() => this.cvSuccess.set(null), 4000);
+        // Reset file input so the same file can be re-uploaded if needed
+        input.value = '';
+      },
+      error: (err) => {
+        this.cvUploading.set(false);
+        this.cvError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors du téléversement.');
+      },
+    });
+  }
+
+  downloadCv(): void {
+    window.open(this.candidateService.cvDownloadUrl(this.candidateId), '_blank');
+  }
+}

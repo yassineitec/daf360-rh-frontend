@@ -1,0 +1,312 @@
+<!-- Back -->
+<button class="btn-back" type="button" (click)="goBack()">← Retour à la liste</button>
+
+@if (loading()) {
+  <div class="loading-wrap"><app-spinner /></div>
+}
+
+@if (error()) {
+  <div class="alert alert-error" role="alert">{{ error() }}</div>
+}
+
+@if (successMsg()) {
+  <div class="alert alert-success" role="status">{{ successMsg() }}</div>
+}
+
+@if (!loading() && prov(); as p) {
+
+  <!-- ── Progress bar ─────────────────────────────────────────────────────── -->
+  <div class="progress-bar-wrap">
+    @for (step of steps(); track step.label; let i = $index, last = $last) {
+      <div class="step-node">
+        <div class="step-circle" [class.step-done]="step.done">
+          @if (step.done) {
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          } @else {
+            <span>{{ i + 1 }}</span>
+          }
+        </div>
+        <span class="step-label" [class.step-label-done]="step.done">{{ step.label }}</span>
+      </div>
+      @if (!last) { <div class="step-connector" [class.connector-done]="step.done"></div> }
+    }
+  </div>
+
+  <!-- ── Page header ─────────────────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h1 class="candidate-name">{{ p.candidateFullName }}</h1>
+      <p class="candidate-sub">{{ p.appliedPosition ?? 'Poste non spécifié' }}</p>
+    </div>
+    <app-status-badge [status]="p.status" />
+  </div>
+
+  <!-- ── SECTION 1: Identité (read-only) ─────────────────────────────────── -->
+  <section class="form-section">
+    <h2 class="section-title">1. Identité du candidat</h2>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Nom complet</span>
+        <span class="info-value">{{ p.candidateFullName }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Début prévu</span>
+        <span class="info-value">{{ p.expectedStartDate ?? '—' }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 2: Compte Microsoft 365 ─────────────────────────────────── -->
+  <section class="form-section">
+    <h2 class="section-title">2. Compte Microsoft 365</h2>
+
+    @if (p.ms365Email) {
+      <!-- Email already submitted — read-only -->
+      <div class="ms365-set">
+        <svg class="check-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <div>
+          <p class="ms365-email">{{ p.ms365Email }}</p>
+          <p class="ms365-date">Soumis le {{ p.ms365EmailCreatedAt ? (p.ms365EmailCreatedAt | slice:0:10) : '—' }}</p>
+        </div>
+      </div>
+    } @else {
+      <!-- Email not yet submitted -->
+      <div class="email-form-row">
+        <div class="form-group">
+          <label class="form-label" for="ms365Email">Adresse email MS365 <span class="required">*</span></label>
+          <input
+            id="ms365Email"
+            class="form-input"
+            type="email"
+            placeholder="prenom.nom@itecgroupe.com"
+            [ngModel]="emailInput()"
+            (ngModelChange)="emailInput.set($event)"
+            [disabled]="submittingEmail()"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          type="button"
+          class="btn-submit-email"
+          [disabled]="!emailIsValid() || submittingEmail()"
+          (click)="onOpenEmailModal()"
+        >
+          @if (submittingEmail()) { En cours… } @else { Soumettre l'email }
+        </button>
+      </div>
+      @if (!emailIsValid() && emailInput().length > 0) {
+        <p class="field-error">Adresse email invalide.</p>
+      }
+    }
+  </section>
+
+  <!-- ── SECTION 3: Matériel ──────────────────────────────────────────────── -->
+  <section class="form-section" [class.section-disabled]="isCompleted()">
+    <h2 class="section-title">3. Matériel informatique</h2>
+
+    @if (editableAssets().length === 0) {
+      <p style="font-size:13px;color:#9CA3AF;margin:0 0 12px;">Aucun type d'actif configuré pour cette entité.</p>
+    } @else {
+      <table class="hw-table">
+        <thead>
+          <tr>
+            <th class="hw-th-check">Fourni</th>
+            <th class="hw-th-name">Matériel</th>
+            <th>N° de série (S/N)</th>
+            <th>Marque / Modèle</th>
+            <th>Asset Tag</th>
+            <th class="hw-th-status">Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (asset of editableAssets(); track asset.id; let i = $index) {
+            <tr [class.hw-row-on]="asset.provided" [class.hw-row-off]="!asset.provided">
+              <td class="hw-td-check">
+                <input type="checkbox"
+                  [ngModel]="asset.provided"
+                  (ngModelChange)="toggleAssetProvided(i, $event)"
+                  [disabled]="isCompleted()" />
+              </td>
+              <td class="hw-td-name">{{ asset.assetTypeLabelFr }}</td>
+              <td>
+                <input class="hw-input" type="text" placeholder="SN-…"
+                  [ngModel]="asset.serialNumber"
+                  (ngModelChange)="setAssetField(i, 'serialNumber', $event)"
+                  [disabled]="!asset.provided || isCompleted()" />
+              </td>
+              <td>
+                <input class="hw-input" type="text" placeholder="Marque / Modèle"
+                  [ngModel]="asset.brandModel"
+                  (ngModelChange)="setAssetField(i, 'brandModel', $event)"
+                  [disabled]="!asset.provided || isCompleted()" />
+              </td>
+              <td>
+                <input class="hw-input" type="text" placeholder="AT-…"
+                  [ngModel]="asset.assetTag"
+                  (ngModelChange)="setAssetField(i, 'assetTag', $event)"
+                  [disabled]="!asset.provided || isCompleted()" />
+              </td>
+              <td>
+                <select class="hw-select"
+                  [ngModel]="asset.status"
+                  (ngModelChange)="setAssetField(i, 'status', $event)"
+                  [disabled]="!asset.provided || isCompleted()">
+                  <option value="">—</option>
+                  @for (s of hwStatuses; track s.value) {
+                    <option [value]="s.value">{{ s.label }}</option>
+                  }
+                </select>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <div class="form-group mt-12">
+      <label class="form-label">Notes matériel</label>
+      <textarea
+        class="form-textarea"
+        rows="3"
+        placeholder="Observations sur le matériel…"
+        [ngModel]="hardwareNotes()"
+        (ngModelChange)="hardwareNotes.set($event)"
+      ></textarea>
+    </div>
+  </section>
+
+  <!-- ── SECTION 4: Licences ──────────────────────────────────────────────── -->
+  <section class="form-section" [class.section-disabled]="isCompleted()">
+    <h2 class="section-title">4. Licences applicatives</h2>
+    <div class="checkbox-grid">
+      <label class="check-label">
+        <input type="checkbox" [ngModel]="licenseOffice365()" (ngModelChange)="licenseOffice365.set($event)"> Office 365
+      </label>
+      <label class="check-label">
+        <input type="checkbox" [ngModel]="licenseAutocad()" (ngModelChange)="licenseAutocad.set($event)"> AutoCAD
+      </label>
+      <label class="check-label">
+        <input type="checkbox" [ngModel]="licenseRevit()" (ngModelChange)="licenseRevit.set($event)"> Revit
+      </label>
+      <label class="check-label">
+        <input type="checkbox" [ngModel]="licenseAutodesk()" (ngModelChange)="licenseAutodesk.set($event)"> Autodesk
+      </label>
+      <label class="check-label">
+        <input type="checkbox" [ngModel]="licenseKaspersky()" (ngModelChange)="licenseKaspersky.set($event)"> Kaspersky
+      </label>
+    </div>
+    <div class="form-group mt-12">
+      <label class="form-label">Autres licences</label>
+      <input
+        class="form-input"
+        type="text"
+        placeholder="Logiciels spéciaux…"
+        [ngModel]="licenseOther()"
+        (ngModelChange)="licenseOther.set($event)"
+      >
+    </div>
+  </section>
+
+  <!-- ── SECTION 5: Active Directory ─────────────────────────────────────── -->
+  <section class="form-section" [class.section-disabled]="isCompleted()">
+    <h2 class="section-title">5. Active Directory</h2>
+    <label class="check-label check-ad">
+      <input type="checkbox" [ngModel]="adAccountCreated()" (ngModelChange)="adAccountCreated.set($event)">
+      Compte Active Directory créé
+    </label>
+    <div class="form-group mt-12">
+      <label class="form-label">Type de profil AD</label>
+      <select class="form-select" [ngModel]="adProfileType()" (ngModelChange)="adProfileType.set($event)">
+        @for (opt of adOptions(); track opt.valueCode) {
+          <option [value]="opt.valueCode">{{ opt.labelFr }}</option>
+        }
+      </select>
+    </div>
+  </section>
+
+  <!-- ── SECTION 6: Notes générales ──────────────────────────────────────── -->
+  <section class="form-section" [class.section-disabled]="isCompleted()">
+    <h2 class="section-title">6. Notes générales</h2>
+    <textarea
+      class="form-textarea form-textarea-lg"
+      rows="4"
+      placeholder="Notes internes, observations…"
+      [ngModel]="notes()"
+      (ngModelChange)="notes.set($event)"
+    ></textarea>
+  </section>
+
+  <!-- ── Sticky footer ────────────────────────────────────────────────────── -->
+  <div class="sticky-footer">
+    @if (!isCompleted()) {
+      <button type="button" class="btn-save" [disabled]="saving()" (click)="onSave()">
+        @if (saving()) { Enregistrement… } @else { Enregistrer }
+      </button>
+    }
+    <button
+      type="button"
+      class="btn-complete"
+      [disabled]="!canComplete() || completing() || isCompleted()"
+      [title]="canComplete() ? 'Marquer ce dossier comme terminé' : 'Créez d\'abord le compte MS365 et le compte AD'"
+      (click)="onOpenCompleteModal()"
+    >
+      @if (isCompleted()) { ✓ Provisioning terminé }
+      @else if (completing()) { Finalisation… }
+      @else { Marquer comme terminé }
+    </button>
+  </div>
+
+  @if (isCompleted() && prov()) {
+    <div class="decharge-section">
+      <div class="decharge-card">
+        <div class="decharge-info">
+          <span style="font-size:24px">📄</span>
+          <div>
+            <p class="decharge-title">Decharge de responsabilite</p>
+            <p class="decharge-desc">Ce document formalise la remise du materiel informatique au collaborateur.</p>
+          </div>
+        </div>
+        <app-pdf-download-button
+          label="Generer la decharge"
+          endpoint="/api/hr/documents/decharge-responsabilite"
+          [body]="{ candidateId: prov()!.candidateId, itProvisioningId: prov()!.id, context: 'IT_COMPLETE' }"
+          [filename]="'decharge-responsabilite.pdf'"
+          variant="outline"
+        />
+      </div>
+    </div>
+  }
+
+  <!-- ── Email confirmation modal ─────────────────────────────────────────── -->
+  <app-confirm-email-modal
+    [visible]="showEmailModal()"
+    [candidateName]="p.candidateFullName"
+    [email]="emailInput()"
+    (confirmed)="onEmailConfirmed()"
+    (closed)="showEmailModal.set(false)"
+  />
+
+  <!-- ── Complete confirmation modal ──────────────────────────────────────── -->
+  <app-modal
+    title="Confirmer la finalisation"
+    [visible]="showCompleteModal()"
+    (closed)="showCompleteModal.set(false)"
+    [hasFooter]="true"
+  >
+    <p class="complete-msg">
+      Êtes-vous sûr de vouloir marquer le provisioning de
+      <strong>{{ p.candidateFullName }}</strong> comme <strong>terminé</strong> ?
+      Cette action est définitive.
+    </p>
+    <div slot="footer">
+      <button type="button" class="btn-cancel-sm" (click)="showCompleteModal.set(false)">Annuler</button>
+      <button type="button" class="btn-confirm-complete" (click)="onCompleteConfirmed()">Confirmer</button>
+    </div>
+  </app-modal>
+
+} <!-- end @if prov -->

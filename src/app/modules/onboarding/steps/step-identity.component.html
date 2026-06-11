@@ -1,0 +1,103 @@
+<div class="step-identity">
+  <div class="form-grid">
+
+    <!-- Row 1: firstName | lastName -->
+    <div class="form-group">
+      <label class="form-label">Prénom <span class="req">*</span></label>
+      <input
+        type="text"
+        class="form-input"
+        [ngModel]="firstName()"
+        (ngModelChange)="firstName.set($event); emit()"
+        placeholder="ex. Yassine"
+        autocomplete="given-name"
+      />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Nom <span class="req">*</span></label>
+      <input
+        type="text"
+        class="form-input"
+        [ngModel]="lastName()"
+        (ngModelChange)="lastName.set($event); emit()"
+        placeholder="ex. Rhouma"
+        autocomplete="family-name"
+      />
+    </div>
+
+    <!-- Row 2: dateOfBirth | gender -->
+    <div class="form-group">
+      <label class="form-label">Date de naissance</label>
+      <input
+        type="date"
+        class="form-input"
+        [ngModel]="dateOfBirth()"
+        (ngModelChange)="dateOfBirth.set($event); emit()"
+      />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Genre</label>
+      <select
+        class="form-input form-select"
+        [ngModel]="gender()"
+        (ngModelChange)="gender.set($event); emit()"
+      >
+        @for (opt of (genderOptions$ | async) ?? emptyList; track $index) {
+          <option [value]="opt.valueCode">{{ opt.labelFr }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Row 3: nationality | nationalId -->
+    <div class="form-group">
+      <label class="form-label">Nationalité</label>
+      <select
+        class="form-input"
+        [ngModel]="nationalityId()"
+        (ngModelChange)="nationalityId.set($event); emit()"
+      >
+        <option [ngValue]="null">— Sélectionner —</option>
+        @for (n of nationalities(); track n.id) {
+          <option [ngValue]="n.id">{{ n.labelFr }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">CIN / Identifiant national</label>
+      <input
+        type="text"
+        class="form-input"
+        [ngModel]="nationalId()"
+        (ngModelChange)="nationalId.set($event); emit()"
+        placeholder="ex. 12345678"
+        autocomplete="off"
+      />
+    </div>
+
+    <!-- Row 4 (full-width): passportNumber -->
+    <div class="form-group form-full">
+      <label class="form-label">Numéro de passeport</label>
+      <input
+        type="text"
+        class="form-input"
+        [ngModel]="passportNumber()"
+        (ngModelChange)="passportNumber.set($event); emit()"
+        placeholder="ex. AB1234567"
+        autocomplete="off"
+      />
+    </div>
+
+    <!-- Row 5 (full-width): photo — uploaded after profile creation -->
+    <div class="form-group form-full">
+      <label class="form-label">Photo de profil</label>
+      <div style="background:#f2f4f6;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+        <span class="material-symbols-outlined" style="font-size:18px;color:#44474c;">info</span>
+        <p style="font-size:12px;color:#44474c;margin:0;">La photo de profil pourra être ajoutée depuis la fiche employé après la création du compte.</p>
+      </div>
+    </div>
+
+  </div>
+</div>

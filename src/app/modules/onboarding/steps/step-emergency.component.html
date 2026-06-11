@@ -1,0 +1,43 @@
+<div class="step-emergency">
+  <p class="step-intro">Personne à contacter en cas d'urgence (optionnel).</p>
+
+  <div class="form-grid">
+
+    <div class="form-field form-full">
+      <label class="form-label" for="emergencyContactName">Nom complet</label>
+      <input
+        id="emergencyContactName"
+        class="form-input"
+        type="text"
+        placeholder="ex : Marie Dupont"
+        [ngModel]="emergencyContactName()"
+        (ngModelChange)="emergencyContactName.set($event); emit()"
+      />
+    </div>
+
+    <div class="form-field form-full">
+      <label class="form-label" for="emergencyContactRelation">Relation (ex&nbsp;: Conjoint, Parent…)</label>
+      <input
+        id="emergencyContactRelation"
+        class="form-input"
+        type="text"
+        placeholder="ex : Conjoint(e)"
+        [ngModel]="emergencyContactRelation()"
+        (ngModelChange)="emergencyContactRelation.set($event); emit()"
+      />
+    </div>
+
+    <div class="form-field form-full">
+      <label class="form-label" for="emergencyContactPhone">Téléphone</label>
+      <input
+        id="emergencyContactPhone"
+        class="form-input"
+        type="tel"
+        placeholder="ex : +216 XX XXX XXX"
+        [ngModel]="emergencyContactPhone()"
+        (ngModelChange)="emergencyContactPhone.set($event); emit()"
+      />
+    </div>
+
+  </div>
+</div>

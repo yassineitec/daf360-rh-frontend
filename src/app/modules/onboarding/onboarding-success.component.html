@@ -1,0 +1,28 @@
+<div class="success-page">
+  <div class="success-card">
+
+    <!-- Animated green checkmark -->
+    <div class="check-wrap" aria-hidden="true">
+      <svg class="check-svg" viewBox="0 0 52 52">
+        <circle class="check-circle" cx="26" cy="26" r="25" fill="none" stroke="#27ae60" stroke-width="2"/>
+        <path class="check-tick" d="M14 26l8 8 16-16" fill="none" stroke="#27ae60" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <h1 class="success-title">Dossier créé avec succès !</h1>
+    <p class="success-name">{{ fullName() }}</p>
+    @if (profileId()) {
+      <div class="id-badge">Profil #{{ profileId() }}</div>
+    }
+    <p class="success-email">
+      Un email de bienvenue a été envoyé à
+      <strong class="email-hl">{{ ms365Email() }}</strong>
+    </p>
+
+    <div class="success-actions">
+      <button class="btn-profile" type="button" (click)="goToProfile()">Voir le profil employé</button>
+      <button class="btn-list"    type="button" (click)="goToList()">Retour à la liste</button>
+    </div>
+
+  </div>
+</div>

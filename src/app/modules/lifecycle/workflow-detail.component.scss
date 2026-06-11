@@ -1,0 +1,36 @@
+.breadcrumb { display:flex;align-items:center;gap:6px;padding:16px 24px 0;font-size:12px }
+.bc-link    { color:var(--color-primary,#1C4E5C);text-decoration:none }
+.bc-link:hover { text-decoration:underline }
+.bc-sep,.bc-current { color:var(--color-text-muted,#6B7280) }
+.center-spinner { display:flex;justify-content:center;padding:64px }
+.error-state { text-align:center;padding:48px;color:var(--color-text-muted) }
+
+.warning-banner {
+  display:flex;align-items:center;gap:10px;
+  margin:16px 24px 0;padding:12px 16px;
+  border-radius:8px;border-left:4px solid #D97706;
+  background:#fffbeb;color:#92400e;font-size:13px;
+}
+.warning-banner.blocked { border-color:#DC2626;background:#fff5f5;color:#991b1b }
+.warning-banner strong { font-weight:700 }
+
+.card { background:var(--color-surface,#fff);border:1px solid var(--color-border,#E0E7E9);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08) }
+.wf-header { margin:16px 24px 0;padding:20px 24px }
+.wf-title  { font-family:var(--font-display,'DM Serif Display',serif);font-size:20px;font-weight:400;margin:0 0 10px }
+.wf-chips  { display:flex;flex-wrap:wrap;gap:8px;align-items:center }
+.meta-chip { display:inline-block;padding:2px 10px;border-radius:999px;background:var(--color-bg-secondary,#EEF2F5);font-size:12px;color:var(--color-text-muted,#6B7280) }
+
+.progress-section { margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border,#E0E7E9) }
+.progress-label   { display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--color-text-muted) }
+.progress-pct-val { color:var(--color-primary,#1C4E5C) }
+.progress-bar-lg  { height:8px;border-radius:999px;background:var(--color-border,#E0E7E9);overflow:hidden }
+.progress-fill-lg { height:100%;background:var(--color-primary,#1C4E5C);border-radius:999px;transition:width .4s }
+.progress-fill-lg.done { background:#16A34A }
+.progress-counts  { margin-top:6px;font-size:11px;color:var(--color-text-muted,#6B7280) }
+.wf-notes { margin-top:16px;padding-top:12px;border-top:1px solid var(--color-border) }
+.notes-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted);display:block;margin-bottom:4px }
+.wf-notes p { font-size:13px;color:var(--color-text);margin:0 }
+
+.timeline-section { padding:16px 24px 24px }
+
+.btn-ghost { display:inline-flex;align-items:center;padding:7px 14px;border:1px solid var(--color-border);border-radius:8px;background:none;font-size:13px;cursor:pointer;color:var(--color-text-muted);text-decoration:none }
