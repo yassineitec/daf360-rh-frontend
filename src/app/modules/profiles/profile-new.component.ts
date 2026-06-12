@@ -43,7 +43,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
   template: `
     <!-- ── Breadcrumb ──────────────────────────────────────────────── -->
     <nav class="breadcrumb">
-      <a routerLink="/hr/profiles" class="bc-link">Profils</a>
+      <a routerLink="/profiles" class="bc-link">Profils</a>
       <span class="bc-sep">›</span>
       <span class="bc-current">Nouveau profil</span>
     </nav>
@@ -227,7 +227,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
           @if (step() > 0) {
             <button class="btn-ghost" type="button" (click)="prev()">‹ Précédent</button>
           } @else {
-            <a routerLink="/hr/profiles" class="btn-ghost">Annuler</a>
+            <a routerLink="/profiles" class="btn-ghost">Annuler</a>
           }
 
           @if (step() < steps.length - 1) {
@@ -403,7 +403,7 @@ export class ProfileNewComponent implements OnInit {
       })
     ).subscribe(profile => {
       this.saving.set(false);
-      if (profile) this.router.navigate(['/hr/profiles', profile.id]);
+      if (profile) this.router.navigate(['/profiles', profile.id]);
     });
   }
 

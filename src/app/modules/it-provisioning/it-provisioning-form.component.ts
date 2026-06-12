@@ -11,7 +11,8 @@ import {
   ItAssetDto, ProvisioningDetail, UpdateAssetRequest,
   UpdateProvisioningRequest, computeSteps,
 } from './it-provisioning.model';
-import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 import { ModalComponent }       from '../../shared/modal.component';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
@@ -86,6 +87,7 @@ export class ItProvisioningFormComponent implements OnInit {
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   private provId = 0;
+  protected readonly statusBadge = statusBadge;
 
   ngOnInit(): void {
     this.provId = Number(this.route.snapshot.paramMap.get('id'));
@@ -268,5 +270,5 @@ export class ItProvisioningFormComponent implements OnInit {
     setTimeout(() => this.successMsg.set(null), 4000);
   }
 
-  goBack(): void { this.router.navigate(['/hr/it-provisioning']); }
+  goBack(): void { this.router.navigate(['/it-provisioning']); }
 }

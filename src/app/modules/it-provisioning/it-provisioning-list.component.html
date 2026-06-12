@@ -57,7 +57,7 @@
                 <span class="email-pending">— En attente —</span>
               }
             </td>
-            <td><app-status-badge [status]="r.status" /></td>
+            <td><daf-badge [label]="statusBadge(r.status).label" [options]="statusBadge(r.status).options" /></td>
             <td class="cell-date">{{ r.expectedStartDate ?? '—' }}</td>
             <td>
               <div class="progress-cell" [class.done]="hwProgress(r) === '6/6'">

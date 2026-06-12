@@ -163,7 +163,7 @@ export class OnboardingFormComponent implements OnInit {
       next: (result) => {
         this.submitting.set(false);
         this.showConfirmModal.set(false);
-        this.router.navigate(['/hr/onboarding/success'], {
+        this.router.navigate(['/onboarding/success'], {
           queryParams: {
             profileId:  result.employeeProfileId,
             userId:     result.userId,
@@ -187,6 +187,6 @@ export class OnboardingFormComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/hr/onboarding']);
+    this.router.navigate(['/onboarding']);
   }
 }

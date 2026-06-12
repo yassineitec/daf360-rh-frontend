@@ -2,7 +2,7 @@ import {
   Component, OnChanges, SimpleChanges, inject, input, signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgClass, DatePipe, DecimalPipe } from '@angular/common';
+import {  DatePipe, DecimalPipe } from '@angular/common';
 import { ContractHistoryService } from './contract-history.service';
 import {
   ContractHistoryDto, TypeContratDto, CreateContractRequest,
@@ -11,7 +11,7 @@ import {
 @Component({
   selector: 'app-contract-history',
   standalone: true,
-  imports: [FormsModule, NgClass, DatePipe, DecimalPipe],
+  imports: [FormsModule,  DatePipe, DecimalPipe],
   template: `
 <div style="margin-top:4px;">
 

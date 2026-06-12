@@ -62,7 +62,7 @@
             <td class="cell-date">{{ formatDate(r.expectedStartDate) }}</td>
             <td>
               <div class="status-cell">
-                <app-status-badge [status]="r.candidateStatus" />
+                <daf-badge [label]="statusBadge(r.candidateStatus).label" [options]="statusBadge(r.candidateStatus).options" />
                 @if (r.hasDraft) {
                   <span class="badge-draft">Brouillon</span>
                 }

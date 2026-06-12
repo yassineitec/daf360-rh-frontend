@@ -1,6 +1,6 @@
 <!-- ── Breadcrumb ──────────────────────────────────────────────────────────── -->
 <nav class="breadcrumb" aria-label="Fil d'Ariane">
-  <a routerLink="/hr/profiles" class="bc-link">Profils</a>
+  <a routerLink="/profiles" class="bc-link">Profils</a>
   <span class="bc-sep">›</span>
   <span class="bc-current">Profil #{{ profileId }}</span>
 </nav>
@@ -11,7 +11,7 @@
 } @else if (!profile()) {
   <div class="error-state">
     <p>Impossible de charger ce profil.</p>
-    <a routerLink="/hr/profiles" class="btn-ghost">Retour à la liste</a>
+    <a routerLink="/profiles" class="btn-ghost">Retour à la liste</a>
   </div>
 } @else {
 
@@ -58,7 +58,7 @@
         </div>
       }
       <div class="ph-meta">
-        <app-status-badge [status]="profile()!.lifecycleStatus" />
+        <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
         <span class="ph-sep">·</span>
         <span>{{ profile()!.contractType ?? 'N/A' }}</span>
         <span class="ph-sep">·</span>
@@ -619,7 +619,7 @@
                       <span class="doc-name">{{ doc.fileName ?? doc.documentType }}</span>
                       @if (doc.fileSizeKb) { <span class="doc-size">{{ doc.fileSizeKb }} Ko</span> }
                     </div>
-                    <app-status-badge [status]="doc.verificationStatus" />
+                    <daf-badge [label]="statusBadge(doc.verificationStatus).label" [options]="statusBadge(doc.verificationStatus).options" />
                   </li>
                 }
               </ul>
@@ -699,7 +699,7 @@
   @if (profile()) {
     <div class="transition-body">
       <p class="t-label">Statut actuel</p>
-      <app-status-badge [status]="profile()!.lifecycleStatus" />
+      <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
 
       <p class="t-label" style="margin-top:20px">Nouveau statut *</p>
       <div class="status-options">
@@ -710,7 +710,7 @@
             [class.selected]="transitionTarget() === s"
             (click)="transitionTarget.set(s)"
           >
-            <app-status-badge [status]="s" />
+            <daf-badge [label]="statusBadge(s).label" [options]="statusBadge(s).options" />
             <span>{{ lifecycleLabel(s) }}</span>
           </button>
         }

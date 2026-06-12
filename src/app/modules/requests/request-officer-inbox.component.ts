@@ -7,7 +7,8 @@ import { catchError, of } from 'rxjs';
 
 import { RequestsService }  from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
-import { StatusBadgeComponent }  from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe }      from '../../shared/sla-countdown.pipe';
 import { SpinnerComponent }      from '../../shared/spinner.component';
 import { ModalComponent }        from '../../shared/modal.component';
@@ -23,7 +24,7 @@ import { UserStore }             from '../../core/user.store';
         <h1 class="page-title">Boîte de réception RH</h1>
         <p class="page-sub">{{ total() }} demande{{ total() !== 1 ? 's' : '' }} à traiter</p>
       </div>
-      <a routerLink="/hr/requests" class="btn-ghost">← Mes demandes</a>
+      <a routerLink="/requests" class="btn-ghost">← Mes demandes</a>
     </div>
 
     <!-- Filters -->
@@ -77,9 +78,9 @@ import { UserStore }             from '../../core/user.store';
                   @let sla = slaDeadline(row) | slaCountdown;
                   <span class="sla-chip" [class]="'sla-chip--' + sla.level">{{ sla.label }}</span>
                 </td>
-                <td><app-status-badge [status]="row.status" /></td>
+                <td><daf-badge [label]="statusBadge(row.status).label" [options]="statusBadge(row.status).options" /></td>
                 <td class="cell-actions">
-                  <a [routerLink]="['/hr/requests', row.id]" class="action-link">Détail</a>
+                  <a [routerLink]="['/requests', row.id]" class="action-link">Détail</a>
                   <button class="action-approve" (click)="quickApprove(row)" type="button">✓ Approuver</button>
                   <button class="action-refuse"  (click)="openRefuse(row)"  type="button">✕ Refuser</button>
                 </td>
@@ -148,6 +149,7 @@ export class RequestOfficerInboxComponent implements OnInit {
   filterStatus  = '';
   refuseTarget  = signal<EmployeeRequest | null>(null);
   refuseMotif   = '';
+  protected readonly statusBadge = statusBadge;
 
   private officerId = computed(() => this.userStore.currentUser()?.userId ?? 0);
   private paysId    = computed(() => this.userStore.currentUser()?.paysId ?? 1);

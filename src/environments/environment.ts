@@ -3,5 +3,5 @@ export const environment = {
   /** Portal backend — issues the JWT HttpOnly cookie and exposes /api/me */
   portalUrl: 'http://localhost:8080',
   /** HR service — all /api/hr/* calls */
-  hrApiUrl: 'http://localhost:8082',
+  hrApiUrl: 'http://localhost:8888',
 };

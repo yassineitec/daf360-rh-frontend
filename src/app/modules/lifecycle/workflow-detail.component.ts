@@ -10,7 +10,8 @@ import {
   groupTasksByPhase, computeProgress, findNextDueTask,
 } from './models/lifecycle.model';
 import { TimelineComponent }    from '../../shared/timeline.component';
-import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 
 @Component({
@@ -19,7 +20,7 @@ import { SpinnerComponent }     from '../../shared/spinner.component';
   imports: [RouterLink, TimelineComponent, StatusBadgeComponent, SpinnerComponent],
   template: `
     <nav class="breadcrumb">
-      <a routerLink="/hr/lifecycle" class="bc-link">Lifecycle</a>
+      <a routerLink="/lifecycle" class="bc-link">Lifecycle</a>
       <span class="bc-sep">›</span>
       <span class="bc-current">Workflow #{{ workflowId }}</span>
     </nav>
@@ -29,7 +30,7 @@ import { SpinnerComponent }     from '../../shared/spinner.component';
     } @else if (!workflow()) {
       <div class="error-state">
         <p>Workflow introuvable.</p>
-        <a routerLink="/hr/lifecycle" class="btn-ghost">Retour</a>
+        <a routerLink="/lifecycle" class="btn-ghost">Retour</a>
       </div>
     } @else {
 
@@ -53,7 +54,7 @@ import { SpinnerComponent }     from '../../shared/spinner.component';
         <div class="wf-meta">
           <h1 class="wf-title">{{ eventLabel(workflow()!.eventType) }}</h1>
           <div class="wf-chips">
-            <app-status-badge [status]="workflow()!.status" />
+            <daf-badge [label]="statusBadge(workflow()!.status).label" [options]="statusBadge(workflow()!.status).options" />
             <span class="meta-chip">Profil #{{ workflow()!.employeeProfileId }}</span>
             @if (workflow()!.startDate) {
               <span class="meta-chip">Démarré {{ fmtDate(workflow()!.startDate) }}</span>
@@ -106,6 +107,7 @@ export class WorkflowDetailComponent implements OnInit {
   loading    = signal(true);
   workflow   = signal<WorkflowInstance | null>(null);
   saving     = signal(false);
+  protected readonly statusBadge = statusBadge;
 
   phases      = computed(() => groupTasksByPhase(this.workflow()?.tasks ?? []));
   progressPct = computed(() => computeProgress(this.workflow()?.tasks ?? []));

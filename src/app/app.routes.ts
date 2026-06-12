@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth.guard';
+import { HrShellComponent } from './layout/hr-shell.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/hr/profiles', pathMatch: 'full' },
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 
   // Portal redirects here after successful OAuth2 login.
   // This component re-loads /api/me and then navigates into the app.
@@ -13,12 +13,15 @@ export const routes: Routes = [
   },
 
   {
-    path: 'hr',
-    loadComponent: () =>
-      import('./layout/hr-shell.component').then(m => m.HrShellComponent),
-    canActivate: [authGuard],
+    path: '',
+    component: HrShellComponent,
     children: [
-      { path: '', redirectTo: 'profiles', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: 'dashboard',
+        loadChildren: () =>
+          import('./modules/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES),
+      },
       {
         path: 'profiles',
         loadChildren: () =>
@@ -67,5 +70,5 @@ export const routes: Routes = [
     ],
   },
 
-  { path: '**', redirectTo: '/hr/profiles' },
+  { path: '**', redirectTo: 'dashboard' },
 ];

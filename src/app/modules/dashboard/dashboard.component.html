@@ -1,0 +1,138 @@
+@if (loading()) {
+  <div class="flex items-center justify-center h-screen">
+    <app-spinner />
+  </div>
+} @else {
+
+<div class="p-6 space-y-8">
+
+  <!-- ── Welcome Header ─────────────────────────────────────────────────── -->
+  <header class="flex justify-between items-end">
+    <div>
+      <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+        Portail-RH
+      </h1>
+      <p class="text-[14px] text-outline mt-1">
+        Bonjour {{ userName() }}, voici l'état de vos effectifs aujourd'hui.
+      </p>
+    </div>
+    <div class="flex gap-3">
+      <button
+        type="button"
+        class="px-4 py-2 border border-teal text-teal font-semibold rounded-lg text-[14px]
+               shadow-sm hover:bg-surface-container transition-all flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">account_tree</span>
+        Organigramme
+      </button>
+      <button
+        type="button"
+        class="px-4 py-2 bg-teal text-white font-semibold rounded-lg text-[14px]
+               shadow-sm hover:opacity-90 transition-all flex items-center gap-2"
+        (click)="navigateTo('profiles/new')">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        Nouvel Employé
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Actions Rapides ────────────────────────────────────────────────── -->
+  <section>
+    <h2 class="text-[16px] font-bold text-on-surface mb-4">Actions Rapides</h2>
+    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      @for (action of quickActions(); track action.label) {
+        <rh-quick-action-card
+          [icon]="action.icon"
+          [label]="action.label"
+          [sublabel]="action.sublabel"
+          [route]="action.route"
+          (clicked)="onQuickAction($event)" />
+      }
+    </div>
+  </section>
+
+  <!-- ── Stats Row: watchlist (½) + 2 KPI cards (½) ────────────────────── -->
+  <div class="flex gap-6">
+
+    <!-- Alert card: full width on mobile/tablet → left half on lg+ -->
+    <div class="w-full flex-1">
+      <rh-alert-card [probationAlerts]="probation()" />
+    </div>
+
+    <!-- KPI cards: stacked on mobile → side by side on md+ → right half on lg+ -->
+    <div class="w-full flex-1 flex gap-6">
+      <div class="flex-1 min-w-0">
+        <rh-workforce-stats
+          [totalActifs]="stats()?.totalActifs ?? 0"
+          [pctFemmes]="stats()?.pctFemmes"
+          [pctHommes]="stats()?.pctHommes" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <rh-profile-completion
+          [tauxGlobalPct]="completion()?.completionRate ?? 0"
+          [dossiersIncomplets]="completion()?.incomplete ?? 0" />
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Employee Directory ─────────────────────────────────────────────── -->
+  <section class="border-t border-outline-variant pt-8">
+
+    <!-- Directory search bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <h2 class="text-[16px] font-bold text-on-surface">Annuaire des profils</h2>
+      <div class="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          class="px-4 py-2 border border-teal text-teal font-semibold rounded-lg text-[14px]
+                 shadow-sm hover:bg-surface-container transition-all"
+          (click)="navigateTo('profiles')">
+          Voir tous les profils
+        </button>
+        <div class="relative w-full md:w-64">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2
+                        text-outline text-[18px] pointer-events-none">search</span>
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant
+                   rounded-lg text-[14px] focus:outline-none focus:border-teal transition-colors" />
+        </div>
+        <button
+          type="button"
+          class="flex items-center gap-2 px-4 py-2 bg-teal text-white font-semibold
+                 rounded-lg text-[14px] shadow-sm hover:opacity-90 transition-all">
+          <span class="material-symbols-outlined text-[20px]">tune</span>
+          Filtres
+        </button>
+      </div>
+    </div>
+
+    <!-- 4-col grid: cards (3) + widgets sidebar (1) -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+      <div class="lg:col-span-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          @for (emp of employeeCards(); track emp.profileId) {
+            <rh-employee-card
+              [employee]="emp"
+              (viewProfile)="onViewProfile($event)" />
+          } @empty {
+            <p class="text-[13px] text-outline col-span-2 py-8 text-center">
+              Aucun employé à afficher.
+            </p>
+          }
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <rh-anniversary-widget [items]="anniversaires()" />
+        <rh-new-employees-widget [items]="nouveaux()" />
+      </aside>
+
+    </div>
+  </section>
+
+</div>
+
+}

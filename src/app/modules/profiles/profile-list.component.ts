@@ -10,7 +10,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ProfileService }    from './profile.service';
 import { ProfileFilter, EmployeeListItem } from './models/profile.model';
-import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
+import { avatarUrl }   from '../../shared/utils/avatar.utils';
 import { ModalComponent }       from '../../shared/modal.component';
 import { UserStore }            from '../../core/user.store';
 import { RefDataService }       from '../../core/ref/ref-data.service';
@@ -116,11 +118,7 @@ const PAGE_SIZE = 25;
                   <!-- Nom complet + avatar -->
                   <td class="cell-name">
                     <div class="name-cell">
-                      @if (row.photoUrl) {
-                        <img class="avatar-sm" [src]="row.photoUrl" [alt]="row.fullName" />
-                      } @else {
-                        <span class="avatar-initials">{{ initials(row.fullName) }}</span>
-                      }
+                      <img class="avatar-sm" [src]="row.photoUrl || avatarUrl(row.gender)" [alt]="row.fullName" />
                       <span class="name-text">{{ row.fullName }}</span>
                     </div>
                   </td>
@@ -154,7 +152,7 @@ const PAGE_SIZE = 25;
                   <!-- Statut -->
                   <td class="cell-status">
                     @if (row.hasProfile && row.lifecycleStatus) {
-                      <app-status-badge [status]="row.lifecycleStatus" />
+                      <daf-badge [label]="statusBadge(row.lifecycleStatus).label" [options]="statusBadge(row.lifecycleStatus).options" />
                     } @else {
                       <span class="badge-none">Sans profil</span>
                     }
@@ -165,7 +163,7 @@ const PAGE_SIZE = 25;
                     <div class="actions-wrap">
                       <!-- Voir — always enabled -->
                       @if (row.hasProfile && row.profileId != null) {
-                        <a class="action-btn action-view" [routerLink]="['/hr/profiles', row.profileId]" title="Voir le profil">
+                        <a class="action-btn action-view" [routerLink]="['/profiles', row.profileId]" title="Voir le profil">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                           <span>Voir</span>
                         </a>
@@ -178,7 +176,7 @@ const PAGE_SIZE = 25;
 
                       <!-- Modifier / Créer profil — always enabled -->
                       @if (row.hasProfile && row.profileId != null) {
-                        <a class="action-btn action-edit" [routerLink]="['/hr/profiles', row.profileId]" title="Modifier le profil">
+                        <a class="action-btn action-edit" [routerLink]="['/profiles', row.profileId]" title="Modifier le profil">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           <span>Modifier</span>
                         </a>
@@ -567,6 +565,8 @@ export class ProfileListComponent implements OnInit {
 
   readonly statusOptions = STATUS_OPTIONS;
   readonly skeletonRows  = [1, 2, 3, 4, 5];
+  protected readonly statusBadge = statusBadge;
+  protected readonly avatarUrl   = avatarUrl;
 
   // ── List state ────────────────────────────────────────────────────────────
   loading    = signal(false);

@@ -14,7 +14,7 @@
     <div class="header-left">
       <h1 class="candidate-name">{{ c.firstName }} {{ c.lastName }}</h1>
       <div class="header-meta">
-        <app-status-badge [status]="c.status" />
+        <daf-badge [label]="statusBadge(c.status).label" [options]="statusBadge(c.status).options" />
         @if (c.appliedPosition) {
           <span class="meta-sep">·</span>
           <span class="meta-pos">{{ c.appliedPosition }}</span>
@@ -42,7 +42,7 @@
         </button>
       }
       @if (c.status === 'HIRED') {
-        <a class="btn-action profile-link" routerLink="/hr/profiles">
+        <a class="btn-action profile-link" routerLink="/profiles">
           Voir les profils employés →
         </a>
       }
@@ -88,7 +88,7 @@
       <div class="info-card">
         <h3 class="card-title">IT Provisioning</h3>
         <div class="prov-status">
-          <app-status-badge [status]="prov.status" />
+          <daf-badge [label]="statusBadge(prov.status).label" [options]="statusBadge(prov.status).options" />
         </div>
         @if (prov.ms365Email) {
           <p class="ms365-email">{{ prov.ms365Email }}</p>
@@ -121,7 +121,7 @@
         </div>
 
         <p class="section-label">Active Directory</p>
-        <app-status-badge [status]="prov.adAccountCreated ? 'COMPLETED' : 'PENDING'" />
+        <daf-badge [label]="statusBadge(prov.adAccountCreated ? 'COMPLETED' : 'PENDING').label" [options]="statusBadge(prov.adAccountCreated ? 'COMPLETED' : 'PENDING').options" />
       </div>
     } @else if (showItSection() && !c.itProvisioning) {
       <div class="info-card">

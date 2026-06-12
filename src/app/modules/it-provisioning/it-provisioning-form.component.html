@@ -40,7 +40,7 @@
       <h1 class="candidate-name">{{ p.candidateFullName }}</h1>
       <p class="candidate-sub">{{ p.appliedPosition ?? 'Poste non spécifié' }}</p>
     </div>
-    <app-status-badge [status]="p.status" />
+    <daf-badge [label]="statusBadge(p.status).label" [options]="statusBadge(p.status).options" />
   </div>
 
   <!-- ── SECTION 1: Identité (read-only) ─────────────────────────────────── -->

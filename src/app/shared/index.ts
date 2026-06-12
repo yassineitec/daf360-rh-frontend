@@ -1,7 +1,4 @@
 export * from './permission.directive';
-export * from './status-badge.component';
-export * from './sla-badge.component';
-export * from './badge.component';
 export * from './spinner.component';
 export * from './modal.component';
 export * from './data-table.component';

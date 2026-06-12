@@ -185,11 +185,11 @@ export class CandidateListComponent implements OnInit {
   }
 
   openNewCandidateForm(): void {
-    this.router.navigate(['/hr/candidates/new']);
+    this.router.navigate(['/candidates/new']);
   }
 
   openStatusModal(candidate: CandidateListItem): void {
-    this.router.navigate(['/hr/candidates', candidate.id]);
+    this.router.navigate(['/candidates', candidate.id]);
   }
 
   // ── Quick Accept / Reject from list ───────────────────────────────────────

@@ -10,7 +10,7 @@ import { PermissionDirective } from '../../../shared/permission.directive';
 @Component({
   selector: 'app-legal-rules-admin',
   standalone: true,
-  imports: [NgClass, FormsModule, PermissionDirective],
+  imports: [ FormsModule, PermissionDirective],
   template: `
 <div>
   <!-- Header -->

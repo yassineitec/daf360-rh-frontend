@@ -12,7 +12,8 @@ import {
   LifecycleStatus, LIFECYCLE_TRANSITIONS, LIFECYCLE_LABELS,
   ProfileUpdateDto,
 } from './models/profile.model';
-import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 import { ModalComponent }       from '../../shared/modal.component';
 import { UserStore }            from '../../core/user.store';
@@ -69,6 +70,7 @@ export class ProfileDetailComponent implements OnInit {
   private pdfSvc     = inject(PdfDownloadService);
   private regimeSvc  = inject(RegimeService);
   private refSvc     = inject(RefDataService);
+  protected readonly statusBadge = statusBadge;
 
   profileId = 0;
 

@@ -7,7 +7,8 @@ import { catchError, of } from 'rxjs';
 
 import { RequestsService }   from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
-import { StatusBadgeComponent }  from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe }      from '../../shared/sla-countdown.pipe';
 import { SpinnerComponent }      from '../../shared/spinner.component';
 import { UserStore }             from '../../core/user.store';
@@ -93,7 +94,7 @@ const STATUS_OPTS: { value: string; label: string }[] = [
                   </div>
                 </td>
                 <td class="cell-muted">{{ fmtDate(row.submissionDate) }}</td>
-                <td><app-status-badge [status]="row.status" /></td>
+                <td><daf-badge [label]="statusBadge(row.status).label" [options]="statusBadge(row.status).options" /></td>
                 <td>
                   @if (row.status === 'SUBMITTED' || row.status === 'IN_REVIEW' || row.status === 'PENDING_L2') {
                     @let sla = slaDeadline(row) | slaCountdown;
@@ -150,6 +151,7 @@ export class RequestListComponent implements OnInit {
   showNew    = signal(false);
 
   filterStatus = '';
+  protected readonly statusBadge = statusBadge;
 
   canViewInbox   = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
   currentPaysId  = computed(() => this.userStore.currentUser()?.paysId ?? 1);

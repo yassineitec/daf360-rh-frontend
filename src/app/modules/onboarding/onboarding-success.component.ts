@@ -28,10 +28,10 @@ export class OnboardingSuccessComponent implements OnInit {
   }
 
   goToProfile(): void {
-    this.router.navigate(['/hr/profiles']);
+    this.router.navigate(['/profiles']);
   }
 
   goToList(): void {
-    this.router.navigate(['/hr/onboarding']);
+    this.router.navigate(['/onboarding']);
   }
 }

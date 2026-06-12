@@ -9,7 +9,8 @@ import { catchError, of } from 'rxjs';
 import { RequestsService }      from './requests.service';
 import { EmployeeRequest, GeneratedDocument } from './models/request.model';
 import { ApprovalTimelineComponent } from '../../shared/approval-timeline.component';
-import { StatusBadgeComponent }      from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }          from '../../shared/spinner.component';
 import { UserStore }                 from '../../core/user.store';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
@@ -21,7 +22,7 @@ import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pd
   imports: [RouterLink, FormsModule, SlicePipe, ApprovalTimelineComponent, StatusBadgeComponent, SpinnerComponent, PdfDownloadButtonComponent],
   template: `
     <nav class="breadcrumb">
-      <a routerLink="/hr/requests" class="bc-link">Demandes</a>
+      <a routerLink="/requests" class="bc-link">Demandes</a>
       <span class="bc-sep">›</span>
       <span class="bc-current">Demande #{{ requestId }}</span>
     </nav>
@@ -31,7 +32,7 @@ import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pd
     } @else if (!req()) {
       <div class="error-state">
         <p>Demande introuvable.</p>
-        <a routerLink="/hr/requests" class="btn-ghost">Retour</a>
+        <a routerLink="/requests" class="btn-ghost">Retour</a>
       </div>
     } @else {
 
@@ -44,7 +45,7 @@ import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pd
           <div class="req-header card">
             <div class="req-title-row">
               <h1 class="req-title">{{ req()!.typeDisplayNameFr ?? 'Demande #' + req()!.requestTypeId }}</h1>
-              <app-status-badge [status]="req()!.status" />
+              <daf-badge [label]="statusBadge(req()!.status).label" [options]="statusBadge(req()!.status).options" />
             </div>
             <div class="req-meta">
               <span class="meta-chip">Profil #{{ req()!.employeeProfileId }}</span>
@@ -101,7 +102,7 @@ import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pd
                 <span class="profile-label">Profil ID</span>
                 <span>{{ req()!.employeeProfileId }}</span>
               </div>
-              <a [routerLink]="['/hr/profiles', req()!.employeeProfileId]"
+              <a [routerLink]="['/profiles', req()!.employeeProfileId]"
                  class="profile-link">Voir le profil complet →</a>
             </div>
 
@@ -267,6 +268,7 @@ export class RequestDetailComponent implements OnInit {
   errorMsg   = signal<string | null>(null);
   generatedDoc = signal<GeneratedDocumentResponse | null>(null);
   actionComment = '';
+  protected readonly statusBadge = statusBadge;
 
   readonly DOCUMENT_TYPES = [
     'ATTESTATION_TRAVAIL',

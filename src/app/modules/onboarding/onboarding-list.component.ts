@@ -2,7 +2,8 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { OnboardingService }    from './onboarding.service';
 import { OnboardingListItem }   from './onboarding.model';
-import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
@@ -17,6 +18,7 @@ export class OnboardingListComponent implements OnInit {
   items   = signal<OnboardingListItem[]>([]);
   loading = signal(true);
   error   = signal<string | null>(null);
+  protected readonly statusBadge = statusBadge;
 
   ngOnInit(): void { this.load(); }
 
@@ -30,7 +32,7 @@ export class OnboardingListComponent implements OnInit {
   }
 
   navigate(id: number): void {
-    this.router.navigate(['/hr/onboarding', id]);
+    this.router.navigate(['/onboarding', id]);
   }
 
   formatDate(value: string | null): string {

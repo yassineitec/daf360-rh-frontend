@@ -58,7 +58,7 @@
                     <p class="cand-name">{{ c.firstName }} {{ c.lastName }}</p>
                     <p class="cand-pos">{{ c.appliedPosition ?? '—' }}</p>
                   </div>
-                  <app-status-badge [status]="c.status" />
+                  <daf-badge [label]="statusBadge(c.status).label" [options]="statusBadge(c.status).options" />
                 </div>
                 <div class="card-meta">
                   <span>{{ c.contractType ?? '—' }}</span>

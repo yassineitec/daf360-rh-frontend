@@ -30,10 +30,10 @@ export class AuthCallbackComponent implements OnInit {
     await this.store.loadCurrentUser();
 
     if (this.store.isAuthenticated()) {
-      this.router.navigate(['/hr/profiles']);
+      this.router.navigate(['/profiles']);
     } else {
       // Should not happen unless the JWT cookie was not set
-      this.router.navigate(['/hr/profiles']);
+      this.router.navigate(['/profiles']);
     }
   }
 }

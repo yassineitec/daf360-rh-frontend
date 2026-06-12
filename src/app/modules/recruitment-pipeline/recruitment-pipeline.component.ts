@@ -2,7 +2,8 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { StatusBadgeComponent } from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 
 interface PipelineCandidate {
@@ -29,13 +30,13 @@ const STAGES: Stage[] = [
   { key: 'pending',   label: 'Candidatures',         statuses: ['PENDING'],
     color: '#95a5a6', icon: '📋', nextRoute: null, nextLabel: null },
   { key: 'accepted',  label: 'Acceptés — IT à faire', statuses: ['ACCEPTED'],
-    color: '#27ae60', icon: '✅', nextRoute: () => '/hr/it-provisioning', nextLabel: 'Provisioning IT →' },
+    color: '#27ae60', icon: '✅', nextRoute: () => '/it-provisioning', nextLabel: 'Provisioning IT →' },
   { key: 'it',        label: 'Provisioning IT',       statuses: ['IT_IN_PROGRESS','EMAIL_CREATED'],
-    color: '#3498db', icon: '💻', nextRoute: () => '/hr/it-provisioning', nextLabel: 'Ouvrir →' },
+    color: '#3498db', icon: '💻', nextRoute: () => '/it-provisioning', nextLabel: 'Ouvrir →' },
   { key: 'onboarding',label: 'Onboarding RH',         statuses: ['EMAIL_RECEIVED','HR_IN_PROGRESS'],
-    color: '#f39c12', icon: '📝', nextRoute: (c) => '/hr/onboarding/' + c.id, nextLabel: 'Compléter →' },
+    color: '#f39c12', icon: '📝', nextRoute: (c) => '/onboarding/' + c.id, nextLabel: 'Compléter →' },
   { key: 'hired',     label: 'Embauchés',             statuses: ['HIRED'],
-    color: '#1e8449', icon: '🎉', nextRoute: () => '/hr/profiles', nextLabel: 'Voir les profils →' },
+    color: '#1e8449', icon: '🎉', nextRoute: () => '/profiles', nextLabel: 'Voir les profils →' },
   { key: 'rejected',  label: 'Rejetés / Archivés',    statuses: ['REJECTED','ARCHIVED'],
     color: '#e74c3c', icon: '❌', nextRoute: null, nextLabel: null },
 ];
@@ -56,6 +57,7 @@ export class RecruitmentPipelineComponent implements OnInit {
   error   = signal<string | null>(null);
 
   readonly stages = STAGES;
+  protected readonly statusBadge = statusBadge;
 
   readonly grouped = computed(() =>
     STAGES.map(stage => ({
@@ -86,5 +88,5 @@ export class RecruitmentPipelineComponent implements OnInit {
   }
 
   navigate(path: string): void { this.router.navigate([path]); }
-  goToCandidate(id: number): void { this.router.navigate(['/hr/candidates', id]); }
+  goToCandidate(id: number): void { this.router.navigate(['/candidates', id]); }
 }

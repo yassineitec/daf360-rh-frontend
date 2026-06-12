@@ -2,7 +2,8 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ItProvisioningService }  from './it-provisioning.service';
 import { ProvisioningListItem }   from './it-provisioning.model';
-import { StatusBadgeComponent }   from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }       from '../../shared/spinner.component';
 
 @Component({
@@ -19,6 +20,7 @@ export class ItProvisioningListComponent implements OnInit {
   items   = signal<ProvisioningListItem[]>([]);
   loading = signal(true);
   error   = signal<string | null>(null);
+  protected readonly statusBadge = statusBadge;
 
   ngOnInit(): void { this.load(); }
 
@@ -47,6 +49,6 @@ export class ItProvisioningListComponent implements OnInit {
   }
 
   navigate(id: number): void {
-    this.router.navigate(['/hr/it-provisioning', id]);
+    this.router.navigate(['/it-provisioning', id]);
   }
 }

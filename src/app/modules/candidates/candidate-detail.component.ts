@@ -5,7 +5,8 @@ import { CandidateService }      from './candidate.service';
 import { CandidateDetail }       from './candidate.model';
 import { CandidateFormComponent } from './candidate-form.component';
 import { RejectModalComponent }   from './reject-modal.component';
-import { StatusBadgeComponent }   from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }       from '../../shared/spinner.component';
 import { UserStore }              from '../../core/user.store';
 
@@ -41,6 +42,7 @@ export class CandidateDetailComponent implements OnInit {
   cvSuccess    = signal<string | null>(null);
 
   private candidateId = 0;
+  protected readonly statusBadge = statusBadge;
 
   readonly canAcceptReject = computed(() =>
     this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'),
@@ -98,14 +100,14 @@ export class CandidateDetailComponent implements OnInit {
   onFormClosed(): void {
     this.showForm.set(false);
     if (!this.candidateId) {
-      this.router.navigate(['/hr/candidates']);
+      this.router.navigate(['/candidates']);
     }
   }
 
   onFormSaved(): void {
     this.showForm.set(false);
     if (!this.candidateId) {
-      this.router.navigate(['/hr/candidates']);
+      this.router.navigate(['/candidates']);
       return;
     }
     this.loadCandidate();
@@ -125,15 +127,15 @@ export class CandidateDetailComponent implements OnInit {
   );
 
   goBack(): void {
-    this.router.navigate(['/hr/candidates']);
+    this.router.navigate(['/candidates']);
   }
 
   goToProvisioning(provId: number): void {
-    this.router.navigate(['/hr/it-provisioning', provId]);
+    this.router.navigate(['/it-provisioning', provId]);
   }
 
   goToOnboarding(): void {
-    this.router.navigate(['/hr/onboarding', this.candidateId]);
+    this.router.navigate(['/onboarding', this.candidateId]);
   }
 
   // ── CV ────────────────────────────────────────────────────────────────────

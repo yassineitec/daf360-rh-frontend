@@ -8,7 +8,8 @@ import {
   WorkflowInstance, WorkflowStatus, WORKFLOW_EVENT_TYPES, EVENT_TYPE_LABELS,
   computeProgress, findNextDueTask, WorkflowFilter,
 } from './models/lifecycle.model';
-import { StatusBadgeComponent }      from '../../shared/status-badge.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe }          from '../../shared/sla-countdown.pipe';
 import { SpinnerComponent }          from '../../shared/spinner.component';
 import { NewWorkflowModalComponent } from './new-workflow-modal.component';
@@ -76,7 +77,7 @@ import { NewWorkflowModalComponent } from './new-workflow-modal.component';
               <tr class="data-row" [routerLink]="[row.id]">
                 <td class="cell-id">Profil #{{ row.employeeProfileId }}</td>
                 <td><span class="event-chip">{{ eventLabel(row.eventType) }}</span></td>
-                <td><app-status-badge [status]="row.status" /></td>
+                <td><daf-badge [label]="statusBadge(row.status).label" [options]="statusBadge(row.status).options" /></td>
                 <td>
                   <div class="progress-cell">
                     <div class="progress-bar">
@@ -136,6 +137,7 @@ export class LifecycleDashboardComponent implements OnInit {
 
   filterStatus    = '';
   filterEventType = '';
+  protected readonly statusBadge = statusBadge;
 
   readonly statusOptions = [
     { value: 'OPEN',        label: 'Ouvert' },
