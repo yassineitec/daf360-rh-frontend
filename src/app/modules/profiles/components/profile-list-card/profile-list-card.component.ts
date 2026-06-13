@@ -151,7 +151,7 @@ export class ProfileListCardComponent {
   hovered = signal(false);
 
   handleSelect(checked: boolean): void {
-    const id = this.employee().profileId;
+    const id = this.employee().userId;
     if (id != null) this.onSelect.emit({ profileId: id, checked });
   }
 

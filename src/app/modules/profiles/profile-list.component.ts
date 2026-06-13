@@ -53,9 +53,9 @@ export class ProfileListComponent implements OnInit {
   selectedCount = computed(() => this.selectedIds().size);
 
   isAllSelected = computed(() => {
-    const withProfile = this.employees().filter(e => e.profileId !== null);
+    const withProfile = this.employees().filter(e => e.userId !== null);
     return withProfile.length > 0 &&
-           withProfile.every(e => this.selectedIds().has(e.profileId!));
+           withProfile.every(e => this.selectedIds().has(e.userId!));
   });
 
   /* ── Derived ────────────────────────────────────────────────────────────── */
@@ -166,16 +166,13 @@ export class ProfileListComponent implements OnInit {
   }
 
   /* ── Selection methods ──────────────────────────────────────────────────── */
-  toggleSelect(profileId: number, checked: boolean): void {
-    console.log(profileId);
-    
+  toggleSelect(userId: number, checked: boolean): void {     
     this.selectedIds.update(set => {
       const next = new Set(set);
-      checked ? next.add(profileId) : next.delete(profileId);
+      checked ? next.add(userId) : next.delete(userId);
       return next;
-    });
-    console.log(this.selectedIds);
-    
+    });   
+     
   }
 
   selectAll(): void {
@@ -185,7 +182,7 @@ export class ProfileListComponent implements OnInit {
           .map(e => e.userId)
           .filter((id): id is number => id !== null),
       )
-    );
+    );    
   }
 
   clearSelection(): void {

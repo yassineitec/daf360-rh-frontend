@@ -12,7 +12,7 @@ import { Component, input, output } from '@angular/core';
         [value]="value()"
         [placeholder]="placeholder()"
         (input)="searchChange.emit($any($event.target).value)"
-        class="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-xl
+        class="w-full pl-10 pr-4 py-2.5 border border-outline-variant rounded-lg
                text-[14px] bg-white focus:outline-none focus:border-[#1b3a4b]
                placeholder:text-outline/50 transition-colors" />
     </div>

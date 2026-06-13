@@ -22,19 +22,22 @@
 
   <!-- ── Search + controls ────────────────────────────────────────────── -->
   <div class="flex items-center gap-3">
-    <rh-profile-search-bar
+    <div class="flex w-1/2 justify-start gap-4">
+          <rh-profile-search-bar
       class="flex-1"
       [value]="searchQuery()"
       (searchChange)="onSearch($event)" />
 
     <button
       type="button"
-      class="flex items-center gap-2 px-4 py-2.5 border border-outline-variant rounded-xl
+      class="flex items-center gap-2 px-4 py-2.5 border border-outline-variant rounded-lg
              text-[14px] font-semibold hover:bg-surface-container transition-colors shrink-0">
       <span class="material-symbols-outlined text-[18px] text-outline">tune</span>
       Filtres avancés
     </button>
+    </div>
 
+    <div class="flex w-1/2 justify-end">
     <!-- View mode toggle -->
     <div class="flex border border-outline-variant rounded-lg overflow-hidden shrink-0">
       <button
@@ -57,6 +60,7 @@
         title="Liste">
         <span class="material-symbols-outlined text-[20px]">view_list</span>
       </button>
+    </div>
     </div>
   </div>
 
@@ -139,13 +143,13 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        @for (emp of employees(); track emp.profileId ?? emp.userId) {
+        @for (emp of employees(); track emp.userId ?? emp.userId) {
           <rh-profile-grid-card
             [employee]="emp"
-            [selected]="selIds.has(emp.profileId!)"
+            [selected]="selIds.has(emp.userId!)"
             (viewProfile)="onViewProfile($event)"
             (moreActions)="onViewProfile($event)"
-            (onSelect)="toggleSelect($event.profileId, $event.checked)"
+            (onSelect)="toggleSelect($event.userId, $event.checked)"
             (onEdit)="onEdit($event)"
             (onDelete)="onDelete($event)" />
         }
@@ -187,10 +191,10 @@
       </div>
 
       <div class="flex flex-col gap-3">
-        @for (emp of employees(); track emp.profileId ?? emp.userId) {
+        @for (emp of employees(); track emp.userId) {
           <rh-profile-list-card
             [employee]="emp"
-            [selected]="selIds.has(emp.profileId!)"
+            [selected]="selIds.has(emp.userId!)"
             (viewProfile)="onViewProfile($event)"
             (moreActions)="onViewProfile($event)"
             (onSelect)="toggleSelect($event.profileId, $event.checked)"

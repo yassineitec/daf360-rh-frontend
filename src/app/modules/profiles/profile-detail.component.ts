@@ -58,7 +58,7 @@ type SectionKey = 'identite' | 'emploi' | 'poste' | 'regime' | 'contact' | 'urge
 @Component({
   selector: 'app-profile-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, SlicePipe, StatusBadgeComponent, SpinnerComponent, ModalComponent, FieldComponent, PdfDownloadButtonComponent, ContractHistoryComponent],
+  imports: [RouterLink, FormsModule, StatusBadgeComponent, SpinnerComponent, ModalComponent, FieldComponent, PdfDownloadButtonComponent, ContractHistoryComponent],
   templateUrl: './profile-detail.component.html',
   styleUrl:    './profile-detail.component.scss',
 })

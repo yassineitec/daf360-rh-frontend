@@ -362,12 +362,12 @@
                   <span style="display:inline-block;margin-top:8px;background:#ede9fe;color:#5b21b6;font-size:11px;padding:2px 10px;border-radius:999px;font-weight:700;">Horaires flexibles</span>
                 }
               </div>
-              <span style="font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;"
-                [ngClass]="{
+              <span style="font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;">
+                <!-- [ngClass]="{
                   'regime-override': resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE',
                   'regime-role':     resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT',
                   'regime-default':  resolvedRegime()!.assignmentLevel === 'DEFAULT'
-                }">
+                }"> -->
                 {{ resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'Override personnel'
                    : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? 'Assignation par rôle'
                    : 'Défaut entité' }}
@@ -638,7 +638,7 @@
           @for (doc of generatedDocs(); track doc.id) {
             <div class="doc-history-row">
               <span class="doc-type">{{ doc.documentType.replace('_', ' ') }}</span>
-              <span class="doc-date">{{ doc.generatedAt | slice:0:10 }}</span>
+              <!-- <span class="doc-date">{{ doc.generatedAt | slice:0:10 }}</span> -->
               <code class="doc-code">{{ doc.verificationCode }}</code>
               <app-pdf-download-button
                 label="Telecharger"
