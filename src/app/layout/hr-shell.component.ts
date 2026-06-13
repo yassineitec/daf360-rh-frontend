@@ -20,7 +20,7 @@ interface AppNavDef {
 
 const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'dashboard',       label: 'Dashboard',       icon: 'dashboard',            route: 'dashboard',       permission: null },
-  { id: 'profiles',        label: 'Profils',         icon: 'account_circle',       route: 'profiles',        permission: 'HR_CREATE_PROFILE' },
+  { id: 'profiles',        label: 'Profils',         icon: 'account_circle',       route: 'profiles',        permission: null },
   { id: 'recrutement',     label: 'Pipeline RH',     icon: 'analytics',            route: 'recrutement',     permission: 'VIEW_CANDIDATES' },
   { id: 'candidates',      label: 'Candidats',       icon: 'group_add',            route: 'candidates',      permission: 'VIEW_CANDIDATES' },
   { id: 'it-provisioning', label: 'Provisioning IT', icon: 'devices',              route: 'it-provisioning', permission: 'IT_PROVISIONING' },

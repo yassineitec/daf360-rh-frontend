@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   DashboardService,
   WorkforceStats,
@@ -29,6 +29,7 @@ interface QuickActionDef {
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    RouterLink,
     SpinnerComponent,
     QuickActionCardComponent,
     AlertCardComponent,
