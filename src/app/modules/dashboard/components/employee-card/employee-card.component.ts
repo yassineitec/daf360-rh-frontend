@@ -9,6 +9,7 @@ export interface EmployeeCardData {
   anciennete:       string;
   presenceStatus:   'PRESENT' | 'TELETRAVAIL' | 'ABSENT';
   photoUrl:         string | null;
+  gender:           string | null;
   initials:         string;
   completionPerso:  boolean;
   completionDocs:   boolean;
@@ -53,10 +54,8 @@ export interface EmployeeCardData {
             <img [src]="employee().photoUrl!" [alt]="employee().fullName"
                  class="w-full h-full object-cover" />
           } @else {
-            <div class="w-full h-full bg-surface-container flex items-center justify-center
-                        text-[12px] font-bold text-on-surface">
-              {{ employee().initials }}
-            </div>
+            <img [src]="avatarSrc()" [alt]="employee().fullName"
+                 class="w-full h-full object-cover" />
           }
         </div>
         <div>
@@ -109,6 +108,12 @@ export class EmployeeCardComponent {
   readonly employee    = input.required<EmployeeCardData>();
   readonly viewProfile = output<number | null>();
   readonly moreActions = output<number | null>();
+
+  avatarSrc(): string {
+    return this.employee().gender === 'F'
+      ? 'images/avatars/female.png'
+      : 'images/avatars/male.png';
+  }
 
   completionCells() {
     const e = this.employee();

@@ -86,6 +86,7 @@ export class DashboardComponent implements OnInit {
       anciennete:       emp.hireDate ? this.ancienneteLabel(emp.hireDate) : '—',
       presenceStatus:   'PRESENT' as const,
       photoUrl:         emp.photoUrl,
+      gender:           emp.gender,
       initials:         this.initials(emp.fullName),
       completionPerso:  emp.hasProfile,
       completionDocs:   false,
