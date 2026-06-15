@@ -67,12 +67,12 @@ export class ProfileService {
     return this.http.get<EmployeeDocument[]>(`${this.base}/profiles/${profileId}/documents`);
   }
 
-  uploadDocument(profileId: number, file: File, documentType: string): Observable<EmployeeDocument> {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('documentType', documentType);
-    return this.http.post<EmployeeDocument>(`${this.base}/profiles/${profileId}/documents`, fd);
-  }
+  // uploadDocument(profileId: number, file: File, documentType: string): Observable<EmployeeDocument> {
+  //   const fd = new FormData();
+  //   fd.append('file', file);
+  //   fd.append('documentType', documentType);
+  //   return this.http.post<EmployeeDocument>(`${this.base}/profiles/${profileId}/documents`, fd);
+  // }
 
   verifyDocument(profileId: number, docId: number, status: 'VERIFIED' | 'REJECTED'): Observable<EmployeeDocument> {
     return this.http.patch<EmployeeDocument>(

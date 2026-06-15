@@ -1,4 +1,4 @@
-import { Component, Injector, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Injector, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { Router, NavigationEnd, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { filter, map } from 'rxjs';
@@ -7,8 +7,9 @@ import { environment } from '../../environments/environment';
 import { UserStore } from '../core/user.store';
 import { AuthService } from '../core/auth.service';
 import { RemoteStylesService } from '../core/remote-styles.service';
-import { SideNavComponent } from '@khalilrebhiitec/daf360';
+import { SideNavComponent, UserActions } from '@khalilrebhiitec/daf360';
 import type { NavItem, SideNavConfig } from '@khalilrebhiitec/daf360';
+import { Store } from '@ngrx/store';
 
 interface AppNavDef {
   id: string;
@@ -21,14 +22,14 @@ interface AppNavDef {
 const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'dashboard',       label: 'Dashboard',       icon: 'dashboard',            route: 'dashboard',       permission: null },
   { id: 'profiles',        label: 'Profils',         icon: 'account_circle',       route: 'profiles',        permission: null },
-  { id: 'recrutement',     label: 'Pipeline RH',     icon: 'analytics',            route: 'recrutement',     permission: 'VIEW_CANDIDATES' },
-  { id: 'candidates',      label: 'Candidats',       icon: 'group_add',            route: 'candidates',      permission: 'VIEW_CANDIDATES' },
-  { id: 'it-provisioning', label: 'Provisioning IT', icon: 'devices',              route: 'it-provisioning', permission: 'IT_PROVISIONING' },
-  { id: 'onboarding',      label: 'Onboarding',      icon: 'person_add',           route: 'onboarding',      permission: 'HR_ONBOARDING' },
-  { id: 'leave',           label: 'Congés',          icon: 'beach_access',         route: 'leave',           permission: 'RESPONSE_LEAVE' },
-  { id: 'lifecycle',       label: 'Lifecycle',       icon: 'timeline',             route: 'lifecycle',       permission: 'VIEW_WORKFLOW' },
+  { id: 'recrutement',     label: 'Pipeline RH',     icon: 'analytics',            route: 'recrutement',     permission: null },
+  { id: 'candidates',      label: 'Candidats',       icon: 'group_add',            route: 'candidates',      permission: null },
+  { id: 'it-provisioning', label: 'Provisioning IT', icon: 'devices',              route: 'it-provisioning', permission: null },
+  { id: 'onboarding',      label: 'Onboarding',      icon: 'person_add',           route: 'onboarding',      permission: null },
+  { id: 'leave',           label: 'Congés',          icon: 'beach_access',         route: 'leave',           permission: null },
+  { id: 'lifecycle',       label: 'Lifecycle',       icon: 'timeline',             route: 'lifecycle',       permission: null },
   { id: 'requests',        label: 'Demandes',        icon: 'inbox',                route: 'requests',        permission: null },
-  { id: 'admin',           label: 'Admin',           icon: 'admin_panel_settings', route: 'admin',           permission: 'HR_ADMIN_ROLES' },
+  { id: 'admin',           label: 'Admin',           icon: 'admin_panel_settings', route: 'admin',           permission: null },
 ];
 
 @Component({
@@ -45,6 +46,7 @@ export class HrShellComponent implements OnInit {
   private auth            = inject(AuthService);
   private injector        = inject(Injector);
   private remoteStyles    = inject(RemoteStylesService);
+  private store           = inject(Store);
 
   onboardingCount = signal(0);
 
@@ -77,6 +79,24 @@ export class HrShellComponent implements OnInit {
 
   ngOnInit(): void {
     this.remoteStyles.injectStyles(4203);
+
+    effect(() => {
+      const user = this.userStore.currentUser();
+      if (user) {
+        this.store.dispatch(UserActions.loadCurrentUserSuccess({
+          user: {
+            id:          user.userId,
+            fullName:    user.fullName,
+            email:       user.email,
+            roleName:    user.roleName,
+            photoUrl:    user.photoUrl ?? undefined,
+            permissions: user.permissions,
+            paysId:      String(user.paysId),
+          },
+        }));
+      }
+    }, { injector: this.injector });
+
     if (this.userStore.hasPermission('HR_ONBOARDING')) {
       this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/onboarding/pending`).subscribe({
         next:  list => this.onboardingCount.set(list.length),

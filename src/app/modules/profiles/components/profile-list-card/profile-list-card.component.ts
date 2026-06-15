@@ -3,6 +3,7 @@ import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { EmployeeListItem } from '../../models/profile.model';
 import { avatarUrl } from '../../../../shared/utils/avatar.utils';
 import { statusBadge } from '../../../../shared/status-badge.utils';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'rh-profile-list-card',
@@ -32,7 +33,7 @@ import { statusBadge } from '../../../../shared/status-badge.utils';
       <!-- Avatar -->
       <div class="w-12 h-12 rounded-full border border-[#79D7BE] overflow-hidden shrink-0">
         <img
-          [src]="employee().photoUrl || avatarUrl(employee().gender)"
+          [src]="resolvePhoto(employee().photoUrl) || avatarUrl(employee().gender)"
           [alt]="employee().fullName"
           class="w-full h-full object-cover" />
       </div>
@@ -163,6 +164,12 @@ export class ProfileListCardComponent {
   emitDelete(): void {
     const id = this.employee().profileId;
     if (id != null) this.onDelete.emit(id);
+  }
+
+  resolvePhoto(url: string | null): string | null {
+    if (!url) return null;
+    if (url.startsWith('/api/')) return environment.hrApiUrl + url;
+    return url;
   }
 
   formatDate(dateStr: string | null): string {

@@ -189,11 +189,13 @@ export class ProfileDetailComponent implements OnInit {
 
   // ── Document upload ─────────────────────────────────────────────────────────
   onFileChange(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    this.svc.uploadDocument(this.profileId, file, this.uploadType)
-      .pipe(catchError(() => of(null)))
-      .subscribe(doc => { if (doc) this.documents.update(d => [doc, ...d]); });
+    // const file = (e.target as HTMLInputElement).files?.[0];
+    // if (!file) return;
+    // this.svc.uploadDocument(this.profileId, file, this.uploadType)
+    //   .pipe(catchError(() => of(null)))
+    //   .subscribe(doc => { if (doc) this.documents.update(d => [doc, ...d]); });
+    console.log(e);
+    
   }
 
   // ── Photo upload ────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@
   <a
     *appHasPermission="'CREATE_CANDIDATE'"
     class="btn-primary"
-    routerLink="/candidates/new"
+    routerLink="new"
   >
     <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
     Nouveau candidat
@@ -237,7 +237,7 @@
 
                   <a
                     class="btn-action view"
-                    [routerLink]="['/candidates', c.id]"
+                    [routerLink]="[c.id]"
                     title="Voir le dossier"
                   >
                     <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>

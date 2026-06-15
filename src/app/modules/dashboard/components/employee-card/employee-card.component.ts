@@ -1,5 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { environment } from '../../../../../environments/environment';
+import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
 export interface EmployeeCardData {
   profileId:        number | null;
@@ -50,13 +52,9 @@ export interface EmployeeCardData {
       <!-- Avatar + info -->
       <div class="flex items-start gap-4 mb-4">
         <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0">
-          @if (employee().photoUrl) {
-            <img [src]="employee().photoUrl!" [alt]="employee().fullName"
-                 class="w-full h-full object-cover" />
-          } @else {
-            <img [src]="avatarSrc()" [alt]="employee().fullName"
-                 class="w-full h-full object-cover" />
-          }
+          <img [src]="getAvatarUrl(resolvePhoto(employee().photoUrl), employee().gender)"
+               [alt]="employee().fullName"
+               class="w-full h-full object-cover" />
         </div>
         <div>
           <h3 class="text-[14px] font-bold text-on-surface">{{ employee().fullName }}</h3>
@@ -108,11 +106,12 @@ export class EmployeeCardComponent {
   readonly employee    = input.required<EmployeeCardData>();
   readonly viewProfile = output<number | null>();
   readonly moreActions = output<number | null>();
+  readonly getAvatarUrl = getAvatarUrl;
 
-  avatarSrc(): string {
-    return this.employee().gender === 'F'
-      ? 'images/avatars/female.png'
-      : 'images/avatars/male.png';
+  resolvePhoto(url: string | null): string | null {
+    if (!url) return null;
+    if (url.startsWith('/api/')) return environment.hrApiUrl + url;
+    return url;
   }
 
   completionCells() {

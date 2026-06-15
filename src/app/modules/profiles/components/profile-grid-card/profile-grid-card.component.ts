@@ -1,6 +1,7 @@
 import { Component, input, output, signal } from '@angular/core';
 import { EmployeeListItem } from '../../models/profile.model';
 import { avatarUrl } from '../../../../shared/utils/avatar.utils';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'rh-profile-grid-card',
@@ -54,7 +55,7 @@ import { avatarUrl } from '../../../../shared/utils/avatar.utils';
       <div class="flex items-start gap-4 mt-1">
         <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0">
           <img
-            [src]="employee().photoUrl || avatarUrl(employee().gender)"
+            [src]="resolvePhoto(employee().photoUrl) || avatarUrl(employee().gender)"
             [alt]="employee().fullName"
             class="w-full h-full object-cover" />
         </div>
@@ -124,6 +125,12 @@ export class ProfileGridCardComponent {
   readonly avatarUrl   = avatarUrl;
 
   hovered = signal(false);
+
+  resolvePhoto(url: string | null): string | null {
+    if (!url) return null;
+    if (url.startsWith('/api/')) return environment.hrApiUrl + url;
+    return url;
+  }
 
   handleSelect(checked: boolean): void {        
     const id = this.employee().userId;

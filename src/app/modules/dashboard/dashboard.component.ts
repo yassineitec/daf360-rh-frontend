@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import {
   DashboardService,
   WorkforceStats,
@@ -42,9 +42,10 @@ interface QuickActionDef {
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
-  private dashboardSvc = inject(DashboardService);
-  private userStore    = inject(UserStore);
-  private router       = inject(Router);
+  private dashboardSvc    = inject(DashboardService);
+  private userStore       = inject(UserStore);
+  private router          = inject(Router);
+  private activatedRoute  = inject(ActivatedRoute);
 
   // ── Raw signals ────────────────────────────────────────────────────────────
   readonly loading              = signal(true);
@@ -136,7 +137,7 @@ export class DashboardComponent implements OnInit {
   }
 
   onViewProfile(id: number | null): void {
-    if (id != null) this.router.navigate(['profiles', id]);
+    if (id != null) this.router.navigate(['../profiles', id], { relativeTo: this.activatedRoute });
   }
 
   onQuickAction(route?: string): void {

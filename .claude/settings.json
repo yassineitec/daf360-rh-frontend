@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\('ngrx:', require\\('./node_modules/@ngrx/store/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\('angular:', require\\('./node_modules/@angular/core/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\('lib:', require\\('./node_modules/@khalilrebhiitec/daf360/package.json'\\).version\\)\")",
+      "Bash(node -e \"try { console.log\\('effects:', require\\('./node_modules/@ngrx/effects/package.json'\\).version\\) } catch\\(e\\) { console.log\\('effects: NOT INSTALLED'\\) }\")",
+      "Bash(node -e \"console.log\\('effects:', require\\('./node_modules/@ngrx/effects/package.json'\\).version\\)\")"
+    ]
+  }
+}

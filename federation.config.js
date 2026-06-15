@@ -16,6 +16,8 @@ module.exports = withNativeFederation({
     '@angular/animations':         { singleton: true, strictVersion: false, requiredVersion: '^21.2.0' },
     '@angular/animations/browser': { singleton: true, strictVersion: false, requiredVersion: '^21.2.0' },
     '@khalilrebhiitec/daf360':     { singleton: true, strictVersion: false, requiredVersion: '^2.0.0' },
+    '@ngrx/store':                 { singleton: true, strictVersion: false, requiredVersion: '21.1.0' },
+    '@ngrx/effects':               { singleton: true, strictVersion: false, requiredVersion: '21.1.0' },
   },
   skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
 });

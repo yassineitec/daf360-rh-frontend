@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
 import { HrShellComponent } from './layout/hr-shell.component';
+import { authGuard } from './core/auth.guard';
+import { provideState } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { rhProfilesReducer } from './store/profiles.reducer';
+import { ProfilesEffects } from './store/profiles.effects';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -15,6 +20,11 @@ export const routes: Routes = [
   {
     path: '',
     component: HrShellComponent,
+    canActivate: [authGuard],
+    providers: [
+      provideState('rh', rhProfilesReducer),
+      provideEffects([ProfilesEffects]),
+    ],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
@@ -30,12 +40,12 @@ export const routes: Routes = [
       {
         path: 'candidates',
         loadChildren: () =>
-          import('./modules/candidates/candidates.routes').then(m => m.CANDIDATES_ROUTES),
+          import('./modules/candidates/candidates.routes').then(m => m.candidatesRoutes),
       },
       {
         path: 'recrutement',
         loadChildren: () =>
-          import('./modules/recruitment-pipeline/recruitment-pipeline.routes').then(m => m.RECRUITMENT_PIPELINE_ROUTES),
+          import('./modules/pipeline/pipeline.routes').then(m => m.pipelineRoutes),
       },
       {
         path: 'it-provisioning',

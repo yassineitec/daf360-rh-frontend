@@ -1,0 +1,83 @@
+<div class="flex flex-col h-full" style="font-family: 'Inter', sans-serif">
+
+  @if (loading()) {
+    <div class="flex items-center justify-center h-full">
+      <span class="material-symbols-outlined text-[48px] text-outline animate-spin">
+        progress_activity
+      </span>
+    </div>
+  }
+
+  @else if (profile()) {
+
+    <!-- Page Header -->
+    <rh-profile-header
+      [profile]="profile()!"
+      (backClick)="onBack()"
+      (editClick)="onEdit()" />
+
+    <!-- Tabs bar -->
+    <div class="bg-white border-b border-outline-variant px-8 flex items-center gap-1">
+      @for (tab of tabs; track tab.id) {
+        <button
+          class="px-5 py-3.5 text-[14px] font-semibold border-b-2 transition-colors"
+          [class]="
+            activeTab() === tab.id
+              ? 'border-[#1b3a4b] text-[#1b3a4b]'
+              : 'border-transparent text-outline hover:text-on-surface'
+          "
+          (click)="activeTab.set(tab.id)">
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <!-- Content area -->
+    <div class="flex-1 overflow-y-auto bg-background">
+      <div class="max-w-7xl mx-auto p-6">
+        <div class="grid grid-cols-12 gap-6">
+
+          <!-- Sidebar -->
+          <div class="col-span-12 lg:col-span-3">
+            <rh-profile-sidebar-info [profile]="profile()!" />
+          </div>
+
+          <!-- Main tab content -->
+          <div class="col-span-12 lg:col-span-9">
+            @switch (activeTab()) {
+              @case ('info') {
+                <rh-profile-info-tab [profile]="profile()!" />
+              }
+              @case ('contrat') {
+                <rh-profile-contract-tab
+                  [contracts]="contracts()"
+                  [profile]="profile()!" />
+              }
+              @case ('documents') {
+                <rh-profile-documents-tab [documents]="documents()" />
+              }
+              @case ('conges') {
+                <rh-profile-leaves-tab
+                  [balances]="leaveBalances()"
+                  [history]="leaveHistory()" />
+              }
+            }
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  } @else {
+    <div class="flex flex-col items-center justify-center h-full text-outline gap-3">
+      <span class="material-symbols-outlined text-[48px]">person_off</span>
+      <p class="text-[16px] font-medium">Profil introuvable</p>
+      <button
+        (click)="onBack()"
+        class="text-[#1b3a4b] font-semibold hover:underline text-[14px]">
+        ← Retour aux profils
+      </button>
+    </div>
+  }
+
+</div>
