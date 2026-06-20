@@ -764,7 +764,7 @@ export class ProfileListComponent implements OnInit {
     if (this.cfNationalId)        dto['nationalId']       = this.cfNationalId;
     if (this.cfPhone)             dto['phone']            = this.cfPhone;
     if (this.cfPersonalEmail)     dto['personalEmail']    = this.cfPersonalEmail;
-    if (this.cfHomeAddress)       dto['homeAddress']      = this.cfHomeAddress;
+    if (this.cfHomeAddress)       dto['personalAddress']  = this.cfHomeAddress;
     if (this.cfEmergencyName)     dto['emergencyContactName']     = this.cfEmergencyName;
     if (this.cfEmergencyRelation) dto['emergencyContactRelation'] = this.cfEmergencyRelation;
     if (this.cfEmergencyPhone)    dto['emergencyContactPhone']    = this.cfEmergencyPhone;

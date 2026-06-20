@@ -17,7 +17,7 @@ const MOCK_PROFILE: EmployeeProfile = {
   probationEndDate: null, isOnProbation: false,
   dateOfBirth: '1990-05-10', gender: 'MALE', nationality: 'Tunisienne',
   nationalId: null, passportNumber: null, photoUrl: null,
-  personalEmail: 'alice@example.com', phone: '+21611111111', homeAddress: null,
+  personalEmail: 'alice@example.com', phone: '+21611111111', personalAddress: null,
   emergencyContactName: null, emergencyContactRelation: null, emergencyContactPhone: null,
   department: 'ENGINEER', grade: 'SENIOR', discipline: null, nogLevel: null,
   regimeTemplateId: null, regimeStartDate: null, regimeEndDate: null, regimeReason: null,

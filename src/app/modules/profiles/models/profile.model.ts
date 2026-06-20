@@ -76,7 +76,7 @@ export interface EmployeeProfile {
   photoUrl:          string | null;
   personalEmail:     string | null;
   phone:             string | null;
-  homeAddress:       string | null;
+  personalAddress:   string | null;
 
   // ── Emergency contact ────────────────────────────────────────
   emergencyContactName:     string | null;
@@ -172,7 +172,7 @@ export interface ProfileUpdateDto {
   // Contact
   personalEmail?:    string;
   phone?:            string;
-  homeAddress?:      string;
+  personalAddress?:  string;
   // Contact d'urgence
   emergencyContactName?:     string;
   emergencyContactRelation?: string;

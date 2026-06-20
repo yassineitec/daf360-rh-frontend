@@ -25,7 +25,7 @@ export class StepPersonalComponent implements OnInit {
   cnssAffiliationDate = signal('');
   maritalStatus       = signal('');
   numberOfChildren    = signal<number | null>(null);
-  homeAddress         = signal('');
+  personalAddress         = signal('');
   phone               = signal('');
 
   ngOnInit(): void {
@@ -36,7 +36,7 @@ export class StepPersonalComponent implements OnInit {
     this.cnssAffiliationDate.set(d.cnssAffiliationDate ?? fi?.cnssAffiliationDate ?? '');
     this.maritalStatus.set(d.maritalStatus ?? fi?.maritalStatus ?? '');
     this.numberOfChildren.set(d.numberOfChildren ?? fi?.numberOfChildren ?? null);
-    this.homeAddress.set(d.homeAddress ?? fi?.homeAddress ?? '');
+    this.personalAddress.set(d.personalAddress ?? fi?.personalAddress ?? '');
     this.phone.set(d.phone ?? fi?.phone ?? '');
   }
 
@@ -46,7 +46,7 @@ export class StepPersonalComponent implements OnInit {
       cnssAffiliationDate: this.cnssAffiliationDate() || null,
       maritalStatus:       this.maritalStatus() || null,
       numberOfChildren:    this.numberOfChildren(),
-      homeAddress:         this.homeAddress() || null,
+      personalAddress:         this.personalAddress() || null,
       phone:               this.phone() || null,
     });
   }

@@ -116,7 +116,7 @@ export interface OnboardingProfileDto {
   cnssAffiliationDate?: string | null;
   maritalStatus?: string | null;
   numberOfChildren?: number | null;
-  homeAddress?: string | null;
+  personalAddress?: string | null;
   phone?: string | null;
   // Step 5 — Bank
   bankName?: string;

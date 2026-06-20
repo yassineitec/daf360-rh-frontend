@@ -324,7 +324,7 @@ export class ProfileDetailComponent implements OnInit {
       nogLevelId: p.nogLevelId ?? null,
       personalEmail: p.personalEmail ?? '',
       phone: p.phone ?? '',
-      homeAddress: p.homeAddress ?? '',
+      personalAddress: p.personalAddress ?? '',
       emergencyContactName: p.emergencyContactName ?? '',
       emergencyContactRelation: p.emergencyContactRelation ?? '',
       emergencyContactPhone: p.emergencyContactPhone ?? '',

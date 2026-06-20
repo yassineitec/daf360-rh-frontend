@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DAF360 RH — Manuel Fonctionnel</title>
+<style>
+  /* ── Reset & base ─────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --brand:      #1B6CA8;
+    --brand-dark: #134E7A;
+    --brand-light:#EBF4FB;
+    --accent:     #E67E22;
+    --green:      #27AE60;
+    --red:        #E74C3C;
+    --yellow:     #F39C12;
+    --purple:     #8E44AD;
+    --teal:       #16A085;
+    --gray-50:    #F8FAFC;
+    --gray-100:   #F1F5F9;
+    --gray-200:   #E2E8F0;
+    --gray-400:   #94A3B8;
+    --gray-600:   #475569;
+    --gray-800:   #1E293B;
+    --sidebar-w:  280px;
+    --radius:     8px;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--gray-800);
+    background: var(--gray-50);
+    display: flex;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    background: var(--gray-800);
+    padding: 0 0 40px;
+    flex-shrink: 0;
+  }
+  #sidebar-header {
+    background: var(--brand-dark);
+    padding: 22px 20px 18px;
+    border-bottom: 2px solid var(--brand);
+  }
+  #sidebar-header .logo { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .5px; }
+  #sidebar-header .sub  { font-size: 11px; color: #94C9E8; margin-top: 2px; }
+  #sidebar nav { padding: 12px 0; }
+  #sidebar nav a {
+    display: block; padding: 7px 20px;
+    font-size: 12.5px; color: #CBD5E1;
+    text-decoration: none; border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+  #sidebar nav a:hover  { color: #fff; background: rgba(255,255,255,.06); border-left-color: var(--brand); }
+  #sidebar nav a.active { color: #fff; background: rgba(27,108,168,.35); border-left-color: var(--brand); }
+  #sidebar nav .section-title {
+    padding: 16px 20px 4px;
+    font-size: 10px; font-weight: 600;
+    color: #64748B; text-transform: uppercase; letter-spacing: 1.2px;
+  }
+  #sidebar nav a.sub { padding-left: 32px; font-size: 12px; }
+
+  /* ── Main content ─────────────────────────────────────────────── */
+  #main { flex: 1; min-width: 0; padding: 0 40px 80px; max-width: 960px; }
+
+  /* ── Cover ────────────────────────────────────────────────────── */
+  #cover {
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 60%, #2980B9 100%);
+    margin: 0 -40px 48px;
+    padding: 60px 40px 52px;
+    color: #fff;
+  }
+  #cover .badge {
+    display: inline-block; padding: 4px 12px;
+    background: rgba(255,255,255,.18); border-radius: 20px;
+    font-size: 11px; letter-spacing: .8px; text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  #cover h1  { font-size: 34px; font-weight: 700; line-height: 1.2; }
+  #cover .sub { font-size: 16px; color: #BDD8F0; margin-top: 10px; }
+  #cover .meta { display: flex; gap: 32px; margin-top: 32px; flex-wrap: wrap; }
+  #cover .meta-item { font-size: 12px; color: #BDD8F0; }
+  #cover .meta-item strong { display: block; font-size: 18px; color: #fff; font-weight: 600; }
+
+  /* ── Typography ───────────────────────────────────────────────── */
+  h2 {
+    font-size: 22px; font-weight: 700; color: var(--brand-dark);
+    margin: 52px 0 4px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--brand-light);
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .h2-icon { font-size: 22px; }
+  h3 { font-size: 16px; font-weight: 600; color: var(--gray-800); margin: 28px 0 10px; }
+  h4 { font-size: 13.5px; font-weight: 600; color: var(--gray-600); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
+  p  { margin-bottom: 10px; color: var(--gray-600); }
+
+  /* ── Section intro ────────────────────────────────────────────── */
+  .section-intro {
+    background: var(--brand-light); border-left: 4px solid var(--brand);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px; margin-bottom: 24px; color: var(--brand-dark);
+    font-size: 13.5px;
+  }
+
+  /* ── Cards ────────────────────────────────────────────────────── */
+  .card {
+    background: #fff; border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    padding: 20px 24px; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+
+  /* ── Steps ────────────────────────────────────────────────────── */
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li {
+    display: flex; gap: 14px;
+    padding: 10px 0; border-bottom: 1px solid var(--gray-100);
+    align-items: flex-start;
+  }
+  .steps li:last-child { border-bottom: none; }
+  .step-num {
+    flex-shrink: 0; width: 26px; height: 26px;
+    background: var(--brand); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; margin-top: 1px;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { color: var(--gray-800); display: block; margin-bottom: 2px; }
+  .step-body span   { color: var(--gray-600); font-size: 13px; }
+
+  /* ── Field list ───────────────────────────────────────────────── */
+  .field-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .field-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+  }
+  .field-pill.required { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+  .field-pill.optional { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+  .field-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .field-pill.required .dot { background: #B91C1C; }
+  .field-pill.optional .dot { background: var(--gray-400); }
+
+  /* ── Status badges ────────────────────────────────────────────── */
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .badge-status {
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: .3px;
+  }
+  .s-green  { background: #DCFCE7; color: #166534; }
+  .s-yellow { background: #FEF9C3; color: #854D0E; }
+  .s-blue   { background: #DBEAFE; color: #1E40AF; }
+  .s-red    { background: #FEE2E2; color: #991B1B; }
+  .s-gray   { background: var(--gray-100); color: var(--gray-600); }
+  .s-purple { background: #F3E8FF; color: #6B21A8; }
+  .s-teal   { background: #CCFBF1; color: #134E4A; }
+  .s-orange { background: #FFEDD5; color: #9A3412; }
+
+  /* ── Role badge ───────────────────────────────────────────────── */
+  .role-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .role-admin  { background: #EDE9FE; color: #5B21B6; }
+  .role-hr     { background: #DBEAFE; color: #1E40AF; }
+  .role-it     { background: #DCFCE7; color: #166534; }
+  .role-user   { background: var(--gray-100); color: var(--gray-600); }
+  .role-mgr    { background: #FFEDD5; color: #9A3412; }
+
+  /* ── Permission tag ───────────────────────────────────────────── */
+  .perm {
+    display: inline-block; padding: 1px 7px;
+    background: #F0FDF4; color: #166534;
+    border: 1px solid #BBF7D0; border-radius: 4px;
+    font-size: 11px; font-family: monospace; letter-spacing: .2px;
+  }
+
+  /* ── Workflow diagram ─────────────────────────────────────────── */
+  .workflow {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 0; margin: 14px 0;
+    overflow-x: auto;
+  }
+  .wf-node {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; min-width: 90px;
+  }
+  .wf-box {
+    padding: 7px 14px; border-radius: 6px;
+    font-size: 11.5px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .wf-label { font-size: 10px; color: var(--gray-400); margin-top: 4px; }
+  .wf-arrow {
+    font-size: 18px; color: var(--gray-400); margin: 0 4px;
+    padding-bottom: 14px; flex-shrink: 0;
+  }
+
+  /* ── Table ────────────────────────────────────────────────────── */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    margin: 14px 0; font-size: 13px;
+  }
+  .data-table th {
+    background: var(--brand-dark); color: #fff;
+    padding: 9px 14px; text-align: left;
+    font-size: 12px; font-weight: 600; letter-spacing: .3px;
+  }
+  .data-table th:first-child { border-radius: var(--radius) 0 0 0; }
+  .data-table th:last-child  { border-radius: 0 var(--radius) 0 0; }
+  .data-table td {
+    padding: 8px 14px; border-bottom: 1px solid var(--gray-100);
+    vertical-align: top;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:nth-child(even) td { background: var(--gray-50); }
+
+  /* ── Note box ─────────────────────────────────────────────────── */
+  .note {
+    background: #FFFBEB; border-left: 4px solid var(--yellow);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 10px 16px; margin: 12px 0;
+    font-size: 13px; color: #78350F;
+  }
+  .note strong { color: #92400E; }
+  .info {
+    background: var(--brand-light); border-left: 4px solid var(--brand);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 10px 16px; margin: 12px 0;
+    font-size: 13px; color: var(--brand-dark);
+  }
+
+  /* ── Two-column layout ────────────────────────────────────────── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Divider ──────────────────────────────────────────────────── */
+  .divider { border: none; border-top: 1px solid var(--gray-200); margin: 36px 0; }
+
+  /* ── Print ────────────────────────────────────────────────────── */
+  @media print {
+    #sidebar { display: none; }
+    #main { padding: 20px; }
+    h2 { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ SIDEBAR -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="logo">DAF360 · RH</div>
+    <div class="sub">Manuel Fonctionnel — v1.0</div>
+  </div>
+  <nav>
+    <div class="section-title">Introduction</div>
+    <a href="#apercu">Aperçu général</a>
+    <a href="#roles">Rôles &amp; Accès</a>
+    <a href="#workflow-global">Workflow global</a>
+
+    <div class="section-title">Recrutement</div>
+    <a href="#demands">Demandes de recrutement</a>
+    <a href="#candidates">Gestion des candidats</a>
+    <a href="#pipeline">Pipeline de recrutement</a>
+
+    <div class="section-title">Intégration</div>
+    <a href="#it-prov">Provisioning IT</a>
+    <a href="#onboarding">Onboarding RH</a>
+
+    <div class="section-title">Employés</div>
+    <a href="#profiles">Fiches employés</a>
+    <a href="#documents">Documents</a>
+
+    <div class="section-title">Administration</div>
+    <a href="#admin-roles">Rôles &amp; Permissions</a>
+    <a href="#admin-ref">Données de référence</a>
+    <a href="#admin-lists">Listes configurables</a>
+    <a href="#admin-regimes">Régimes horaires</a>
+    <a href="#admin-breaks">Modèles de pause</a>
+    <a href="#admin-holidays">Jours fériés</a>
+    <a href="#admin-payroll">Paramètres de paie</a>
+    <a href="#admin-notifs">Notifications</a>
+    <a href="#admin-request-types">Types de demandes</a>
+    <a href="#audit">Journal d'audit</a>
+  </nav>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════ MAIN -->
+<main id="main">
+
+<!-- COVER -->
+<div id="cover">
+  <div class="badge">Documentation officielle</div>
+  <h1>DAF360 — Module Ressources Humaines</h1>
+  <div class="sub">Manuel fonctionnel complet · Tous les acteurs · Toutes les fonctionnalités</div>
+  <div class="meta">
+    <div class="meta-item"><strong>8</strong>Modules couverts</div>
+    <div class="meta-item"><strong>30+</strong>Fonctionnalités</div>
+    <div class="meta-item"><strong>Juin 2026</strong>Version du document</div>
+    <div class="meta-item"><strong>DAF360</strong>ITEC Groupe</div>
+  </div>
+</div>
+
+<!-- ═══════ APERÇU ═══════════════════════════════════════════════ -->
+<h2 id="apercu"><span class="h2-icon">🏠</span> Aperçu général</h2>
+<div class="section-intro">
+  Le module RH de DAF360 couvre l'intégralité du cycle de vie d'un collaborateur — de la demande de recrutement jusqu'à l'archivage de son dossier — au travers d'une application web sécurisée, accessible selon les droits de chaque utilisateur.
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h4>Accès à l'application</h4>
+    <p>L'application est accessible via <strong>http://localhost:4201</strong> (développement) ou l'URL de production communiquée par l'administrateur. L'authentification est gérée par le portail DAF360 — aucun identifiant séparé n'est requis.</p>
+  </div>
+  <div class="card">
+    <h4>Navigation principale</h4>
+    <p>Le menu latéral donne accès aux modules selon les permissions de l'utilisateur connecté. Les sections non autorisées sont automatiquement masquées.</p>
+  </div>
+</div>
+
+<!-- ═══════ RÔLES ════════════════════════════════════════════════ -->
+<h2 id="roles"><span class="h2-icon">👤</span> Rôles &amp; Accès</h2>
+<div class="section-intro">
+  Chaque utilisateur hérite d'un ensemble de permissions via son rôle. Les permissions s'appliquent à la fois dans l'interface (boutons visibles / masqués) et côté serveur (API sécurisée).
+</div>
+
+<table class="data-table">
+  <thead><tr><th>Acteur</th><th>Périmètre habituel</th><th>Permissions clés</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="role-badge role-admin">Administrateur</span></td>
+      <td>Accès total à toutes les sections, y compris l'administration système</td>
+      <td>Toutes les permissions</td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-hr">DRH / Responsable RH</span></td>
+      <td>Gestion des candidats, profils, onboarding, demandes de recrutement, tableau de bord RH</td>
+      <td><span class="perm">ACCEPT_REJECT_CANDIDATE</span> <span class="perm">HR_ONBOARDING</span> <span class="perm">RH_VIEW_RECRUITMENT_DEMAND</span></td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-it">Responsable IT</span></td>
+      <td>Provisioning informatique uniquement</td>
+      <td><span class="perm">IT_PROVISIONING</span></td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-mgr">Manager / Directeur</span></td>
+      <td>Création de demandes de recrutement, suivi des candidats, approbation</td>
+      <td><span class="perm">RH_CREATE_RECRUITMENT_DEMAND</span> <span class="perm">RH_APPROVE_RECRUITMENT_DEMAND</span></td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-user">Collaborateur</span></td>
+      <td>Consultation de son propre dossier, soumission de demandes personnelles</td>
+      <td><span class="perm">RH_VIEW_RECRUITMENT_DEMAND</span></td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-hr">Assistante RH</span></td>
+      <td>Saisie des profils, suivi onboarding, gestion documentaire</td>
+      <td><span class="perm">EDIT_CANDIDATE</span> <span class="perm">HR_ONBOARDING</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════ WORKFLOW GLOBAL ══════════════════════════════════════ -->
+<h2 id="workflow-global"><span class="h2-icon">🔄</span> Workflow global — du candidat à l'employé</h2>
+<div class="section-intro">
+  Le parcours complet d'intégration d'un nouveau collaborateur suit les étapes ci-dessous. Chaque flèche représente une action métier déclenchée par un acteur identifié.
+</div>
+
+<div class="workflow">
+  <div class="wf-node"><div class="wf-box s-gray">Demande de recrutement</div><div class="wf-label">Manager</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-yellow">Candidat créé</div><div class="wf-label">RH</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-blue">Accepté</div><div class="wf-label">RH</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-orange">Provisioning IT</div><div class="wf-label">IT</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-purple">Onboarding RH</div><div class="wf-label">RH</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-green">Employé actif</div><div class="wf-label">Système</div></div>
+</div>
+
+<div class="note">
+  <strong>Important :</strong> Chaque étape est bloquante. Le provisioning IT ne peut commencer qu'après acceptation du candidat. L'onboarding RH ne peut démarrer qu'après réception de l'e-mail MS365.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : DEMANDES DE RECRUTEMENT                              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="demands"><span class="h2-icon">📋</span> Demandes de recrutement</h2>
+<div class="section-intro">
+  Un manager ou directeur soumet une demande de besoin en personnel. La DRH valide ou rejette la demande. Une demande approuvée peut ensuite être associée à un ou plusieurs candidats.
+</div>
+
+<h3>Accès à la liste des demandes</h3>
+<div class="card">
+  <p>Menu <strong>Demandes de recrutement</strong> → liste paginée (20 par page). Les filtres disponibles sont :</p>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Statut : EN ATTENTE, APPROUVÉE, REJETÉE, ANNULÉE, CLÔTURÉE</span>
+    <span class="field-pill optional"><span class="dot"></span>Entité (pays) — automatique selon l'utilisateur connecté</span>
+  </div>
+  <p>Les colonnes affichées sont : Intitulé du poste, Département, Urgence, Effectif, Candidats liés, Statut, Date de soumission.</p>
+</div>
+
+<h3>Créer une demande</h3>
+<p><span class="role-badge role-mgr">Manager</span> <span class="role-badge role-hr">DRH</span> <span class="role-badge role-admin">Admin</span> — Permission requise : <span class="perm">RH_CREATE_RECRUITMENT_DEMAND</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Nouvelle demande »</strong><span>Un formulaire modal s'ouvre.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Remplir les informations du poste</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Intitulé du poste</span>
+      <span class="field-pill required"><span class="dot"></span>Effectif requis (1–50)</span>
+      <span class="field-pill required"><span class="dot"></span>Profil recherché (diplômes, expérience…)</span>
+      <span class="field-pill required"><span class="dot"></span>Périmètre de la mission</span>
+      <span class="field-pill optional"><span class="dot"></span>Département (liste déroulante)</span>
+      <span class="field-pill optional"><span class="dot"></span>Niveau d'urgence</span>
+      <span class="field-pill optional"><span class="dot"></span>Type de contrat</span>
+      <span class="field-pill optional"><span class="dot"></span>Date de début cible</span>
+      <span class="field-pill optional"><span class="dot"></span>Fourchette budgétaire</span>
+      <span class="field-pill optional"><span class="dot"></span>Notes complémentaires</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Cliquer sur « Soumettre »</strong><span>La demande passe au statut <span class="badge-status s-yellow">EN ATTENTE</span> et une notification est envoyée aux approbateurs.</span></div></li>
+</ol>
+
+<h3>Approuver / Rejeter une demande</h3>
+<p><span class="role-badge role-hr">DRH</span> <span class="role-badge role-admin">Admin</span> — Permission requise : <span class="perm">RH_APPROVE_RECRUITMENT_DEMAND</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Ouvrir le détail de la demande</strong><span>Cliquer sur la ligne dans la liste.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Consulter le dossier</strong><span>Profil requis, périmètre, urgence, budget.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Saisir un commentaire de décision</strong><span>Champ texte obligatoire (justification de la décision).</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Cliquer sur « Approuver » ou « Rejeter »</strong><span>La demande change de statut. Le demandeur reçoit une notification.</span></div></li>
+</ol>
+
+<h3>Annuler sa propre demande</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Ouvrir le détail</strong><span>Uniquement possible si la demande est encore <span class="badge-status s-yellow">EN ATTENTE</span>.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Annuler »</strong><span>La demande passe au statut <span class="badge-status s-gray">ANNULÉE</span>. Action irréversible.</span></div></li>
+</ol>
+
+<h3>Statuts d'une demande de recrutement</h3>
+<div class="badges">
+  <span class="badge-status s-yellow">EN ATTENTE</span>
+  <span class="badge-status s-green">APPROUVÉE</span>
+  <span class="badge-status s-red">REJETÉE</span>
+  <span class="badge-status s-gray">ANNULÉE</span>
+  <span class="badge-status s-teal">CLÔTURÉE</span>
+</div>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : CANDIDATS                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="candidates"><span class="h2-icon">👥</span> Gestion des candidats</h2>
+<div class="section-intro">
+  La gestion des candidats couvre la création du dossier candidat, le suivi des étapes (acceptation, provisioning, onboarding), le téléchargement du CV et l'historique complet des actions.
+</div>
+
+<h3>Liste des candidats</h3>
+<div class="card">
+  <p>Menu <strong>Candidats</strong> → tableau paginé (10 par page). En-tête affichant les statistiques clés :</p>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Total candidats</span>
+    <span class="field-pill optional"><span class="dot"></span>En attente</span>
+    <span class="field-pill optional"><span class="dot"></span>Embauchés ce mois</span>
+  </div>
+  <p>Filtres disponibles : <strong>Recherche</strong> (nom / e-mail, délai 300ms) · <strong>Statut</strong> (voir ci-dessous).</p>
+  <p>Au clic sur une ligne : panneau latéral d'historique horodaté des actions sur ce candidat.</p>
+</div>
+
+<h3>Créer un candidat</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span> — Permission requise : <span class="perm">EDIT_CANDIDATE</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Nouveau candidat »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Section Identité</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Prénom</span>
+      <span class="field-pill required"><span class="dot"></span>Nom</span>
+      <span class="field-pill required"><span class="dot"></span>E-mail personnel (validé)</span>
+      <span class="field-pill optional"><span class="dot"></span>Téléphone</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Section Poste</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill optional"><span class="dot"></span>Poste souhaité</span>
+      <span class="field-pill optional"><span class="dot"></span>Demande de recrutement liée (liste déroulante — demandes approuvées)</span>
+      <span class="field-pill optional"><span class="dot"></span>Département (liste déroulante)</span>
+      <span class="field-pill required"><span class="dot"></span>Type de contrat : CDI / CDD / Stage / Consultant</span>
+      <span class="field-pill optional"><span class="dot"></span>Grade souhaité</span>
+      <span class="field-pill optional"><span class="dot"></span>Discipline</span>
+      <span class="field-pill optional"><span class="dot"></span>Nationalité</span>
+      <span class="field-pill required"><span class="dot"></span>Date d'entrée souhaitée</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Section Notes</strong><span>Zone de texte libre (observations, source de candidature…).</span></div></li>
+  <li><div class="step-num">5</div><div class="step-body"><strong>Enregistrer</strong><span>Le candidat est créé au statut <span class="badge-status s-yellow">EN ATTENTE</span>.</span></div></li>
+  <li><div class="step-num">6</div><div class="step-body"><strong>(Optionnel) Joindre un CV</strong><span>Formats acceptés : PDF, DOC, DOCX · Taille max : 10 Mo. Cliquer sur « Télécharger CV ».</span></div></li>
+</ol>
+
+<h3>Accepter un candidat</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span> — Permission : <span class="perm">ACCEPT_REJECT_CANDIDATE</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Ouvrir le dossier candidat</strong><span>Depuis la liste ou le pipeline.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Accepter »</strong><span>Une confirmation est demandée. Le statut passe à <span class="badge-status s-blue">ACCEPTÉ</span>. Une notification est envoyée à l'équipe IT.</span></div></li>
+</ol>
+
+<h3>Rejeter un candidat</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span> — Permission : <span class="perm">ACCEPT_REJECT_CANDIDATE</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Rejeter »</strong><span>Une fenêtre modale s'ouvre.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Saisir le motif de rejet</strong><span>Zone de texte obligatoire.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Confirmer</strong><span>Le statut passe à <span class="badge-status s-red">REJETÉ</span>.</span></div></li>
+</ol>
+
+<h3>Modifier un candidat</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span> — Permission : <span class="perm">EDIT_CANDIDATE</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Ouvrir le dossier candidat</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Modifier »</strong><span>Les champs du formulaire deviennent éditables.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Apporter les modifications</strong><span>Tous les champs de création sont modifiables.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Télécharger / remplacer le CV</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Dans le dossier candidat</strong><span>Section CV : bouton « Télécharger CV » ou « Remplacer ».</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Sélectionner le fichier</strong><span>PDF, DOC ou DOCX uniquement · max 10 Mo.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Le lien de téléchargement est mis à jour</strong><span>Bouton « Télécharger CV » disponible pour toute personne ayant accès au dossier.</span></div></li>
+</ol>
+
+<h3>Statuts d'un candidat</h3>
+<div class="workflow">
+  <div class="wf-node"><div class="wf-box s-yellow">EN ATTENTE</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-blue">ACCEPTÉ</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-orange">IT EN COURS</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-purple">E-MAIL CRÉÉ</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-teal">RH EN COURS</div></div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-node"><div class="wf-box s-green">EMBAUCHÉ</div></div>
+</div>
+<div class="badges" style="margin-top:8px">
+  <span class="badge-status s-red">REJETÉ</span>
+  <span class="badge-status s-gray">ARCHIVÉ</span>
+</div>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : PIPELINE                                              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="pipeline"><span class="h2-icon">🗂️</span> Pipeline de recrutement</h2>
+<div class="section-intro">
+  Vue kanban offrant une visualisation globale de tous les candidats répartis par étape du processus d'intégration.
+</div>
+
+<div class="card">
+  <h4>Les 6 colonnes du pipeline</h4>
+  <table class="data-table">
+    <thead><tr><th>Colonne</th><th>Statuts associés</th><th>Actions disponibles</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Candidatures</strong></td><td><span class="badge-status s-yellow">EN ATTENTE</span></td><td>Voir fiche · Accepter · Rejeter</td></tr>
+      <tr><td><strong>Acceptés — IT à faire</strong></td><td><span class="badge-status s-blue">ACCEPTÉ</span></td><td>Voir fiche · Démarrer provisioning IT →</td></tr>
+      <tr><td><strong>Provisioning IT</strong></td><td><span class="badge-status s-orange">IT EN COURS</span> <span class="badge-status s-purple">E-MAIL CRÉÉ</span></td><td>Voir fiche · Compléter provisioning →</td></tr>
+      <tr><td><strong>Onboarding RH</strong></td><td><span class="badge-status s-teal">E-MAIL REÇU</span> <span class="badge-status s-teal">RH EN COURS</span></td><td>Voir fiche · Formulaire onboarding →</td></tr>
+      <tr><td><strong>Embauchés</strong></td><td><span class="badge-status s-green">EMBAUCHÉ</span></td><td>Voir fiche employé →</td></tr>
+      <tr><td><strong>Rejetés / Archivés</strong></td><td><span class="badge-status s-red">REJETÉ</span> <span class="badge-status s-gray">ARCHIVÉ</span></td><td>Consulter seulement</td></tr>
+    </tbody>
+  </table>
+  <div class="info">
+    <strong>Astuce :</strong> Chaque carte candidat affiche son nom, le poste souhaité, le type de contrat et la date d'entrée cible. Cliquer sur une carte ouvre le dossier complet.
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : IT PROVISIONING                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="it-prov"><span class="h2-icon">💻</span> Provisioning IT</h2>
+<div class="section-intro">
+  Géré par l'équipe informatique, le provisioning IT crée le compte MS365, configure les assets matériels et les licences logicielles d'un nouveau collaborateur avant son intégration RH.
+</div>
+<p>Permission requise : <span class="perm">IT_PROVISIONING</span> <span class="role-badge role-it">Responsable IT</span> <span class="role-badge role-admin">Admin</span></p>
+
+<h3>Liste des missions à traiter</h3>
+<div class="card">
+  <p>Menu <strong>Provisioning IT</strong> → liste de tous les candidats dont le statut est <span class="badge-status s-blue">ACCEPTÉ</span> ou ultérieur. Pour chaque ligne :</p>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Nom, e-mail, poste, type de contrat</span>
+    <span class="field-pill optional"><span class="dot"></span>Progression matériel (x/6 assets)</span>
+    <span class="field-pill optional"><span class="dot"></span>Progression licences (x/5)</span>
+    <span class="field-pill optional"><span class="dot"></span>Statut actuel</span>
+  </div>
+</div>
+
+<h3>Étape 1 — Créer le compte e-mail MS365</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Ouvrir le dossier de provisioning</strong><span>Cliquer sur la ligne dans la liste.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Saisir l'adresse e-mail MS365</strong><span>Format attendu : prenom.nom@domaine.com</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Cliquer sur « Envoyer l'e-mail »</strong><span>Le système envoie une notification au candidat et au service RH.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Confirmer la réception</strong><span>Cliquer sur « Confirmer » après validation par le candidat. Le statut passe à <span class="badge-status s-purple">E-MAIL CRÉÉ</span>.</span></div></li>
+  <li><div class="step-num">5</div><div class="step-body"><strong>Cocher « Compte AD créé »</strong><span>Active Directory / Entra ID configuré.</span></div></li>
+</ol>
+
+<h3>Étape 2 — Enregistrer le matériel</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Section « Matériels »</strong><span>Tableau des assets à attribuer.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Pour chaque asset, renseigner</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Type d'équipement (liste déroulante)</span>
+      <span class="field-pill optional"><span class="dot"></span>Numéro de série</span>
+      <span class="field-pill optional"><span class="dot"></span>État : NEUF / BON ÉTAT / USAGÉ / EN RÉPARATION / DÉFECTUEUX</span>
+      <span class="field-pill optional"><span class="dot"></span>Notes</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Ajouter / supprimer des lignes</strong><span>Boutons « + Asset » et corbeille par ligne.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Ajouter des notes matérielles</strong><span>Zone de texte globale pour observations.</span></div></li>
+</ol>
+
+<h3>Étape 3 — Attribuer les licences logicielles</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Section « Licences »</strong><span>Cocher les licences à attribuer :</span>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill optional"><span class="dot"></span>Office 365</span>
+      <span class="field-pill optional"><span class="dot"></span>AutoCAD</span>
+      <span class="field-pill optional"><span class="dot"></span>Revit</span>
+      <span class="field-pill optional"><span class="dot"></span>Autodesk</span>
+      <span class="field-pill optional"><span class="dot"></span>Kaspersky</span>
+      <span class="field-pill optional"><span class="dot"></span>Autres licences (texte libre)</span>
+    </div>
+  </div></li>
+</ol>
+
+<h3>Étape 4 — Clôturer le provisioning</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Vérifier les prérequis</strong><span>Matériel complété ✓ · Licences attribuées ✓ · Compte AD créé ✓</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Clôturer le provisioning »</strong><span>Une confirmation est demandée.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Résultat</strong><span>Le statut du candidat passe à <span class="badge-status s-teal">E-MAIL REÇU</span>. L'équipe RH est notifiée pour démarrer l'onboarding.</span></div></li>
+</ol>
+
+<div class="note"><strong>Télécharger le bon de provisioning :</strong> Bouton « Télécharger PDF » disponible à tout moment pour éditer un document officiel listant le matériel et les licences.</div>
+
+<h3>Statuts du provisioning</h3>
+<div class="badges">
+  <span class="badge-status s-gray">NOUVEAU</span>
+  <span class="badge-status s-yellow">E-MAIL ENVOYÉ</span>
+  <span class="badge-status s-blue">E-MAIL CONFIRMÉ</span>
+  <span class="badge-status s-orange">ASSETS SOUMIS</span>
+  <span class="badge-status s-orange">LICENCES SOUMISES</span>
+  <span class="badge-status s-green">TERMINÉ</span>
+  <span class="badge-status s-gray">EN ATTENTE</span>
+</div>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ONBOARDING                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="onboarding"><span class="h2-icon">🎯</span> Onboarding RH</h2>
+<div class="section-intro">
+  L'onboarding RH finalise la création du dossier employé. Il est déclenché après réception de l'e-mail MS365 par le candidat. Le formulaire en 7 étapes collecte toutes les informations nécessaires à la fiche employé.
+</div>
+<p>Permission requise : <span class="perm">HR_ONBOARDING</span> <span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span></p>
+
+<h3>Accès à la liste d'onboarding</h3>
+<div class="card">
+  <p>Menu <strong>Onboarding</strong> → liste des candidats au statut <span class="badge-status s-teal">E-MAIL REÇU</span> ou <span class="badge-status s-teal">RH EN COURS</span>. Chaque ligne affiche le nom, le poste, l'e-mail MS365, la date d'entrée et le statut. Cliquer sur une ligne ouvre le formulaire.</p>
+</div>
+
+<h3>Formulaire d'onboarding — 7 étapes</h3>
+<div class="info">Le formulaire enregistre automatiquement un brouillon à chaque étape. La navigation entre étapes est libre (boutons Suivant / Précédent / clic direct sur l'indicateur d'étape).</div>
+
+<div class="card">
+  <h4>Étape 1 — Identité</h4>
+  <div class="field-list">
+    <span class="field-pill required"><span class="dot"></span>Prénom</span>
+    <span class="field-pill required"><span class="dot"></span>Nom</span>
+    <span class="field-pill optional"><span class="dot"></span>Date de naissance</span>
+    <span class="field-pill optional"><span class="dot"></span>Genre</span>
+    <span class="field-pill optional"><span class="dot"></span>Nationalité (liste déroulante)</span>
+    <span class="field-pill optional"><span class="dot"></span>N° CIN</span>
+    <span class="field-pill optional"><span class="dot"></span>N° Passeport</span>
+  </div>
+</div>
+<div class="card">
+  <h4>Étape 2 — Contrat &amp; Poste</h4>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Date d'embauche</span>
+    <span class="field-pill optional"><span class="dot"></span>Type de contrat : CDI / CDD / Intérim / Consultant</span>
+    <span class="field-pill optional"><span class="dot"></span>Date fin de contrat (si CDD)</span>
+    <span class="field-pill optional"><span class="dot"></span>Période d'essai (oui/non)</span>
+    <span class="field-pill optional"><span class="dot"></span>Date fin de période d'essai</span>
+    <span class="field-pill optional"><span class="dot"></span>Grade (liste déroulante)</span>
+    <span class="field-pill optional"><span class="dot"></span>Discipline</span>
+    <span class="field-pill optional"><span class="dot"></span>Niveau NOG</span>
+    <span class="field-pill optional"><span class="dot"></span>Département</span>
+  </div>
+</div>
+<div class="card">
+  <h4>Étape 3 — Régime horaire</h4>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Modèle de régime (liste déroulante des régimes actifs)</span>
+  </div>
+</div>
+<div class="card">
+  <h4>Étape 4 — Informations personnelles</h4>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>N° CNSS</span>
+    <span class="field-pill optional"><span class="dot"></span>Date d'affiliation CNSS</span>
+    <span class="field-pill optional"><span class="dot"></span>Situation familiale</span>
+    <span class="field-pill optional"><span class="dot"></span>Nombre d'enfants</span>
+    <span class="field-pill optional"><span class="dot"></span>Adresse domicile</span>
+  </div>
+</div>
+<div class="card">
+  <h4>Étape 5 — Coordonnées bancaires</h4>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Banque (liste déroulante)</span>
+    <span class="field-pill optional"><span class="dot"></span>RIB</span>
+    <span class="field-pill optional"><span class="dot"></span>N° compte bancaire</span>
+    <span class="field-pill optional"><span class="dot"></span>IBAN</span>
+    <span class="field-pill optional"><span class="dot"></span>N° sécurité sociale</span>
+    <span class="field-pill optional"><span class="dot"></span>Identifiant fiscal</span>
+  </div>
+</div>
+<div class="card">
+  <h4>Étape 6 — Contact d'urgence</h4>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Nom du contact</span>
+    <span class="field-pill optional"><span class="dot"></span>Lien de parenté</span>
+    <span class="field-pill optional"><span class="dot"></span>Téléphone</span>
+  </div>
+</div>
+<div class="card">
+  <h4>Étape 7 — Résumé &amp; Validation</h4>
+  <p>Récapitulatif de toutes les données saisies. Possibilité de revenir à n'importe quelle étape pour corriger.</p>
+  <ol class="steps" style="margin-top:10px">
+    <li><div class="step-num">1</div><div class="step-body"><strong>Vérifier le résumé</strong></div></li>
+    <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Soumettre l'onboarding »</strong><span>Une confirmation est demandée.</span></div></li>
+    <li><div class="step-num">3</div><div class="step-body"><strong>Résultat</strong><span>La fiche employé est créée. Le candidat passe au statut <span class="badge-status s-green">EMBAUCHÉ</span>. Un e-mail de confirmation est envoyé.</span></div></li>
+  </ol>
+</div>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : FICHES EMPLOYÉS                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="profiles"><span class="h2-icon">🧑‍💼</span> Fiches employés</h2>
+<div class="section-intro">
+  Le module Profils centralise toutes les informations RH d'un employé. Accessible depuis le menu « Collaborateurs », il permet la consultation, la modification du dossier et l'accès aux documents.
+</div>
+
+<h3>Liste des collaborateurs</h3>
+<div class="card">
+  <p>Tableau paginé (25 par page) avec :</p>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Recherche : nom / e-mail / matricule (délai 350ms)</span>
+    <span class="field-pill optional"><span class="dot"></span>Filtre statut : Tous / PRÉ-ONBOARDING / ACTIF / EN CONGÉ / EN MISSION / OFFBOARDING / RÉSILIÉ / ARCHIVÉ</span>
+  </div>
+  <p>Colonnes : Matricule · Nom complet (avec avatar) · E-mail · Rôle · Entité · Type de contrat · Statut.</p>
+  <p>Actions par ligne : <strong>Créer profil</strong> (si aucun profil RH) · <strong>Modifier</strong> · <strong>Voir</strong>.</p>
+</div>
+
+<h3>Créer une fiche employé manuellement</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span></p>
+<div class="note"><strong>Note :</strong> La fiche est créée automatiquement via le processus d'onboarding. La création manuelle est réservée aux cas particuliers (employé existant à régulariser).</div>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Trouver l'utilisateur dans la liste</strong><span>Rechercher par nom ou e-mail.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Créer profil »</strong><span>Un formulaire modal s'ouvre.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Section Emploi</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Date d'embauche</span>
+      <span class="field-pill required"><span class="dot"></span>Type de contrat</span>
+      <span class="field-pill optional"><span class="dot"></span>Département</span>
+      <span class="field-pill optional"><span class="dot"></span>Date fin de contrat (CDD)</span>
+      <span class="field-pill optional"><span class="dot"></span>Date fin de période d'essai</span>
+      <span class="field-pill optional"><span class="dot"></span>Grade · Discipline · Niveau NOG</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Section Identité</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill optional"><span class="dot"></span>Genre · Date de naissance · Nationalité</span>
+      <span class="field-pill optional"><span class="dot"></span>N° CIN · Téléphone · E-mail personnel · Adresse</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">5</div><div class="step-body"><strong>Section Contact d'urgence</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill optional"><span class="dot"></span>Nom · Lien de parenté · Téléphone</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">6</div><div class="step-body"><strong>Section Bancaire</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill optional"><span class="dot"></span>Banque · RIB · IBAN</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">7</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Consulter une fiche employé</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Voir » ou sur le nom</strong><span>La page de détail s'ouvre avec toutes les sections.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Sections disponibles (dépliables)</strong>
+    <ul style="margin-top:6px; padding-left:18px; color:var(--gray-600); font-size:13px; line-height:2">
+      <li><strong>Identité :</strong> Prénom, nom, e-mail, téléphone, genre, date de naissance, nationalité, CIN</li>
+      <li><strong>Emploi :</strong> Matricule, date d'embauche, type de contrat, fin de contrat, période d'essai</li>
+      <li><strong>Poste :</strong> Département, grade, discipline, niveau NOG</li>
+      <li><strong>Contact personnel :</strong> E-mail, téléphone, adresse domicile</li>
+      <li><strong>Contact d'urgence :</strong> Nom, lien, téléphone</li>
+      <li><strong>Bancaire :</strong> Banque, RIB, IBAN, N° compte, CNSS, identifiant fiscal</li>
+      <li><strong>Régime horaire :</strong> Régime résolu (rôle ou override individuel)</li>
+      <li><strong>Historique de contrats :</strong> Timeline des changements contractuels</li>
+      <li><strong>Documents :</strong> Liste des pièces jointes avec type et date</li>
+    </ul>
+  </div></li>
+</ol>
+
+<h3>Modifier une fiche employé</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Modifier »</strong><span>Les champs passent en mode édition.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Apporter les modifications</strong><span>Tous les champs de la fiche sont éditables. Les listes déroulantes se peuplent depuis les données de référence.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Saisir le motif de modification</strong><span>Champ obligatoire — conservé dans le journal d'audit.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Ajouter une photo de profil</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Dans la fiche employé</strong><span>Cliquer sur l'avatar ou le bouton « Photo ».</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Sélectionner une image</strong><span>Formats acceptés : JPEG, PNG, WebP · Taille max : 3 Mo.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>La photo est mise à jour immédiatement</strong></div></li>
+</ol>
+
+<h3>Télécharger la fiche PDF</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Bouton « Télécharger PDF »</strong><span>Génère un document officiel de la fiche employé avec toutes les informations.</span></div></li>
+</ol>
+
+<h3>Gérer le régime horaire individuel</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Section « Régime horaire »</strong><span>Affiche le régime appliqué (hérité du rôle ou override individuel).</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Si un override individuel est actif</strong><span>Bouton « Supprimer l'override » visible pour revenir au régime par défaut du rôle.</span></div></li>
+</ol>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : DOCUMENTS                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="documents"><span class="h2-icon">📁</span> Documents employé</h2>
+<div class="section-intro">
+  Chaque fiche employé dispose d'un espace documentaire pour stocker les pièces administratives. Les documents sont classés par type et téléchargeables à tout moment.
+</div>
+
+<h3>Ajouter un document</h3>
+<p><span class="role-badge role-hr">RH</span> <span class="role-badge role-admin">Admin</span></p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Dans la fiche employé</strong><span>Section « Documents » → cliquer sur « Ajouter un document ».</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Choisir le type de document</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill optional"><span class="dot"></span>Contrat de travail</span>
+      <span class="field-pill optional"><span class="dot"></span>Carte d'identité</span>
+      <span class="field-pill optional"><span class="dot"></span>Diplôme</span>
+      <span class="field-pill optional"><span class="dot"></span>Certificat médical</span>
+      <span class="field-pill optional"><span class="dot"></span>RIB</span>
+      <span class="field-pill optional"><span class="dot"></span>Lettre de démission</span>
+      <span class="field-pill optional"><span class="dot"></span>Autre</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Sélectionner le fichier</strong><span>Tout format accepté selon le type de document.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Enregistrer</strong><span>Le document apparaît dans la liste avec son type, sa date d'ajout et un lien de téléchargement.</span></div></li>
+</ol>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — RÔLES & PERMISSIONS                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-roles"><span class="h2-icon">🔐</span> Administration — Rôles &amp; Permissions</h2>
+<div class="section-intro">
+  Accessible depuis <strong>Administration → Rôles &amp; Permissions</strong>. Permet de définir les rôles métier et d'associer à chacun un ensemble précis de droits d'accès.
+</div>
+<p>Permission requise : <span class="perm">GET_ROLES</span> <span class="role-badge role-admin">Admin</span></p>
+
+<h3>Créer un rôle</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Nouveau rôle »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Saisir</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Nom en français</span>
+      <span class="field-pill required"><span class="dot"></span>Nom en anglais</span>
+      <span class="field-pill optional"><span class="dot"></span>Description</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Gérer les permissions d'un rôle</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Sélectionner le rôle</strong><span>Dans la liste à gauche.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Onglet « Permissions »</strong><span>Grille de cases à cocher listant toutes les permissions disponibles.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Cocher / décocher</strong><span>Les changements sont appliqués immédiatement.</span></div></li>
+</ol>
+
+<h3>Assigner des utilisateurs à un rôle</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Onglet « Utilisateurs »</strong><span>Liste des utilisateurs porteurs du rôle.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Ajouter un utilisateur</strong><span>Bouton « Assigner » → rechercher et sélectionner.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Retirer un utilisateur</strong><span>Bouton de suppression en fin de ligne.</span></div></li>
+</ol>
+
+<h3>Supprimer un rôle</h3>
+<div class="note"><strong>Attention :</strong> Seuls les rôles sans utilisateurs assignés peuvent être supprimés. Les rôles système sont protégés.</div>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — DONNÉES DE RÉFÉRENCE                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-ref"><span class="h2-icon">🗄️</span> Administration — Données de référence</h2>
+<div class="section-intro">
+  Les données de référence alimentent les listes déroulantes de l'application (grades, disciplines, départements, banques, nationalités…). Elles sont organisées par entité (pays) ou globalement.
+</div>
+<p>Permission requise : <span class="perm">ADMIN_LISTS</span></p>
+
+<table class="data-table">
+  <thead><tr><th>Type de donnée</th><th>Périmètre</th><th>Champs</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Grades</strong></td><td>Par entité (pays)</td><td>Code · Libellé FR · Libellé EN · Ordre</td></tr>
+    <tr><td><strong>Disciplines</strong></td><td>Par entité</td><td>Code · Libellé FR · Libellé EN · Ordre</td></tr>
+    <tr><td><strong>Niveaux NOG</strong></td><td>Par entité</td><td>Code · Libellé FR · Libellé EN · Ordre</td></tr>
+    <tr><td><strong>Départements</strong></td><td>Par entité</td><td>Code · Libellé FR · Libellé EN · Hiérarchie (parent)</td></tr>
+    <tr><td><strong>Banques</strong></td><td>Par entité</td><td>Code · Libellé FR · SWIFT · Ordre</td></tr>
+    <tr><td><strong>Nationalités</strong></td><td>Global</td><td>Code · Libellé FR · Libellé EN</td></tr>
+    <tr><td><strong>Types matériel IT</strong></td><td>Global</td><td>Code · Libellé FR · Libellé EN</td></tr>
+  </tbody>
+</table>
+
+<h3>Ajouter un élément de référence</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Sélectionner l'onglet correspondant</strong><span>Ex. : « Grades ».</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Ajouter »</strong></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Remplir le formulaire</strong><span>Code (unique), libellé FR, libellé EN, ordre d'affichage.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Enregistrer</strong><span>L'élément est immédiatement disponible dans les listes déroulantes.</span></div></li>
+</ol>
+
+<h3>Modifier / Désactiver un élément</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur la ligne</strong><span>Mode édition inline.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Modifier les champs</strong><span>Libellés, ordre, statut actif.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer</strong><span>Un élément désactivé n'apparaît plus dans les listes déroulantes mais reste visible dans les dossiers existants.</span></div></li>
+</ol>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — LISTES CONFIGURABLES                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-lists"><span class="h2-icon">📝</span> Administration — Listes configurables</h2>
+<div class="section-intro">
+  Les listes configurables gèrent les valeurs des champs à choix multiples spécifiques à l'application (niveau d'urgence, type de contrat, type de profil AD, situation familiale, genre…).
+</div>
+<p>Permission requise : <span class="perm">ADMIN_LISTS</span></p>
+
+<h3>Consulter et modifier une liste</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Panneau gauche</strong><span>Choisir une liste (ex. URGENCY_LEVEL, EMPLOYMENT_TYPE, AD_PROFILE_TYPE…). Filtrer par recherche si nécessaire.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Panneau droit</strong><span>Tableau des valeurs de la liste sélectionnée.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Édition inline</strong><span>Cliquer sur une ligne → modifier code, libellé FR, libellé EN, ordre, statut actif.</span></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Ajouter une valeur</strong><span>Formulaire en bas du tableau.</span></div></li>
+  <li><div class="step-num">5</div><div class="step-body"><strong>Supprimer</strong><span>Icône de suppression avec confirmation.</span></div></li>
+</ol>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — RÉGIMES HORAIRES                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-regimes"><span class="h2-icon">⏱️</span> Administration — Régimes horaires</h2>
+<div class="section-intro">
+  Les régimes horaires définissent les règles de temps de travail (heures hebdomadaires, pauses…). Un régime par défaut est associé à chaque rôle, avec possibilité d'override individuel par employé.
+</div>
+
+<h3>Onglet Catalogue — Créer un régime</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Nouveau régime »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Remplir</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Nom en français</span>
+      <span class="field-pill required"><span class="dot"></span>Nom en anglais</span>
+      <span class="field-pill required"><span class="dot"></span>Heures par semaine</span>
+      <span class="field-pill optional"><span class="dot"></span>Description</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Onglet Assignation rôles</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Matrice rôles / régimes</strong><span>Pour chaque rôle, sélectionner le régime par défaut dans la liste déroulante.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Enregistrer</strong><span>Tous les employés porteurs du rôle héritent automatiquement du régime sauf override individuel.</span></div></li>
+</ol>
+
+<h3>Onglet Vue d'ensemble</h3>
+<p>Tableau de bord résumant le nombre d'employés et de rôles par régime — aucune action disponible, lecture seule.</p>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — MODÈLES DE PAUSE                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-breaks"><span class="h2-icon">☕</span> Administration — Modèles de pause</h2>
+<div class="section-intro">
+  Les modèles de pause définissent les intervalles de repos associés à chaque régime horaire (pause déjeuner, café, repos…).
+</div>
+<p>Permission requise : <span class="perm">ADMIN_BREAKS</span></p>
+
+<h3>Créer un modèle de pause</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Onglet « Templates »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Cliquer sur « Nouveau »</strong></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Remplir</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Régime associé</span>
+      <span class="field-pill required"><span class="dot"></span>Libellé FR</span>
+      <span class="field-pill required"><span class="dot"></span>Libellé EN</span>
+      <span class="field-pill required"><span class="dot"></span>Type : DÉJEUNER / CAFÉ / REPOS / …</span>
+      <span class="field-pill required"><span class="dot"></span>Heure de début</span>
+      <span class="field-pill required"><span class="dot"></span>Durée (minutes)</span>
+      <span class="field-pill optional"><span class="dot"></span>Payée (oui/non)</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Règles légales (onglet 2)</h3>
+<p>Configuration des contraintes légales de pause par pays / régime (durée minimale, horaires autorisés). Édition directe dans le tableau.</p>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — JOURS FÉRIÉS                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-holidays"><span class="h2-icon">📅</span> Administration — Jours fériés</h2>
+<div class="section-intro">
+  Gestion du calendrier des jours non travaillés par année. Les fériés récurrents sont automatiquement reportés d'une année à l'autre.
+</div>
+<p>Permission requise : <span class="perm">GET_HOLIDAYS</span></p>
+
+<h3>Consulter le calendrier</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Sélectionner l'année</strong><span>Liste déroulante (année en cours + 5 ans).</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Vue calendrier mensuel</strong><span>Les jours fériés sont mis en évidence.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Vue tableau</strong><span>Liste des fériés : Date · Libellé FR · Libellé EN · Badge « Récurrent ».</span></div></li>
+</ol>
+
+<h3>Ajouter un jour férié</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Ajouter »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Remplir</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Date</span>
+      <span class="field-pill required"><span class="dot"></span>Libellé en français</span>
+      <span class="field-pill optional"><span class="dot"></span>Libellé en anglais</span>
+      <span class="field-pill optional"><span class="dot"></span>Récurrent (coché = reporté chaque année à la même date)</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Initialisation automatique</h3>
+<p>Bouton « Initialiser les fériés par défaut » → peuple automatiquement les jours fériés nationaux standard pour l'entité (pays) sélectionnée.</p>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — PARAMÈTRES DE PAIE                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-payroll"><span class="h2-icon">💰</span> Administration — Paramètres de paie</h2>
+<div class="section-intro">
+  Table de clés/valeurs configurant les taux et règles de calcul de paie (CNSS, IRPP, CSS, devise…). Chaque paramètre est modifiable individuellement.
+</div>
+<p>Permission requise : <span class="perm">GET_PAYS</span></p>
+
+<h3>Consulter et modifier les paramètres</h3>
+<p>Tableau des paramètres : <strong>Clé</strong> · <strong>Valeur</strong> · <strong>Description</strong> · <strong>Date de modification</strong>.</p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Modifier » en fin de ligne</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Éditer la valeur</strong><span>Champ de saisie inline.</span></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer / Annuler</strong></div></li>
+</ol>
+
+<h3>Ajouter un paramètre personnalisé</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Ajouter »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Remplir</strong>
+    <div class="field-list" style="margin-top:8px">
+      <span class="field-pill required"><span class="dot"></span>Clé (unique, ex. TAUX_CNSS_EMPLOYE)</span>
+      <span class="field-pill required"><span class="dot"></span>Valeur (ex. 0.09)</span>
+      <span class="field-pill optional"><span class="dot"></span>Description</span>
+    </div>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Paramètres standards disponibles</h3>
+<div class="field-list">
+  <span class="field-pill optional"><span class="dot"></span>TAUX_CNSS_EMPLOYE</span>
+  <span class="field-pill optional"><span class="dot"></span>TAUX_CNSS_EMPLOYEUR</span>
+  <span class="field-pill optional"><span class="dot"></span>TAUX_IRPP</span>
+  <span class="field-pill optional"><span class="dot"></span>TAUX_CSS</span>
+  <span class="field-pill optional"><span class="dot"></span>DEVISE</span>
+</div>
+<p>Bouton « Initialiser les valeurs par défaut » → peuple tous les paramètres standard en une seule action.</p>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — NOTIFICATIONS                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-notifs"><span class="h2-icon">🔔</span> Administration — Notifications &amp; E-mails</h2>
+<div class="section-intro">
+  Le moteur de notifications envoie automatiquement des e-mails lors des événements métier (candidat accepté, onboarding soumis, demande approuvée…). Les règles d'acheminement et les templates sont configurables.
+</div>
+<p>Permission requise : <span class="perm">ADMIN_NOTIFICATIONS</span></p>
+
+<h3>Configurer les règles d'acheminement</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Choisir un type d'événement</strong><span>Liste groupée par module (Candidats, Onboarding, Demandes…). Filtrer par recherche.</span></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Configurer les destinataires</strong>
+    <ul style="margin-top:6px; padding-left:18px; color:var(--gray-600); font-size:13px; line-height:2">
+      <li>Rôles à notifier (tags multi-sélection)</li>
+      <li>E-mails directs supplémentaires</li>
+      <li>Canal : E-mail / SMS / Portail</li>
+    </ul>
+  </div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Sélectionner ou éditer le template e-mail</strong></div></li>
+  <li><div class="step-num">4</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<h3>Tester une règle de notification</h3>
+<p><span class="role-badge role-admin">Admin</span> uniquement.</p>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Bouton « Test d'envoi »</strong><span>Envoie un e-mail de test aux destinataires configurés.</span></div></li>
+</ol>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : ADMIN — TYPES DE DEMANDES                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="admin-request-types"><span class="h2-icon">📋</span> Administration — Types de demandes</h2>
+<div class="section-intro">
+  Catalogue des types de demandes proposés aux collaborateurs (attestations, changements de données personnelles, formations…). Chaque type définit ses règles d'approbation et son délai de traitement.
+</div>
+<p>Permission requise : <span class="perm">GET_ROLES</span></p>
+
+<table class="data-table">
+  <thead><tr><th>Champ</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>Code</td><td>Identifiant technique (ex. ATTESTATION_TRAVAIL)</td></tr>
+    <tr><td>Nom FR / EN</td><td>Libellé affiché dans l'interface</td></tr>
+    <tr><td>Catégorie</td><td>DOCUMENT · DONNÉES PERSONNELLES · BANCAIRE · CARRIÈRE · AUTRE</td></tr>
+    <tr><td>Niveau d'approbation</td><td>L1 (DRH seul) ou L2 (DRH + validation financière)</td></tr>
+    <tr><td>Délai SLA (jours)</td><td>Délai de traitement standard (par défaut : 3 jours)</td></tr>
+    <tr><td>Actif</td><td>Désactivé → n'apparaît plus dans le formulaire de demande</td></tr>
+  </tbody>
+</table>
+
+<h3>Créer un type de demande</h3>
+<ol class="steps">
+  <li><div class="step-num">1</div><div class="step-body"><strong>Cliquer sur « Nouveau type »</strong></div></li>
+  <li><div class="step-num">2</div><div class="step-body"><strong>Remplir tous les champs du tableau ci-dessus</strong></div></li>
+  <li><div class="step-num">3</div><div class="step-body"><strong>Enregistrer</strong></div></li>
+</ol>
+
+<p>Bouton <strong>« Initialiser les types par défaut »</strong> → crée les 15 types standards en une seule action (Attestation de travail, Attestation de salaire, Mise à jour bancaire, Changement d'adresse, etc.).</p>
+
+<hr class="divider" />
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION : AUDIT                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="audit"><span class="h2-icon">🔍</span> Journal d'audit</h2>
+<div class="section-intro">
+  Toutes les actions significatives (création, modification, transition de statut, connexion…) sont tracées dans un journal immuable consultable par les administrateurs.
+</div>
+<p>Permission requise : <span class="role-badge role-admin">Admin</span> <span class="role-badge role-hr">DRH</span></p>
+
+<div class="card">
+  <h4>Informations tracées pour chaque événement</h4>
+  <div class="field-list">
+    <span class="field-pill optional"><span class="dot"></span>Date et heure (horodatage précis)</span>
+    <span class="field-pill optional"><span class="dot"></span>Utilisateur ayant réalisé l'action</span>
+    <span class="field-pill optional"><span class="dot"></span>Type d'entité concernée (Candidat, Profil, Demande…)</span>
+    <span class="field-pill optional"><span class="dot"></span>Action réalisée (CREATE, UPDATE, STATUS_CHANGE…)</span>
+    <span class="field-pill optional"><span class="dot"></span>Motif saisi (pour les modifications de fiche)</span>
+    <span class="field-pill optional"><span class="dot"></span>Valeurs avant / après modification</span>
+  </div>
+</div>
+
+<div class="info">Le journal d'audit est en lecture seule. Aucune entrée ne peut être modifiée ou supprimée.</div>
+
+<hr class="divider" />
+
+<!-- FOOTER -->
+<div style="text-align:center; color:var(--gray-400); font-size:12px; padding-top:20px;">
+  DAF360 — Module RH &nbsp;·&nbsp; Manuel Fonctionnel &nbsp;·&nbsp; Juin 2026 &nbsp;·&nbsp; ITEC Groupe &nbsp;·&nbsp; Document confidentiel
+</div>
+
+</main>
+
+<script>
+  // Active sidebar link on scroll
+  const links = document.querySelectorAll('#sidebar nav a[href^="#"]');
+  const sections = [...links].map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`#sidebar nav a[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

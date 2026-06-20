@@ -100,7 +100,7 @@ export class OnboardingFormComponent implements OnInit {
           cnssAffiliationDate:     data.cnssAffiliationDate     ?? undefined,
           maritalStatus:           data.maritalStatus           ?? undefined,
           numberOfChildren:        data.numberOfChildren        ?? undefined,
-          homeAddress:             data.homeAddress             ?? undefined,
+          personalAddress:         data.personalAddress         ?? undefined,
           // Bank / RIB
           bankId:                  data.bankId                  ?? undefined,
           bankName:                data.bankName                ?? undefined,
