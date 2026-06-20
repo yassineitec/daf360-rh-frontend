@@ -84,15 +84,17 @@ import { environment } from '../../../../../../environments/environment';
         <div class="flex items-center gap-3 flex-shrink-0">
           <button
             class="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold
-                   border border-[#1b3a4b] text-[#1b3a4b] hover:bg-[#1b3a4b] hover:text-white
-                   transition-colors"
-            (click)="editClick.emit()">
+                   border border-[#1b3a4b] text-white
+                   transition-colors disabled:bg-gray-200"
+            (click)="editClick.emit()"
+            disabled>
             <span class="material-symbols-outlined text-[16px]">edit</span>
             Modifier
           </button>
           <button
             class="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold
-                   bg-[#1b3a4b] text-white hover:opacity-90 transition-opacity">
+                   bg-[#1b3a4b] text-white hover:opacity-90 transition-opacity disabled:bg-gray-200"
+                   disabled>
             Actions
             <span class="material-symbols-outlined text-[16px]">expand_more</span>
           </button>

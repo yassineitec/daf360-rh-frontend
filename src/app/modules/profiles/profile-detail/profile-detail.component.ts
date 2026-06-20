@@ -75,6 +75,8 @@ export class ProfileDetailComponent implements OnInit {
       history:   this.detailSvc.getLeaveHistory(id),
     }).subscribe({
       next: data => {
+        console.log(data);
+        
         this.profile.set(data.profile);
         this.contracts.set(data.contracts);
         this.documents.set(data.documents);
@@ -86,6 +88,6 @@ export class ProfileDetailComponent implements OnInit {
     });
   }
 
-  onBack(): void  { this.router.navigate(['/profiles']); }
-  onEdit(): void  { this.router.navigate(['/profiles', this.profileId(), 'edit']); }
+  onBack(): void  { this.router.navigate(['/rh/profiles']); }
+  onEdit(): void  { console.log(this.profileId); this.router.navigate(['/rh/profiles', this.profileId(), 'edit']); }
 }
