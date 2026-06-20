@@ -1,4 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, OnDestroy, effect, inject, input, output, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { catchError, EMPTY } from 'rxjs';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import type { BadgeOptions } from '@khalilrebhiitec/daf360';
 import { EmployeeProfile, LifecycleStatus, LIFECYCLE_LABELS } from '../../../models/profile.model';
@@ -37,6 +39,10 @@ import { environment } from '../../../../../../environments/environment';
           @if (resolvedPhotoUrl()) {
             <img [src]="resolvedPhotoUrl()!" [alt]="profile().fullName ?? ''"
                  class="w-full h-full object-cover" />
+          } @else if (avatarUrl()) {
+            <img [src]="avatarUrl()!" [alt]="profile().gender ?? ''"
+                 class="w-full h-full object-cover"
+                 (error)="onAvatarError()" />
           } @else {
             <div class="w-full h-full flex items-center justify-center
                         text-[20px] font-bold text-on-surface-variant">
@@ -103,15 +109,41 @@ import { environment } from '../../../../../../environments/environment';
     </div>
   `,
 })
-export class ProfileHeaderComponent {
+export class ProfileHeaderComponent implements OnDestroy {
   profile   = input.required<EmployeeProfile>();
   editClick = output<void>();
   backClick = output<void>();
 
-  resolvedPhotoUrl(): string | null {
-    if (!this.profile().photoUrl) return null;
-    return `${environment.hrApiUrl}/api/hr/profiles/${this.profile().id}/photo`;
+  private http         = inject(HttpClient);
+  private photoBlobUrl = signal<string | null>(null);
+  private avatarFailed = signal(false);
+
+  constructor() {
+    effect(() => {
+      const p = this.profile();
+      if (!p.photoUrl) return;
+      const url = `${environment.hrApiUrl}/api/hr/profiles/${p.id}/photo`;
+      this.http.get(url, { responseType: 'blob' }).pipe(
+        catchError(() => EMPTY),
+      ).subscribe(blob => this.photoBlobUrl.set(URL.createObjectURL(blob)));
+    });
   }
+
+  ngOnDestroy(): void {
+    const url = this.photoBlobUrl();
+    if (url) URL.revokeObjectURL(url);
+  }
+
+  resolvedPhotoUrl(): string | null { return this.photoBlobUrl(); }
+
+  avatarUrl(): string | null {
+    if (this.avatarFailed()) return null;
+    const gender = this.profile().gender?.toUpperCase() ?? '';
+    const isMale = ['MASCULIN', 'MALE', 'M', 'HOMME'].includes(gender);
+    return isMale ? '/images/avatars/male.png' : '/images/avatars/female.png';
+  }
+
+  onAvatarError(): void { this.avatarFailed.set(true); }
 
   initials(): string {
     return (this.profile().fullName ?? '')
