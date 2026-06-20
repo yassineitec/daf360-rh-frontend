@@ -98,7 +98,7 @@ import { environment } from '../../../../../environments/environment';
           class="flex-1 py-2 bg-[#617f88] text-white rounded-lg text-[13px]
                  font-semibold hover:opacity-90 transition-opacity"
           (click)="viewProfile.emit(employee().profileId)">
-          Voir profil
+          Voir profile
         </button>
         <button
           type="button"

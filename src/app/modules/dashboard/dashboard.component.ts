@@ -3,17 +3,18 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   DashboardService,
-  WorkforceStats,
+  DashboardStats,
   WorkforceData,
   ProfileCompletionData,
-  FinPeriodeEssaiItem,
+  ProbationAlertDto,
+  MissingDocumentDto,
   AnniversaireDto,
   NouveauEmployeDto,
 } from './services/dashboard.service';
 import { UserStore } from '../../core/user.store';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { QuickActionCardComponent } from './components/quick-action-card/quick-action-card.component';
-import { AlertCardComponent, ProbationAlert } from './components/alert-card/alert-card.component';
+import { AlertCardComponent, MissingDocAlert, ProbationAlert } from './components/alert-card/alert-card.component';
 import { WorkforceStatsComponent } from './components/workforce-stats/workforce-stats.component';
 import { ProfileCompletionComponent } from './components/profile-completion/profile-completion.component';
 import { EmployeeCardComponent, EmployeeCardData } from './components/employee-card/employee-card.component';
@@ -52,14 +53,17 @@ export class DashboardComponent implements OnInit {
   private translate       = inject(TranslateService);
 
   // ── Raw signals ────────────────────────────────────────────────────────────
-  readonly loading              = signal(true);
-  readonly error                = signal<string | null>(null);
-  readonly stats                = signal<WorkforceStats | null>(null);
-  readonly workforce            = signal<WorkforceData | null>(null);
-  readonly completion           = signal<ProfileCompletionData | null>(null);
-  readonly finPeriodeEssai      = signal<FinPeriodeEssaiItem[]>([]);
+  readonly loading                  = signal(true);
+  readonly error                    = signal<string | null>(null);
+  readonly stats                    = signal<DashboardStats | null>(null);
+  readonly workforce                = signal<WorkforceData | null>(null);
+  readonly completion               = signal<ProfileCompletionData | null>(null);
+  private readonly probationItems   = signal<ProbationAlertDto[]>([]);
+  readonly probationTotal           = signal<number>(0);
+  private readonly missingDocItems  = signal<MissingDocumentDto[]>([]);
+  readonly missingDocsTotal         = signal<number>(0);
   private readonly anniversairesRaw = signal<AnniversaireDto[]>([]);
-  readonly nouveauxEmployes     = signal<NouveauEmployeDto[]>([]);
+  readonly nouveauxEmployes         = signal<NouveauEmployeDto[]>([]);
 
   readonly currentUser = this.userStore.currentUser;
 
@@ -78,9 +82,25 @@ export class DashboardComponent implements OnInit {
   });
 
   readonly probation = computed<ProbationAlert[]>(() =>
-    this.finPeriodeEssai().map(p => ({
-      fullName:      p.fullName,
-      joursRestants: p.joursRestants ?? 0,
+    this.probationItems().map((p: ProbationAlertDto) => ({
+      profileId:       p.profileId,
+      fullName:        p.fullName,
+      photoUrl:        p.photoUrl,
+      finPeriodeEssai: p.finPeriodeEssai,
+      joursRestants:   p.joursRestants,
+      contractEndDate: p.contractEndDate,
+      department:      p.department,
+      roleName:        p.roleName,
+      gender:          p.gender,
+    }))
+  );
+
+  readonly missingDocAlerts = computed<MissingDocAlert[]>(() =>
+    this.missingDocItems().map((d: MissingDocumentDto) => ({
+      profileId:   d.profileId,
+      fullName:    d.fullName,
+      missingDocs: d.missingDocs,
+      urgency:     d.urgency,
     }))
   );
 
@@ -90,15 +110,15 @@ export class DashboardComponent implements OnInit {
       fullName:         emp.fullName,
       poste:            null,
       department:       emp.department,
-      discipline:       emp.discipline    ?? null,
-      contractType:     emp.contractType  ?? null,
-      paysLabel:        emp.paysLabel     ?? null,
+      discipline:       emp.discipline   ?? null,
+      contractType:     emp.contractType ?? null,
+      paysLabel:        emp.paysLabel    ?? null,
       anciennete:       emp.hireDate ? this.ancienneteLabel(emp.hireDate) : '—',
       presenceStatus:   'PRESENT' as const,
       photoUrl:         emp.photoUrl,
-      gender:           emp.gender        ?? null,
+      gender:           emp.gender       ?? null,
       initials:         this.initials(emp.fullName),
-      completionPerso:  false,
+      completionPerso:  emp.onboardingCompleted,
       completionDocs:   false,
       completionSkills: false,
     }))
@@ -126,13 +146,14 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.dashboardSvc.load().subscribe({
-      
-      next: data => {        
-        console.log(data);
+      next: data => {
         this.stats.set(data.stats);
         this.workforce.set(data.workforce);
         this.completion.set(data.completion);
-        this.finPeriodeEssai.set(data.finPeriodeEssai);
+        this.probationItems.set(data.probation.items);
+        this.probationTotal.set(data.probation.total);
+        this.missingDocItems.set(data.missingDocuments.items);
+        this.missingDocsTotal.set(data.missingDocuments.total);
         this.anniversairesRaw.set(data.anniversaires);
         this.nouveauxEmployes.set(data.nouveauxEmployes);
         this.loading.set(false);

@@ -47,7 +47,11 @@
     <!-- ── Stats Row: watchlist (½) + 2 KPI cards (½) ────────────────────── -->
     <div class="flex gap-6">
       <div class="w-full flex-1">
-        <rh-alert-card [probationAlerts]="probation()" />
+        <rh-alert-card
+          [probationAlerts]="probation()"
+          [probationTotal]="probationTotal()"
+          [missingDocsAlerts]="missingDocAlerts()"
+          [missingDocsTotal]="missingDocsTotal()" />
       </div>
       <div class="w-full flex-1 flex gap-6">
         <div class="flex-1 min-w-0">
