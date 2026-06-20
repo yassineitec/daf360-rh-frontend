@@ -11,12 +11,16 @@ export interface AnniversaireDto {
 }
 
 export interface NouveauEmployeDto {
-  profileId: number;
-  fullName: string;
-  photoUrl: string | null;
-  hireDate: string | null;
-  department: string | null;
-  grade: string | null;
+  profileId:    number;
+  fullName:     string;
+  photoUrl:     string | null;
+  hireDate:     string | null;
+  department:   string | null;
+  grade:        string | null;
+  gender?:      string | null;
+  discipline?:  string | null;
+  contractType?:string | null;
+  paysLabel?:   string | null;
 }
 
 export interface WorkforceStats {

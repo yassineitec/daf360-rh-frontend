@@ -1,6 +1,7 @@
-import { Component, input } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
+import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
 export interface NouveauItem {
   profileId:  number | null;
@@ -8,6 +9,8 @@ export interface NouveauItem {
   hireDate:   string | null;
   grade:      string | null;
   department: string | null;
+  photoUrl:   string | null;
+  gender:     string | null;
 }
 
 @Component({
@@ -24,8 +27,15 @@ export interface NouveauItem {
         @for (item of items(); track item.fullName) {
           <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center
-                        text-[10px] font-bold text-on-surface shrink-0">
-              {{ initials(item.fullName) }}
+                        text-[10px] font-bold text-on-surface shrink-0 overflow-hidden">
+              @if (!failed().has(item.profileId ?? item.fullName)) {
+                <img [src]="getAvatarUrl(item.profileId, item.photoUrl, item.gender)"
+                     [alt]="item.fullName"
+                     class="w-full h-full object-cover"
+                     (error)="onError(item.profileId ?? item.fullName)" />
+              } @else {
+                {{ initials(item.fullName) }}
+              }
             </div>
             <div>
               <p class="text-[13px] font-bold text-on-surface leading-tight">{{ item.fullName }}</p>
@@ -44,7 +54,13 @@ export interface NouveauItem {
   `,
 })
 export class NewEmployeesWidgetComponent {
-  readonly items = input.required<NouveauItem[]>();
+  readonly items       = input.required<NouveauItem[]>();
+  readonly getAvatarUrl = getAvatarUrl;
+  readonly failed       = signal(new Set<number | string>());
+
+  onError(key: number | string): void {
+    this.failed.update(s => new Set(s).add(key));
+  }
 
   initials(name: string): string {
     return name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();

@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { environment } from '../../../../../environments/environment';
@@ -9,6 +9,9 @@ export interface EmployeeCardData {
   fullName:         string;
   poste:            string | null;
   department:       string | null;
+  discipline:       string | null;
+  contractType:     string | null;
+  paysLabel:        string | null;
   anciennete:       string;
   presenceStatus:   'PRESENT' | 'TELETRAVAIL' | 'ABSENT';
   photoUrl:         string | null;
@@ -52,16 +55,38 @@ export interface EmployeeCardData {
 
       <!-- Avatar + info -->
       <div class="flex items-start gap-4 mb-4">
-        <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0">
-          <img [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
-               [alt]="employee().fullName"
-               class="w-full h-full object-cover" />
+        <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0
+                    bg-surface-container flex items-center justify-center">
+          @if (!avatarFailed()) {
+            <img [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
+                 [alt]="employee().fullName"
+                 class="w-full h-full object-cover"
+                 (error)="avatarFailed.set(true)" />
+          } @else {
+            <span class="text-[14px] font-bold text-on-surface-variant">
+              {{ employee().initials }}
+            </span>
+          }
         </div>
-        <div>
-          <h3 class="text-[14px] font-bold text-on-surface">{{ employee().fullName }}</h3>
-          <p class="text-[12px] text-outline">
-            {{ employee().poste ?? '—' }}{{ employee().department ? ' • ' + employee().department : '' }}
+        <div class="min-w-0">
+          <h3 class="text-[14px] font-bold text-on-surface truncate">{{ employee().fullName }}</h3>
+          <p class="text-[12px] text-outline truncate">
+            {{ employee().discipline ?? employee().poste ?? '—' }}{{ employee().department ? ' • ' + employee().department : '' }}
           </p>
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            @if (employee().contractType) {
+              <span class="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5
+                           rounded bg-surface-container text-on-surface-variant">
+                {{ employee().contractType }}
+              </span>
+            }
+            @if (employee().paysLabel) {
+              <span class="flex items-center gap-0.5 text-[11px] text-outline">
+                <span class="material-symbols-outlined text-[12px]">location_on</span>
+                {{ employee().paysLabel }}
+              </span>
+            }
+          </div>
           <p class="text-[11px] text-teal font-bold uppercase mt-1">
             {{ 'DASHBOARD.EMPLOYEE_CARD.SENIORITY' | translate }} {{ employee().anciennete }}
           </p>
@@ -104,7 +129,8 @@ export interface EmployeeCardData {
   `,
 })
 export class EmployeeCardComponent {
-  readonly employee    = input.required<EmployeeCardData>();
+  readonly employee     = input.required<EmployeeCardData>();
+  readonly avatarFailed = signal(false);
   readonly viewProfile = output<number | null>();
   readonly moreActions = output<number | null>();
   readonly getAvatarUrl = getAvatarUrl;

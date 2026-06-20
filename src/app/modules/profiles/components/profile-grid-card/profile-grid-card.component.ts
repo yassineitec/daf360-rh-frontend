@@ -53,7 +53,7 @@ import { environment } from '../../../../../environments/environment';
 
       <!-- Avatar + info -->
       <div class="flex items-start gap-4 mt-1">
-        <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0">
+        <div class="w-14 h-14 rounded-full border-2 border-[#79d7be] overflow-hidden shrink-0">
           <img
             [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
             [alt]="employee().fullName"
@@ -95,7 +95,7 @@ import { environment } from '../../../../../environments/environment';
       <div class="flex gap-2 mt-4">
         <button
           type="button"
-          class="flex-1 py-2 bg-[#1b3a4b] text-white rounded-lg text-[13px]
+          class="flex-1 py-2 bg-[#617f88] text-white rounded-lg text-[13px]
                  font-semibold hover:opacity-90 transition-opacity"
           (click)="viewProfile.emit(employee().profileId)">
           Voir profil

@@ -90,14 +90,17 @@ export class DashboardComponent implements OnInit {
       fullName:         emp.fullName,
       poste:            null,
       department:       emp.department,
+      discipline:       emp.discipline    ?? null,
+      contractType:     emp.contractType  ?? null,
+      paysLabel:        emp.paysLabel     ?? null,
       anciennete:       emp.hireDate ? this.ancienneteLabel(emp.hireDate) : '—',
       presenceStatus:   'PRESENT' as const,
       photoUrl:         emp.photoUrl,
-      gender:           null,
+      gender:           emp.gender        ?? null,
       initials:         this.initials(emp.fullName),
       completionPerso:  false,
-      completionDocs:   false, // TODO: needs onboardingCompleted in list endpoint
-      completionSkills: false, // TODO: skills endpoint pending
+      completionDocs:   false,
+      completionSkills: false,
     }))
   );
 
@@ -116,6 +119,8 @@ export class DashboardComponent implements OnInit {
       hireDate:   emp.hireDate,
       grade:      emp.grade,
       department: emp.department,
+      photoUrl:   emp.photoUrl,
+      gender:     emp.gender ?? null,
     }))
   );
 
