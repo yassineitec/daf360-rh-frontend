@@ -11,6 +11,16 @@ export interface PipelineCandidateItem {
   score: number;
   datePostulation: string;
   photoUrl?: string | null;
+  stageLabel?: string;
+  applicationDate?: string;
+  email?: string;
+  status?: string;
+}
+
+export interface CandidateKanbanColumn {
+  stage: string;
+  stageLabel: string;
+  count: number;
 }
 
 export interface PipelineStats {
@@ -35,6 +45,10 @@ export class CandidatesPipelineService {
 
   getStats(): Observable<PipelineStats> {
     return this.http.get<PipelineStats>(`${this.base}/stats`);
+  }
+
+  getKanban(): Observable<CandidateKanbanColumn[]> {
+    return this.http.get<CandidateKanbanColumn[]>(`${this.base}/kanban`);
   }
 
   getCandidates(params: {

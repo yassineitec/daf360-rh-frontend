@@ -1,7 +1,7 @@
 import { Component, input, output, signal } from '@angular/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { EmployeeListItem } from '../../models/profile.model';
-import { avatarUrl } from '../../../../shared/utils/avatar.utils';
+import { avatarUrl, getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 import { statusBadge } from '../../../../shared/status-badge.utils';
 import { environment } from '../../../../../environments/environment';
 
@@ -33,7 +33,7 @@ import { environment } from '../../../../../environments/environment';
       <!-- Avatar -->
       <div class="w-12 h-12 rounded-full border border-[#79D7BE] overflow-hidden shrink-0">
         <img
-          [src]="resolvePhoto(employee().photoUrl) || avatarUrl(employee().gender)"
+          [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
           [alt]="employee().fullName"
           class="w-full h-full object-cover" />
       </div>
@@ -146,8 +146,9 @@ export class ProfileListCardComponent {
   readonly onSelect    = output<{ profileId: number; checked: boolean }>();
   readonly onEdit      = output<number>();
   readonly onDelete    = output<number>();
-  readonly avatarUrl   = avatarUrl;
-  readonly statusBadge = statusBadge;
+  readonly avatarUrl    = avatarUrl;
+  readonly getAvatarUrl = getAvatarUrl;
+  readonly statusBadge  = statusBadge;
 
   hovered = signal(false);
 

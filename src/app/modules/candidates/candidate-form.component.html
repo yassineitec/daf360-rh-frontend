@@ -1,297 +1,299 @@
-<app-modal
-  [title]="candidate() ? 'Modifier le candidat' : 'Nouveau candidat'"
-  [visible]="visible()"
-  (closed)="closed.emit()"
-  [hasFooter]="true"
->
+<!-- Error banner -->
+@if (error()) {
+  <div class="mb-5 flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3">
+    <span
+      class="material-symbols-outlined text-[18px] text-danger mt-0.5"
+      style="font-variation-settings: 'FILL' 1"
+      >error</span
+    >
+    <span class="text-sm text-danger">{{ error() }}</span>
+  </div>
+}
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" id="candidate-form" novalidate>
-
-    <!-- ── Error banner ──────────────────────────────────────────────────── -->
-    @if (error()) {
-      <div class="form-error-banner">{{ error() }}</div>
-    }
-
-    <!-- ── Section: Identity ─────────────────────────────────────────────── -->
-    <fieldset class="form-section" formGroupName="identity">
-      <legend class="form-section-legend">Identité</legend>
-
-      <div class="form-grid">
-
-        <!-- firstName -->
-        <div class="form-group">
-          <label class="form-label" for="firstName">
-            Prénom <span class="required">*</span>
-          </label>
-          <input
-            id="firstName"
-            type="text"
-            class="form-input"
-            formControlName="firstName"
-            placeholder="Prénom"
-            autocomplete="given-name"
-          />
-          @if (identityGroup.get('firstName')?.invalid && identityGroup.get('firstName')?.touched) {
-            <span class="form-error">Le prénom est requis.</span>
-          }
-        </div>
-
-        <!-- lastName -->
-        <div class="form-group">
-          <label class="form-label" for="lastName">
-            Nom <span class="required">*</span>
-          </label>
-          <input
-            id="lastName"
-            type="text"
-            class="form-input"
-            formControlName="lastName"
-            placeholder="Nom de famille"
-            autocomplete="family-name"
-          />
-          @if (identityGroup.get('lastName')?.invalid && identityGroup.get('lastName')?.touched) {
-            <span class="form-error">Le nom est requis.</span>
-          }
-        </div>
-
-        <!-- emailPersonal -->
-        <div class="form-group">
-          <label class="form-label" for="emailPersonal">
-            Email personnel <span class="required">*</span>
-          </label>
-          <input
-            id="emailPersonal"
-            type="email"
-            class="form-input"
-            formControlName="emailPersonal"
-            placeholder="exemple@email.com"
-            autocomplete="email"
-          />
-          @if (identityGroup.get('emailPersonal')?.touched) {
-            @if (identityGroup.get('emailPersonal')?.hasError('required')) {
-              <span class="form-error">L'email est requis.</span>
-            } @else if (identityGroup.get('emailPersonal')?.hasError('email')) {
-              <span class="form-error">Format d'email invalide.</span>
-            }
-          }
-        </div>
-
-        <!-- phone -->
-        <div class="form-group">
-          <label class="form-label" for="phone">Téléphone</label>
-          <input
-            id="phone"
-            type="tel"
-            class="form-input"
-            formControlName="phone"
-            placeholder="+212 6XX XXX XXX"
-            autocomplete="tel"
-          />
-        </div>
-
-      </div>
-    </fieldset>
-
-    <!-- ── Section: Position ─────────────────────────────────────────────── -->
-    <fieldset class="form-section" formGroupName="position">
-      <legend class="form-section-legend">Poste</legend>
-
-      <div class="form-grid">
-
-        <!-- appliedPosition -->
-        <div class="form-group">
-          <label class="form-label" for="appliedPosition">
-            Poste souhaité <span class="required">*</span>
-          </label>
-          <input
-            id="appliedPosition"
-            type="text"
-            class="form-input"
-            formControlName="appliedPosition"
-            placeholder="Ex: Ingénieur structure"
-          />
-          @if (positionGroup.get('appliedPosition')?.invalid && positionGroup.get('appliedPosition')?.touched) {
-            <span class="form-error">Le poste est requis.</span>
-          }
-        </div>
-
-        <!-- departmentId -->
-        <div class="form-group">
-          <label class="form-label" for="departmentId">Département</label>
-          <select id="departmentId" class="form-select" formControlName="departmentId">
-            <option [ngValue]="null">— Sélectionner —</option>
-            @for (d of departments(); track d.id) {
-              <option [ngValue]="d.id">{{ d.labelFr }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- contractType -->
-        <div class="form-group">
-          <label class="form-label" for="contractType">
-            Type de contrat <span class="required">*</span>
-          </label>
-          <select id="contractType" class="form-select" formControlName="contractType">
-            <option value="" disabled>-- Sélectionner --</option>
-            @for (opt of contractTypeOptions; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
-            }
-          </select>
-          @if (positionGroup.get('contractType')?.invalid && positionGroup.get('contractType')?.touched) {
-            <span class="form-error">Le type de contrat est requis.</span>
-          }
-        </div>
-
-        <!-- appliedGradeId -->
-        <div class="form-group">
-          <label class="form-label" for="appliedGradeId">Grade</label>
-          <select id="appliedGradeId" class="form-select" formControlName="appliedGradeId">
-            <option [ngValue]="null">— Sélectionner —</option>
-            @for (g of grades(); track g.id) {
-              <option [ngValue]="g.id">{{ g.labelFr }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- appliedDisciplineId -->
-        <div class="form-group">
-          <label class="form-label" for="appliedDisciplineId">Discipline</label>
-          <select id="appliedDisciplineId" class="form-select" formControlName="appliedDisciplineId">
-            <option [ngValue]="null">— Sélectionner —</option>
-            @for (d of disciplines(); track d.id) {
-              <option [ngValue]="d.id">{{ d.labelFr }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- nationalityId -->
-        <div class="form-group">
-          <label class="form-label" for="nationalityId">Nationalité</label>
-          <select id="nationalityId" class="form-select" formControlName="nationalityId">
-            <option [ngValue]="null">— Sélectionner —</option>
-            @for (n of nationalities(); track n.id) {
-              <option [ngValue]="n.id">{{ n.labelFr }}</option>
-            }
-          </select>
-        </div>
-
-        <!-- expectedStartDate -->
-        <div class="form-group">
-          <label class="form-label" for="expectedStartDate">
-            Date de début prévue <span class="required">*</span>
-          </label>
-          <input
-            id="expectedStartDate"
-            type="date"
-            class="form-input"
-            formControlName="expectedStartDate"
-          />
-          @if (positionGroup.get('expectedStartDate')?.invalid && positionGroup.get('expectedStartDate')?.touched) {
-            <span class="form-error">La date de début est requise.</span>
-          }
-        </div>
-
-        <!-- contractEndDate — shown only for FIXED_TERM -->
-        @if (isFixedTerm) {
-          <div class="form-group">
-            <label class="form-label" for="contractEndDate">
-              Date de fin de contrat <span class="required">*</span>
-            </label>
-            <input
-              id="contractEndDate"
-              type="date"
-              class="form-input"
-              formControlName="contractEndDate"
-            />
-          </div>
-        }
-
-        <!-- paysId — read-only indicator -->
-        <div class="form-group">
-          <label class="form-label" for="paysId">Pays (ID)</label>
-          <input
-            id="paysId"
-            type="number"
-            class="form-input pays-readonly"
-            formControlName="paysId"
-            readonly
-            tabindex="-1"
-          />
-        </div>
-
-      </div>
-    </fieldset>
-
-    <!-- ── Notes (full width) ─────────────────────────────────────────────── -->
-    <div class="form-group form-full">
-      <label class="form-label" for="notes">Notes</label>
-      <textarea
-        id="notes"
-        class="form-textarea"
-        formControlName="notes"
-        rows="3"
-        placeholder="Observations, remarques…"
-      ></textarea>
+<div class="w-full p-6">
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+    <div>
+      <nav class="flex items-center gap-1.5 text-sm text-on-surface-variant mb-2">
+        <button
+          type="button"
+          class="hover:text-teal transition-colors font-medium cursor-pointer"
+          (click)="navigateToList()"
+        >
+          Recrutement
+        </button>
+        <span class="material-symbols-outlined text-[16px] text-outline">chevron_right</span>
+        <span class="text-teal font-medium">Nouveau Candidat</span>
+      </nav>
+      <h1 class="text-2xl font-bold text-on-surface">Créer un profil candidat</h1>
     </div>
 
+    <div class="flex gap-3 shrink-0">
+      <daf-button
+        label="Annuler"
+        variant="ghost"
+        [options]="{ iconStart: 'cancel', size: 'md' }"
+        (onClick)="onCancel()"
+      />
+      <daf-button
+        [label]="
+          saving()
+            ? cvFiles().length
+              ? 'Envoi du CV…'
+              : 'Enregistrement…'
+            : cvFiles().length
+              ? 'Enregistrer + CV'
+              : 'Enregistrer le profil'
+        "
+        variant="teal"
+        [options]="{ iconStart: 'save', size: 'md', loading: saving() }"
+        (onClick)="onSubmit()"
+      />
+    </div>
+  </div>
+
+  <!-- Form Grid -->
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    novalidate
+    class="flex w-full justify-center gap-6"
+  >
+    <div class="flex flex-col flex-1 gap-6 col-6">
+      <daf-section-card>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-teal">person</span>
+            <daf-section-title title="Informations d'Identité" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <daf-form-field
+              [options]="{
+                label: 'Prénom',
+                required: true,
+                placeholder: 'ex: Jean',
+                error: getFieldError('identity.firstName'),
+              }"
+              [value]="getTextValue('identity.firstName')"
+              (valueChange)="setTextValue('identity.firstName', $event)"
+            />
+            <daf-form-field
+              [options]="{
+                label: 'Nom',
+                required: true,
+                placeholder: 'ex: Dupont',
+                error: getFieldError('identity.lastName'),
+              }"
+              [value]="getTextValue('identity.lastName')"
+              (valueChange)="setTextValue('identity.lastName', $event)"
+            />
+            <daf-form-field
+              [options]="{
+                label: 'Email professionnel',
+                type: 'email',
+                required: true,
+                placeholder: 'jean.dupont@email.com',
+                prefixIcon: 'mail',
+                error: getFieldError('identity.emailPersonal'),
+              }"
+              [value]="getTextValue('identity.emailPersonal')"
+              (valueChange)="setTextValue('identity.emailPersonal', $event)"
+            />
+            <daf-form-field
+              [options]="{
+                label: 'Téléphone',
+                placeholder: '+212 6XX XXX XXX',
+                prefixIcon: 'phone',
+              }"
+              [value]="getTextValue('identity.phone')"
+              (valueChange)="setTextValue('identity.phone', $event)"
+            />
+          </div>
+        </div>
+      </daf-section-card>
+      <!-- CV Upload -->
+      <daf-section-card>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-teal">description</span>
+            <daf-section-title title="Curriculum Vitae" />
+          </div>
+          <daf-file-upload
+            [(files)]="cvFiles"
+            [config]="{
+              accept: '.pdf,.doc,.docx',
+              maxSizeMb: 10,
+              hint: 'PDF, DOC ou DOCX — max 10 Mo',
+            }"
+          />
+        </div>
+      </daf-section-card>
+      <!-- Notes -->
+      <daf-section-card>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-teal">edit_note</span>
+            <daf-section-title title="Notes &amp; Commentaires" />
+          </div>
+          <daf-form-field
+            [options]="{
+              type: 'textarea',
+              rows: 4,
+              placeholder:
+                'Ajouter des observations sur le candidat, ses points forts ou ses attentes particulières…',
+              hint: 'Informations complémentaires sur le candidat',
+            }"
+            [value]="getTextValue('notes')"
+            (valueChange)="setTextValue('notes', $event)"
+          />
+        </div>
+      </daf-section-card>
+    </div>
+    <div class="flex flex-col flex-1 gap-6 col-6">
+      <!-- Position & Contract -->
+      <daf-section-card>
+        <div class="p-6">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="material-symbols-outlined text-teal">work</span>
+            <daf-section-title title="Poste &amp; Contrat" />
+          </div>
+          <div class="space-y-4">
+            <daf-form-field
+              [options]="{
+                label: 'Poste souhaité',
+                required: true,
+                placeholder: 'Ex: Ingénieur structure',
+                prefixIcon: 'work_outline',
+                error: getFieldError('position.appliedPosition'),
+              }"
+              [value]="getTextValue('position.appliedPosition')"
+              (valueChange)="setTextValue('position.appliedPosition', $event)"
+            />
+            <daf-select
+              [selected]="getSelectStr('position.contractType')"
+              [options]="contractOptions"
+              [config]="{
+                label: 'Type de contrat',
+                placeholder: '— Sélectionner —',
+                required: true,
+                error: getFieldError('position.contractType'),
+                fullWidth: true,
+              }"
+              (selectedChange)="setSelectStr('position.contractType', $event)"
+            />
+            <div class="flex items-center gap-4">
+              <daf-date-picker
+                class="flex-1"
+                [value]="getDateValue('position.expectedStartDate')"
+                [config]="{
+                  label: 'Date de début',
+                  placeholder: 'Sélectionner une date',
+                  required: true,
+                  error: getFieldError('position.expectedStartDate'),
+                }"
+                (valueChange)="setDateValue('position.expectedStartDate', $event)"
+              />
+              <daf-select
+                class="flex-1"
+                [selected]="getSelectNum('position.departmentId')"
+                [options]="departmentOptions()"
+                [config]="{
+                  label: 'Département',
+                  placeholder: '— Sélectionner —',
+                  fullWidth: true,
+                }"
+                (selectedChange)="setSelectNum('position.departmentId', $event)"
+              />
+            </div>
+            <daf-select
+              [selected]="getSelectNum('position.appliedGradeId')"
+              [options]="gradeOptions()"
+              [config]="{ label: 'Grade', placeholder: '— Sélectionner —', fullWidth: true }"
+              (selectedChange)="setSelectNum('position.appliedGradeId', $event)"
+            />
+            <daf-select
+              [selected]="getSelectNum('position.appliedDisciplineId')"
+              [options]="disciplineOptions()"
+              [config]="{ label: 'Discipline', placeholder: '— Sélectionner —', fullWidth: true }"
+              (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)"
+            />
+            <daf-select
+              [selected]="getSelectNum('position.nationalityId')"
+              [options]="nationalityOptions()"
+              [config]="{
+                label: 'Nationalité',
+                placeholder: '— Sélectionner —',
+                fullWidth: true,
+              }"
+              (selectedChange)="setSelectNum('position.nationalityId', $event)"
+            />
+          </div>
+        </div>
+      </daf-section-card>
+      <!-- Profile Quality -->
+      <daf-section-card>
+        <div class="p-6">
+          <div class="flex items-start gap-4">
+            <div class="p-3 bg-surface-container rounded-xl shrink-0 text-teal">
+              <span
+                class="material-symbols-outlined text-[32px]"
+                [style.font-variation-settings]="fillStyle(profileCompleteness() >= 100)"
+                >verified_user</span
+              >
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <h4 class="text-base font-semibold text-on-surface">Qualité du profil</h4>
+                <span
+                  class="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-container text-teal"
+                >
+                  {{ completenessLabel() }}
+                </span>
+              </div>
+
+              <p class="text-sm text-on-surface-variant mb-3">
+                En complétant toutes les sections, vous augmentez la visibilité du candidat pour les
+                managers.
+              </p>
+
+              <daf-progress-bar
+                label=""
+                [value]="profileCompleteness()"
+                [options]="{
+                  showLabel: false,
+                  showPercent: false,
+                  animated: true,
+                  variant: 'teal',
+                }"
+              />
+
+              <p class="text-sm font-semibold text-teal mt-2">
+                {{ profileCompleteness() }}% complété
+              </p>
+
+              <ul class="mt-4 space-y-1.5">
+                @for (field of requiredFieldsStatus(); track field.label) {
+                  <li class="flex items-center gap-2 text-xs">
+                    <span
+                      class="material-symbols-outlined text-[15px]"
+                      [class.text-success]="field.done"
+                      [class.text-outline]="!field.done"
+                      [style.font-variation-settings]="fillStyle(field.done)"
+                      >{{ field.done ? 'check_circle' : 'radio_button_unchecked' }}</span
+                    >
+                    <span
+                      [class.text-on-surface]="field.done"
+                      [class.text-on-surface-variant]="!field.done"
+                      >{{ field.label }}</span
+                    >
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+      </daf-section-card>
+    </div>
   </form>
-
-  <!-- ── CV upload (outside reactive form — handled separately) ───────────── -->
-  <div class="cv-upload-section">
-    <p class="cv-upload-label">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-      Curriculum Vitae
-      <span class="cv-optional">(optionnel)</span>
-    </p>
-
-    @if (cvFile()) {
-      <!-- File selected — show name + remove button -->
-      <div class="cv-selected">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#27ae60">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-        <span class="cv-selected-name">{{ cvFile()!.name }}</span>
-        <button type="button" class="cv-remove" (click)="cvFile.set(null)" aria-label="Retirer le fichier">✕</button>
-      </div>
-    } @else {
-      <!-- No file — show upload zone -->
-      <label class="cv-drop-zone">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-muted)">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span>Cliquer pour choisir un fichier</span>
-        <span class="cv-hint">PDF, DOC, DOCX — max 10 Mo</span>
-        <input type="file" accept=".pdf,.doc,.docx" (change)="onCvFileSelected($event)" hidden />
-      </label>
-    }
-
-    @if (cvError()) {
-      <p class="cv-error">{{ cvError() }}</p>
-    }
-  </div>
-
-  <!-- ── Footer slot ────────────────────────────────────────────────────── -->
-  <div slot="footer">
-    <button type="button" class="btn-cancel" (click)="closed.emit()">
-      Annuler
-    </button>
-    <button
-      type="button"
-      class="btn-submit"
-      [disabled]="saving()"
-      (click)="onSubmit()"
-    >
-      @if (saving()) {
-        @if (cvFile()) { Envoi du CV… } @else { Enregistrement… }
-      } @else {
-        @if (cvFile()) { Enregistrer + CV } @else { Enregistrer }
-      }
-    </button>
-  </div>
-
-</app-modal>
+</div>

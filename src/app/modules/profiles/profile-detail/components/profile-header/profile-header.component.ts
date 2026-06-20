@@ -65,7 +65,7 @@ import { environment } from '../../../../../../environments/environment';
             @if (profile().paysId) {
               <span class="flex items-center gap-1 text-[13px] text-outline">
                 <span class="material-symbols-outlined text-[14px]">location_on</span>
-                Pays {{ profile().paysId }}
+                {{ paysLabel() }}
               </span>
             }
             @if (profile().hireDate) {
@@ -107,10 +107,8 @@ export class ProfileHeaderComponent {
   backClick = output<void>();
 
   resolvedPhotoUrl(): string | null {
-    const url = this.profile().photoUrl;
-    if (!url) return null;
-    if (url.startsWith('/api/')) return environment.hrApiUrl + url;
-    return url;
+    if (!this.profile().photoUrl) return null;
+    return `${environment.hrApiUrl}/api/hr/profiles/${this.profile().id}/photo`;
   }
 
   initials(): string {
@@ -137,6 +135,11 @@ export class ProfileHeaderComponent {
       ARCHIVED:       { variant: 'neutral' },
     };
     return map[this.profile().lifecycleStatus] ?? { variant: 'neutral' };
+  }
+
+  paysLabel(): string {
+    const p = this.profile();
+    return (p as any)['paysLabel'] ?? p.nationality ?? `Pays #${p.paysId}`;
   }
 
   fmt(iso: string | null | undefined): string {

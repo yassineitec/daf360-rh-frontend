@@ -10,6 +10,10 @@ import { RemoteStylesService } from '../core/remote-styles.service';
 import { SideNavComponent, UserActions } from '@khalilrebhiitec/daf360';
 import type { NavItem, SideNavConfig } from '@khalilrebhiitec/daf360';
 import { Store } from '@ngrx/store';
+import { TranslateService } from '@ngx-translate/core';
+import en from '@public/assets/i18n/en.json';
+import fr from '@public/assets/i18n/fr.json';
+import ar from '@public/assets/i18n/ar.json';
 
 interface AppNavDef {
   id: string;
@@ -20,16 +24,40 @@ interface AppNavDef {
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
-  { id: 'dashboard',       label: 'Dashboard',       icon: 'dashboard',            route: 'dashboard',       permission: null },
-  { id: 'profiles',        label: 'Profils',         icon: 'account_circle',       route: 'profiles',        permission: null },
-  { id: 'recrutement',     label: 'Pipeline RH',     icon: 'analytics',            route: 'recrutement',     permission: null },
-  { id: 'candidates',      label: 'Candidats',       icon: 'group_add',            route: 'candidates',      permission: null },
-  { id: 'it-provisioning', label: 'Provisioning IT', icon: 'devices',              route: 'it-provisioning', permission: null },
-  { id: 'onboarding',      label: 'Onboarding',      icon: 'person_add',           route: 'onboarding',      permission: null },
-  { id: 'leave',           label: 'Congés',          icon: 'beach_access',         route: 'leave',           permission: null },
-  { id: 'lifecycle',       label: 'Lifecycle',       icon: 'timeline',             route: 'lifecycle',       permission: null },
-  { id: 'requests',        label: 'Demandes',        icon: 'inbox',                route: 'requests',        permission: null },
-  { id: 'admin',           label: 'Admin',           icon: 'admin_panel_settings', route: 'admin',           permission: null },
+  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', route: 'dashboard', permission: null },
+  { id: 'profiles', label: 'Profils', icon: 'account_circle', route: 'profiles', permission: null },
+  {
+    id: 'recrutement',
+    label: 'Pipeline RH',
+    icon: 'analytics',
+    route: 'recrutement',
+    permission: null,
+  },
+  {
+    id: 'candidates',
+    label: 'Candidats',
+    icon: 'group_add',
+    route: 'candidates',
+    permission: null,
+  },
+  {
+    id: 'it-provisioning',
+    label: 'Provisioning IT',
+    icon: 'devices',
+    route: 'it-provisioning',
+    permission: null,
+  },
+  {
+    id: 'onboarding',
+    label: 'Onboarding',
+    icon: 'person_add',
+    route: 'onboarding',
+    permission: null,
+  },
+  { id: 'leave', label: 'Congés', icon: 'beach_access', route: 'leave', permission: null },
+  { id: 'lifecycle', label: 'Lifecycle', icon: 'timeline', route: 'lifecycle', permission: null },
+  { id: 'requests', label: 'Demandes', icon: 'inbox', route: 'requests', permission: null },
+  { id: 'admin', label: 'Admin', icon: 'admin_panel_settings', route: 'admin', permission: null },
 ];
 
 @Component({
@@ -39,68 +67,93 @@ const APP_NAV_DEFS: AppNavDef[] = [
   templateUrl: './hr-shell.component.html',
 })
 export class HrShellComponent implements OnInit {
-  private userStore       = inject(UserStore);
-  private http            = inject(HttpClient);
-  private router          = inject(Router);
-  private activatedRoute  = inject(ActivatedRoute);
-  private auth            = inject(AuthService);
-  private injector        = inject(Injector);
-  private remoteStyles    = inject(RemoteStylesService);
-  private store           = inject(Store);
+  private userStore = inject(UserStore);
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private activatedRoute = inject(ActivatedRoute);
+  private auth = inject(AuthService);
+  private injector = inject(Injector);
+  private store = inject(Store);
+  private translate = inject(TranslateService);
+  private remoteStyles = inject(RemoteStylesService);
+
+  constructor() {
+    // Register RH translations into whatever TranslateService is active —
+    // standalone: the one from appConfig; federated: the shell's singleton.
+    // Must run before child routes render so pipes find the keys on first eval.
+    // setTranslation is called BEFORE use() so loadOrExtendLanguage sees the
+    // translations as already present and skips the loader entirely.
+    this.translate.setTranslation('fr', fr, true);
+    this.translate.setTranslation('en', en, true);
+    this.translate.setTranslation('ar', ar, true);
+    // getCurrentLang() returns string | null (snapshot, not signal).
+    // Only activate 'fr' when nothing is set; respect whatever lang the shell picked.
+    if (!this.translate.getCurrentLang()) {
+      this.translate.use('fr');
+    }
+  }
 
   onboardingCount = signal(0);
 
   readonly activeRoute = toSignal(
     this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd),
+      filter((e) => e instanceof NavigationEnd),
       map(() => this.router.url),
     ),
     { initialValue: this.router.url, injector: this.injector },
   );
 
   readonly navItems = computed<NavItem[]>(() =>
-    APP_NAV_DEFS
-      .filter(def => def.permission === null || this.userStore.hasPermission(def.permission))
-      .map(def => ({
-        id:    def.id,
-        label: def.label,
-        icon:  def.icon,
-        route: def.route,
-        ...(def.id === 'onboarding' && this.onboardingCount() > 0
-          ? { badge: this.onboardingCount() }
-          : {}),
-      }))
+    APP_NAV_DEFS.filter(
+      (def) => def.permission === null || this.userStore.hasPermission(def.permission),
+    ).map((def) => ({
+      id: def.id,
+      label: def.label,
+      icon: def.icon,
+      route: def.route,
+      ...(def.id === 'onboarding' && this.onboardingCount() > 0
+        ? { badge: this.onboardingCount() }
+        : {}),
+    })),
   );
 
   readonly sideNavConfig: SideNavConfig = {
     sectionLabel: 'NAVIGATION RH',
-    collapsible:  true,
+    collapsible: true,
   };
 
   ngOnInit(): void {
-    this.remoteStyles.injectStyles(4203);
+    const stylesUrl = environment.production
+      ? '/remotes/rh/styles.css'
+      : 'http://localhost:4203/styles.css';
+    this.remoteStyles.injectStyles(stylesUrl);
 
-    effect(() => {
-      const user = this.userStore.currentUser();
-      if (user) {
-        this.store.dispatch(UserActions.loadCurrentUserSuccess({
-          user: {
-            id:          user.userId,
-            fullName:    user.fullName,
-            email:       user.email,
-            roleName:    user.roleName,
-            photoUrl:    user.photoUrl ?? undefined,
-            permissions: user.permissions,
-            paysId:      String(user.paysId),
-          },
-        }));
-      }
-    }, { injector: this.injector });
+    effect(
+      () => {
+        const user = this.userStore.currentUser();
+        if (user) {
+          this.store.dispatch(
+            UserActions.loadCurrentUserSuccess({
+              user: {
+                id: user.userId,
+                fullName: user.fullName,
+                email: user.email,
+                roleName: user.roleName,
+                photoUrl: user.photoUrl ?? undefined,
+                permissions: user.permissions,
+                paysId: String(user.paysId),
+              },
+            }),
+          );
+        }
+      },
+      { injector: this.injector },
+    );
 
     if (this.userStore.hasPermission('HR_ONBOARDING')) {
       this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/onboarding/pending`).subscribe({
-        next:  list => this.onboardingCount.set(list.length),
-        error: ()   => {},
+        next: (list) => this.onboardingCount.set(list.length),
+        error: () => {},
       });
     }
   }
@@ -111,5 +164,7 @@ export class HrShellComponent implements OnInit {
     }
   }
 
-  logout(): void { this.auth.logout(); }
+  logout(): void {
+    this.auth.logout();
+  }
 }

@@ -31,7 +31,7 @@ export class ProfileListService {
       .set('size', params.size);
     if (params.search)     p = p.set('search',     params.search);
     if (params.department) p = p.set('department', params.department);
-    if (params.pays)       p = p.set('paysId',     params.pays);
+    if (params.pays)       p = p.set('pays',        params.pays);
     if (params.grade)      p = p.set('grade',       params.grade);
     if (params.sort)       p = p.set('sort',         params.sort);
     return this.http.get<PageResponse<EmployeeListItem>>(`${this.base}/profiles/employees`, { params: p });

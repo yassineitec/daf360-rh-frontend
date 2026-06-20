@@ -1,42 +1,35 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink }           from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
-import { CandidateService }      from './candidate.service';
-import { CandidateDetail }       from './candidate.model';
-import { CandidateFormComponent } from './candidate-form.component';
-import { RejectModalComponent }   from './reject-modal.component';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
-import { statusBadge } from '../../shared/status-badge.utils';
-import { SpinnerComponent }       from '../../shared/spinner.component';
+import { CandidateService }     from './candidate.service';
+import { CandidateDetail }      from './candidate.model';
+import { RejectModalComponent } from './reject-modal.component';
+import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
+import { statusBadge }            from '../../shared/status-badge.utils';
 import { UserStore }              from '../../core/user.store';
 
 @Component({
   selector: 'app-candidate-detail',
   standalone: true,
   imports: [
-    RouterLink,
     StatusBadgeComponent,
-    SpinnerComponent,
-    CandidateFormComponent,
+    ButtonComponent,
     RejectModalComponent,
   ],
   templateUrl: './candidate-detail.component.html',
-  styleUrls: ['./candidate-detail.component.scss'],
 })
 export class CandidateDetailComponent implements OnInit {
 
   private readonly candidateService = inject(CandidateService);
   private readonly route            = inject(ActivatedRoute);
-  private readonly router           = inject(Router);
+  protected readonly router         = inject(Router);
   readonly userStore                = inject(UserStore);
 
-  candidate    = signal<CandidateDetail | null>(null);
-  loading      = signal(true);
-  error        = signal<string | null>(null);
-  showForm     = signal(false);
-  showReject   = signal(false);
+  candidate  = signal<CandidateDetail | null>(null);
+  loading    = signal(true);
+  error      = signal<string | null>(null);
+  showReject = signal(false);
 
-  // ── CV upload state ───────────────────────────────────────────────────────
   cvUploading  = signal(false);
   cvError      = signal<string | null>(null);
   cvSuccess    = signal<string | null>(null);
@@ -48,10 +41,6 @@ export class CandidateDetailComponent implements OnInit {
     this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'),
   );
 
-  readonly canEdit = computed(() =>
-    this.userStore.hasPermission('EDIT_CANDIDATE'),
-  );
-
   readonly showItSection = computed(() => {
     const c = this.candidate();
     const noProvisioning: string[] = ['PENDING', 'REJECTED'];
@@ -59,58 +48,24 @@ export class CandidateDetailComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const rawId = this.route.snapshot.paramMap.get('id');
-    if (!rawId || rawId === 'new') {
-      this.loading.set(false);
-      this.showForm.set(true);
-      return;
-    }
-    this.candidateId = +rawId;
+    this.candidateId = +(this.route.snapshot.paramMap.get('id') ?? 0);
     this.loadCandidate();
   }
 
   private loadCandidate(): void {
     this.loading.set(true);
     this.error.set(null);
-
-    this.candidateService
-      .getById(this.candidateId)
-      .subscribe({
-        next: (data) => {
-          this.candidate.set(data);
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.error.set(
-            err?.error?.message ?? 'Impossible de charger le candidat.',
-          );
-          this.loading.set(false);
-        },
-      });
+    this.candidateService.getById(this.candidateId).subscribe({
+      next:  data => { this.candidate.set(data); this.loading.set(false); },
+      error: err  => { this.error.set(err?.error?.message ?? 'Impossible de charger le candidat.'); this.loading.set(false); },
+    });
   }
 
   onAccept(): void {
     this.candidateService.accept(this.candidateId).subscribe({
-      next: () => this.loadCandidate(),
-      error: (err) =>
-        this.error.set(err?.error?.message ?? 'Erreur lors de l\'acceptation.'),
+      next:  () => this.loadCandidate(),
+      error: err => this.error.set(err?.error?.message ?? 'Erreur lors de l\'acceptation.'),
     });
-  }
-
-  onFormClosed(): void {
-    this.showForm.set(false);
-    if (!this.candidateId) {
-      this.router.navigate(['/candidates']);
-    }
-  }
-
-  onFormSaved(): void {
-    this.showForm.set(false);
-    if (!this.candidateId) {
-      this.router.navigate(['/candidates']);
-      return;
-    }
-    this.loadCandidate();
   }
 
   onRejected(): void {
@@ -126,10 +81,6 @@ export class CandidateDetailComponent implements OnInit {
     this.userStore.hasPermission('HR_ONBOARDING'),
   );
 
-  goBack(): void {
-    this.router.navigate(['/candidates']);
-  }
-
   goToProvisioning(provId: number): void {
     this.router.navigate(['/it-provisioning', provId]);
   }
@@ -138,39 +89,32 @@ export class CandidateDetailComponent implements OnInit {
     this.router.navigate(['/onboarding', this.candidateId]);
   }
 
-  // ── CV ────────────────────────────────────────────────────────────────────
-
   onCvFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file  = input.files?.[0];
     if (!file) return;
 
-    const allowed = ['application/pdf',
-                     'application/msword',
-                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowed.includes(file.type)) {
-      this.cvError.set('Format non supporté — PDF, DOC ou DOCX uniquement');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      this.cvError.set('Fichier trop volumineux — max 10 Mo');
-      return;
-    }
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (!allowed.includes(file.type)) { this.cvError.set('Format non supporté — PDF, DOC ou DOCX uniquement'); return; }
+    if (file.size > 10 * 1024 * 1024) { this.cvError.set('Fichier trop volumineux — max 10 Mo'); return; }
 
     this.cvError.set(null);
     this.cvSuccess.set(null);
     this.cvUploading.set(true);
 
     this.candidateService.uploadCv(this.candidateId, file).subscribe({
-      next: (updated) => {
+      next: updated => {
         this.candidate.set(updated);
         this.cvUploading.set(false);
         this.cvSuccess.set(`CV "${file.name}" téléversé avec succès.`);
-        setTimeout(() => this.cvSuccess.set(null), 4000);
-        // Reset file input so the same file can be re-uploaded if needed
         input.value = '';
+        setTimeout(() => this.cvSuccess.set(null), 4000);
       },
-      error: (err) => {
+      error: err => {
         this.cvUploading.set(false);
         this.cvError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors du téléversement.');
       },

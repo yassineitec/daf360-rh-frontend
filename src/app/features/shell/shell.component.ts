@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AsyncPipe } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../environments/environment';
 
 interface NavItem {
   label: string;
@@ -306,7 +307,7 @@ export class ShellComponent {
   ];
 
   constructor(private authService: AuthService) {
-    this.portalUrl = `http://localhost:4200`;
+    this.portalUrl = environment.shellUrl || '/';
     this.user$ = this.authService.getUser();
   }
 

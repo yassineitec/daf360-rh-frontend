@@ -149,10 +149,14 @@ export class ProfileDetailComponent implements OnInit {
 
   loadProfile() {
     this.loading.set(true);
+    console.log(this.profileId);
+    
     this.svc.getById(this.profileId).pipe(catchError(() => of(null)))
       .subscribe(p => {
         this.loading.set(false);
         this.profile.set(p);
+        console.log(p);
+        
         if (p) {
           this.loadResolvedRegime(p.id);
           this.pdfSvc.generateDocument('/api/hr/documents/by-profile/' + p.id, null)
@@ -286,7 +290,7 @@ export class ProfileDetailComponent implements OnInit {
       nogLevelId: p.nogLevelId ?? null,
       personalEmail: p.personalEmail ?? '',
       phone: p.phone ?? '',
-      homeAddress: p.homeAddress ?? '',
+      personalAddress: p.personalAddress ?? '',
       emergencyContactName: p.emergencyContactName ?? '',
       emergencyContactRelation: p.emergencyContactRelation ?? '',
       emergencyContactPhone: p.emergencyContactPhone ?? '',

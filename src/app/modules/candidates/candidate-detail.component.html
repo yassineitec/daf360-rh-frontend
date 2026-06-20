@@ -1,202 +1,232 @@
 @if (loading()) {
-  <div class="loading-wrap">
-    <app-spinner />
+  <div class="flex justify-center items-center h-64">
+    <span class="material-symbols-outlined text-5xl text-outline animate-spin">progress_activity</span>
   </div>
+
 } @else if (error()) {
-  <div class="error-msg">{{ error() }}</div>
+  <div class="flex flex-col items-center justify-center h-64 gap-4">
+    <span class="material-symbols-outlined text-5xl text-danger">error</span>
+    <p class="text-sm text-outline">{{ error() }}</p>
+    <daf-button label="Retour" variant="ghost" [options]="{ iconStart: 'arrow_back', size: 'md' }" (onClick)="router.navigate(['/candidates'])" />
+  </div>
+
 } @else if (candidate(); as c) {
 
-  <!-- Back button -->
-  <button class="btn-back" (click)="goBack()">← Retour</button>
+  <!-- Back + Header -->
+  <div class="mb-6">
+    <daf-button
+      label="Retour"
+      variant="ghost"
+      [options]="{ iconStart: 'arrow_back', size: 'sm' }"
+      (onClick)="router.navigate(['/candidates'])"
+    />
+  </div>
 
-  <!-- Header -->
-  <div class="detail-header">
-    <div class="header-left">
-      <h1 class="candidate-name">{{ c.firstName }} {{ c.lastName }}</h1>
-      <div class="header-meta">
+  <div class="flex items-start justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl font-bold text-on-surface">{{ c.firstName }} {{ c.lastName }}</h1>
+      <div class="flex items-center gap-2 mt-2">
         <daf-badge [label]="statusBadge(c.status).label" [options]="statusBadge(c.status).options" />
         @if (c.appliedPosition) {
-          <span class="meta-sep">·</span>
-          <span class="meta-pos">{{ c.appliedPosition }}</span>
+          <span class="text-sm text-outline">· {{ c.appliedPosition }}</span>
         }
       </div>
     </div>
-    <div class="header-actions">
-      @if (canEdit() && c.status === 'PENDING') {
-        <button class="btn-action edit" (click)="showForm.set(true)">Modifier</button>
-      }
-      @if (canAcceptReject() && c.status === 'PENDING') {
-        <button class="btn-action accept" (click)="onAccept()">Accepter</button>
-        <button class="btn-action reject" (click)="showReject.set(true)">Rejeter</button>
-      }
 
-      <!-- Navigate to next pipeline phase -->
+    <div class="flex items-center gap-2 flex-wrap justify-end">
+      @if (canAcceptReject() && c.status === 'PENDING') {
+        <daf-button label="Accepter" variant="teal" [options]="{ iconStart: 'check_circle', size: 'md' }" (onClick)="onAccept()" />
+        <daf-button label="Rejeter" variant="danger" [options]="{ iconStart: 'cancel', size: 'md' }" (onClick)="showReject.set(true)" />
+      }
       @if (['ACCEPTED','IT_IN_PROGRESS','EMAIL_CREATED'].includes(c.status) && c.itProvisioning) {
-        <button class="btn-action it-prov" (click)="goToProvisioning(c.itProvisioning.id)">
-          Provisioning IT →
-        </button>
+        <daf-button label="Provisioning IT →" variant="secondary" [options]="{ size: 'md' }" (onClick)="goToProvisioning(c.itProvisioning!.id)" />
       }
       @if (['EMAIL_RECEIVED','HR_IN_PROGRESS'].includes(c.status)) {
-        <button class="btn-action onboard" (click)="goToOnboarding()">
-          Compléter l'onboarding →
-        </button>
+        <daf-button label="Compléter l'onboarding →" variant="secondary" [options]="{ size: 'md' }" (onClick)="goToOnboarding()" />
       }
       @if (c.status === 'HIRED') {
-        <a class="btn-action profile-link" routerLink="../../profiles">
-          Voir les profils employés →
-        </a>
+        <daf-button label="Voir les profils →" variant="ghost" [options]="{ size: 'md' }" (onClick)="router.navigate(['/profiles'])" />
       }
     </div>
   </div>
 
   <!-- 3-column info grid -->
-  <div class="cards-grid">
+  <div class="grid grid-cols-3 gap-5 mb-6">
 
-    <!-- Card 1: Informations personnelles -->
-    <div class="info-card">
-      <h3 class="card-title">Informations personnelles</h3>
-      <dl class="info-list">
-        <dt>Date de naissance</dt><dd>{{ c.dateOfBirth  ?? '—' }}</dd>
-        <dt>Nationalité</dt>      <dd>{{ c.nationality  ?? '—' }}</dd>
-        <dt>N° pièce d'identité</dt><dd>{{ c.nationalId ?? '—' }}</dd>
-        <dt>Téléphone</dt>        <dd>{{ c.phone        ?? '—' }}</dd>
-        <dt>Email personnel</dt>  <dd>{{ c.emailPersonal }}</dd>
+    <!-- Card 1: Personal info -->
+    <div class="bg-surface rounded-2xl border border-outline-variant p-5">
+      <h3 class="text-xs font-semibold text-outline uppercase tracking-wide mb-4">Informations personnelles</h3>
+      <dl class="space-y-2.5">
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Date de naissance</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.dateOfBirth ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Nationalité</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.nationality ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">N° pièce d'identité</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.nationalId ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Téléphone</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.phone ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Email personnel</dt>
+          <dd class="text-sm font-medium text-on-surface break-all">{{ c.emailPersonal }}</dd>
+        </div>
       </dl>
     </div>
 
-    <!-- Card 2: Poste & Contrat -->
-    <div class="info-card">
-      <h3 class="card-title">Poste &amp; Contrat</h3>
-      <dl class="info-list">
-        <dt>Poste</dt>             <dd>{{ c.appliedPosition   ?? '—' }}</dd>
-        <dt>Grade</dt>             <dd>{{ c.appliedGrade      ?? '—' }}</dd>
-        <dt>Discipline</dt>        <dd>{{ c.appliedDiscipline ?? '—' }}</dd>
-        <dt>Département</dt>        <dd>{{ c.department        ?? '—' }}</dd>
-        <dt>Contrat</dt>           <dd>{{ c.contractType      ?? '—' }}</dd>
-        <dt>Début prévu</dt>       <dd>{{ c.expectedStartDate ?? '—' }}</dd>
+    <!-- Card 2: Position & Contract -->
+    <div class="bg-surface rounded-2xl border border-outline-variant p-5">
+      <h3 class="text-xs font-semibold text-outline uppercase tracking-wide mb-4">Poste &amp; Contrat</h3>
+      <dl class="space-y-2.5">
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Poste</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.appliedPosition ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Grade</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.appliedGrade ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Discipline</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.appliedDiscipline ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Département</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.department ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Contrat</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.contractType ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col">
+          <dt class="text-xs text-outline">Début prévu</dt>
+          <dd class="text-sm font-medium text-on-surface">{{ c.expectedStartDate ?? '—' }}</dd>
+        </div>
       </dl>
       @if (c.notes) {
-        <div class="notes-block">
-          <p class="notes-label">Notes</p>
-          <p class="notes-text">{{ c.notes }}</p>
+        <div class="mt-4 pt-4 border-t border-outline-variant">
+          <p class="text-xs text-outline mb-1">Notes</p>
+          <p class="text-sm text-on-surface leading-relaxed">{{ c.notes }}</p>
         </div>
       }
     </div>
 
     <!-- Card 3: IT Provisioning -->
     @if (showItSection() && c.itProvisioning; as prov) {
-      <div class="info-card">
-        <h3 class="card-title">IT Provisioning</h3>
-        <div class="prov-status">
+      <div class="bg-surface rounded-2xl border border-outline-variant p-5">
+        <h3 class="text-xs font-semibold text-outline uppercase tracking-wide mb-4">IT Provisioning</h3>
+        <div class="mb-3">
           <daf-badge [label]="statusBadge(prov.status).label" [options]="statusBadge(prov.status).options" />
         </div>
-        @if (prov.ms365Email) {
-          <p class="ms365-email">{{ prov.ms365Email }}</p>
-        } @else {
-          <p class="ms365-email muted">Email MS365 — En attente</p>
-        }
 
-        <p class="section-label">Matériel</p>
-        <div class="check-grid">
-          <span class="check-item" [class.active]="prov.assetsProvided > 0">
-            {{ prov.assetsProvided > 0 ? '✓' : '✗' }}
-            {{ prov.assetsProvided }} / 6 équipements fournis
-          </span>
+        <p class="text-sm font-medium text-on-surface mb-3">
+          {{ prov.ms365Email ?? 'Email MS365 — En attente' }}
+        </p>
+
+        <p class="text-xs font-semibold text-outline uppercase tracking-wide mb-2">Matériel</p>
+        <span
+          class="text-xs font-medium"
+          [class.text-teal-600]="prov.assetsProvided > 0"
+          [class.text-outline]="prov.assetsProvided === 0"
+        >
+          {{ prov.assetsProvided > 0 ? '✓' : '✗' }} {{ prov.assetsProvided }} / 6 équipements fournis
+        </span>
+
+        <p class="text-xs font-semibold text-outline uppercase tracking-wide mt-3 mb-2">Licences</p>
+        <div class="grid grid-cols-2 gap-1 text-xs">
+          @for (lic of [
+            { label: 'Office 365',  active: prov.licenseOffice365 },
+            { label: 'AutoCAD',     active: prov.licenseAutocad },
+            { label: 'Revit',       active: prov.licenseRevit },
+            { label: 'Kaspersky',   active: prov.licenseKaspersky }
+          ]; track lic.label) {
+            <span [class.text-teal-600]="lic.active" [class.text-outline]="!lic.active">
+              {{ lic.active ? '✓' : '✗' }} {{ lic.label }}
+            </span>
+          }
         </div>
 
-        <p class="section-label">Licences</p>
-        <div class="check-grid">
-          <span class="check-item" [class.active]="prov.licenseOffice365">
-            {{ prov.licenseOffice365 ? '✓' : '✗' }} Office 365
-          </span>
-          <span class="check-item" [class.active]="prov.licenseAutocad">
-            {{ prov.licenseAutocad ? '✓' : '✗' }} AutoCAD
-          </span>
-          <span class="check-item" [class.active]="prov.licenseRevit">
-            {{ prov.licenseRevit ? '✓' : '✗' }} Revit
-          </span>
-          <span class="check-item" [class.active]="prov.licenseKaspersky">
-            {{ prov.licenseKaspersky ? '✓' : '✗' }} Kaspersky
-          </span>
-        </div>
-
-        <p class="section-label">Active Directory</p>
-        <daf-badge [label]="statusBadge(prov.adAccountCreated ? 'COMPLETED' : 'PENDING').label" [options]="statusBadge(prov.adAccountCreated ? 'COMPLETED' : 'PENDING').options" />
+        <p class="text-xs font-semibold text-outline uppercase tracking-wide mt-3 mb-2">Active Directory</p>
+        <daf-badge
+          [label]="statusBadge(prov.adAccountCreated ? 'COMPLETED' : 'PENDING').label"
+          [options]="statusBadge(prov.adAccountCreated ? 'COMPLETED' : 'PENDING').options"
+        />
       </div>
     } @else if (showItSection() && !c.itProvisioning) {
-      <div class="info-card">
-        <h3 class="card-title">IT Provisioning</h3>
-        <p class="muted">Aucune tâche IT créée pour l'instant.</p>
+      <div class="bg-surface rounded-2xl border border-outline-variant p-5">
+        <h3 class="text-xs font-semibold text-outline uppercase tracking-wide mb-4">IT Provisioning</h3>
+        <p class="text-sm text-outline">Aucune tâche IT créée pour l'instant.</p>
       </div>
     }
 
-  </div><!-- /cards-grid -->
+  </div>
 
-  <!-- ── CV section ───────────────────────────────────────────────────────── -->
-  <div class="cv-section">
-    <div class="cv-header">
-      <h3 class="cv-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-        Curriculum Vitae
-      </h3>
+  <!-- CV section -->
+  <div class="bg-surface rounded-2xl border border-outline-variant p-5 mb-6">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="material-symbols-outlined text-xl text-outline">description</span>
+      <h3 class="text-sm font-semibold text-on-surface">Curriculum Vitae</h3>
+    </div>
 
-      @if (c.cvOriginalName) {
-        <!-- CV already uploaded — show filename + action buttons -->
-        <div class="cv-file-info">
-          <span class="cv-filename">{{ c.cvOriginalName }}</span>
+    @if (c.cvOriginalName) {
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p class="text-sm font-medium text-on-surface">{{ c.cvOriginalName }}</p>
           @if (c.cvUploadedAt) {
-            <span class="cv-date">Uploadé le {{ c.cvUploadedAt.slice(0,10) }}</span>
+            <p class="text-xs text-outline mt-0.5">Uploadé le {{ c.cvUploadedAt.slice(0, 10) }}</p>
           }
         </div>
-        <div class="cv-actions">
-          <button class="btn-cv-download" type="button" (click)="downloadCv()" title="Télécharger le CV">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Télécharger
-          </button>
-          <label class="btn-cv-replace" [class.uploading]="cvUploading()" title="Remplacer le CV">
-            @if (cvUploading()) { Envoi… } @else { Remplacer }
+        <div class="flex gap-2">
+          <daf-button
+            label="Télécharger"
+            variant="ghost"
+            [options]="{ iconStart: 'download', size: 'sm' }"
+            (onClick)="downloadCv()"
+          />
+          <label class="cursor-pointer" [class.opacity-50]="cvUploading()">
+            <daf-button
+              [label]="cvUploading() ? 'Envoi…' : 'Remplacer'"
+              variant="secondary"
+              [options]="{ iconStart: 'upload', size: 'sm', disabled: cvUploading() }"
+            />
             <input type="file" accept=".pdf,.doc,.docx" (change)="onCvFileSelected($event)" [disabled]="cvUploading()" hidden />
           </label>
         </div>
-      } @else {
-        <!-- No CV yet — show upload prompt -->
-        <p class="cv-empty">Aucun CV téléversé.</p>
-        <label class="btn-cv-upload" [class.uploading]="cvUploading()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          @if (cvUploading()) { Envoi en cours… } @else { Ajouter un CV }
+      </div>
+    } @else {
+      <div class="flex items-center gap-4">
+        <p class="text-sm text-outline">Aucun CV téléversé.</p>
+        <label class="cursor-pointer" [class.opacity-50]="cvUploading()">
+          <daf-button
+            [label]="cvUploading() ? 'Envoi en cours…' : 'Ajouter un CV'"
+            variant="secondary"
+            [options]="{ iconStart: 'upload', size: 'sm', disabled: cvUploading() }"
+          />
           <input type="file" accept=".pdf,.doc,.docx" (change)="onCvFileSelected($event)" [disabled]="cvUploading()" hidden />
         </label>
-      }
-    </div>
+      </div>
+    }
 
     @if (cvError()) {
-      <p class="cv-error">{{ cvError() }}</p>
+      <p class="text-xs text-danger mt-3">{{ cvError() }}</p>
     }
     @if (cvSuccess()) {
-      <p class="cv-success">{{ cvSuccess() }}</p>
+      <p class="text-xs text-teal-600 mt-3">{{ cvSuccess() }}</p>
     }
-    <p class="cv-hint">Formats acceptés : PDF, DOC, DOCX — max 10 Mo</p>
+    <p class="text-xs text-outline mt-2">Formats acceptés : PDF, DOC, DOCX — max 10 Mo</p>
   </div>
 
   <!-- Rejection reason -->
   @if (c.status === 'REJECTED' && c.rejectionReason) {
-    <div class="rejection-box">
-      <p class="rejection-label">Motif du rejet</p>
-      <p class="rejection-reason">{{ c.rejectionReason }}</p>
+    <div class="bg-danger/5 border border-danger/20 rounded-2xl p-5 mb-6">
+      <p class="text-xs font-semibold text-danger uppercase tracking-wide mb-2">Motif du rejet</p>
+      <p class="text-sm text-on-surface">{{ c.rejectionReason }}</p>
     </div>
   }
 
@@ -206,19 +236,4 @@
     (closed)="showReject.set(false)"
     (rejected)="onRejected()"
   />
-
 }
-
-@if (!candidate() && !loading() && showForm()) {
-  <div style="padding:24px 0 8px;">
-    <button class="btn-back" (click)="onFormClosed()">← Retour aux candidats</button>
-  </div>
-}
-
-<!-- Form rendered outside candidate block — visible for both create and edit -->
-<app-candidate-form
-  [visible]="showForm()"
-  [candidate]="candidate()"
-  (closed)="onFormClosed()"
-  (saved)="onFormSaved()"
-/>

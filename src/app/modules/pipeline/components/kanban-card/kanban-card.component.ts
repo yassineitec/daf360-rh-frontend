@@ -33,7 +33,7 @@ import { environment } from '../../../../../environments/environment';
       <div class="flex items-center gap-3 mb-4">
         <div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
           @if (candidate().photoUrl) {
-            <img [src]="resolvePhoto(candidate().photoUrl)" [alt]="candidate().fullName"
+            <img [src]="resolvePhoto(candidate().photoUrl)!"
                  class="w-full h-full object-cover" />
           } @else {
             <div class="w-full h-full bg-surface-container-high text-on-surface-variant
@@ -94,8 +94,7 @@ export class KanbanCardComponent {
 
   resolvePhoto(url: string | undefined): string | null {
     if (!url) return null;
-    if (url.startsWith('/api/')) return environment.hrApiUrl + url;
-    return url;
+    return `${environment.hrApiUrl}/api/hr/profiles/${this.candidate().id}/photo`;
   }
 
   badgeOptions(): BadgeOptions {

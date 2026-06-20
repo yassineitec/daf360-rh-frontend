@@ -129,7 +129,7 @@ import { EmployeeProfile } from '../../../models/profile.model';
           </div>
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-wide text-outline">Pays</p>
-            <p class="text-[14px] font-medium text-on-surface mt-0.5">{{ profile().paysId }}</p>
+            <p class="text-[14px] font-medium text-on-surface mt-0.5">{{ paysLabel() }}</p>
           </div>
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-wide text-outline">Régime</p>
@@ -145,6 +145,11 @@ import { EmployeeProfile } from '../../../models/profile.model';
 })
 export class ProfileInfoTabComponent {
   profile = input.required<EmployeeProfile>();
+
+  paysLabel(): string {
+    const p = this.profile();
+    return (p as any)['paysLabel'] ?? p.nationality ?? `Pays #${p.paysId}`;
+  }
 
   hasMissingPositionData(): boolean {
     const p = this.profile();

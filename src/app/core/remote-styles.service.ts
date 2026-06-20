@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class RemoteStylesService {
-  injectStyles(port: number): void {
-    const id = `remote-styles-${port}`;
+  injectStyles(url: string): void {
+    if (!url) return;
+    const id = 'remote-styles-rh';
     if (document.getElementById(id)) return;
     const link = document.createElement('link');
-    link.id = id;
-    link.rel = 'stylesheet';
-    link.href = `http://localhost:${port}/styles.css`;
+    link.id   = id;
+    link.rel  = 'stylesheet';
+    link.href = url;
     document.head.appendChild(link);
   }
 }

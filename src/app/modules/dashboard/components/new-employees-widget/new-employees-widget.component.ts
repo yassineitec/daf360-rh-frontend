@@ -1,5 +1,6 @@
 import { Component, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { TranslatePipe } from '@ngx-translate/core';
 
 export interface NouveauItem {
   profileId:  number | null;
@@ -12,12 +13,12 @@ export interface NouveauItem {
 @Component({
   selector: 'rh-new-employees-widget',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, TranslatePipe],
   template: `
     <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm">
       <h3 class="flex items-center gap-2 text-[14px] font-bold text-on-surface mb-4">
         <span class="material-symbols-outlined text-[20px]" style="color: #79D7BE;">person_add</span>
-        Nouveaux employés
+        {{ 'DASHBOARD.NEW_EMPLOYEES.TITLE' | translate }}
       </h3>
       <div class="space-y-3">
         @for (item of items(); track item.fullName) {
@@ -34,7 +35,9 @@ export interface NouveauItem {
             </div>
           </div>
         } @empty {
-          <p class="text-[13px] text-outline text-center py-2">Aucun nouvel employé récemment</p>
+          <p class="text-[13px] text-outline text-center py-2">
+            {{ 'DASHBOARD.NEW_EMPLOYEES.EMPTY' | translate }}
+          </p>
         }
       </div>
     </div>

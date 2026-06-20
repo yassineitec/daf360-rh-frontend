@@ -1,22 +1,58 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { NgClass, NgStyle } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import {
+  ButtonComponent,
+  FormFieldComponent,
+  FormFieldOptions,
+  MetricCardComponent,
+  PaginationComponent,
+  SelectComponent,
+  SelectConfig,
+  SelectOption,
+  StatusBadgeComponent,
+  BadgeOptions,
+  BadgeVariant,
+} from '@khalilrebhiitec/daf360';
 import { CandidateService } from './candidate.service';
 import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
-import { CandidateListItem, CandidateStats, CandidateHistoryItem, PageResponse } from './candidate.model';
+import {
+  CandidateListItem,
+  CandidateStats,
+  CandidateHistoryItem,
+  PageResponse,
+  CANDIDATE_STATUS_OPTIONS,
+} from './candidate.model';
+import { statusBadge } from '../../shared/status-badge.utils';
+
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
+  PENDING:        'neutral',
+  ACCEPTED:       'success',
+  REJECTED:       'danger',
+  IT_IN_PROGRESS: 'info',
+  EMAIL_RECEIVED: 'teal',
+  HR_IN_PROGRESS: 'warning',
+  HIRED:          'success',
+  ARCHIVED:       'neutral',
+};
 
 @Component({
   selector: 'app-candidate-list',
   standalone: true,
-  imports: [NgClass, NgStyle, FormsModule, RouterLink, PermissionDirective],
+  imports: [
+    PermissionDirective,
+    ButtonComponent,
+    FormFieldComponent,
+    SelectComponent,
+    MetricCardComponent,
+    PaginationComponent,
+    StatusBadgeComponent,
+  ],
   templateUrl: './candidate-list.component.html',
-  styleUrls: ['./candidate-list.component.scss'],
 })
 export class CandidateListComponent implements OnInit {
-  private svc = inject(CandidateService);
-  private router = inject(Router);
+  private svc       = inject(CandidateService);
+  protected router  = inject(Router);
   readonly userStore = inject(UserStore);
 
   candidates    = signal<PageResponse<CandidateListItem> | null>(null);
@@ -29,19 +65,54 @@ export class CandidateListComponent implements OnInit {
   isLoadingHistory    = signal(false);
   showFilters         = signal(false);
 
-  currentPage  = signal(0);
-  pageSize     = signal(10);
-  searchInput  = '';
-  statusFilter = '';
+  currentPage = signal(0);
+  pageSize    = signal(10);
 
-  selectedCandidate = computed(() => {
+  // ── Filter signals bound to daf360 components ────────────────────────────
+  searchValue    = signal<string | number | null>('');
+  selectedStatus = signal<string[]>([]);
+
+  // ── Reject modal state ────────────────────────────────────────────────────
+  rejectTarget = signal<CandidateListItem | null>(null);
+  rejectReason = signal<string | number | null>('');
+  isActioning  = signal(false);
+  actionError  = signal<string | null>(null);
+
+  // ── Computed ──────────────────────────────────────────────────────────────
+  readonly selectedCandidate = computed(() => {
     const id = this.selectedId();
     return this.candidates()?.content?.find(c => c.id === id) ?? null;
   });
 
-  skeletonRows = [1, 2, 3, 4, 5];
+  readonly canAcceptReject = computed(() =>
+    this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE')
+  );
 
-  ngOnInit(): void { this.loadStats(); this.loadCandidates(); }
+  // ── daf360 options ────────────────────────────────────────────────────────
+  readonly searchFieldOptions: FormFieldOptions = {
+    type: 'search',
+    placeholder: 'Nom, email, poste…',
+    prefixIcon: 'search',
+    fullWidth: true,
+  };
+
+  readonly statusSelectConfig: SelectConfig = {
+    placeholder: 'Tous les statuts',
+  };
+
+  readonly statusSelectOptions: SelectOption[] = CANDIDATE_STATUS_OPTIONS
+    .filter(o => o.value !== '')
+    .map(o => ({ value: o.value, label: o.label }));
+
+  readonly skeletonRows = [1, 2, 3, 4, 5];
+
+  protected readonly statusBadge = statusBadge;
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.loadStats();
+    this.loadCandidates();
+  }
 
   loadStats(): void {
     this.isLoadingStats.set(true);
@@ -55,8 +126,8 @@ export class CandidateListComponent implements OnInit {
     this.isLoadingCandidates.set(true);
     this.svc.getCandidates({
       paysId: this.userStore.currentUser()?.paysId,
-      status: this.statusFilter || undefined,
-      search: this.searchInput  || undefined,
+      status: this.selectedStatus()[0] || undefined,
+      search: (this.searchValue() as string) || undefined,
       page:   this.currentPage(),
       size:   this.pageSize(),
     }).subscribe({
@@ -65,6 +136,36 @@ export class CandidateListComponent implements OnInit {
     });
   }
 
+  // ── Filter handlers ───────────────────────────────────────────────────────
+  onSearch(value: string | number | null): void {
+    this.searchValue.set(value);
+    this.currentPage.set(0);
+    this.loadCandidates();
+  }
+
+  onStatusChange(values: string[]): void {
+    this.selectedStatus.set(values);
+    this.currentPage.set(0);
+    this.loadCandidates();
+  }
+
+  applyFilters(): void {
+    this.currentPage.set(0);
+    this.loadCandidates();
+  }
+
+  clearFilters(): void {
+    this.searchValue.set('');
+    this.selectedStatus.set([]);
+    this.currentPage.set(0);
+    this.loadCandidates();
+  }
+
+  toggleFilters(): void { this.showFilters.update(v => !v); }
+
+  onPageChange(p: number): void { this.currentPage.set(p); this.loadCandidates(); }
+
+  // ── Row selection ─────────────────────────────────────────────────────────
   onRowClick(candidateId: number): void {
     const same = this.selectedId() === candidateId;
     this.selectedId.set(same ? null : candidateId);
@@ -76,29 +177,9 @@ export class CandidateListComponent implements OnInit {
     });
   }
 
-  onPageChange(p: number): void { this.currentPage.set(p); this.loadCandidates(); }
-
-  applyFilters(): void { this.currentPage.set(0); this.loadCandidates(); }
-
-  clearFilters(): void {
-    this.searchInput = ''; this.statusFilter = '';
-    this.currentPage.set(0); this.loadCandidates();
-  }
-
-  toggleFilters(): void { this.showFilters.update(v => !v); }
-
-  getStatusClass(s: string): string {
-    const m: Record<string, string> = {
-      PENDING:        'status-pending',
-      ACCEPTED:       'status-accepted',
-      REJECTED:       'status-rejected',
-      IT_IN_PROGRESS: 'status-it',
-      EMAIL_RECEIVED: 'status-email',
-      HR_IN_PROGRESS: 'status-hr',
-      HIRED:          'status-hired',
-      ARCHIVED:       'status-archived',
-    };
-    return m[s] ?? 'status-archived';
+  // ── Badge helper ──────────────────────────────────────────────────────────
+  getStatusBadgeOptions(status: string): BadgeOptions {
+    return { variant: STATUS_VARIANT[status] ?? 'neutral', size: 'sm', dot: true };
   }
 
   getStatusLabel(s: string): string {
@@ -115,20 +196,7 @@ export class CandidateListComponent implements OnInit {
     return m[s] ?? s;
   }
 
-  getStatusIcon(s: string): string {
-    const m: Record<string, string> = {
-      PENDING:        'schedule',
-      ACCEPTED:       'check_circle',
-      REJECTED:       'cancel',
-      IT_IN_PROGRESS: 'settings',
-      EMAIL_RECEIVED: 'mark_email_read',
-      HR_IN_PROGRESS: 'edit_document',
-      HIRED:          'how_to_reg',
-      ARCHIVED:       'archive',
-    };
-    return m[s] ?? 'circle';
-  }
-
+  // ── Timeline helpers ──────────────────────────────────────────────────────
   getTimelineDotStyle(action: string): object {
     const m: Record<string, { bg: string; color: string }> = {
       ACCEPT_CANDIDATE:            { bg: '#4648d4', color: '#fff' },
@@ -164,6 +232,7 @@ export class CandidateListComponent implements OnInit {
     return m[action] ?? 'history';
   }
 
+  // ── Misc helpers ──────────────────────────────────────────────────────────
   getInitials(fn: string, ln: string): string {
     return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
   }
@@ -173,7 +242,7 @@ export class CandidateListComponent implements OnInit {
     const dt = new Date(d);
     if (isNaN(dt.getTime())) return '—';
     const mo = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-    return dt.getDate() + ' ' + mo[dt.getMonth()] + ' ' + dt.getFullYear();
+    return `${dt.getDate()} ${mo[dt.getMonth()]} ${dt.getFullYear()}`;
   }
 
   formatTimestamp(ts: string | null): string {
@@ -184,49 +253,36 @@ export class CandidateListComponent implements OnInit {
          + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   }
 
-  openNewCandidateForm(): void {
-    this.router.navigate(['/candidates/new']);
-  }
-
-  openStatusModal(candidate: CandidateListItem): void {
-    this.router.navigate(['/candidates', candidate.id]);
-  }
-
-  // ── Quick Accept / Reject from list ───────────────────────────────────────
-
-  readonly canAcceptReject = computed(() =>
-    this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE')
-  );
-
-  // Reject modal state
-  rejectTarget   = signal<CandidateListItem | null>(null);
-  rejectReason   = '';
-  isActioning    = signal(false);
-  actionError    = signal<string | null>(null);
-
+  // ── Accept / Reject ───────────────────────────────────────────────────────
   quickAccept(c: CandidateListItem, event: Event): void {
     event.stopPropagation();
     if (!confirm(`Accepter le candidat ${c.firstName} ${c.lastName} ?`)) return;
     this.isActioning.set(true);
     this.svc.accept(c.id).subscribe({
-      next: () => { this.isActioning.set(false); this.loadCandidates(); },
-      error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? 'Erreur lors de l\'acceptation.'); },
+      next:  () => { this.isActioning.set(false); this.loadCandidates(); },
+      error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? 'Erreur.'); },
     });
   }
 
   openRejectModal(c: CandidateListItem, event: Event): void {
     event.stopPropagation();
     this.rejectTarget.set(c);
-    this.rejectReason = '';
+    this.rejectReason.set('');
     this.actionError.set(null);
+  }
+
+  isRejectReasonValid(): boolean {
+    const r = this.rejectReason();
+    return typeof r === 'string' && r.trim().length > 0;
   }
 
   confirmReject(): void {
     const c = this.rejectTarget();
-    if (!c || !this.rejectReason.trim()) return;
+    const reason = (this.rejectReason() as string)?.trim();
+    if (!c || !reason) return;
     this.isActioning.set(true);
-    this.svc.reject(c.id, this.rejectReason).subscribe({
-      next: () => { this.isActioning.set(false); this.rejectTarget.set(null); this.loadCandidates(); },
+    this.svc.reject(c.id, reason).subscribe({
+      next:  () => { this.isActioning.set(false); this.rejectTarget.set(null); this.loadCandidates(); },
       error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? 'Erreur lors du rejet.'); },
     });
   }

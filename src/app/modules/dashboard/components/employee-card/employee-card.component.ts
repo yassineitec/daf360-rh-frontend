@@ -1,4 +1,5 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { environment } from '../../../../../environments/environment';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
@@ -21,7 +22,7 @@ export interface EmployeeCardData {
 @Component({
   selector: 'rh-employee-card',
   standalone: true,
-  imports: [StatusBadgeComponent],
+  imports: [StatusBadgeComponent, TranslatePipe],
   template: `
     <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant
                 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
@@ -32,18 +33,18 @@ export interface EmployeeCardData {
           @case ('PRESENT') {
             <span class="flex items-center gap-1 text-[11px] font-bold text-secondary">
               <span class="w-2 h-2 rounded-full bg-secondary"></span>
-              Présent
+              {{ 'DASHBOARD.EMPLOYEE_CARD.PRESENT' | translate }}
             </span>
           }
           @case ('TELETRAVAIL') {
             <span class="flex items-center gap-1 text-[11px] font-bold text-teal">
               <span class="material-symbols-outlined text-[14px]">home</span>
-              Télétravail
+              {{ 'DASHBOARD.EMPLOYEE_CARD.REMOTE' | translate }}
             </span>
           }
           @case ('ABSENT') {
             <daf-badge
-              label="En Congé"
+              [label]="'DASHBOARD.EMPLOYEE_CARD.ON_LEAVE' | translate"
               [options]="{ variant: 'danger', size: 'sm' }" />
           }
         }
@@ -52,7 +53,7 @@ export interface EmployeeCardData {
       <!-- Avatar + info -->
       <div class="flex items-start gap-4 mb-4">
         <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0">
-          <img [src]="getAvatarUrl(resolvePhoto(employee().photoUrl), employee().gender)"
+          <img [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
                [alt]="employee().fullName"
                class="w-full h-full object-cover" />
         </div>
@@ -62,16 +63,16 @@ export interface EmployeeCardData {
             {{ employee().poste ?? '—' }}{{ employee().department ? ' • ' + employee().department : '' }}
           </p>
           <p class="text-[11px] text-teal font-bold uppercase mt-1">
-            Ancienneté: {{ employee().anciennete }}
+            {{ 'DASHBOARD.EMPLOYEE_CARD.SENIORITY' | translate }} {{ employee().anciennete }}
           </p>
         </div>
       </div>
 
       <!-- Profile completion grid -->
       <div class="grid grid-cols-3 gap-2 mb-4">
-        @for (cell of completionCells(); track cell.label) {
+        @for (cell of completionCells(); track cell.key) {
           <div class="p-2 bg-surface rounded-lg text-center border border-outline-variant">
-            <p class="text-[9px] text-outline uppercase font-bold mb-1">{{ cell.label }}</p>
+            <p class="text-[9px] text-outline uppercase font-bold mb-1">{{ cell.key | translate }}</p>
             <span class="material-symbols-outlined text-[16px]"
               [class]="cell.ok ? 'text-secondary' : 'text-error'">
               {{ cell.ok ? 'check_circle' : 'cancel' }}
@@ -87,7 +88,7 @@ export interface EmployeeCardData {
           class="flex-1 py-2 bg-teal text-white rounded-lg text-[13px] font-semibold
                  hover:opacity-90 transition-opacity"
           (click)="viewProfile.emit(employee().profileId)">
-          Voir profil
+          {{ 'DASHBOARD.EMPLOYEE_CARD.VIEW_PROFILE' | translate }}
         </button>
         <button
           type="button"
@@ -117,9 +118,9 @@ export class EmployeeCardComponent {
   completionCells() {
     const e = this.employee();
     return [
-      { label: 'Perso',  ok: e.completionPerso },
-      { label: 'Docs',   ok: e.completionDocs },
-      { label: 'Skills', ok: e.completionSkills },
+      { key: 'DASHBOARD.EMPLOYEE_CARD.COMPLETION_PERSO',  ok: e.completionPerso },
+      { key: 'DASHBOARD.EMPLOYEE_CARD.COMPLETION_DOCS',   ok: e.completionDocs },
+      { key: 'DASHBOARD.EMPLOYEE_CARD.COMPLETION_SKILLS', ok: e.completionSkills },
     ];
   }
 }

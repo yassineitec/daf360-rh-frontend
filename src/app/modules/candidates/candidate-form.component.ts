@@ -1,56 +1,79 @@
-import {
-  Component, effect, inject, input, output, signal,
-} from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 
-import { ModalComponent }     from '../../shared/modal.component';
-import { UserStore }          from '../../core/user.store';
-import { CandidateService }   from './candidate.service';
+import { UserStore }        from '../../core/user.store';
+import { CandidateService } from './candidate.service';
 import {
-  CandidateDetail,
   CreateCandidateRequest,
-  UpdateCandidateRequest,
   CONTRACT_TYPE_OPTIONS,
 } from './candidate.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
+import {
+  ButtonComponent,
+  DatePickerComponent,
+  FileUploadComponent,
+  FormFieldComponent,
+  ProgressBarComponent,
+  SectionCardComponent,
+  SectionTitleComponent,
+  SelectComponent,
+  SelectOption,
+  UploadedFile,
+} from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-candidate-form',
   standalone: true,
-  imports: [ReactiveFormsModule, ModalComponent],
+  imports: [
+    ReactiveFormsModule,
+    ButtonComponent,
+    DatePickerComponent,
+    FileUploadComponent,
+    FormFieldComponent,
+    ProgressBarComponent,
+    SectionCardComponent,
+    SectionTitleComponent,
+    SelectComponent,
+  ],
   templateUrl: './candidate-form.component.html',
-  styleUrl: './candidate-form.component.scss',
 })
-export class CandidateFormComponent {
-  // ── Inputs / Outputs ────────────────────────────────────────────────────────
-  visible   = input(false);
-  candidate = input<CandidateDetail | null>(null);
-  closed    = output<void>();
-  saved     = output<void>();
+export class CandidateFormComponent implements OnInit {
 
-  // ── Services ────────────────────────────────────────────────────────────────
   private fb               = inject(FormBuilder);
   private candidateService = inject(CandidateService);
   private userStore        = inject(UserStore);
   private refSvc           = inject(RefDataService);
+  private router           = inject(Router);
 
-  // ── State ───────────────────────────────────────────────────────────────────
-  saving      = signal(false);
-  error       = signal<string | null>(null);
-  cvFile      = signal<File | null>(null);
-  cvError     = signal<string | null>(null);
+  saving  = signal(false);
+  error   = signal<string | null>(null);
+  cvFiles = signal<UploadedFile[]>([]);
 
-  // ── Ref data lists ──────────────────────────────────────────────────────────
   grades        = signal<RefDataItem[]>([]);
   disciplines   = signal<RefDataItem[]>([]);
   departments   = signal<RefDataItem[]>([]);
   nationalities = signal<RefDataItem[]>([]);
 
-  // ── Options ─────────────────────────────────────────────────────────────────
-  readonly contractTypeOptions = CONTRACT_TYPE_OPTIONS.filter(o => o.value !== '');
+  readonly gradeOptions = computed<SelectOption[]>(() =>
+    this.grades().map(g => ({ value: String(g.id), label: g.labelFr }))
+  );
+  readonly disciplineOptions = computed<SelectOption[]>(() =>
+    this.disciplines().map(d => ({ value: String(d.id), label: d.labelFr }))
+  );
+  readonly departmentOptions = computed<SelectOption[]>(() =>
+    this.departments().map(d => ({ value: String(d.id), label: d.labelFr }))
+  );
+  readonly nationalityOptions = computed<SelectOption[]>(() =>
+    this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr }))
+  );
 
-  // ── Form ────────────────────────────────────────────────────────────────────
+  readonly contractOptions: SelectOption[] = CONTRACT_TYPE_OPTIONS
+    .filter(o => o.value !== '')
+    .map(o => ({ value: o.value, label: o.label }));
+
   form: FormGroup = this.fb.group({
     identity: this.fb.group({
       firstName:     ['', Validators.required],
@@ -71,80 +94,115 @@ export class CandidateFormComponent {
     notes: [null as string | null],
   });
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
-  get isFixedTerm(): boolean {
-    return this.form.get('position.contractType')?.value === 'FIXED_TERM';
+  private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.value });
+
+  readonly profileCompleteness = computed(() => {
+    const v   = this.formValue() as any;
+    const id  = v?.identity ?? {};
+    const pos = v?.position ?? {};
+    const fields = [
+      id.firstName, id.lastName, id.emailPersonal, id.phone,
+      pos.appliedPosition, pos.contractType, pos.expectedStartDate,
+      pos.departmentId, pos.appliedGradeId, pos.appliedDisciplineId,
+      pos.nationalityId, v?.notes,
+    ];
+    const total  = fields.length + 1; // +1 for CV
+    const filled = fields.filter((val: unknown) => val != null && val !== '').length
+                 + (this.cvFiles().length > 0 ? 1 : 0);
+    return Math.round((filled / total) * 100);
+  });
+
+  readonly completenessLabel = computed(() => {
+    const p = this.profileCompleteness();
+    if (p >= 100) return 'Complet';
+    if (p >= 75)  return 'Très bon';
+    if (p >= 50)  return 'Bon';
+    if (p >= 25)  return 'En cours';
+    return 'À compléter';
+  });
+
+  readonly requiredFieldsStatus = computed(() => {
+    const v   = this.formValue() as any;
+    const id  = v?.identity ?? {};
+    const pos = v?.position ?? {};
+    return [
+      { label: 'Prénom et Nom',       done: !!(id.firstName && id.lastName) },
+      { label: 'Email professionnel', done: !!id.emailPersonal },
+      { label: 'Poste souhaité',      done: !!pos.appliedPosition },
+      { label: 'Type de contrat',     done: !!pos.contractType },
+      { label: 'Date de début',       done: !!pos.expectedStartDate },
+    ];
+  });
+
+  get identityGroup(): FormGroup { return this.form.get('identity') as FormGroup; }
+  get positionGroup(): FormGroup { return this.form.get('position') as FormGroup; }
+
+  ngOnInit(): void {
+    const paysId = this.userStore.currentUser()?.paysId ?? 179;
+    this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
+    this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
+    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+    this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
   }
 
-  get identityGroup(): FormGroup {
-    return this.form.get('identity') as FormGroup;
+  // ── Bridge helpers ───────────────────────────────────────────────────────
+  getSelectStr(path: string): string[] {
+    const val = this.form.get(path)?.value;
+    return val ? [String(val)] : [];
   }
 
-  get positionGroup(): FormGroup {
-    return this.form.get('position') as FormGroup;
+  setSelectStr(path: string, values: string[]): void {
+    this.form.get(path)?.setValue(values[0] ?? '');
   }
 
-  // ── Effect: react to visibility + candidate changes ─────────────────────────
-  constructor() {
-    effect(() => {
-      if (!this.visible()) return;
-
-      const c = this.candidate();
-      this.error.set(null);
-
-      // Reset CV selection on every modal open
-      this.cvFile.set(null);
-      this.cvError.set(null);
-
-      // Load ref data lists
-      const paysId = c?.paysId ?? this.userStore.currentUser()?.paysId ?? 179;
-      this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
-      this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
-      this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
-      this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
-
-      if (c) {
-        // Edit mode — patch with existing data
-        this.form.patchValue({
-          identity: {
-            firstName:     c.firstName,
-            lastName:      c.lastName,
-            emailPersonal: c.emailPersonal,
-            phone:         c.phone,
-          },
-          position: {
-            appliedPosition:     c.appliedPosition,
-            departmentId:        c.departmentId,
-            contractType:        c.contractType,
-            appliedGradeId:      c.appliedGradeId,
-            appliedDisciplineId: c.appliedDisciplineId,
-            nationalityId:       c.nationalityId,
-            expectedStartDate:   c.expectedStartDate,
-            paysId:              c.paysId,
-          },
-          notes: c.notes,
-        });
-      } else {
-        // Create mode — reset and seed paysId from current user
-        this.form.reset({
-          identity: { firstName: '', lastName: '', emailPersonal: '', phone: null },
-          position: {
-            appliedPosition:     '',
-            departmentId:        null,
-            contractType:        '',
-            appliedGradeId:      null,
-            appliedDisciplineId: null,
-            nationalityId:       null,
-            expectedStartDate:   '',
-            paysId:              this.userStore.currentUser()?.paysId ?? null,
-          },
-          notes: null,
-        });
-      }
-    });
+  getSelectNum(path: string): string[] {
+    const val = this.form.get(path)?.value;
+    return val != null ? [String(val)] : [];
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  setSelectNum(path: string, values: string[]): void {
+    this.form.get(path)?.setValue(values[0] ? Number(values[0]) : null);
+  }
+
+  getTextValue(path: string): string | number | null {
+    return this.form.get(path)?.value ?? null;
+  }
+
+  setTextValue(path: string, value: string | number | null): void {
+    this.form.get(path)?.setValue(value);
+    this.form.get(path)?.markAsTouched();
+  }
+
+  getFieldError(path: string): string {
+    const ctrl = this.form.get(path);
+    if (!ctrl?.touched || !ctrl?.invalid) return '';
+    if (ctrl.hasError('required')) return 'Ce champ est obligatoire.';
+    if (ctrl.hasError('email')) return "Format d'email invalide.";
+    return '';
+  }
+
+  getDateValue(path: string): string {
+    return this.form.get(path)?.value ?? '';
+  }
+
+  setDateValue(path: string, value: string): void {
+    this.form.get(path)?.setValue(value || null);
+  }
+
+  fillStyle(filled: boolean): string {
+    return filled ? "'FILL' 1" : "'FILL' 0";
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────────────
+  navigateToList(): void {
+    this.router.navigate(['/rh/candidates']);
+  }
+
+  onCancel(): void {
+    this.router.navigate(['/rh/candidates']);
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────────
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -152,117 +210,53 @@ export class CandidateFormComponent {
       return;
     }
     this.error.set(null);
-
     this.saving.set(true);
-    this.error.set(null);
 
     const identity = this.identityGroup.value;
     const position = this.positionGroup.value;
-    const notes    = this.form.get('notes')?.value ?? null;
 
-    const c = this.candidate();
+    const dto: CreateCandidateRequest = {
+      paysId:              position.paysId,
+      firstName:           identity.firstName,
+      lastName:            identity.lastName,
+      emailPersonal:       identity.emailPersonal,
+      phone:               identity.phone               || null,
+      appliedPosition:     position.appliedPosition     || null,
+      departmentId:        position.departmentId        ?? null,
+      contractType:        position.contractType        || null,
+      appliedGradeId:      position.appliedGradeId      ?? null,
+      appliedDisciplineId: position.appliedDisciplineId ?? null,
+      nationalityId:       position.nationalityId       ?? null,
+      expectedStartDate:   position.expectedStartDate   || null,
+      notes:               this.form.get('notes')?.value ?? null,
+    };
 
-    if (!c) {
-      // CREATE
-      const dto: CreateCandidateRequest = {
-        paysId:              position.paysId,
-        firstName:           identity.firstName,
-        lastName:            identity.lastName,
-        emailPersonal:       identity.emailPersonal,
-        phone:               identity.phone              || null,
-        appliedPosition:     position.appliedPosition    || null,
-        departmentId:        position.departmentId       ?? null,
-        contractType:        position.contractType       || null,
-        appliedGradeId:      position.appliedGradeId     ?? null,
-        appliedDisciplineId: position.appliedDisciplineId ?? null,
-        nationalityId:       position.nationalityId      ?? null,
-        expectedStartDate:   position.expectedStartDate  || null,
-        notes,
-      };
-
-      this.candidateService.create(dto).subscribe({
-        next: (created) => this.afterSave(created.id),
-        error: (err) => {
-          this.saving.set(false);
-          this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Une erreur est survenue lors de la création.');
-        },
-      });
-    } else {
-      // UPDATE
-      const dto: UpdateCandidateRequest = {
-        firstName:           identity.firstName,
-        lastName:            identity.lastName,
-        emailPersonal:       identity.emailPersonal,
-        phone:               identity.phone              || null,
-        appliedPosition:     position.appliedPosition    || null,
-        departmentId:        position.departmentId       ?? null,
-        contractType:        position.contractType       || null,
-        appliedGradeId:      position.appliedGradeId     ?? null,
-        appliedDisciplineId: position.appliedDisciplineId ?? null,
-        nationalityId:       position.nationalityId      ?? null,
-        expectedStartDate:   position.expectedStartDate  || null,
-        notes,
-      };
-
-      this.candidateService.update(c.id, dto).subscribe({
-        next: (updated) => this.afterSave(updated.id),
-        error: (err) => {
-          this.saving.set(false);
-          this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Une erreur est survenue lors de la mise à jour.');
-        },
-      });
-    }
-  }
-
-  /** After create/update succeeds: upload CV if one was selected, then close. */
-  private afterSave(candidateId: number): void {
-    const file = this.cvFile();
-    if (!file) {
-      this.saving.set(false);
-      this.saved.emit();
-      this.closed.emit();
-      return;
-    }
-    // Upload the CV (second step)
-    this.candidateService.uploadCv(candidateId, file).subscribe({
-      next: () => {
+    this.candidateService.create(dto).subscribe({
+      next:  created => this.afterSave(created.id),
+      error: err     => {
         this.saving.set(false);
-        this.saved.emit();
-        this.closed.emit();
-      },
-      error: () => {
-        // CV upload failed — but the candidate WAS saved; warn and close
-        this.saving.set(false);
-        this.error.set('Candidat enregistré, mais le téléversement du CV a échoué. Réessayez depuis la fiche candidat.');
-        setTimeout(() => { this.saved.emit(); this.closed.emit(); }, 3000);
+        this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la création.');
       },
     });
   }
 
-  /** Validates and stores the selected CV file. */
-  onCvFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file  = input.files?.[0] ?? null;
-    this.cvError.set(null);
-    this.cvFile.set(null);
-
-    if (!file) return;
-
-    const allowed = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-    if (!allowed.includes(file.type)) {
-      this.cvError.set('Format non supporté — PDF, DOC ou DOCX uniquement');
-      input.value = '';
+  private afterSave(candidateId: number): void {
+    const file = this.cvFiles().find(f => !f.error)?.file ?? null;
+    if (!file) {
+      this.saving.set(false);
+      this.router.navigate(['/rh/candidates', candidateId]);
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      this.cvError.set('Fichier trop volumineux — max 10 Mo');
-      input.value = '';
-      return;
-    }
-    this.cvFile.set(file);
+    this.candidateService.uploadCv(candidateId, file).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.router.navigate(['/rh/candidates', candidateId]);
+      },
+      error: () => {
+        this.saving.set(false);
+        this.error.set('Candidat enregistré, mais le téléversement du CV a échoué. Réessayez depuis la fiche.');
+        setTimeout(() => this.router.navigate(['/rh/candidates', candidateId]), 3000);
+      },
+    });
   }
 }

@@ -75,8 +75,6 @@ export class ProfileDetailComponent implements OnInit {
       history:   this.detailSvc.getLeaveHistory(id),
     }).subscribe({
       next: data => {
-        console.log(data.profile);
-        
         this.profile.set(data.profile);
         this.contracts.set(data.contracts);
         this.documents.set(data.documents);

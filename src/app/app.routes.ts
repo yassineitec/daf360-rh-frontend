@@ -1,10 +1,23 @@
 import { Routes } from '@angular/router';
+import { provideEnvironmentInitializer, inject } from '@angular/core';
 import { HrShellComponent } from './layout/hr-shell.component';
 import { authGuard } from './core/auth.guard';
 import { provideState } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { rhProfilesReducer } from './store/profiles.reducer';
 import { ProfilesEffects } from './store/profiles.effects';
+import { TranslateService } from '@ngx-translate/core';
+
+import en from '@public/assets/i18n/en.json';
+import fr from '@public/assets/i18n/fr.json';
+import ar from '@public/assets/i18n/ar.json';
+
+function registerTranslations(): void {
+  const translate = inject(TranslateService);
+  translate.setTranslation('fr', fr, true);
+  translate.setTranslation('en', en, true);
+  translate.setTranslation('ar', ar, true);
+}
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -24,6 +37,11 @@ export const routes: Routes = [
     providers: [
       provideState('rh', rhProfilesReducer),
       provideEffects([ProfilesEffects]),
+      // Fires when this route's environment injector is created — in both
+      // standalone mode (supplements the InlineTranslateLoader from appConfig)
+      // and federated mode (injects RH translations into the shell's singleton
+      // TranslateService, which never ran appConfig).
+      provideEnvironmentInitializer(() => registerTranslations()),
     ],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

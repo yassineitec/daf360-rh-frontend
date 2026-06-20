@@ -4,10 +4,11 @@ export function avatarUrl(gender: string | null | undefined): string {
 }
 
 export function getAvatarUrl(
+  profileId: number | null | undefined,
   photoUrl: string | null | undefined,
   gender: string | null | undefined,
 ): string {
-  if (photoUrl) return photoUrl;
+  if (photoUrl && profileId) return `/api/hr/profiles/${profileId}/photo`;
   if (gender === 'FEMININ') return '/images/avatars/female.png';
   return '/images/avatars/male.png';
 }

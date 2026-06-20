@@ -5,7 +5,28 @@
       "Bash(node -e \"console.log\\('angular:', require\\('./node_modules/@angular/core/package.json'\\).version\\)\")",
       "Bash(node -e \"console.log\\('lib:', require\\('./node_modules/@khalilrebhiitec/daf360/package.json'\\).version\\)\")",
       "Bash(node -e \"try { console.log\\('effects:', require\\('./node_modules/@ngrx/effects/package.json'\\).version\\) } catch\\(e\\) { console.log\\('effects: NOT INSTALLED'\\) }\")",
-      "Bash(node -e \"console.log\\('effects:', require\\('./node_modules/@ngrx/effects/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\('effects:', require\\('./node_modules/@ngrx/effects/package.json'\\).version\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8888/api/hr/dashboard/stats\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8888/api/hr/profiles/employees?page=0&size=3\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8888/api/hr/pipeline/stats\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8888/api/hr/pipeline/candidates?page=0&size=3\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(curl -s \"http://localhost:8888/api/hr/dashboard/stats\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s \"http://localhost:8888/api/hr/dashboard/workforce\")",
+      "Bash(curl -s \"http://localhost:8888/api/hr/dashboard/completion\")",
+      "Bash(curl -s \"http://localhost:8888/api/hr/dashboard/fin-periode-essai?joursMax=30\")",
+      "Bash(curl -s \"http://localhost:8888/api/hr/dashboard/anniversaires\")",
+      "Bash(curl -s \"http://localhost:8888/api/hr/dashboard/nouveaux-employes?limit=5\")",
+      "Bash(xargs wc -l)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); p=d['projects']; [print\\(k, json.dumps\\(p[k].get\\('architect',{}\\).get\\('build',{}\\).get\\('options',{}\\), indent=2\\)\\) for k in p]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k: d[k] for k in ['name','workspaces','dependencies','devDependencies'] if k in d}, indent=2\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\MSI\\\\Desktop\\\\daf360-rh-frontend\\\\public\\\\assets\\\\i18n\")",
+      "Bash(node -e \"const f = require\\('./public/assets/i18n/fr.json'\\); console.log\\('fr.json keys:', Object.keys\\(f\\)\\); console.log\\('DASHBOARD.TITLE:', f.DASHBOARD.TITLE\\);\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\MSI\\Desktop\\daf360-rh-frontend\\public\\assets"
     ]
   }
 }

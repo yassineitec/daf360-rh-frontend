@@ -1,0 +1,68 @@
+{
+  "DASHBOARD": {
+    "TITLE": "Portail-RH",
+    "SUBTITLE": "Bonjour {{name}}, voici l'état de vos effectifs aujourd'hui.",
+    "NEW_EMPLOYEE": "Nouvel Employé",
+    "SENIORITY": {
+      "LESS_THAN_MONTH": "Moins d'un mois",
+      "MONTHS": "{{count}} mois",
+      "YEARS": "{{count}} an(s)"
+    },
+    "QUICK_ACTIONS": {
+      "SECTION": "Actions Rapides",
+      "REQUESTS_LABEL": "Demandes",
+      "REQUESTS_SUBLABEL": "{{count}} en attente",
+      "ONBOARDING_LABEL": "Onboarding",
+      "ONBOARDING_SUBLABEL": "Gérer les arrivées",
+      "LEAVE_LABEL": "Congés",
+      "LEAVE_SUBLABEL": "Valider les demandes",
+      "RECRUITMENT_LABEL": "Recrutement",
+      "RECRUITMENT_SUBLABEL": "Voir le pipeline"
+    },
+    "DIRECTORY": {
+      "TITLE": "Annuaire des profils",
+      "VIEW_ALL": "Voir tous les profils",
+      "SEARCH_PLACEHOLDER": "Rechercher...",
+      "FILTERS": "Filtres",
+      "EMPTY": "Aucun employé à afficher."
+    },
+    "ALERT_CARD": {
+      "TITLE": "À surveiller",
+      "PROBATION_TITLE": "Fin de période d'essai",
+      "PROBATION_EMPTY": "Aucune échéance proche.",
+      "PROBATION_DAYS": "J-{{days}}",
+      "MISSING_DOCS_TITLE": "Documents manquants",
+      "URGENT": "Urgent",
+      "REMINDER_SENT": "Relance envoyée"
+    },
+    "EMPLOYEE_CARD": {
+      "PRESENT": "Présent",
+      "REMOTE": "Télétravail",
+      "ON_LEAVE": "En Congé",
+      "SENIORITY": "Ancienneté :",
+      "VIEW_PROFILE": "Voir profil",
+      "COMPLETION_PERSO": "Perso",
+      "COMPLETION_DOCS": "Docs",
+      "COMPLETION_SKILLS": "Skills"
+    },
+    "WORKFORCE_STATS": {
+      "LABEL": "Total Effectifs",
+      "ACTIVE_EMPLOYEES": "Employés Actifs",
+      "FEMALE": "Féminin",
+      "MALE": "Masculin"
+    },
+    "PROFILE_COMPLETION": {
+      "LABEL": "Complétion des profils",
+      "INCOMPLETE": "{{count}} dossiers incomplets",
+      "REMIND": "Relancer les employés"
+    },
+    "ANNIVERSARY": {
+      "TITLE": "Anniversaires du mois",
+      "EMPTY": "Aucun anniversaire ce mois"
+    },
+    "NEW_EMPLOYEES": {
+      "TITLE": "Nouveaux employés",
+      "EMPTY": "Aucun nouvel employé récemment"
+    }
+  }
+}

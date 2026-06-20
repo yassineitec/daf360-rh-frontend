@@ -7,6 +7,7 @@ export interface PipelineStats {
   totalCandidats: number;
   delaiMoyenJours: number;
   postesUrgents: number;
+  urgents?: number;
 }
 
 export interface KanbanCandidate {
@@ -25,6 +26,11 @@ export interface KanbanCandidate {
   salary?: string;
   isUrgent: boolean;
   stage: string;
+  initials?: string;
+  stageLabel?: string;
+  applicationDate?: string;
+  email?: string;
+  status?: string;
 }
 
 export interface KanbanColumn {
@@ -69,8 +75,6 @@ export class PipelineService {
   }
 
   moveToStage(id: number, stage: string): Observable<KanbanCandidate> {
-    console.log(stage);
-    
     return this.http.put<KanbanCandidate>(`${this.base}/candidates/${id}/stage`, stage);
   }
 }

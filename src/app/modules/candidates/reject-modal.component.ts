@@ -1,13 +1,12 @@
 import { Component, input, output, signal, inject } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
 import { ModalComponent } from '../../shared/modal.component';
 import { CandidateService } from './candidate.service';
+import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-reject-modal',
   standalone: true,
-  imports: [ReactiveFormsModule, ModalComponent],
-  styleUrl: './reject-modal.component.scss',
+  imports: [ModalComponent, ButtonComponent, FormFieldComponent],
   template: `
     <app-modal
       [title]="'Rejeter le candidat'"
@@ -15,23 +14,36 @@ import { CandidateService } from './candidate.service';
       (closed)="onClose()"
       [hasFooter]="true"
     >
-      <p class="reject-name">{{ candidateName }}</p>
-      <div class="form-group">
-        <label class="form-label">Motif du rejet <span class="required">*</span> (min. 10 car.)</label>
-        <textarea
-          class="reason-textarea"
-          rows="4"
-          placeholder="Expliquez le motif du rejet…"
+      @if (candidateName) {
+        <p class="text-sm font-semibold text-on-surface mb-4">{{ candidateName }}</p>
+      }
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-on-surface">
+          Motif du rejet <span class="text-danger">*</span>
+          <span class="font-normal text-outline"> (min. 10 car.)</span>
+        </label>
+        <daf-form-field
           [value]="reason()"
-          (input)="onReasonChange($any($event.target).value)"
-        ></textarea>
-        @if (error()) { <p class="field-error">{{ error() }}</p> }
+          [options]="reasonFieldOptions"
+          (valueChange)="onReasonChange($event)"
+        />
+        @if (error()) {
+          <p class="text-xs text-danger">{{ error() }}</p>
+        }
       </div>
-      <div slot="footer">
-        <button type="button" (click)="onClose()" class="btn-cancel">Annuler</button>
-        <button type="button" (click)="onConfirm()" [disabled]="saving() || reason().trim().length < 10" class="btn-reject">
-          @if (saving()) { Rejet en cours… } @else { Confirmer le rejet }
-        </button>
+      <div slot="footer" class="flex justify-end gap-2">
+        <daf-button
+          label="Annuler"
+          variant="ghost"
+          [options]="{ size: 'md' }"
+          (onClick)="onClose()"
+        />
+        <daf-button
+          [label]="saving() ? 'Rejet en cours…' : 'Confirmer le rejet'"
+          variant="danger"
+          [options]="{ iconStart: 'cancel', size: 'md', disabled: saving() || reason().trim().length < 10 }"
+          (onClick)="onConfirm()"
+        />
       </div>
     </app-modal>
   `,
@@ -48,13 +60,20 @@ export class RejectModalComponent {
   error   = signal<string | null>(null);
   saving  = signal(false);
 
+  readonly reasonFieldOptions: FormFieldOptions = {
+    type: 'textarea',
+    placeholder: 'Expliquez le motif du rejet…',
+    fullWidth: true,
+    rows: 4,
+  };
+
   get candidateName(): string {
     const t = this.target();
     return t ? t.firstName + ' ' + t.lastName : '';
   }
 
-  onReasonChange(value: string): void {
-    this.reason.set(value);
+  onReasonChange(value: string | number | null): void {
+    this.reason.set(typeof value === 'string' ? value : '');
   }
 
   onClose(): void {

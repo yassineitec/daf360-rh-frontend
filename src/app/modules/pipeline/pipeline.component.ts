@@ -46,7 +46,7 @@ export class PipelineComponent implements OnInit {
     { key: 'stage',     label: 'Étape',     type: 'badge' },
     { key: 'fitScore',  label: 'Fit %',     type: 'number', align: 'center' },
     { key: 'location',  label: 'Lieu',      type: 'text' },
-    { key: 'action',    label: '',          type: 'action', align: 'center' },
+    { key: 'action',    label: '',          type: 'custom', align: 'center' },
   ];
 
   ngOnInit(): void {
@@ -54,10 +54,14 @@ export class PipelineComponent implements OnInit {
     forkJoin({
       stats:  this.pipelineService.getStats(),
       kanban: this.pipelineService.getKanban(),
+      list:   this.pipelineService.getCandidates({ page: 0, size: 15 }),
     }).subscribe({
-      next: ({ stats, kanban }) => {
+      next: ({ stats, kanban, list }) => {
         this.stats.set(stats);
         this.kanbanColumns.set(kanban);
+        this.candidates.set(list.content);
+        this.totalPages.set(list.totalPages ?? 1);
+        this.totalElements.set(list.totalElements ?? 0);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -82,10 +86,6 @@ export class PipelineComponent implements OnInit {
 
   onViewChange(mode: 'kanban' | 'list'): void {
     this.viewMode.set(mode);
-    if (mode === 'list') {
-      this.currentPage.set(0);
-      this.loadList();
-    }
   }
 
   onCardClick(id: number): void {

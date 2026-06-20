@@ -1,6 +1,6 @@
 import { Component, input, output, signal } from '@angular/core';
 import { EmployeeListItem } from '../../models/profile.model';
-import { avatarUrl } from '../../../../shared/utils/avatar.utils';
+import { avatarUrl, getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
@@ -55,7 +55,7 @@ import { environment } from '../../../../../environments/environment';
       <div class="flex items-start gap-4 mt-1">
         <div class="w-14 h-14 rounded-full border-2 border-[#79D7BE] overflow-hidden shrink-0">
           <img
-            [src]="resolvePhoto(employee().photoUrl) || avatarUrl(employee().gender)"
+            [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
             [alt]="employee().fullName"
             class="w-full h-full object-cover" />
         </div>
@@ -122,7 +122,8 @@ export class ProfileGridCardComponent {
   readonly onSelect    = output<{ userId: number; checked: boolean }>();
   readonly onEdit      = output<number>();
   readonly onDelete    = output<number>();
-  readonly avatarUrl   = avatarUrl;
+  readonly avatarUrl    = avatarUrl;
+  readonly getAvatarUrl = getAvatarUrl;
 
   hovered = signal(false);
 

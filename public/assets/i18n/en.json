@@ -1,0 +1,68 @@
+{
+  "DASHBOARD": {
+    "TITLE": "HR Portal",
+    "SUBTITLE": "Hello {{name}}, here is the status of your workforce today.",
+    "NEW_EMPLOYEE": "New Employee",
+    "SENIORITY": {
+      "LESS_THAN_MONTH": "Less than a month",
+      "MONTHS": "{{count}} month(s)",
+      "YEARS": "{{count}} year(s)"
+    },
+    "QUICK_ACTIONS": {
+      "SECTION": "Quick Actions",
+      "REQUESTS_LABEL": "Requests",
+      "REQUESTS_SUBLABEL": "{{count}} pending",
+      "ONBOARDING_LABEL": "Onboarding",
+      "ONBOARDING_SUBLABEL": "Manage arrivals",
+      "LEAVE_LABEL": "Leave",
+      "LEAVE_SUBLABEL": "Approve requests",
+      "RECRUITMENT_LABEL": "Recruitment",
+      "RECRUITMENT_SUBLABEL": "View pipeline"
+    },
+    "DIRECTORY": {
+      "TITLE": "Employee Directory",
+      "VIEW_ALL": "View all profiles",
+      "SEARCH_PLACEHOLDER": "Search...",
+      "FILTERS": "Filters",
+      "EMPTY": "No employees to display."
+    },
+    "ALERT_CARD": {
+      "TITLE": "Watchlist",
+      "PROBATION_TITLE": "End of probation",
+      "PROBATION_EMPTY": "No upcoming deadlines.",
+      "PROBATION_DAYS": "D-{{days}}",
+      "MISSING_DOCS_TITLE": "Missing documents",
+      "URGENT": "Urgent",
+      "REMINDER_SENT": "Reminder sent"
+    },
+    "EMPLOYEE_CARD": {
+      "PRESENT": "Present",
+      "REMOTE": "Remote",
+      "ON_LEAVE": "On Leave",
+      "SENIORITY": "Seniority:",
+      "VIEW_PROFILE": "View profile",
+      "COMPLETION_PERSO": "Info",
+      "COMPLETION_DOCS": "Docs",
+      "COMPLETION_SKILLS": "Skills"
+    },
+    "WORKFORCE_STATS": {
+      "LABEL": "Total Workforce",
+      "ACTIVE_EMPLOYEES": "Active Employees",
+      "FEMALE": "Female",
+      "MALE": "Male"
+    },
+    "PROFILE_COMPLETION": {
+      "LABEL": "Profile Completion",
+      "INCOMPLETE": "{{count}} incomplete files",
+      "REMIND": "Remind employees"
+    },
+    "ANNIVERSARY": {
+      "TITLE": "Birthdays this month",
+      "EMPTY": "No birthdays this month"
+    },
+    "NEW_EMPLOYEES": {
+      "TITLE": "New employees",
+      "EMPTY": "No new employees recently"
+    }
+  }
+}

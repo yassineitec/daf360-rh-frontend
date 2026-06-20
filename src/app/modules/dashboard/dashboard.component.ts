@@ -1,13 +1,15 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   DashboardService,
   WorkforceStats,
   WorkforceData,
   ProfileCompletionData,
   FinPeriodeEssaiItem,
+  AnniversaireDto,
+  NouveauEmployeDto,
 } from './services/dashboard.service';
-import { EmployeeListItem } from '../profiles/models/profile.model';
 import { UserStore } from '../../core/user.store';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { QuickActionCardComponent } from './components/quick-action-card/quick-action-card.component';
@@ -30,6 +32,7 @@ interface QuickActionDef {
   standalone: true,
   imports: [
     RouterLink,
+    TranslatePipe,
     SpinnerComponent,
     QuickActionCardComponent,
     AlertCardComponent,
@@ -46,6 +49,7 @@ export class DashboardComponent implements OnInit {
   private userStore       = inject(UserStore);
   private router          = inject(Router);
   private activatedRoute  = inject(ActivatedRoute);
+  private translate       = inject(TranslateService);
 
   // ── Raw signals ────────────────────────────────────────────────────────────
   readonly loading              = signal(true);
@@ -54,8 +58,8 @@ export class DashboardComponent implements OnInit {
   readonly workforce            = signal<WorkforceData | null>(null);
   readonly completion           = signal<ProfileCompletionData | null>(null);
   readonly finPeriodeEssai      = signal<FinPeriodeEssaiItem[]>([]);
-  private readonly anniversairesRaw = signal<EmployeeListItem[]>([]);
-  readonly nouveauxEmployes     = signal<EmployeeListItem[]>([]);
+  private readonly anniversairesRaw = signal<AnniversaireDto[]>([]);
+  readonly nouveauxEmployes     = signal<NouveauEmployeDto[]>([]);
 
   readonly currentUser = this.userStore.currentUser;
 
@@ -64,11 +68,12 @@ export class DashboardComponent implements OnInit {
 
   readonly quickActions = computed<QuickActionDef[]>(() => {
     const s = this.stats();
+    const t = (key: string, p?: object) => this.translate.instant(key, p);
     return [
-      { icon: 'inbox',        label: 'Demandes',    sublabel: `${s?.pendingRequests ?? 0} en attente`, route: 'requests' },
-      { icon: 'person_add',   label: 'Onboarding',  sublabel: 'Gérer les arrivées',                    route: 'onboarding' },
-      { icon: 'beach_access', label: 'Congés',       sublabel: 'Valider les demandes',                  route: 'leave' },
-      { icon: 'analytics',    label: 'Recrutement', sublabel: 'Voir le pipeline',                      route: 'recrutement' },
+      { icon: 'inbox',        label: t('DASHBOARD.QUICK_ACTIONS.REQUESTS_LABEL'),   sublabel: t('DASHBOARD.QUICK_ACTIONS.REQUESTS_SUBLABEL',   { count: s?.pendingRequests ?? 0 }), route: 'requests' },
+      { icon: 'person_add',   label: t('DASHBOARD.QUICK_ACTIONS.ONBOARDING_LABEL'), sublabel: t('DASHBOARD.QUICK_ACTIONS.ONBOARDING_SUBLABEL'),                                      route: 'onboarding' },
+      { icon: 'beach_access', label: t('DASHBOARD.QUICK_ACTIONS.LEAVE_LABEL'),      sublabel: t('DASHBOARD.QUICK_ACTIONS.LEAVE_SUBLABEL'),                                           route: 'leave' },
+      { icon: 'analytics',    label: t('DASHBOARD.QUICK_ACTIONS.RECRUITMENT_LABEL'),sublabel: t('DASHBOARD.QUICK_ACTIONS.RECRUITMENT_SUBLABEL'),                                     route: 'recrutement' },
     ];
   });
 
@@ -83,16 +88,16 @@ export class DashboardComponent implements OnInit {
     this.nouveauxEmployes().map(emp => ({
       profileId:        emp.profileId,
       fullName:         emp.fullName,
-      poste:            emp.roleName,
+      poste:            null,
       department:       emp.department,
       anciennete:       emp.hireDate ? this.ancienneteLabel(emp.hireDate) : '—',
       presenceStatus:   'PRESENT' as const,
       photoUrl:         emp.photoUrl,
-      gender:           emp.gender,
+      gender:           null,
       initials:         this.initials(emp.fullName),
-      completionPerso:  emp.hasProfile,
-      completionDocs:   false,
-      completionSkills: false,
+      completionPerso:  false,
+      completionDocs:   false, // TODO: needs onboardingCompleted in list endpoint
+      completionSkills: false, // TODO: skills endpoint pending
     }))
   );
 
@@ -100,7 +105,7 @@ export class DashboardComponent implements OnInit {
     this.anniversairesRaw().map(emp => ({
       profileId:   emp.profileId,
       fullName:    emp.fullName,
-      dateOfBirth: emp.hireDate,
+      dateOfBirth: emp.dateOfBirth,
     }))
   );
 
@@ -116,7 +121,9 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.dashboardSvc.load().subscribe({
-      next: data => {
+      
+      next: data => {        
+        console.log(data);
         this.stats.set(data.stats);
         this.workforce.set(data.workforce);
         this.completion.set(data.completion);
@@ -152,9 +159,8 @@ export class DashboardComponent implements OnInit {
     const months = Math.floor(
       (Date.now() - new Date(hireDate).getTime()) / (1000 * 60 * 60 * 24 * 30),
     );
-    if (months < 1) return "Moins d'un mois";
-    if (months < 12) return `${months} mois`;
-    const years = Math.floor(months / 12);
-    return `${years} an${years > 1 ? 's' : ''}`;
+    if (months < 1) return this.translate.instant('DASHBOARD.SENIORITY.LESS_THAN_MONTH');
+    if (months < 12) return this.translate.instant('DASHBOARD.SENIORITY.MONTHS', { count: months });
+    return this.translate.instant('DASHBOARD.SENIORITY.YEARS', { count: Math.floor(months / 12) });
   }
 }

@@ -1,11 +1,21 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { PaginationComponent } from '@khalilrebhiitec/daf360';
+import {
+  ButtonComponent,
+  CardComponent,
+  FormFieldComponent,
+  FormFieldOptions,
+  PaginationComponent,
+  SelectComponent,
+  SelectConfig,
+  ToolbarComponent,
+} from '@khalilrebhiitec/daf360';
 import {
   CandidatesPipelineService,
   PipelineCandidateItem,
   PipelineStats,
+  CandidateKanbanColumn,
 } from './services/candidates.service';
 import { CandidateKpiCardsComponent } from './components/candidate-kpi-cards/candidate-kpi-cards.component';
 import { CandidateTableRowComponent, ProcessedCandidate } from './components/candidate-table-row/candidate-table-row.component';
@@ -21,48 +31,68 @@ const PAGE_SIZE = 10;
   selector: 'rh-candidates',
   standalone: true,
   imports: [
-    FormsModule,
+    ButtonComponent,
+    CardComponent,
+    FormFieldComponent,
+    SelectComponent,
     PaginationComponent,
+    ToolbarComponent,
     CandidateKpiCardsComponent,
     CandidateTableRowComponent,
   ],
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
-  private svc = inject(CandidatesPipelineService);
+  private svc    = inject(CandidatesPipelineService);
+  private router = inject(Router);
 
   readonly stats         = signal<PipelineStats | null>(null);
   readonly candidates    = signal<ProcessedCandidate[]>([]);
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
-  readonly viewMode      = signal<'liste' | 'tableau'>('tableau');
   readonly search        = signal('');
   readonly stageFilter   = signal('');
   readonly currentPage   = signal(0);
   readonly totalElements = signal(0);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
+  readonly stages        = signal<{ value: string; label: string }[]>([]);
 
-  readonly stages = [
-    { value: '', label: 'Toutes les étapes' },
-    { value: 'Candidature',         label: 'Candidature' },
-    { value: 'Screening RH',        label: 'Screening RH' },
-    { value: 'Entretien Technique', label: 'Entretien Technique' },
-    { value: 'Offre Envoyée',       label: 'Offre Envoyée' },
-    { value: 'Recruté',             label: 'Recruté' },
-    { value: 'Rejeté',              label: 'Rejeté' },
-  ];
+  readonly stageSelectOptions = computed(() =>
+    this.stages()
+      .filter(s => s.value !== '')
+      .map(s => ({ value: s.value, label: s.label }))
+  );
+
+  readonly searchFieldOptions: FormFieldOptions = {
+    type: 'search',
+    placeholder: 'Rechercher un candidat...',
+    prefixIcon: 'search',
+    fullWidth: true,
+  };
+
+  readonly stageSelectConfig: SelectConfig = {
+    placeholder: 'Toutes les étapes',
+  };
 
   ngOnInit(): void {
     this.loading.set(true);
     this.statsLoading.set(true);
     forkJoin({
-      stats: this.svc.getStats(),
-      page:  this.svc.getCandidates({ page: 0, size: PAGE_SIZE }),
+      stats:  this.svc.getStats(),
+      page:   this.svc.getCandidates({ page: 0, size: PAGE_SIZE }),
+      kanban: this.svc.getKanban(),
     }).subscribe({
-      next: ({ stats, page }) => {
+      next: ({ stats, page, kanban }) => {
         this.stats.set(stats);
         this.totalElements.set(page.totalElements);
         this.candidates.set(this.process(page.content));
+        this.stages.set([
+          { value: '', label: 'Toutes les étapes' },
+          ...kanban.map((col: CandidateKanbanColumn) => ({
+            value: col.stage,
+            label: col.stageLabel,
+          })),
+        ]);
         this.loading.set(false);
         this.statsLoading.set(false);
       },
@@ -73,14 +103,18 @@ export class CandidatesComponent implements OnInit {
     });
   }
 
-  onSearch(value: string): void {
-    this.search.set(value);
+  onNewCandidate(): void {
+    this.router.navigate(['/rh/candidates', 'new']);
+  }
+
+  onSearch(value: string | number | null): void {
+    this.search.set((value as string) ?? '');
     this.currentPage.set(0);
     this.loadCandidates();
   }
 
-  onStageChange(value: string): void {
-    this.stageFilter.set(value);
+  onStageChange(stages: string[]): void {
+    this.stageFilter.set(stages[0] ?? '');
     this.currentPage.set(0);
     this.loadCandidates();
   }
@@ -90,8 +124,20 @@ export class CandidatesComponent implements OnInit {
     this.loadCandidates();
   }
 
-  onView(_id: number): void {}
-  onMessage(_id: number): void {}
+  onView(id: number): void {
+    const c = this.candidates().find(c => c.id === id);
+    if (c?.status === 'HIRED') {
+      this.router.navigate(['/rh/profiles']);
+    }
+  }
+
+  onMessage(id: number): void {
+    const c = this.candidates().find(c => c.id === id);
+    if (c?.email) {
+      window.open(`mailto:${c.email}`, '_blank');
+    }
+  }
+
   onMore(_id: number): void {}
 
   private loadCandidates(): void {

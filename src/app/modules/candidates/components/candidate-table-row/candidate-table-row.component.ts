@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { ButtonComponent } from '@khalilrebhiitec/daf360';
 import { CandidateStageBadgeComponent } from '../candidate-stage-badge/candidate-stage-badge.component';
 import { PipelineCandidateItem } from '../../services/candidates.service';
 
@@ -16,7 +17,7 @@ export type ProcessedCandidate = PipelineCandidateItem & {
 @Component({
   selector: '[rh-candidate-table-row]',
   standalone: true,
-  imports: [DatePipe, CandidateStageBadgeComponent],
+  imports: [DatePipe, CandidateStageBadgeComponent, ButtonComponent],
   template: `
     <!-- Candidat -->
     <td class="py-3 px-4">
@@ -25,15 +26,15 @@ export type ProcessedCandidate = PipelineCandidateItem & {
           <img [src]="candidate.photoUrl" class="w-9 h-9 rounded-full object-cover shrink-0" />
         } @else {
           <div
-            class="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0"
+            class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
             [style.background-color]="avatarColor"
           >{{ candidate.initials }}</div>
         }
-        <p class="text-[14px] font-semibold text-on-surface">{{ candidate.fullName }}</p>
+        <p class="text-sm font-semibold text-on-surface">{{ candidate.fullName }}</p>
       </div>
     </td>
     <!-- Poste -->
-    <td class="py-3 px-4 text-[13px] text-outline">{{ candidate.poste }}</td>
+    <td class="py-3 px-4 text-sm text-outline">{{ candidate.poste }}</td>
     <!-- Étape -->
     <td class="py-3 px-4">
       <rh-candidate-stage-badge [stage]="candidate.stage" />
@@ -48,34 +49,31 @@ export type ProcessedCandidate = PipelineCandidateItem & {
             [style.background-color]="scoreColor"
           ></div>
         </div>
-        <span class="text-[13px] font-semibold text-on-surface">{{ candidate.score }}%</span>
+        <span class="text-sm font-semibold text-on-surface">{{ candidate.score }}%</span>
       </div>
     </td>
     <!-- Date -->
-    <td class="py-3 px-4 text-[13px] text-outline">
+    <td class="py-3 px-4 text-sm text-outline">
       {{ candidate.datePostulation | date: 'dd/MM/yyyy' }}
     </td>
     <!-- Actions -->
     <td class="py-3 px-4">
       <div class="flex items-center gap-1">
-        <button
-          class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors"
-          (click)="viewClick.emit(candidate.id)"
-        >
-          <span class="material-symbols-outlined text-[18px]">visibility</span>
-        </button>
-        <button
-          class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors"
-          (click)="messageClick.emit(candidate.id)"
-        >
-          <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
-        </button>
-        <button
-          class="p-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors"
-          (click)="moreClick.emit(candidate.id)"
-        >
-          <span class="material-symbols-outlined text-[18px]">more_vert</span>
-        </button>
+        <daf-button
+          variant="ghost"
+          [options]="{ iconStart: 'visibility', size: 'sm' }"
+          (onClick)="viewClick.emit(candidate.id)"
+        />
+        <daf-button
+          variant="ghost"
+          [options]="{ iconStart: 'chat_bubble', size: 'sm' }"
+          (onClick)="messageClick.emit(candidate.id)"
+        />
+        <daf-button
+          variant="ghost"
+          [options]="{ iconStart: 'more_vert', size: 'sm' }"
+          (onClick)="moreClick.emit(candidate.id)"
+        />
       </div>
     </td>
   `,

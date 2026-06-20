@@ -1,0 +1,68 @@
+{
+  "DASHBOARD": {
+    "TITLE": "بوابة الموارد البشرية",
+    "SUBTITLE": "مرحباً {{name}}، إليك حالة موظفيك اليوم.",
+    "NEW_EMPLOYEE": "موظف جديد",
+    "SENIORITY": {
+      "LESS_THAN_MONTH": "أقل من شهر",
+      "MONTHS": "{{count}} شهر",
+      "YEARS": "{{count}} سنة"
+    },
+    "QUICK_ACTIONS": {
+      "SECTION": "إجراءات سريعة",
+      "REQUESTS_LABEL": "الطلبات",
+      "REQUESTS_SUBLABEL": "{{count}} في الانتظار",
+      "ONBOARDING_LABEL": "الإدماج",
+      "ONBOARDING_SUBLABEL": "إدارة الوافدين",
+      "LEAVE_LABEL": "الإجازات",
+      "LEAVE_SUBLABEL": "الموافقة على الطلبات",
+      "RECRUITMENT_LABEL": "التوظيف",
+      "RECRUITMENT_SUBLABEL": "عرض خط الأنابيب"
+    },
+    "DIRECTORY": {
+      "TITLE": "دليل الموظفين",
+      "VIEW_ALL": "عرض جميع الملفات",
+      "SEARCH_PLACEHOLDER": "بحث...",
+      "FILTERS": "تصفية",
+      "EMPTY": "لا يوجد موظفون للعرض."
+    },
+    "ALERT_CARD": {
+      "TITLE": "قائمة المراقبة",
+      "PROBATION_TITLE": "نهاية فترة التجربة",
+      "PROBATION_EMPTY": "لا توجد مواعيد نهائية قريبة.",
+      "PROBATION_DAYS": "ي-{{days}}",
+      "MISSING_DOCS_TITLE": "وثائق مفقودة",
+      "URGENT": "عاجل",
+      "REMINDER_SENT": "تم إرسال التذكير"
+    },
+    "EMPLOYEE_CARD": {
+      "PRESENT": "حاضر",
+      "REMOTE": "عمل عن بُعد",
+      "ON_LEAVE": "في إجازة",
+      "SENIORITY": "الأقدمية:",
+      "VIEW_PROFILE": "عرض الملف",
+      "COMPLETION_PERSO": "شخصي",
+      "COMPLETION_DOCS": "وثائق",
+      "COMPLETION_SKILLS": "مهارات"
+    },
+    "WORKFORCE_STATS": {
+      "LABEL": "إجمالي القوى العاملة",
+      "ACTIVE_EMPLOYEES": "موظفون نشطون",
+      "FEMALE": "إناث",
+      "MALE": "ذكور"
+    },
+    "PROFILE_COMPLETION": {
+      "LABEL": "اكتمال الملفات",
+      "INCOMPLETE": "{{count}} ملف غير مكتمل",
+      "REMIND": "تذكير الموظفين"
+    },
+    "ANNIVERSARY": {
+      "TITLE": "أعياد ميلاد الشهر",
+      "EMPTY": "لا توجد أعياد ميلاد هذا الشهر"
+    },
+    "NEW_EMPLOYEES": {
+      "TITLE": "موظفون جدد",
+      "EMPTY": "لا يوجد موظفون جدد مؤخراً"
+    }
+  }
+}

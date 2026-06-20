@@ -206,29 +206,62 @@ export class ProfileListComponent implements OnInit {
 
   onBulkActionClick(actionId: string): void {
     switch (actionId) {
-      case 'export': this.onBulkExport(); break;
-      case 'email':  this.onBulkEmail();  break;
-      case 'status': console.log('Modifier statut:', [...this.selectedIds()]); break;
-      case 'delete': this.onBulkDelete(); break;
+      case 'export': this.onBulkExport();       break;
+      case 'email':  this.onBulkEmail();        break;
+      case 'status': this.onBulkStatusChange(); break;
+      case 'delete': this.onBulkDelete();       break;
     }
   }
 
   onBulkExport(): void {
-    console.log('Export:', [...this.selectedIds()]);
+    const selected = this.employees().filter(e => this.selectedIds().has(e.userId));
+    const header = 'Nom,Email,Pays,Statut,Date embauche';
+    const rows = selected.map(e =>
+      [
+        `"${e.fullName}"`,
+        `"${e.email ?? ''}"`,
+        `"${e.paysLabel ?? ''}"`,
+        `"${e.lifecycleStatus ?? ''}"`,
+        `"${e.hireDate ?? ''}"`,
+      ].join(',')
+    );
+    const csv  = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = `profils-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    this.clearSelection();
   }
 
   onBulkEmail(): void {
-    console.log('Email:', [...this.selectedIds()]);
+    const emails = this.employees()
+      .filter(e => this.selectedIds().has(e.userId) && e.email)
+      .map(e => e.email)
+      .join(',');
+    if (emails) window.open(`mailto:${emails}`, '_blank');
+    this.clearSelection();
+  }
+
+  onBulkStatusChange(): void {
+    alert('Modification de statut en lot — fonctionnalité à venir.');
   }
 
   onBulkDelete(): void {
-    console.log('Delete:', [...this.selectedIds()]);
+    const count = this.selectedCount();
+    if (!window.confirm(
+      `Supprimer ${count} profil(s) sélectionné(s) ?\nCette action est irréversible.`
+    )) return;
+    alert('Suppression en lot — fonctionnalité backend en cours.');
+    this.clearSelection();
   }
 
   /* ── Navigation ─────────────────────────────────────────────────────────── */
-  onViewProfile(profileId: number | null): void {
+  onViewProfile(profileId: number | null): void {    
     if (profileId != null) {
-      this.router.navigate(['/profiles', profileId]);
+      this.router.navigate(['/rh/profiles', profileId]);
     }
   }
 

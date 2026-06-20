@@ -1,171 +1,125 @@
 <!-- ── Page header ─────────────────────────────────────────────────────── -->
-<section class="page-header">
+<div class="flex items-center justify-between mb-8">
   <div>
-    <h1 class="page-title">
-      <span class="material-symbols-outlined" style="font-size:26px;color:var(--color-primary)">group</span>
+    <h1 class="flex items-center gap-2 text-2xl font-bold text-on-surface">
+      <span class="material-symbols-outlined text-[26px] text-primary">group</span>
       Suivi des Recrutements
       @if (candidates()?.totalElements != null) {
-        <span class="count-badge">{{ candidates()!.totalElements }}</span>
+        <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container text-outline">
+          {{ candidates()!.totalElements }}
+        </span>
       }
     </h1>
-    <p class="page-sub">Gestion du recrutement et du suivi des candidatures</p>
+    <p class="text-sm text-outline mt-1">Gestion du recrutement et du suivi des candidatures</p>
   </div>
 
-  <a
-    *appHasPermission="'CREATE_CANDIDATE'"
-    class="btn-primary"
-    routerLink="new"
-  >
-    <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
-    Nouveau candidat
-  </a>
-</section>
+  <ng-container *appHasPermission="'CREATE_CANDIDATE'">
+    <daf-button
+      label="Nouveau candidat"
+      variant="teal"
+      [options]="{ iconStart: 'person_add', size: 'md' }"
+      (onClick)="router.navigate(['/candidates', 'new'])"
+    />
+  </ng-container>
+</div>
 
 <!-- ── Stats cards ─────────────────────────────────────────────────────── -->
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
-
-  <!-- Total -->
-  <div class="glass-card" style="border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
-    <div style="width:44px;height:44px;border-radius:12px;background:rgba(70,72,212,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:22px;color:#4648d4">group</span>
-    </div>
-    <div>
-      <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Total candidats</div>
-      @if (isLoadingStats()) {
-        <span class="skeleton" style="width:48px;height:26px;display:inline-block;"></span>
-      } @else {
-        <div style="font-size:26px;font-weight:800;color:#1d2b3e;line-height:1;">{{ stats().total }}</div>
-      }
-    </div>
-  </div>
-
-  <!-- Pending -->
-  <div class="glass-card" style="border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
-    <div style="width:44px;height:44px;border-radius:12px;background:rgba(146,64,14,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:22px;color:#92400e">schedule</span>
-    </div>
-    <div>
-      <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">En attente</div>
-      @if (isLoadingStats()) {
-        <span class="skeleton" style="width:36px;height:26px;display:inline-block;"></span>
-      } @else {
-        <div style="font-size:26px;font-weight:800;color:#92400e;line-height:1;">{{ stats().pending }}</div>
-      }
-    </div>
-  </div>
-
-  <!-- Hired this month -->
-  <div class="glass-card" style="border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:16px;">
-    <div style="width:44px;height:44px;border-radius:12px;background:rgba(20,83,45,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:22px;color:#14532d">how_to_reg</span>
-    </div>
-    <div>
-      <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Embauchés ce mois</div>
-      @if (isLoadingStats()) {
-        <span class="skeleton" style="width:36px;height:26px;display:inline-block;"></span>
-      } @else {
-        <div style="font-size:26px;font-weight:800;color:#14532d;line-height:1;">{{ stats().hiredThisMonth }}</div>
-      }
-    </div>
-  </div>
+<div class="grid grid-cols-3 gap-6 mb-8">
+  <daf-metric-card
+    [value]="isLoadingStats() ? '…' : stats().total"
+    label="Total candidats"
+    [options]="{ icon: 'group', variant: 'primary' }"
+  />
+  <daf-metric-card
+    [value]="isLoadingStats() ? '…' : stats().pending"
+    label="En attente"
+    [options]="{ icon: 'schedule', variant: 'secondary' }"
+  />
+  <daf-metric-card
+    [value]="isLoadingStats() ? '…' : stats().hiredThisMonth"
+    label="Embauchés ce mois"
+    [options]="{ icon: 'how_to_reg', variant: 'teal' }"
+  />
 </div>
 
 <!-- ── Table section ───────────────────────────────────────────────────── -->
-<div class="glass-panel" style="border-radius:16px;overflow:hidden;">
+<div class="bg-surface rounded-2xl border border-outline-variant overflow-hidden mb-6">
 
   <!-- Toolbar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.6);">
-    <div style="font-size:14px;font-weight:600;color:#1d2b3e;">
-      Liste des candidats
-    </div>
-    <button
-      type="button"
-      class="btn-primary"
-      style="height:32px;font-size:12px;gap:4px;padding:0 12px;"
-      (click)="toggleFilters()"
-    >
-      <span class="material-symbols-outlined" style="font-size:16px">tune</span>
-      {{ showFilters() ? 'Masquer filtres' : 'Filtres' }}
-    </button>
+  <div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
+    <span class="text-sm font-semibold text-on-surface">Liste des candidats</span>
+    <daf-button
+      [label]="showFilters() ? 'Masquer filtres' : 'Filtres'"
+      variant="ghost"
+      [options]="{ iconStart: 'tune', size: 'sm' }"
+      (onClick)="toggleFilters()"
+    />
   </div>
 
   <!-- Filter panel -->
   @if (showFilters()) {
-    <div style="padding:16px 20px;background:rgba(248,250,252,.8);border-bottom:1px solid rgba(226,232,240,.6);display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-      <div class="search-wrap" style="flex:1;min-width:200px;">
-        <span class="material-symbols-outlined search-icon" style="font-size:18px;">search</span>
-        <input
-          class="search-input"
-          type="search"
-          placeholder="Nom, email, poste…"
-          [(ngModel)]="searchInput"
-          aria-label="Rechercher un candidat"
-          style="width:100%;"
+    <div class="flex gap-3 flex-wrap items-end px-5 py-4 bg-surface-container-low border-b border-outline-variant">
+      <div class="flex-1 min-w-52">
+        <daf-form-field
+          [value]="searchValue()"
+          [options]="searchFieldOptions"
+          (valueChange)="onSearch($event)"
         />
       </div>
 
-      <select
-        class="filter-select"
-        [(ngModel)]="statusFilter"
-        aria-label="Filtrer par statut"
-      >
-        <option value="">Tous les statuts</option>
-        <option value="PENDING">En attente</option>
-        <option value="ACCEPTED">Accepté(e)</option>
-        <option value="REJECTED">Refusé(e)</option>
-        <option value="IT_IN_PROGRESS">IT en cours</option>
-        <option value="EMAIL_RECEIVED">Email reçu</option>
-        <option value="HR_IN_PROGRESS">RH en cours</option>
-        <option value="HIRED">Embauché(e)</option>
-        <option value="ARCHIVED">Archivé(e)</option>
-      </select>
+      <daf-select
+        [selected]="selectedStatus()"
+        [options]="statusSelectOptions"
+        [config]="statusSelectConfig"
+        (selectedChange)="onStatusChange($event)"
+      />
 
-      <button type="button" class="btn-primary" style="height:36px;" (click)="applyFilters()">
-        <span class="material-symbols-outlined" style="font-size:16px">search</span>
-        Appliquer
-      </button>
-      <button
-        type="button"
-        class="btn-primary"
-        style="height:36px;background:var(--color-bg-secondary);color:var(--color-text);border:1px solid var(--color-border);"
-        (click)="clearFilters()"
-      >
-        <span class="material-symbols-outlined" style="font-size:16px">close</span>
-        Réinitialiser
-      </button>
+      <daf-button
+        label="Appliquer"
+        variant="primary"
+        [options]="{ iconStart: 'search', size: 'md' }"
+        (onClick)="applyFilters()"
+      />
+      <daf-button
+        label="Réinitialiser"
+        variant="ghost"
+        [options]="{ iconStart: 'close', size: 'md' }"
+        (onClick)="clearFilters()"
+      />
     </div>
   }
 
   <!-- Table -->
-  <div style="overflow-x:auto;">
-    <table aria-label="Liste des candidats" style="width:100%;border-collapse:collapse;font-size:13px;">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
       <thead>
-        <tr>
-          <th scope="col">Candidat</th>
-          <th scope="col">Poste</th>
-          <th scope="col">Statut</th>
-          <th scope="col">Début prévu</th>
-          <th scope="col" style="text-align:right;">Actions</th>
+        <tr class="border-b border-outline-variant bg-surface-container-low">
+          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Candidat</th>
+          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Poste</th>
+          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Statut</th>
+          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Début prévu</th>
+          <th class="py-3 px-4 text-right text-xs font-semibold text-outline uppercase tracking-wide">Actions</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Skeleton rows while loading -->
+      <tbody class="divide-y divide-outline-variant">
+
+        <!-- Skeleton rows -->
         @if (isLoadingCandidates()) {
           @for (row of skeletonRows; track row) {
             <tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <span class="skeleton" style="width:36px;height:36px;border-radius:50%;flex-shrink:0;"></span>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-2">
+                  <div class="w-9 h-9 rounded-full bg-surface-container-high animate-pulse shrink-0"></div>
                   <div>
-                    <span class="skeleton" style="width:120px;height:13px;display:block;margin-bottom:5px;"></span>
-                    <span class="skeleton" style="width:160px;height:11px;display:block;"></span>
+                    <div class="w-28 h-3 rounded bg-surface-container-high animate-pulse mb-1"></div>
+                    <div class="w-40 h-2.5 rounded bg-surface-container-high animate-pulse"></div>
                   </div>
                 </div>
               </td>
-              <td><span class="skeleton" style="width:100px;height:13px;display:block;"></span></td>
-              <td><span class="skeleton" style="width:80px;height:22px;border-radius:9999px;display:block;"></span></td>
-              <td><span class="skeleton" style="width:90px;height:13px;display:block;"></span></td>
-              <td style="text-align:right;"><span class="skeleton" style="width:60px;height:28px;border-radius:6px;display:inline-block;"></span></td>
+              <td class="py-3 px-4"><div class="w-24 h-3 rounded bg-surface-container-high animate-pulse"></div></td>
+              <td class="py-3 px-4"><div class="w-20 h-5 rounded-full bg-surface-container-high animate-pulse"></div></td>
+              <td class="py-3 px-4"><div class="w-20 h-3 rounded bg-surface-container-high animate-pulse"></div></td>
+              <td class="py-3 px-4 text-right"><div class="w-14 h-7 rounded-lg bg-surface-container-high animate-pulse inline-block"></div></td>
             </tr>
           }
         }
@@ -174,75 +128,67 @@
         @if (!isLoadingCandidates()) {
           @for (c of candidates()?.content ?? []; track c.id) {
             <tr
-              class="candidate-row"
-              [ngClass]="{ 'selected-row': selectedId() === c.id }"
-              [style.background]="selectedId() === c.id ? 'rgba(70,72,212,.06)' : ''"
+              class="cursor-pointer transition-colors"
+              [class.bg-primary/5]="selectedId() === c.id"
+              [class.hover:bg-surface-container-low]="selectedId() !== c.id"
               (click)="onRowClick(c.id)"
-              style="cursor:pointer;"
             >
               <!-- Candidat -->
-              <td>
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4648d4,#6366f1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:.5px;">
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
                     {{ getInitials(c.firstName, c.lastName) }}
                   </div>
                   <div>
-                    <div class="cell-name">{{ c.firstName }} {{ c.lastName }}</div>
-                    <div class="cell-email">{{ c.emailPersonal }}</div>
+                    <div class="font-semibold text-on-surface">{{ c.firstName }} {{ c.lastName }}</div>
+                    <div class="text-xs text-outline">{{ c.emailPersonal }}</div>
                   </div>
                 </div>
               </td>
 
               <!-- Poste -->
-              <td>
-                @if (c.appliedPosition) {
-                  {{ c.appliedPosition }}
-                } @else {
-                  <span class="cell-muted">—</span>
-                }
+              <td class="py-3 px-4 text-outline">
+                {{ c.appliedPosition ?? '—' }}
               </td>
 
               <!-- Statut -->
-              <td>
-                <span class="status-badge" [ngClass]="getStatusClass(c.status)">
-                  <span class="material-symbols-outlined" style="font-size:13px;">{{ getStatusIcon(c.status) }}</span>
-                  {{ getStatusLabel(c.status) }}
-                </span>
+              <td class="py-3 px-4">
+                <daf-badge
+                  [label]="getStatusLabel(c.status)"
+                  [options]="getStatusBadgeOptions(c.status)"
+                />
               </td>
 
               <!-- Début prévu -->
-              <td>{{ formatDateFr(c.expectedStartDate) }}</td>
+              <td class="py-3 px-4 text-outline">{{ formatDateFr(c.expectedStartDate) }}</td>
 
               <!-- Actions -->
-              <td style="text-align:right;">
-                <div class="row-actions" style="display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;" (click)="$event.stopPropagation()">
+              <td class="py-3 px-4 text-right" (click)="$event.stopPropagation()">
+                <div class="inline-flex items-center gap-1 flex-wrap justify-end">
 
-                  <!-- Accept + Reject — PENDING only, permission required -->
                   @if (c.status === 'PENDING' && canAcceptReject()) {
-                    <button type="button"
-                      (click)="quickAccept(c, $event)"
-                      [disabled]="isActioning()"
-                      style="padding:5px 12px;border-radius:8px;border:none;background:#dcfce7;color:#15803d;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                      <span class="material-symbols-outlined" style="font-size:13px;">check_circle</span>
-                      Accepter
-                    </button>
-                    <button type="button"
-                      (click)="openRejectModal(c, $event)"
-                      [disabled]="isActioning()"
-                      style="padding:5px 12px;border-radius:8px;border:none;background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                      <span class="material-symbols-outlined" style="font-size:13px;">cancel</span>
-                      Rejeter
-                    </button>
+                    <daf-button
+                      label="Accepter"
+                      variant="ghost"
+                      [options]="{ iconStart: 'check_circle', size: 'sm' }"
+                      [class.opacity-50]="isActioning()"
+                      (onClick)="quickAccept(c, $event)"
+                    />
+                    <daf-button
+                      label="Rejeter"
+                      variant="danger"
+                      [options]="{ iconStart: 'cancel', size: 'sm' }"
+                      [class.opacity-50]="isActioning()"
+                      (onClick)="openRejectModal(c, $event)"
+                    />
                   }
 
-                  <a
-                    class="btn-action view"
-                    [routerLink]="[c.id]"
-                    title="Voir le dossier"
-                  >
-                    <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>
-                    Voir
-                  </a>
+                  <daf-button
+                    label="Voir"
+                    variant="ghost"
+                    [options]="{ iconStart: 'open_in_new', size: 'sm' }"
+                    (onClick)="router.navigate(['/candidates', c.id])"
+                  />
                 </div>
               </td>
             </tr>
@@ -254,138 +200,108 @@
 
   <!-- Empty state -->
   @if (!isLoadingCandidates() && (candidates()?.content?.length ?? 0) === 0) {
-    <div class="empty-state">
-      <span class="material-symbols-outlined empty-icon" style="font-size:52px;">person_search</span>
-      <p class="empty-title">Aucun candidat trouvé</p>
-      <p class="empty-hint">Modifiez vos filtres ou ajoutez un nouveau candidat.</p>
+    <div class="flex flex-col items-center justify-center py-16 gap-3 text-outline">
+      <span class="material-symbols-outlined text-5xl">person_search</span>
+      <p class="font-semibold text-on-surface">Aucun candidat trouvé</p>
+      <p class="text-sm">Modifiez vos filtres ou ajoutez un nouveau candidat.</p>
     </div>
   }
 
   <!-- Pagination -->
   @if (!isLoadingCandidates() && (candidates()?.totalPages ?? 0) > 1) {
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(226,232,240,.6);font-size:13px;color:var(--color-text-muted);">
-      <span>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-outline-variant">
+      <span class="text-sm text-outline">
         Page {{ (candidates()?.number ?? 0) + 1 }} sur {{ candidates()?.totalPages ?? 1 }}
         &nbsp;·&nbsp;
         {{ candidates()?.totalElements ?? 0 }} résultats
       </span>
-      <div style="display:flex;gap:4px;">
-        <button
-          type="button"
-          class="btn-action view"
-          [disabled]="currentPage() === 0"
-          [style.opacity]="currentPage() === 0 ? '0.4' : '1'"
-          (click)="onPageChange(currentPage() - 1)"
-        >
-          <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
-        </button>
-        @for (p of [].constructor(candidates()?.totalPages ?? 0); track $index) {
-          <button
-            type="button"
-            class="btn-action"
-            [ngClass]="$index === currentPage() ? 'accept' : 'view'"
-            style="min-width:32px;padding:0 8px;"
-            (click)="onPageChange($index)"
-          >
-            {{ $index + 1 }}
-          </button>
-        }
-        <button
-          type="button"
-          class="btn-action view"
-          [disabled]="currentPage() >= (candidates()?.totalPages ?? 1) - 1"
-          [style.opacity]="currentPage() >= (candidates()?.totalPages ?? 1) - 1 ? '0.4' : '1'"
-          (click)="onPageChange(currentPage() + 1)"
-        >
-          <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
-        </button>
-      </div>
+      <daf-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="candidates()?.totalPages ?? 1"
+        [totalElements]="candidates()?.totalElements ?? 0"
+        (pageChange)="onPageChange($event)"
+      />
     </div>
   }
 </div>
 
-<!-- ── Bottom grid: Section 3 (history) + Section 4 (workflow) ─────────── -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+<!-- ── Bottom: History + Workflow ──────────────────────────────────────── -->
+<div class="grid grid-cols-2 gap-5">
 
-  <!-- SECTION 3: Historique des décisions ─────────────────────────── -->
-  <section class="glass-panel" style="border-radius:16px;padding:24px;">
+  <!-- Decision history -->
+  <div class="bg-surface rounded-2xl border border-outline-variant p-6">
 
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-      <span class="material-symbols-outlined" style="font-size:20px;color:#4648d4;">history</span>
+    <div class="flex items-center gap-2 mb-5">
+      <span class="material-symbols-outlined text-xl text-primary">history</span>
       <div>
-        <div style="font-size:15px;font-weight:700;color:#1d2b3e;">
+        <p class="text-sm font-semibold text-on-surface">
           Historique des décisions
           @if (selectedCandidate()) {
-            <span style="color:#4648d4;"> — {{ selectedCandidate()!.firstName }} {{ selectedCandidate()!.lastName }}</span>
+            <span class="text-primary"> — {{ selectedCandidate()!.firstName }} {{ selectedCandidate()!.lastName }}</span>
           }
-        </div>
-        <div style="font-size:11px;color:var(--color-text-muted);">Cliquez sur un candidat pour voir son historique</div>
+        </p>
+        <p class="text-xs text-outline">Cliquez sur un candidat pour voir son historique</p>
       </div>
     </div>
 
-    <!-- Empty state: no candidate selected -->
     @if (!selectedId()) {
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 16px;text-align:center;">
-        <span class="material-symbols-outlined" style="font-size:52px;color:#c5c6cd;display:block;margin-bottom:12px;">history</span>
-        <p style="font-size:14px;color:#44474c;margin:0;">Sélectionnez un candidat</p>
-        <p style="font-size:12px;color:#75777d;margin-top:4px;">pour voir l'historique de ses décisions</p>
+      <div class="flex flex-col items-center justify-center py-12 gap-2 text-outline">
+        <span class="material-symbols-outlined text-5xl opacity-40">history</span>
+        <p class="text-sm text-on-surface">Sélectionnez un candidat</p>
+        <p class="text-xs">pour voir l'historique de ses décisions</p>
       </div>
     }
 
-    <!-- Skeleton loading -->
     @if (selectedId() && isLoadingHistory()) {
-      <div class="timeline-container" style="display:flex;flex-direction:column;gap:16px;">
-        @for (row of skeletonRows; track row) {
-          <div style="display:flex;gap:12px;align-items:flex-start;padding-left:44px;">
-            <div class="skeleton" style="position:absolute;left:0;width:32px;height:32px;border-radius:50%;"></div>
-            <div style="flex:1;">
-              <span class="skeleton" style="width:160px;height:13px;display:block;margin-bottom:6px;"></span>
-              <span class="skeleton" style="width:240px;height:11px;display:block;"></span>
+      <div class="flex flex-col gap-4">
+        @for (r of skeletonRows; track r) {
+          <div class="flex gap-3 pl-10">
+            <div class="flex-1">
+              <div class="w-40 h-3 rounded bg-surface-container-high animate-pulse mb-1"></div>
+              <div class="w-56 h-2.5 rounded bg-surface-container-high animate-pulse"></div>
             </div>
           </div>
         }
       </div>
     }
 
-    <!-- Timeline content -->
     @if (selectedId() && !isLoadingHistory()) {
       @if (history().length === 0) {
-        <div style="text-align:center;padding:32px;color:var(--color-text-muted);">
-          <span class="material-symbols-outlined" style="font-size:40px;opacity:.35;display:block;margin-bottom:8px;">event_note</span>
-          <span style="font-size:13px;">Aucun historique disponible</span>
+        <div class="flex flex-col items-center justify-center py-8 gap-2 text-outline">
+          <span class="material-symbols-outlined text-4xl opacity-35">event_note</span>
+          <span class="text-sm">Aucun historique disponible</span>
         </div>
-      }
-      @if (history().length > 0) {
-        <div class="timeline-container">
+      } @else {
+        <div class="relative flex flex-col gap-4 pl-11">
           @for (item of history(); track item.id) {
-            <div class="timeline-item">
+            <div class="relative">
               <div
-                style="position:absolute;left:0;top:2px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(51,65,85,.15);"
-                [ngStyle]="getTimelineDotStyle(item.action)"
+                class="absolute -left-11 top-0.5 w-8 h-8 rounded-full flex items-center justify-center border-2 border-surface shadow-sm"
+                [style]="getTimelineDotStyle(item.action)"
               >
-                <span class="material-symbols-outlined" style="font-size:15px;">{{ getTimelineIcon(item.action) }}</span>
+                <span class="material-symbols-outlined text-[15px]">{{ getTimelineIcon(item.action) }}</span>
               </div>
-              <div style="background:rgba(248,250,252,.7);border-radius:10px;padding:12px 14px;border:1px solid rgba(226,232,240,.5);">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">
-                  <span style="font-size:13px;font-weight:600;color:#1d2b3e;">{{ item.actionLabel || item.action }}</span>
-                  <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;flex-shrink:0;">{{ formatTimestamp(item.timestamp) }}</span>
+              <div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant/50">
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <span class="text-sm font-semibold text-on-surface">{{ item.actionLabel || item.action }}</span>
+                  <span class="text-xs text-outline shrink-0 whitespace-nowrap">{{ formatTimestamp(item.timestamp) }}</span>
                 </div>
                 @if (item.performedByName) {
-                  <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:3px;">
-                    <span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px;">person</span>
+                  <div class="text-xs text-outline mb-1">
+                    <span class="material-symbols-outlined text-[13px] align-middle">person</span>
                     {{ item.performedByName }}
                   </div>
                 }
                 @if (item.resultingStatus) {
-                  <div style="margin-top:5px;">
-                    <span class="status-badge" [ngClass]="getStatusClass(item.resultingStatus)" style="font-size:11px;padding:2px 8px;">
-                      <span class="material-symbols-outlined" style="font-size:12px;">{{ getStatusIcon(item.resultingStatus) }}</span>
-                      {{ getStatusLabel(item.resultingStatus) }}
-                    </span>
+                  <div class="mt-1">
+                    <daf-badge
+                      [label]="getStatusLabel(item.resultingStatus)"
+                      [options]="getStatusBadgeOptions(item.resultingStatus)"
+                    />
                   </div>
                 }
                 @if (item.comment) {
-                  <div style="font-size:12px;color:#475569;margin-top:6px;padding:8px 10px;background:rgba(241,245,249,.8);border-radius:6px;border-left:3px solid rgba(70,72,212,.3);font-style:italic;">
+                  <div class="text-xs text-on-surface mt-2 px-3 py-2 bg-surface rounded-lg border-l-2 border-primary/30 italic">
                     "{{ item.comment }}"
                   </div>
                 }
@@ -395,125 +311,103 @@
         </div>
       }
     }
-  </section>
+  </div>
 
-  <!-- SECTION 4: Automatisation du Workflow ───────────────────────── -->
-  <section class="glass-card" style="border-radius:16px;padding:24px;background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(242,244,246,.8));overflow:hidden;position:relative;">
+  <!-- Workflow automation -->
+  <div class="bg-surface rounded-2xl border border-outline-variant p-6 relative overflow-hidden">
 
-    <!-- Header -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
-      <div style="background:#4648d4;color:#fff;padding:8px;border-radius:10px;display:flex;">
-        <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
+    <div class="flex items-center gap-3 mb-6">
+      <div class="bg-primary rounded-xl p-2 flex text-white">
+        <span class="material-symbols-outlined text-xl">auto_awesome</span>
       </div>
       <div>
-        <div style="font-size:15px;font-weight:700;color:#1d2b3e;">Automatisation du Workflow</div>
-        <div style="font-size:11px;color:var(--color-text-muted);">Notifications automatiques à l'acceptation</div>
+        <p class="text-sm font-semibold text-on-surface">Automatisation du Workflow</p>
+        <p class="text-xs text-outline">Notifications automatiques à l'acceptation</p>
       </div>
     </div>
 
-    <!-- Step 1: Trigger -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 1px 4px rgba(51,65,85,.06);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="material-symbols-outlined" style="font-size:20px;color:#004941;">task_alt</span>
+    <!-- Step 1 -->
+    <div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-outline-variant/50 mb-1">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl" style="color:#004941">task_alt</span>
         <div>
-          <div style="font-size:13px;font-weight:600;color:#1d2b3e;">Candidat marqué comme 'Accepté'</div>
-          <div style="font-size:11px;color:var(--color-text-muted);">Déclencheur manuel HR</div>
+          <p class="text-sm font-semibold text-on-surface">Candidat marqué 'Accepté'</p>
+          <p class="text-xs text-outline">Déclencheur manuel HR</p>
         </div>
       </div>
-      <span class="material-symbols-outlined" style="font-size:18px;color:#4648d4;">arrow_forward</span>
+      <span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
     </div>
 
-    <!-- Connector -->
-    <div style="display:flex;justify-content:center;margin:4px 0;">
-      <div style="height:28px;width:2px;background:rgba(70,72,212,.25);"></div>
+    <div class="flex justify-center my-1">
+      <div class="w-px h-7 bg-primary/25"></div>
     </div>
 
-    <!-- Step 2: Notification card (dark) -->
-    <div style="background:#1d2b3e;color:#fff;border-radius:12px;padding:20px;box-shadow:0 8px 24px rgba(29,43,62,.3);transform:rotate(0.8deg);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9eadc5;">Notification IT automatique</span>
-        <span class="material-symbols-outlined" style="font-size:18px;color:#9eadc5;">lan</span>
+    <!-- Notification card -->
+    <div class="bg-on-surface rounded-xl p-5 rotate-[0.8deg]">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">Notification IT automatique</span>
+        <span class="material-symbols-outlined text-[18px] text-outline-variant">lan</span>
       </div>
-      <div style="font-family:monospace;font-size:12px;line-height:1.8;opacity:.9;">
-        <div><span style="color:#9eadc5;">OBJET : </span>Préparation équipement - Nouveau talent</div>
-        <div>
-          <span style="color:#9eadc5;">NOM : </span>
-          {{ selectedCandidate() ? (selectedCandidate()!.firstName + ' ' + selectedCandidate()!.lastName) : 'Aucun candidat sélectionné' }}
-        </div>
-        <div>
-          <span style="color:#9eadc5;">POSTE : </span>
-          {{ selectedCandidate()?.appliedPosition ?? '—' }}
-        </div>
-        <div>
-          <span style="color:#9eadc5;">START : </span>
-          {{ selectedCandidate()?.expectedStartDate ? formatDateFr(selectedCandidate()!.expectedStartDate!) : '—' }}
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);font-size:11px;">
-          Action : Création compte MS365 + Provisioning matériel demandés.
-        </div>
+      <div class="font-mono text-[12px] leading-relaxed text-surface opacity-90">
+        <div><span class="text-outline-variant">OBJET : </span>Préparation équipement - Nouveau talent</div>
+        <div><span class="text-outline-variant">NOM : </span>{{ selectedCandidate() ? (selectedCandidate()!.firstName + ' ' + selectedCandidate()!.lastName) : 'Aucun candidat sélectionné' }}</div>
+        <div><span class="text-outline-variant">POSTE : </span>{{ selectedCandidate()?.appliedPosition ?? '—' }}</div>
+        <div><span class="text-outline-variant">START : </span>{{ selectedCandidate()?.expectedStartDate ? formatDateFr(selectedCandidate()!.expectedStartDate!) : '—' }}</div>
+        <div class="mt-2 pt-2 border-t border-surface/15 text-[11px]">Action : Création compte MS365 + Provisioning matériel.</div>
       </div>
-      <div style="margin-top:14px;display:flex;justify-content:flex-end;">
-        @if (selectedCandidate()?.status === 'ACCEPTED'
-          || selectedCandidate()?.status === 'IT_IN_PROGRESS'
-          || selectedCandidate()?.status === 'EMAIL_RECEIVED'
-          || selectedCandidate()?.status === 'HR_IN_PROGRESS'
-          || selectedCandidate()?.status === 'HIRED') {
-          <span style="background:rgba(60,221,199,.2);color:#3cddc7;font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;">✓ Envoyé avec succès</span>
+      <div class="mt-3 flex justify-end">
+        @if (['ACCEPTED','IT_IN_PROGRESS','EMAIL_RECEIVED','HR_IN_PROGRESS','HIRED'].includes(selectedCandidate()?.status ?? '')) {
+          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-teal-300 bg-teal-900/30">✓ Envoyé avec succès</span>
         } @else {
-          <span style="background:rgba(158,173,197,.15);color:#9eadc5;font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;">En attente d'acceptation</span>
+          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-outline-variant bg-surface-container/20">En attente d'acceptation</span>
         }
       </div>
     </div>
 
     <!-- Footer note -->
-    <div style="display:flex;align-items:flex-start;gap:8px;margin-top:16px;color:#44474c;">
-      <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0;margin-top:1px;">info</span>
-      <p style="font-size:12px;line-height:1.5;margin:0;">
-        Chaque validation 'Acceptée' génère automatiquement une notification vers le département IT et crée un dossier de provisioning.
+    <div class="flex gap-2 mt-4 text-outline">
+      <span class="material-symbols-outlined text-base shrink-0 mt-0.5">info</span>
+      <p class="text-xs leading-relaxed">
+        Chaque validation 'Acceptée' génère automatiquement une notification IT et crée un dossier de provisioning.
       </p>
     </div>
-  </section>
-
+  </div>
 </div>
 
-<!-- ── Reject modal ──────────────────────────────────────────────────────── -->
+<!-- ── Reject modal overlay ───────────────────────────────────────────────── -->
 @if (rejectTarget()) {
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-      <h3 style="font-size:17px;font-weight:700;color:#1d2b3e;margin:0 0 6px;">Rejeter le candidat</h3>
-      <p style="font-size:13px;color:#44474c;margin:0 0 20px;">
-        <strong>{{ rejectTarget()!.firstName }} {{ rejectTarget()!.lastName }}</strong>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div class="bg-surface rounded-2xl p-7 w-full max-w-md shadow-2xl">
+      <h3 class="text-base font-bold text-on-surface mb-1">Rejeter le candidat</h3>
+      <p class="text-sm text-outline mb-5">
+        <strong class="text-on-surface">{{ rejectTarget()!.firstName }} {{ rejectTarget()!.lastName }}</strong>
       </p>
 
       @if (actionError()) {
-        <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:14px;">
-          {{ actionError() }}
-        </div>
+        <div class="bg-danger/10 text-danger text-xs rounded-lg px-3 py-2 mb-4">{{ actionError() }}</div>
       }
 
-      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:20px;">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;">
-          Motif du rejet *
-        </label>
-        <textarea [(ngModel)]="rejectReason" rows="3"
-          placeholder="Expliquez la raison du rejet…"
-          style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:10px 12px;font-size:13px;outline:none;resize:none;box-sizing:border-box;">
-        </textarea>
+      <div class="mb-5">
+        <daf-form-field
+          [value]="rejectReason()"
+          [options]="{ type: 'textarea', label: 'Motif du rejet *', placeholder: 'Expliquez la raison du rejet…', rows: 3, required: true, fullWidth: true }"
+          (valueChange)="rejectReason.set($event)"
+        />
       </div>
 
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button type="button"
-          (click)="rejectTarget.set(null)"
-          style="padding:9px 20px;border-radius:10px;border:1px solid #e5e7eb;background:none;font-size:13px;cursor:pointer;color:#44474c;">
-          Annuler
-        </button>
-        <button type="button"
-          (click)="confirmReject()"
-          [disabled]="isActioning() || !rejectReason.trim()"
-          style="padding:9px 20px;border-radius:10px;border:none;background:#b91c1c;color:#fff;font-size:13px;font-weight:700;cursor:pointer;"
-          [style.opacity]="(isActioning() || !rejectReason.trim()) ? '0.6' : '1'">
-          {{ isActioning() ? 'Rejet en cours…' : 'Confirmer le rejet' }}
-        </button>
+      <div class="flex gap-3 justify-end">
+        <daf-button
+          label="Annuler"
+          variant="ghost"
+          [options]="{ size: 'md' }"
+          (onClick)="rejectTarget.set(null)"
+        />
+        <daf-button
+          label="Confirmer le rejet"
+          variant="danger"
+          [options]="{ size: 'md', loading: isActioning(), disabled: isActioning() || !isRejectReasonValid() }"
+          (onClick)="confirmReject()"
+        />
       </div>
     </div>
   </div>

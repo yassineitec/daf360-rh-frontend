@@ -417,11 +417,11 @@
               </div>
             }
 
-            @if (!editMode()) { <app-field label="Adresse" [value]="profile()!.homeAddress" [wide]="true" /> }
+            @if (!editMode()) { <app-field label="Adresse" [value]="profile()!.personalAddress" [wide]="true" /> }
             @if (editMode()) {
               <div style="display:flex;flex-direction:column;gap:4px;grid-column:span 2;">
                 <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Adresse</label>
-                <textarea [(ngModel)]="editForm.homeAddress" rows="2" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                <textarea [(ngModel)]="editForm.personalAddress" rows="2" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;resize:vertical;"></textarea>
               </div>
             }
           </div>

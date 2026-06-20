@@ -2,7 +2,22 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, catchError, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { EmployeeListItem } from '../../profiles/models/profile.model';
+export interface AnniversaireDto {
+  profileId: number;
+  fullName: string;
+  photoUrl: string | null;
+  dateOfBirth: string;
+  joursAvant: number;
+}
+
+export interface NouveauEmployeDto {
+  profileId: number;
+  fullName: string;
+  photoUrl: string | null;
+  hireDate: string | null;
+  department: string | null;
+  grade: string | null;
+}
 
 export interface WorkforceStats {
   totalActifs: number;
@@ -16,19 +31,18 @@ export interface WorkforceStats {
 }
 
 export interface WorkforceData {
-  pending: number;
-  accepted: number;
-  itInProgress: number;
-  hired: number;
-  rejected: number;
-  total: number;
+  totalActifs: number;
+  hommes: number;
+  femmes: number;
+  nonDefini: number;
+  pctHommes: number;
+  pctFemmes: number;
 }
 
 export interface ProfileCompletionData {
-  completionRate: number;
-  complete: number;
-  incomplete: number;
-  total: number;
+  tauxGlobalPct: number;
+  dossiersComplets: number;
+  dossiersIncomplets: number;
 }
 
 export interface FinPeriodeEssaiItem {
@@ -47,30 +61,10 @@ export interface DashboardData {
   workforce: WorkforceData | null;
   completion: ProfileCompletionData | null;
   finPeriodeEssai: FinPeriodeEssaiItem[];
-  anniversaires: EmployeeListItem[];
-  nouveauxEmployes: EmployeeListItem[];
+  anniversaires: AnniversaireDto[];
+  nouveauxEmployes: NouveauEmployeDto[];
 }
 
-export interface WeeklyStats {
-  weekLabel: string;
-  week: number;
-  pointageEnAttente: number;
-  tauxAffectation: number;
-}
-
-export interface RecruitmentStats {
-  recrutementsEnCours: number;
-  congesValidesMonth: number;
-  newApplications: number;
-}
-
-export interface RecentActivityItem {
-  id: number;
-  collaborateur: string;
-  action: string;
-  date: string;
-  type: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
@@ -93,24 +87,12 @@ export class DashboardService {
     return this.http.get<FinPeriodeEssaiItem[]>(`${this.base}/dashboard/fin-periode-essai`);
   }
 
-  getAnniversaires(): Observable<EmployeeListItem[]> {
-    return this.http.get<EmployeeListItem[]>(`${this.base}/dashboard/anniversaires`);
+  getAnniversaires(): Observable<AnniversaireDto[]> {
+    return this.http.get<AnniversaireDto[]>(`${this.base}/dashboard/anniversaires`);
   }
 
-  getNouveauxEmployes(): Observable<EmployeeListItem[]> {
-    return this.http.get<EmployeeListItem[]>(`${this.base}/dashboard/nouveaux-employes`);
-  }
-
-  getWeeklyStats(): Observable<WeeklyStats> {
-    return this.http.get<WeeklyStats>(`${this.base}/dashboard/weekly-stats`);
-  }
-
-  getRecruitmentStats(): Observable<RecruitmentStats> {
-    return this.http.get<RecruitmentStats>(`${this.base}/dashboard/recruitment-stats`);
-  }
-
-  getRecentActivity(): Observable<RecentActivityItem[]> {
-    return this.http.get<RecentActivityItem[]>(`${this.base}/dashboard/recent-activity`);
+  getNouveauxEmployes(): Observable<NouveauEmployeDto[]> {
+    return this.http.get<NouveauEmployeDto[]>(`${this.base}/dashboard/nouveaux-employes`);
   }
 
   load(): Observable<DashboardData> {
@@ -119,8 +101,8 @@ export class DashboardService {
       workforce:         this.getWorkforce().pipe(catchError(() => of(null))),
       completion:        this.getCompletion().pipe(catchError(() => of(null))),
       finPeriodeEssai:   this.getFinPeriodeEssai().pipe(catchError(() => of([] as FinPeriodeEssaiItem[]))),
-      anniversaires:     this.getAnniversaires().pipe(catchError(() => of([] as EmployeeListItem[]))),
-      nouveauxEmployes:  this.getNouveauxEmployes().pipe(catchError(() => of([] as EmployeeListItem[]))),
+      anniversaires:     this.getAnniversaires().pipe(catchError(() => of([] as AnniversaireDto[]))),
+      nouveauxEmployes:  this.getNouveauxEmployes().pipe(catchError(() => of([] as NouveauEmployeDto[]))),
     });
   }
 }

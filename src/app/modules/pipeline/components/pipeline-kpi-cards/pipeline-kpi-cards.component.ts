@@ -39,7 +39,7 @@ import { PipelineStats } from '../../services/pipeline.service';
         </div>
         <div>
           <p class="text-outline text-sm">Postes Urgents</p>
-          <p class="text-headline-md font-bold">{{ stats().postesUrgents }} Ouverts</p>
+          <p class="text-headline-md font-bold">{{ (stats().urgents ?? stats().postesUrgents ?? 0) }} Ouverts</p>
           <p class="text-error text-xs font-bold">Action requise</p>
         </div>
       </div>

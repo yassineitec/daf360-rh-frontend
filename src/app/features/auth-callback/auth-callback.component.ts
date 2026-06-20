@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 /**
  * Handles the redirect from DAF360 Portal.
  *
- * Expected URL: http://localhost:4201/auth/callback?token=<jwt>
+ * Expected URL: {shellUrl}/auth/callback?token=<jwt>
  *
  * The portal's AzureOAuth2SuccessHandler signs an internal JWT and redirects
  * to {frontendUrl}/auth/callback?token={jwt}. This component reads that token,
