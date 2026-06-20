@@ -114,7 +114,6 @@ export interface EmployeeProfile {
 
   // ── Recruitment link ──────────────────────────────────────────────────────
   candidateId:      number | null;
-  personalAddress:  string | null;  // V2 column personal_address (same data as homeAddress)
 
   // ── Sensitive — null when caller lacks HR_MANAGER / FINANCE_OFFICER ─────
   bankName:          string | null;   // text label from response DTO

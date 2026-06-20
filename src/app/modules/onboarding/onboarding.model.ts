@@ -65,7 +65,7 @@ export interface OnboardingFormData {
   cnssAffiliationDate: string | null;
   maritalStatus:     string | null;
   numberOfChildren:  number | null;
-  personalAddress:   string | null;
+  homeAddress:       string | null;
   // Bank
   bankId:            number | null;
   bankName:          string | null;

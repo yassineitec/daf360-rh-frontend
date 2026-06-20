@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/hr/onboarding', label: 'Onboarding', icon: 'user-check', permission: 'HR_ONBOARDING' },
   { path: '/hr/leave',      label: 'Congés',    icon: 'calendar',   permission: 'RESPONSE_LEAVE' },
   { path: '/hr/lifecycle',  label: 'Lifecycle', icon: 'activity', permission: 'VIEW_WORKFLOW' },
+  { path: '/hr/recruitment-demands', label: 'Expr. de besoin', icon: 'briefcase', permission: 'RH_VIEW_RECRUITMENT_DEMAND' },
   { path: '/hr/requests',   label: 'Demandes',  icon: 'inbox',    permission: null },
   { path: '/hr/admin',      label: 'Admin',     icon: 'settings', permission: 'HR_ADMIN_ROLES' },
 ];
@@ -46,9 +47,10 @@ export class HrShellComponent implements OnInit {
     )
   );
 
-  notificationCount = signal(0);
-  sidebarOpen       = signal(true);
-  onboardingCount   = signal(0);
+  notificationCount    = signal(0);
+  sidebarOpen          = signal(true);
+  onboardingCount      = signal(0);
+  lifecycleAlertCount  = signal(0);
 
   icons: Record<string, string> = {
     users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
@@ -61,6 +63,7 @@ export class HrShellComponent implements OnInit {
     settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>`,
     server: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>`,
     'user-check': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>`,
+    briefcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`,
     bell: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
     menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
   };
@@ -71,6 +74,13 @@ export class HrShellComponent implements OnInit {
     if (this.userStore.hasPermission('HR_ONBOARDING')) {
       this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/onboarding/pending`).subscribe({
         next: list => this.onboardingCount.set(list.length),
+        error: () => {},
+      });
+    }
+    const paysId = this.userStore.currentUser()?.paysId;
+    if (paysId && this.userStore.hasPermission('RH_VIEW_CONTRACTS')) {
+      this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/lifecycle/alerts?paysId=${paysId}&acknowledged=false`).subscribe({
+        next: list => this.lifecycleAlertCount.set(list.length),
         error: () => {},
       });
     }

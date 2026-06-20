@@ -10,10 +10,13 @@ import {
   CandidateDetail,
   CreateCandidateRequest,
   UpdateCandidateRequest,
-  CONTRACT_TYPE_OPTIONS,
 } from './candidate.model';
-import { RefDataService } from '../../core/ref/ref-data.service';
-import { RefDataItem }    from '../../core/ref/ref-data.model';
+import { RefDataService }            from '../../core/ref/ref-data.service';
+import { RefDataItem }               from '../../core/ref/ref-data.model';
+import { RecruitmentDemandService }  from '../recruitment-demands/recruitment-demand.service';
+import { ApprovedDemandOption }      from '../recruitment-demands/recruitment-demand.model';
+import { ConfigurableListService }   from '../../core/lists/configurable-list.service';
+import { ListValue }                 from '../../core/lists/configurable-list.model';
 
 @Component({
   selector: 'app-candidate-form',
@@ -34,21 +37,23 @@ export class CandidateFormComponent {
   private candidateService = inject(CandidateService);
   private userStore        = inject(UserStore);
   private refSvc           = inject(RefDataService);
+  private demandSvc        = inject(RecruitmentDemandService);
+  private listSvc          = inject(ConfigurableListService);
 
   // ── State ───────────────────────────────────────────────────────────────────
-  saving      = signal(false);
-  error       = signal<string | null>(null);
-  cvFile      = signal<File | null>(null);
-  cvError     = signal<string | null>(null);
+  saving              = signal(false);
+  error               = signal<string | null>(null);
+  cvFile              = signal<File | null>(null);
+  cvError             = signal<string | null>(null);
+  departmentAutoFilled = signal(false);
 
   // ── Ref data lists ──────────────────────────────────────────────────────────
-  grades        = signal<RefDataItem[]>([]);
-  disciplines   = signal<RefDataItem[]>([]);
-  departments   = signal<RefDataItem[]>([]);
-  nationalities = signal<RefDataItem[]>([]);
-
-  // ── Options ─────────────────────────────────────────────────────────────────
-  readonly contractTypeOptions = CONTRACT_TYPE_OPTIONS.filter(o => o.value !== '');
+  grades           = signal<RefDataItem[]>([]);
+  disciplines      = signal<RefDataItem[]>([]);
+  departments      = signal<RefDataItem[]>([]);
+  nationalities    = signal<RefDataItem[]>([]);
+  approvedDemands  = signal<ApprovedDemandOption[]>([]);
+  employmentTypes  = signal<ListValue[]>([]);
 
   // ── Form ────────────────────────────────────────────────────────────────────
   form: FormGroup = this.fb.group({
@@ -59,9 +64,10 @@ export class CandidateFormComponent {
       phone:         [null as string | null],
     }),
     position: this.fb.group({
-      appliedPosition:     ['', Validators.required],
+      appliedPosition:     [null as string | null],
+      recruitmentDemandId: [null as number | null],
       departmentId:        [null as number | null],
-      contractType:        ['', Validators.required],
+      employmentTypeId:    [null as number | null],
       appliedGradeId:      [null as number | null],
       appliedDisciplineId: [null as number | null],
       nationalityId:       [null as number | null],
@@ -72,10 +78,6 @@ export class CandidateFormComponent {
   });
 
   // ── Derived ─────────────────────────────────────────────────────────────────
-  get isFixedTerm(): boolean {
-    return this.form.get('position.contractType')?.value === 'FIXED_TERM';
-  }
-
   get identityGroup(): FormGroup {
     return this.form.get('identity') as FormGroup;
   }
@@ -102,6 +104,8 @@ export class CandidateFormComponent {
       this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
       this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
       this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
+      this.demandSvc.getApprovedOptions(paysId).subscribe({ next: r => this.approvedDemands.set(r), error: () => {} });
+      this.listSvc.getListValues('EMPLOYMENT_TYPE', paysId).subscribe({ next: v => this.employmentTypes.set(v), error: () => {} });
 
       if (c) {
         // Edit mode — patch with existing data
@@ -114,8 +118,9 @@ export class CandidateFormComponent {
           },
           position: {
             appliedPosition:     c.appliedPosition,
+            recruitmentDemandId: c.recruitmentDemandId,
             departmentId:        c.departmentId,
-            contractType:        c.contractType,
+            employmentTypeId:    c.employmentTypeId ?? null,
             appliedGradeId:      c.appliedGradeId,
             appliedDisciplineId: c.appliedDisciplineId,
             nationalityId:       c.nationalityId,
@@ -129,9 +134,10 @@ export class CandidateFormComponent {
         this.form.reset({
           identity: { firstName: '', lastName: '', emailPersonal: '', phone: null },
           position: {
-            appliedPosition:     '',
+            appliedPosition:     null,
+            recruitmentDemandId: null,
             departmentId:        null,
-            contractType:        '',
+            employmentTypeId:    null,
             appliedGradeId:      null,
             appliedDisciplineId: null,
             nationalityId:       null,
@@ -141,6 +147,20 @@ export class CandidateFormComponent {
           notes: null,
         });
       }
+    });
+
+    // Auto-fill department when a recruitment demand is selected
+    this.positionGroup.get('recruitmentDemandId')!.valueChanges.subscribe((demandId: number | null) => {
+      this.departmentAutoFilled.set(false);
+      if (!demandId) return;
+      const demand = this.approvedDemands().find(d => d.id === demandId);
+      if (!demand?.department) return;
+      const match = this.departments().find(
+        d => d.labelFr.toLowerCase() === demand.department!.toLowerCase()
+      );
+      if (!match) return;
+      this.positionGroup.patchValue({ departmentId: match.id }, { emitEvent: false });
+      this.departmentAutoFilled.set(true);
     });
   }
 
@@ -171,8 +191,9 @@ export class CandidateFormComponent {
         emailPersonal:       identity.emailPersonal,
         phone:               identity.phone              || null,
         appliedPosition:     position.appliedPosition    || null,
+        recruitmentDemandId: position.recruitmentDemandId ?? null,
         departmentId:        position.departmentId       ?? null,
-        contractType:        position.contractType       || null,
+        employmentTypeId:    position.employmentTypeId   ?? null,
         appliedGradeId:      position.appliedGradeId     ?? null,
         appliedDisciplineId: position.appliedDisciplineId ?? null,
         nationalityId:       position.nationalityId      ?? null,
@@ -196,7 +217,6 @@ export class CandidateFormComponent {
         phone:               identity.phone              || null,
         appliedPosition:     position.appliedPosition    || null,
         departmentId:        position.departmentId       ?? null,
-        contractType:        position.contractType       || null,
         appliedGradeId:      position.appliedGradeId     ?? null,
         appliedDisciplineId: position.appliedDisciplineId ?? null,
         nationalityId:       position.nationalityId      ?? null,

@@ -93,7 +93,7 @@
       @if (currentStep() < 7) {
         <button type="button" class="btn-next" (click)="nextStep()">Suivant →</button>
       } @else {
-        <button type="button" class="btn-submit" (click)="showConfirmModal.set(true)">
+        <button type="button" class="btn-submit" (click)="openConfirmModal()">
           Soumettre et créer le dossier
         </button>
       }

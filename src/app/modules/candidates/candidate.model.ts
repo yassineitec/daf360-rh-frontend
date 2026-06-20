@@ -13,7 +13,6 @@ export interface CandidateListItem {
   emailPersonal: string;
   appliedPosition: string | null;
   appliedGrade:    string | null;
-  contractType:    string | null;
   expectedStartDate: string | null;
   status: CandidateStatus;
   createdAt: string;
@@ -55,7 +54,6 @@ export interface CandidateDetail {
   appliedDisciplineId: number | null;
   department:         string | null;
   departmentId:       number | null;
-  contractType:    string | null;
   expectedStartDate: string | null;
   status: CandidateStatus;
   rejectionReason: string | null;
@@ -69,6 +67,10 @@ export interface CandidateDetail {
   cvOriginalName: string | null;
   cvUploadedAt:   string | null;
   itProvisioning: ItProvisioningSummary | null;
+  recruitmentDemandId: number | null;
+  recruitmentDemandJobTitle: string | null;
+  employmentTypeId: number | null;
+  employmentTypeLabel: string | null;
 }
 
 export interface CreateCandidateRequest {
@@ -84,9 +86,10 @@ export interface CreateCandidateRequest {
   appliedGradeId?: number | null;
   appliedDisciplineId?: number | null;
   departmentId?: number | null;
-  contractType?: string | null;
   expectedStartDate?: string | null;
   notes?: string | null;
+  recruitmentDemandId?: number | null;
+  employmentTypeId?: number | null;
 }
 
 export interface UpdateCandidateRequest {
@@ -100,7 +103,6 @@ export interface UpdateCandidateRequest {
   appliedDisciplineId?: number | null;
   departmentId?: number | null;
   nationalityId?: number | null;
-  contractType?: string | null;
   expectedStartDate?: string | null;
   notes?: string | null;
 }
@@ -125,14 +127,6 @@ export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
 };
 
 export const STAFF_TYPE_OPTIONS: { value: string; label: string }[] = [];
-
-export const CONTRACT_TYPE_OPTIONS = [
-  { value: '', label: 'Tous les contrats' },
-  { value: 'PERMANENT',   label: 'CDI' },
-  { value: 'FIXED_TERM',  label: 'CDD' },
-  { value: 'INTERN',      label: 'Stage' },
-  { value: 'CONSULTANT',  label: 'Consultant' },
-];
 
 export const CANDIDATE_STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
@@ -168,4 +162,21 @@ export interface PageResponse<T> {
   totalPages: number;
   number: number;
   size: number;
+}
+
+export interface HireCandidateRequest {
+  hireDate: string;           // ISO date (YYYY-MM-DD)
+  contractTypeCode?: string;  // optional override; derived from employmentTypeId if omitted
+  dateFinPrevue?: string;     // required for CDD, CIVP, STAGE, DETACHEMENT
+  managerProfile: boolean;
+  notes?: string | null;
+}
+
+export interface HireCandidateResponse {
+  candidateId: number;
+  employeeProfileId: number;
+  contractId: number;
+  contractTypeCode: string;
+  userId: number;
+  message: string;
 }

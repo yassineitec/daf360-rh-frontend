@@ -17,7 +17,7 @@ export const authGuard: CanActivateFn = () => {
     map(() => {
       if (auth.isAuthenticated()) return true;
       window.location.href = `${environment.portalUrl}/oauth2/authorization/azure`;
-      return false;
+      return true;
     }),
   );
 };

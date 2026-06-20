@@ -198,6 +198,10 @@ export class CandidateListComponent implements OnInit {
     this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE')
   );
 
+  readonly canHire = computed(() =>
+    this.userStore.hasPermission('RH_HIRE_CANDIDATE')
+  );
+
   // Reject modal state
   rejectTarget   = signal<CandidateListItem | null>(null);
   rejectReason   = '';

@@ -23,6 +23,12 @@ import { ResolvedRegimeDto } from '../admin/regimes/regime.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem } from '../../core/ref/ref-data.model';
 import { ContractHistoryComponent } from './contract-history/contract-history.component';
+import { ContractLifecycleService } from './lifecycle/contract-lifecycle.service';
+import {
+  ContractListDto, ContractDetailDto, ContractTransitionHistoryDto,
+  STATUS_CONFIG, CONTRACT_TYPE_CONFIG,
+} from './lifecycle/contract-lifecycle.model';
+import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reusable field display — defined here for colocation, imported below.
@@ -49,7 +55,7 @@ export class FieldComponent {
   wide  = input(false);
 }
 
-type SectionKey = 'identite' | 'emploi' | 'poste' | 'regime' | 'contact' | 'urgence' | 'bancaire' | 'contrats' | 'documents';
+type SectionKey = 'identite' | 'emploi' | 'poste' | 'regime' | 'contact' | 'urgence' | 'bancaire' | 'lifecycle' | 'contrats' | 'documents';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Profile Detail
@@ -57,7 +63,7 @@ type SectionKey = 'identite' | 'emploi' | 'poste' | 'regime' | 'contact' | 'urge
 @Component({
   selector: 'app-profile-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, SlicePipe, StatusBadgeComponent, SpinnerComponent, ModalComponent, FieldComponent, PdfDownloadButtonComponent, ContractHistoryComponent],
+  imports: [RouterLink, FormsModule, NgClass, SlicePipe, StatusBadgeComponent, SpinnerComponent, ModalComponent, FieldComponent, PdfDownloadButtonComponent, ContractHistoryComponent, NewContractFormComponent],
   templateUrl: './profile-detail.component.html',
   styleUrl:    './profile-detail.component.scss',
 })
@@ -69,6 +75,17 @@ export class ProfileDetailComponent implements OnInit {
   private pdfSvc     = inject(PdfDownloadService);
   private regimeSvc  = inject(RegimeService);
   private refSvc     = inject(RefDataService);
+  private lcSvc      = inject(ContractLifecycleService);
+
+  readonly statusCfg  = STATUS_CONFIG;
+  readonly typeCfg    = CONTRACT_TYPE_CONFIG;
+
+  lcStatusCfg(code: string) {
+    return this.statusCfg[code as keyof typeof STATUS_CONFIG] ?? { label: code, bg: '#f1f5f9', color: '#475569' };
+  }
+  lcTypeCfg(code: string) {
+    return this.typeCfg[code as keyof typeof CONTRACT_TYPE_CONFIG] ?? { label: code, needsEndDate: false, hasTrial: false };
+  }
 
   profileId = 0;
 
@@ -102,6 +119,31 @@ export class ProfileDetailComponent implements OnInit {
   transitionTarget = signal<LifecycleStatus | null>(null);
   transitionReason = '';
   uploadType       = 'CONTRACT';
+
+  // ── Contract Lifecycle Engine ───────────────────────────────────────────────
+  lcContracts    = signal<ContractListDto[]>([]);
+  lcLoading      = signal(false);
+  lcLoaded       = false;
+  lcHistory      = signal<ContractTransitionHistoryDto[]>([]);
+  lcSaving       = signal(false);
+  lcError        = signal<string | null>(null);
+
+  showNewContractModal   = signal(false);
+  showValidateTrialModal = signal(false);
+  showRenewCDDModal      = signal(false);
+  showConvertCDIModal    = signal(false);
+
+  selectedContractId: number | null = null;
+
+  // trial validation form
+  trialApproved  = true;
+  trialComment   = '';
+  // CDD renewal form
+  renewDateFin   = '';
+  renewComment   = '';
+  // CDI conversion form
+  cdiStartDate   = '';
+  cdiComment     = '';
 
   readonly docTypes = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB', 'RESIGNATION', 'OTHER'];
 
@@ -323,5 +365,120 @@ export class ProfileDetailComponent implements OnInit {
           this.editSaveError.set(null);
         }
       });
+  }
+
+  // ── Contract Lifecycle Engine ───────────────────────────────────────────────
+
+  loadContracts(): void {
+    if (this.lcLoaded) return;
+    this.lcLoaded = true;
+    this.lcLoading.set(true);
+    this.lcSvc.getContracts(this.profileId).pipe(catchError(() => of([])))
+      .subscribe(cs => {
+        this.lcContracts.set(cs);
+        this.lcLoading.set(false);
+      });
+    this.lcSvc.getLifecycleHistory(this.profileId).pipe(catchError(() => of([])))
+      .subscribe(h => this.lcHistory.set(h));
+  }
+
+  onContractCreated(contract: ContractDetailDto): void {
+    this.showNewContractModal.set(false);
+    this.lcLoaded = false;
+    this.loadContracts();
+  }
+
+  daysUntil(dateStr: string | null): number | null {
+    if (!dateStr) return null;
+    const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000);
+    return diff;
+  }
+
+  openValidateTrialModal(contractId: number): void {
+    this.selectedContractId = contractId;
+    this.trialApproved = true;
+    this.trialComment = '';
+    this.lcError.set(null);
+    this.showValidateTrialModal.set(true);
+  }
+
+  confirmValidateTrial(): void {
+    if (this.selectedContractId === null) return;
+    this.lcSaving.set(true);
+    this.lcSvc.validateTrial(this.selectedContractId, {
+      approved:    this.trialApproved,
+      commentaire: this.trialComment || null,
+    }).pipe(catchError(err => {
+      this.lcError.set(err?.error?.message ?? 'Erreur.');
+      this.lcSaving.set(false);
+      return of(null);
+    })).subscribe(r => {
+      if (r) {
+        this.showValidateTrialModal.set(false);
+        this.lcSaving.set(false);
+        this.lcLoaded = false;
+        this.loadContracts();
+      }
+    });
+  }
+
+  openRenewCDDModal(contractId: number): void {
+    this.selectedContractId = contractId;
+    this.renewDateFin = '';
+    this.renewComment = '';
+    this.lcError.set(null);
+    this.showRenewCDDModal.set(true);
+  }
+
+  confirmRenewCDD(): void {
+    if (this.selectedContractId === null || !this.renewDateFin) {
+      this.lcError.set('La nouvelle date de fin est obligatoire.'); return;
+    }
+    this.lcSaving.set(true);
+    this.lcSvc.renewCDD(this.selectedContractId, {
+      newDateFin:  this.renewDateFin,
+      commentaire: this.renewComment || null,
+    }).pipe(catchError(err => {
+      this.lcError.set(err?.error?.message ?? 'Erreur.');
+      this.lcSaving.set(false);
+      return of(null);
+    })).subscribe(r => {
+      if (r) {
+        this.showRenewCDDModal.set(false);
+        this.lcSaving.set(false);
+        this.lcLoaded = false;
+        this.loadContracts();
+      }
+    });
+  }
+
+  openConvertCDIModal(contractId: number): void {
+    this.selectedContractId = contractId;
+    this.cdiStartDate = '';
+    this.cdiComment = '';
+    this.lcError.set(null);
+    this.showConvertCDIModal.set(true);
+  }
+
+  confirmConvertCDI(): void {
+    if (this.selectedContractId === null || !this.cdiStartDate) {
+      this.lcError.set('La date de début CDI est obligatoire.'); return;
+    }
+    this.lcSaving.set(true);
+    this.lcSvc.convertToCDI(this.selectedContractId, {
+      cdiStartDate: this.cdiStartDate,
+      commentaire:  this.cdiComment || null,
+    }).pipe(catchError(err => {
+      this.lcError.set(err?.error?.message ?? 'Erreur.');
+      this.lcSaving.set(false);
+      return of(null);
+    })).subscribe(r => {
+      if (r) {
+        this.showConvertCDIModal.set(false);
+        this.lcSaving.set(false);
+        this.lcLoaded = false;
+        this.loadContracts();
+      }
+    });
   }
 }

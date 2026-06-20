@@ -1,23 +1,36 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink }           from '@angular/router';
+import { FormsModule }                                   from '@angular/forms';
 
-import { CandidateService }      from './candidate.service';
-import { CandidateDetail }       from './candidate.model';
-import { CandidateFormComponent } from './candidate-form.component';
-import { RejectModalComponent }   from './reject-modal.component';
-import { StatusBadgeComponent }   from '../../shared/status-badge.component';
-import { SpinnerComponent }       from '../../shared/spinner.component';
-import { UserStore }              from '../../core/user.store';
+import { CandidateService }        from './candidate.service';
+import { CandidateDetail, HireCandidateRequest } from './candidate.model';
+import { CandidateFormComponent }  from './candidate-form.component';
+import { RejectModalComponent }    from './reject-modal.component';
+import { StatusBadgeComponent }    from '../../shared/status-badge.component';
+import { SpinnerComponent }        from '../../shared/spinner.component';
+import { UserStore }               from '../../core/user.store';
+import { PermissionDirective }     from '../../shared/permission.directive';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue }               from '../../core/lists/configurable-list.model';
+
+const HIREABLE_STATUSES = ['ACCEPTED', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
+const NEEDS_END_DATE    = ['CDD', 'CIVP', 'STAGE', 'DETACHEMENT'];
+const CONTRACT_CODE_MAP: Record<string, string> = {
+  CDI: 'CDI', CDD: 'CDD', CIVP: 'CIVP', STAGE: 'STAGE',
+  FREELANCE: 'PORTAGE', PORTAGE: 'PORTAGE', DETACHEMENT: 'DETACHEMENT',
+};
 
 @Component({
   selector: 'app-candidate-detail',
   standalone: true,
   imports: [
     RouterLink,
+    FormsModule,
     StatusBadgeComponent,
     SpinnerComponent,
     CandidateFormComponent,
     RejectModalComponent,
+    PermissionDirective,
   ],
   templateUrl: './candidate-detail.component.html',
   styleUrls: ['./candidate-detail.component.scss'],
@@ -27,6 +40,7 @@ export class CandidateDetailComponent implements OnInit {
   private readonly candidateService = inject(CandidateService);
   private readonly route            = inject(ActivatedRoute);
   private readonly router           = inject(Router);
+  private readonly listSvc          = inject(ConfigurableListService);
   readonly userStore                = inject(UserStore);
 
   candidate    = signal<CandidateDetail | null>(null);
@@ -34,6 +48,39 @@ export class CandidateDetailComponent implements OnInit {
   error        = signal<string | null>(null);
   showForm     = signal(false);
   showReject   = signal(false);
+
+  // ── Hire modal state ──────────────────────────────────────────────────────
+  showHireModal  = signal(false);
+  hireLoading    = signal(false);
+  hireError      = signal<string | null>(null);
+  employmentTypes = signal<ListValue[]>([]);
+
+  hireForm: HireCandidateRequest = {
+    hireDate: '',
+    managerProfile: false,
+    notes: null,
+  };
+
+  readonly resolvedContractTypeCode = computed(() => {
+    const c = this.candidate();
+    if (!c?.employmentTypeId) return 'CDI';
+    const et = this.employmentTypes().find(v => v.id === c.employmentTypeId);
+    if (!et) return c.employmentTypeLabel ?? 'CDI';
+    return CONTRACT_CODE_MAP[et.valueCode] ?? et.valueCode;
+  });
+
+  readonly requiresEndDate = computed(() =>
+    NEEDS_END_DATE.includes(this.resolvedContractTypeCode())
+  );
+
+  readonly canHire = computed(() =>
+    this.userStore.hasPermission('RH_HIRE_CANDIDATE')
+  );
+
+  readonly canHireThisCandidate = computed(() => {
+    const c = this.candidate();
+    return c !== null && HIREABLE_STATUSES.includes(c.status) && this.canHire();
+  });
 
   // ── CV upload state ───────────────────────────────────────────────────────
   cvUploading  = signal(false);
@@ -65,6 +112,49 @@ export class CandidateDetailComponent implements OnInit {
     }
     this.candidateId = +rawId;
     this.loadCandidate();
+  }
+
+  openHireModal(): void {
+    const c = this.candidate();
+    if (!c) return;
+    this.hireForm = { hireDate: '', managerProfile: false, notes: null };
+    this.hireError.set(null);
+    this.listSvc.getListValues('EMPLOYMENT_TYPE', c.paysId)
+      .subscribe({ next: v => this.employmentTypes.set(v), error: () => {} });
+    this.showHireModal.set(true);
+  }
+
+  confirmHire(): void {
+    if (!this.hireForm.hireDate) {
+      this.hireError.set('La date d\'embauche est obligatoire.');
+      return;
+    }
+    if (this.requiresEndDate() && !this.hireForm.dateFinPrevue) {
+      this.hireError.set('La date de fin est obligatoire pour ce type de contrat.');
+      return;
+    }
+    this.hireLoading.set(true);
+    this.hireError.set(null);
+
+    const dto: HireCandidateRequest = {
+      hireDate:          this.hireForm.hireDate,
+      contractTypeCode:  this.resolvedContractTypeCode() || undefined,
+      dateFinPrevue:     this.hireForm.dateFinPrevue   || undefined,
+      managerProfile:    this.hireForm.managerProfile,
+      notes:             this.hireForm.notes            || null,
+    };
+
+    this.candidateService.hireCandidate(this.candidateId, dto).subscribe({
+      next: (res) => {
+        this.hireLoading.set(false);
+        this.showHireModal.set(false);
+        this.router.navigate(['/hr/profiles', res.employeeProfileId]);
+      },
+      error: (err) => {
+        this.hireLoading.set(false);
+        this.hireError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de l\'embauche.');
+      },
+    });
   }
 
   private loadCandidate(): void {

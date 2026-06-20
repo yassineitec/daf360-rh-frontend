@@ -36,7 +36,7 @@ export class StepPersonalComponent implements OnInit {
     this.cnssAffiliationDate.set(d.cnssAffiliationDate ?? fi?.cnssAffiliationDate ?? '');
     this.maritalStatus.set(d.maritalStatus ?? fi?.maritalStatus ?? '');
     this.numberOfChildren.set(d.numberOfChildren ?? fi?.numberOfChildren ?? null);
-    this.homeAddress.set(d.homeAddress ?? fi?.personalAddress ?? '');
+    this.homeAddress.set(d.homeAddress ?? fi?.homeAddress ?? '');
     this.phone.set(d.phone ?? fi?.phone ?? '');
   }
 

@@ -68,6 +68,9 @@
               @if (item.path === '/hr/onboarding' && onboardingCount() > 0) {
                 <span class="nav-count-badge">{{ onboardingCount() }}</span>
               }
+              @if (item.path === '/hr/lifecycle' && lifecycleAlertCount() > 0) {
+                <span class="nav-count-badge">{{ lifecycleAlertCount() }}</span>
+              }
             </a>
           </li>
         }

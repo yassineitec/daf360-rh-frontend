@@ -1,4 +1,5 @@
 export * from './permission.directive';
+export * from './tags-input/tags-input.component';
 export * from './status-badge.component';
 export * from './sla-badge.component';
 export * from './badge.component';

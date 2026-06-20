@@ -7,6 +7,7 @@ import {
   CandidateFilter, CandidateListItem, CandidateDetail,
   CreateCandidateRequest, UpdateCandidateRequest,
   CandidateStats, CandidateHistoryItem, PageResponse,
+  HireCandidateRequest, HireCandidateResponse,
 } from './candidate.model';
 
 @Injectable({ providedIn: 'root' })
@@ -82,5 +83,9 @@ export class CandidateService {
 
   getHistory(candidateId: number): Observable<CandidateHistoryItem[]> {
     return this.http.get<CandidateHistoryItem[]>(this.base + '/' + candidateId + '/history').pipe(catchError(() => of([])));
+  }
+
+  hireCandidate(id: number, dto: HireCandidateRequest): Observable<HireCandidateResponse> {
+    return this.http.post<HireCandidateResponse>(`${this.base}/${id}/hire`, dto);
   }
 }

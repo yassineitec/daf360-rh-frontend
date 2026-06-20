@@ -98,11 +98,21 @@
 
       <div class="form-grid">
 
-        <!-- appliedPosition -->
+        <!-- recruitmentDemandId — dropdown from approved demands -->
         <div class="form-group">
-          <label class="form-label" for="appliedPosition">
-            Poste souhaité <span class="required">*</span>
-          </label>
+          <label class="form-label" for="recruitmentDemandId">Demande de recrutement</label>
+          <select id="recruitmentDemandId" class="form-select" formControlName="recruitmentDemandId">
+            <option [ngValue]="null">— Aucune demande liée —</option>
+            @for (d of approvedDemands(); track d.id) {
+              <option [ngValue]="d.id">{{ d.label }}</option>
+            }
+          </select>
+          <span class="form-hint">Sélectionner une demande approuvée ou saisir le poste manuellement ci-dessous.</span>
+        </div>
+
+        <!-- appliedPosition — manual override (optional) -->
+        <div class="form-group">
+          <label class="form-label" for="appliedPosition">Poste souhaité (saisie libre)</label>
           <input
             id="appliedPosition"
             type="text"
@@ -110,15 +120,17 @@
             formControlName="appliedPosition"
             placeholder="Ex: Ingénieur structure"
           />
-          @if (positionGroup.get('appliedPosition')?.invalid && positionGroup.get('appliedPosition')?.touched) {
-            <span class="form-error">Le poste est requis.</span>
-          }
         </div>
 
         <!-- departmentId -->
         <div class="form-group">
-          <label class="form-label" for="departmentId">Département</label>
-          <select id="departmentId" class="form-select" formControlName="departmentId">
+          <label class="form-label" for="departmentId">
+            Département
+            @if (departmentAutoFilled()) {
+              <span class="autofill-badge">Auto-rempli</span>
+            }
+          </label>
+          <select id="departmentId" class="form-select" formControlName="departmentId" (change)="departmentAutoFilled.set(false)">
             <option [ngValue]="null">— Sélectionner —</option>
             @for (d of departments(); track d.id) {
               <option [ngValue]="d.id">{{ d.labelFr }}</option>
@@ -126,20 +138,15 @@
           </select>
         </div>
 
-        <!-- contractType -->
+        <!-- employmentTypeId — single contract type field (replaces legacy contractType) -->
         <div class="form-group">
-          <label class="form-label" for="contractType">
-            Type de contrat <span class="required">*</span>
-          </label>
-          <select id="contractType" class="form-select" formControlName="contractType">
-            <option value="" disabled>-- Sélectionner --</option>
-            @for (opt of contractTypeOptions; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
+          <label class="form-label" for="employmentTypeId">Type de contrat</label>
+          <select id="employmentTypeId" class="form-select" formControlName="employmentTypeId">
+            <option [ngValue]="null">— Sélectionner —</option>
+            @for (v of employmentTypes(); track v.id) {
+              <option [ngValue]="v.id">{{ v.labelFr }}</option>
             }
           </select>
-          @if (positionGroup.get('contractType')?.invalid && positionGroup.get('contractType')?.touched) {
-            <span class="form-error">Le type de contrat est requis.</span>
-          }
         </div>
 
         <!-- appliedGradeId -->
@@ -190,21 +197,6 @@
             <span class="form-error">La date de début est requise.</span>
           }
         </div>
-
-        <!-- contractEndDate — shown only for FIXED_TERM -->
-        @if (isFixedTerm) {
-          <div class="form-group">
-            <label class="form-label" for="contractEndDate">
-              Date de fin de contrat <span class="required">*</span>
-            </label>
-            <input
-              id="contractEndDate"
-              type="date"
-              class="form-input"
-              formControlName="contractEndDate"
-            />
-          </div>
-        }
 
         <!-- paysId — read-only indicator -->
         <div class="form-group">

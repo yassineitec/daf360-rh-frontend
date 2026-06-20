@@ -235,6 +235,19 @@
                     </button>
                   }
 
+                  <!-- Quick-hire — hireable statuses only -->
+                  @if (['ACCEPTED','EMAIL_RECEIVED','HR_IN_PROGRESS'].includes(c.status) && canHire()) {
+                    <a
+                      class="btn-action"
+                      [routerLink]="['/hr/candidates', c.id]"
+                      title="Embaucher ce candidat"
+                      style="padding:5px 12px;border-radius:8px;border:none;background:#ccfbf1;color:#0d9488;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;text-decoration:none;"
+                    >
+                      <span class="material-symbols-outlined" style="font-size:13px;">how_to_reg</span>
+                      Embaucher
+                    </a>
+                  }
+
                   <a
                     class="btn-action view"
                     [routerLink]="['/hr/candidates', c.id]"
