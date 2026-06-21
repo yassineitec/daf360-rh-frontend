@@ -30,7 +30,7 @@ export class StepBankComponent implements OnInit {
   ngOnInit(): void {
     const d      = this.data();
     const fi     = this.formInfo();
-    const paysId = fi?.paysId ?? 179;
+    const paysId = fi?.paysId ?? 52;
 
     this.bankId.set(d.bankId ?? null);
     this.rib.set(d.rib ?? fi?.rib ?? '');

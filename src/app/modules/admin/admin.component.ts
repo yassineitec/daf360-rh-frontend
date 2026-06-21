@@ -102,7 +102,7 @@ export class AdminComponent {
 
   activeTab   = signal<AdminTab>('roles');
   isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager());
-  paysId      = computed(() => this.userStore.currentUser()?.paysId ?? 179);
+  paysId      = computed(() => this.userStore.currentUser()?.paysId ?? 52);
   currentPays = computed(() => this.userStore.currentUser()?.isoCode ?? '—');
 
   visibleTabs = computed(() =>

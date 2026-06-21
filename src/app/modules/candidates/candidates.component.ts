@@ -125,10 +125,7 @@ export class CandidatesComponent implements OnInit {
   }
 
   onView(id: number): void {
-    const c = this.candidates().find(c => c.id === id);
-    if (c?.status === 'HIRED') {
-      this.router.navigate(['/rh/profiles']);
-    }
+    this.router.navigate(['/rh/candidates', id]);
   }
 
   onMessage(id: number): void {

@@ -124,4 +124,52 @@ export class CandidateDetailComponent implements OnInit {
   downloadCv(): void {
     window.open(this.candidateService.cvDownloadUrl(this.candidateId), '_blank');
   }
+
+  // ── Template helpers ──────────────────────────────────────────────────────
+
+  initials(c: { firstName: string; lastName: string }): string {
+    return ((c.firstName?.[0] ?? '') + (c.lastName?.[0] ?? '')).toUpperCase();
+  }
+
+  contractLabel(type: string | null): string {
+    const map: Record<string, string> = {
+      PERMANENT:  'CDI', FIXED_TERM: 'CDD',
+      INTERN:     'Stage', CONSULTANT: 'Consultant',
+    };
+    return type ? (map[type] ?? type) : '—';
+  }
+
+  formatDate(d: string | null | undefined): string {
+    if (!d) return '—';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  readonly pipelineSteps: { status: string; label: string }[] = [
+    { status: 'PENDING',        label: 'En attente' },
+    { status: 'ACCEPTED',       label: 'Accepté' },
+    { status: 'IT_IN_PROGRESS', label: 'IT en cours' },
+    { status: 'EMAIL_RECEIVED', label: 'Email reçu' },
+    { status: 'HR_IN_PROGRESS', label: 'RH en cours' },
+    { status: 'HIRED',          label: 'Embauché' },
+  ];
+
+  private readonly statusOrder = this.pipelineSteps.map(s => s.status);
+
+  isPast(stepStatus: string, currentStatus: string): boolean {
+    return this.statusOrder.indexOf(stepStatus) < this.statusOrder.indexOf(currentStatus);
+  }
+
+  stepBg(stepStatus: string, currentStatus: string): string {
+    if (stepStatus === currentStatus) return '#1b3a4b';
+    if (this.isPast(stepStatus, currentStatus)) return 'rgba(121,215,190,0.2)';
+    return 'rgba(0,0,0,0.05)';
+  }
+
+  stepColor(stepStatus: string, currentStatus: string): string {
+    if (stepStatus === currentStatus) return '#ffffff';
+    if (this.isPast(stepStatus, currentStatus)) return '#50717b';
+    return '#94a3b8';
+  }
 }

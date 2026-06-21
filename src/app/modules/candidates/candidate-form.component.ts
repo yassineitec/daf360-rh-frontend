@@ -5,22 +5,19 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { UserStore }        from '../../core/user.store';
 import { CandidateService } from './candidate.service';
-import {
-  CreateCandidateRequest,
-  CONTRACT_TYPE_OPTIONS,
-} from './candidate.model';
+import { CreateCandidateRequest } from './candidate.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
 import {
   ButtonComponent,
+  ChipGroupComponent,
+  ChipOption,
   DatePickerComponent,
   FileUploadComponent,
   FormFieldComponent,
-  ProgressBarComponent,
-  SectionCardComponent,
-  SectionTitleComponent,
   SelectComponent,
   SelectOption,
+  SliderComponent,
   UploadedFile,
 } from '@khalilrebhiitec/daf360';
 
@@ -30,13 +27,12 @@ import {
   imports: [
     ReactiveFormsModule,
     ButtonComponent,
+    ChipGroupComponent,
     DatePickerComponent,
     FileUploadComponent,
     FormFieldComponent,
-    ProgressBarComponent,
-    SectionCardComponent,
-    SectionTitleComponent,
     SelectComponent,
+    SliderComponent,
   ],
   templateUrl: './candidate-form.component.html',
 })
@@ -48,9 +44,10 @@ export class CandidateFormComponent implements OnInit {
   private refSvc           = inject(RefDataService);
   private router           = inject(Router);
 
-  saving  = signal(false);
-  error   = signal<string | null>(null);
-  cvFiles = signal<UploadedFile[]>([]);
+  saving          = signal(false);
+  error           = signal<string | null>(null);
+  cvFiles         = signal<UploadedFile[]>([]);
+  experienceYears = signal(0);
 
   grades        = signal<RefDataItem[]>([]);
   disciplines   = signal<RefDataItem[]>([]);
@@ -70,9 +67,12 @@ export class CandidateFormComponent implements OnInit {
     this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr }))
   );
 
-  readonly contractOptions: SelectOption[] = CONTRACT_TYPE_OPTIONS
-    .filter(o => o.value !== '')
-    .map(o => ({ value: o.value, label: o.label }));
+  readonly contractChipOptions: ChipOption[] = [
+    { value: 'PERMANENT',  label: 'CDI' },
+    { value: 'FIXED_TERM', label: 'CDD' },
+    { value: 'CONSULTANT', label: 'Freelance' },
+    { value: 'INTERN',     label: 'Stage' },
+  ];
 
   form: FormGroup = this.fb.group({
     identity: this.fb.group({
@@ -80,6 +80,8 @@ export class CandidateFormComponent implements OnInit {
       lastName:      ['', Validators.required],
       emailPersonal: ['', [Validators.required, Validators.email]],
       phone:         [null as string | null],
+      dateOfBirth:   [null as string | null],
+      nationalId:    [null as string | null],
     }),
     position: this.fb.group({
       appliedPosition:     ['', Validators.required],
@@ -89,7 +91,6 @@ export class CandidateFormComponent implements OnInit {
       appliedDisciplineId: [null as number | null],
       nationalityId:       [null as number | null],
       expectedStartDate:   ['', Validators.required],
-      paysId:              [null as number | null],
     }),
     notes: [null as string | null],
   });
@@ -102,6 +103,7 @@ export class CandidateFormComponent implements OnInit {
     const pos = v?.position ?? {};
     const fields = [
       id.firstName, id.lastName, id.emailPersonal, id.phone,
+      id.dateOfBirth, id.nationalId,
       pos.appliedPosition, pos.contractType, pos.expectedStartDate,
       pos.departmentId, pos.appliedGradeId, pos.appliedDisciplineId,
       pos.nationalityId, v?.notes,
@@ -138,21 +140,23 @@ export class CandidateFormComponent implements OnInit {
   get positionGroup(): FormGroup { return this.form.get('position') as FormGroup; }
 
   ngOnInit(): void {
-    const paysId = this.userStore.currentUser()?.paysId ?? 179;
-    this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
-    this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
-    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+    this.refSvc.getGrades().subscribe(r => this.grades.set(r));
+    this.refSvc.getDisciplines().subscribe(r => this.disciplines.set(r));
+    this.refSvc.getDepartments().subscribe(r => this.departments.set(r));
     this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
   }
 
   // ── Bridge helpers ───────────────────────────────────────────────────────
+
   getSelectStr(path: string): string[] {
     const val = this.form.get(path)?.value;
     return val ? [String(val)] : [];
   }
 
   setSelectStr(path: string, values: string[]): void {
-    this.form.get(path)?.setValue(values[0] ?? '');
+    const ctrl = this.form.get(path);
+    ctrl?.setValue(values[0] ?? '');
+    ctrl?.markAsTouched();
   }
 
   getSelectNum(path: string): string[] {
@@ -161,7 +165,9 @@ export class CandidateFormComponent implements OnInit {
   }
 
   setSelectNum(path: string, values: string[]): void {
-    this.form.get(path)?.setValue(values[0] ? Number(values[0]) : null);
+    const ctrl = this.form.get(path);
+    ctrl?.setValue(values[0] ? Number(values[0]) : null);
+    ctrl?.markAsTouched();
   }
 
   getTextValue(path: string): string | number | null {
@@ -186,7 +192,9 @@ export class CandidateFormComponent implements OnInit {
   }
 
   setDateValue(path: string, value: string): void {
-    this.form.get(path)?.setValue(value || null);
+    const ctrl = this.form.get(path);
+    ctrl?.setValue(value || null);
+    ctrl?.markAsTouched();
   }
 
   fillStyle(filled: boolean): string {
@@ -194,6 +202,7 @@ export class CandidateFormComponent implements OnInit {
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────
+
   navigateToList(): void {
     this.router.navigate(['/rh/candidates']);
   }
@@ -203,6 +212,7 @@ export class CandidateFormComponent implements OnInit {
   }
 
   // ── Submit ───────────────────────────────────────────────────────────────
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -212,15 +222,18 @@ export class CandidateFormComponent implements OnInit {
     this.error.set(null);
     this.saving.set(true);
 
+    const paysId   = this.userStore.currentUser()?.paysId ?? 179;
     const identity = this.identityGroup.value;
     const position = this.positionGroup.value;
 
     const dto: CreateCandidateRequest = {
-      paysId:              position.paysId,
+      paysId,
       firstName:           identity.firstName,
       lastName:            identity.lastName,
       emailPersonal:       identity.emailPersonal,
       phone:               identity.phone               || null,
+      dateOfBirth:         identity.dateOfBirth         || null,
+      nationalId:          identity.nationalId          || null,
       appliedPosition:     position.appliedPosition     || null,
       departmentId:        position.departmentId        ?? null,
       contractType:        position.contractType        || null,

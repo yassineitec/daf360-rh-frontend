@@ -38,7 +38,7 @@ export class StepContractComponent implements OnInit {
   ngOnInit(): void {
     const d      = this.data();
     const fi     = this.formInfo();
-    const paysId = fi?.paysId ?? 179;
+    const paysId = fi?.paysId ?? 52;
 
     this.hireDate.set(d.hireDate ?? '');
     this.contractType.set(d.contractType ?? fi?.contractType ?? '');

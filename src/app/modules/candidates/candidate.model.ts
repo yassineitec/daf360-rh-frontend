@@ -72,21 +72,23 @@ export interface CandidateDetail {
 }
 
 export interface CreateCandidateRequest {
-  paysId: number;
-  firstName: string;
-  lastName: string;
-  emailPersonal: string;
-  phone?: string | null;
-  dateOfBirth?: string | null;
-  nationalityId?: number | null;
-  nationalId?: string | null;
-  appliedPosition?: string | null;
-  appliedGradeId?: number | null;
+  paysId:              number;
+  firstName:           string;
+  lastName:            string;
+  emailPersonal:       string;
+  phone?:              string | null;
+  dateOfBirth?:        string | null;
+  nationalityId?:      number | null;
+  nationalId?:         string | null;
+  appliedPosition?:    string | null;
+  appliedGradeId?:     number | null;
   appliedDisciplineId?: number | null;
-  departmentId?: number | null;
-  contractType?: string | null;
-  expectedStartDate?: string | null;
-  notes?: string | null;
+  departmentId?:       number | null;
+  contractType?:       string | null;
+  expectedStartDate?:  string | null;
+  notes?:              string | null;
+  recruitmentDemandId?: number | null;
+  employmentTypeId?:   number | null;
 }
 
 export interface UpdateCandidateRequest {

@@ -343,7 +343,7 @@ export class ProfileNewComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const paysId = this.userStore.currentUser()?.paysId ?? 179;
+    const paysId = this.userStore.currentUser()?.paysId ?? 52;
     this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));

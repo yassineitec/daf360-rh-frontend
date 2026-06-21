@@ -11,29 +11,34 @@ export class RefDataService {
   private base = environment.hrApiUrl + '/api/hr/ref';
   private cache = new Map<string, Observable<RefDataItem[]>>();
 
-  getGrades(paysId: number): Observable<RefDataItem[]> {
-    return this.cached(`grades_${paysId}`,
-      this.http.get<RefDataItem[]>(`${this.base}/grades?paysId=${paysId}`).pipe(catchError(() => of([]))));
+  getGrades(paysId?: number): Observable<RefDataItem[]> {
+    const key = paysId ? `grades_${paysId}` : 'grades_all';
+    const url = paysId ? `${this.base}/grades?paysId=${paysId}` : `${this.base}/grades`;
+    return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
   }
 
-  getDisciplines(paysId: number): Observable<RefDataItem[]> {
-    return this.cached(`disciplines_${paysId}`,
-      this.http.get<RefDataItem[]>(`${this.base}/disciplines?paysId=${paysId}`).pipe(catchError(() => of([]))));
+  getDisciplines(paysId?: number): Observable<RefDataItem[]> {
+    const key = paysId ? `disciplines_${paysId}` : 'disciplines_all';
+    const url = paysId ? `${this.base}/disciplines?paysId=${paysId}` : `${this.base}/disciplines`;
+    return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
   }
 
-  getNogLevels(paysId: number): Observable<RefDataItem[]> {
-    return this.cached(`nog_${paysId}`,
-      this.http.get<RefDataItem[]>(`${this.base}/nog-levels?paysId=${paysId}`).pipe(catchError(() => of([]))));
+  getNogLevels(paysId?: number): Observable<RefDataItem[]> {
+    const key = paysId ? `nog_${paysId}` : 'nog_all';
+    const url = paysId ? `${this.base}/nog-levels?paysId=${paysId}` : `${this.base}/nog-levels`;
+    return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
   }
 
-  getDepartments(paysId: number): Observable<RefDataItem[]> {
-    return this.cached(`depts_${paysId}`,
-      this.http.get<RefDataItem[]>(`${this.base}/departments?paysId=${paysId}`).pipe(catchError(() => of([]))));
+  getDepartments(paysId?: number): Observable<RefDataItem[]> {
+    const key = paysId ? `depts_${paysId}` : 'depts_all';
+    const url = paysId ? `${this.base}/departments?paysId=${paysId}` : `${this.base}/departments`;
+    return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
   }
 
-  getBanks(paysId: number): Observable<RefDataItem[]> {
-    return this.cached(`banks_${paysId}`,
-      this.http.get<RefDataItem[]>(`${this.base}/banks?paysId=${paysId}`).pipe(catchError(() => of([]))));
+  getBanks(paysId?: number): Observable<RefDataItem[]> {
+    const key = paysId ? `banks_${paysId}` : 'banks_all';
+    const url = paysId ? `${this.base}/banks?paysId=${paysId}` : `${this.base}/banks`;
+    return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
   }
 
   getNationalities(): Observable<RefDataItem[]> {

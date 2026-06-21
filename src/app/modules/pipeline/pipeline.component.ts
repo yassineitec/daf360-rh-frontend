@@ -89,7 +89,7 @@ export class PipelineComponent implements OnInit {
   }
 
   onCardClick(id: number): void {
-    this.router.navigate(['pipeline', 'candidates', id]);
+    this.router.navigate(['/rh/candidates', id]);
   }
 
   onStageFilter(stage: string): void {
@@ -106,8 +106,6 @@ export class PipelineComponent implements OnInit {
   onKanbanDrop(event: { candidateId: number; fromStage: string; toStage: string }): void {
     const { candidateId, fromStage, toStage } = event;
 
-    // Update column counts only — CDK already owns the visual card positions.
-    // Keeping `candidates` reference unchanged prevents ngOnChanges from resetting CDK order.
     this.kanbanColumns.update(cols =>
       cols.map(col => {
         if (col.stage === fromStage) return { ...col, count: Math.max(0, col.count - 1) };
@@ -116,9 +114,12 @@ export class PipelineComponent implements OnInit {
       }),
     );
 
-    // Persist to backend; revert on error
     this.pipelineService.moveToStage(candidateId, toStage).subscribe({
       error: () => this.loadKanban(),
     });
+  }
+
+  goToNewCandidate(): void {
+    this.router.navigate(['/rh/candidates', 'new']);
   }
 }
