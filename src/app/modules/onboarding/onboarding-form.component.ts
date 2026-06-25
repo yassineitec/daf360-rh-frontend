@@ -116,7 +116,7 @@ export class OnboardingFormComponent implements OnInit {
           cnssAffiliationDate:     data.cnssAffiliationDate     ?? undefined,
           maritalStatus:           data.maritalStatus           ?? undefined,
           numberOfChildren:        data.numberOfChildren        ?? undefined,
-          homeAddress:             data.personalAddress         ?? undefined,
+          personalAddress:         data.personalAddress         ?? undefined,
           // Bank / RIB
           bankId:                  data.bankId                  ?? undefined,
           bankName:                data.bankName                ?? undefined,
@@ -171,6 +171,37 @@ export class OnboardingFormComponent implements OnInit {
         this.error.set('Erreur lors de la sauvegarde du brouillon.');
       },
     });
+  }
+
+  openConfirmModal(): void {
+    const d = this.draftData();
+    if (!d.hireDate) {
+      this.error.set('La date d\'embauche est obligatoire (étape 2).');
+      this.currentStep.set(2);
+      return;
+    }
+    if (!d.contractType) {
+      this.error.set('Le type de contrat est obligatoire (étape 2).');
+      this.currentStep.set(2);
+      return;
+    }
+    if (!d.regimeTemplateId) {
+      this.error.set('Le régime de travail est obligatoire (étape 3).');
+      this.currentStep.set(3);
+      return;
+    }
+    if (!d.cnssNumber) {
+      this.error.set('Le numéro CNSS est obligatoire (étape 4).');
+      this.currentStep.set(4);
+      return;
+    }
+    if (!d.rib) {
+      this.error.set('Le RIB est obligatoire (étape 5).');
+      this.currentStep.set(5);
+      return;
+    }
+    this.error.set(null);
+    this.showConfirmModal.set(true);
   }
 
   onSubmitConfirmed(): void {

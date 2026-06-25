@@ -541,6 +541,251 @@
       </section>
     }
 
+    <!-- 8' · Contrats & Cycle de vie ─────────────────────────────────────── -->
+    <section class="section-card" [class.collapsed]="!open('lifecycle')">
+      <button class="section-header" (click)="toggle('lifecycle'); loadContracts()" type="button">
+        <span class="section-title">
+          Contrats &amp; Cycle de vie
+          @if (lcContracts().length > 0) {
+            <span class="count-badge">{{ lcContracts().length }}</span>
+          }
+        </span>
+        <span class="chevron" [class.open]="open('lifecycle')">›</span>
+      </button>
+      @if (open('lifecycle')) {
+        <div class="section-body" style="display:flex;flex-direction:column;gap:20px;">
+
+          @if (lcLoading()) {
+            <app-spinner />
+          } @else {
+
+            <!-- Provenance candidat -->
+            @if (profile()!.candidateId) {
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;color:#166534;">
+                <span class="material-symbols-outlined" style="font-size:16px;">person_search</span>
+                <span>Recruté via candidature</span>
+                <a [routerLink]="['/hr/candidates', profile()!.candidateId]"
+                   style="color:#0d9488;font-weight:600;text-decoration:none;margin-left:4px;">
+                  Voir le dossier candidat →
+                </a>
+              </div>
+            }
+
+            <!-- Actions bar -->
+            @if (canEdit()) {
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-primary" type="button" (click)="showNewContractModal.set(true)">
+                  + Nouveau contrat
+                </button>
+              </div>
+            }
+
+            <!-- No contracts -->
+            @if (lcContracts().length === 0) {
+              <p class="empty-docs">Aucun contrat lifecycle enregistré.</p>
+            }
+
+            <!-- Contract list -->
+            @for (c of lcContracts(); track c.id) {
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                  <div style="display:flex;flex-direction:column;gap:6px;flex:1;">
+                    <!-- Type + status chips -->
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                      <span style="font-size:13px;font-weight:700;color:#1d2b3e;">{{ lcTypeCfg(c.contractTypeCode).label }}</span>
+                      <span style="font-size:11px;padding:2px 9px;border-radius:999px;font-weight:600;"
+                        [style.background]="lcStatusCfg(c.currentStatusCode).bg"
+                        [style.color]="lcStatusCfg(c.currentStatusCode).color">
+                        {{ lcStatusCfg(c.currentStatusCode).label }}
+                      </span>
+                      @if (c.isActive) {
+                        <span style="font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;background:#e6f7f5;color:#00695c;">Actif</span>
+                      }
+                      @if (c.dossierLocked) {
+                        <span style="font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;background:#fee2e2;color:#991b1b;">Dossier verrouillé</span>
+                      }
+                    </div>
+
+                    <!-- Dates -->
+                    <div style="font-size:12px;color:#44474c;display:flex;flex-wrap:wrap;gap:14px;">
+                      <span>Début : {{ fmt(c.dateDebut) }}</span>
+                      @if (c.dateFinPrevue) {
+                        <span>Fin prévue : {{ fmt(c.dateFinPrevue) }}</span>
+                        @if ((daysUntil(c.dateFinPrevue) ?? 999) <= 30 && c.isActive) {
+                          <span style="color:#b45309;font-weight:600;">
+                            ⚠ {{ daysUntil(c.dateFinPrevue) }} jour(s) restant(s)
+                          </span>
+                        }
+                      }
+                      @if (c.dateFinPeriodeEssai && c.currentStatusCode === 'PERIODE_ESSAI') {
+                        <span style="color:#713f12;font-weight:600;">
+                          Période d'essai → {{ fmt(c.dateFinPeriodeEssai) }}
+                          ({{ daysUntil(c.dateFinPeriodeEssai) }} j)
+                        </span>
+                      }
+                    </div>
+
+                    @if (c.referenceContrat) {
+                      <span style="font-size:11px;color:#6B7280;">Réf : {{ c.referenceContrat }}</span>
+                    }
+                  </div>
+
+                  <!-- Per-contract actions -->
+                  @if (canEdit() && c.isActive && !c.dossierLocked) {
+                    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                      @if (c.currentStatusCode === 'PERIODE_ESSAI') {
+                        <button class="btn-outline" type="button" (click)="openValidateTrialModal(c.id)"
+                          style="font-size:12px;padding:5px 12px;">
+                          Valider période d'essai
+                        </button>
+                      }
+                      @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
+                        <button class="btn-outline" type="button" (click)="openRenewCDDModal(c.id)"
+                          style="font-size:12px;padding:5px 12px;">
+                          Renouveler CDD
+                        </button>
+                        <button class="btn-outline" type="button" (click)="openConvertCDIModal(c.id)"
+                          style="font-size:12px;padding:5px 12px;">
+                          Convertir en CDI
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Lifecycle transition history -->
+            @if (lcHistory().length > 0) {
+              <div>
+                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;margin:0 0 10px;">
+                  Historique des transitions
+                </p>
+                <div style="display:flex;flex-direction:column;gap:0;position:relative;">
+                  @for (h of lcHistory(); track h.id; let last = $last) {
+                    <div style="display:flex;gap:10px;padding-bottom:0;">
+                      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:16px;">
+                        <div style="width:10px;height:10px;border-radius:50%;background:#1a6b7c;flex-shrink:0;margin-top:5px;"></div>
+                        @if (!last) { <div style="width:2px;flex:1;background:#eceef0;margin-top:2px;"></div> }
+                      </div>
+                      <div style="background:#fff;border:1px solid #eceef0;border-radius:10px;padding:10px 14px;flex:1;margin-bottom:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                          <span style="font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600;"
+                            [style.background]="lcStatusCfg(h.statutAvant).bg"
+                            [style.color]="lcStatusCfg(h.statutAvant).color">
+                            {{ lcStatusCfg(h.statutAvant).label }}
+                          </span>
+                          <span style="font-size:11px;color:#6B7280;">→</span>
+                          <span style="font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600;"
+                            [style.background]="lcStatusCfg(h.statutApres).bg"
+                            [style.color]="lcStatusCfg(h.statutApres).color">
+                            {{ lcStatusCfg(h.statutApres).label }}
+                          </span>
+                          <span style="font-size:10px;color:#a8a9ad;margin-left:auto;">{{ fmt(h.triggeredAt) }}</span>
+                        </div>
+                        @if (h.commentaire) {
+                          <p style="font-size:11px;color:#75777d;margin:2px 0 0;font-style:italic;">{{ h.commentaire }}</p>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Modals — Validate trial period -->
+    @if (showValidateTrialModal()) {
+      <app-modal title="Valider la période d'essai" [visible]="true" [hasFooter]="true" (closed)="showValidateTrialModal.set(false)">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          @if (lcError()) {
+            <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+          }
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="radio" name="trialApproved" [value]="true" [(ngModel)]="trialApproved" /> Approuver — passer en ACTIF_CONFIRME
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
+            <input type="radio" name="trialApproved" [value]="false" [(ngModel)]="trialApproved" /> Refuser — résilier le contrat
+          </label>
+          <div>
+            <label class="t-label">Commentaire</label>
+            <textarea [(ngModel)]="trialComment" rows="3" class="reason-input" placeholder="Motif ou observations…"></textarea>
+          </div>
+        </div>
+        <div slot="footer">
+          <button class="btn-ghost" type="button" (click)="showValidateTrialModal.set(false)">Annuler</button>
+          <button class="btn-primary" type="button" (click)="confirmValidateTrial()" [disabled]="lcSaving()">
+            {{ lcSaving() ? 'Enregistrement…' : 'Confirmer' }}
+          </button>
+        </div>
+      </app-modal>
+    }
+
+    <!-- Modal — Renew CDD -->
+    @if (showRenewCDDModal()) {
+      <app-modal title="Renouveler le CDD" [visible]="true" [hasFooter]="true" (closed)="showRenewCDDModal.set(false)">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          @if (lcError()) {
+            <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+          }
+          <div>
+            <label class="t-label">Nouvelle date de fin *</label>
+            <input type="date" [(ngModel)]="renewDateFin"
+              style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;" />
+          </div>
+          <div>
+            <label class="t-label">Commentaire</label>
+            <textarea [(ngModel)]="renewComment" rows="2" class="reason-input"></textarea>
+          </div>
+        </div>
+        <div slot="footer">
+          <button class="btn-ghost" type="button" (click)="showRenewCDDModal.set(false)">Annuler</button>
+          <button class="btn-primary" type="button" (click)="confirmRenewCDD()" [disabled]="lcSaving()">
+            {{ lcSaving() ? 'Enregistrement…' : 'Renouveler' }}
+          </button>
+        </div>
+      </app-modal>
+    }
+
+    <!-- Modal — Convert to CDI -->
+    @if (showConvertCDIModal()) {
+      <app-modal title="Convertir en CDI" [visible]="true" [hasFooter]="true" (closed)="showConvertCDIModal.set(false)">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          @if (lcError()) {
+            <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+          }
+          <div>
+            <label class="t-label">Date de début du CDI *</label>
+            <input type="date" [(ngModel)]="cdiStartDate"
+              style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;" />
+          </div>
+          <div>
+            <label class="t-label">Commentaire</label>
+            <textarea [(ngModel)]="cdiComment" rows="2" class="reason-input"></textarea>
+          </div>
+        </div>
+        <div slot="footer">
+          <button class="btn-ghost" type="button" (click)="showConvertCDIModal.set(false)">Annuler</button>
+          <button class="btn-primary" type="button" (click)="confirmConvertCDI()" [disabled]="lcSaving()">
+            {{ lcSaving() ? 'Enregistrement…' : 'Convertir' }}
+          </button>
+        </div>
+      </app-modal>
+    }
+
+    <!-- Modal — New contract -->
+    @if (showNewContractModal()) {
+      <app-new-contract-form
+        [profileId]="profileId"
+        [paysId]="profile()!.paysId"
+        (saved)="onContractCreated($event)"
+        (cancelled)="showNewContractModal.set(false)"
+      />
+    }
+
     <!-- Barre de sauvegarde — visible uniquement en mode édition -->
     @if (editMode() && canEdit()) {
       <div style="background:#fff;border:1px solid #eceef0;border-radius:14px;padding:18px 20px;display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(51,65,85,.06);">

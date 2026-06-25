@@ -91,6 +91,11 @@ export const routes: Routes = [
           import('./modules/requests/requests.routes').then(m => m.REQUESTS_ROUTES),
       },
       {
+        path: 'recruitment-demands',
+        loadChildren: () =>
+          import('./modules/recruitment-demands/recruitment-demands.routes').then(m => m.RECRUITMENT_DEMANDS_ROUTES),
+      },
+      {
         path: 'admin',
         loadChildren: () =>
           import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),

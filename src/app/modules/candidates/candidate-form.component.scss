@@ -34,6 +34,9 @@
 }
 
 .form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-muted);
@@ -44,6 +47,20 @@
     color: var(--color-error);
     margin-left: 2px;
   }
+}
+
+.autofill-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(39, 174, 96, 0.12);
+  border: 1px solid rgba(39, 174, 96, 0.3);
+  color: #27ae60;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.2px;
 }
 
 .form-input,
@@ -86,6 +103,12 @@
 .form-error {
   font-size: 11px;
   color: var(--color-error);
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
 
 .form-error-banner {

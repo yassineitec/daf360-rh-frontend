@@ -156,6 +156,13 @@ export class HrShellComponent implements OnInit {
         error: () => {},
       });
     }
+    const paysId = this.userStore.currentUser()?.paysId;
+    // if (paysId && this.userStore.hasPermission('RH_VIEW_CONTRACTS')) {
+    //   this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/lifecycle/alerts?paysId=${paysId}&acknowledged=false`).subscribe({
+    //     next: list => this.lifecycleAlertCount.set(list.length),
+    //     error: () => {},
+    //   });
+    // }
   }
 
   onNavClick(item: NavItem): void {

@@ -76,8 +76,8 @@
         class="form-textarea"
         rows="3"
         placeholder="Rue, code postal, ville, pays…"
-        [ngModel]="homeAddress()"
-        (ngModelChange)="homeAddress.set($event); emit()"
+        [ngModel]="personalAddress()"
+        (ngModelChange)="personalAddress.set($event); emit()"
       ></textarea>
     </div>
   </div>

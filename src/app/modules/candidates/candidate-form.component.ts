@@ -84,9 +84,10 @@ export class CandidateFormComponent implements OnInit {
       nationalId:    [null as string | null],
     }),
     position: this.fb.group({
-      appliedPosition:     ['', Validators.required],
+      appliedPosition:     [null as string | null],
+      recruitmentDemandId: [null as number | null],
       departmentId:        [null as number | null],
-      contractType:        ['', Validators.required],
+      employmentTypeId:    [null as number | null],
       appliedGradeId:      [null as number | null],
       appliedDisciplineId: [null as number | null],
       nationalityId:       [null as number | null],

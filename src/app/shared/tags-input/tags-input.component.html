@@ -1,0 +1,30 @@
+<div class="tags-wrapper">
+  <div class="tags-field" (click)="inputEl.focus()">
+    @for (tag of tags(); track tag; let i = $index) {
+      <span class="tag-badge" [style.background]="color() + '1a'" [style.color]="color()" [style.border]="'1px solid ' + color() + '40'">
+        {{ tag }}
+        <button type="button" class="tag-remove" (click)="removeTag(i); $event.stopPropagation()" aria-label="Retirer">×</button>
+      </span>
+    }
+    <input
+      #inputEl
+      class="tag-input"
+      [placeholder]="tags().length === 0 ? placeholder() : ''"
+      (input)="onInput($event)"
+      (keydown)="onKeydown($event, inputEl)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      autocomplete="off"
+    />
+  </div>
+
+  @if (showSuggestions() && filteredSuggestions().length > 0) {
+    <div class="suggestions-drop">
+      @for (sug of filteredSuggestions(); track sug) {
+        <button type="button" class="sug-item" (mousedown)="pickSuggestion(sug, inputEl)">
+          {{ sug }}
+        </button>
+      }
+    </div>
+  }
+</div>

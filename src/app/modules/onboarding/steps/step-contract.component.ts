@@ -54,6 +54,8 @@ export class StepContractComponent implements OnInit {
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));
     this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+
+    this.emit();
   }
 
   emit(): void {
