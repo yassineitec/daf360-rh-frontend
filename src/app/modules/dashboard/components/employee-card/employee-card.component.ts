@@ -1,6 +1,6 @@
 import { Component, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { CardComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { environment } from '../../../../../environments/environment';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
@@ -25,10 +25,10 @@ export interface EmployeeCardData {
 @Component({
   selector: 'rh-employee-card',
   standalone: true,
-  imports: [StatusBadgeComponent, TranslatePipe],
+  imports: [StatusBadgeComponent, TranslatePipe, CardComponent],
   template: `
-    <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant
-                shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+    <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }">
+      <div class="relative overflow-hidden p-5">
 
       <!-- Presence indicator (top-right) -->
       <div class="absolute top-0 right-0 p-3">
@@ -125,7 +125,8 @@ export interface EmployeeCardData {
           </span>
         </button>
       </div>
-    </div>
+      </div>
+    </daf-card>
   `,
 })
 export class EmployeeCardComponent {

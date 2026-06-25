@@ -1,84 +1,174 @@
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Onboarding RH</h1>
-    <p class="page-sub">Dossiers en attente de complétion</p>
-  </div>
-  <button class="btn-refresh" type="button" (click)="load()" [disabled]="loading()" aria-label="Rafraîchir">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-    </svg>
-    Rafraîchir
-  </button>
-</div>
+<div class="flex flex-col h-full overflow-hidden">
+  <div class="flex-1 overflow-y-auto">
+    <div class="p-8 space-y-6">
 
-@if (error()) {
-  <div class="alert-error" role="alert">{{ error() }}</div>
-}
+      <!-- Page header -->
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+            Onboarding RH
+          </h1>
+          <p class="text-[14px] text-outline mt-1">Dossiers en attente de complétion</p>
+        </div>
+        <button
+          type="button"
+          class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline-variant
+                 text-[13px] font-semibold text-on-surface-variant hover:bg-surface-container
+                 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          [disabled]="loading()"
+          (click)="load()">
+          <span class="material-symbols-outlined text-[16px]">refresh</span>
+          Rafraîchir
+        </button>
+      </div>
 
-@if (loading()) {
-  <div class="table-container">
-    <div class="skel-header"></div>
-    <div class="row-skel"></div>
-    <div class="row-skel"></div>
-    <div class="row-skel"></div>
-  </div>
-} @else if (items().length === 0) {
-  <div class="empty-state">
-    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)"
-         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <polyline points="9 12 11 14 15 10"/>
-    </svg>
-    <p class="empty-title">Aucun dossier en attente</p>
-    <p class="empty-sub">Tous les dossiers ont été traités.</p>
-  </div>
-} @else {
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Employé</th>
-          <th>Email MS365</th>
-          <th>Entité</th>
-          <th>Début prévu</th>
-          <th>Statut candidat</th>
-          <th>MàJ</th>
-          <th class="th-actions">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (r of items(); track r.candidateId) {
-          <tr>
-            <td>
-              <p class="cell-name">{{ r.candidateFullName }}</p>
-              @if (r.appliedPosition) {
-                <p class="cell-pos">{{ r.appliedPosition }}</p>
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <daf-metric-card
+          [value]="kpiStats()?.pendingCount ?? items().length"
+          label="Employés en attente"
+          [options]="{ icon: 'pending_actions', iconBg: 'bg-primary/10', iconColor: 'text-primary' }"
+        />
+        <daf-metric-card
+          [value]="kpiStats()?.profilesCreatedToday ?? '—'"
+          label="Profils créés aujourd'hui"
+          [options]="{ icon: 'person_add', iconBg: 'bg-green-100', iconColor: 'text-green-600' }"
+        />
+        <daf-metric-card
+          [value]="kpiStats()?.incompleteProfiles ?? '—'"
+          label="Profils incomplets"
+          [options]="{ icon: 'error_outline', iconBg: 'bg-error/10', iconColor: 'text-error' }"
+        />
+        <daf-metric-card
+          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' min') : '—'"
+          label="Temps moyen création"
+          [options]="{ icon: 'timer', iconBg: 'bg-orange-100', iconColor: 'text-orange-500' }"
+        />
+      </div>
+
+      <!-- Error alert -->
+      @if (error()) {
+        <div class="bg-error/10 border border-error/30 text-error rounded-xl px-4 py-3 text-[13px]"
+             role="alert">
+          {{ error() }}
+        </div>
+      }
+
+      <!-- Loading skeleton -->
+      @if (loading()) {
+        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
+          <div class="skel-header rounded-t-2xl"></div>
+          <div class="row-skel"></div>
+          <div class="row-skel"></div>
+          <div class="row-skel"></div>
+        </daf-card>
+
+      <!-- Empty state -->
+      } @else if (items().length === 0) {
+        <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+          <div class="flex flex-col items-center py-16 gap-3 text-center">
+            <span class="material-symbols-outlined text-[48px] text-outline-variant">
+              assignment_turned_in
+            </span>
+            <p class="text-[16px] font-semibold text-on-surface">Aucun dossier en attente</p>
+            <p class="text-[13px] text-outline">Tous les dossiers ont été traités.</p>
+          </div>
+        </daf-card>
+
+      <!-- Table -->
+      } @else {
+        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
+          <table class="w-full border-collapse text-[13px]">
+            <thead>
+              <tr>
+                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  Employé
+                </th>
+                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  Email MS365
+                </th>
+                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  Entité
+                </th>
+                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  Début prévu
+                </th>
+                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  Statut
+                </th>
+                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  MàJ
+                </th>
+                <th class="text-center px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
+                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of items(); track r.candidateId) {
+                <tr class="border-b border-outline-variant/20 hover:bg-surface-container-low/40
+                           transition-colors last:border-b-0">
+                  <td class="px-4 py-3.5">
+                    <p class="font-semibold text-on-surface">{{ r.candidateFullName }}</p>
+                    @if (r.appliedPosition) {
+                      <p class="text-[11px] text-outline mt-0.5">{{ r.appliedPosition }}</p>
+                    }
+                  </td>
+                  <td class="px-4 py-3.5 text-[12px] text-on-surface-variant">
+                    {{ r.ms365Email || '—' }}
+                  </td>
+                  <td class="px-4 py-3.5 text-[12px] text-outline">#{{ r.paysId }}</td>
+                  <td class="px-4 py-3.5 text-[12px] text-outline whitespace-nowrap">
+                    {{ formatDate(r.expectedStartDate) }}
+                  </td>
+                  <td class="px-4 py-3.5">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <daf-badge
+                        [label]="statusBadge(r.candidateStatus).label"
+                        [options]="statusBadge(r.candidateStatus).options"
+                      />
+                      @if (r.hasDraft) {
+                        <span class="inline-flex items-center bg-amber-50 text-amber-700
+                                     border border-amber-300 rounded-full text-[11px]
+                                     font-semibold px-2 py-0.5">
+                          Brouillon
+                        </span>
+                      }
+                    </div>
+                  </td>
+                  <td class="px-4 py-3.5 text-[12px] text-outline whitespace-nowrap">
+                    {{
+                      r.draftSavedAt
+                        ? formatDate(r.draftSavedAt)
+                        : r.ms365EmailCreatedAt
+                          ? formatDate(r.ms365EmailCreatedAt)
+                          : '—'
+                    }}
+                  </td>
+                  <td class="px-4 py-3.5 text-center">
+                    <button
+                      class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
+                             hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
+                      style="background-color: #50717B"
+                      type="button"
+                      (click)="navigate(r.candidateId)">
+                      Compléter →
+                    </button>
+                  </td>
+                </tr>
               }
-            </td>
-            <td class="cell-email">{{ r.ms365Email || '—' }}</td>
-            <td class="cell-entity">Entité #{{ r.paysId }}</td>
-            <td class="cell-date">{{ formatDate(r.expectedStartDate) }}</td>
-            <td>
-              <div class="status-cell">
-                <daf-badge [label]="statusBadge(r.candidateStatus).label" [options]="statusBadge(r.candidateStatus).options" />
-                @if (r.hasDraft) {
-                  <span class="badge-draft">Brouillon</span>
-                }
-              </div>
-            </td>
-            <td class="cell-date">
-              {{ r.draftSavedAt ? formatDate(r.draftSavedAt) : (r.ms365EmailCreatedAt ? formatDate(r.ms365EmailCreatedAt) : '—') }}
-            </td>
-            <td class="td-actions">
-              <button class="btn-complete" type="button" (click)="navigate(r.candidateId)">
-                Compléter →
-              </button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+            </tbody>
+          </table>
+        </daf-card>
+      }
+
+    </div>
   </div>
-}
+</div>

@@ -121,7 +121,7 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Permissions ────────────────────────────────────────────────────────────
-  canEdit          = computed(() => this.userStore.isHrManager());
+  canEdit          = signal(true)
   canViewSensitive = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
   canTransition    = computed(() =>
     this.profile() !== null && this.allowedTransitions().length > 0 && this.userStore.isHrManager()
@@ -142,25 +142,30 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
+  private openInEditMode = false;
+
   ngOnInit() {
     this.profileId = Number(this.route.snapshot.paramMap.get('id'));
+    this.openInEditMode = this.route.snapshot.queryParamMap.get('edit') === 'true';
     this.loadProfile();
   }
 
   loadProfile() {
     this.loading.set(true);
-    console.log(this.profileId);
-    
+
     this.svc.getById(this.profileId).pipe(catchError(() => of(null)))
       .subscribe(p => {
         this.loading.set(false);
         this.profile.set(p);
-        console.log(p);
-        
+
         if (p) {
           this.loadResolvedRegime(p.id);
           this.pdfSvc.generateDocument('/api/hr/documents/by-profile/' + p.id, null)
             .subscribe({ next: (docs: any) => this.generatedDocs.set(docs), error: () => {} });
+          if (this.openInEditMode) {
+            this.openInEditMode = false;
+            this.startEdit();
+          }
         }
       });
   }

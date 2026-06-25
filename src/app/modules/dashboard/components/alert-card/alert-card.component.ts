@@ -1,5 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
+import { CardComponent } from '@khalilrebhiitec/daf360';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
 export interface ProbationAlert {
@@ -25,9 +26,9 @@ const VISIBLE_LIMIT = 2;
 @Component({
   selector: 'rh-alert-card',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, CardComponent],
   template: `
-    <div class="bg-white p-5 rounded-xl border border-outline-variant shadow-sm h-full">
+    <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl', fullHeight: true, hoverable: true }">
 
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
@@ -121,7 +122,7 @@ const VISIBLE_LIMIT = 2;
           </div>
         }
       </div>
-    </div>
+    </daf-card>
   `,
 })
 export class AlertCardComponent {

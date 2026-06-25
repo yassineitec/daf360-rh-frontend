@@ -23,10 +23,18 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k: d[k] for k in ['name','workspaces','dependencies','devDependencies'] if k in d}, indent=2\\)\\)\")",
       "Bash(python -c ' *)",
       "Bash(mkdir -p \"c:\\\\Users\\\\MSI\\\\Desktop\\\\daf360-rh-frontend\\\\public\\\\assets\\\\i18n\")",
-      "Bash(node -e \"const f = require\\('./public/assets/i18n/fr.json'\\); console.log\\('fr.json keys:', Object.keys\\(f\\)\\); console.log\\('DASHBOARD.TITLE:', f.DASHBOARD.TITLE\\);\")"
+      "Bash(node -e \"const f = require\\('./public/assets/i18n/fr.json'\\); console.log\\('fr.json keys:', Object.keys\\(f\\)\\); console.log\\('DASHBOARD.TITLE:', f.DASHBOARD.TITLE\\);\")",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npm start *)",
+      "WebFetch(domain:localhost)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\MSI\\\\Desktop\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Sort-Object Name)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\MSI\\Desktop\\daf360-rh-frontend\\public\\assets"
+      "c:\\Users\\MSI\\Desktop\\daf360-rh-frontend\\public\\assets",
+      "C:\\Users\\MSI\\Desktop\\daf360-rh-service\\src\\main\\java\\com\\daf360\\rh\\service"
     ]
   }
 }

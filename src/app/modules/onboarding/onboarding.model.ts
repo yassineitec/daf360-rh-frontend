@@ -26,6 +26,13 @@ export interface RegimeSummary {
   isDefault: boolean;
 }
 
+export interface OnboardingKpiStats {
+  pendingCount: number;
+  profilesCreatedToday: number;
+  incompleteProfiles: number;
+  avgCreationMinutes: number;
+}
+
 export interface OnboardingFormData {
   // Identity
   candidateId:       number;
@@ -78,6 +85,15 @@ export interface OnboardingFormData {
   emergencyContactName:     string | null;
   emergencyContactRelation: string | null;
   emergencyContactPhone:    string | null;
+  // IT Provisioning (extended — backend fields may be null if not yet implemented)
+  matricule?:              string | null;
+  itDeviceName?:           string | null;
+  ms365LicenseType?:       string | null;
+  itProvisioningStatus?:   string | null;
+  // Workflow timeline dates (for process tracker)
+  requestValidatedAt?:     string | null;
+  itAccountCreatedAt?:     string | null;
+  equipmentAssignedAt?:    string | null;
   // Meta
   candidateStatus: string;
   hasDraft:        boolean;

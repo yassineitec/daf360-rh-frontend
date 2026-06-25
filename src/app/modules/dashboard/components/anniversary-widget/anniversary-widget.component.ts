@@ -1,6 +1,7 @@
 import { Component, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
+import { CardComponent } from '@khalilrebhiitec/daf360';
 
 export interface AnniversaireItem {
   profileId:   number | null;
@@ -11,9 +12,9 @@ export interface AnniversaireItem {
 @Component({
   selector: 'rh-anniversary-widget',
   standalone: true,
-  imports: [DatePipe, TranslatePipe],
+  imports: [DatePipe, TranslatePipe, CardComponent],
   template: `
-    <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm">
+    <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
       <h3 class="flex items-center gap-2 text-[14px] font-bold text-on-surface mb-4">
         <span class="material-symbols-outlined text-[20px]" style="color: #79D7BE;">cake</span>
         {{ 'DASHBOARD.ANNIVERSARY.TITLE' | translate }}
@@ -32,7 +33,7 @@ export interface AnniversaireItem {
           </li>
         }
       </ul>
-    </div>
+    </daf-card>
   `,
 })
 export class AnniversaryWidgetComponent {

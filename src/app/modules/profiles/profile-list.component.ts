@@ -97,6 +97,7 @@ export class ProfileListComponent implements OnInit {
       this.loading.set(false);
       if (list) {
         this.employees.set(list.content);
+        
         this.totalElements.set(list.totalElements);
         this.totalPages.set(list.totalPages);
       } else {
@@ -120,6 +121,8 @@ export class ProfileListComponent implements OnInit {
     }).pipe(catchError(() => of(null)))
     .subscribe(res => {
       this.loading.set(false);
+      console.log(res?.content);
+      
       if (res) {
         this.employees.set(res.content);
         this.totalElements.set(res.totalElements);
@@ -266,7 +269,7 @@ export class ProfileListComponent implements OnInit {
   }
 
   onEdit(profileId: number): void {
-    this.router.navigate(['/profiles', profileId, 'edit']);
+    this.router.navigate(['/rh/profiles', profileId], { queryParams: { edit: 'true' } });
   }
 
   onDelete(profileId: number): void {

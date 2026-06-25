@@ -1,6 +1,7 @@
 import { Component, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
+import { CardComponent } from '@khalilrebhiitec/daf360';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
 export interface NouveauItem {
@@ -16,9 +17,9 @@ export interface NouveauItem {
 @Component({
   selector: 'rh-new-employees-widget',
   standalone: true,
-  imports: [DatePipe, TranslatePipe],
+  imports: [DatePipe, TranslatePipe, CardComponent],
   template: `
-    <div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm">
+    <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
       <h3 class="flex items-center gap-2 text-[14px] font-bold text-on-surface mb-4">
         <span class="material-symbols-outlined text-[20px]" style="color: #79D7BE;">person_add</span>
         {{ 'DASHBOARD.NEW_EMPLOYEES.TITLE' | translate }}
@@ -50,7 +51,7 @@ export interface NouveauItem {
           </p>
         }
       </div>
-    </div>
+    </daf-card>
   `,
 })
 export class NewEmployeesWidgetComponent {

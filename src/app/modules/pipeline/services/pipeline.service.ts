@@ -14,6 +14,7 @@ export interface KanbanCandidate {
   id: number;
   fullName: string;
   photoUrl?: string;
+  gender?: string;
   poste: string;
   fitScore: number;
   badge: string;
@@ -31,6 +32,7 @@ export interface KanbanCandidate {
   applicationDate?: string;
   email?: string;
   status?: string;
+  contractType?: string;
 }
 
 export interface KanbanColumn {

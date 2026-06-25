@@ -1,15 +1,15 @@
 import { Component, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ProgressBarComponent } from '@khalilrebhiitec/daf360';
+import { CardComponent, ProgressBarComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'rh-profile-completion',
   standalone: true,
   host: { class: 'block h-full' },
-  imports: [ProgressBarComponent, TranslatePipe],
+  imports: [ProgressBarComponent, TranslatePipe, CardComponent],
   template: `
-    <div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant
-                shadow-sm flex flex-col justify-between h-full">
+    <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', fullHeight: true, hoverable: true }">
+      <div class="flex flex-col justify-between h-full">
       <div>
         <p class="text-[11px] text-outline uppercase tracking-wider mb-2">
           {{ 'DASHBOARD.PROFILE_COMPLETION.LABEL' | translate }}
@@ -30,7 +30,8 @@ import { ProgressBarComponent } from '@khalilrebhiitec/daf360';
         <span class="material-symbols-outlined text-[18px]">notifications_active</span>
         {{ 'DASHBOARD.PROFILE_COMPLETION.REMIND' | translate }}
       </button>
-    </div>
+      </div>
+    </daf-card>
   `,
 })
 export class ProfileCompletionComponent {

@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
+import { CardComponent } from '@khalilrebhiitec/daf360';
 import { OnboardingService } from './onboarding.service';
 import {
   OnboardingFormData,
@@ -22,6 +23,7 @@ import { SpinnerComponent } from '../../shared/spinner.component';
   selector: 'app-onboarding-form',
   standalone: true,
   imports: [
+    CardComponent,
     FormsModule,
     StepIdentityComponent,
     StepContractComponent,
@@ -63,6 +65,20 @@ export class OnboardingFormComponent implements OnInit {
   readonly lastName    = computed(() => this.draftData().lastName   ?? this.formData()?.lastName  ?? '');
   readonly hasDraft    = computed(() => this.formData()?.hasDraft   ?? false);
   readonly draftSavedAt = computed(() => this.formData()?.draftSavedAt ?? null);
+
+  // Profile photo card
+  readonly photoFailed = signal(false);
+
+  resolvePhoto(fd: OnboardingFormData): string {
+    return fd.gender === 'FEMININ'
+      ? '/images/avatars/female.png'
+      : '/images/avatars/male.png';
+  }
+
+  candidateInitials(fd: OnboardingFormData): string {
+    return ((fd.firstName ?? '')[0] ?? '').toUpperCase()
+         + ((fd.lastName  ?? '')[0] ?? '').toUpperCase();
+  }
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('candidateId'));
@@ -163,7 +179,8 @@ export class OnboardingFormComponent implements OnInit {
       next: (result) => {
         this.submitting.set(false);
         this.showConfirmModal.set(false);
-        this.router.navigate(['/onboarding/success'], {
+        this.router.navigate(['../success'], {
+          relativeTo: this.route,
           queryParams: {
             profileId:  result.employeeProfileId,
             userId:     result.userId,
@@ -186,7 +203,12 @@ export class OnboardingFormComponent implements OnInit {
     setTimeout(() => this.successMsg.set(null), 3500);
   }
 
+  formatDate(value: string | null | undefined): string {
+    if (!value) return '—';
+    return value.slice(0, 10);
+  }
+
   goBack(): void {
-    this.router.navigate(['/onboarding']);
+    this.router.navigate(['../'], { relativeTo: this.route });
   }
 }

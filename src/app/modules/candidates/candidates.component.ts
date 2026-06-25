@@ -1,11 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import {
   ButtonComponent,
   CardComponent,
-  FormFieldComponent,
-  FormFieldOptions,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -15,10 +14,11 @@ import {
   CandidatesPipelineService,
   PipelineCandidateItem,
   PipelineStats,
-  CandidateKanbanColumn,
 } from './services/candidates.service';
+import { PipelineService, KanbanColumn } from '../pipeline/services/pipeline.service';
 import { CandidateKpiCardsComponent } from './components/candidate-kpi-cards/candidate-kpi-cards.component';
 import { CandidateTableRowComponent, ProcessedCandidate } from './components/candidate-table-row/candidate-table-row.component';
+import { KanbanColumnComponent } from '../pipeline/components/kanban-column/kanban-column.component';
 
 const AVATAR_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f97316',
@@ -33,21 +33,25 @@ const PAGE_SIZE = 10;
   imports: [
     ButtonComponent,
     CardComponent,
-    FormFieldComponent,
     SelectComponent,
-    PaginationComponent,
     ToolbarComponent,
+    PaginationComponent,
     CandidateKpiCardsComponent,
     CandidateTableRowComponent,
+    KanbanColumnComponent,
+    CdkDropListGroup,
   ],
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
-  private svc    = inject(CandidatesPipelineService);
-  private router = inject(Router);
+  private svc         = inject(CandidatesPipelineService);
+  private pipelineSvc = inject(PipelineService);
+  private router      = inject(Router);
 
+  readonly viewMode      = signal<'list' | 'kanban'>('list');
   readonly stats         = signal<PipelineStats | null>(null);
   readonly candidates    = signal<ProcessedCandidate[]>([]);
+  readonly kanbanColumns = signal<KanbanColumn[]>([]);
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
   readonly search        = signal('');
@@ -63,13 +67,6 @@ export class CandidatesComponent implements OnInit {
       .map(s => ({ value: s.value, label: s.label }))
   );
 
-  readonly searchFieldOptions: FormFieldOptions = {
-    type: 'search',
-    placeholder: 'Rechercher un candidat...',
-    prefixIcon: 'search',
-    fullWidth: true,
-  };
-
   readonly stageSelectConfig: SelectConfig = {
     placeholder: 'Toutes les étapes',
   };
@@ -80,15 +77,16 @@ export class CandidatesComponent implements OnInit {
     forkJoin({
       stats:  this.svc.getStats(),
       page:   this.svc.getCandidates({ page: 0, size: PAGE_SIZE }),
-      kanban: this.svc.getKanban(),
+      kanban: this.pipelineSvc.getKanban(),
     }).subscribe({
       next: ({ stats, page, kanban }) => {
         this.stats.set(stats);
         this.totalElements.set(page.totalElements);
         this.candidates.set(this.process(page.content));
+        this.kanbanColumns.set(kanban);
         this.stages.set([
           { value: '', label: 'Toutes les étapes' },
-          ...kanban.map((col: CandidateKanbanColumn) => ({
+          ...kanban.map((col: KanbanColumn) => ({
             value: col.stage,
             label: col.stageLabel,
           })),
@@ -101,6 +99,10 @@ export class CandidatesComponent implements OnInit {
         this.statsLoading.set(false);
       },
     });
+  }
+
+  setViewMode(mode: 'list' | 'kanban'): void {
+    this.viewMode.set(mode);
   }
 
   onNewCandidate(): void {
@@ -130,12 +132,27 @@ export class CandidatesComponent implements OnInit {
 
   onMessage(id: number): void {
     const c = this.candidates().find(c => c.id === id);
-    if (c?.email) {
-      window.open(`mailto:${c.email}`, '_blank');
-    }
+    if (c?.email) window.open(`mailto:${c.email}`, '_blank');
   }
 
   onMore(_id: number): void {}
+
+  onCardClick(id: number): void {
+    this.router.navigate(['/rh/candidates', id]);
+  }
+
+  onKanbanDrop(event: { candidateId: number; fromStage: string; toStage: string }): void {
+    this.kanbanColumns.update(cols =>
+      cols.map(col => {
+        if (col.stage === event.fromStage) return { ...col, count: Math.max(0, col.count - 1) };
+        if (col.stage === event.toStage)   return { ...col, count: col.count + 1 };
+        return col;
+      }),
+    );
+    this.pipelineSvc.moveToStage(event.candidateId, event.toStage).subscribe({
+      error: () => this.pipelineSvc.getKanban().subscribe(cols => this.kanbanColumns.set(cols)),
+    });
+  }
 
   private loadCandidates(): void {
     this.loading.set(true);
@@ -157,12 +174,7 @@ export class CandidatesComponent implements OnInit {
   private process(items: PipelineCandidateItem[]): ProcessedCandidate[] {
     return items.map((item, i) => ({
       ...item,
-      initials: item.fullName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase(),
+      initials: item.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
       colorIndex: i % AVATAR_COLORS.length,
     }));
   }

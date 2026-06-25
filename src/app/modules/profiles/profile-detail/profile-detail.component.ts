@@ -89,5 +89,5 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   onBack(): void  { this.router.navigate(['/rh/profiles']); }
-  onEdit(): void  { console.log(this.profileId); this.router.navigate(['/rh/profiles', this.profileId(), 'edit']); }
+  onEdit(): void  { this.router.navigate(['/rh/profiles', this.profileId(), 'edit']); }
 }

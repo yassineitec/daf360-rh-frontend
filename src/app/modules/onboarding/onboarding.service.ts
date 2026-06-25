@@ -2,12 +2,16 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { OnboardingListItem, OnboardingFormData, OnboardingProfileDto, CompletionResult } from './onboarding.model';
+import { OnboardingListItem, OnboardingFormData, OnboardingProfileDto, CompletionResult, OnboardingKpiStats } from './onboarding.model';
 
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   private http = inject(HttpClient);
   private base = `${environment.hrApiUrl}/api/hr/onboarding`;
+
+  getKpiStats(): Observable<OnboardingKpiStats> {
+    return this.http.get<OnboardingKpiStats>(`${this.base}/kpi`);
+  }
 
   getPendingList(): Observable<OnboardingListItem[]> {
     return this.http.get<OnboardingListItem[]>(`${this.base}/pending`);

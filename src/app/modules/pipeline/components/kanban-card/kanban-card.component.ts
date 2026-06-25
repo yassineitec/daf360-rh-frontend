@@ -1,8 +1,8 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import type { BadgeOptions } from '@khalilrebhiitec/daf360';
 import { KanbanCandidate } from '../../services/pipeline.service';
-import { environment } from '../../../../../environments/environment';
+import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
 @Component({
   selector: 'rh-kanban-card',
@@ -32,9 +32,12 @@ import { environment } from '../../../../../environments/environment';
       <!-- Avatar + info -->
       <div class="flex items-center gap-3 mb-4">
         <div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-          @if (candidate().photoUrl) {
-            <img [src]="resolvePhoto(candidate().photoUrl)!"
-                 class="w-full h-full object-cover" />
+          @if (!avatarFailed().has(candidate().id)) {
+            <img
+              [src]="resolveAvatar()"
+              [alt]="candidate().fullName"
+              class="w-full h-full object-cover"
+              (error)="onAvatarError()" />
           } @else {
             <div class="w-full h-full bg-surface-container-high text-on-surface-variant
                         flex items-center justify-center font-bold text-sm">
@@ -92,9 +95,15 @@ export class KanbanCardComponent {
   candidate = input.required<KanbanCandidate>();
   cardClick = output<number>();
 
-  resolvePhoto(url: string | undefined): string | null {
-    if (!url) return null;
-    return `${environment.hrApiUrl}/api/hr/profiles/${this.candidate().id}/photo`;
+  readonly avatarFailed = signal(new Set<number>());
+
+  resolveAvatar(): string {
+    const c = this.candidate();
+    return getAvatarUrl(c.id, c.photoUrl, c.gender);
+  }
+
+  onAvatarError(): void {
+    this.avatarFailed.update(s => new Set(s).add(this.candidate().id));
   }
 
   badgeOptions(): BadgeOptions {

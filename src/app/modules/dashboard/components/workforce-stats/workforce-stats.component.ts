@@ -1,14 +1,14 @@
 import { Component, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
+import { CardComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'rh-workforce-stats',
   standalone: true,
   host: { class: 'block h-full' },
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, CardComponent],
   template: `
-    <div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant
-                shadow-sm flex flex-col justify-between h-full">
+    <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', fullHeight: true, hoverable: true }">
       <div>
         <p class="text-[11px] text-outline uppercase tracking-wider mb-2">
           {{ 'DASHBOARD.WORKFORCE_STATS.LABEL' | translate }}
@@ -31,7 +31,7 @@ import { TranslatePipe } from '@ngx-translate/core';
           </div>
         </div>
       </div>
-    </div>
+    </daf-card>
   `,
 })
 export class WorkforceStatsComponent {

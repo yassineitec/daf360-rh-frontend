@@ -1,106 +1,336 @@
-<!-- Back -->
-<button class="btn-back" (click)="goBack()">← Retour à la liste</button>
+<div class="form-page" style="font-family: 'Inter', sans-serif;">
 
-@if (error()) {
-  <div class="alert alert-error">{{ error() }}</div>
-}
-@if (successMsg()) {
-  <div class="alert alert-success">{{ successMsg() }}</div>
-}
-
-<!-- Draft banner -->
-@if (!loading() && hasDraft() && draftSavedAt()) {
-  <div class="draft-banner">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="8" x2="12" y2="12"/>
-      <line x1="12" y1="16" x2="12.01" y2="16"/>
-    </svg>
-    Brouillon sauvegardé le {{ draftSavedAt()!.slice(0, 10) }}
+  <!-- Back -->
+  <div class="px-6 pt-5">
+    <button class="flex items-center gap-1.5 text-[13px] text-outline hover:text-on-surface transition-colors"
+      type="button" (click)="goBack()">
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+      Retour à la liste
+    </button>
   </div>
-}
 
-@if (loading()) {
-  <div class="loading-wrap"><app-spinner /></div>
-}
-
-@if (!loading() && formData(); as fd) {
-
-  <!-- ── Stepper header ── -->
-  <div class="stepper-header">
-    @for (step of STEPS; track step.number; let last = $last) {
-      <div
-        class="step-item"
-        [class.step-active]="currentStep() === step.number"
-        [class.step-done]="currentStep() > step.number"
-        (click)="goToStep(step.number)"
-      >
-        <div class="step-bubble">
-          @if (currentStep() > step.number) {
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          } @else {
-            {{ step.number }}
-          }
-        </div>
-        <span class="step-name">{{ step.label }}</span>
+  <!-- Alerts -->
+  <div class="px-6 pt-3 flex flex-col gap-2">
+    @if (error()) {
+      <div class="alert alert-error" role="alert">{{ error() }}</div>
+    }
+    @if (successMsg()) {
+      <div class="alert alert-success" role="status">{{ successMsg() }}</div>
+    }
+    @if (!loading() && hasDraft() && draftSavedAt()) {
+      <div class="draft-banner">
+        <span class="material-symbols-outlined text-[16px]">info</span>
+        Brouillon sauvegardé le {{ draftSavedAt()!.slice(0, 10) }}
       </div>
-      @if (!last) {
-        <div class="step-line" [class.step-line-done]="currentStep() > step.number"></div>
-      }
     }
   </div>
 
-  <!-- ── Step content ── -->
-  <div class="step-content">
+  <!-- Main content -->
+  <div class="px-6 pt-5 pb-28">
 
-    @if (currentStep() === 1) {
-      <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-    }
-    @if (currentStep() === 2) {
-      <app-step-contract [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-    }
-    @if (currentStep() === 3) {
-      <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-    }
-    @if (currentStep() === 4) {
-      <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-    }
-    @if (currentStep() === 5) {
-      <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-    }
-    @if (currentStep() === 6) {
-      <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-    }
-    @if (currentStep() === 7) {
-      <app-step-summary [data]="draftData()" [formInfo]="fd" (editStep)="goToStep($event)" />
+    <!-- Page title -->
+    <section class="mb-6 space-y-1">
+      <h1 class="text-[24px] font-extrabold text-on-surface leading-tight">Création d'un nouveau collaborateur</h1>
+      <p class="text-[14px] text-on-surface-variant max-w-[640px]">
+        Cette étape permet au service RH de compléter les informations administratives du collaborateur après le provisionnement IT.
+      </p>
+    </section>
+
+    @if (loading()) {
+      <div class="flex justify-center py-20">
+        <app-spinner />
+      </div>
     }
 
+    @if (!loading() && formData(); as fd) {
+      <div class="flex gap-6 items-start">
+
+        <!-- ── Left: form content ── -->
+        <div class="flex-1 min-w-0 flex flex-col gap-5">
+
+          <!-- IT Pre-provisioning (read-only) -->
+          <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
+            <div class="bg-surface-container-high/50 px-5 py-3.5 flex items-center justify-between border-b border-outline-variant/30">
+              <h2 class="text-[15px] font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[18px]">terminal</span>
+                Informations de pré-provisionnement
+                <span class="text-[13px] font-normal text-outline">(Lecture seule)</span>
+              </h2>
+              <span class="bg-success/10 text-success px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 shrink-0">
+                <span class="material-symbols-outlined text-[14px]">verified</span>
+                Vérifié par IT
+              </span>
+            </div>
+            <div class="p-5 grid grid-cols-2 lg:grid-cols-3 gap-5">
+              <div>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Matricule</label>
+                <p class="text-[14px] font-bold text-on-surface">{{ fd.matricule ?? ('EMP-' + fd.paysId + '-' + fd.candidateId) }}</p>
+              </div>
+              <div>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Email Pro</label>
+                <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365Email }}</p>
+              </div>
+              <div>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">PC attribué</label>
+                <p class="text-[14px] font-bold text-on-surface">{{ fd.itDeviceName ?? '—' }}</p>
+              </div>
+              <div>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Licence Microsoft</label>
+                <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365LicenseType ?? 'Affectée' }}</p>
+              </div>
+              <div>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Statut IT</label>
+                <span class="text-[14px] font-bold text-success">{{ fd.itProvisioningStatus ?? 'Provisionné' }}</span>
+              </div>
+            </div>
+          </daf-card>
+
+          <!-- Stepper -->
+          <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
+            <div class="flex items-center overflow-x-auto px-5 py-3.5" style="scrollbar-width: none">
+              @for (step of STEPS; track step.number; let last = $last) {
+                <div class="step-item"
+                  [class.step-done]="currentStep() > step.number"
+                  [class.step-active]="currentStep() === step.number"
+                  (click)="goToStep(step.number)">
+                  <div class="step-bubble">
+                    @if (currentStep() > step.number) {
+                      <span class="material-symbols-outlined text-[14px] font-bold">check</span>
+                    } @else {
+                      {{ step.number }}
+                    }
+                  </div>
+                  <span class="step-label">{{ step.label }}</span>
+                </div>
+                @if (!last) {
+                  <div class="step-connector" [class.step-connector-done]="currentStep() > step.number"></div>
+                }
+              }
+            </div>
+          </daf-card>
+
+          <!-- Step content -->
+          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+            <div class="min-h-64">
+              @if (currentStep() === 1) {
+                <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              }
+              @if (currentStep() === 2) {
+                <app-step-contract [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              }
+              @if (currentStep() === 3) {
+                <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              }
+              @if (currentStep() === 4) {
+                <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              }
+              @if (currentStep() === 5) {
+                <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              }
+              @if (currentStep() === 6) {
+                <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              }
+              @if (currentStep() === 7) {
+                <app-step-summary [data]="draftData()" [formInfo]="fd" (editStep)="goToStep($event)" />
+              }
+            </div>
+          </daf-card>
+
+        </div>
+
+        <!-- ── Right: Process tracker sidebar ── -->
+        <aside class="w-72 shrink-0 flex flex-col gap-4 sticky top-6">
+
+          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+            <h3 class="text-[16px] font-bold text-on-surface border-b border-outline-variant/30 pb-3 mb-5">
+              Statut d'intégration
+            </h3>
+
+            <div class="space-y-0">
+              <!-- Step: Demande validée (done) -->
+              <div class="tracker-step">
+                <div class="tracker-line tracker-line-done"></div>
+                <div class="tracker-dot tracker-dot-done">
+                  <span class="material-symbols-outlined text-[14px]">check</span>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-bold text-on-surface">Demande validée</p>
+                  @if (fd.requestValidatedAt) {
+                    <p class="text-[12px] text-outline">{{ formatDate(fd.requestValidatedAt) }}</p>
+                  }
+                </div>
+              </div>
+
+              <!-- Step: Compte IT créé (done) -->
+              <div class="tracker-step">
+                <div class="tracker-line tracker-line-done"></div>
+                <div class="tracker-dot tracker-dot-done">
+                  <span class="material-symbols-outlined text-[14px]">check</span>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-bold text-on-surface">Compte IT créé</p>
+                  @if (fd.itAccountCreatedAt) {
+                    <p class="text-[12px] text-outline">{{ formatDate(fd.itAccountCreatedAt) }}</p>
+                  }
+                </div>
+              </div>
+
+              <!-- Step: Matériel affecté (done) -->
+              <div class="tracker-step">
+                <div class="tracker-line tracker-line-done"></div>
+                <div class="tracker-dot tracker-dot-done">
+                  <span class="material-symbols-outlined text-[14px]">check</span>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-bold text-on-surface">Matériel affecté</p>
+                  @if (fd.equipmentAssignedAt) {
+                    <p class="text-[12px] text-outline">{{ formatDate(fd.equipmentAssignedAt) }}</p>
+                  }
+                </div>
+              </div>
+
+              <!-- Step: Profil RH (active) -->
+              <div class="tracker-step">
+                <div class="tracker-line tracker-line-pending"></div>
+                <div class="tracker-dot tracker-dot-active">
+                  <div class="tracker-dot-inner"></div>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-bold text-primary">Profil RH</p>
+                  <p class="text-[12px] text-success font-semibold">Étape en cours</p>
+                </div>
+              </div>
+
+              <!-- Step: Validation Manager (pending) -->
+              <div class="tracker-step">
+                <div class="tracker-line tracker-line-pending"></div>
+                <div class="tracker-dot tracker-dot-pending">
+                  <span class="material-symbols-outlined text-[14px]">hourglass_empty</span>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-medium text-outline">Validation Manager</p>
+                </div>
+              </div>
+
+              <!-- Step: Signature Contrat (pending) -->
+              <div class="tracker-step">
+                <div class="tracker-line tracker-line-pending"></div>
+                <div class="tracker-dot tracker-dot-pending">
+                  <span class="material-symbols-outlined text-[14px]">history_edu</span>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-medium text-outline">Signature Contrat</p>
+                </div>
+              </div>
+
+              <!-- Step: Intégration terminée (pending, no line after) -->
+              <div class="tracker-step tracker-step-last">
+                <div class="tracker-dot tracker-dot-pending">
+                  <span class="material-symbols-outlined text-[14px]">celebration</span>
+                </div>
+                <div class="pt-0.5">
+                  <p class="text-[14px] font-medium text-outline">Intégration terminée</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- HR tip -->
+            <div class="mt-6 p-3.5 bg-primary/5 border border-primary/15 rounded-xl">
+              <p class="text-[12px] font-semibold text-on-surface mb-1">Conseil RH :</p>
+              <p class="text-[12px] text-on-surface-variant italic">Vérifiez bien la date de fin de période d'essai selon la convention collective.</p>
+            </div>
+          </daf-card>
+
+          <!-- Candidate profile card (hover-reveal) -->
+          <div class="relative overflow-hidden rounded-2xl group cursor-pointer"
+               style="height: 240px; background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 24px rgba(0,0,0,0.07);">
+
+            <!-- Photo -->
+            <div class="absolute inset-0">
+              @if (!photoFailed()) {
+                <img [src]="resolvePhoto(fd)"
+                     [alt]="firstName() + ' ' + lastName()"
+                     class="w-full h-full object-cover object-top"
+                     (error)="photoFailed.set(true)" />
+              } @else {
+                <div class="w-full h-full flex items-center justify-center"
+                     style="background: linear-gradient(135deg, #1B3A4B 0%, #50717B 100%)">
+                  <span class="text-[52px] font-extrabold" style="color: rgba(255,255,255,0.28)">
+                    {{ candidateInitials(fd) }}
+                  </span>
+                </div>
+              }
+            </div>
+
+            <!-- Persistent bottom gradient -->
+            <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent
+                        transition-all duration-300 group-hover:h-full group-hover:from-black/60"></div>
+
+            <!-- Info panel — slides up from below on hover -->
+            <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-3
+                        translate-y-full group-hover:translate-y-0
+                        transition-transform duration-300 ease-out">
+              <p class="text-[10px] font-extrabold tracking-widest uppercase mb-1"
+                 style="color: #79D7BE">Nouvel Arrivant</p>
+              <h4 class="text-[16px] font-bold text-white leading-tight">
+                {{ firstName() }} {{ lastName() }}
+              </h4>
+              @if (fd.appliedPosition) {
+                <p class="text-[12px] mt-0.5" style="color: rgba(255,255,255,0.70)">{{ fd.appliedPosition }}</p>
+              }
+              <p class="text-[11px] mt-2 flex items-center gap-1" style="color: rgba(255,255,255,0.50)">
+                <span class="material-symbols-outlined text-[13px]">mail</span>
+                {{ fd.ms365Email }}
+              </p>
+            </div>
+          </div>
+
+        </aside>
+      </div>
+    }
   </div>
 
-  <!-- ── Footer navigation ── -->
-  <div class="form-footer">
-    <div class="footer-left">
-      @if (currentStep() > 1) {
-        <button type="button" class="btn-prev" (click)="prevStep()">← Précédent</button>
-      }
-    </div>
-    <div class="footer-right">
-      <button type="button" class="btn-draft" [disabled]="saving()" (click)="onSaveDraft()">
-        @if (saving()) { Sauvegarde… } @else { Enregistrer le brouillon }
+</div>
+
+<!-- Fixed footer -->
+<footer class="form-footer">
+  <div class="footer-left">
+    <button class="btn-cancel" type="button" (click)="goBack()">Annuler</button>
+    @if (currentStep() > 1) {
+      <button class="btn-prev" type="button" (click)="prevStep()">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        Précédent
       </button>
-      @if (currentStep() < 7) {
-        <button type="button" class="btn-next" (click)="nextStep()">Suivant →</button>
-      } @else {
-        <button type="button" class="btn-submit" (click)="showConfirmModal.set(true)">
-          Soumettre et créer le dossier
-        </button>
-      }
-    </div>
+    }
   </div>
 
-  <!-- Confirmation modal -->
+  <div class="footer-right">
+    <button class="btn-draft" type="button" [disabled]="saving()" (click)="onSaveDraft()">
+      @if (saving()) { Sauvegarde… } @else { Enregistrer Brouillon }
+    </button>
+
+    @if (currentStep() === 7) {
+      <button class="btn-create-profile" type="button" (click)="showConfirmModal.set(true)">
+        Créer le Profil Employé
+      </button>
+    }
+
+    @if (currentStep() < 7) {
+      <button class="btn-create-next" type="button" (click)="nextStep()">
+        @if (currentStep() === 1) { Créer et Passer à l'étape suivante } @else { Suivant }
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+      </button>
+    } @else {
+      <button class="btn-create-next" type="button" (click)="showConfirmModal.set(true)">
+        Soumettre et créer le dossier
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+      </button>
+    }
+  </div>
+</footer>
+
+<!-- Confirmation modal -->
+@if (!loading() && formData()) {
   <app-confirm-submit-modal
     [visible]="showConfirmModal()"
     [firstName]="firstName()"
@@ -110,5 +340,4 @@
     (confirmed)="onSubmitConfirmed()"
     (closed)="showConfirmModal.set(false)"
   />
-
-} <!-- end @if formData -->
+}

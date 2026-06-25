@@ -1,117 +1,148 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
+import { CardComponent } from '@khalilrebhiitec/daf360';
 import { EmployeeListItem } from '../../models/profile.model';
-import { avatarUrl, getAvatarUrl } from '../../../../shared/utils/avatar.utils';
-import { environment } from '../../../../../environments/environment';
+import { getInitials } from '../../../../shared/utils/avatar.utils';
 
 @Component({
   selector: 'rh-profile-grid-card',
   standalone: true,
+  imports: [CardComponent],
   template: `
-    <div class="bg-white rounded-2xl p-5 hover:shadow-lg transition-all relative cursor-pointer"
-         [class.border-2]="selected()"
-         [class.shadow-md]="selected()"
-         [class.border]="!selected()"
-         [class.border-outline-variant]="!selected()"
-         [style.border-color]="selected() ? '#50717B' : null"
-         [style.background-color]="selected() ? 'rgba(80,113,123,0.05)' : null"
-         (mouseenter)="hovered.set(true)"
-         (mouseleave)="hovered.set(false)">
+<daf-card
+  [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }"
+  [style.box-shadow]="selected() ? '0 0 0 2px #3a6567' : null"
+  (mouseenter)="hovered.set(true)"
+  (mouseleave)="hovered.set(false)"
+>
+  <div
+    class="relative p-5 h-80 flex flex-col overflow-hidden"
+    [style.background-color]="selected() ? 'rgba(58,101,103,0.05)' : null"
+  >
 
-      <!-- Checkbox (top-left) -->
-      <div class="absolute top-3 left-3 z-10">
-        <input
-          type="checkbox"
-          class="w-4 h-4 rounded accent-[#50717B] cursor-pointer"
-          [checked]="selected()"
-          (click)="$event.stopPropagation()"
-          (change)="handleSelect($any($event.target).checked)" />
-      </div>
+    <!-- Checkbox -->
+    <div class="absolute top-3 left-3 z-10">
+      <input
+        type="checkbox"
+        class="w-4 h-4 rounded cursor-pointer accent-[#3a6567]"
+        [checked]="selected()"
+        (click)="$event.stopPropagation()"
+        (change)="handleSelect($any($event.target).checked)"
+      />
+    </div>
 
-      <!-- Hover quick actions (top-right) -->
-      <div class="absolute top-3 right-3 flex gap-1 z-10
-                  bg-white/90 backdrop-blur-sm p-1 rounded-lg
-                  border border-outline-variant shadow-sm
-                  transition-opacity duration-200"
-           [class.opacity-0]="!hovered()"
-           [class.opacity-100]="hovered()"
-           [class.pointer-events-none]="!hovered()">
-        <button
-          type="button"
-          class="p-1.5 text-outline rounded hover:text-[#50717B]
-                 hover:bg-surface-container transition-colors"
-          (click)="$event.stopPropagation(); emitEdit()">
-          <span class="material-symbols-outlined text-[18px]">edit</span>
-        </button>
-        <button
-          type="button"
-          class="p-1.5 text-outline rounded hover:text-error
-                 hover:bg-error-container transition-colors"
-          (click)="$event.stopPropagation(); emitDelete()">
-          <span class="material-symbols-outlined text-[18px]">delete</span>
-        </button>
-      </div>
+    <!-- Hover actions -->
+    <div
+      class="absolute top-3 right-3 flex gap-1 z-10
+             bg-white/90 backdrop-blur-sm p-1 rounded-lg
+             border border-outline-variant shadow-sm
+             transition-opacity duration-200"
+      [class.opacity-0]="!hovered()"
+      [class.opacity-100]="hovered()"
+      [class.pointer-events-none]="!hovered()"
+    >
+      <button
+        type="button"
+        class="p-1.5 text-outline rounded hover:text-[#3a6567]
+               hover:bg-surface-container transition-colors"
+        (click)="$event.stopPropagation(); emitEdit()"
+      >
+        <span class="material-symbols-outlined text-[18px]">edit</span>
+      </button>
+      <button
+        type="button"
+        class="p-1.5 text-outline rounded hover:text-error
+               hover:bg-error-container transition-colors"
+        (click)="$event.stopPropagation(); emitDelete()"
+      >
+        <span class="material-symbols-outlined text-[18px]">delete</span>
+      </button>
+    </div>
 
-      <!-- Avatar + info -->
-      <div class="flex items-start gap-4 mt-1">
-        <div class="w-14 h-14 rounded-full border-2 border-[#79d7be] overflow-hidden shrink-0">
-          <img
-            [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
-            [alt]="employee().fullName"
-            class="w-full h-full object-cover" />
+    <!-- Body row -->
+    <div class="flex gap-5 flex-1 min-h-0 mt-2">
+
+      <!-- LEFT: Avatar + Name + Grade -->
+      <div class="w-[44%] shrink-0 flex flex-col items-center text-center overflow-hidden">
+
+        <div class="w-28 h-28 rounded-xl overflow-hidden border border-outline-variant bg-surface-container shrink-0">
+          @if (photoSrc() !== null) {
+            <img
+              [src]="photoSrc()!"
+              [alt]="employee().fullName"
+              class="w-full h-full object-cover"
+              (error)="onImgError()"
+            />
+          } @else {
+            <div
+              class="w-full h-full flex items-center justify-center"
+              [style.background-color]="initialsColor()"
+            >
+              <span class="text-white text-2xl font-bold select-none">{{ initials() }}</span>
+            </div>
+          }
         </div>
-        <div class="min-w-0">
-          <h3 class="text-[15px] font-bold text-on-surface truncate">{{ employee().fullName }}</h3>
-          <p class="text-[13px] text-outline truncate">
-            {{ employee().roleName ?? '—' }}{{ employee().department ? ' · ' + employee().department : '' }}
-          </p>
-        </div>
+
+        <h3 class="mt-3 text-[15px] font-bold text-on-surface leading-tight line-clamp-2 w-full px-1">
+          {{ employee().fullName || '-' }}
+        </h3>
+
+        <span class="mt-1 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider truncate w-full px-1">
+          {{ employee().grade || employee().roleName || '-' }}
+        </span>
+
       </div>
 
-      <!-- Location -->
-      @if (employee().paysLabel) {
-        <div class="flex items-center gap-1 mt-3">
-          <span class="material-symbols-outlined text-[14px] text-outline">location_on</span>
-          <span class="text-[13px] text-outline">{{ employee().paysLabel }}</span>
+      <!-- Vertical divider -->
+      <div class="w-px self-stretch bg-outline-variant/40 shrink-0"></div>
+
+      <!-- RIGHT: 4 data fields -->
+      <div class="flex-1 overflow-hidden space-y-3">
+
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-0.5">PAYS</p>
+          <p class="font-semibold text-[13px] text-on-surface truncate">{{ employee().paysLabel || '-' }}</p>
         </div>
-      }
 
-      <!-- Tags -->
-      <div class="flex gap-2 mt-2 flex-wrap">
-        @if (employee().paysLabel) {
-          <span class="px-2 py-0.5 bg-surface-container rounded text-[10px]
-                       font-bold text-on-surface-variant uppercase">
-            {{ employee().paysLabel }}
-          </span>
-        }
-        @if (employee().grade) {
-          <span class="px-2 py-0.5 bg-surface-container rounded text-[10px]
-                       font-bold text-on-surface-variant uppercase">
-            {{ employee().grade }}
-          </span>
-        }
-      </div>
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-0.5">TYPE DE CONTRAT</p>
+          <p class="font-semibold text-[13px] text-on-surface uppercase truncate">{{ employee().contractType || '-' }}</p>
+        </div>
 
-      <!-- Buttons -->
-      <div class="flex gap-2 mt-4">
-        <button
-          type="button"
-          class="flex-1 py-2 bg-[#617f88] text-white rounded-lg text-[13px]
-                 font-semibold hover:opacity-90 transition-opacity"
-          (click)="viewProfile.emit(employee().profileId)">
-          Voir profile
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 border border-outline-variant rounded-lg
-                 hover:bg-surface-container transition-colors"
-          (click)="moreActions.emit(employee().profileId)">
-          <span class="material-symbols-outlined text-[16px] text-on-surface-variant">
-            more_horiz
-          </span>
-        </button>
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-0.5">STATUT</p>
+          <div class="flex items-center gap-1.5">
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              [style.background-color]="statusColor()"
+              [style.box-shadow]="statusGlow()"
+            ></span>
+            <p class="font-semibold text-[13px] text-on-surface uppercase truncate">{{ statusLabel() }}</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-0.5">DATE D'EMBAUCHE</p>
+          <p class="font-semibold text-[13px] text-on-surface">{{ employee().hireDate || '-' }}</p>
+        </div>
+
       </div>
 
     </div>
+
+    <!-- Footer -->
+    <div class="flex justify-end mt-4 shrink-0">
+      <button
+        type="button"
+        class="bg-[#3a6567] text-white px-7 py-2.5 rounded-lg font-semibold
+               text-[13px] hover:opacity-90 active:scale-95 transition-all shadow-sm"
+        (click)="viewProfile.emit(employee().profileId)"
+      >
+        Voir profil
+      </button>
+    </div>
+
+  </div>
+</daf-card>
   `,
 })
 export class ProfileGridCardComponent {
@@ -122,18 +153,64 @@ export class ProfileGridCardComponent {
   readonly onSelect    = output<{ userId: number; checked: boolean }>();
   readonly onEdit      = output<number>();
   readonly onDelete    = output<number>();
-  readonly avatarUrl    = avatarUrl;
-  readonly getAvatarUrl = getAvatarUrl;
 
   hovered = signal(false);
 
-  resolvePhoto(url: string | null): string | null {
-    if (!url) return null;
-    if (url.startsWith('/api/')) return environment.hrApiUrl + url;
-    return url;
+  // 0 = try real photo, 1 = try gender avatar, 2 = show initials
+  private readonly imgPhase = signal<0 | 1 | 2>(0);
+
+  readonly photoSrc = computed((): string | null => {
+    const emp = this.employee();
+    const phase = this.imgPhase();
+    const photoUrl = (emp.photoUrl && emp.profileId)
+      ? `/api/hr/profiles/${emp.profileId}/photo`
+      : null;
+    const genderUrl = emp.gender
+      ? (emp.gender === 'FEMININ' ? '/images/avatars/female.png' : '/images/avatars/male.png')
+      : null;
+
+    if (phase === 0) return photoUrl ?? genderUrl ?? null;
+    if (phase === 1) return genderUrl ?? null;
+    return null;
+  });
+
+  readonly initials    = computed(() => getInitials(this.employee().fullName || '??'));
+  readonly initialsColor = computed(() => {
+    const palette = ['#3a6567', '#617f88', '#4a7c8f', '#2d5a6b', '#5a8a96', '#3d6b72'];
+    const code = (this.employee().fullName || '').charCodeAt(0) || 0;
+    return palette[code % palette.length];
+  });
+
+  private readonly STATUS_MAP: Record<string, { color: string; label: string; glow?: string }> = {
+    ACTIVE:         { color: '#10b981', label: 'Actif',          glow: '0 0 8px rgba(16,185,129,0.5)' },
+    ON_LEAVE:       { color: '#f59e0b', label: 'En congé' },
+    ON_MISSION:     { color: '#3b82f6', label: 'En mission' },
+    OFFBOARDING:    { color: '#f97316', label: 'Offboarding' },
+    TERMINATED:     { color: '#ef4444', label: 'Terminé' },
+    PRE_ONBOARDING: { color: '#8b5cf6', label: 'Pré-onboarding' },
+    ARCHIVED:       { color: '#6b7280', label: 'Archivé' },
+  };
+
+  readonly statusColor = computed(() => {
+    const s = this.employee().lifecycleStatus;
+    return s ? (this.STATUS_MAP[s]?.color ?? '#6b7280') : '#6b7280';
+  });
+  readonly statusLabel = computed(() => {
+    const s = this.employee().lifecycleStatus;
+    return s ? (this.STATUS_MAP[s]?.label ?? s) : '-';
+  });
+  readonly statusGlow = computed(() => {
+    const s = this.employee().lifecycleStatus;
+    return s ? (this.STATUS_MAP[s]?.glow ?? null) : null;
+  });
+
+  onImgError(): void {
+    const emp = this.employee();
+    const hasRealPhoto = !!(emp.photoUrl && emp.profileId);
+    this.imgPhase.update(p => (p === 0 && hasRealPhoto ? 1 : 2));
   }
 
-  handleSelect(checked: boolean): void {        
+  handleSelect(checked: boolean): void {
     const id = this.employee().userId;
     if (id != null) this.onSelect.emit({ userId: id, checked });
   }
