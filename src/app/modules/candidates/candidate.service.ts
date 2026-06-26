@@ -7,7 +7,6 @@ import {
   CandidateFilter, CandidateListItem, CandidateDetail,
   CreateCandidateRequest, UpdateCandidateRequest,
   CandidateStats, CandidateHistoryItem, PageResponse,
-  HireCandidateRequest, HireCandidateResponse,
 } from './candidate.model';
 
 @Injectable({ providedIn: 'root' })

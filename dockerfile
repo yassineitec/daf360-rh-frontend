@@ -4,7 +4,7 @@ COPY package*.json ./
 COPY .npmrc .npmrc
 RUN npm ci --legacy-peer-deps
 COPY . .
-RUN npx ng build --configuration production
+RUN npm run build
  
 FROM nginx:alpine
 COPY --from=build /app/dist/daf360-rh-frontend/browser /usr/share/nginx/html
