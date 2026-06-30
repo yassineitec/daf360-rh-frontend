@@ -1,11 +1,21 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { CardComponent, ProgressBarComponent } from '@khalilrebhiitec/daf360';
+import {
+  CardComponent,
+  MetricCardComponent,
+  ProgressBarComponent,
+  ButtonComponent,
+  StatusBadgeComponent,
+  BulkActionBarComponent,
+} from '@khalilrebhiitec/daf360';
 import {
   PipelineService,
   KanbanColumn,
   KanbanCandidate,
+  PipelineStats,
+  PipelineActivity,
+  PipelineObjective,
 } from './services/pipeline.service';
 import { getAvatarUrl } from '../../shared/utils/avatar.utils';
 
@@ -18,33 +28,70 @@ interface StageCard {
   accent: boolean;
 }
 
-const STAGE_STYLES = [
-  { icon: 'search',            iconBg: 'bg-blue-100',   iconColor: 'text-blue-600',   accent: false },
-  { icon: 'record_voice_over', iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   accent: true  },
-  { icon: 'description',       iconBg: 'bg-orange-100', iconColor: 'text-orange-500', accent: false },
-  { icon: 'check_circle',      iconBg: 'bg-green-100',  iconColor: 'text-green-600',  accent: false },
+interface BulkAction {
+  id: string;
+  label: string;
+  icon: string;
+  variant?: 'default' | 'danger';
+}
+
+const STAGE_STYLES: Array<{ label: string; icon: string; iconBg: string; iconColor: string; accent: boolean }> = [
+  { label: 'Sourcing',   icon: 'search',       iconBg: 'bg-blue-100',   iconColor: 'text-blue-600',   accent: false },
+  { label: 'Entretien',  icon: 'forum',         iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   accent: true  },
+  { label: 'Offre',      icon: 'description',   iconBg: 'bg-orange-100', iconColor: 'text-orange-500', accent: false },
+  { label: 'Recruté',    icon: 'check_circle',  iconBg: 'bg-green-100',  iconColor: 'text-green-600',  accent: false },
 ];
+
+const ACTIVITY_META: Record<string, { icon: string; bg: string; color: string }> = {
+  ACCEPT:                   { icon: 'verified',      bg: 'bg-teal-100',    color: 'text-teal-700'   },
+  HIRE_CANDIDATE:           { icon: 'check_circle',  bg: 'bg-green-100',   color: 'text-green-600'  },
+  REJECT:                   { icon: 'person_remove', bg: 'bg-red-100',     color: 'text-red-500'    },
+  CREATE:                   { icon: 'person_add',    bg: 'bg-blue-100',    color: 'text-blue-600'   },
+  UPLOAD_CV:                { icon: 'upload_file',   bg: 'bg-teal-100',    color: 'text-teal-600'   },
+  COMPLETE_IT_PROVISIONING: { icon: 'terminal',      bg: 'bg-teal-100',    color: 'text-teal-600'   },
+  UPDATE:                   { icon: 'mail_outline',  bg: 'bg-orange-100',  color: 'text-orange-600' },
+};
+
+type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'secondary' | 'neutral' | 'teal';
+
+const BADGE_VARIANT: Record<string, BadgeVariant> = {
+  urgent:      'danger',
+  new:         'info',
+  in_progress: 'teal',
+  offer:       'warning',
+  hired:       'success',
+  rejected:    'neutral',
+  top:         'success',
+};
 
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [CardComponent, ProgressBarComponent],
+  imports: [CardComponent, MetricCardComponent, ProgressBarComponent, ButtonComponent, StatusBadgeComponent, BulkActionBarComponent],
   templateUrl: './pipeline.component.html',
 })
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
   private router          = inject(Router);
 
-  readonly kanbanColumns   = signal<KanbanColumn[]>([]);
-  readonly candidates      = signal<KanbanCandidate[]>([]);
-  readonly loading         = signal(true);
-  readonly searchQuery     = signal('');
-  readonly selectedIds     = signal(new Set<number>());
-  readonly avatarFailed    = signal(new Set<number>());
+  readonly kanbanColumns = signal<KanbanColumn[]>([]);
+  readonly candidates    = signal<KanbanCandidate[]>([]);
+  readonly stats         = signal<PipelineStats | null>(null);
+  readonly activities    = signal<PipelineActivity[]>([]);
+  readonly objectives    = signal<PipelineObjective[]>([]);
+  readonly loading       = signal(true);
+  readonly searchQuery   = signal('');
+  readonly selectedIds   = signal(new Set<number>());
+  readonly avatarFailed  = signal(new Set<number>());
+
+  readonly bulkActions: BulkAction[] = [
+    { id: 'planifier', label: 'Planifier entretien', icon: 'calendar_month'          },
+    { id: 'offre',     label: 'Envoyer offre',        icon: 'send'                    },
+    { id: 'rejeter',   label: 'Rejeter',               icon: 'close', variant: 'danger' },
+  ];
 
   readonly stageCards = computed<StageCard[]>(() =>
     this.kanbanColumns().slice(0, 4).map((col, i) => ({
-      label: col.stageLabel,
       count: col.count,
       ...(STAGE_STYLES[i] ?? STAGE_STYLES[0]),
     }))
@@ -60,20 +107,31 @@ export class PipelineComponent implements OnInit {
 
   readonly selectedCount = computed(() => this.selectedIds().size);
 
-  readonly recentActivities = [
-    { icon: 'person_check',  description: 'Ahmed Belaid → Entretien Technique', time: 'il y a 2h',  color: 'text-blue-500' },
-    { icon: 'send',          description: 'Ibrahim Tlili — Offre Envoyée',        time: 'il y a 4h',  color: 'text-teal-600' },
-    { icon: 'check_circle',  description: 'Sana Khelifi — Recrutée',              time: 'hier',        color: 'text-green-500' },
-  ];
+  readonly currentObjective = computed<PipelineObjective | null>(() => {
+    const objs = this.objectives();
+    return objs.length ? objs[objs.length - 1] : null;
+  });
+
+  readonly objectiveProgress = computed<number>(() => {
+    const obj = this.currentObjective();
+    if (!obj || obj.target === 0) return 0;
+    return Math.min(100, Math.round((obj.actual / obj.target) * 100));
+  });
 
   ngOnInit(): void {
     forkJoin({
-      kanban: this.pipelineService.getKanban(),
-      list:   this.pipelineService.getCandidates({ page: 0, size: 20 }),
+      kanban:     this.pipelineService.getKanban(),
+      list:       this.pipelineService.getCandidates({ page: 0, size: 20 }),
+      stats:      this.pipelineService.getStats(),
+      activities: this.pipelineService.getActivity(),
+      objectives: this.pipelineService.getObjectives(),
     }).subscribe({
-      next: ({ kanban, list }) => {
+      next: ({ kanban, list, stats, activities, objectives }) => {
         this.kanbanColumns.set(kanban);
         this.candidates.set(list.content);
+        this.stats.set(stats);
+        this.activities.set(activities);
+        this.objectives.set(objectives);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -90,6 +148,11 @@ export class PipelineComponent implements OnInit {
 
   onSearch(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  onBulkAction(actionId: string): void {
+    // TODO: implement bulk actions
+    console.log('bulk action:', actionId, [...this.selectedIds()]);
   }
 
   toggleSelect(id: number, event: Event): void {
@@ -110,9 +173,18 @@ export class PipelineComponent implements OnInit {
   }
 
   getCardVariant(candidate: KanbanCandidate): 'provisioning' | 'onboarding' | 'default' {
-    if (candidate.status === 'IT_IN_PROGRESS')  return 'provisioning';
-    if (candidate.status === 'HR_IN_PROGRESS')  return 'onboarding';
+    const s = candidate.status;
+    if (s === 'IT_IN_PROGRESS' || s === 'EMAIL_RECEIVED') return 'provisioning';
+    if (s === 'HR_IN_PROGRESS' || s === 'HIRED')          return 'onboarding';
     return 'default';
+  }
+
+  badgeVariant(badgeType: string): BadgeVariant {
+    return BADGE_VARIANT[badgeType] ?? 'neutral';
+  }
+
+  activityMeta(action: string) {
+    return ACTIVITY_META[action] ?? { icon: 'info', bg: 'bg-surface-container', color: 'text-outline' };
   }
 
   resolveAvatar(candidate: KanbanCandidate): string {
@@ -129,8 +201,10 @@ export class PipelineComponent implements OnInit {
 
   formatDate(dateStr: string | undefined): string {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    });
+    return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  formatDelay(days: number): string {
+    return `Moy. ${Math.round(days)}j`;
   }
 }

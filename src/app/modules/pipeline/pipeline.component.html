@@ -2,239 +2,285 @@
   <div class="flex-1 overflow-y-auto">
     <div class="p-8 space-y-6">
 
-      <!-- Page header -->
-      <div class="flex justify-between items-center">
+      <!-- ── Page header ───────────────────────────────────────────── -->
+      <div class="flex justify-between items-end">
         <div>
           <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
             Pipeline de Recrutement
           </h1>
-          <p class="text-[14px] text-outline mt-1">
-            Suivi en temps réel des processus d'embauche actifs.
+          <p class="text-[16px] text-outline mt-1">
+            Suivi en temps réel des talents et de leur intégration.
           </p>
         </div>
       </div>
 
-      <!-- Stage counter cards -->
-      <div class="grid grid-cols-4 gap-4">
-        @for (card of stageCards(); track card.label) {
-          <daf-card
-            [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }"
-            [style.border-left]="card.accent ? '4px solid #79D7BE' : null">
-            <div class="flex items-center gap-4">
-              <div class="p-3 rounded-xl shrink-0" [class]="card.iconBg">
-                <span class="material-symbols-outlined text-[24px]" [class]="card.iconColor">
-                  {{ card.icon }}
-                </span>
-              </div>
-              <div>
-                <p class="text-[13px] text-outline">{{ card.label }}</p>
-                <p class="text-[26px] font-bold text-on-surface leading-none mt-0.5">{{ card.count }}</p>
-                <p class="text-[11px] text-outline mt-0.5">Candidats actifs</p>
-              </div>
-            </div>
-          </daf-card>
-        }
+      <!-- ── Stage counter cards ───────────────────────────────────── -->
+      <div class="flex flex-row gap-4">
 
-        <!-- Skeleton placeholders when no columns yet -->
         @if (stageCards().length === 0 && loading()) {
           @for (i of [1, 2, 3, 4]; track i) {
-            <div class="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant animate-pulse">
+            <div class="flex-1 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-surface-container shrink-0"></div>
                 <div class="space-y-2">
-                  <div class="w-20 h-3 rounded bg-surface-container"></div>
+                  <div class="w-16 h-3 rounded bg-surface-container"></div>
                   <div class="w-10 h-7 rounded bg-surface-container"></div>
                 </div>
               </div>
             </div>
           }
         }
+
+        @for (card of stageCards(); track card.label) {
+          <daf-metric-card
+            class="flex-1"
+            [label]="card.label"
+            [value]="card.count"
+            [options]="{ icon: card.icon, iconBg: card.iconBg, iconColor: card.iconColor }"
+            >
+          </daf-metric-card>
+        }
       </div>
 
-      <!-- Loading spinner (initial) -->
+      <!-- Loading spinner -->
       @if (loading()) {
         <div class="flex justify-center items-center h-64">
           <span class="material-symbols-outlined text-[48px] text-outline animate-spin">
             progress_activity
           </span>
         </div>
+
       } @else {
 
-        <!-- 2/3 + 1/3 grid -->
-        <div class="grid grid-cols-3 gap-6">
+        <!-- ── 2/3 + 1/3 main layout ─────────────────────────────────── -->
+        <div class="flex flex-row gap-6">
 
-          <!-- ─── LEFT: Candidatures en cours ─── -->
-          <div class="col-span-2 space-y-4">
+          <!-- ═══ LEFT: Candidatures en cours ═══ -->
+          <div class="flex-2 min-w-0 flex flex-col gap-4">
 
-            <!-- Section header + search -->
-            <div class="flex items-center justify-between gap-4">
-              <h2 class="text-[17px] font-bold text-on-surface shrink-0">Candidatures en cours</h2>
+            <!-- Section header + search bar -->
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-[17px] font-semibold text-on-surface shrink-0">Candidatures en cours</h2>
               <div class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-outline pointer-events-none">
-                  search
-                </span>
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2
+                             text-[18px] text-outline pointer-events-none">search</span>
                 <input
                   type="text"
-                  placeholder="Rechercher un candidat..."
-                  class="pl-9 pr-4 py-2 rounded-lg border border-outline-variant bg-surface
-                         text-[13px] text-on-surface outline-none focus:border-[#50717B] transition-colors"
+                  placeholder="Rechercher..."
+                  class="pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-white
+                         text-[13px] text-on-surface outline-none
+                         focus:border-[#79D7BE] focus:ring-1 focus:ring-[#79D7BE] transition-colors"
                   [value]="searchQuery()"
                   (input)="onSearch($event)" />
               </div>
             </div>
 
-            <!-- Candidate cards -->
+            <!-- ── Candidate cards ── -->
             <div class="space-y-3">
+
               @for (candidate of filteredCandidates(); track candidate.id) {
 
+                <!-- ▸ PROVISIONING IT variant -->
                 @if (getCardVariant(candidate) === 'provisioning') {
-                  <!-- ── Provisioning IT card ── -->
-                  <daf-card
-                    [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }"
-                    style="border-left: 4px solid #79D7BE">
-                    <div class="p-4">
-                      <div class="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          class="w-4 h-4 rounded accent-teal shrink-0 cursor-pointer"
-                          [checked]="isSelected(candidate.id)"
-                          (change)="toggleSelect(candidate.id, $event)" />
-                        <!-- Avatar -->
-                        <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-outline-variant bg-surface-container-high flex items-center justify-center">
+                  <div class="bg-surface-container-lowest p-5 rounded-xl
+                               border border-outline-variant border-l-4 border-l-[#79D7BE]
+                               hover:shadow-md transition-all">
+                    <div class="flex items-start justify-between gap-4">
+
+                      <!-- Left: avatar + info -->
+                      <div class="flex gap-4 flex-1 min-w-0">
+                        <div class="w-12 h-12 rounded-full overflow-hidden shrink-0
+                                    border border-outline-variant bg-surface-container-high
+                                    flex items-center justify-center">
                           @if (!avatarFailed().has(candidate.id)) {
                             <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
                                  class="w-full h-full object-cover"
                                  (error)="onAvatarError(candidate.id)" />
                           } @else {
-                            <span class="text-[13px] font-bold text-on-surface-variant">{{ initials(candidate.fullName) }}</span>
-                          }
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="text-[14px] font-bold text-on-surface truncate">{{ candidate.fullName }}</p>
-                          <p class="text-[12px] text-outline truncate">{{ candidate.poste }}</p>
-                        </div>
-                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 shrink-0">
-                          {{ candidate.stageLabel ?? candidate.stage }}
-                        </span>
-                      </div>
-                      <!-- IT progress -->
-                      <div class="mt-3">
-                        <div class="flex justify-between text-[12px] mb-1.5">
-                          <span class="text-outline">Provisioning IT</span>
-                          <span class="font-bold text-teal-600">60%</span>
-                        </div>
-                        <daf-progress-bar [value]="60" [options]="{ variant: 'teal' }" />
-                        <p class="text-[11px] text-outline mt-1">2 éléments en attente</p>
-                      </div>
-                      <div class="mt-3">
-                        <button class="text-[12px] px-3 py-1.5 rounded-lg border border-[#79D7BE]
-                                       text-[#50717B] font-semibold hover:bg-teal-50 transition-colors">
-                          Relancer IT
-                        </button>
-                      </div>
-                    </div>
-                  </daf-card>
-
-                } @else if (getCardVariant(candidate) === 'onboarding') {
-                  <!-- ── Onboarding RH card ── -->
-                  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-                    <div class="p-4">
-                      <div class="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          class="w-4 h-4 rounded accent-teal shrink-0 cursor-pointer"
-                          [checked]="isSelected(candidate.id)"
-                          (change)="toggleSelect(candidate.id, $event)" />
-                        <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-outline-variant bg-surface-container-high flex items-center justify-center">
-                          @if (!avatarFailed().has(candidate.id)) {
-                            <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
-                                 class="w-full h-full object-cover"
-                                 (error)="onAvatarError(candidate.id)" />
-                          } @else {
-                            <span class="text-[13px] font-bold text-on-surface-variant">{{ initials(candidate.fullName) }}</span>
-                          }
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="text-[14px] font-bold text-on-surface truncate">{{ candidate.fullName }}</p>
-                          <p class="text-[12px] text-outline truncate">{{ candidate.poste }}</p>
-                        </div>
-                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">
-                          {{ candidate.stageLabel ?? candidate.stage }}
-                        </span>
-                      </div>
-                      <!-- Onboarding steps -->
-                      <div class="flex items-center gap-2 mt-3">
-                        @for (done of [true, true, false, false]; track $index) {
-                          <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                               [class]="done ? 'bg-green-100 text-green-600' : 'bg-surface-container text-outline'">
-                            <span class="material-symbols-outlined text-[14px]">{{ done ? 'check' : 'radio_button_unchecked' }}</span>
-                          </div>
-                        }
-                        <span class="text-[12px] text-outline ml-1">Onboarding RH: 50%</span>
-                      </div>
-                      <div class="mt-3">
-                        <button class="text-[12px] px-3 py-1.5 rounded-lg border border-outline-variant
-                                       text-outline font-semibold hover:bg-surface-container transition-colors">
-                          Compléter RH
-                        </button>
-                      </div>
-                    </div>
-                  </daf-card>
-
-                } @else {
-                  <!-- ── Default candidate card ── -->
-                  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }">
-                    <div class="p-4 flex items-center gap-3 group cursor-pointer"
-                         (click)="onCandidateClick(candidate.id)">
-                      <input
-                        type="checkbox"
-                        class="w-4 h-4 rounded accent-teal shrink-0 cursor-pointer"
-                        [checked]="isSelected(candidate.id)"
-                        (change)="toggleSelect(candidate.id, $event)" />
-                      <!-- Avatar -->
-                      <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-outline-variant bg-surface-container-high flex items-center justify-center">
-                        @if (!avatarFailed().has(candidate.id)) {
-                          <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
-                               class="w-full h-full object-cover"
-                               (error)="onAvatarError(candidate.id)" />
-                        } @else {
-                          <span class="text-[13px] font-bold text-on-surface-variant">{{ initials(candidate.fullName) }}</span>
-                        }
-                      </div>
-                      <!-- Info -->
-                      <div class="flex-1 min-w-0">
-                        <p class="text-[14px] font-bold text-on-surface truncate">{{ candidate.fullName }}</p>
-                        <p class="text-[12px] text-outline truncate">{{ candidate.poste }}</p>
-                        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                          @if (candidate.contractType) {
-                            <span class="text-[11px] text-outline">{{ candidate.contractType }}</span>
-                          }
-                          @if (candidate.applicationDate) {
-                            <span class="text-[11px] text-outline">
-                              {{ candidate.contractType ? '·' : '' }} {{ formatDate(candidate.applicationDate) }}
+                            <span class="text-[14px] font-bold text-on-surface-variant">
+                              {{ candidate.initials ?? initials(candidate.fullName) }}
                             </span>
                           }
-                          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full
-                                       bg-surface-container text-on-surface-variant">
-                            {{ candidate.stageLabel ?? candidate.stage }}
-                          </span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-[14px] font-bold text-on-surface">{{ candidate.fullName }}</p>
+                          <p class="text-[13px] text-outline">{{ candidate.poste }}</p>
+                          <!-- Provisioning progress block -->
+                          <div class="mt-3 p-3 bg-surface-container-low rounded-lg
+                                      border border-outline-variant/50">
+                            <div class="flex justify-between items-center mb-2">
+                              <span class="text-[12px] font-semibold text-on-surface flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">terminal</span>
+                                Provisioning IT
+                              </span>
+                              <span class="text-[12px] font-bold text-[#50717B]">75%</span>
+                            </div>
+                            <daf-progress-bar
+                              [value]="75"
+                              [options]="{ variant: 'teal', size: 'xs' }" />
+                            <p class="text-[11px] text-outline mt-1.5 italic">
+                              En attente de : Accès Slack &amp; Jira
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <!-- Hover quick actions -->
-                      <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0">
-                        <button
-                          class="p-1.5 rounded-lg hover:bg-surface-container transition-colors"
-                          (click)="onCandidateClick(candidate.id); $event.stopPropagation()">
-                          <span class="material-symbols-outlined text-[18px] text-outline">check_circle</span>
-                        </button>
-                        <button
-                          class="p-1.5 rounded-lg hover:bg-surface-container transition-colors"
-                          (click)="$event.stopPropagation()">
-                          <span class="material-symbols-outlined text-[18px] text-outline">calendar_month</span>
-                        </button>
+
+                      <!-- Right: button + checkbox -->
+                      <div class="flex flex-col items-end gap-3 shrink-0">
+                        <daf-button
+                          label="Relancer IT"
+                          [options]="{ variant: 'primary', size: 'sm' }">
+                        </daf-button>
+                        <input
+                          type="checkbox"
+                          class="w-5 h-5 rounded border-outline-variant cursor-pointer"
+                          [checked]="isSelected(candidate.id)"
+                          (change)="toggleSelect(candidate.id, $event)" />
                       </div>
                     </div>
-                  </daf-card>
+                  </div>
+
+                <!-- ▸ ONBOARDING RH variant -->
+                } @else if (getCardVariant(candidate) === 'onboarding') {
+                  <div class="bg-surface-container-lowest p-5 rounded-xl
+                               border border-outline-variant hover:shadow-md transition-all">
+                    <div class="flex items-start justify-between gap-4">
+
+                      <!-- Left: avatar + info -->
+                      <div class="flex gap-4 flex-1 min-w-0">
+                        <div class="w-12 h-12 rounded-full overflow-hidden shrink-0
+                                    border border-outline-variant bg-surface-container-high
+                                    flex items-center justify-center">
+                          @if (!avatarFailed().has(candidate.id)) {
+                            <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
+                                 class="w-full h-full object-cover"
+                                 (error)="onAvatarError(candidate.id)" />
+                          } @else {
+                            <span class="text-[14px] font-bold text-on-surface-variant">
+                              {{ candidate.initials ?? initials(candidate.fullName) }}
+                            </span>
+                          }
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-[14px] font-bold text-on-surface">{{ candidate.fullName }}</p>
+                          <p class="text-[13px] text-outline">{{ candidate.poste }}</p>
+                          <!-- Onboarding step icons -->
+                          <div class="mt-3 flex items-center gap-4">
+                            <div class="flex -space-x-2">
+                              <div class="w-8 h-8 rounded-full border-2 border-white
+                                          bg-green-500 flex items-center justify-center text-white"
+                                   title="Contrat Signé">
+                                <span class="material-symbols-outlined text-[16px]">draw</span>
+                              </div>
+                              <div class="w-8 h-8 rounded-full border-2 border-white
+                                          bg-green-500 flex items-center justify-center text-white"
+                                   title="RIB Reçu">
+                                <span class="material-symbols-outlined text-[16px]">account_balance</span>
+                              </div>
+                              <div class="w-8 h-8 rounded-full border-2 border-white
+                                          bg-surface-container-high flex items-center justify-center text-outline"
+                                   title="Mutuelle (En cours)">
+                                <span class="material-symbols-outlined text-[16px]">medical_services</span>
+                              </div>
+                              <div class="w-8 h-8 rounded-full border-2 border-white
+                                          bg-surface-container-high flex items-center justify-center text-outline"
+                                   title="Onboarding RH">
+                                <span class="material-symbols-outlined text-[16px]">person_add</span>
+                              </div>
+                            </div>
+                            <span class="text-[12px] text-outline">Onboarding RH : 50%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Right: button + checkbox -->
+                      <div class="flex flex-col items-end gap-3 shrink-0">
+                        <daf-button
+                          label="Compléter RH"
+                          [options]="{ variant: 'ghost', size: 'sm' }">
+                        </daf-button>
+                        <input
+                          type="checkbox"
+                          class="w-5 h-5 rounded border-outline-variant cursor-pointer"
+                          [checked]="isSelected(candidate.id)"
+                          (change)="toggleSelect(candidate.id, $event)" />
+                      </div>
+                    </div>
+                  </div>
+
+                <!-- ▸ DEFAULT candidate card -->
+                } @else {
+                  <div class="profile-card bg-surface-container-lowest p-5 rounded-xl
+                               border border-outline-variant hover:shadow-md transition-all
+                               group relative cursor-pointer"
+                       (click)="onCandidateClick(candidate.id)">
+                    <div class="flex items-start justify-between gap-4">
+
+                      <!-- Left: avatar + info -->
+                      <div class="flex gap-4">
+                        <div class="w-12 h-12 rounded-full overflow-hidden shrink-0
+                                    border border-outline-variant bg-surface-container-high
+                                    flex items-center justify-center">
+                          @if (!avatarFailed().has(candidate.id)) {
+                            <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
+                                 class="w-full h-full object-cover"
+                                 (error)="onAvatarError(candidate.id)" />
+                          } @else {
+                            <span class="text-[14px] font-bold text-on-surface-variant">
+                              {{ candidate.initials ?? initials(candidate.fullName) }}
+                            </span>
+                          }
+                        </div>
+                        <div>
+                          <p class="text-[14px] font-bold text-on-surface">{{ candidate.fullName }}</p>
+                          <p class="text-[13px] text-outline">{{ candidate.poste }}</p>
+                          <!-- Meta row: contract · date · badge -->
+                          <div class="flex items-center gap-3 mt-2 flex-wrap">
+                            @if (candidate.contractType) {
+                              <span class="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[14px]">work</span>
+                                {{ candidate.contractType }}
+                              </span>
+                            }
+                            @if (candidate.applicationDate) {
+                              <span class="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[14px]">event</span>
+                                {{ formatDate(candidate.applicationDate) }}
+                              </span>
+                            }
+                            <daf-badge
+                              [label]="candidate.badge"
+                              [options]="{ variant: badgeVariant(candidate.badgeType), size: 'sm' }">
+                            </daf-badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Right: hover actions + checkbox -->
+                      <div class="flex flex-col items-end gap-2 shrink-0">
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            class="p-2 hover:bg-surface-container rounded-lg text-[#50717B] transition-colors"
+                            title="Valider l'étape"
+                            (click)="onCandidateClick(candidate.id); $event.stopPropagation()">
+                            <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                          </button>
+                          <button
+                            class="p-2 hover:bg-surface-container rounded-lg text-outline transition-colors"
+                            title="Planifier"
+                            (click)="$event.stopPropagation()">
+                            <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                          </button>
+                        </div>
+                        <input
+                          type="checkbox"
+                          class="w-5 h-5 rounded border-outline-variant cursor-pointer"
+                          [checked]="isSelected(candidate.id)"
+                          (change)="toggleSelect(candidate.id, $event)"
+                          (click)="$event.stopPropagation()" />
+                      </div>
+                    </div>
+                  </div>
                 }
 
               }
@@ -242,65 +288,93 @@
               <!-- Empty state -->
               @if (filteredCandidates().length === 0) {
                 <div class="text-center py-16 text-outline">
-                  <span class="material-symbols-outlined text-5xl block mb-3">inbox</span>
+                  <span class="material-symbols-outlined text-[48px] block mb-3">inbox</span>
                   <p class="text-[14px]">Aucune candidature trouvée</p>
                 </div>
               }
+
             </div>
           </div>
 
-          <!-- ─── RIGHT sidebar ─── -->
-          <div class="space-y-4">
+          <!-- ═══ RIGHT: Sidebar ═══ -->
+          <div class="flex-1 min-w-0 flex flex-col gap-4">
 
             <!-- Activités Récentes -->
             <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
               <h3 class="text-[15px] font-bold text-on-surface mb-4">Activités Récentes</h3>
-              <div class="space-y-3">
-                @for (activity of recentActivities; track $index) {
-                  <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0">
-                      <span class="material-symbols-outlined text-[16px]" [class]="activity.color">
-                        {{ activity.icon }}
+              <div class="space-y-4">
+                @for (activity of activities(); track activity.id) {
+                  <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                         [class]="activityMeta(activity.action).bg">
+                      <span class="material-symbols-outlined text-[18px]"
+                            [class]="activityMeta(activity.action).color">
+                        {{ activityMeta(activity.action).icon }}
                       </span>
                     </div>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-[13px] text-on-surface">{{ activity.description }}</p>
-                      <p class="text-[11px] text-outline mt-0.5">{{ activity.time }}</p>
+                    <div>
+                      <p class="text-[13px] text-on-surface">
+                        {{ activity.actionLabel }}
+                        @if (activity.candidateName) {
+                          — <b>{{ activity.candidateName }}</b>
+                        }
+                      </p>
+                      <p class="text-[11px] text-outline">{{ activity.timestamp }}</p>
                     </div>
                   </div>
                 }
+                @if (activities().length === 0) {
+                  <p class="text-[13px] text-outline text-center py-3">Aucune activité récente</p>
+                }
               </div>
-              <button class="mt-4 w-full py-2 text-[13px] text-outline border border-outline-variant
-                             rounded-lg hover:bg-surface-container transition-colors">
+              <button class="w-full mt-6 py-2 text-[13px] text-[#50717B]
+                             border border-[#50717B]/20 rounded-lg
+                             hover:bg-[#50717B]/5 transition-colors">
                 Voir tout l'historique
               </button>
             </daf-card>
 
-            <!-- Objectifs du Mois (dark card) -->
-            <div class="rounded-2xl p-5 space-y-4" style="background-color: #50717B">
-              <h3 class="text-[15px] font-bold text-white">Objectifs du Mois</h3>
+            <!-- Objectifs du Mois — dark card -->
+            <div class="rounded-xl p-6 text-white space-y-4" style="background-color: #50717B">
+              <h3 class="text-[15px] font-bold">Objectifs du Mois</h3>
 
-              <!-- Recrutements Tech -->
-              <div>
-                <div class="flex justify-between text-[13px] text-white mb-2">
-                  <span>Recrutements Tech</span>
-                  <span class="font-bold">8/10</span>
+              <!-- Recruitment target vs actual -->
+              @if (currentObjective(); as obj) {
+                <div>
+                  <div class="flex justify-between text-[13px] mb-1">
+                    <span>Recrutements — {{ obj.monthLabel }}</span>
+                    <span class="font-bold">{{ obj.actual }}/{{ obj.target }}</span>
+                  </div>
+                  <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-[#79D7BE] h-full rounded-full transition-all"
+                         [style.width.%]="objectiveProgress()"></div>
+                  </div>
                 </div>
-                <div class="w-full h-2 rounded-full" style="background: rgba(255,255,255,0.2)">
-                  <div class="h-2 rounded-full bg-white" style="width: 80%"></div>
+              } @else {
+                <div>
+                  <div class="flex justify-between text-[13px] mb-1">
+                    <span>Recrutements Tech</span>
+                    <span class="font-bold">—</span>
+                  </div>
+                  <div class="w-full bg-white/20 h-1.5 rounded-full"></div>
                 </div>
-              </div>
+              }
 
-              <!-- Délai de Provisioning -->
+              <!-- Pipeline delay -->
               <div>
-                <div class="flex justify-between text-[13px] text-white mb-2">
+                <div class="flex justify-between text-[13px] mb-1">
                   <span>Délai de Provisioning</span>
-                  <span class="font-bold" style="color: #79D7BE">Moy. 3j</span>
+                  <span class="font-bold" style="color: #79D7BE">
+                    {{ stats() ? formatDelay(stats()!.delaiMoyenJours) : '—' }}
+                  </span>
                 </div>
-                <div class="w-full h-2 rounded-full" style="background: rgba(255,255,255,0.2)">
-                  <div class="h-2 rounded-full" style="width: 70%; background-color: #79D7BE"></div>
-                </div>
-                <p class="text-[11px] mt-1" style="color: rgba(255,255,255,0.6)">-1j vs objectif ce mois</p>
+                <p class="text-[11px] italic" style="color: rgba(255,255,255,0.65)">
+                  @if (stats()?.urgents) {
+                    {{ stats()!.urgents }} poste(s) urgent(s) ce mois
+                  } @else {
+                    Cible : &lt; 2 jours
+                  }
+                </p>
               </div>
             </div>
 
@@ -311,22 +385,15 @@
     </div>
   </div>
 
-  <!-- Bulk actions bar (fixed bottom, shown when items selected) -->
+  <!-- ── Bulk actions bar ─────────────────────────────────────────── -->
   @if (selectedCount() > 0) {
-    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-      <div class="flex items-center gap-3 text-white px-6 py-3 rounded-full shadow-xl pointer-events-auto"
-           style="background-color: #1b3a4b">
-        <span class="text-[13px] font-semibold">{{ selectedCount() }} sélectionné(s)</span>
-        <div class="w-px h-4 bg-white/30"></div>
-        <button class="text-[13px] hover:text-[#79D7BE] transition-colors">Planifier entretien</button>
-        <button class="text-[13px] hover:text-[#79D7BE] transition-colors">Envoyer offre</button>
-        <button class="text-[13px] hover:text-error transition-colors">Rejeter</button>
-        <div class="w-px h-4 bg-white/30"></div>
-        <button class="p-1 hover:text-white/60 transition-colors" (click)="clearSelection()">
-          <span class="material-symbols-outlined text-[18px]">close</span>
-        </button>
-      </div>
-    </div>
+    <daf-bulk-action-bar
+      [count]="selectedCount()"
+      [actions]="bulkActions"
+      countLabel="sélectionné(s)"
+      (cancel)="clearSelection()"
+      (actionClick)="onBulkAction($event)">
+    </daf-bulk-action-bar>
   }
 
 </div>
