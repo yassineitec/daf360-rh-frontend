@@ -11,6 +11,7 @@ import { ListManagerComponent }       from './lists/list-manager.component';
 import { NotificationRoutingComponent } from './notifications/notification-routing.component';
 import { RefDataAdminComponent }        from './ref-data-admin.component';
 import { OvertimeAdminComponent }       from './overtime/overtime-admin.component';
+import { InterviewTypesAdminComponent } from './interview-types-admin.component';
 
 const TABS: { key: AdminTab; label: string; permission: string }[] = [
   { key: 'roles',         label: 'Rôles & Permissions',  permission: 'GET_ROLES' },
@@ -22,7 +23,8 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
   { key: 'notifications', label: 'Notifications & Emails', permission: 'ADMIN_NOTIFICATIONS' },
   { key: 'breaks',        label: 'Gestion des pauses',    permission: 'ADMIN_BREAKS'         },
   { key: 'ref-data',      label: 'Données de référence',  permission: 'ADMIN_LISTS'          },
-  { key: 'overtime',      label: 'Heures supplémentaires', permission: 'GET_PAYS'             },
+  { key: 'overtime',        label: 'Heures supplémentaires', permission: 'GET_PAYS'             },
+  { key: 'interview-types', label: 'Types d\'entretiens',    permission: 'RH_ADMIN_INTERVIEW_TYPES' },
 ];
 
 @Component({
@@ -39,6 +41,7 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
     BreaksAdminComponent,
     RefDataAdminComponent,
     OvertimeAdminComponent,
+    InterviewTypesAdminComponent,
   ],
   template: `
     @if (!isAdmin()) {
@@ -78,7 +81,8 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
         @if (activeTab() === 'notifications') { <app-notification-routing /> }
         @if (activeTab() === 'breaks')        { <app-breaks-admin [paysId]="paysId()" /> }
         @if (activeTab() === 'ref-data')     { <app-ref-data-admin [paysId]="paysId()" /> }
-        @if (activeTab() === 'overtime')    { <app-overtime-admin [paysId]="paysId()" /> }
+        @if (activeTab() === 'overtime')          { <app-overtime-admin [paysId]="paysId()" /> }
+        @if (activeTab() === 'interview-types') { <app-interview-types-admin [paysId]="paysId()" /> }
       </div>
     }
   `,
