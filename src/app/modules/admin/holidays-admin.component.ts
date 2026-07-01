@@ -5,11 +5,12 @@ import { AdminService }     from './admin.service';
 import { Holiday }          from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { ModalComponent }   from '../../shared/modal.component';
+import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-holidays-admin',
   standalone: true,
-  imports: [FormsModule, SpinnerComponent, ModalComponent],
+  imports: [FormsModule, SpinnerComponent, ModalComponent, MultiDatePickerComponent],
   template: `
     <div class="section-header">
       <div>
@@ -86,8 +87,11 @@ import { ModalComponent }   from '../../shared/modal.component';
     >
       <div class="modal-form">
         <div class="field-row">
-          <label class="form-label">Date *</label>
-          <input class="form-input" type="date" [(ngModel)]="form.dateHoliday" />
+          <daf-multi-date-picker
+            [value]="holidayPickerValue"
+            [config]="{ label: 'Date', selectionMode: 'single', required: true, placeholder: 'Sélectionner une date' }"
+            (valueChange)="onHolidayDateChange($event)"
+          />
         </div>
         <div class="field-row">
           <label class="form-label">Libellé français *</label>
@@ -190,6 +194,14 @@ export class HolidaysAdminComponent implements OnChanges {
 
   fmtDate(iso: string): string {
     try { return new Date(iso).toLocaleDateString('fr-FR'); } catch { return iso; }
+  }
+
+  get holidayPickerValue(): Date | null {
+    return this.form.dateHoliday ? new Date(this.form.dateHoliday + 'T00:00:00') : null;
+  }
+
+  onHolidayDateChange(v: Date | Date[] | null): void {
+    this.form.dateHoliday = v instanceof Date ? v.toISOString().substring(0, 10) : '';
   }
 
   openAdd()  { this.editTarget.set(null); this.form = { dateHoliday: '', frenchLabel: '', englishLabel: '', isRecurring: false }; this.showModal.set(true); this.modalError.set(null); }

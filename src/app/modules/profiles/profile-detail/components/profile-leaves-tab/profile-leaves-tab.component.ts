@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import { MetricCardComponent, StatusBadgeComponent, DataTableComponent } from '@khalilrebhiitec/daf360';
+import { MetricCardComponent, DataTableComponent } from '@khalilrebhiitec/daf360';
 import type { TableColumn, TableRow, BadgeCell, MetricDelta } from '@khalilrebhiitec/daf360';
 import { LeaveBalanceDto, LeaveHistoryDto } from '../../../services/profile-detail.service';
 
@@ -22,7 +22,7 @@ const ETAT_LABELS: Record<string, string> = {
 @Component({
   selector: 'rh-profile-leaves-tab',
   standalone: true,
-  imports: [MetricCardComponent, StatusBadgeComponent, DataTableComponent],
+  imports: [MetricCardComponent, DataTableComponent],
   template: `
     <div class="space-y-6">
 

@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import '../node_modules/@khalilrebhiitec/daf360/styles.css';
+@import '../node_modules/@khalilrebhiitec/daf360/tokens.css';
+
+/* Tokens used by daf360 components but absent from tokens.css */
 @source "../src/**/*.{ts,html}";
 @source "../node_modules/@khalilrebhiitec/daf360/fesm2022/khalilrebhiitec-daf360.mjs";
 
@@ -11,123 +15,10 @@
 @source inline("{bg-primary,bg-secondary,bg-teal,bg-surface,bg-surface-container,bg-surface-container-lowest,bg-surface-container-high,bg-background,bg-error,bg-danger}");
 @source inline("{border-primary,border-secondary,border-outline,border-outline-variant,border-error}");
 
-@theme {
-  --font-sans: 'Inter', sans-serif;
-
-  /* ── Brand palette ───────────────────────── */
-  --color-primary:                  #1b3a4b;
-  --color-on-primary:               #ffffff;
-  --color-primary-container:        #dde1ff;
-  --color-on-primary-container:     #00105c;
-
-  --color-secondary:                #1b3a4b;
-  --color-on-secondary:             #ffffff;
-  --color-secondary-container:      #cce8f0;
-  --color-on-secondary-container:   #001f26;
-
-  --color-tertiary:                 #79D7BE;
-  --color-on-tertiary:              #ffffff;
-  --color-tertiary-fixed:           #ffddb8;
-  --color-on-tertiary-container:    #301d00;
-
-  --color-teal:                     #50717B;
-  --color-on-teal:                  #ffffff;
-  --color-teal-50:                  #f0f7f9;
-  --color-teal-100:                 #d6eaee;
-  --color-teal-light:               #79D7BE;
-
-  /* ── Semantic success / RH green ────────── */
-  --color-success:                  #006c49;
-  --color-on-success:               #ffffff;
-  --color-success-container:        #6cf8bb;
-
-  /* ── Surface scale ───────────────────────── */
-  --color-surface:                  #f8fafb;
-  --color-background:               #f8fafb;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low:    #f2f3f5;
-  --color-surface-container:        #edeef0;
-  --color-surface-container-high:   #e7e8ea;
-  --color-surface-container-highest:#e1e2e4;
-
-  /* ── Content ─────────────────────────────── */
-  --color-on-surface:               #1a1c1e;
-  --color-on-surface-variant:       #444653;
-  --color-outline:                  #757684;
-  --color-outline-variant:          #c4c5d5;
-
-  /* ── Feedback ────────────────────────────── */
-  --color-error:                    #ba1a1a;
-  --color-on-error:                 #ffffff;
-  --color-error-container:          #ffdad6;
-  --color-on-error-container:       #93000a;
-
-  --color-danger:                   #ba1a1a;
-  --color-warning:                  #e08c00;
-  --color-on-warning:               #ffffff;
-
-  /* ── Legacy operational vars ─────────────── */
-  --color-bg:                       #f8fafb;
-  --color-bg-secondary:             #eef2f5;
-  --color-text:                     #1a1c1e;
-  --color-text-muted:               #6b7280;
-  --color-border:                   #e0e7e9;
-
-  /* ── Spacing ─────────────────────────────── */
-  --spacing-xs:                     4px;
-  --spacing-sm:                     8px;
-  --spacing-md:                     16px;
-  --spacing-lg:                     24px;
-  --spacing-xl:                     32px;
-  --spacing-2xl:                    48px;
-  --spacing-gutter:                 24px;
-
-  /* ── Radius ──────────────────────────────── */
-  --radius-sm:                      4px;
-  --radius-md:                      8px;
-  --radius-lg:                      12px;
-  --radius-xl:                      16px;
-  --radius-full:                    9999px;
-
-  /* ── Shadow ──────────────────────────────── */
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
-  --shadow-md:   0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
-  --shadow-lg:   0 10px 15px rgba(0,0,0,0.07), 0 4px 6px rgba(0,0,0,0.05);
-
-  /* ── Typography ──────────────────────────── */
-  --font-display: 'Inter', sans-serif;
-  --font-body:    'Inter', sans-serif;
-}
-
-/* ── Glass utilities ─────────────────────── */
-@utility glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow:
-    0 4px 6px -1px rgba(0,0,0,0.1),
-    0 2px 4px -1px rgba(0,0,0,0.06),
-    inset 0 1px 0 0 rgba(255,255,255,0.5);
-}
-
-@utility soft-depth {
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.06),
-    0 0 0 1px rgba(0,0,0,0.04);
-}
-
-/* ── Material Symbols ────────────────────── */
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  line-height: 1;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* ── Base ────────────────────────────────── */
-html, body {
-  font-family: 'Inter', sans-serif;
-  background-color: #f8fafb;
-  color: #1a1c1e;
+/* ── Layout helpers for daf-card ── */
+/* Makes the inner wrapper fill the grid-cell height so sibling cards are equal height */
+daf-card > div {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }

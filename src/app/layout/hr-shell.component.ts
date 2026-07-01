@@ -65,6 +65,7 @@ const APP_NAV_DEFS: AppNavDef[] = [
   standalone: true,
   imports: [RouterOutlet, SideNavComponent],
   templateUrl: './hr-shell.component.html',
+  host: { style: 'display:block;height:100%' },
 })
 export class HrShellComponent implements OnInit {
   private userStore = inject(UserStore);

@@ -1,11 +1,11 @@
-<div class="flex h-screen overflow-hidden">
+<div class="flex h-full overflow-hidden">
   <daf-side-nav
     [items]="navItems()"
     [config]="sideNavConfig"
     [activeRoute]="activeRoute()"
     (itemClick)="onNavClick($event)" />
 
-  <main class="ml-64 flex-1 min-h-screen bg-background overflow-y-auto">
+  <main class="ml-64 flex-1 overflow-y-auto bg-background">
     <router-outlet />
   </main>
 </div>

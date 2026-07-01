@@ -9,13 +9,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   BulkActionBarComponent, BulkAction,
   PaginationComponent, PaginationConfig,
+  ToolbarComponent, ToolbarAction, ToolbarToggleOption,
+  CheckboxComponent,
+  ButtonComponent,
 } from '@khalilrebhiitec/daf360';
 
 import { ProfileListService, FilterOptions } from './services/profile-list.service';
 import { EmployeeListItem } from './models/profile.model';
 import { ProfileGridCardComponent } from './components/profile-grid-card/profile-grid-card.component';
 import { ProfileListCardComponent } from './components/profile-list-card/profile-list-card.component';
-import { ProfileSearchBarComponent } from './components/profile-search-bar/profile-search-bar.component';
 
 const PAGE_SIZE = 15;
 
@@ -23,12 +25,13 @@ const PAGE_SIZE = 15;
   selector: 'app-profile-list',
   standalone: true,
   imports: [
-    RouterLink,
     ProfileGridCardComponent,
     ProfileListCardComponent,
-    ProfileSearchBarComponent,
     BulkActionBarComponent,
     PaginationComponent,
+    ToolbarComponent,
+    CheckboxComponent,
+    ButtonComponent,
   ],
   templateUrl: './profile-list.component.html',
 })
@@ -95,7 +98,7 @@ export class ProfileListComponent implements OnInit {
       opts: this.svc.getFilterOptions(),
     }).subscribe(({ list, opts }) => {
       this.loading.set(false);
-      if (list) {
+      if (list) {        
         this.employees.set(list.content);
         
         this.totalElements.set(list.totalElements);
@@ -207,6 +210,17 @@ export class ProfileListComponent implements OnInit {
     size:          'md',
   };
 
+  readonly toolbarActions: ToolbarAction[] = [
+    { id: 'filters', label: 'Filtres avancés', icon: 'tune', position: 'left' },
+  ];
+
+  readonly viewToggleOptions: ToolbarToggleOption[] = [
+    { id: 'grid', icon: 'grid_view', tooltip: 'Grille' },
+    { id: 'list', icon: 'view_list', tooltip: 'Liste' },
+  ];
+
+  onToolbarAction(_actionId: string): void {}
+
   onBulkActionClick(actionId: string): void {
     switch (actionId) {
       case 'export': this.onBulkExport();       break;
@@ -262,7 +276,9 @@ export class ProfileListComponent implements OnInit {
   }
 
   /* ── Navigation ─────────────────────────────────────────────────────────── */
-  onViewProfile(profileId: number | null): void {    
+  onViewProfile(profileId: number | null): void {  
+    console.log(profileId);
+      
     if (profileId != null) {
       this.router.navigate(['/rh/profiles', profileId]);
     }

@@ -3,11 +3,12 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LeaveService } from '../../../core/services/leave.service';
 import { AbsenceType } from '../../../core/models/leave.model';
+import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-leave-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, MultiDatePickerComponent],
   template: `
     <div class="page-header">
       <div>
@@ -36,16 +37,11 @@ import { AbsenceType } from '../../../core/models/leave.model';
             </select>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">From <span style="color:#333">*</span></label>
-              <input class="form-control" type="date" formControlName="startDate"/>
-            </div>
-            <div class="form-group">
-              <label class="form-label">To <span style="color:#333">*</span></label>
-              <input class="form-control" type="date" formControlName="endDate"/>
-            </div>
-          </div>
+          <daf-multi-date-picker
+            [value]="dateRange()"
+            [config]="{ label: 'Période de congé', selectionMode: 'range', required: true, placeholder: 'Sélectionner une période', allowPastDays: true }"
+            (valueChange)="onRangeChange($event)"
+          />
 
           <div class="form-group">
             <label class="form-label">Comment</label>
@@ -74,8 +70,9 @@ import { AbsenceType } from '../../../core/models/leave.model';
 export class LeaveFormComponent implements OnInit {
   form!: ReturnType<FormBuilder['group']>;
 
-  saving = signal(false);
-  error  = signal('');
+  saving    = signal(false);
+  error     = signal('');
+  dateRange = signal<Date | Date[] | null>(null);
 
   absenceTypes: { value: AbsenceType; label: string }[] = [
     { value: 'PAID_LEAVE',        label: 'Paid Leave' },
@@ -102,6 +99,16 @@ export class LeaveFormComponent implements OnInit {
       endDate:     ['', Validators.required],
       comment:     [null as string | null],
     });
+  }
+
+  onRangeChange(value: Date | Date[] | null): void {
+    this.dateRange.set(value);
+    if (Array.isArray(value) && value.length === 2) {
+      const toISO = (d: Date) => d.toISOString().substring(0, 10);
+      this.form.patchValue({ startDate: toISO(value[0]), endDate: toISO(value[1]) });
+    } else {
+      this.form.patchValue({ startDate: '', endDate: '' });
+    }
   }
 
   submit(): void {

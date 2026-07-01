@@ -13,48 +13,17 @@
   </div>
 
   <!-- ── Search + controls ────────────────────────────────────────────── -->
-  <div class="flex items-center gap-3">
-    <div class="flex w-1/2 justify-start gap-4">
-          <rh-profile-search-bar
-      class="flex-1"
-      [value]="searchQuery()"
-      (searchChange)="onSearch($event)" />
-
-    <button
-      type="button"
-      class="flex items-center gap-2 px-4 py-2.5 border border-outline-variant rounded-lg
-             text-[14px] font-semibold hover:bg-surface-container transition-colors shrink-0">
-      <span class="material-symbols-outlined text-[18px] text-outline">tune</span>
-      Filtres avancés
-    </button>
-    </div>
-
-    <div class="flex w-1/2 justify-end">
-    <!-- View mode toggle -->
-    <div class="flex border border-outline-variant rounded-lg overflow-hidden shrink-0">
-      <button
-        type="button"
-        class="p-2 transition-colors"
-        [class]="viewMode() === 'grid'
-          ? 'bg-[#617f88] text-white'
-          : 'hover:bg-surface-container text-outline'"
-        (click)="viewMode.set('grid')"
-        title="Grille">
-        <span class="material-symbols-outlined text-[20px]">grid_view</span>
-      </button>
-      <button
-        type="button"
-        class="p-2 transition-colors"
-        [class]="viewMode() === 'list'
-          ? 'bg-[#617f88] text-white'
-          : 'hover:bg-surface-container text-outline'"
-        (click)="viewMode.set('list')"
-        title="Liste">
-        <span class="material-symbols-outlined text-[20px]">view_list</span>
-      </button>
-    </div>
-    </div>
-  </div>
+  <daf-toolbar
+    [searchValue]="searchQuery()"
+    searchPlaceholder="Rechercher par nom, email…"
+    [actions]="toolbarActions"
+    [toggleOptions]="viewToggleOptions"
+    []
+    [activeToggle]="viewMode()"
+    togglePosition="right"
+    (searchChange)="onSearch($event)"
+    (actionClick)="onToolbarAction($event)"
+    (toggleChange)="viewMode.set($any($event))" />
 
   <!-- ── Active filter tags ────────────────────────────────────────────── -->
   @if (activeFilterTags().length > 0) {
@@ -69,12 +38,10 @@
           </button>
         </span>
       }
-      <button
-        type="button"
-        class="text-[13px] text-[#50717B] hover:underline"
-        (click)="clearFilters()">
-        Tout effacer
-      </button>
+      <daf-button
+        label="Tout effacer"
+        variant="ghost"
+        (onClick)="clearFilters()" />
     </div>
   }
 
@@ -92,12 +59,11 @@
     <div class="flex flex-col items-center justify-center h-64 text-outline">
       <span class="material-symbols-outlined text-[48px] mb-3 text-error">error_outline</span>
       <p class="text-[16px] font-medium">Erreur lors du chargement</p>
-      <button
-        type="button"
-        class="mt-3 px-4 py-2 bg-[#79d7be] text-white rounded-lg text-[13px] font-semibold"
-        (click)="loadEmployees()">
-        Réessayer
-      </button>
+      <daf-button
+        class="mt-3"
+        label="Réessayer"
+        variant="teal"
+        (onClick)="loadEmployees()" />
     </div>
   }
 
@@ -114,19 +80,11 @@
 
       <!-- Select all row -->
       <div class="flex items-center gap-3 mb-2">
-        <input
-          type="checkbox"
-          class="w-4 h-4 rounded accent-[#50717B] cursor-pointer"
+        <daf-checkbox
           [checked]="isAllSelected()"
           [indeterminate]="selectedCount() > 0 && !isAllSelected()"
-          (change)="$any($event.target).checked ? selectAll() : clearSelection()" />
-        <span class="text-[13px] text-outline">
-          @if (isAllSelected()) {
-            Tout désélectionner
-          } @else {
-            Tout sélectionner ({{ employees().length }})
-          }
-        </span>
+          (checkedChange)="$event ? selectAll() : clearSelection()"
+          [options]="{ label: isAllSelected() ? 'Tout désélectionner' : 'Tout sélectionner (' + employees().length + ')' }" />
         @if (selectedCount() > 0) {
           <span class="text-[13px] font-medium text-[#50717B]">
             {{ selectedCount() }} sélectionné(s)
@@ -162,19 +120,11 @@
 
       <!-- Select all row -->
       <div class="flex items-center gap-3 mb-1">
-        <input
-          type="checkbox"
-          class="w-4 h-4 rounded accent-[#50717B] cursor-pointer"
+        <daf-checkbox
           [checked]="isAllSelected()"
           [indeterminate]="selectedCount() > 0 && !isAllSelected()"
-          (change)="$any($event.target).checked ? selectAll() : clearSelection()" />
-        <span class="text-[13px] text-outline">
-          @if (isAllSelected()) {
-            Tout désélectionner
-          } @else {
-            Tout sélectionner ({{ employees().length }})
-          }
-        </span>
+          (checkedChange)="$event ? selectAll() : clearSelection()"
+          [options]="{ label: isAllSelected() ? 'Tout désélectionner' : 'Tout sélectionner (' + employees().length + ')' }" />
         @if (selectedCount() > 0) {
           <span class="text-[13px] font-medium text-[#50717B]">
             {{ selectedCount() }} sélectionné(s)

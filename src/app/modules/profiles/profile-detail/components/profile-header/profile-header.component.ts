@@ -32,22 +32,41 @@ import { environment } from '../../../../../../environments/environment';
       <!-- Main header row -->
       <div class="flex items-start gap-6">
 
-        <!-- Avatar -->
-        <div class="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0
-                    border-2 bg-surface-container"
-             style="border-color:#79D7BE">
-          @if (resolvedPhotoUrl()) {
-            <img [src]="resolvedPhotoUrl()!" [alt]="profile().fullName ?? ''"
-                 class="w-full h-full object-cover" />
-          } @else if (avatarUrl()) {
-            <img [src]="avatarUrl()!" [alt]="profile().gender ?? ''"
-                 class="w-full h-full object-cover"
-                 (error)="onAvatarError()" />
-          } @else {
-            <div class="w-full h-full flex items-center justify-center
-                        text-[20px] font-bold text-on-surface-variant">
-              {{ initials() }}
-            </div>
+        <!-- Avatar with photo-upload overlay -->
+        <div class="relative group flex-shrink-0">
+          <div class="w-20 h-20 rounded-2xl overflow-hidden border-2 bg-surface-container"
+               style="border-color:#79D7BE">
+            @if (resolvedPhotoUrl()) {
+              <img [src]="resolvedPhotoUrl()!" [alt]="profile().fullName ?? ''"
+                   class="w-full h-full object-cover" />
+            } @else if (!avatarFailed()) {
+              <img [src]="defaultAvatarUrl()" [alt]="profile().gender ?? ''"
+                   class="w-full h-full object-cover"
+                   (error)="avatarFailed.set(true)" />
+            } @else {
+              <div class="w-full h-full flex items-center justify-center
+                          text-[20px] font-bold text-on-surface-variant">
+                {{ initials() }}
+              </div>
+            }
+          </div>
+
+          @if (canEdit()) {
+            <label
+              class="absolute inset-0 flex flex-col items-center justify-center rounded-2xl
+                     bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+              [style.cursor]="photoUploading() ? 'wait' : 'pointer'">
+              @if (photoUploading()) {
+                <span class="material-symbols-outlined text-white text-[22px]"
+                      style="animation:spin 1s linear infinite">progress_activity</span>
+              } @else {
+                <span class="material-symbols-outlined text-white text-[22px]">photo_camera</span>
+                <span class="text-white text-[10px] font-semibold mt-0.5">Changer</span>
+              }
+              <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"
+                     [disabled]="photoUploading()"
+                     (change)="onPhotoInputChange($event)" />
+            </label>
           }
         </div>
 
@@ -80,43 +99,51 @@ import { environment } from '../../../../../../environments/environment';
                 Depuis {{ fmt(profile().hireDate) }}
               </span>
             }
-            <daf-badge
-              [label]="lifecycleLabel()"
-              [options]="lifecycleBadgeOptions()" />
+            <daf-badge [label]="lifecycleLabel()" [options]="lifecycleBadgeOptions()" />
           </div>
         </div>
 
         <!-- Actions -->
         <div class="flex items-center gap-3 flex-shrink-0">
+          @if (canTransition()) {
+            <button
+              class="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold
+                     border border-outline-variant text-on-surface hover:border-[#1b3a4b]
+                     hover:text-[#1b3a4b] transition-colors"
+              (click)="transitionClick.emit()">
+              <span class="material-symbols-outlined text-[16px]">swap_horiz</span>
+              Changer statut
+            </button>
+          }
           <button
             class="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold
-                   border border-[#1b3a4b] text-white
-                   transition-colors disabled:bg-gray-200"
-            (click)="editClick.emit()"
-            disabled>
+                   border border-[#1b3a4b] text-[#1b3a4b] hover:bg-[#1b3a4b] hover:text-white
+                   transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            [disabled]="!canEdit()"
+            (click)="editClick.emit()">
             <span class="material-symbols-outlined text-[16px]">edit</span>
             Modifier
-          </button>
-          <button
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-semibold
-                   bg-[#1b3a4b] text-white hover:opacity-90 transition-opacity disabled:bg-gray-200"
-                   disabled>
-            Actions
-            <span class="material-symbols-outlined text-[16px]">expand_more</span>
           </button>
         </div>
       </div>
     </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   `,
 })
 export class ProfileHeaderComponent implements OnDestroy {
-  profile   = input.required<EmployeeProfile>();
-  editClick = output<void>();
-  backClick = output<void>();
+  profile        = input.required<EmployeeProfile>();
+  canEdit        = input(false);
+  canTransition  = input(false);
+  photoUploading = input(false);
+
+  editClick       = output<void>();
+  backClick       = output<void>();
+  transitionClick = output<void>();
+  photoChange     = output<File>();
 
   private http         = inject(HttpClient);
   private photoBlobUrl = signal<string | null>(null);
-  private avatarFailed = signal(false);
+  avatarFailed         = signal(false);
 
   constructor() {
     effect(() => {
@@ -125,7 +152,11 @@ export class ProfileHeaderComponent implements OnDestroy {
       const url = `${environment.hrApiUrl}/api/hr/profiles/${p.id}/photo`;
       this.http.get(url, { responseType: 'blob' }).pipe(
         catchError(() => EMPTY),
-      ).subscribe(blob => this.photoBlobUrl.set(URL.createObjectURL(blob)));
+      ).subscribe(blob => {
+        const old = this.photoBlobUrl();
+        if (old) URL.revokeObjectURL(old);
+        this.photoBlobUrl.set(URL.createObjectURL(blob));
+      });
     });
   }
 
@@ -136,14 +167,18 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   resolvedPhotoUrl(): string | null { return this.photoBlobUrl(); }
 
-  avatarUrl(): string | null {
-    if (this.avatarFailed()) return null;
+  defaultAvatarUrl(): string {
     const gender = this.profile().gender?.toUpperCase() ?? '';
-    const isMale = ['MASCULIN', 'MALE', 'M', 'HOMME'].includes(gender);
-    return isMale ? '/images/avatars/male.png' : '/images/avatars/female.png';
+    return ['MASCULIN', 'MALE', 'M', 'HOMME'].includes(gender)
+      ? '/images/avatars/male.png'
+      : '/images/avatars/female.png';
   }
 
-  onAvatarError(): void { this.avatarFailed.set(true); }
+  onPhotoInputChange(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) this.photoChange.emit(file);
+    (event.target as HTMLInputElement).value = '';
+  }
 
   initials(): string {
     return (this.profile().fullName ?? '')
