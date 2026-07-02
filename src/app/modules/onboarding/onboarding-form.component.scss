@@ -1,4 +1,4 @@
-:host { display: block; font-family: 'Inter', sans-serif; }
+:host { display: block; font-family: 'Manrope', sans-serif; }
 
 .form-page { padding-bottom: 0; }
 
@@ -200,7 +200,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -219,7 +219,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
   transition: background 0.15s;
 
   &:hover { background: var(--color-surface-container); }
@@ -235,7 +235,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
   transition: background 0.15s;
 
   &:hover:not(:disabled) { background: var(--color-surface-container-high); }
@@ -252,7 +252,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
   transition: opacity 0.15s, transform 0.1s;
 
   &:hover { opacity: 0.9; }
@@ -269,7 +269,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
   display: inline-flex;
   align-items: center;
   gap: 6px;

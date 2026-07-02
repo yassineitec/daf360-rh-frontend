@@ -1,22 +1,28 @@
 import {
-  Component, inject, input, output, signal,
+  AfterViewInit, Component, inject, input, output, signal, TemplateRef, viewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ModalComponent } from '../../../shared/modal.component';
+import {
+  CheckboxComponent,
+  MultiDatePickerComponent,
+  FormFieldComponent,
+  ModalService,
+  type ModalRef,
+} from '@khalilrebhiitec/daf360';
 import { ContractLifecycleService } from './contract-lifecycle.service';
 import {
   ContractDetailDto, ContractTypeCode, CreateContractRequest,
   CONTRACT_TYPE_CONFIG,
 } from './contract-lifecycle.model';
+import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEMENT', 'PORTAGE'];
 
 @Component({
   selector: 'app-new-contract-form',
   standalone: true,
-  imports: [FormsModule, ModalComponent],
+  imports: [FormFieldComponent, MultiDatePickerComponent, CheckboxComponent],
   template: `
-    <app-modal title="Nouveau contrat" [visible]="true" (closed)="cancelled.emit()">
+    <ng-template #formTpl>
       <div style="display:flex;flex-direction:column;gap:16px;">
 
         @if (error()) {
@@ -41,91 +47,58 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
 
         <!-- Dates -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label class="lbl">Date de début *</label>
-            <input type="date" [(ngModel)]="dateDebut" class="inp" />
-          </div>
+          <daf-multi-date-picker [config]="{ label: 'Date de début *', selectionMode: 'single' }"
+            [value]="toDate(dateDebut)" (valueChange)="dateDebut = fromDate($event)" />
           @if (cfg[contractType].needsEndDate) {
-            <div>
-              <label class="lbl">Date de fin prévue *</label>
-              <input type="date" [(ngModel)]="dateFinPrevue" class="inp" />
-            </div>
+            <daf-multi-date-picker [config]="{ label: 'Date de fin prévue *', selectionMode: 'single' }"
+              [value]="toDate(dateFinPrevue)" (valueChange)="dateFinPrevue = fromDate($event)" />
           }
         </div>
 
         <!-- Référence -->
-        <div>
-          <label class="lbl">Référence contrat</label>
-          <input type="text" [(ngModel)]="referenceContrat" class="inp" placeholder="ex: CTR-2026-001" />
-        </div>
+        <daf-form-field [options]="{ label: 'Référence contrat', placeholder: 'ex: CTR-2026-001' }"
+          [value]="referenceContrat" (valueChange)="referenceContrat = asText($event)" />
 
         <!-- CDI — manager profile -->
         @if (contractType === 'CDI') {
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-            <input type="checkbox" [(ngModel)]="managerProfile" />
-            Profil encadrant (période d'essai 6 mois au lieu de 3)
-          </label>
+          <daf-checkbox [options]="{ label: 'Profil encadrant (période d\\'essai 6 mois au lieu de 3)' }"
+            [checked]="managerProfile" (checkedChange)="managerProfile = $event" />
         }
 
         <!-- CIVP fields -->
         @if (contractType === 'CIVP') {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div>
-              <label class="lbl">Référence ANETI</label>
-              <input type="text" [(ngModel)]="civpAnetiReference" class="inp" />
-            </div>
-            <div>
-              <label class="lbl">Date convention</label>
-              <input type="date" [(ngModel)]="civpConventionDate" class="inp" />
-            </div>
+            <daf-form-field [options]="{ label: 'Référence ANETI' }"
+              [value]="civpAnetiReference" (valueChange)="civpAnetiReference = asText($event)" />
+            <daf-multi-date-picker [config]="{ label: 'Date convention', selectionMode: 'single' }"
+              [value]="toDate(civpConventionDate)" (valueChange)="civpConventionDate = fromDate($event)" />
           </div>
         }
 
         <!-- STAGE fields -->
         @if (contractType === 'STAGE') {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div>
-              <label class="lbl">École / Université</label>
-              <input type="text" [(ngModel)]="stageEcole" class="inp" placeholder="ex: ESPRIT Tunis" />
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:22px;">
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-                <input type="checkbox" [(ngModel)]="stageConventionSignee" />
-                Convention signée
-              </label>
-            </div>
+            <daf-form-field [options]="{ label: 'École / Université', placeholder: 'ex: ESPRIT Tunis' }"
+              [value]="stageEcole" (valueChange)="stageEcole = asText($event)" />
+            <daf-checkbox style="margin-top:22px;" [options]="{ label: 'Convention signée' }"
+              [checked]="stageConventionSignee" (checkedChange)="stageConventionSignee = $event" />
           </div>
         }
 
         <!-- DETACHEMENT fields -->
         @if (contractType === 'DETACHEMENT') {
-          <div>
-            <label class="lbl">Retour prévu</label>
-            <input type="date" [(ngModel)]="detachementRetourPrevu" class="inp" />
-          </div>
+          <daf-multi-date-picker [config]="{ label: 'Retour prévu', selectionMode: 'single' }"
+            [value]="toDate(detachementRetourPrevu)" (valueChange)="detachementRetourPrevu = fromDate($event)" />
         }
 
       </div>
-
-      <!-- Footer -->
-      <div slot="footer">
-        <button type="button" class="btn-ghost" (click)="cancelled.emit()">Annuler</button>
-        <button type="button" class="btn-primary" (click)="submit()" [disabled]="saving()">
-          {{ saving() ? 'Création…' : 'Créer le contrat' }}
-        </button>
-      </div>
-    </app-modal>
+    </ng-template>
   `,
   styles: [`
     .lbl {
       display: block; font-size: 11px; font-weight: 600;
       text-transform: uppercase; letter-spacing: .4px;
       color: var(--color-text-muted, #6B7280); margin-bottom: 4px;
-    }
-    .inp {
-      width: 100%; background: #f2f4f6; border: none; border-radius: 8px;
-      padding: 8px 12px; font-size: 13px; outline: none; box-sizing: border-box;
-      &:focus { box-shadow: 0 0 0 2px var(--color-primary, #1a6b7c); }
     }
     .type-chip {
       padding: 6px 14px; border: 1px solid var(--color-border, #E0E7E9);
@@ -137,20 +110,9 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
       border-color: var(--color-primary, #1a6b7c);
       background: var(--color-primary, #1a6b7c); color: #fff;
     }
-    .btn-primary {
-      padding: 9px 20px; background: var(--color-primary, #1a6b7c); color: #fff;
-      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
-      cursor: pointer; transition: background .15s;
-      &:disabled { opacity: .5; cursor: not-allowed; }
-    }
-    .btn-ghost {
-      padding: 9px 16px; border: 1px solid var(--color-border, #E0E7E9);
-      border-radius: 8px; background: none; font-size: 13px; cursor: pointer;
-      color: var(--color-text-muted, #6B7280);
-    }
   `],
 })
-export class NewContractFormComponent {
+export class NewContractFormComponent implements AfterViewInit {
   readonly profileId = input.required<number>();
   readonly paysId    = input.required<number>();
 
@@ -158,9 +120,12 @@ export class NewContractFormComponent {
   readonly cancelled = output<void>();
 
   private svc = inject(ContractLifecycleService);
+  private modalService = inject(ModalService);
 
   readonly types = TYPE_CODES;
   readonly cfg   = CONTRACT_TYPE_CONFIG;
+
+  formTpl = viewChild.required<TemplateRef<unknown>>('formTpl');
 
   contractType:          ContractTypeCode = 'CDI';
   dateDebut:             string  = '';
@@ -176,7 +141,41 @@ export class NewContractFormComponent {
   saving = signal(false);
   error  = signal<string | null>(null);
 
-  submit(): void {
+  ngAfterViewInit(): void {
+    // closeOnBackdrop is disabled — this component's lifetime is driven by the
+    // parent's showNewContractModal signal, so silent backdrop-dismiss would
+    // leave that signal out of sync with the (now-closed) modal.
+    this.modalService.open({
+      title: 'Nouveau contrat',
+      body: this.formTpl(),
+      closeOnBackdrop: false,
+      buttons: [
+        {
+          label: 'Annuler',
+          variant: 'secondary',
+          action: (ref) => {
+            ref.close();
+            this.cancelled.emit();
+          },
+        },
+        {
+          label: 'Créer le contrat',
+          variant: 'primary',
+          action: (ref) => this.submit(ref),
+        },
+      ],
+    });
+  }
+
+  asText(v: string | number | null): string {
+    return v == null ? '' : String(v);
+  }
+
+  protected readonly toDate = isoToDate;
+  protected readonly fromDate = dateToIso;
+
+  submit(ref: ModalRef): void {
+    if (this.saving()) return;
     this.error.set(null);
     if (!this.dateDebut) { this.error.set('La date de début est obligatoire.'); return; }
     if (this.cfg[this.contractType].needsEndDate && !this.dateFinPrevue) {
@@ -200,7 +199,11 @@ export class NewContractFormComponent {
 
     this.saving.set(true);
     this.svc.createContract(this.profileId(), req).subscribe({
-      next:  contract => { this.saving.set(false); this.saved.emit(contract); },
+      next: contract => {
+        this.saving.set(false);
+        ref.close();
+        this.saved.emit(contract);
+      },
       error: err => {
         this.saving.set(false);
         this.error.set(err?.error?.message ?? 'Erreur lors de la création du contrat.');

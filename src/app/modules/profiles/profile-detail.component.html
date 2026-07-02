@@ -1,4 +1,5 @@
 <!-- ── Breadcrumb ──────────────────────────────────────────────────────────── -->
+
 <nav class="breadcrumb" aria-label="Fil d'Ariane">
   <a routerLink=".." class="bc-link">Profils</a>
   <span class="bc-sep">›</span>
@@ -16,69 +17,72 @@
 } @else {
 
   <!-- ── Profile header ───────────────────────────────────────────────────── -->
-  <div class="profile-header card">
-    <div class="ph-avatar" style="position:relative;">
-      @if (profile()!.photoUrl) {
-        <img [src]="photoUrl(profile()!.photoUrl)" alt="Photo" class="avatar-lg"
-             style="object-fit:cover;" />
-      } @else {
-        <span class="avatar-initials-lg">{{ profile()!.fullName ? (profile()!.fullName!.split(' ')[0]?.[0] || '') + (profile()!.fullName!.split(' ')[1]?.[0] || '') : ('P' + profile()!.id) }}</span>
-      }
-
-      <!-- Upload overlay — always visible for HR managers (not just edit mode) -->
-      @if (canEdit()) {
-        <label style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;gap:3px;"
-               onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"
-               [title]="photoUploading() ? 'Téléversement…' : 'Changer la photo'">
-          @if (!photoUploading()) {
-            <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">photo_camera</span>
-            <span style="font-size:10px;color:#fff;font-weight:600;">Modifier</span>
+  <div class="profile-header-wrap">
+    <daf-card [options]="{ padding: 'lg' }">
+      <div class="profile-header">
+        <div class="ph-avatar" style="position:relative;">
+          @if (profile()!.photoUrl) {
+            <img [src]="photoUrl(profile()!.photoUrl)" alt="Photo" class="avatar-lg"
+                 style="object-fit:cover;" />
           } @else {
-            <span class="material-symbols-outlined" style="font-size:18px;color:#fff;animation:spin .8s linear infinite;">progress_activity</span>
+            <span class="avatar-initials-lg">{{ profile()!.fullName ? (profile()!.fullName!.split(' ')[0]?.[0] || '') + (profile()!.fullName!.split(' ')[1]?.[0] || '') : ('P' + profile()!.id) }}</span>
           }
-          <input type="file" accept="image/jpeg,image/png,image/webp"
-                 (change)="onPhotoChange($event)"
-                 [disabled]="photoUploading()"
-                 hidden />
-        </label>
-      }
-    </div>
 
-    @if (photoError()) {
-      <div style="background:#fee2e2;border-radius:8px;padding:6px 12px;font-size:12px;color:#991b1b;margin-top:6px;max-width:200px;">
-        {{ photoError() }}
-      </div>
-    }
-    <div class="ph-info">
-      <h1 class="ph-name">{{ profile()!.fullName ?? ('Profil #' + profile()!.id) }}</h1>
-      @if (profile()!.matricule) {
-        <div style="display:inline-flex;align-items:center;gap:6px;background:#e6f4f6;border-radius:8px;padding:3px 12px;margin-bottom:6px;">
-          <span class="material-symbols-outlined" style="font-size:14px;color:#0f4a57;">badge</span>
-          <span style="font-size:13px;font-weight:700;color:#0f4a57;font-family:monospace;letter-spacing:.5px;">{{ profile()!.matricule }}</span>
+          <!-- Upload overlay — always visible for HR managers (not just edit mode) -->
+          @if (canEdit()) {
+            <label style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;gap:3px;"
+                   onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"
+                   [title]="photoUploading() ? 'Téléversement…' : 'Changer la photo'">
+              @if (!photoUploading()) {
+                <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">photo_camera</span>
+                <span style="font-size:10px;color:#fff;font-weight:600;">Modifier</span>
+              } @else {
+                <span class="material-symbols-outlined" style="font-size:18px;color:#fff;animation:spin .8s linear infinite;">progress_activity</span>
+              }
+              <input type="file" accept="image/jpeg,image/png,image/webp"
+                     (change)="onPhotoChange($event)"
+                     [disabled]="photoUploading()"
+                     hidden />
+            </label>
+          }
         </div>
-      }
-      <div class="ph-meta">
-        <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
-        <span class="ph-sep">·</span>
-        <span>{{ profile()!.contractType ?? 'N/A' }}</span>
-        <span class="ph-sep">·</span>
-        <span>{{ profile()!.department ?? 'N/A' }}</span>
-        @if (profile()!.grade) {
-          <span class="ph-sep">·</span>
-          <span>{{ profile()!.grade }}</span>
+
+        @if (photoError()) {
+          <div style="background:#fee2e2;border-radius:8px;padding:6px 12px;font-size:12px;color:#991b1b;margin-top:6px;max-width:200px;">
+            {{ photoError() }}
+          </div>
         }
+        <div class="ph-info">
+          <h1 class="ph-name">{{ profile()!.fullName ?? ('Profil #' + profile()!.id) }}</h1>
+          @if (profile()!.matricule) {
+            <div style="display:inline-flex;align-items:center;gap:6px;background:#e6f4f6;border-radius:8px;padding:3px 12px;margin-bottom:6px;">
+              <span class="material-symbols-outlined" style="font-size:14px;color:#0f4a57;">badge</span>
+              <span style="font-size:13px;font-weight:700;color:#0f4a57;font-family:monospace;letter-spacing:.5px;">{{ profile()!.matricule }}</span>
+            </div>
+          }
+          <div class="ph-meta">
+            <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
+            <span class="ph-sep">·</span>
+            <span>{{ profile()!.contractType ?? 'N/A' }}</span>
+            <span class="ph-sep">·</span>
+            <span>{{ profile()!.department ?? 'N/A' }}</span>
+            @if (profile()!.grade) {
+              <span class="ph-sep">·</span>
+              <span>{{ profile()!.grade }}</span>
+            }
+          </div>
+        </div>
+        <div class="ph-actions">
+          @if (canTransition()) {
+            <daf-button label="Changer le statut" variant="ghost" (onClick)="openTransitionModal()" />
+          }
+          @if (canEdit()) {
+            <daf-button [label]="editMode() ? 'Annuler' : 'Modifier'" variant="teal"
+              (onClick)="editMode() ? editMode.set(false) : startEdit()" />
+          }
+        </div>
       </div>
-    </div>
-    <div class="ph-actions">
-      @if (canTransition()) {
-        <button class="btn-outline" (click)="openTransitionModal()">Changer le statut</button>
-      }
-      @if (canEdit()) {
-        <button class="btn-primary" (click)="editMode() ? editMode.set(false) : startEdit()">
-          {{ editMode() ? 'Annuler' : 'Modifier' }}
-        </button>
-      }
-    </div>
+    </daf-card>
   </div>
 
   <!-- ── 8 Collapsible sections ───────────────────────────────────────────── -->
@@ -95,68 +99,39 @@
           <div class="field-grid">
             @if (!editMode()) {
               <app-field label="Date de naissance" [value]="fmt(profile()!.dateOfBirth)" />
-            }
-            @if (editMode()) {
-              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Date de naissance</label>
-                <input type="date" [(ngModel)]="editForm.dateOfBirth"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            } @else {
+              <daf-multi-date-picker [config]="{ label: 'Date de naissance', selectionMode: 'single' }"
+                [value]="toDate(editForm.dateOfBirth)" (valueChange)="editForm.dateOfBirth = fromDate($event)" />
             }
 
             @if (!editMode()) {
               <app-field label="Genre" [value]="profile()!.gender" />
-            }
-            @if (editMode()) {
-              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Genre</label>
-                <select [(ngModel)]="editForm.gender"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option value="">— Sélectionner —</option>
-                  <option value="Homme">Homme</option>
-                  <option value="Femme">Femme</option>
-                  <option value="Autre">Autre</option>
-                  <option value="Non précisé">Non précisé</option>
-                </select>
-              </div>
+            } @else {
+              <daf-select [options]="genderOptions" [config]="{ label: 'Genre' }"
+                [selected]="editForm.gender ? [editForm.gender] : []"
+                (selectedChange)="editForm.gender = $event[0]" />
             }
 
             @if (!editMode()) {
               <app-field label="Nationalité" [value]="profile()!.nationality" />
-            }
-            @if (editMode()) {
-              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Nationalité</label>
-                <select [(ngModel)]="editForm.nationalityId"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option [ngValue]="null">— Sélectionner —</option>
-                  @for (n of nationalities(); track n.id) {
-                    <option [ngValue]="n.id">{{ n.labelFr }}</option>
-                  }
-                </select>
-              </div>
+            } @else {
+              <daf-select [options]="nationalityOptions()" [config]="{ label: 'Nationalité' }"
+                [selected]="toSelected(editForm.nationalityId)"
+                (selectedChange)="editForm.nationalityId = fromSelected($event)" />
             }
 
             @if (!editMode()) {
               <app-field label="N° carte d'identité" [value]="profile()!.nationalId" />
-            }
-            @if (editMode()) {
-              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° carte d'identité</label>
-                <input type="text" [(ngModel)]="editForm.nationalId"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            } @else {
+              <daf-form-field [options]="{ label: 'N° carte d\'identité' }"
+                [value]="editForm.nationalId ?? ''" (valueChange)="editForm.nationalId = asText($event)" />
             }
 
             @if (!editMode()) {
               <app-field label="N° passeport" [value]="profile()!.passportNumber" />
-            }
-            @if (editMode()) {
-              <div class="edit-field" style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° passeport</label>
-                <input type="text" [(ngModel)]="editForm.passportNumber"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            } @else {
+              <daf-form-field [options]="{ label: 'N° passeport' }"
+                [value]="editForm.passportNumber ?? ''" (valueChange)="editForm.passportNumber = asText($event)" />
             }
 
             @if (!editMode()) {
@@ -182,79 +157,52 @@
             <!-- Matricule — toujours en lecture seule, généré automatiquement -->
             <app-field label="Matricule" [value]="profile()!.matricule" />
 
-            @if (!editMode()) { <app-field label="Date d'embauche" [value]="fmt(profile()!.hireDate)" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Date d'embauche</label>
-                <input type="date" [(ngModel)]="editForm.hireDate" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
-            }
-
-            @if (!editMode()) { <app-field label="Type de contrat" [value]="profile()!.contractType" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Type de contrat</label>
-                <select [(ngModel)]="editForm.contractType" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option value="">— Sélectionner —</option>
-                  <option value="PERMANENT">CDI</option>
-                  <option value="FIXED_TERM">CDD</option>
-                  <option value="INTERN">Stage</option>
-                  <option value="CONSULTANT">Consultant</option>
-                </select>
-              </div>
-            }
-
-            @if (!editMode()) { <app-field label="Fin de contrat" [value]="fmt(profile()!.contractEndDate)" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Fin de contrat</label>
-                <input type="date" [(ngModel)]="editForm.contractEndDate" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
-            }
-
-            @if (!editMode()) { <app-field label="Fin période d'essai" [value]="fmt(profile()!.probationEndDate)" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Fin période d'essai</label>
-                <input type="date" [(ngModel)]="editForm.probationEndDate" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
-            }
-
-            @if (!editMode()) { <app-field label="En période d'essai" [value]="profile()!.isOnProbation ? 'Oui' : 'Non'" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">En période d'essai</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding-top:4px;cursor:pointer;">
-                  <input type="checkbox" [(ngModel)]="editForm.isOnProbation" /> Oui
-                </label>
-              </div>
+            @if (!editMode()) {
+              <app-field label="Date d'embauche" [value]="fmt(profile()!.hireDate)" />
+            } @else {
+              <daf-multi-date-picker [config]="{ label: 'Date d\'embauche', selectionMode: 'single' }"
+                [value]="toDate(editForm.hireDate)" (valueChange)="editForm.hireDate = fromDate($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Prétention nette candidat"
-                [value]="profile()!.salaireNetCandidat != null ? profile()!.salaireNetCandidat + ' TND' : null" />
+              <app-field label="Type de contrat" [value]="profile()!.contractType" />
+            } @else {
+              <daf-select [options]="contractTypeOptions" [config]="{ label: 'Type de contrat' }"
+                [selected]="editForm.contractType ? [editForm.contractType] : []"
+                (selectedChange)="editForm.contractType = $event[0]" />
             }
+
             @if (!editMode()) {
-              <app-field label="Salaire net RH"
-                [value]="profile()!.salaireNetRh != null ? profile()!.salaireNetRh + ' TND' : null" />
+              <app-field label="Fin de contrat" [value]="fmt(profile()!.contractEndDate)" />
+            } @else {
+              <daf-multi-date-picker [config]="{ label: 'Fin de contrat', selectionMode: 'single' }"
+                [value]="toDate(editForm.contractEndDate)" (valueChange)="editForm.contractEndDate = fromDate($event)" />
             }
 
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Prétention nette candidat (TND)</label>
-                <input type="number" step="1" min="0" [(ngModel)]="editForm.salaireNetCandidat"
-                  placeholder="ex: 2500"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="Fin période d'essai" [value]="fmt(profile()!.probationEndDate)" />
+            } @else {
+              <daf-multi-date-picker [config]="{ label: 'Fin période d\'essai', selectionMode: 'single' }"
+                [value]="toDate(editForm.probationEndDate)" (valueChange)="editForm.probationEndDate = fromDate($event)" />
             }
 
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Salaire net proposé RH (TND)</label>
-                <input type="number" step="1" min="0" [(ngModel)]="editForm.salaireNetRh"
-                  placeholder="ex: 2800"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="En période d'essai" [value]="profile()!.isOnProbation ? 'Oui' : 'Non'" />
+            } @else {
+              <daf-toggle [options]="{ label: 'En période d\'essai' }"
+                [checked]="editForm.isOnProbation ?? false" (checkedChange)="editForm.isOnProbation = $event" />
+            }
+
+            @if (!editMode()) {
+              <daf-amount-field [value]="profile()!.salaireNetCandidat ?? undefined"
+                [options]="{ value: profile()!.salaireNetCandidat ?? null, label: 'Prétention nette candidat', currency: 'TND', currencyPosition: 'end', placeholder: '—' }" />
+              <daf-amount-field [value]="profile()!.salaireNetRh ?? undefined"
+                [options]="{ value: profile()!.salaireNetRh ?? null, label: 'Salaire net RH', currency: 'TND', currencyPosition: 'end', placeholder: '—' }" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Prétention nette candidat (TND)', type: 'number', placeholder: 'ex: 2500' }"
+                [value]="editForm.salaireNetCandidat ?? null" (valueChange)="editForm.salaireNetCandidat = asNumber($event)" />
+              <daf-form-field [options]="{ label: 'Salaire net proposé RH (TND)', type: 'number', placeholder: 'ex: 2800' }"
+                [value]="editForm.salaireNetRh ?? null" (valueChange)="editForm.salaireNetRh = asNumber($event)" />
             }
           </div>
         </div>
@@ -270,60 +218,36 @@
       @if (open('poste')) {
         <div class="section-body">
           <div class="field-grid">
-            @if (!editMode()) { <app-field label="Département" [value]="profile()!.department" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Département</label>
-                <select [(ngModel)]="editForm.departmentId"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option [ngValue]="null">— Sélectionner —</option>
-                  @for (d of departments(); track d.id) {
-                    <option [ngValue]="d.id">{{ d.labelFr }}</option>
-                  }
-                </select>
-              </div>
+            @if (!editMode()) {
+              <app-field label="Département" [value]="profile()!.department" />
+            } @else {
+              <daf-select [options]="departmentOptions()" [config]="{ label: 'Département' }"
+                [selected]="toSelected(editForm.departmentId)"
+                (selectedChange)="editForm.departmentId = fromSelected($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Grade" [value]="profile()!.grade" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Grade</label>
-                <select [(ngModel)]="editForm.gradeId"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option [ngValue]="null">— Sélectionner —</option>
-                  @for (g of grades(); track g.id) {
-                    <option [ngValue]="g.id">{{ g.labelFr }}</option>
-                  }
-                </select>
-              </div>
+            @if (!editMode()) {
+              <app-field label="Grade" [value]="profile()!.grade" />
+            } @else {
+              <daf-select [options]="gradeOptions()" [config]="{ label: 'Grade' }"
+                [selected]="toSelected(editForm.gradeId)"
+                (selectedChange)="editForm.gradeId = fromSelected($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Discipline" [value]="profile()!.discipline" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Discipline</label>
-                <select [(ngModel)]="editForm.disciplineId"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option [ngValue]="null">— Sélectionner —</option>
-                  @for (d of disciplines(); track d.id) {
-                    <option [ngValue]="d.id">{{ d.labelFr }}</option>
-                  }
-                </select>
-              </div>
+            @if (!editMode()) {
+              <app-field label="Discipline" [value]="profile()!.discipline" />
+            } @else {
+              <daf-select [options]="disciplineOptions()" [config]="{ label: 'Discipline' }"
+                [selected]="toSelected(editForm.disciplineId)"
+                (selectedChange)="editForm.disciplineId = fromSelected($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Niveau NOG" [value]="profile()!.nogLevel" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Niveau NOG</label>
-                <select [(ngModel)]="editForm.nogLevelId"
-                  style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                  <option [ngValue]="null">— Sélectionner —</option>
-                  @for (n of nogLevels(); track n.id) {
-                    <option [ngValue]="n.id">{{ n.labelFr }}</option>
-                  }
-                </select>
-              </div>
+            @if (!editMode()) {
+              <app-field label="Niveau NOG" [value]="profile()!.nogLevel" />
+            } @else {
+              <daf-select [options]="nogLevelOptions()" [config]="{ label: 'Niveau NOG' }"
+                [selected]="toSelected(editForm.nogLevelId)"
+                (selectedChange)="editForm.nogLevelId = fromSelected($event)" />
             }
           </div>
         </div>
@@ -359,26 +283,24 @@
                   }
                 </p>
                 @if (resolvedRegime()!.isFlexible) {
-                  <span style="display:inline-block;margin-top:8px;background:#ede9fe;color:#5b21b6;font-size:11px;padding:2px 10px;border-radius:999px;font-weight:700;">Horaires flexibles</span>
+                  <daf-badge label="Horaires flexibles" [options]="{ variant: 'secondary', pill: true, size: 'sm' }" />
                 }
               </div>
-              <span style="font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;">
-                <!-- [ngClass]="{
-                  'regime-override': resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE',
-                  'regime-role':     resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT',
-                  'regime-default':  resolvedRegime()!.assignmentLevel === 'DEFAULT'
-                }"> -->
-                {{ resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'Override personnel'
+              <daf-badge
+                [label]="resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'Override personnel'
                    : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? 'Assignation par rôle'
-                   : 'Défaut entité' }}
-              </span>
+                   : 'Défaut entité'"
+                [options]="{
+                  variant: resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'teal'
+                    : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? 'secondary' : 'neutral',
+                  pill: true
+                }"
+              />
             </div>
             @if (resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
-              <button type="button" (click)="removeEmployeeRegimeOverride()"
-                style="margin-top:12px;font-size:12px;color:#ba1a1a;font-weight:500;border:none;background:none;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;">
-                <span class="material-symbols-outlined" style="font-size:14px;">undo</span>
-                Supprimer l'override (revenir au régime du rôle)
-              </button>
+              <daf-button variant="ghost" style="margin-top:12px;"
+                [options]="{ label: 'Supprimer l\'override (revenir au régime du rôle)', iconStart: 'undo', size: 'sm' }"
+                (onClick)="removeEmployeeRegimeOverride()" />
             }
           }
 
@@ -401,28 +323,26 @@
       @if (open('contact')) {
         <div class="section-body">
           <div class="field-grid">
-            @if (!editMode()) { <app-field label="Email personnel" [value]="profile()!.personalEmail" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Email personnel</label>
-                <input type="email" [(ngModel)]="editForm.personalEmail" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="Email personnel" [value]="profile()!.personalEmail" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Email personnel', type: 'email' }"
+                [value]="editForm.personalEmail ?? ''" (valueChange)="editForm.personalEmail = asText($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Téléphone" [value]="profile()!.phone" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Téléphone</label>
-                <input type="tel" [(ngModel)]="editForm.phone" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="Téléphone" [value]="profile()!.phone" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Téléphone' }"
+                [value]="editForm.phone ?? ''" (valueChange)="editForm.phone = asText($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Adresse" [value]="profile()!.personalAddress" [wide]="true" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;grid-column:span 2;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Adresse</label>
-                <textarea [(ngModel)]="editForm.personalAddress" rows="2" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;resize:vertical;"></textarea>
-              </div>
+            @if (!editMode()) {
+              <app-field label="Adresse" [value]="profile()!.personalAddress" [wide]="true" />
+            } @else {
+              <daf-form-field style="grid-column:span 2;"
+                [options]="{ label: 'Adresse', type: 'textarea', rows: 2 }"
+                [value]="editForm.personalAddress ?? ''" (valueChange)="editForm.personalAddress = asText($event)" />
             }
           </div>
         </div>
@@ -438,28 +358,25 @@
       @if (open('urgence')) {
         <div class="section-body">
           <div class="field-grid">
-            @if (!editMode()) { <app-field label="Nom" [value]="profile()!.emergencyContactName" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Nom</label>
-                <input type="text" [(ngModel)]="editForm.emergencyContactName" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="Nom" [value]="profile()!.emergencyContactName" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Nom' }"
+                [value]="editForm.emergencyContactName ?? ''" (valueChange)="editForm.emergencyContactName = asText($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Relation" [value]="profile()!.emergencyContactRelation" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Relation</label>
-                <input type="text" [(ngModel)]="editForm.emergencyContactRelation" placeholder="ex: Conjoint, Parent…" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="Relation" [value]="profile()!.emergencyContactRelation" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Relation', placeholder: 'ex: Conjoint, Parent…' }"
+                [value]="editForm.emergencyContactRelation ?? ''" (valueChange)="editForm.emergencyContactRelation = asText($event)" />
             }
 
-            @if (!editMode()) { <app-field label="Téléphone" [value]="profile()!.emergencyContactPhone" /> }
-            @if (editMode()) {
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Téléphone</label>
-                <input type="tel" [(ngModel)]="editForm.emergencyContactPhone" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-              </div>
+            @if (!editMode()) {
+              <app-field label="Téléphone" [value]="profile()!.emergencyContactPhone" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Téléphone' }"
+                [value]="editForm.emergencyContactPhone ?? ''" (valueChange)="editForm.emergencyContactPhone = asText($event)" />
             }
           </div>
         </div>
@@ -472,65 +389,54 @@
         <button class="section-header" (click)="toggle('bancaire')" type="button">
           <span class="section-title">
             Coordonnées bancaires
-            <span class="sensitive-chip">Confidentiel</span>
+            <daf-badge label="Confidentiel" [options]="{ variant: 'warning', pill: true, size: 'sm' }" />
           </span>
           <span class="chevron" [class.open]="open('bancaire')">›</span>
         </button>
         @if (open('bancaire')) {
           <div class="section-body">
             <div class="field-grid">
-              @if (!editMode()) { <app-field label="Banque" [value]="profile()!.bankName" /> }
-              @if (editMode()) {
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Banque</label>
-                  <select [(ngModel)]="editForm.bankId"
-                    style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;">
-                    <option [ngValue]="null">— Sélectionner —</option>
-                    @for (b of banks(); track b.id) {
-                      <option [ngValue]="b.id">{{ b.labelFr }}</option>
-                    }
-                  </select>
-                </div>
+              @if (!editMode()) {
+                <app-field label="Banque" [value]="profile()!.bankName" />
+              } @else {
+                <daf-select [options]="bankOptions()" [config]="{ label: 'Banque' }"
+                  [selected]="toSelected(editForm.bankId)"
+                  (selectedChange)="editForm.bankId = fromSelected($event)" />
               }
 
-              @if (!editMode()) { <app-field label="IBAN" [value]="profile()!.iban" /> }
-              @if (editMode()) {
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">IBAN</label>
-                  <input type="text" [(ngModel)]="editForm.iban" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;font-family:monospace;" />
-                </div>
+              @if (!editMode()) {
+                <app-field label="IBAN" [value]="profile()!.iban" />
+              } @else {
+                <daf-form-field [options]="{ label: 'IBAN' }"
+                  [value]="editForm.iban ?? ''" (valueChange)="editForm.iban = asText($event)" />
               }
 
-              @if (!editMode()) { <app-field label="N° de compte" [value]="profile()!.bankAccountNumber" /> }
-              @if (editMode()) {
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° de compte</label>
-                  <input type="text" [(ngModel)]="editForm.bankAccountNumber" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;font-family:monospace;" />
-                </div>
+              @if (!editMode()) {
+                <app-field label="N° de compte" [value]="profile()!.bankAccountNumber" />
+              } @else {
+                <daf-form-field [options]="{ label: 'N° de compte' }"
+                  [value]="editForm.bankAccountNumber ?? ''" (valueChange)="editForm.bankAccountNumber = asText($event)" />
               }
 
-              @if (!editMode()) { <app-field label="RIB" [value]="profile()!.rib" /> }
-              @if (editMode()) {
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">RIB</label>
-                  <input type="text" [(ngModel)]="editForm.rib" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;font-family:monospace;" />
-                </div>
+              @if (!editMode()) {
+                <app-field label="RIB" [value]="profile()!.rib" />
+              } @else {
+                <daf-form-field [options]="{ label: 'RIB' }"
+                  [value]="editForm.rib ?? ''" (valueChange)="editForm.rib = asText($event)" />
               }
 
-              @if (!editMode()) { <app-field label="N° sécurité sociale" [value]="profile()!.socialSecurityNumber" /> }
-              @if (editMode()) {
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">N° sécurité sociale</label>
-                  <input type="text" [(ngModel)]="editForm.socialSecurityNumber" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-                </div>
+              @if (!editMode()) {
+                <app-field label="N° sécurité sociale" [value]="profile()!.socialSecurityNumber" />
+              } @else {
+                <daf-form-field [options]="{ label: 'N° sécurité sociale' }"
+                  [value]="editForm.socialSecurityNumber ?? ''" (valueChange)="editForm.socialSecurityNumber = asText($event)" />
               }
 
-              @if (!editMode()) { <app-field label="NIF" [value]="profile()!.taxId" /> }
-              @if (editMode()) {
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                  <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">NIF</label>
-                  <input type="text" [(ngModel)]="editForm.taxId" style="background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:100%;box-sizing:border-box;" />
-                </div>
+              @if (!editMode()) {
+                <app-field label="NIF" [value]="profile()!.taxId" />
+              } @else {
+                <daf-form-field [options]="{ label: 'NIF' }"
+                  [value]="editForm.taxId ?? ''" (valueChange)="editForm.taxId = asText($event)" />
               }
 
               @if (!editMode()) { <app-field label="N° CNSS" [value]="profile()!.cnssNumber" /> }
@@ -574,9 +480,7 @@
             <!-- Actions bar -->
             @if (canEdit()) {
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn-primary" type="button" (click)="showNewContractModal.set(true)">
-                  + Nouveau contrat
-                </button>
+                <daf-button label="+ Nouveau contrat" variant="primary" (onClick)="showNewContractModal.set(true)" />
               </div>
             }
 
@@ -599,10 +503,10 @@
                         {{ lcStatusCfg(c.currentStatusCode).label }}
                       </span>
                       @if (c.isActive) {
-                        <span style="font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;background:#e6f7f5;color:#00695c;">Actif</span>
+                        <daf-badge label="Actif" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
                       }
                       @if (c.dossierLocked) {
-                        <span style="font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;background:#fee2e2;color:#991b1b;">Dossier verrouillé</span>
+                        <daf-badge label="Dossier verrouillé" [options]="{ variant: 'danger', pill: true, size: 'sm' }" />
                       }
                     </div>
 
@@ -634,20 +538,14 @@
                   @if (canEdit() && c.isActive && !c.dossierLocked) {
                     <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
                       @if (c.currentStatusCode === 'PERIODE_ESSAI') {
-                        <button class="btn-outline" type="button" (click)="openValidateTrialModal(c.id)"
-                          style="font-size:12px;padding:5px 12px;">
-                          Valider période d'essai
-                        </button>
+                        <daf-button label="Valider période d'essai" variant="secondary" [options]="{ size: 'sm' }"
+                          (onClick)="openValidateTrialModal(c.id)" />
                       }
                       @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
-                        <button class="btn-outline" type="button" (click)="openRenewCDDModal(c.id)"
-                          style="font-size:12px;padding:5px 12px;">
-                          Renouveler CDD
-                        </button>
-                        <button class="btn-outline" type="button" (click)="openConvertCDIModal(c.id)"
-                          style="font-size:12px;padding:5px 12px;">
-                          Convertir en CDI
-                        </button>
+                        <daf-button label="Renouveler CDD" variant="secondary" [options]="{ size: 'sm' }"
+                          (onClick)="openRenewCDDModal(c.id)" />
+                        <daf-button label="Convertir en CDI" variant="secondary" [options]="{ size: 'sm' }"
+                          (onClick)="openConvertCDIModal(c.id)" />
                       }
                     </div>
                   }
@@ -697,86 +595,80 @@
       }
     </section>
 
-    <!-- Modals — Validate trial period -->
-    @if (showValidateTrialModal()) {
-      <app-modal title="Valider la période d'essai" [visible]="true" [hasFooter]="true" (closed)="showValidateTrialModal.set(false)">
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          @if (lcError()) {
-            <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
-          }
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
-            <input type="radio" name="trialApproved" [value]="true" [(ngModel)]="trialApproved" /> Approuver — passer en ACTIF_CONFIRME
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;">
-            <input type="radio" name="trialApproved" [value]="false" [(ngModel)]="trialApproved" /> Refuser — résilier le contrat
-          </label>
-          <div>
-            <label class="t-label">Commentaire</label>
-            <textarea [(ngModel)]="trialComment" rows="3" class="reason-input" placeholder="Motif ou observations…"></textarea>
-          </div>
-        </div>
-        <div slot="footer">
-          <button class="btn-ghost" type="button" (click)="showValidateTrialModal.set(false)">Annuler</button>
-          <button class="btn-primary" type="button" (click)="confirmValidateTrial()" [disabled]="lcSaving()">
-            {{ lcSaving() ? 'Enregistrement…' : 'Confirmer' }}
-          </button>
-        </div>
-      </app-modal>
-    }
+    <!-- Modal bodies — opened imperatively via ModalService (see profile-detail.component.ts) -->
+    <ng-template #transitionTpl>
+      <div class="transition-body">
+        @if (transitionError()) {
+          <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:14px;">{{ transitionError() }}</div>
+        }
+        <p class="t-label">Statut actuel</p>
+        <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
 
-    <!-- Modal — Renew CDD -->
-    @if (showRenewCDDModal()) {
-      <app-modal title="Renouveler le CDD" [visible]="true" [hasFooter]="true" (closed)="showRenewCDDModal.set(false)">
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          @if (lcError()) {
-            <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+        <p class="t-label" style="margin-top:20px">Nouveau statut *</p>
+        <div class="status-options">
+          @for (s of allowedTransitions(); track s) {
+            <button
+              type="button"
+              class="status-option"
+              [class.selected]="transitionTarget() === s"
+              (click)="transitionTarget.set(s)"
+            >
+              <daf-badge [label]="statusBadge(s).label" [options]="statusBadge(s).options" />
+              <span>{{ lifecycleLabel(s) }}</span>
+            </button>
           }
-          <div>
-            <label class="t-label">Nouvelle date de fin *</label>
-            <input type="date" [(ngModel)]="renewDateFin"
-              style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;" />
-          </div>
-          <div>
-            <label class="t-label">Commentaire</label>
-            <textarea [(ngModel)]="renewComment" rows="2" class="reason-input"></textarea>
-          </div>
         </div>
-        <div slot="footer">
-          <button class="btn-ghost" type="button" (click)="showRenewCDDModal.set(false)">Annuler</button>
-          <button class="btn-primary" type="button" (click)="confirmRenewCDD()" [disabled]="lcSaving()">
-            {{ lcSaving() ? 'Enregistrement…' : 'Renouveler' }}
-          </button>
-        </div>
-      </app-modal>
-    }
 
-    <!-- Modal — Convert to CDI -->
-    @if (showConvertCDIModal()) {
-      <app-modal title="Convertir en CDI" [visible]="true" [hasFooter]="true" (closed)="showConvertCDIModal.set(false)">
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          @if (lcError()) {
-            <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
-          }
-          <div>
-            <label class="t-label">Date de début du CDI *</label>
-            <input type="date" [(ngModel)]="cdiStartDate"
-              style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;" />
-          </div>
-          <div>
-            <label class="t-label">Commentaire</label>
-            <textarea [(ngModel)]="cdiComment" rows="2" class="reason-input"></textarea>
-          </div>
-        </div>
-        <div slot="footer">
-          <button class="btn-ghost" type="button" (click)="showConvertCDIModal.set(false)">Annuler</button>
-          <button class="btn-primary" type="button" (click)="confirmConvertCDI()" [disabled]="lcSaving()">
-            {{ lcSaving() ? 'Enregistrement…' : 'Convertir' }}
-          </button>
-        </div>
-      </app-modal>
-    }
+        <daf-form-field style="margin-top:16px;display:block;"
+          [options]="{ label: 'Raison *', type: 'textarea', rows: 3, placeholder: 'Préciser la raison de ce changement de statut…' }"
+          [value]="transitionReason" (valueChange)="transitionReason = asText($event)" />
+      </div>
+    </ng-template>
 
-    <!-- Modal — New contract -->
+    <ng-template #validateTrialTpl>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        @if (lcError()) {
+          <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+        }
+        <daf-radio-group
+          [options]="[
+            { value: 'true', label: 'Approuver — passer en ACTIF_CONFIRME' },
+            { value: 'false', label: 'Refuser — résilier le contrat' }
+          ]"
+          [config]="{ layout: 'vertical' }"
+          [selected]="trialApproved ? 'true' : 'false'"
+          (selectedChange)="trialApproved = $event === 'true'"
+        />
+        <daf-form-field [options]="{ label: 'Commentaire', type: 'textarea', rows: 3, placeholder: 'Motif ou observations…' }"
+          [value]="trialComment" (valueChange)="trialComment = asText($event)" />
+      </div>
+    </ng-template>
+
+    <ng-template #renewCDDTpl>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        @if (lcError()) {
+          <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+        }
+        <daf-multi-date-picker [config]="{ label: 'Nouvelle date de fin *', selectionMode: 'single' }"
+          [value]="toDate(renewDateFin)" (valueChange)="renewDateFin = fromDate($event)" />
+        <daf-form-field [options]="{ label: 'Commentaire', type: 'textarea', rows: 2 }"
+          [value]="renewComment" (valueChange)="renewComment = asText($event)" />
+      </div>
+    </ng-template>
+
+    <ng-template #convertCDITpl>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        @if (lcError()) {
+          <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
+        }
+        <daf-multi-date-picker [config]="{ label: 'Date de début du CDI *', selectionMode: 'single' }"
+          [value]="toDate(cdiStartDate)" (valueChange)="cdiStartDate = fromDate($event)" />
+        <daf-form-field [options]="{ label: 'Commentaire', type: 'textarea', rows: 2 }"
+          [value]="cdiComment" (valueChange)="cdiComment = asText($event)" />
+      </div>
+    </ng-template>
+
+    <!-- New contract — opens its own ModalService modal internally -->
     @if (showNewContractModal()) {
       <app-new-contract-form
         [profileId]="profileId"
@@ -790,19 +682,12 @@
     @if (editMode() && canEdit()) {
       <div style="background:#fff;border:1px solid #eceef0;border-radius:14px;padding:18px 20px;display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(51,65,85,.06);">
         <div style="flex:1;">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;display:block;margin-bottom:4px;">Raison de la modification *</label>
-          <input type="text" [(ngModel)]="editForm.reason"
-            placeholder="Ex: Mise à jour coordonnées, correction données contrat…"
-            style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-          @if (editSaveError()) {
-            <p style="color:#ba1a1a;font-size:12px;margin:4px 0 0;">{{ editSaveError() }}</p>
-          }
+          <daf-form-field
+            [options]="{ label: 'Raison de la modification *', placeholder: 'Ex: Mise à jour coordonnées, correction données contrat…', error: editSaveError() ?? undefined }"
+            [value]="editForm.reason" (valueChange)="editForm.reason = asText($event)" />
         </div>
-        <button type="button" (click)="saveProfile()" [disabled]="saving()"
-          style="padding:9px 24px;border-radius:10px;border:none;background:#1a6b7c;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;"
-          [style.opacity]="saving() ? '0.6' : '1'">
-          {{ saving() ? 'Enregistrement…' : '💾 Enregistrer les modifications' }}
-        </button>
+        <daf-button [label]="saving() ? 'Enregistrement…' : 'Enregistrer les modifications'" variant="teal"
+          [options]="{ disabled: saving(), loading: saving() }" (onClick)="saveProfile()" />
       </div>
     }
 
@@ -837,17 +722,10 @@
           } @else {
             @if (canEdit()) {
               <div class="upload-bar">
-                <select class="filter-select" [(ngModel)]="uploadType">
-                  @for (t of docTypes; track t) { <option [value]="t">{{ t }}</option> }
-                </select>
-                <label class="upload-label">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
-                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-                  </svg>
-                  Importer un document
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileChange($event)" hidden />
-                </label>
+                <daf-select [options]="docTypeOptions" [config]="{ label: 'Type de document' }"
+                  [selected]="[uploadType]" (selectedChange)="uploadType = $event[0]" />
+                <daf-file-upload [config]="{ accept: '.pdf,.jpg,.jpeg,.png', hint: 'Importer un document' }"
+                  [files]="uploadFiles()" (filesChange)="onDocumentFilesChange($event)" />
               </div>
             }
             @if (documents().length === 0) {
@@ -883,7 +761,6 @@
           @for (doc of generatedDocs(); track doc.id) {
             <div class="doc-history-row">
               <span class="doc-type">{{ doc.documentType.replace('_', ' ') }}</span>
-              <!-- <span class="doc-date">{{ doc.generatedAt | slice:0:10 }}</span> -->
               <code class="doc-code">{{ doc.verificationCode }}</code>
               <app-pdf-download-button
                 label="Telecharger"
@@ -899,89 +776,24 @@
         <p class="empty-docs">Aucun document genere pour ce profil.</p>
       }
       <div class="doc-gen-grid">
-        <div class="doc-gen-card">
-          <div class="doc-gen-header">📄 <strong>Attestation de travail</strong></div>
-          <p class="doc-gen-desc">Certifie l'emploi au sein d'ARX Ingenierie</p>
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-travail" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-travail.pdf'" variant="outline" />
-        </div>
-        <div class="doc-gen-card">
-          <div class="doc-gen-header">📄 <strong>Attestation de salaire</strong></div>
-          <p class="doc-gen-desc">Certifie le salaire brut annuel</p>
-          <p class="doc-gen-note">Necessite une simulation de paie validee</p>
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-salaire" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-salaire.pdf'" variant="outline" />
-        </div>
-        <div class="doc-gen-card">
-          <div class="doc-gen-header">📄 <strong>Attestation non-benefice de pret</strong></div>
-          <p class="doc-gen-desc">Certifie l'absence d'emprunt en cours</p>
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-non-benefice-pret" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-pret.pdf'" variant="outline" />
-        </div>
-        <div class="doc-gen-card">
-          <div class="doc-gen-header">📄 <strong>Attestation de titularisation</strong></div>
-          <p class="doc-gen-desc">Certifie la titularisation en CDI</p>
-          <p class="doc-gen-note">Reservee aux contrats CDI</p>
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-titularisation" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-titularisation.pdf'" variant="outline" [disabled]="profile()!.contractType !== 'PERMANENT'" disabledTooltip="Reservee aux employes en CDI" />
-        </div>
-        <div class="doc-gen-card">
-          <div class="doc-gen-header">📄 <strong>Attestation de domiciliation de salaire</strong></div>
-          <p class="doc-gen-desc">Certifie la domiciliation bancaire du salaire</p>
-          <p class="doc-gen-note">Necessite les coordonnees bancaires</p>
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-domiciliation-salaire" [body]="{ employeeProfileId: profile()!.id }" [filename]="'attestation-domiciliation.pdf'" variant="outline" [disabled]="!profile()!.rib && !profile()!.bankName" disabledTooltip="Completez les coordonnees bancaires" />
-        </div>
+        <daf-card [options]="{ title: 'Attestation de travail', description: 'Certifie l\'emploi au sein d\'ARX Ingenierie', icon: 'description', padding: 'md' }">
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-travail" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-travail.pdf" variant="outline" />
+        </daf-card>
+        <daf-card [options]="{ title: 'Attestation de salaire', description: 'Certifie le salaire brut annuel — nécessite une simulation de paie validée', icon: 'description', padding: 'md' }">
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-salaire" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-salaire.pdf" variant="outline" />
+        </daf-card>
+        <daf-card [options]="{ title: 'Attestation non-benefice de pret', description: 'Certifie l\'absence d\'emprunt en cours', icon: 'description', padding: 'md' }">
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-non-benefice-pret" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-pret.pdf" variant="outline" />
+        </daf-card>
+        <daf-card [options]="{ title: 'Attestation de titularisation', description: 'Certifie la titularisation en CDI — réservée aux contrats CDI', icon: 'description', padding: 'md' }">
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-titularisation" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-titularisation.pdf" variant="outline" [disabled]="profile()!.contractType !== 'PERMANENT'" disabledTooltip="Reservee aux employes en CDI" />
+        </daf-card>
+        <daf-card [options]="{ title: 'Attestation de domiciliation de salaire', description: 'Certifie la domiciliation bancaire du salaire — nécessite les coordonnées bancaires', icon: 'description', padding: 'md' }">
+          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-domiciliation-salaire" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-domiciliation.pdf" variant="outline" [disabled]="!profile()!.rib && !profile()!.bankName" disabledTooltip="Completez les coordonnees bancaires" />
+        </daf-card>
       </div>
     </section>
     } <!-- /canEdit — Documents RH -->
 
   </div><!-- /sections -->
 }
-
-<!-- ── Lifecycle transition modal ────────────────────────────────────────────── -->
-<app-modal
-  title="Changer le statut du profil"
-  [visible]="showTransitionModal()"
-  [hasFooter]="true"
-  (closed)="showTransitionModal.set(false)"
->
-  @if (profile()) {
-    <div class="transition-body">
-      <p class="t-label">Statut actuel</p>
-      <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
-
-      <p class="t-label" style="margin-top:20px">Nouveau statut *</p>
-      <div class="status-options">
-        @for (s of allowedTransitions(); track s) {
-          <button
-            type="button"
-            class="status-option"
-            [class.selected]="transitionTarget() === s"
-            (click)="transitionTarget.set(s)"
-          >
-            <daf-badge [label]="statusBadge(s).label" [options]="statusBadge(s).options" />
-            <span>{{ lifecycleLabel(s) }}</span>
-          </button>
-        }
-      </div>
-
-      <label class="t-label" style="margin-top:16px;display:block">Raison *</label>
-      <textarea
-        class="reason-input"
-        [(ngModel)]="transitionReason"
-        placeholder="Préciser la raison de ce changement de statut…"
-        rows="3"
-      ></textarea>
-    </div>
-  }
-  <div slot="footer">
-    @if (profile()) {
-      <button class="btn-ghost" type="button" (click)="showTransitionModal.set(false)">Annuler</button>
-      <button
-        class="btn-primary"
-        type="button"
-        [disabled]="!transitionTarget() || !transitionReason.trim() || saving()"
-        (click)="confirmTransition()"
-      >
-        @if (saving()) { <app-spinner size="sm" /> }
-        Confirmer
-      </button>
-    }
-  </div>
-</app-modal>

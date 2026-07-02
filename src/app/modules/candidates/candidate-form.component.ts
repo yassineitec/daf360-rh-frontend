@@ -12,7 +12,7 @@ import {
   ButtonComponent,
   ChipGroupComponent,
   ChipOption,
-  DatePickerComponent,
+  MultiDatePickerComponent,
   FileUploadComponent,
   FormFieldComponent,
   SelectComponent,
@@ -20,6 +20,7 @@ import {
   SliderComponent,
   UploadedFile,
 } from '@khalilrebhiitec/daf360';
+import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-candidate-form',
@@ -28,7 +29,7 @@ import {
     ReactiveFormsModule,
     ButtonComponent,
     ChipGroupComponent,
-    DatePickerComponent,
+    MultiDatePickerComponent,
     FileUploadComponent,
     FormFieldComponent,
     SelectComponent,
@@ -188,13 +189,13 @@ export class CandidateFormComponent implements OnInit {
     return '';
   }
 
-  getDateValue(path: string): string {
-    return this.form.get(path)?.value ?? '';
+  getDateValue(path: string): Date | null {
+    return isoToDate(this.form.get(path)?.value ?? null);
   }
 
-  setDateValue(path: string, value: string): void {
+  setDateValue(path: string, value: Date | Date[] | null): void {
     const ctrl = this.form.get(path);
-    ctrl?.setValue(value || null);
+    ctrl?.setValue(dateToIso(value) || null);
     ctrl?.markAsTouched();
   }
 

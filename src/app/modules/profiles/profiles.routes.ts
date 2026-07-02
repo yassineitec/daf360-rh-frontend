@@ -9,12 +9,12 @@ export const PROFILES_ROUTES: Routes = [
   {
     // /hr/profiles/new is disabled — use the Candidate → Onboarding pipeline instead.
     path: 'new',
-    redirectTo: '',
-    pathMatch: 'full',
+    loadComponent: () =>
+      import('./profile-new.component').then(m => m.ProfileNewComponent),
   },
   {
     path: ':id',
     loadComponent: () =>
-      import('./profile-detail/profile-detail.component').then(m => m.ProfileDetailComponent),
+      import('./profile-detail.component').then(m => m.ProfileDetailComponent),
   },
 ];

@@ -75,9 +75,9 @@
             [value]="getTextValue('identity.phone')"
             (valueChange)="setTextValue('identity.phone', $event)" />
 
-          <daf-date-picker
+          <daf-multi-date-picker
             [value]="getDateValue('identity.dateOfBirth')"
-            [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner' }"
+            [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
             (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
 
           <daf-form-field
@@ -141,10 +141,10 @@
             (selectedChange)="setSelectStr('position.contractType', $event)" />
 
           <div class="grid grid-cols-2 gap-4">
-            <daf-date-picker
+            <daf-multi-date-picker
               [value]="getDateValue('position.expectedStartDate')"
               [config]="{ label: 'Date de Début', placeholder: 'Sélectionner', required: true,
-                          error: getFieldError('position.expectedStartDate') }"
+                          selectionMode: 'single', error: getFieldError('position.expectedStartDate') }"
               (valueChange)="setDateValue('position.expectedStartDate', $event)" />
 
             <daf-select

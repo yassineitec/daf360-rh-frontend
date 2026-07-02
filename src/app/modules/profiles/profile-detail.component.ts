@@ -1,7 +1,5 @@
-import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, signal, TemplateRef, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { NgClass, SlicePipe } from '@angular/common';
 import { catchError, of } from 'rxjs';
 
 import { ProfileService } from './profile.service';
@@ -13,10 +11,25 @@ import {
   LIFECYCLE_LABELS,
   ProfileUpdateDto,
 } from './models/profile.model';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  StatusBadgeComponent,
+  ButtonComponent,
+  CardComponent,
+  SelectComponent,
+  FormFieldComponent,
+  MultiDatePickerComponent,
+  ToggleComponent,
+  RadioGroupComponent,
+  AmountFieldComponent,
+  FileUploadComponent,
+  ModalService,
+  type ModalRef,
+  type SelectOption,
+  type UploadedFile,
+} from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { ModalComponent } from '../../shared/modal.component';
 import { UserStore } from '../../core/user.store';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
@@ -37,6 +50,7 @@ import { NewContractFormComponent } from './lifecycle/new-contract-form.componen
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reusable field display — defined here for colocation, imported below.
+// No lib equivalent exists for a plain label+value display, so this stays local.
 // ─────────────────────────────────────────────────────────────────────────────
 @Component({
   selector: 'app-field',
@@ -97,10 +111,17 @@ type SectionKey =
   standalone: true,
   imports: [
     RouterLink,
-    FormsModule,
     StatusBadgeComponent,
+    ButtonComponent,
+    CardComponent,
+    SelectComponent,
+    FormFieldComponent,
+    MultiDatePickerComponent,
+    ToggleComponent,
+    RadioGroupComponent,
+    AmountFieldComponent,
+    FileUploadComponent,
     SpinnerComponent,
-    ModalComponent,
     FieldComponent,
     PdfDownloadButtonComponent,
     ContractHistoryComponent,
@@ -118,6 +139,7 @@ export class ProfileDetailComponent implements OnInit {
   private regimeSvc = inject(RegimeService);
   private refSvc = inject(RefDataService);
   private lcSvc = inject(ContractLifecycleService);
+  private modalService = inject(ModalService);
 
   readonly statusCfg = STATUS_CONFIG;
   readonly typeCfg = CONTRACT_TYPE_CONFIG;
@@ -154,7 +176,6 @@ export class ProfileDetailComponent implements OnInit {
   editMode = signal(false);
   editForm: ProfileUpdateDto = { reason: '' };
   editSaveError = signal<string | null>(null);
-  showTransitionModal = signal(false);
 
   // ── Ref data lists for edit dropdowns ─────────────────────────────────────
   grades = signal<RefDataItem[]>([]);
@@ -164,16 +185,92 @@ export class ProfileDetailComponent implements OnInit {
   banks = signal<RefDataItem[]>([]);
   nationalities = signal<RefDataItem[]>([]);
 
+  private static readonly BLANK_OPTION: SelectOption = { value: '', label: '— Sélectionner —' };
+
+  readonly genderOptions: SelectOption[] = [
+    ProfileDetailComponent.BLANK_OPTION,
+    { value: 'Homme', label: 'Homme' },
+    { value: 'Femme', label: 'Femme' },
+    { value: 'Autre', label: 'Autre' },
+    { value: 'Non précisé', label: 'Non précisé' },
+  ];
+
+  readonly contractTypeOptions: SelectOption[] = [
+    ProfileDetailComponent.BLANK_OPTION,
+    { value: 'PERMANENT', label: 'CDI' },
+    { value: 'FIXED_TERM', label: 'CDD' },
+    { value: 'INTERN', label: 'Stage' },
+    { value: 'CONSULTANT', label: 'Consultant' },
+  ];
+
+  nationalityOptions = computed<SelectOption[]>(() => [
+    ProfileDetailComponent.BLANK_OPTION,
+    ...this.nationalities().map((n) => ({ value: String(n.id), label: n.labelFr })),
+  ]);
+  departmentOptions = computed<SelectOption[]>(() => [
+    ProfileDetailComponent.BLANK_OPTION,
+    ...this.departments().map((d) => ({ value: String(d.id), label: d.labelFr })),
+  ]);
+  gradeOptions = computed<SelectOption[]>(() => [
+    ProfileDetailComponent.BLANK_OPTION,
+    ...this.grades().map((g) => ({ value: String(g.id), label: g.labelFr })),
+  ]);
+  disciplineOptions = computed<SelectOption[]>(() => [
+    ProfileDetailComponent.BLANK_OPTION,
+    ...this.disciplines().map((d) => ({ value: String(d.id), label: d.labelFr })),
+  ]);
+  nogLevelOptions = computed<SelectOption[]>(() => [
+    ProfileDetailComponent.BLANK_OPTION,
+    ...this.nogLevels().map((n) => ({ value: String(n.id), label: n.labelFr })),
+  ]);
+  bankOptions = computed<SelectOption[]>(() => [
+    ProfileDetailComponent.BLANK_OPTION,
+    ...this.banks().map((b) => ({ value: String(b.id), label: b.labelFr })),
+  ]);
+
+  // Bridges nullable FK ids used by editForm to the string[] selection model of daf-select.
+  toSelected(id: number | null | undefined): string[] {
+    return id != null ? [String(id)] : [];
+  }
+  fromSelected(values: string[]): number | null {
+    return values[0] ? Number(values[0]) : null;
+  }
+
+  // Bridges daf-form-field's `string | number | null` value model to plain text/number fields.
+  asText(v: string | number | null): string {
+    return v == null ? '' : String(v);
+  }
+  asNumber(v: string | number | null): number | null {
+    return v == null || v === '' ? null : Number(v);
+  }
+
+  // Bridges plain ISO date strings to daf-multi-date-picker's Date-based value model.
+  protected readonly toDate = isoToDate;
+  protected readonly fromDate = dateToIso;
+
+  // Backend errors are Spring ProblemDetail bodies — the message is under `detail`
+  // (and, for validation failures, a per-field `errors` map), never `message`.
+  private extractErrorMessage(err: unknown, fallback: string): string {
+    const body = (err as { error?: { detail?: string; errors?: Record<string, string> } })?.error;
+    if (body?.errors && typeof body.errors === 'object') {
+      const messages = Object.values(body.errors).filter((v): v is string => typeof v === 'string');
+      if (messages.length) return messages.join(' ');
+    }
+    return body?.detail ?? fallback;
+  }
+
   resolvedRegime = signal<ResolvedRegimeDto | null>(null);
   isLoadingRegime = signal(true);
-  showRegimeModal = signal(false);
 
   photoUploading = signal(false);
   photoError = signal<string | null>(null);
 
   transitionTarget = signal<LifecycleStatus | null>(null);
   transitionReason = '';
+  transitionError = signal<string | null>(null);
+
   uploadType = 'CONTRACT';
+  uploadFiles = signal<UploadedFile[]>([]);
 
   // ── Contract Lifecycle Engine ───────────────────────────────────────────────
   lcContracts = signal<ContractListDto[]>([]);
@@ -184,9 +281,6 @@ export class ProfileDetailComponent implements OnInit {
   lcError = signal<string | null>(null);
 
   showNewContractModal = signal(false);
-  showValidateTrialModal = signal(false);
-  showRenewCDDModal = signal(false);
-  showConvertCDIModal = signal(false);
 
   selectedContractId: number | null = null;
 
@@ -209,6 +303,13 @@ export class ProfileDetailComponent implements OnInit {
     'RESIGNATION',
     'OTHER',
   ];
+  readonly docTypeOptions: SelectOption[] = this.docTypes.map((t) => ({ value: t, label: t }));
+
+  // ── Modal templates (opened imperatively via ModalService) ──────────────────
+  transitionTpl = viewChild<TemplateRef<unknown>>('transitionTpl');
+  validateTrialTpl = viewChild<TemplateRef<unknown>>('validateTrialTpl');
+  renewCDDTpl = viewChild<TemplateRef<unknown>>('renewCDDTpl');
+  convertCDITpl = viewChild<TemplateRef<unknown>>('convertCDITpl');
 
   private openSections = signal<Set<SectionKey>>(
     new Set<SectionKey>(['identite', 'emploi', 'poste', 'contact']),
@@ -260,12 +361,11 @@ export class ProfileDetailComponent implements OnInit {
   ngOnInit() {
     this.profileId = Number(this.route.snapshot.paramMap.get('id'));
     this.openInEditMode = this.route.snapshot.queryParamMap.get('edit') === 'true';
+
     this.loadProfile();
   }
 
   loadProfile() {
-    this.loading.set(true);
-
     this.svc
       .getById(this.profileId)
       .pipe(catchError(() => of(null)))
@@ -302,33 +402,49 @@ export class ProfileDetailComponent implements OnInit {
   openTransitionModal() {
     this.transitionTarget.set(null);
     this.transitionReason = '';
-    this.showTransitionModal.set(true);
+    this.transitionError.set(null);
+    const tpl = this.transitionTpl();
+    if (!tpl) return;
+    this.modalService.open({
+      title: 'Changer le statut du profil',
+      body: tpl,
+      buttons: [
+        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
+        { label: 'Confirmer', variant: 'primary', action: (ref) => this.confirmTransition(ref) },
+      ],
+    });
   }
 
-  confirmTransition() {
+  confirmTransition(ref: ModalRef) {
     const target = this.transitionTarget();
-    if (!target || !this.transitionReason.trim()) return;
+    if (!target || !this.transitionReason.trim()) {
+      this.transitionError.set('Sélectionnez un statut et indiquez une raison.');
+      return;
+    }
+    if (this.saving()) return;
+    this.transitionError.set(null);
     this.saving.set(true);
     this.svc
       .transition(this.profileId, { newStatus: target, reason: this.transitionReason })
-      .pipe(catchError(() => of(null)))
+      .pipe(
+        catchError((err) => {
+          this.saving.set(false);
+          this.transitionError.set(this.extractErrorMessage(err, 'Erreur lors du changement de statut.'));
+          return of(null);
+        }),
+      )
       .subscribe((updated) => {
-        this.saving.set(false);
         if (updated) {
+          this.saving.set(false);
           this.profile.set(updated);
-          this.showTransitionModal.set(false);
+          ref.close();
         }
       });
   }
 
   // ── Document upload ─────────────────────────────────────────────────────────
-  onFileChange(e: Event) {
-    // const file = (e.target as HTMLInputElement).files?.[0];
-    // if (!file) return;
-    // this.svc.uploadDocument(this.profileId, file, this.uploadType)
-    //   .pipe(catchError(() => of(null)))
-    //   .subscribe(doc => { if (doc) this.documents.update(d => [doc, ...d]); });
-    console.log(e);
+  onDocumentFilesChange(files: UploadedFile[]): void {
+    this.uploadFiles.set(files);
   }
 
   // ── Photo upload ────────────────────────────────────────────────────────────
@@ -354,7 +470,7 @@ export class ProfileDetailComponent implements OnInit {
       },
       error: (err) => {
         this.photoUploading.set(false);
-        this.photoError.set(err?.error?.message ?? 'Erreur lors du téléversement.');
+        this.photoError.set(this.extractErrorMessage(err, 'Erreur lors du téléversement.'));
       },
     });
   }
@@ -454,7 +570,7 @@ export class ProfileDetailComponent implements OnInit {
       .pipe(
         catchError((err) => {
           this.saving.set(false);
-          this.editSaveError.set(err?.error?.message ?? 'Erreur lors de la sauvegarde.');
+          this.editSaveError.set(this.extractErrorMessage(err, 'Erreur lors de la sauvegarde.'));
           return of(null);
         }),
       )
@@ -504,11 +620,20 @@ export class ProfileDetailComponent implements OnInit {
     this.trialApproved = true;
     this.trialComment = '';
     this.lcError.set(null);
-    this.showValidateTrialModal.set(true);
+    const tpl = this.validateTrialTpl();
+    if (!tpl) return;
+    this.modalService.open({
+      title: "Valider la période d'essai",
+      body: tpl,
+      buttons: [
+        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
+        { label: 'Confirmer', variant: 'primary', action: (ref) => this.confirmValidateTrial(ref) },
+      ],
+    });
   }
 
-  confirmValidateTrial(): void {
-    if (this.selectedContractId === null) return;
+  confirmValidateTrial(ref: ModalRef): void {
+    if (this.selectedContractId === null || this.lcSaving()) return;
     this.lcSaving.set(true);
     this.lcSvc
       .validateTrial(this.selectedContractId, {
@@ -517,17 +642,17 @@ export class ProfileDetailComponent implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.lcError.set(err?.error?.message ?? 'Erreur.');
+          this.lcError.set(this.extractErrorMessage(err, 'Erreur.'));
           this.lcSaving.set(false);
           return of(null);
         }),
       )
       .subscribe((r) => {
         if (r) {
-          this.showValidateTrialModal.set(false);
           this.lcSaving.set(false);
           this.lcLoaded = false;
           this.loadContracts();
+          ref.close();
         }
       });
   }
@@ -537,14 +662,24 @@ export class ProfileDetailComponent implements OnInit {
     this.renewDateFin = '';
     this.renewComment = '';
     this.lcError.set(null);
-    this.showRenewCDDModal.set(true);
+    const tpl = this.renewCDDTpl();
+    if (!tpl) return;
+    this.modalService.open({
+      title: 'Renouveler le CDD',
+      body: tpl,
+      buttons: [
+        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
+        { label: 'Renouveler', variant: 'primary', action: (ref) => this.confirmRenewCDD(ref) },
+      ],
+    });
   }
 
-  confirmRenewCDD(): void {
+  confirmRenewCDD(ref: ModalRef): void {
     if (this.selectedContractId === null || !this.renewDateFin) {
       this.lcError.set('La nouvelle date de fin est obligatoire.');
       return;
     }
+    if (this.lcSaving()) return;
     this.lcSaving.set(true);
     this.lcSvc
       .renewCDD(this.selectedContractId, {
@@ -553,17 +688,17 @@ export class ProfileDetailComponent implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.lcError.set(err?.error?.message ?? 'Erreur.');
+          this.lcError.set(this.extractErrorMessage(err, 'Erreur.'));
           this.lcSaving.set(false);
           return of(null);
         }),
       )
       .subscribe((r) => {
         if (r) {
-          this.showRenewCDDModal.set(false);
           this.lcSaving.set(false);
           this.lcLoaded = false;
           this.loadContracts();
+          ref.close();
         }
       });
   }
@@ -573,14 +708,24 @@ export class ProfileDetailComponent implements OnInit {
     this.cdiStartDate = '';
     this.cdiComment = '';
     this.lcError.set(null);
-    this.showConvertCDIModal.set(true);
+    const tpl = this.convertCDITpl();
+    if (!tpl) return;
+    this.modalService.open({
+      title: 'Convertir en CDI',
+      body: tpl,
+      buttons: [
+        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
+        { label: 'Convertir', variant: 'primary', action: (ref) => this.confirmConvertCDI(ref) },
+      ],
+    });
   }
 
-  confirmConvertCDI(): void {
+  confirmConvertCDI(ref: ModalRef): void {
     if (this.selectedContractId === null || !this.cdiStartDate) {
       this.lcError.set('La date de début CDI est obligatoire.');
       return;
     }
+    if (this.lcSaving()) return;
     this.lcSaving.set(true);
     this.lcSvc
       .convertToCDI(this.selectedContractId, {
@@ -589,17 +734,17 @@ export class ProfileDetailComponent implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.lcError.set(err?.error?.message ?? 'Erreur.');
+          this.lcError.set(this.extractErrorMessage(err, 'Erreur.'));
           this.lcSaving.set(false);
           return of(null);
         }),
       )
       .subscribe((r) => {
         if (r) {
-          this.showConvertCDIModal.set(false);
           this.lcSaving.set(false);
           this.lcLoaded = false;
           this.loadContracts();
+          ref.close();
         }
       });
   }
