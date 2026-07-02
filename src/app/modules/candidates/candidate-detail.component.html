@@ -333,6 +333,13 @@
               </div>
             }
 
+            <!-- Entretiens -->
+            @if (showInterviewsSection()) {
+              <app-candidate-interviews
+                [candidateId]="c.id"
+                [paysId]="c.paysId" />
+            }
+
             <!-- IT Provisioning -->
             @if (showItSection()) {
               @if (c.itProvisioning; as prov) {

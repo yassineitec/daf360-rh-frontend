@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { CandidateService } from './candidate.service';
 import { CandidateDetail, HireCandidateRequest } from './candidate.model';
+import { CandidateInterviewsComponent } from './candidate-interviews.component';
 import { CandidateFormComponent } from './candidate-form.component';
 import { RejectModalComponent } from './reject-modal.component';
 // import { StatusBadgeComponent }    from '../../shared/status-badge.component';
@@ -37,6 +38,7 @@ const CONTRACT_CODE_MAP: Record<string, string> = {
     ButtonComponent,
     RejectModalComponent,
     PermissionDirective,
+    CandidateInterviewsComponent,
   ],
   templateUrl: './candidate-detail.component.html',
 })
@@ -101,6 +103,11 @@ export class CandidateDetailComponent implements OnInit {
     const c = this.candidate();
     const noProvisioning: string[] = ['PENDING', 'REJECTED'];
     return c !== null && !noProvisioning.includes(c.status);
+  });
+
+  readonly showInterviewsSection = computed(() => {
+    const c = this.candidate();
+    return c !== null && !['REJECTED', 'ARCHIVED'].includes(c.status);
   });
 
   ngOnInit(): void {

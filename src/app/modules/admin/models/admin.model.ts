@@ -159,4 +159,4 @@ export interface RegimeDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin tabs
 // ─────────────────────────────────────────────────────────────────────────────
-export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime';
+export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types';
