@@ -9,10 +9,11 @@ import { getInitials } from '../../../../shared/utils/avatar.utils';
   imports: [CardComponent],
   template: `
 <daf-card
-  [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }"
+  [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true, clickable: true }"
   [style.box-shadow]="selected() ? '0 0 0 2px #3a6567' : null"
   (mouseenter)="hovered.set(true)"
   (mouseleave)="hovered.set(false)"
+  (cardClick)="viewProfile.emit(employee().profileId)"
 >
   <div
     class="relative p-5 h-80 flex flex-col overflow-hidden"
@@ -44,6 +45,14 @@ import { getInitials } from '../../../../shared/utils/avatar.utils';
         type="button"
         class="p-1.5 text-outline rounded hover:text-[#3a6567]
                hover:bg-surface-container transition-colors"
+        (click)="$event.stopPropagation(); viewProfile.emit(employee().profileId)"
+      >
+        <span class="material-symbols-outlined text-[18px]">visibility</span>
+      </button>
+      <button
+        type="button"
+        class="p-1.5 text-outline rounded hover:text-[#3a6567]
+               hover:bg-surface-container transition-colors"
         (click)="$event.stopPropagation(); emitEdit()"
       >
         <span class="material-symbols-outlined text-[18px]">edit</span>
@@ -59,10 +68,10 @@ import { getInitials } from '../../../../shared/utils/avatar.utils';
     </div>
 
     <!-- Body row -->
-    <div class="flex gap-5 flex-1 min-h-0 mt-2">
+    <div class="flex gap-5 flex-1 min-h-0 mt-4">
 
       <!-- LEFT: Avatar + Name + Grade -->
-      <div class="w-[44%] shrink-0 flex flex-col items-center text-center overflow-hidden">
+      <div class="w-[44%] shrink-0 flex flex-col items-center justify-center text-center overflow-hidden">
 
         <div class="w-28 h-28 rounded-xl overflow-hidden border border-outline-variant bg-surface-container shrink-0">
           @if (photoSrc() !== null) {
@@ -96,7 +105,7 @@ import { getInitials } from '../../../../shared/utils/avatar.utils';
       <div class="w-px self-stretch bg-outline-variant/40 shrink-0"></div>
 
       <!-- RIGHT: 4 data fields -->
-      <div class="flex-1 overflow-hidden space-y-3">
+      <div class="flex-1 flex flex-col justify-center overflow-hidden space-y-3">
 
         <div>
           <p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-0.5">PAYS</p>
@@ -128,19 +137,6 @@ import { getInitials } from '../../../../shared/utils/avatar.utils';
       </div>
 
     </div>
-
-    <!-- Footer -->
-    <div class="flex justify-end mt-4 shrink-0">
-      <button
-        type="button"
-        class="bg-[#3a6567] text-white px-7 py-2.5 rounded-lg font-semibold
-               text-[13px] hover:opacity-90 active:scale-95 transition-all shadow-sm"
-        (click)="viewProfile.emit(employee().profileId)"
-      >
-        Voir profil
-      </button>
-    </div>
-
   </div>
 </daf-card>
   `,

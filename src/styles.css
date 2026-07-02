@@ -1,24 +1,44 @@
 @import 'tailwindcss';
-@import '../node_modules/@khalilrebhiitec/daf360/styles.css';
-@import '../node_modules/@khalilrebhiitec/daf360/tokens.css';
+@import '@khalilrebhiitec/daf360/styles.css';
+@import '@khalilrebhiitec/daf360/tokens.css';
 
-/* Tokens used by daf360 components but absent from tokens.css */
-@source "../src/**/*.{ts,html}";
-@source "../node_modules/@khalilrebhiitec/daf360/fesm2022/khalilrebhiitec-daf360.mjs";
+@source './app';
+@source '../node_modules/@khalilrebhiitec/daf360/fesm2022/khalilrebhiitec-daf360.mjs';
 
-@source inline("{grid-cols-1,grid-cols-2,grid-cols-3,grid-cols-4,grid-cols-5,grid-cols-6,grid-cols-7,grid-cols-8,grid-cols-9,grid-cols-10,grid-cols-11,grid-cols-12}");
-@source inline("{col-span-1,col-span-2,col-span-3,col-span-4,col-span-5,col-span-6,col-span-7,col-span-8,col-span-9,col-span-10,col-span-11,col-span-12}");
-@source inline("{lg:col-span-1,lg:col-span-2,lg:col-span-3,lg:col-span-4,lg:col-span-5,lg:col-span-6,lg:col-span-7,lg:col-span-8,lg:col-span-9,lg:col-span-10,lg:col-span-11,lg:col-span-12}");
-@source inline("{md:grid-cols-1,md:grid-cols-2,md:grid-cols-3,md:grid-cols-4,lg:grid-cols-1,lg:grid-cols-2,lg:grid-cols-3,lg:grid-cols-4}");
-@source inline("{ml-0,ml-64,pt-16,min-h-screen,overflow-y-auto,overflow-hidden}");
-@source inline("{text-primary,text-secondary,text-teal,text-on-surface,text-on-surface-variant,text-outline,text-error,text-danger,text-success}");
-@source inline("{bg-primary,bg-secondary,bg-teal,bg-surface,bg-surface-container,bg-surface-container-lowest,bg-surface-container-high,bg-background,bg-error,bg-danger}");
-@source inline("{border-primary,border-secondary,border-outline,border-outline-variant,border-error}");
+/* Compatibility shim: legacy variable names still referenced by component
+   styles, aliased to the closest @khalilrebhiitec/daf360 token so nothing
+   resolves to nothing. Remove each line as its components are migrated to
+   the lib's own token names directly. */
+:root {
+  --color-text:                      var(--color-on-surface);
+  --color-text-muted:                var(--color-on-surface-variant);
+  --color-border:                    var(--color-outline-variant);
+  --color-bg:                        var(--color-background);
+  --color-bg-secondary:              var(--color-surface-container-low);
+  --color-error:                     var(--color-danger);
+  --color-primary-hover:             var(--color-primary);
+  --color-primary-dark:              var(--color-primary);
+  --color-primary-light:             var(--color-teal-light);
+  --color-surface-container-high:    var(--color-surface-container);
+  --color-teal-50:                   var(--color-surface-container-low);
+  --color-teal-100:                  var(--color-surface-container);
+  --cc-primary:                      var(--color-primary);
+  --cc-secondary:                    var(--color-secondary);
+  --cc-tertiary:                     var(--color-tertiary);
+  --cc-bg:                           var(--color-background);
+  --cc-surface:                      var(--color-surface);
+  --cc-section:                      var(--color-surface-container-low);
+  --cc-border:                       var(--color-outline-variant);
+  --cc-text:                         var(--color-on-surface);
+  --cc-text-muted:                   var(--color-on-surface-variant);
+  /* No lib equivalent exists for these — fixed fallback, not brand-derived */
+  --radius-sm:                       4px;
+  --radius-md:                       8px;
+  --radius-lg:                       12px;
+  --font-display:                    var(--font-sans);
+  --font-body:                       var(--font-sans);
+}
 
-/* ── Layout helpers for daf-card ── */
-/* Makes the inner wrapper fill the grid-cell height so sibling cards are equal height */
-daf-card > div {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+*, *::before, *::after {
+  box-sizing: border-box;
 }
