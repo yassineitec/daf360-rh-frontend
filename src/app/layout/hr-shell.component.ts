@@ -1,4 +1,4 @@
-import { Component, Injector, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, Injector, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, NavigationEnd, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { filter, map } from 'rxjs';
@@ -7,9 +7,8 @@ import { environment } from '../../environments/environment';
 import { UserStore } from '../core/user.store';
 import { AuthService } from '../core/auth.service';
 import { RemoteStylesService } from '../core/remote-styles.service';
-import { SideNavComponent, UserActions } from '@khalilrebhiitec/daf360';
+import { SideNavComponent } from '@khalilrebhiitec/daf360';
 import type { NavItem, SideNavConfig } from '@khalilrebhiitec/daf360';
-import { Store } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import en from '@public/assets/i18n/en.json';
 import fr from '@public/assets/i18n/fr.json';
@@ -74,7 +73,6 @@ export class HrShellComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private auth = inject(AuthService);
   private injector = inject(Injector);
-  private store = inject(Store);
   private translate = inject(TranslateService);
   private remoteStyles = inject(RemoteStylesService);
 
@@ -128,28 +126,6 @@ export class HrShellComponent implements OnInit {
       ? '/remotes/rh/styles.css'
       : 'http://localhost:4203/styles.css';
     this.remoteStyles.injectStyles(stylesUrl);
-
-    effect(
-      () => {
-        const user = this.userStore.currentUser();
-        if (user) {
-          this.store.dispatch(
-            UserActions.loadCurrentUserSuccess({
-              user: {
-                id: user.userId,
-                fullName: user.fullName,
-                email: user.email,
-                roleName: user.roleName,
-                photoUrl: user.photoUrl ?? undefined,
-                permissions: user.permissions,
-                paysId: String(user.paysId),
-              },
-            }),
-          );
-        }
-      },
-      { injector: this.injector },
-    );
 
     if (this.userStore.hasPermission('HR_ONBOARDING')) {
       this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/onboarding/pending`).subscribe({

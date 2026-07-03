@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { UserStore, MeResponse } from './user.store';
+import { provideStore } from '@ngrx/store';
+import { MeResponse, rootReducers } from '@khalilrebhiitec/daf360';
+import { UserStore } from './user.store';
 
 const MOCK_USER: MeResponse = {
   userId:      42,
@@ -27,6 +29,7 @@ describe('UserStore', () => {
         UserStore,
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideStore(rootReducers),
       ],
     });
     store = TestBed.inject(UserStore);
