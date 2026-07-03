@@ -195,6 +195,14 @@ export class ProfileDetailComponent implements OnInit {
     { value: 'Non précisé', label: 'Non précisé' },
   ];
 
+  readonly maritalStatusOptions: SelectOption[] = [
+    ProfileDetailComponent.BLANK_OPTION,
+    { value: 'Célibataire', label: 'Célibataire' },
+    { value: 'Marié(e)', label: 'Marié(e)' },
+    { value: 'Divorcé(e)', label: 'Divorcé(e)' },
+    { value: 'Veuf(ve)', label: 'Veuf(ve)' },
+  ];
+
   readonly contractTypeOptions: SelectOption[] = [
     ProfileDetailComponent.BLANK_OPTION,
     { value: 'PERMANENT', label: 'CDI' },
@@ -527,6 +535,8 @@ export class ProfileDetailComponent implements OnInit {
       nationalityId: p.nationalityId ?? null,
       nationalId: p.nationalId ?? '',
       passportNumber: p.passportNumber ?? '',
+      maritalStatus: p.maritalStatus ?? '',
+      numberOfChildren: p.numberOfChildren ?? null,
       hireDate: p.hireDate ?? '',
       contractType: p.contractType ?? '',
       contractEndDate: p.contractEndDate ?? '',
@@ -548,6 +558,8 @@ export class ProfileDetailComponent implements OnInit {
       rib: p.rib ?? '',
       socialSecurityNumber: p.socialSecurityNumber ?? '',
       taxId: p.taxId ?? '',
+      cnssNumber: p.cnssNumber ?? '',
+      cnssAffiliationDate: p.cnssAffiliationDate ?? '',
       salaireNetCandidat: p.salaireNetCandidat ?? null,
       salaireNetRh: p.salaireNetRh ?? null,
     };

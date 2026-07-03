@@ -139,7 +139,7 @@
             [selected]="selIds.has(emp.userId!)"
             (viewProfile)="onViewProfile($event)"
             (moreActions)="onViewProfile($event)"
-            (onSelect)="toggleSelect($event.profileId, $event.checked)"
+            (onSelect)="toggleSelect($event.userId, $event.checked)"
             (onEdit)="onEdit($event)"
             (onDelete)="onDelete($event)" />
         }

@@ -160,6 +160,8 @@ export interface ProfileUpdateDto {
   nationalityId?: number | null; // FK — replaces text nationality
   nationalId?: string;
   passportNumber?: string;
+  maritalStatus?: string;
+  numberOfChildren?: number | null;
   // Emploi
   hireDate?: string;
   contractType?: string;
@@ -186,6 +188,8 @@ export interface ProfileUpdateDto {
   rib?: string;
   socialSecurityNumber?: string;
   taxId?: string;
+  cnssNumber?: string;
+  cnssAffiliationDate?: string;
   salaireNetCandidat?: number | null;
   salaireNetRh?: number | null;
 }

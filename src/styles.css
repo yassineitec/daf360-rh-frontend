@@ -57,3 +57,8 @@
 body {
   font-family: var(--font-sans);
 }
+
+
+.modal-panel {
+  transform: none !important;
+}

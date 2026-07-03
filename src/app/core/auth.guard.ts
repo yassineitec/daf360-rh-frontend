@@ -12,10 +12,23 @@ export const authGuard: CanActivateFn = async () => {
   // Fast path: standalone mode — APP_INITIALIZER already populated UserStore.
   if (userStore.isAuthenticated()) return true;
 
-  // Federation path: the shell populates the shared NgRx store asynchronously
-  // (UserActions dispatched from ShellLayoutComponent.ngOnInit after the effect
-  // runs its /api/me call). firstValueFrom would resolve immediately with null
-  // if we don't filter, so we wait up to 2 s for a non-null user to arrive.
+  // Federation path: UserStore must be populated directly — it's the only source of
+  // rhToken (auth.interceptor.ts reads it for every rh-service call; the shared NgRx
+  // store's MeResponse, from @khalilrebhiitec/daf360, doesn't carry that field at all).
+  // This used to be a 2 s wait on the shared store first, which could grant navigation
+  // without ever populating UserStore — leaving every subsequent rh-service call
+  // silently unauthenticated (no Authorization header, falling back to cookies that
+  // don't reliably cross the shell/rh-service port boundary).
+  try {
+    await userStore.loadCurrentUser();
+    if (userStore.isAuthenticated()) return true;
+  } catch {
+    // network error — fall through to the shared-store check below
+  }
+
+  // Fallback: if the direct call failed but the shell's shared store already confirms
+  // a logged-in user, don't bounce to login — just proceed without rhToken rather than
+  // block navigation (rh-service calls will fall back to cookie auth in that case).
   try {
     const store = inject(Store);
     const storeUser = await firstValueFrom(
@@ -27,14 +40,6 @@ export const authGuard: CanActivateFn = async () => {
     if (storeUser) return true;
   } catch {
     // NgRx store not provided (standalone without APP_INITIALIZER) — fall through.
-  }
-
-  // Network fallback: fetch the user directly from the portal.
-  try {
-    await userStore.loadCurrentUser();
-    if (userStore.isAuthenticated()) return true;
-  } catch {
-    // network error — treat as unauthenticated
   }
 
   window.location.href = environment.shellUrl || '/';

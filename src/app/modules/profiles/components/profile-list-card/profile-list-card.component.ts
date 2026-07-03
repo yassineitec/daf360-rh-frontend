@@ -143,7 +143,7 @@ export class ProfileListCardComponent {
   readonly selected    = input<boolean>(false);
   readonly viewProfile = output<number | null>();
   readonly moreActions = output<number | null>();
-  readonly onSelect    = output<{ profileId: number; checked: boolean }>();
+  readonly onSelect    = output<{ userId: number; checked: boolean }>();
   readonly onEdit      = output<number>();
   readonly onDelete    = output<number>();
   readonly avatarUrl    = avatarUrl;
@@ -154,7 +154,7 @@ export class ProfileListCardComponent {
 
   handleSelect(checked: boolean): void {
     const id = this.employee().userId;
-    if (id != null) this.onSelect.emit({ profileId: id, checked });
+    if (id != null) this.onSelect.emit({ userId: id, checked });
   }
 
   emitEdit(): void {

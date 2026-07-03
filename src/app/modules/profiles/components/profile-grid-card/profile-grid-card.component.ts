@@ -212,12 +212,12 @@ export class ProfileGridCardComponent {
   }
 
   emitEdit(): void {
-    const id = this.employee().userId;
+    const id = this.employee().profileId;
     if (id != null) this.onEdit.emit(id);
   }
 
   emitDelete(): void {
-    const id = this.employee().userId;
+    const id = this.employee().profileId;
     if (id != null) this.onDelete.emit(id);
   }
 }

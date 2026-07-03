@@ -107,7 +107,7 @@
             @if (!editMode()) {
               <app-field label="Genre" [value]="profile()!.gender" />
             } @else {
-              <daf-select [options]="genderOptions" [config]="{ label: 'Genre' }"
+              <daf-select [options]="genderOptions" [config]="{ label: 'Genre', searchable: true }"
                 [selected]="editForm.gender ? [editForm.gender] : []"
                 (selectedChange)="editForm.gender = $event[0]" />
             }
@@ -115,7 +115,7 @@
             @if (!editMode()) {
               <app-field label="Nationalité" [value]="profile()!.nationality" />
             } @else {
-              <daf-select [options]="nationalityOptions()" [config]="{ label: 'Nationalité' }"
+              <daf-select [options]="nationalityOptions()" [config]="{ label: 'Nationalité', searchable: true }"
                 [selected]="toSelected(editForm.nationalityId)"
                 (selectedChange)="editForm.nationalityId = fromSelected($event)" />
             }
@@ -136,9 +136,17 @@
 
             @if (!editMode()) {
               <app-field label="Situation familiale" [value]="profile()!.maritalStatus" />
+            } @else {
+              <daf-select [options]="maritalStatusOptions" [config]="{ label: 'Situation familiale', searchable: true }"
+                [selected]="editForm.maritalStatus ? [editForm.maritalStatus] : []"
+                (selectedChange)="editForm.maritalStatus = $event[0]" />
             }
+
             @if (!editMode()) {
               <app-field label="Nombre d'enfants" [value]="profile()!.numberOfChildren?.toString()" />
+            } @else {
+              <daf-form-field [options]="{ label: 'Nombre d\'enfants', type: 'number' }"
+                [value]="editForm.numberOfChildren ?? null" (valueChange)="editForm.numberOfChildren = asNumber($event)" />
             }
           </div>
         </div>
@@ -167,7 +175,7 @@
             @if (!editMode()) {
               <app-field label="Type de contrat" [value]="profile()!.contractType" />
             } @else {
-              <daf-select [options]="contractTypeOptions" [config]="{ label: 'Type de contrat' }"
+              <daf-select [options]="contractTypeOptions" [config]="{ label: 'Type de contrat', searchable: true }"
                 [selected]="editForm.contractType ? [editForm.contractType] : []"
                 (selectedChange)="editForm.contractType = $event[0]" />
             }
@@ -221,7 +229,7 @@
             @if (!editMode()) {
               <app-field label="Département" [value]="profile()!.department" />
             } @else {
-              <daf-select [options]="departmentOptions()" [config]="{ label: 'Département' }"
+              <daf-select [options]="departmentOptions()" [config]="{ label: 'Département', searchable: true }"
                 [selected]="toSelected(editForm.departmentId)"
                 (selectedChange)="editForm.departmentId = fromSelected($event)" />
             }
@@ -229,7 +237,7 @@
             @if (!editMode()) {
               <app-field label="Grade" [value]="profile()!.grade" />
             } @else {
-              <daf-select [options]="gradeOptions()" [config]="{ label: 'Grade' }"
+              <daf-select [options]="gradeOptions()" [config]="{ label: 'Grade', searchable: true }"
                 [selected]="toSelected(editForm.gradeId)"
                 (selectedChange)="editForm.gradeId = fromSelected($event)" />
             }
@@ -237,7 +245,7 @@
             @if (!editMode()) {
               <app-field label="Discipline" [value]="profile()!.discipline" />
             } @else {
-              <daf-select [options]="disciplineOptions()" [config]="{ label: 'Discipline' }"
+              <daf-select [options]="disciplineOptions()" [config]="{ label: 'Discipline', searchable: true }"
                 [selected]="toSelected(editForm.disciplineId)"
                 (selectedChange)="editForm.disciplineId = fromSelected($event)" />
             }
@@ -245,7 +253,7 @@
             @if (!editMode()) {
               <app-field label="Niveau NOG" [value]="profile()!.nogLevel" />
             } @else {
-              <daf-select [options]="nogLevelOptions()" [config]="{ label: 'Niveau NOG' }"
+              <daf-select [options]="nogLevelOptions()" [config]="{ label: 'Niveau NOG', searchable: true }"
                 [selected]="toSelected(editForm.nogLevelId)"
                 (selectedChange)="editForm.nogLevelId = fromSelected($event)" />
             }
@@ -399,7 +407,7 @@
               @if (!editMode()) {
                 <app-field label="Banque" [value]="profile()!.bankName" />
               } @else {
-                <daf-select [options]="bankOptions()" [config]="{ label: 'Banque' }"
+                <daf-select [options]="bankOptions()" [config]="{ label: 'Banque', searchable: true }"
                   [selected]="toSelected(editForm.bankId)"
                   (selectedChange)="editForm.bankId = fromSelected($event)" />
               }
@@ -439,8 +447,19 @@
                   [value]="editForm.taxId ?? ''" (valueChange)="editForm.taxId = asText($event)" />
               }
 
-              @if (!editMode()) { <app-field label="N° CNSS" [value]="profile()!.cnssNumber" /> }
-              @if (!editMode()) { <app-field label="Date affiliation CNSS" [value]="fmt(profile()!.cnssAffiliationDate)" /> }
+              @if (!editMode()) {
+                <app-field label="N° CNSS" [value]="profile()!.cnssNumber" />
+              } @else {
+                <daf-form-field [options]="{ label: 'N° CNSS' }"
+                  [value]="editForm.cnssNumber ?? ''" (valueChange)="editForm.cnssNumber = asText($event)" />
+              }
+
+              @if (!editMode()) {
+                <app-field label="Date affiliation CNSS" [value]="fmt(profile()!.cnssAffiliationDate)" />
+              } @else {
+                <daf-multi-date-picker [config]="{ label: 'Date affiliation CNSS', selectionMode: 'single' }"
+                  [value]="toDate(editForm.cnssAffiliationDate)" (valueChange)="editForm.cnssAffiliationDate = fromDate($event)" />
+              }
             </div>
           </div>
         }
@@ -722,7 +741,7 @@
           } @else {
             @if (canEdit()) {
               <div class="upload-bar">
-                <daf-select [options]="docTypeOptions" [config]="{ label: 'Type de document' }"
+                <daf-select [options]="docTypeOptions" [config]="{ label: 'Type de document', searchable: true }"
                   [selected]="[uploadType]" (selectedChange)="uploadType = $event[0]" />
                 <daf-file-upload [config]="{ accept: '.pdf,.jpg,.jpeg,.png', hint: 'Importer un document' }"
                   [files]="uploadFiles()" (filesChange)="onDocumentFilesChange($event)" />
