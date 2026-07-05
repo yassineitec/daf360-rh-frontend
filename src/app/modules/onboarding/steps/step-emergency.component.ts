@@ -1,11 +1,11 @@
 import { Component, OnInit, input, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
+import { FormFieldComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-step-emergency',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormFieldComponent],
   templateUrl: './step-emergency.component.html',
   styleUrl: './step-emergency.component.scss',
 })

@@ -196,11 +196,11 @@ export class CandidateDetailComponent implements OnInit {
   readonly canOnboard = computed(() => this.userStore.hasPermission('HR_ONBOARDING'));
 
   goToProvisioning(provId: number): void {
-    this.router.navigate(['/it-provisioning', provId]);
+    this.router.navigate(['/rh/it-provisioning', provId]);
   }
 
   goToOnboarding(): void {
-    this.router.navigate(['/onboarding', this.candidateId]);
+    this.router.navigate(['/rh/onboarding', this.candidateId]);
   }
 
   onCvFileSelected(event: Event): void {

@@ -94,7 +94,10 @@
           <h3 class="text-[16px] font-semibold">Curriculum Vitae</h3>
         </div>
 
+        <!-- Scope --color-primary to tertiary so the dropzone accents (icon, "parcourir"
+             link, hover/drag border) render green instead of the dark primary. -->
         <daf-file-upload
+          style="--color-primary: var(--color-tertiary);"
           [(files)]="cvFiles"
           [config]="{ accept: '.pdf,.doc,.docx', maxSizeMb: 5,
                       hint: 'PDF, DOC ou DOCX — max 5 Mo' }" />
@@ -154,7 +157,9 @@
               (selectedChange)="setSelectNum('position.departmentId', $event)" />
           </div>
 
+          <!-- Scope --color-primary to tertiary so the track fill + thumb render green. -->
           <daf-slider
+            style="--color-primary: var(--color-tertiary);"
             [value]="experienceYears()"
             (valueChange)="experienceYears.set($event)"
             [config]="{ title: 'Niveau d\'Expérience', unit: 'ans',

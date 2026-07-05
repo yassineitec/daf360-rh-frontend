@@ -28,12 +28,11 @@
 
   <div class="form-group mt-16">
     <label class="form-label">Date de début du régime <span class="req">*</span></label>
-    <input
-      type="date"
-      class="form-input"
-      style="max-width:220px"
-      [ngModel]="regimeStartDate()"
-      (ngModelChange)="regimeStartDate.set($event); emit()"
-    >
+    <div style="max-width:220px">
+      <daf-multi-date-picker
+        [value]="isoToDate(regimeStartDate() || null)"
+        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        (valueChange)="regimeStartDate.set(dateToIso($event) || ''); emit()" />
+    </div>
   </div>
 </div>

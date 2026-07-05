@@ -270,5 +270,5 @@ export class ItProvisioningFormComponent implements OnInit {
     setTimeout(() => this.successMsg.set(null), 4000);
   }
 
-  goBack(): void { this.router.navigate(['/it-provisioning']); }
+  goBack(): void { this.router.navigate(['/rh/it-provisioning']); }
 }

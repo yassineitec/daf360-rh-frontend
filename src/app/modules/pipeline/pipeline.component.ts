@@ -107,6 +107,9 @@ export class PipelineComponent implements OnInit {
 
   readonly selectedCount = computed(() => this.selectedIds().size);
 
+  /** Cap the "Activités Récentes" feed so the sidebar stays compact. */
+  readonly recentActivities = computed(() => this.activities().slice(0, 5));
+
   readonly currentObjective = computed<PipelineObjective | null>(() => {
     const objs = this.objectives();
     return objs.length ? objs[objs.length - 1] : null;

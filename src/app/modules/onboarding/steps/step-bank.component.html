@@ -11,73 +11,53 @@
   <!-- Row 1: Banque | RIB -->
   <div class="form-field">
     <label class="form-label">Nom de la banque <span class="req">*</span></label>
-    <select
-      class="form-input"
-      [ngModel]="bankId()"
-      (ngModelChange)="bankId.set($event); emit()"
-    >
-      <option [ngValue]="null">— Sélectionner —</option>
-      @for (b of banks(); track b.id) {
-        <option [ngValue]="b.id">{{ b.labelFr }}</option>
-      }
-    </select>
+    <daf-select
+      [selected]="bankId() != null ? [bankId()!.toString()] : []"
+      [options]="bankOptions()"
+      [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+      (selectedChange)="bankId.set($event[0] ? +$event[0] : null); emit()" />
   </div>
 
   <div class="form-field">
     <label class="form-label">RIB <span class="req">*</span></label>
-    <input
-      class="form-input"
-      type="text"
-      placeholder="Ex. 00199999999999999999"
-      [ngModel]="rib()"
-      (ngModelChange)="rib.set($event); emit()"
-    />
+    <daf-form-field
+      [options]="{ placeholder: 'Ex. 00199999999999999999' }"
+      [value]="rib()"
+      (valueChange)="rib.set($any($event) ?? ''); emit()" />
   </div>
 
   <!-- Row 2: N° Compte | IBAN -->
   <div class="form-field">
     <label class="form-label">N° de compte bancaire</label>
-    <input
-      class="form-input"
-      type="text"
-      placeholder="Ex. 1234567890"
-      [ngModel]="bankAccountNumber()"
-      (ngModelChange)="bankAccountNumber.set($event); emit()"
-    />
+    <daf-form-field
+      [options]="{ placeholder: 'Ex. 1234567890' }"
+      [value]="bankAccountNumber()"
+      (valueChange)="bankAccountNumber.set($any($event) ?? ''); emit()" />
   </div>
 
   <div class="form-field">
     <label class="form-label">IBAN</label>
-    <input
-      class="form-input"
-      type="text"
-      placeholder="Ex. TN59 0000 0000 0000 0000 00"
-      [ngModel]="iban()"
-      (ngModelChange)="iban.set($event); emit()"
-    />
+    <daf-form-field
+      [options]="{ placeholder: 'Ex. TN59 0000 0000 0000 0000 00' }"
+      [value]="iban()"
+      (valueChange)="iban.set($any($event) ?? ''); emit()" />
   </div>
 
   <!-- Row 3: N° Sécu | N° Fiscal -->
   <div class="form-field">
     <label class="form-label">N° Sécurité sociale</label>
-    <input
-      class="form-input"
-      type="text"
-      placeholder="Ex. 1 85 07 75 123 456 78"
-      [ngModel]="socialSecurityNumber()"
-      (ngModelChange)="socialSecurityNumber.set($event); emit()"
-    />
+    <daf-form-field
+      [options]="{ placeholder: 'Ex. 1 85 07 75 123 456 78' }"
+      [value]="socialSecurityNumber()"
+      (valueChange)="socialSecurityNumber.set($any($event) ?? ''); emit()" />
   </div>
 
   <div class="form-field">
     <label class="form-label">N° Fiscal</label>
-    <input
-      class="form-input"
-      type="text"
-      placeholder="Ex. 1234567A"
-      [ngModel]="taxId()"
-      (ngModelChange)="taxId.set($event); emit()"
-    />
+    <daf-form-field
+      [options]="{ placeholder: 'Ex. 1234567A' }"
+      [value]="taxId()"
+      (valueChange)="taxId.set($any($event) ?? ''); emit()" />
   </div>
 
   <!-- Row 4: IBAN attestation upload (full-width, disabled) -->

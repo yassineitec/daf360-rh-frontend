@@ -1,13 +1,19 @@
-import { Component, input, output, OnInit, signal, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { AsyncPipe } from '@angular/common';
+import { Component, input, output, OnInit, signal, inject, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
+import {
+  FormFieldComponent,
+  SelectComponent,
+  MultiDatePickerComponent,
+  SelectOption,
+} from '@khalilrebhiitec/daf360';
+import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-step-personal',
   standalone: true,
-  imports: [FormsModule, AsyncPipe],
+  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent],
   templateUrl: './step-personal.component.html',
   styleUrl: './step-personal.component.scss',
 })
@@ -18,15 +24,19 @@ export class StepPersonalComponent implements OnInit {
   changed = output<Partial<OnboardingProfileDto>>();
 
   private listService = inject(ConfigurableListService);
-  readonly maritalOptions$ = this.listService.getListValues('MARITAL_STATUS');
-  readonly emptyList: never[] = [];
+  private maritalList = toSignal(this.listService.getListValues('MARITAL_STATUS'), { initialValue: [] });
+  readonly maritalOptions = computed<SelectOption[]>(() =>
+    this.maritalList().map(v => ({ value: v.valueCode, label: v.labelFr })));
 
   cnssNumber          = signal('');
   cnssAffiliationDate = signal('');
   maritalStatus       = signal('');
   numberOfChildren    = signal<number | null>(null);
-  personalAddress         = signal('');
+  personalAddress     = signal('');
   phone               = signal('');
+
+  protected readonly isoToDate = isoToDate;
+  protected readonly dateToIso = dateToIso;
 
   ngOnInit(): void {
     const d  = this.data();
@@ -46,7 +56,7 @@ export class StepPersonalComponent implements OnInit {
       cnssAffiliationDate: this.cnssAffiliationDate() || null,
       maritalStatus:       this.maritalStatus() || null,
       numberOfChildren:    this.numberOfChildren(),
-      personalAddress:         this.personalAddress() || null,
+      personalAddress:     this.personalAddress() || null,
       phone:               this.phone() || null,
     });
   }

@@ -63,6 +63,17 @@
         <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ actionError() }}</div>
       }
 
+      <!-- Drag guidance banner -->
+      @if (notice()) {
+        <div class="flex items-center gap-2 bg-primary/10 text-primary text-sm rounded-xl px-4 py-3">
+          <span class="material-symbols-outlined text-[18px]">info</span>
+          <span class="flex-1">{{ notice() }}</span>
+          <button type="button" class="text-primary/70 hover:text-primary" (click)="notice.set(null)">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      }
+
       <!-- Filters -->
       <div class="flex items-center gap-3">
         <div class="flex-1 min-w-0">
@@ -72,13 +83,40 @@
             (searchChange)="onSearch($event)"
           />
         </div>
-        <daf-select
-          [selected]="statusFilter() ? [statusFilter()] : []"
-          [options]="statusSelectOptions"
-          [config]="statusSelectConfig"
-          (selectedChange)="onStatusChange($event)"
-        />
+        @if (viewMode() === 'list') {
+          <daf-select
+            [selected]="statusFilter() ? [statusFilter()] : []"
+            [options]="statusSelectOptions"
+            [config]="statusSelectConfig"
+            (selectedChange)="onStatusChange($event)"
+          />
+        }
+        <!-- View toggle: list ⇄ kanban -->
+        <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+          <button
+            type="button"
+            class="flex items-center px-3 py-2 transition-colors"
+            [class.bg-primary]="viewMode() === 'list'"
+            [class.text-white]="viewMode() === 'list'"
+            [class.text-outline]="viewMode() !== 'list'"
+            title="Vue liste"
+            (click)="setView('list')">
+            <span class="material-symbols-outlined text-[18px]">view_list</span>
+          </button>
+          <button
+            type="button"
+            class="flex items-center px-3 py-2 transition-colors"
+            [class.bg-primary]="viewMode() === 'kanban'"
+            [class.text-white]="viewMode() === 'kanban'"
+            [class.text-outline]="viewMode() !== 'kanban'"
+            title="Vue kanban"
+            (click)="setView('kanban')">
+            <span class="material-symbols-outlined text-[18px]">view_kanban</span>
+          </button>
+        </div>
       </div>
+
+      @if (viewMode() === 'list') {
 
       <!-- Loading -->
       @if (loading()) {
@@ -190,6 +228,96 @@
               (pageChange)="onPageChange($event)" />
           }
         </div>
+      }
+
+      <!-- ═══════════════════ KANBAN VIEW ═══════════════════ -->
+      } @else {
+
+        @if (kanbanLoading()) {
+          <div class="flex justify-center items-center h-48">
+            <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">
+              progress_activity
+            </span>
+          </div>
+        } @else {
+          <div class="flex gap-4 overflow-x-auto pb-2 items-start">
+            @for (col of kanbanColumns(); track col.key) {
+              <div class="flex-1 min-w-[240px] flex flex-col">
+                <!-- Column header -->
+                <div class="flex items-center justify-between px-1 mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full {{ col.dot }}"></span>
+                    <span class="text-sm font-semibold text-on-surface">{{ col.label }}</span>
+                  </div>
+                  <span class="text-xs font-medium text-outline bg-surface-container rounded-full px-2 py-0.5">
+                    {{ col.candidates.length }}
+                  </span>
+                </div>
+
+                <!-- Cards (native HTML5 drop target) -->
+                <div
+                  class="flex flex-col gap-3 min-h-20 rounded-xl transition-all"
+                  [class.ring-2]="dragOverKey() === col.key"
+                  [class.ring-primary]="dragOverKey() === col.key"
+                  [class.ring-offset-2]="dragOverKey() === col.key"
+                  (dragover)="onDragOver($event, col)"
+                  (dragleave)="onDragLeave(col)"
+                  (drop)="onDrop($event, col)">
+                  @for (c of col.candidates; track c.id) {
+                    <div
+                      class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+                      [class.opacity-40]="draggedId() === c.id"
+                      draggable="true"
+                      (dragstart)="onDragStart(c)"
+                      (dragend)="onDragEnd()"
+                      (click)="onView(c.id)">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                          {{ initials(c.firstName, c.lastName) }}
+                        </div>
+                        <div class="min-w-0">
+                          <div class="text-sm font-semibold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</div>
+                          <div class="text-xs text-outline truncate">{{ c.appliedPosition ?? c.emailPersonal }}</div>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center justify-between mt-3">
+                        <daf-badge
+                          [label]="statusBadge(c.status).label"
+                          [options]="statusBadge(c.status).options" />
+                        <span class="text-xs text-outline">{{ formatDate(c.expectedStartDate) }}</span>
+                      </div>
+
+                      @if (c.status === 'PENDING' && canAcceptReject()) {
+                        <div
+                          class="flex items-center gap-1 mt-3 pt-3 border-t border-outline-variant"
+                          (click)="$event.stopPropagation()">
+                          <daf-button
+                            label="Accepter"
+                            variant="ghost"
+                            [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === c.id }"
+                            (onClick)="quickAccept(c, $event)" />
+                          <daf-button
+                            label="Rejeter"
+                            variant="danger"
+                            [options]="{ iconStart: 'cancel', size: 'sm' }"
+                            (onClick)="openRejectModal(c, $event)" />
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (col.candidates.length === 0) {
+                    <div class="text-center text-xs text-outline py-6 border border-dashed border-outline-variant rounded-xl">
+                      Aucun candidat
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
       }
 
     </div>

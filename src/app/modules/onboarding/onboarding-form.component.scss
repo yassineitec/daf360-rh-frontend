@@ -77,27 +77,27 @@
   margin: 0 4px 18px;
   min-width: 12px;
 
-  &.step-connector-done { background: var(--color-primary); }
+  &.step-connector-done { background: var(--color-tertiary); }
 }
 
 .step-item.step-done {
   .step-bubble {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
+    background: var(--color-tertiary);
+    border-color: var(--color-tertiary);
     color: #ffffff;
   }
-  .step-label { color: var(--color-primary); }
+  .step-label { color: var(--color-tertiary); }
 }
 
 .step-item.step-active {
   .step-bubble {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
+    background: var(--color-tertiary);
+    border-color: var(--color-tertiary);
     color: #ffffff;
-    box-shadow: 0 0 0 4px rgba(27, 58, 75, 0.12);
+    box-shadow: 0 0 0 4px rgba(0, 193, 173, 0.15);
   }
   .step-label {
-    color: var(--color-primary);
+    color: var(--color-tertiary);
     font-weight: 700;
   }
 }

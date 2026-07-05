@@ -1,13 +1,20 @@
-import { Component, input, output, signal, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, output, signal, OnInit, inject, computed } from '@angular/core';
 import { OnboardingProfileDto, OnboardingFormData, CONTRACT_OPTIONS } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
+import { input } from '@angular/core';
+import {
+  FormFieldComponent,
+  SelectComponent,
+  MultiDatePickerComponent,
+  SelectOption,
+} from '@khalilrebhiitec/daf360';
+import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-step-contract',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent],
   templateUrl: './step-contract.component.html',
   styleUrl: './step-contract.component.scss',
 })
@@ -18,7 +25,8 @@ export class StepContractComponent implements OnInit {
 
   private refSvc = inject(RefDataService);
 
-  readonly contractOptions = CONTRACT_OPTIONS;
+  readonly contractOptions: SelectOption[] =
+    CONTRACT_OPTIONS.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }));
 
   hireDate         = signal('');
   contractType     = signal('');
@@ -35,10 +43,17 @@ export class StepContractComponent implements OnInit {
   nogLevels   = signal<RefDataItem[]>([]);
   departments = signal<RefDataItem[]>([]);
 
+  readonly gradeOptions      = computed<SelectOption[]>(() => this.grades().map(g => ({ value: String(g.id), label: g.labelFr })));
+  readonly disciplineOptions = computed<SelectOption[]>(() => this.disciplines().map(d => ({ value: String(d.id), label: d.labelFr })));
+  readonly nogOptions        = computed<SelectOption[]>(() => this.nogLevels().map(n => ({ value: String(n.id), label: n.labelFr })));
+  readonly departmentOptions = computed<SelectOption[]>(() => this.departments().map(d => ({ value: String(d.id), label: d.labelFr })));
+
+  protected readonly isoToDate = isoToDate;
+  protected readonly dateToIso = dateToIso;
+
   ngOnInit(): void {
-    const d      = this.data();
-    const fi     = this.formInfo();
-    const paysId = fi?.paysId ?? 52;
+    const d  = this.data();
+    const fi = this.formInfo();
 
     this.hireDate.set(d.hireDate ?? '');
     this.contractType.set(d.contractType ?? fi?.contractType ?? '');
@@ -50,10 +65,11 @@ export class StepContractComponent implements OnInit {
     this.isOnProbation.set(d.isOnProbation ?? false);
     this.probationEndDate.set(d.probationEndDate ?? '');
 
-    this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
-    this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
-    this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));
-    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+    // No paysId → backend returns ALL active ref data (matches the candidate form).
+    this.refSvc.getGrades().subscribe(r => this.grades.set(r));
+    this.refSvc.getDisciplines().subscribe(r => this.disciplines.set(r));
+    this.refSvc.getNogLevels().subscribe(r => this.nogLevels.set(r));
+    this.refSvc.getDepartments().subscribe(r => this.departments.set(r));
 
     this.emit();
   }

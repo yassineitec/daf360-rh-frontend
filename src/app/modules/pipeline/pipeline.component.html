@@ -303,7 +303,7 @@
             <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
               <h3 class="text-[15px] font-bold text-on-surface mb-4">Activités Récentes</h3>
               <div class="space-y-4">
-                @for (activity of activities(); track activity.id) {
+                @for (activity of recentActivities(); track activity.id) {
                   <div class="flex gap-3">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                          [class]="activityMeta(activity.action).bg">

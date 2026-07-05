@@ -7,64 +7,46 @@
   <div class="form-grid">
     <!-- Row 1: CNSS Number | CNSS Affiliation Date -->
     <div class="form-field">
-      <label class="form-label">
-        N° CNSS <span class="req">*</span>
-      </label>
-      <input
-        type="text"
-        class="form-input"
-        placeholder="Ex: 123456789"
-        [ngModel]="cnssNumber()"
-        (ngModelChange)="cnssNumber.set($event); emit()"
-      />
+      <label class="form-label">N° CNSS <span class="req">*</span></label>
+      <daf-form-field
+        [options]="{ placeholder: 'Ex: 123456789' }"
+        [value]="cnssNumber()"
+        (valueChange)="cnssNumber.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field">
       <label class="form-label">Date d'affiliation CNSS</label>
-      <input
-        type="date"
-        class="form-input"
-        [ngModel]="cnssAffiliationDate()"
-        (ngModelChange)="cnssAffiliationDate.set($event); emit()"
-      />
+      <daf-multi-date-picker
+        [value]="isoToDate(cnssAffiliationDate() || null)"
+        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        (valueChange)="cnssAffiliationDate.set(dateToIso($event) || ''); emit()" />
     </div>
 
     <!-- Row 2: Marital Status | Number of Children -->
     <div class="form-field">
       <label class="form-label">Situation familiale</label>
-      <select
-        class="form-input form-select"
-        [ngModel]="maritalStatus()"
-        (ngModelChange)="maritalStatus.set($event); emit()"
-      >
-        @for (opt of (maritalOptions$ | async) ?? emptyList; track $index) {
-          <option [value]="opt.valueCode">{{ opt.labelFr }}</option>
-        }
-      </select>
+      <daf-select
+        [selected]="maritalStatus() ? [maritalStatus()] : []"
+        [options]="maritalOptions()"
+        [config]="{ placeholder: '— Sélectionner —', fullWidth: true }"
+        (selectedChange)="maritalStatus.set($event[0] ?? ''); emit()" />
     </div>
 
     <div class="form-field">
       <label class="form-label">Nombre d'enfants</label>
-      <input
-        type="number"
-        class="form-input"
-        min="0"
-        placeholder="0"
-        [ngModel]="numberOfChildren()"
-        (ngModelChange)="numberOfChildren.set($event === '' || $event === null ? null : +$event); emit()"
-      />
+      <daf-form-field
+        [options]="{ type: 'number', placeholder: '0' }"
+        [value]="numberOfChildren()"
+        (valueChange)="numberOfChildren.set($event == null || $event === '' ? null : +$event); emit()" />
     </div>
 
     <!-- Row 3: Phone | empty -->
     <div class="form-field">
       <label class="form-label">Téléphone personnel</label>
-      <input
-        type="tel"
-        class="form-input"
-        placeholder="Ex: +216 XX XXX XXX"
-        [ngModel]="phone()"
-        (ngModelChange)="phone.set($event); emit()"
-      />
+      <daf-form-field
+        [options]="{ placeholder: 'Ex: +216 XX XXX XXX', prefixIcon: 'phone' }"
+        [value]="phone()"
+        (valueChange)="phone.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field form-empty"></div>
@@ -72,13 +54,10 @@
     <!-- Row 4: Home Address (full-width textarea) -->
     <div class="form-field form-full">
       <label class="form-label">Adresse personnelle</label>
-      <textarea
-        class="form-textarea"
-        rows="3"
-        placeholder="Rue, code postal, ville, pays…"
-        [ngModel]="personalAddress()"
-        (ngModelChange)="personalAddress.set($event); emit()"
-      ></textarea>
+      <daf-form-field
+        [options]="{ type: 'textarea', rows: 3, placeholder: 'Rue, code postal, ville, pays…' }"
+        [value]="personalAddress()"
+        (valueChange)="personalAddress.set($any($event) ?? ''); emit()" />
     </div>
   </div>
 </div>

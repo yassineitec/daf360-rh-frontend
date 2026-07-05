@@ -4,39 +4,27 @@
   <div class="form-grid">
 
     <div class="form-field form-full">
-      <label class="form-label" for="emergencyContactName">Nom complet</label>
-      <input
-        id="emergencyContactName"
-        class="form-input"
-        type="text"
-        placeholder="ex : Marie Dupont"
-        [ngModel]="emergencyContactName()"
-        (ngModelChange)="emergencyContactName.set($event); emit()"
-      />
+      <label class="form-label">Nom complet</label>
+      <daf-form-field
+        [options]="{ placeholder: 'ex : Marie Dupont' }"
+        [value]="emergencyContactName()"
+        (valueChange)="emergencyContactName.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field form-full">
-      <label class="form-label" for="emergencyContactRelation">Relation (ex&nbsp;: Conjoint, Parent…)</label>
-      <input
-        id="emergencyContactRelation"
-        class="form-input"
-        type="text"
-        placeholder="ex : Conjoint(e)"
-        [ngModel]="emergencyContactRelation()"
-        (ngModelChange)="emergencyContactRelation.set($event); emit()"
-      />
+      <label class="form-label">Relation (ex&nbsp;: Conjoint, Parent…)</label>
+      <daf-form-field
+        [options]="{ placeholder: 'ex : Conjoint(e)' }"
+        [value]="emergencyContactRelation()"
+        (valueChange)="emergencyContactRelation.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field form-full">
-      <label class="form-label" for="emergencyContactPhone">Téléphone</label>
-      <input
-        id="emergencyContactPhone"
-        class="form-input"
-        type="tel"
-        placeholder="ex : +216 XX XXX XXX"
-        [ngModel]="emergencyContactPhone()"
-        (ngModelChange)="emergencyContactPhone.set($event); emit()"
-      />
+      <label class="form-label">Téléphone</label>
+      <daf-form-field
+        [options]="{ placeholder: 'ex : +216 XX XXX XXX', prefixIcon: 'phone' }"
+        [value]="emergencyContactPhone()"
+        (valueChange)="emergencyContactPhone.set($any($event) ?? ''); emit()" />
     </div>
 
   </div>

@@ -1,13 +1,13 @@
-import { Component, OnInit, input, output, signal, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, input, output, signal, inject, computed } from '@angular/core';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
+import { FormFieldComponent, SelectComponent, SelectOption } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-step-bank',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormFieldComponent, SelectComponent],
   templateUrl: './step-bank.component.html',
   styleUrl: './step-bank.component.scss',
 })
@@ -27,10 +27,12 @@ export class StepBankComponent implements OnInit {
   socialSecurityNumber = signal('');
   taxId                = signal('');
 
+  readonly bankOptions = computed<SelectOption[]>(() =>
+    this.banks().map(b => ({ value: String(b.id), label: b.labelFr })));
+
   ngOnInit(): void {
-    const d      = this.data();
-    const fi     = this.formInfo();
-    const paysId = fi?.paysId ?? 52;
+    const d  = this.data();
+    const fi = this.formInfo();
 
     this.bankId.set(d.bankId ?? null);
     this.rib.set(d.rib ?? fi?.rib ?? '');
@@ -39,7 +41,8 @@ export class StepBankComponent implements OnInit {
     this.socialSecurityNumber.set(d.socialSecurityNumber ?? '');
     this.taxId.set(d.taxId ?? '');
 
-    this.refSvc.getBanks(paysId).subscribe(r => this.banks.set(r));
+    // No paysId → all active banks (see step-contract rationale).
+    this.refSvc.getBanks().subscribe(r => this.banks.set(r));
   }
 
   emit(): void {

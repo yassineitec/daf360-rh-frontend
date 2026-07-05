@@ -1,11 +1,13 @@
 import { Component, OnInit, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OnboardingFormData, OnboardingProfileDto } from '../onboarding.model';
+import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
+import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-step-regime',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MultiDatePickerComponent],
   templateUrl: './step-regime.component.html',
   styleUrl: './step-regime.component.scss',
 })
@@ -17,6 +19,9 @@ export class StepRegimeComponent implements OnInit {
 
   regimeTemplateId = signal<number | null>(null);
   regimeStartDate  = signal<string>('');
+
+  protected readonly isoToDate = isoToDate;
+  protected readonly dateToIso = dateToIso;
 
   selectedRegimeLabel = computed(() => {
     const regimes = this.formInfo()?.availableRegimes ?? [];

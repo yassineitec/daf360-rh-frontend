@@ -1,15 +1,21 @@
-import { Component, OnInit, input, output, signal, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { AsyncPipe } from '@angular/common';
+import { Component, OnInit, computed, input, output, signal, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
+import {
+  FormFieldComponent,
+  SelectComponent,
+  MultiDatePickerComponent,
+  SelectOption,
+} from '@khalilrebhiitec/daf360';
+import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-step-identity',
   standalone: true,
-  imports: [FormsModule, AsyncPipe],
+  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent],
   templateUrl: './step-identity.component.html',
   styleUrl: './step-identity.component.scss',
 })
@@ -21,8 +27,14 @@ export class StepIdentityComponent implements OnInit {
 
   private listService = inject(ConfigurableListService);
   private refSvc      = inject(RefDataService);
-  readonly genderOptions$ = this.listService.getListValues('GENDER');
-  readonly emptyList: never[] = [];
+
+  private genderList   = toSignal(this.listService.getListValues('GENDER'), { initialValue: [] });
+  nationalities        = signal<RefDataItem[]>([]);
+
+  readonly genderOptions = computed<SelectOption[]>(() =>
+    this.genderList().map(v => ({ value: v.valueCode, label: v.labelFr })));
+  readonly nationalityOptions = computed<SelectOption[]>(() =>
+    this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr })));
 
   firstName      = signal('');
   lastName       = signal('');
@@ -31,7 +43,10 @@ export class StepIdentityComponent implements OnInit {
   nationalityId  = signal<number | null>(null);
   nationalId     = signal('');
   passportNumber = signal('');
-  nationalities  = signal<RefDataItem[]>([]);
+
+  // Expose the date <-> ISO helpers to the template for daf-multi-date-picker.
+  protected readonly isoToDate = isoToDate;
+  protected readonly dateToIso = dateToIso;
 
   ngOnInit(): void {
     const d  = this.data();

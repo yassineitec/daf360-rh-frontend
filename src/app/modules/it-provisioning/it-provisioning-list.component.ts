@@ -49,6 +49,6 @@ export class ItProvisioningListComponent implements OnInit {
   }
 
   navigate(id: number): void {
-    this.router.navigate(['/it-provisioning', id]);
+    this.router.navigate(['/rh/it-provisioning', id]);
   }
 }

@@ -109,9 +109,13 @@
             </div>
           </daf-card>
 
-          <!-- Step content -->
-          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-            <div class="min-h-64">
+          <!-- Step content — NOT glass: the lib's select/date-picker dropdown is
+               position:fixed and a backdrop-filter (glass) ancestor becomes its containing
+               block, throwing the panel far from the trigger. A non-blur card keeps the
+               panel viewport-anchored. --color-primary is scoped to tertiary so all daf360
+               lib controls (form-field / select / date-picker) render green borders & lines. -->
+          <daf-card [options]="{ variant: 'default', padding: 'lg', radius: 'xl' }">
+            <div class="min-h-64" style="--color-primary: var(--color-tertiary);">
               @if (currentStep() === 1) {
                 <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
               }
@@ -309,19 +313,13 @@
       @if (saving()) { Sauvegarde… } @else { Enregistrer Brouillon }
     </button>
 
-    @if (currentStep() === 7) {
-      <button class="btn-create-profile" type="button" (click)="showConfirmModal.set(true)">
-        Créer le Profil Employé
-      </button>
-    }
-
     @if (currentStep() < 7) {
       <button class="btn-create-next" type="button" (click)="nextStep()">
         @if (currentStep() === 1) { Créer et Passer à l'étape suivante } @else { Suivant }
         <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
       </button>
     } @else {
-      <button class="btn-create-next" type="button" (click)="showConfirmModal.set(true)">
+      <button class="btn-create-profile" type="button" [disabled]="submitting()" (click)="openConfirmModal()">
         Soumettre et créer le dossier
         <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
       </button>

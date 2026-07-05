@@ -4,90 +4,63 @@
     <!-- Row 1: firstName | lastName -->
     <div class="form-group">
       <label class="form-label">Prénom <span class="req">*</span></label>
-      <input
-        type="text"
-        class="form-input"
-        [ngModel]="firstName()"
-        (ngModelChange)="firstName.set($event); emit()"
-        placeholder="ex. Yassine"
-        autocomplete="given-name"
-      />
+      <daf-form-field
+        [options]="{ placeholder: 'ex. Yassine' }"
+        [value]="firstName()"
+        (valueChange)="firstName.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-group">
       <label class="form-label">Nom <span class="req">*</span></label>
-      <input
-        type="text"
-        class="form-input"
-        [ngModel]="lastName()"
-        (ngModelChange)="lastName.set($event); emit()"
-        placeholder="ex. Rhouma"
-        autocomplete="family-name"
-      />
+      <daf-form-field
+        [options]="{ placeholder: 'ex. Rhouma' }"
+        [value]="lastName()"
+        (valueChange)="lastName.set($any($event) ?? ''); emit()" />
     </div>
 
     <!-- Row 2: dateOfBirth | gender -->
     <div class="form-group">
       <label class="form-label">Date de naissance</label>
-      <input
-        type="date"
-        class="form-input"
-        [ngModel]="dateOfBirth()"
-        (ngModelChange)="dateOfBirth.set($event); emit()"
-      />
+      <daf-multi-date-picker
+        [value]="isoToDate(dateOfBirth() || null)"
+        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        (valueChange)="dateOfBirth.set(dateToIso($event) || ''); emit()" />
     </div>
 
     <div class="form-group">
       <label class="form-label">Genre</label>
-      <select
-        class="form-input form-select"
-        [ngModel]="gender()"
-        (ngModelChange)="gender.set($event); emit()"
-      >
-        @for (opt of (genderOptions$ | async) ?? emptyList; track $index) {
-          <option [value]="opt.valueCode">{{ opt.labelFr }}</option>
-        }
-      </select>
+      <daf-select
+        [selected]="gender() ? [gender()] : []"
+        [options]="genderOptions()"
+        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        (selectedChange)="gender.set($event[0] ?? ''); emit()" />
     </div>
 
     <!-- Row 3: nationality | nationalId -->
     <div class="form-group">
       <label class="form-label">Nationalité</label>
-      <select
-        class="form-input"
-        [ngModel]="nationalityId()"
-        (ngModelChange)="nationalityId.set($event); emit()"
-      >
-        <option [ngValue]="null">— Sélectionner —</option>
-        @for (n of nationalities(); track n.id) {
-          <option [ngValue]="n.id">{{ n.labelFr }}</option>
-        }
-      </select>
+      <daf-select
+        [selected]="nationalityId() != null ? [nationalityId()!.toString()] : []"
+        [options]="nationalityOptions()"
+        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        (selectedChange)="nationalityId.set($event[0] ? +$event[0] : null); emit()" />
     </div>
 
     <div class="form-group">
       <label class="form-label">CIN / Identifiant national</label>
-      <input
-        type="text"
-        class="form-input"
-        [ngModel]="nationalId()"
-        (ngModelChange)="nationalId.set($event); emit()"
-        placeholder="ex. 12345678"
-        autocomplete="off"
-      />
+      <daf-form-field
+        [options]="{ placeholder: 'ex. 12345678' }"
+        [value]="nationalId()"
+        (valueChange)="nationalId.set($any($event) ?? ''); emit()" />
     </div>
 
     <!-- Row 4 (full-width): passportNumber -->
     <div class="form-group form-full">
       <label class="form-label">Numéro de passeport</label>
-      <input
-        type="text"
-        class="form-input"
-        [ngModel]="passportNumber()"
-        (ngModelChange)="passportNumber.set($event); emit()"
-        placeholder="ex. AB1234567"
-        autocomplete="off"
-      />
+      <daf-form-field
+        [options]="{ placeholder: 'ex. AB1234567' }"
+        [value]="passportNumber()"
+        (valueChange)="passportNumber.set($any($event) ?? ''); emit()" />
     </div>
 
     <!-- Row 5 (full-width): photo — uploaded after profile creation -->

@@ -19,11 +19,24 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import {
   CandidateListItem,
   CandidateStats,
+  CandidateStatus,
   CANDIDATE_STATUS_OPTIONS,
   PageResponse,
 } from './candidate.model';
 
 const PAGE_SIZE = 10;
+
+/** Kanban pulls the whole (tenant-scoped) candidate set in one page and groups it client-side. */
+const KANBAN_FETCH_SIZE = 500;
+
+/** A kanban column groups one or more candidate statuses into a workflow stage. */
+interface KanbanColumn {
+  key: string;
+  label: string;
+  statuses: CandidateStatus[];
+  dot: string;
+  candidates: CandidateListItem[];
+}
 
 /**
  * Candidates landing page — the single, canonical candidate list.
@@ -66,6 +79,37 @@ export class CandidatesComponent implements OnInit {
   readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
   readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
 
+  // ── View toggle (kanban is the default; list on demand) ─────────────────────
+  readonly viewMode      = signal<'list' | 'kanban'>('kanban');
+  readonly kanbanItems   = signal<CandidateListItem[]>([]);
+  readonly kanbanLoading = signal(false);
+  readonly kanbanLoaded  = signal(false);
+
+  /** Transient info banner for guided/blocked drag moves. */
+  readonly notice = signal<string | null>(null);
+
+  // ── Native HTML5 drag & drop state (no CDK — avoids Native Federation secondary-entry issues) ──
+  readonly draggedId   = signal<number | null>(null);
+  readonly dragOverKey = signal<string | null>(null);
+  private draggedCandidate: CandidateListItem | null = null;
+
+  /** Kanban stages mirror the coded candidate workflow (PENDING → … → HIRED / REJECTED). */
+  private readonly columnDefs: Omit<KanbanColumn, 'candidates'>[] = [
+    { key: 'pending',  label: 'En attente',      statuses: ['PENDING'],                                            dot: 'bg-secondary' },
+    { key: 'accepted', label: 'Acceptés',        statuses: ['ACCEPTED'],                                           dot: 'bg-teal' },
+    { key: 'progress', label: 'IT & Onboarding', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], dot: 'bg-primary' },
+    { key: 'hired',    label: 'Embauchés',       statuses: ['HIRED'],                                              dot: 'bg-tertiary' },
+    { key: 'rejected', label: 'Rejetés',         statuses: ['REJECTED', 'ARCHIVED'],                               dot: 'bg-danger' },
+  ];
+
+  readonly kanbanColumns = computed<KanbanColumn[]>(() => {
+    const all = this.kanbanItems();
+    return this.columnDefs.map(def => ({
+      ...def,
+      candidates: all.filter(c => def.statuses.includes(c.status)),
+    }));
+  });
+
   // ── Reject modal state ─────────────────────────────────────────────────────
   readonly rejectTarget = signal<CandidateListItem | null>(null);
   readonly actioningId  = signal<number | null>(null);
@@ -87,7 +131,7 @@ export class CandidatesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadStats();
-    this.loadCandidates();
+    this.loadKanban(); // kanban is the default view
   }
 
   private loadStats(): void {
@@ -112,10 +156,42 @@ export class CandidatesComponent implements OnInit {
     });
   }
 
+  private loadKanban(): void {
+    this.kanbanLoading.set(true);
+    this.svc.getCandidates({
+      paysId: this.userStore.currentUser()?.paysId,
+      search: this.search() || undefined,
+      page:   0,
+      size:   KANBAN_FETCH_SIZE,
+    }).subscribe({
+      next:  r  => {
+        this.kanbanItems.set(r.content);
+        this.kanbanLoaded.set(true);
+        this.kanbanLoading.set(false);
+      },
+      error: () => this.kanbanLoading.set(false),
+    });
+  }
+
+  setView(mode: 'list' | 'kanban'): void {
+    if (this.viewMode() === mode) return;
+    this.viewMode.set(mode);
+    this.notice.set(null);
+    if (mode === 'kanban' && !this.kanbanLoaded()) {
+      this.loadKanban();
+    } else if (mode === 'list' && !this.page()) {
+      this.loadCandidates();
+    }
+  }
+
   onSearch(value: string | number | null): void {
     this.search.set((value as string) ?? '');
     this.currentPage.set(0);
-    this.loadCandidates();
+    if (this.viewMode() === 'kanban') {
+      this.loadKanban();
+    } else {
+      this.loadCandidates();
+    }
   }
 
   onStatusChange(values: string[]): void {
@@ -165,7 +241,101 @@ export class CandidatesComponent implements OnInit {
 
   private reload(): void {
     this.loadStats();
-    this.loadCandidates();
+    if (this.page()) this.loadCandidates();
+    if (this.kanbanLoaded()) this.loadKanban();
+  }
+
+  // ── Drag & drop workflow ────────────────────────────────────────────────────
+  onDragStart(c: CandidateListItem): void {
+    this.draggedCandidate = c;
+    this.draggedId.set(c.id);
+  }
+
+  onDragEnd(): void {
+    this.draggedCandidate = null;
+    this.draggedId.set(null);
+    this.dragOverKey.set(null);
+  }
+
+  onDragOver(event: DragEvent, col: KanbanColumn): void {
+    event.preventDefault(); // required so the column becomes a valid drop target
+    if (this.dragOverKey() !== col.key) this.dragOverKey.set(col.key);
+  }
+
+  onDragLeave(col: KanbanColumn): void {
+    if (this.dragOverKey() === col.key) this.dragOverKey.set(null);
+  }
+
+  onDrop(event: DragEvent, col: KanbanColumn): void {
+    event.preventDefault();
+    const candidate = this.draggedCandidate;
+    this.onDragEnd();
+    if (candidate) this.applyStageMove(candidate, col);
+  }
+
+  /**
+   * Applies a card dropped onto another column. Each move maps to the REAL
+   * coded transition — no blind status flips (which would skip provisioning /
+   * contract creation). Immediate transitions call the guarded endpoints;
+   * multi-step transitions route the user to the dedicated flow.
+   */
+  private applyStageMove(candidate: CandidateListItem, target: KanbanColumn): void {
+    const status = candidate.status;
+    if (target.statuses.includes(status)) return; // dropped in its own column, ignore
+    this.notice.set(null);
+    this.actionError.set(null);
+
+    switch (target.key) {
+      case 'accepted':
+        if (status === 'PENDING') { this.dragAccept(candidate); }
+        else this.notice.set('Seuls les candidats « En attente » peuvent être acceptés.');
+        break;
+
+      case 'rejected':
+        if (status === 'PENDING') { this.rejectTarget.set(candidate); }
+        else this.notice.set('Seuls les candidats « En attente » peuvent être rejetés.');
+        break;
+
+      case 'progress':
+        if (status === 'ACCEPTED') {
+          this.notice.set('Le provisioning IT (création du compte) se fait sur la page dédiée.');
+          this.router.navigate(['/rh/it-provisioning']);
+        } else {
+          this.notice.set('Acceptez d’abord le candidat pour démarrer le provisioning IT.');
+        }
+        break;
+
+      case 'hired':
+        if (status === 'EMAIL_RECEIVED' || status === 'HR_IN_PROGRESS') {
+          this.router.navigate(['/rh/onboarding', candidate.id]);
+        } else {
+          this.notice.set('Le candidat doit passer par le provisioning IT puis l’onboarding avant d’être embauché.');
+        }
+        break;
+
+      default:
+        this.notice.set('Déplacement non autorisé.');
+    }
+  }
+
+  private dragAccept(c: CandidateListItem): void {
+    this.actioningId.set(c.id);
+    this.patchLocalStatus(c.id, 'ACCEPTED'); // optimistic — card jumps to Acceptés
+    this.svc.accept(c.id).subscribe({
+      next:  () => { this.actioningId.set(null); this.reload(); },
+      error: err => {
+        this.actioningId.set(null);
+        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'acceptation.");
+        this.loadKanban(); // revert optimistic move
+      },
+    });
+  }
+
+  /** Optimistically patch a candidate's status in the kanban set so the card regroups instantly. */
+  private patchLocalStatus(id: number, status: CandidateStatus): void {
+    this.kanbanItems.update(items =>
+      items.map(c => (c.id === id ? { ...c, status } : c)),
+    );
   }
 
   // ── Display helpers ─────────────────────────────────────────────────────────
