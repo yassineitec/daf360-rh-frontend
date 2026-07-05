@@ -8,6 +8,8 @@ import { CandidateService } from './candidate.service';
 import { CreateCandidateRequest } from './candidate.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue }               from '../../core/lists/configurable-list.model';
 import {
   ButtonComponent,
   ChipGroupComponent,
@@ -43,6 +45,7 @@ export class CandidateFormComponent implements OnInit {
   private candidateService = inject(CandidateService);
   private userStore        = inject(UserStore);
   private refSvc           = inject(RefDataService);
+  private listSvc          = inject(ConfigurableListService);
   private router           = inject(Router);
 
   saving          = signal(false);
@@ -50,10 +53,11 @@ export class CandidateFormComponent implements OnInit {
   cvFiles         = signal<UploadedFile[]>([]);
   experienceYears = signal(0);
 
-  grades        = signal<RefDataItem[]>([]);
-  disciplines   = signal<RefDataItem[]>([]);
-  departments   = signal<RefDataItem[]>([]);
-  nationalities = signal<RefDataItem[]>([]);
+  grades          = signal<RefDataItem[]>([]);
+  disciplines     = signal<RefDataItem[]>([]);
+  departments     = signal<RefDataItem[]>([]);
+  nationalities   = signal<RefDataItem[]>([]);
+  employmentTypes = signal<ListValue[]>([]);
 
   readonly gradeOptions = computed<SelectOption[]>(() =>
     this.grades().map(g => ({ value: String(g.id), label: g.labelFr }))
@@ -68,12 +72,14 @@ export class CandidateFormComponent implements OnInit {
     this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr }))
   );
 
-  readonly contractChipOptions: ChipOption[] = [
-    { value: 'PERMANENT',  label: 'CDI' },
-    { value: 'FIXED_TERM', label: 'CDD' },
-    { value: 'CONSULTANT', label: 'Freelance' },
-    { value: 'INTERN',     label: 'Stage' },
-  ];
+  /**
+   * Contract types come from the configurable EMPLOYMENT_TYPE list (per pays).
+   * The candidate stores an `employmentTypeId`; the backend later derives the
+   * actual contract code from it at hire time (CandidateService#hireCandidate).
+   */
+  readonly employmentTypeChipOptions = computed<ChipOption[]>(() =>
+    this.employmentTypes().map(t => ({ value: String(t.id), label: t.labelFr || t.labelEn })),
+  );
 
   form: FormGroup = this.fb.group({
     identity: this.fb.group({
@@ -88,7 +94,7 @@ export class CandidateFormComponent implements OnInit {
       appliedPosition:     [null as string | null],
       recruitmentDemandId: [null as number | null],
       departmentId:        [null as number | null],
-      employmentTypeId:    [null as number | null],
+      employmentTypeId:    [null as number | null, Validators.required],
       appliedGradeId:      [null as number | null],
       appliedDisciplineId: [null as number | null],
       nationalityId:       [null as number | null],
@@ -106,7 +112,7 @@ export class CandidateFormComponent implements OnInit {
     const fields = [
       id.firstName, id.lastName, id.emailPersonal, id.phone,
       id.dateOfBirth, id.nationalId,
-      pos.appliedPosition, pos.contractType, pos.expectedStartDate,
+      pos.appliedPosition, pos.employmentTypeId, pos.expectedStartDate,
       pos.departmentId, pos.appliedGradeId, pos.appliedDisciplineId,
       pos.nationalityId, v?.notes,
     ];
@@ -133,7 +139,7 @@ export class CandidateFormComponent implements OnInit {
       { label: 'Prénom et Nom',       done: !!(id.firstName && id.lastName) },
       { label: 'Email professionnel', done: !!id.emailPersonal },
       { label: 'Poste souhaité',      done: !!pos.appliedPosition },
-      { label: 'Type de contrat',     done: !!pos.contractType },
+      { label: 'Type de contrat',     done: !!pos.employmentTypeId },
       { label: 'Date de début',       done: !!pos.expectedStartDate },
     ];
   });
@@ -142,10 +148,12 @@ export class CandidateFormComponent implements OnInit {
   get positionGroup(): FormGroup { return this.form.get('position') as FormGroup; }
 
   ngOnInit(): void {
+    const paysId = this.userStore.currentUser()?.paysId;
     this.refSvc.getGrades().subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines().subscribe(r => this.disciplines.set(r));
     this.refSvc.getDepartments().subscribe(r => this.departments.set(r));
     this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
+    this.listSvc.getListValues('EMPLOYMENT_TYPE', paysId).subscribe(v => this.employmentTypes.set(v));
   }
 
   // ── Bridge helpers ───────────────────────────────────────────────────────
@@ -238,7 +246,8 @@ export class CandidateFormComponent implements OnInit {
       nationalId:          identity.nationalId          || null,
       appliedPosition:     position.appliedPosition     || null,
       departmentId:        position.departmentId        ?? null,
-      contractType:        position.contractType        || null,
+      employmentTypeId:    position.employmentTypeId    ?? null,
+      recruitmentDemandId: position.recruitmentDemandId ?? null,
       appliedGradeId:      position.appliedGradeId      ?? null,
       appliedDisciplineId: position.appliedDisciplineId ?? null,
       nationalityId:       position.nationalityId       ?? null,

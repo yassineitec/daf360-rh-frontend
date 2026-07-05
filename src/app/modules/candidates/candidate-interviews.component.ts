@@ -1,6 +1,13 @@
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  ButtonComponent,
+  FormFieldComponent,
+  MultiDatePickerComponent,
+  SelectComponent,
+  SelectOption,
+} from '@khalilrebhiitec/daf360';
 import { UserStore } from '../../core/user.store';
+import { dateToIso } from '../../shared/date-picker.utils';
 import { InterviewService } from './interview.service';
 import {
   CandidateInterview,
@@ -15,7 +22,12 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
 @Component({
   selector: 'app-candidate-interviews',
   standalone: true,
-  imports: [FormsModule],
+  imports: [
+    ButtonComponent,
+    SelectComponent,
+    FormFieldComponent,
+    MultiDatePickerComponent,
+  ],
   template: `
     <div class="bg-white rounded-xl border border-outline-variant p-5">
 
@@ -32,13 +44,9 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
           }
         </div>
         @if (canManage() && !showForm()) {
-          <button type="button"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white"
-                  style="background:#1C4E5C"
-                  (click)="openForm()">
-            <span class="material-symbols-outlined text-[14px]">add</span>
-            Planifier
-          </button>
+          <daf-button label="Planifier" variant="teal"
+            [options]="{ iconStart: 'add', size: 'sm' }"
+            (onClick)="openForm()" />
         }
       </div>
 
@@ -68,63 +76,43 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
             </p>
           } @else {
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label class="text-[11px] font-semibold text-outline uppercase tracking-wide block mb-1">
-                  Type *
-                </label>
-                <select class="w-full px-3 py-2 border border-outline-variant rounded-lg text-[13px]
-                               text-on-surface bg-white"
-                        [(ngModel)]="formTypeId">
-                  <option [ngValue]="0" disabled>— Sélectionner —</option>
-                  @for (t of activeTypes(); track t.id) {
-                    <option [ngValue]="t.id">{{ t.name }}</option>
-                  }
-                </select>
-              </div>
-              <div>
-                <label class="text-[11px] font-semibold text-outline uppercase tracking-wide block mb-1">
-                  Date &amp; Heure *
-                </label>
-                <input type="datetime-local"
-                       class="w-full px-3 py-2 border border-outline-variant rounded-lg text-[13px]
-                              text-on-surface bg-white"
-                       [(ngModel)]="formScheduledAt" />
-              </div>
-              <div>
-                <label class="text-[11px] font-semibold text-outline uppercase tracking-wide block mb-1">
-                  Lieu
-                </label>
-                <input type="text"
-                       class="w-full px-3 py-2 border border-outline-variant rounded-lg text-[13px]
-                              text-on-surface bg-white"
-                       [(ngModel)]="formLocation"
-                       placeholder="Ex : Salle A, Zoom…" maxlength="255" />
-              </div>
-              <div>
-                <label class="text-[11px] font-semibold text-outline uppercase tracking-wide block mb-1">
-                  Notes (optionnel)
-                </label>
-                <input type="text"
-                       class="w-full px-3 py-2 border border-outline-variant rounded-lg text-[13px]
-                              text-on-surface bg-white"
-                       [(ngModel)]="formNotes"
-                       placeholder="Commentaire…" maxlength="1000" />
-              </div>
+              <daf-select
+                [selected]="typeSelected()"
+                [options]="typeOptions()"
+                [config]="{ label: 'Type', required: true, placeholder: '— Sélectionner —', fullWidth: true }"
+                (selectedChange)="onTypeChange($event)" />
+
+              <daf-multi-date-picker
+                [value]="formDate()"
+                [config]="{ label: 'Date', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+                (valueChange)="onDateChange($event)" />
+
+              <daf-form-field
+                [value]="formTime()"
+                [options]="{ label: 'Heure', type: 'time', fullWidth: true }"
+                (valueChange)="formTime.set($any($event) ?? '')" />
+
+              <daf-form-field
+                [value]="formLocation()"
+                [options]="{ label: 'Lieu', placeholder: 'Ex : Salle A, Zoom…', maxLength: 255, fullWidth: true }"
+                (valueChange)="formLocation.set($any($event) ?? '')" />
+
               <div class="sm:col-span-2">
-                <label class="text-[11px] font-semibold text-outline uppercase tracking-wide block mb-1">
-                  Interviewer (optionnel)
-                </label>
+                <daf-form-field
+                  [value]="formNotes()"
+                  [options]="{ label: 'Notes (optionnel)', placeholder: 'Commentaire…', maxLength: 1000, fullWidth: true }"
+                  (valueChange)="formNotes.set($any($event) ?? '')" />
+              </div>
+
+              <div class="sm:col-span-2">
                 @if (usersLoading()) {
                   <p class="text-[12px] text-outline py-1">Chargement…</p>
                 } @else {
-                  <select class="w-full px-3 py-2 border border-outline-variant rounded-lg text-[13px]
-                                 text-on-surface bg-white"
-                          [(ngModel)]="formInterviewerId">
-                    <option [ngValue]="0">— Aucun —</option>
-                    @for (u of users(); track u.id) {
-                      <option [ngValue]="u.id">{{ u.fullName }}</option>
-                    }
-                  </select>
+                  <daf-select
+                    [selected]="interviewerSelected()"
+                    [options]="interviewerOptions()"
+                    [config]="{ label: 'Interviewer (optionnel)', placeholder: '— Aucun —', fullWidth: true }"
+                    (selectedChange)="onInterviewerChange($event)" />
                 }
               </div>
             </div>
@@ -134,17 +122,11 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
             <p class="text-[12px] mt-2" style="color:#BA1A1A">{{ formError() }}</p>
           }
           <div class="flex justify-end gap-2 mt-3">
-            <button type="button"
-                    class="px-3 py-1.5 rounded-lg text-[12px] font-medium border border-outline-variant
-                           bg-white text-outline"
-                    (click)="cancelForm()">Annuler</button>
-            <button type="button"
-                    class="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white"
-                    style="background:#1C4E5C"
-                    [disabled]="formLoading() || !activeTypes().length"
-                    (click)="submitCreate()">
-              {{ formLoading() ? 'Enregistrement...' : 'Planifier' }}
-            </button>
+            <daf-button label="Annuler" variant="ghost" [options]="{ size: 'sm' }"
+              (onClick)="cancelForm()" />
+            <daf-button label="Planifier" variant="teal"
+              [options]="{ size: 'sm', loading: formLoading(), disabled: formLoading() || !activeTypes().length }"
+              (onClick)="submitCreate()" />
           </div>
         </div>
       }
@@ -259,32 +241,19 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                 <!-- Inline update confirm -->
                 @if (updatingId() === iv.id) {
                   <div class="mt-3 pt-3 border-t border-outline-variant">
-                    <div class="flex items-end gap-3 flex-wrap">
-                      <div class="flex-1" style="min-width:180px">
-                        <label class="text-[11px] font-semibold text-outline uppercase
-                                      tracking-wide block mb-1">Notes (optionnel)</label>
-                        <input type="text"
-                               class="w-full px-2.5 py-1.5 border border-outline-variant
-                                      rounded-lg text-[13px] bg-white"
-                               [(ngModel)]="updateNotes"
-                               placeholder="Commentaire…" maxlength="1000" />
-                      </div>
-                    </div>
+                    <daf-form-field
+                      [value]="updateNotes()"
+                      [options]="{ label: 'Notes (optionnel)', placeholder: 'Commentaire…', maxLength: 1000, fullWidth: true }"
+                      (valueChange)="updateNotes.set($any($event) ?? '')" />
                     @if (updateError()) {
                       <p class="text-[12px] mt-1.5" style="color:#BA1A1A">{{ updateError() }}</p>
                     }
                     <div class="flex gap-2 mt-2">
-                      <button type="button"
-                              class="px-3 py-1.5 rounded-lg text-[12px] font-medium border
-                                     border-outline-variant bg-white text-outline"
-                              (click)="cancelUpdate()">Annuler</button>
-                      <button type="button"
-                              class="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white"
-                              [style.background]="updateBtnColor()"
-                              [disabled]="updateLoading()"
-                              (click)="submitUpdate(iv)">
-                        {{ updateLoading() ? 'En cours...' : updateActionLabel() }}
-                      </button>
+                      <daf-button label="Annuler" variant="ghost" [options]="{ size: 'sm' }"
+                        (onClick)="cancelUpdate()" />
+                      <daf-button [label]="updateActionLabel()" variant="teal"
+                        [options]="{ size: 'sm', loading: updateLoading(), disabled: updateLoading() }"
+                        (onClick)="submitUpdate(iv)" />
                     </div>
                   </div>
                 }
@@ -327,21 +296,39 @@ export class CandidateInterviewsComponent implements OnInit {
   showForm     = signal(false);
   formLoading  = signal(false);
   formError    = signal<string | null>(null);
-  formTypeId       = 0;
-  formScheduledAt  = '';
-  formLocation     = '';
-  formNotes        = '';
-  formInterviewerId = 0;
+  formTypeId        = signal(0);
+  formDate          = signal<Date | null>(null);
+  formTime          = signal('');
+  formLocation      = signal('');
+  formNotes         = signal('');
+  formInterviewerId = signal(0);
 
   users        = signal<UserPickerItem[]>([]);
   usersLoading = signal(false);
+
+  readonly typeOptions = computed<SelectOption[]>(() =>
+    this.activeTypes().map(t => ({ value: String(t.id), label: t.name })),
+  );
+
+  readonly interviewerOptions = computed<SelectOption[]>(() => [
+    { value: '', label: '— Aucun —' },
+    ...this.users().map(u => ({ value: String(u.id), label: u.fullName })),
+  ]);
+
+  typeSelected(): string[] {
+    return this.formTypeId() ? [String(this.formTypeId())] : [];
+  }
+
+  interviewerSelected(): string[] {
+    return this.formInterviewerId() ? [String(this.formInterviewerId())] : [''];
+  }
 
   // ── Update inline ────────────────────────────────────────────────────────────
   updatingId    = signal<number | null>(null);
   updateAction  = signal<UpdateAction | null>(null);
   updateLoading = signal(false);
   updateError   = signal<string | null>(null);
-  updateNotes   = '';
+  updateNotes   = signal('');
 
   readonly updateActionLabel = computed(() => {
     const a = this.updateAction();
@@ -349,13 +336,6 @@ export class CandidateInterviewsComponent implements OnInit {
     if (a === 'DONE_FAIL') return 'Confirmer — Échoué';
     if (a === 'CANCELLED') return "Confirmer l'annulation";
     return 'Confirmer';
-  });
-
-  readonly updateBtnColor = computed(() => {
-    const a = this.updateAction();
-    if (a === 'DONE_PASS') return '#16a34a';
-    if (a === 'DONE_FAIL') return '#c2410c';
-    return '#6B7280';
   });
 
   ngOnInit(): void { this.loadInterviews(); }
@@ -368,9 +348,21 @@ export class CandidateInterviewsComponent implements OnInit {
     });
   }
 
+  onTypeChange(values: string[]): void {
+    this.formTypeId.set(values[0] ? +values[0] : 0);
+  }
+
+  onInterviewerChange(values: string[]): void {
+    this.formInterviewerId.set(values[0] ? +values[0] : 0);
+  }
+
+  onDateChange(value: Date | Date[] | null): void {
+    this.formDate.set(Array.isArray(value) ? (value[0] ?? null) : value);
+  }
+
   openForm(): void {
-    this.formTypeId = 0; this.formScheduledAt = '';
-    this.formLocation = ''; this.formNotes = ''; this.formInterviewerId = 0;
+    this.formTypeId.set(0); this.formDate.set(null); this.formTime.set('');
+    this.formLocation.set(''); this.formNotes.set(''); this.formInterviewerId.set(0);
     this.formError.set(null); this.showForm.set(true);
     if (!this.activeTypes().length) {
       this.typesLoading.set(true);
@@ -391,15 +383,17 @@ export class CandidateInterviewsComponent implements OnInit {
   cancelForm(): void { this.showForm.set(false); }
 
   submitCreate(): void {
-    if (!this.formTypeId) { this.formError.set("Sélectionnez un type d'entretien."); return; }
-    if (!this.formScheduledAt) { this.formError.set("La date et l'heure sont obligatoires."); return; }
+    if (!this.formTypeId()) { this.formError.set("Sélectionnez un type d'entretien."); return; }
+    const dateIso = dateToIso(this.formDate());
+    if (!dateIso) { this.formError.set('La date est obligatoire.'); return; }
+    const time = this.formTime() || '09:00';
     this.formLoading.set(true); this.formError.set(null);
     const dto: CreateInterviewRequest = {
-      interviewTypeId: this.formTypeId,
-      scheduledAt: this.formScheduledAt + ':00+00:00',
-      location: this.formLocation.trim() || undefined,
-      interviewerNotes: this.formNotes.trim() || undefined,
-      interviewerUserId: this.formInterviewerId || undefined,
+      interviewTypeId: this.formTypeId(),
+      scheduledAt: `${dateIso}T${time}:00+00:00`,
+      location: this.formLocation().trim() || undefined,
+      interviewerNotes: this.formNotes().trim() || undefined,
+      interviewerUserId: this.formInterviewerId() || undefined,
     };
     this.svc.createInterview(this.candidateId, dto).subscribe({
       next:  () => { this.formLoading.set(false); this.showForm.set(false); this.loadInterviews(); },
@@ -409,7 +403,7 @@ export class CandidateInterviewsComponent implements OnInit {
 
   openUpdate(iv: CandidateInterview, action: UpdateAction): void {
     this.updatingId.set(iv.id); this.updateAction.set(action);
-    this.updateNotes = ''; this.updateError.set(null);
+    this.updateNotes.set(''); this.updateError.set(null);
   }
 
   cancelUpdate(): void { this.updatingId.set(null); this.updateAction.set(null); }
@@ -418,10 +412,10 @@ export class CandidateInterviewsComponent implements OnInit {
     const action = this.updateAction();
     if (!action) return;
     this.updateLoading.set(true); this.updateError.set(null);
+    const notes = this.updateNotes().trim() || undefined;
     const dto: UpdateInterviewRequest = action === 'CANCELLED'
-      ? { status: 'CANCELLED', interviewerNotes: this.updateNotes.trim() || undefined }
-      : { status: 'DONE', result: action === 'DONE_PASS' ? 'PASS' : 'FAIL',
-          interviewerNotes: this.updateNotes.trim() || undefined };
+      ? { status: 'CANCELLED', interviewerNotes: notes }
+      : { status: 'DONE', result: action === 'DONE_PASS' ? 'PASS' : 'FAIL', interviewerNotes: notes };
     this.svc.updateInterview(this.candidateId, iv.id, dto).subscribe({
       next: updated => {
         this.interviews.update(list => list.map(x => x.id === updated.id ? updated : x));

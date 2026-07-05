@@ -53,10 +53,10 @@
                   {{ c.appliedPosition }}
                 </span>
               }
-              @if (c.contractType) {
+              @if (contractTypeLabel()) {
                 <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
                       style="background:rgba(121,215,190,0.18);color:#79D7BE">
-                  {{ contractLabel(c.contractType) }}
+                  {{ contractTypeLabel() }}
                 </span>
               }
             </div>
@@ -82,6 +82,11 @@
             <daf-button label="Compléter l'onboarding →" variant="teal"
               [options]="{ size: 'md' }"
               (onClick)="goToOnboarding()" />
+          }
+          @if (canHireThisCandidate()) {
+            <daf-button label="Recruter" variant="teal"
+              [options]="{ iconStart: 'how_to_reg', size: 'md' }"
+              (onClick)="openHireModal()" />
           }
           @if (c.status === 'HIRED') {
             <daf-button label="Voir le profil →" variant="secondary"
@@ -233,7 +238,7 @@
                 </div>
                 <div>
                   <p class="text-[11px] text-outline mb-0.5">Type de contrat</p>
-                  <p class="text-[14px] font-semibold text-on-surface">{{ contractLabel(c.contractType) }}</p>
+                  <p class="text-[14px] font-semibold text-on-surface">{{ contractTypeLabel() ?? '—' }}</p>
                 </div>
                 <div>
                   <p class="text-[11px] text-outline mb-0.5">Département</p>
@@ -425,6 +430,57 @@
       (closed)="showReject.set(false)"
       (rejected)="onRejected()"
     />
+
+    <!-- ── Hire modal ─────────────────────────────────────────────────────── -->
+    @if (showHireModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+        <div class="bg-surface rounded-2xl p-7 w-full max-w-md shadow-2xl">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-[20px]" style="color:#50717b">how_to_reg</span>
+            <h3 class="text-base font-bold text-on-surface">Recruter le candidat</h3>
+          </div>
+          <p class="text-sm text-outline mb-5">
+            <strong class="text-on-surface">{{ c.firstName }} {{ c.lastName }}</strong>
+            @if (contractTypeLabel()) { — {{ contractTypeLabel() }} }
+          </p>
+
+          @if (hireError()) {
+            <div class="bg-danger/10 text-danger text-xs rounded-lg px-3 py-2 mb-4">{{ hireError() }}</div>
+          }
+
+          <div class="space-y-4">
+            <daf-multi-date-picker
+              [value]="getHireDate()"
+              [config]="{ label: 'Date d’embauche', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+              (valueChange)="setHireDate($event)" />
+
+            @if (requiresEndDate()) {
+              <daf-multi-date-picker
+                [value]="getEndDate()"
+                [config]="{ label: 'Date de fin prévue', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+                (valueChange)="setEndDate($event)" />
+            }
+
+            <daf-checkbox
+              [(checked)]="hireForm.managerProfile"
+              [options]="{ label: 'Profil manager (période d’essai étendue)' }" />
+
+            <daf-form-field
+              [value]="hireForm.notes ?? null"
+              [options]="{ type: 'textarea', label: 'Notes', placeholder: 'Commentaire (optionnel)…', rows: 3, fullWidth: true }"
+              (valueChange)="setHireNotes($event)" />
+          </div>
+
+          <div class="flex gap-3 justify-end mt-6">
+            <daf-button label="Annuler" variant="ghost" [options]="{ size: 'md' }"
+              (onClick)="showHireModal.set(false)" />
+            <daf-button label="Confirmer le recrutement" variant="teal"
+              [options]="{ iconStart: 'how_to_reg', size: 'md', loading: hireLoading(), disabled: hireLoading() }"
+              (onClick)="confirmHire()" />
+          </div>
+        </div>
+      </div>
+    }
   }
 
 </div>

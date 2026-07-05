@@ -1,112 +1,115 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import {
   ButtonComponent,
   CardComponent,
+  MetricCardComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
+  SelectOption,
+  StatusBadgeComponent,
   ToolbarComponent,
 } from '@khalilrebhiitec/daf360';
+import { CandidateService } from './candidate.service';
+import { RejectModalComponent } from './reject-modal.component';
+import { UserStore } from '../../core/user.store';
+import { PermissionDirective } from '../../shared/permission.directive';
+import { statusBadge } from '../../shared/status-badge.utils';
 import {
-  CandidatesPipelineService,
-  PipelineCandidateItem,
-  PipelineStats,
-} from './services/candidates.service';
-import { PipelineService, KanbanColumn } from '../pipeline/services/pipeline.service';
-import { CandidateKpiCardsComponent } from './components/candidate-kpi-cards/candidate-kpi-cards.component';
-import { CandidateTableRowComponent, ProcessedCandidate } from './components/candidate-table-row/candidate-table-row.component';
-import { KanbanColumnComponent } from '../pipeline/components/kanban-column/kanban-column.component';
-
-const AVATAR_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f97316',
-  '#eab308', '#22c55e', '#14b8a6', '#3b82f6',
-];
+  CandidateListItem,
+  CandidateStats,
+  CANDIDATE_STATUS_OPTIONS,
+  PageResponse,
+} from './candidate.model';
 
 const PAGE_SIZE = 10;
 
+/**
+ * Candidates landing page — the single, canonical candidate list.
+ *
+ * Backed entirely by the candidate backend (`/api/hr/candidates`,
+ * CandidateController). It intentionally does NOT use the recruitment
+ * pipeline endpoints (`/api/hr/pipeline/*`); statuses come straight from
+ * CandidateStatus so the list, filters and KPIs all reflect the same source.
+ */
 @Component({
   selector: 'rh-candidates',
   standalone: true,
   imports: [
     ButtonComponent,
     CardComponent,
+    MetricCardComponent,
     SelectComponent,
+    StatusBadgeComponent,
     ToolbarComponent,
     PaginationComponent,
-    CandidateKpiCardsComponent,
-    CandidateTableRowComponent,
-    KanbanColumnComponent,
-    CdkDropListGroup,
+    PermissionDirective,
+    RejectModalComponent,
   ],
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
-  private svc         = inject(CandidatesPipelineService);
-  private pipelineSvc = inject(PipelineService);
-  private router      = inject(Router);
+  private svc        = inject(CandidateService);
+  private router     = inject(Router);
+  readonly userStore = inject(UserStore);
 
-  readonly viewMode      = signal<'list' | 'kanban'>('list');
-  readonly stats         = signal<PipelineStats | null>(null);
-  readonly candidates    = signal<ProcessedCandidate[]>([]);
-  readonly kanbanColumns = signal<KanbanColumn[]>([]);
+  readonly page          = signal<PageResponse<CandidateListItem> | null>(null);
+  readonly stats         = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
   readonly search        = signal('');
-  readonly stageFilter   = signal('');
+  readonly statusFilter  = signal('');
   readonly currentPage   = signal(0);
-  readonly totalElements = signal(0);
-  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
-  readonly stages        = signal<{ value: string; label: string }[]>([]);
 
-  readonly stageSelectOptions = computed(() =>
-    this.stages()
-      .filter(s => s.value !== '')
-      .map(s => ({ value: s.value, label: s.label }))
+  readonly candidates    = computed(() => this.page()?.content ?? []);
+  readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
+  readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
+
+  // ── Reject modal state ─────────────────────────────────────────────────────
+  readonly rejectTarget = signal<CandidateListItem | null>(null);
+  readonly actioningId  = signal<number | null>(null);
+  readonly actionError  = signal<string | null>(null);
+
+  readonly canAcceptReject = computed(() =>
+    this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'),
   );
 
-  readonly stageSelectConfig: SelectConfig = {
-    placeholder: 'Toutes les étapes',
+  readonly statusSelectOptions: SelectOption[] = CANDIDATE_STATUS_OPTIONS
+    .filter(o => o.value !== '')
+    .map(o => ({ value: o.value, label: o.label }));
+
+  readonly statusSelectConfig: SelectConfig = {
+    placeholder: 'Tous les statuts',
   };
 
+  protected readonly statusBadge = statusBadge;
+
   ngOnInit(): void {
-    this.loading.set(true);
+    this.loadStats();
+    this.loadCandidates();
+  }
+
+  private loadStats(): void {
     this.statsLoading.set(true);
-    forkJoin({
-      stats:  this.svc.getStats(),
-      page:   this.svc.getCandidates({ page: 0, size: PAGE_SIZE }),
-      kanban: this.pipelineSvc.getKanban(),
-    }).subscribe({
-      next: ({ stats, page, kanban }) => {
-        this.stats.set(stats);
-        this.totalElements.set(page.totalElements);
-        this.candidates.set(this.process(page.content));
-        this.kanbanColumns.set(kanban);
-        this.stages.set([
-          { value: '', label: 'Toutes les étapes' },
-          ...kanban.map((col: KanbanColumn) => ({
-            value: col.stage,
-            label: col.stageLabel,
-          })),
-        ]);
-        this.loading.set(false);
-        this.statsLoading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.statsLoading.set(false);
-      },
+    this.svc.getStats(this.userStore.currentUser()?.paysId).subscribe({
+      next:  s  => { this.stats.set(s); this.statsLoading.set(false); },
+      error: () => this.statsLoading.set(false),
     });
   }
 
-  setViewMode(mode: 'list' | 'kanban'): void {
-    this.viewMode.set(mode);
-  }
-
-  onNewCandidate(): void {
-    this.router.navigate(['/rh/candidates', 'new']);
+  private loadCandidates(): void {
+    this.loading.set(true);
+    this.svc.getCandidates({
+      paysId: this.userStore.currentUser()?.paysId,
+      status: this.statusFilter() || undefined,
+      search: this.search()       || undefined,
+      page:   this.currentPage(),
+      size:   PAGE_SIZE,
+    }).subscribe({
+      next:  r  => { this.page.set(r); this.loading.set(false); },
+      error: () => this.loading.set(false),
+    });
   }
 
   onSearch(value: string | number | null): void {
@@ -115,8 +118,8 @@ export class CandidatesComponent implements OnInit {
     this.loadCandidates();
   }
 
-  onStageChange(stages: string[]): void {
-    this.stageFilter.set(stages[0] ?? '');
+  onStatusChange(values: string[]): void {
+    this.statusFilter.set(values[0] ?? '');
     this.currentPage.set(0);
     this.loadCandidates();
   }
@@ -126,56 +129,54 @@ export class CandidatesComponent implements OnInit {
     this.loadCandidates();
   }
 
+  onNewCandidate(): void {
+    this.router.navigate(['/rh/candidates', 'new']);
+  }
+
   onView(id: number): void {
     this.router.navigate(['/rh/candidates', id]);
   }
 
-  onMessage(id: number): void {
-    const c = this.candidates().find(c => c.id === id);
-    if (c?.email) window.open(`mailto:${c.email}`, '_blank');
-  }
-
-  onMore(_id: number): void {}
-
-  onCardClick(id: number): void {
-    this.router.navigate(['/rh/candidates', id]);
-  }
-
-  onKanbanDrop(event: { candidateId: number; fromStage: string; toStage: string }): void {
-    this.kanbanColumns.update(cols =>
-      cols.map(col => {
-        if (col.stage === event.fromStage) return { ...col, count: Math.max(0, col.count - 1) };
-        if (col.stage === event.toStage)   return { ...col, count: col.count + 1 };
-        return col;
-      }),
-    );
-    this.pipelineSvc.moveToStage(event.candidateId, event.toStage).subscribe({
-      error: () => this.pipelineSvc.getKanban().subscribe(cols => this.kanbanColumns.set(cols)),
-    });
-  }
-
-  private loadCandidates(): void {
-    this.loading.set(true);
-    this.svc.getCandidates({
-      search: this.search()      || undefined,
-      stage:  this.stageFilter() || undefined,
-      page:   this.currentPage(),
-      size:   PAGE_SIZE,
-    }).subscribe({
-      next: page => {
-        this.totalElements.set(page.totalElements);
-        this.candidates.set(this.process(page.content));
-        this.loading.set(false);
+  // ── Accept / Reject workflow (PENDING candidates only) ──────────────────────
+  quickAccept(c: CandidateListItem, event: Event): void {
+    event.stopPropagation();
+    if (!confirm(`Accepter le candidat ${c.firstName} ${c.lastName} ?`)) return;
+    this.actioningId.set(c.id);
+    this.actionError.set(null);
+    this.svc.accept(c.id).subscribe({
+      next:  () => { this.actioningId.set(null); this.reload(); },
+      error: err => {
+        this.actioningId.set(null);
+        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'acceptation.");
       },
-      error: () => this.loading.set(false),
     });
   }
 
-  private process(items: PipelineCandidateItem[]): ProcessedCandidate[] {
-    return items.map((item, i) => ({
-      ...item,
-      initials: item.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
-      colorIndex: i % AVATAR_COLORS.length,
-    }));
+  openRejectModal(c: CandidateListItem, event: Event): void {
+    event.stopPropagation();
+    this.actionError.set(null);
+    this.rejectTarget.set(c);
+  }
+
+  onRejected(): void {
+    this.rejectTarget.set(null);
+    this.reload();
+  }
+
+  private reload(): void {
+    this.loadStats();
+    this.loadCandidates();
+  }
+
+  // ── Display helpers ─────────────────────────────────────────────────────────
+  initials(fn: string, ln: string): string {
+    return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
+  }
+
+  formatDate(d: string | null | undefined): string {
+    if (!d) return '—';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return '—';
+    return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 }

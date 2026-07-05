@@ -134,11 +134,11 @@
             (valueChange)="setTextValue('position.appliedPosition', $event)" />
 
           <daf-chip-group
-            [options]="contractChipOptions"
-            [selected]="getSelectStr('position.contractType')"
+            [options]="employmentTypeChipOptions()"
+            [selected]="getSelectNum('position.employmentTypeId')"
             [config]="{ label: 'Type de Contrat', required: true,
-                        error: getFieldError('position.contractType') }"
-            (selectedChange)="setSelectStr('position.contractType', $event)" />
+                        error: getFieldError('position.employmentTypeId') }"
+            (selectedChange)="setSelectNum('position.employmentTypeId', $event)" />
 
           <div class="grid grid-cols-2 gap-4">
             <daf-multi-date-picker

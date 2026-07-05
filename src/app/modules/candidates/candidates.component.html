@@ -12,12 +12,14 @@
             Suivi des candidatures et des étapes de recrutement.
           </p>
         </div>
-        <daf-button
-          label="Nouveau Candidat"
-          variant="teal"
-          [options]="{ iconStart: 'add', size: 'md' }"
-          (onClick)="onNewCandidate()"
-        />
+        <ng-container *appHasPermission="'CREATE_CANDIDATE'">
+          <daf-button
+            label="Nouveau Candidat"
+            variant="teal"
+            [options]="{ iconStart: 'add', size: 'md' }"
+            (onClick)="onNewCandidate()"
+          />
+        </ng-container>
       </div>
 
       <!-- KPI Cards -->
@@ -31,158 +33,173 @@
             </div>
           }
         </div>
-      } @else if (stats()) {
-        <rh-candidate-kpi-cards [stats]="stats()!" />
+      } @else {
+        <div class="grid grid-cols-4 gap-6">
+          <daf-metric-card
+            [value]="stats().total"
+            label="Total Candidats"
+            [options]="{ icon: 'group', iconBg: 'bg-primary/10', iconColor: 'text-primary' }"
+          />
+          <daf-metric-card
+            [value]="stats().pending"
+            label="En attente"
+            [options]="{ icon: 'schedule', iconBg: 'bg-secondary/10', iconColor: 'text-secondary' }"
+          />
+          <daf-metric-card
+            [value]="stats().accepted"
+            label="Acceptés"
+            [options]="{ icon: 'task_alt', iconBg: 'bg-teal/10', iconColor: 'text-teal' }"
+          />
+          <daf-metric-card
+            [value]="stats().hired"
+            label="Embauchés"
+            [options]="{ icon: 'how_to_reg', iconBg: 'bg-tertiary/10', iconColor: 'text-tertiary' }"
+          />
+        </div>
       }
 
-      <!-- View toggle + content -->
-      <div class="space-y-4">
+      <!-- Action error banner -->
+      @if (actionError()) {
+        <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ actionError() }}</div>
+      }
 
-        <!-- Toggle row: filters (list only) + view mode pills -->
-        <div class="flex items-center gap-3">
-          @if (viewMode() === 'list') {
-            <div class="flex-1 flex items-center gap-3 min-w-0">
-              <div class="flex-1 min-w-0">
-                <daf-toolbar
-                  [searchValue]="search()"
-                  searchPlaceholder="Rechercher un candidat..."
-                  [actions]="[{ id: 'sort', icon: 'sort', tooltip: 'Trier', position: 'left' }]"
-                  (searchChange)="onSearch($event)"
-                />
-              </div>
-              <daf-select
-                [selected]="stageFilter() ? [stageFilter()] : []"
-                [options]="stageSelectOptions()"
-                [config]="stageSelectConfig"
-                (selectedChange)="onStageChange($event)"
-              />
-            </div>
-          } @else {
-            <div class="flex-1"></div>
-          }
+      <!-- Filters -->
+      <div class="flex items-center gap-3">
+        <div class="flex-1 min-w-0">
+          <daf-toolbar
+            [searchValue]="search()"
+            searchPlaceholder="Rechercher un candidat..."
+            (searchChange)="onSearch($event)"
+          />
+        </div>
+        <daf-select
+          [selected]="statusFilter() ? [statusFilter()] : []"
+          [options]="statusSelectOptions"
+          [config]="statusSelectConfig"
+          (selectedChange)="onStatusChange($event)"
+        />
+      </div>
 
-          <!-- View mode toggle pill -->
-          <div class="flex gap-1 bg-surface-container-high p-1 rounded-full shrink-0">
-            <button
-              class="px-5 py-1.5 rounded-full text-[13px] font-semibold transition-all flex items-center gap-1.5"
-              [class]="viewMode() === 'kanban' ? 'bg-white shadow-sm text-primary' : 'text-outline hover:text-on-surface'"
-              (click)="setViewMode('kanban')">
-              <span class="material-symbols-outlined text-[16px]">view_kanban</span>
-              Kanban
-            </button>
-            <button
-              class="px-5 py-1.5 rounded-full text-[13px] font-semibold transition-all flex items-center gap-1.5"
-              [class]="viewMode() === 'list' ? 'bg-white shadow-sm text-primary' : 'text-outline hover:text-on-surface'"
-              (click)="setViewMode('list')">
-              <span class="material-symbols-outlined text-[16px]">table_rows</span>
-              Liste
-            </button>
-          </div>
+      <!-- Loading -->
+      @if (loading()) {
+        <div class="flex justify-center items-center h-48">
+          <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">
+            progress_activity
+          </span>
         </div>
 
-        <!-- Loading -->
-        @if (loading()) {
-          <div class="flex justify-center items-center h-48">
-            <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">
-              progress_activity
-            </span>
-          </div>
-
-        <!-- Kanban view -->
-        } @else if (viewMode() === 'kanban') {
-          <div
-            cdkDropListGroup
-            class="flex gap-6 overflow-x-auto pb-8 items-start -mx-8 px-8"
-            style="scrollbar-width: thin">
-            @for (col of kanbanColumns(); track col.stage) {
-              <rh-kanban-column
-                [column]="col"
-                (cardClick)="onCardClick($event)"
-                (dropped)="onKanbanDrop($event)" />
-            }
-            <!-- Add stage placeholder -->
-            <div class="shrink-0 space-y-4" style="min-width: 300px; width: 300px;">
-              <div class="flex justify-between items-center px-2 py-1 invisible pointer-events-none">
-                <span class="font-bold">—</span>
-                <button class="p-1">
-                  <span class="material-symbols-outlined text-[20px]">more_horiz</span>
-                </button>
-              </div>
-              <div
-                class="flex flex-col items-center justify-center py-8 rounded-xl cursor-pointer group
-                       border-2 border-dashed border-outline-variant text-outline
-                       transition-all hover:border-[#79D7BE] hover:text-[#79D7BE]">
-                <span class="material-symbols-outlined text-[32px] group-hover:scale-110 transition-transform">
-                  add_circle
-                </span>
-                <span class="font-semibold text-sm mt-2">Nouvelle Étape</span>
-              </div>
+      <!-- Empty state -->
+      } @else if (candidates().length === 0) {
+        <daf-card [options]="{ variant: 'glass', padding: 'lg' }">
+          <div class="flex flex-col items-center justify-center py-10 gap-4">
+            <span class="material-symbols-outlined text-6xl text-outline">inbox</span>
+            <div class="text-center">
+              <p class="text-body-md font-medium text-on-surface-variant">Aucun candidat trouvé</p>
+              <p class="text-label-sm text-outline mt-1">
+                Essayez de modifier vos filtres ou ajoutez un nouveau candidat.
+              </p>
             </div>
-          </div>
-
-        <!-- Empty state -->
-        } @else if (candidates().length === 0) {
-          <daf-card [options]="{ variant: 'glass', padding: 'lg' }">
-            <div class="flex flex-col items-center justify-center py-10 gap-4">
-              <span class="material-symbols-outlined text-6xl text-outline">inbox</span>
-              <div class="text-center">
-                <p class="text-body-md font-medium text-on-surface-variant">Aucun candidat trouvé</p>
-                <p class="text-label-sm text-outline mt-1">
-                  Essayez de modifier vos filtres ou ajoutez un nouveau candidat.
-                </p>
-              </div>
+            <ng-container *appHasPermission="'CREATE_CANDIDATE'">
               <daf-button
                 label="Ajouter un candidat"
                 variant="secondary"
                 [options]="{ iconStart: 'person_add', size: 'sm' }"
                 (onClick)="onNewCandidate()" />
-            </div>
-          </daf-card>
+            </ng-container>
+          </div>
+        </daf-card>
 
-        <!-- List table -->
-        } @else {
-          <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden">
-            <table class="w-full">
-              <thead>
-                <tr class="border-b border-outline-variant bg-surface-container-low">
-                  <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Candidat</th>
-                  <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Poste</th>
-                  <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Étape</th>
-                  <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Score</th>
-                  <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Date</th>
-                  <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Actions</th>
+      <!-- List table -->
+      } @else {
+        <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-outline-variant bg-surface-container-low">
+                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Candidat</th>
+                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Poste</th>
+                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Statut</th>
+                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Début prévu</th>
+                <th class="py-3 px-4 text-right text-label-sm text-outline uppercase tracking-wide">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant">
+              @for (c of candidates(); track c.id) {
+                <tr
+                  class="cursor-pointer hover:bg-surface-container-low transition-colors"
+                  (click)="onView(c.id)">
+                  <!-- Candidat -->
+                  <td class="py-3 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                        {{ initials(c.firstName, c.lastName) }}
+                      </div>
+                      <div>
+                        <div class="text-sm font-semibold text-on-surface">{{ c.firstName }} {{ c.lastName }}</div>
+                        <div class="text-xs text-outline">{{ c.emailPersonal }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <!-- Poste -->
+                  <td class="py-3 px-4 text-sm text-outline">{{ c.appliedPosition ?? '—' }}</td>
+                  <!-- Statut -->
+                  <td class="py-3 px-4">
+                    <daf-badge
+                      [label]="statusBadge(c.status).label"
+                      [options]="statusBadge(c.status).options" />
+                  </td>
+                  <!-- Début prévu -->
+                  <td class="py-3 px-4 text-sm text-outline">{{ formatDate(c.expectedStartDate) }}</td>
+                  <!-- Actions -->
+                  <td class="py-3 px-4 text-right" (click)="$event.stopPropagation()">
+                    <div class="inline-flex items-center gap-1 flex-wrap justify-end">
+                      @if (c.status === 'PENDING' && canAcceptReject()) {
+                        <daf-button
+                          label="Accepter"
+                          variant="ghost"
+                          [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === c.id }"
+                          (onClick)="quickAccept(c, $event)" />
+                        <daf-button
+                          label="Rejeter"
+                          variant="danger"
+                          [options]="{ iconStart: 'cancel', size: 'sm' }"
+                          (onClick)="openRejectModal(c, $event)" />
+                      }
+                      <daf-button
+                        label="Voir"
+                        variant="ghost"
+                        [options]="{ iconStart: 'open_in_new', size: 'sm' }"
+                        (onClick)="onView(c.id)" />
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody class="divide-y divide-outline-variant">
-                @for (c of candidates(); track c.id) {
-                  <tr
-                    rh-candidate-table-row
-                    [candidate]="c"
-                    (viewClick)="onView($event)"
-                    (messageClick)="onMessage($event)"
-                    (moreClick)="onMore($event)">
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+              }
+            </tbody>
+          </table>
+        </div>
 
-          <!-- Count + Pagination -->
-          <div class="flex items-center justify-between">
-            <span class="text-label-sm text-outline">
-              <span class="font-semibold text-on-surface">{{ totalElements() }}</span> candidat(s)
-            </span>
-            @if (totalPages() > 1) {
-              <daf-pagination
-                [currentPage]="currentPage()"
-                [totalPages]="totalPages()"
-                [totalElements]="totalElements()"
-                (pageChange)="onPageChange($event)" />
-            }
-          </div>
-        }
+        <!-- Count + Pagination -->
+        <div class="flex items-center justify-between">
+          <span class="text-label-sm text-outline">
+            <span class="font-semibold text-on-surface">{{ totalElements() }}</span> candidat(s)
+          </span>
+          @if (totalPages() > 1) {
+            <daf-pagination
+              [currentPage]="currentPage()"
+              [totalPages]="totalPages()"
+              [totalElements]="totalElements()"
+              (pageChange)="onPageChange($event)" />
+          }
+        </div>
+      }
 
-      </div>
     </div>
   </div>
 </div>
+
+<!-- Reject modal -->
+<app-reject-modal
+  [visible]="rejectTarget() !== null"
+  [target]="rejectTarget()"
+  (closed)="rejectTarget.set(null)"
+  (rejected)="onRejected()"
+/>

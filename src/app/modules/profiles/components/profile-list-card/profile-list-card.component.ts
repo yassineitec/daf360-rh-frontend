@@ -14,11 +14,12 @@ import { environment } from '../../../../../environments/environment';
       [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }"
       [style.box-shadow]="selected() ? '0 0 0 2px #50717B' : null"
       (mouseenter)="hovered.set(true)"
-      (mouseleave)="hovered.set(false)">
-
-      <div class="p-4 flex items-center gap-4 relative"
-           [style.background-color]="selected() ? 'rgba(80,113,123,0.05)' : null">
-
+      (mouseleave)="hovered.set(false)"
+    >
+      <div
+        class="p-4 flex items-center gap-4 relative"
+        [style.background-color]="selected() ? 'rgba(80,113,123,0.05)' : null"
+      >
         <!-- Checkbox -->
         <div class="shrink-0">
           <input
@@ -26,7 +27,8 @@ import { environment } from '../../../../../environments/environment';
             class="w-4 h-4 rounded accent-teal cursor-pointer"
             [checked]="selected()"
             (click)="$event.stopPropagation()"
-            (change)="handleSelect($any($event.target).checked)" />
+            (change)="handleSelect($any($event.target).checked)"
+          />
         </div>
 
         <!-- Avatar -->
@@ -34,7 +36,8 @@ import { environment } from '../../../../../environments/environment';
           <img
             [src]="getAvatarUrl(employee().profileId, employee().photoUrl, employee().gender)"
             [alt]="employee().fullName"
-            class="w-full h-full object-cover" />
+            class="w-full h-full object-cover"
+          />
         </div>
 
         <!-- Info block -->
@@ -43,21 +46,26 @@ import { environment } from '../../../../../environments/environment';
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-[14px] font-bold text-on-surface">{{ employee().fullName }}</span>
             @if (employee().paysLabel) {
-              <span class="px-2 py-0.5 bg-surface-container rounded text-[10px]
-                           font-bold text-on-surface-variant uppercase">
+              <span
+                class="px-2 py-0.5 bg-surface-container rounded text-label-caps
+                           font-bold text-on-surface-variant uppercase"
+              >
                 {{ employee().paysLabel }}
               </span>
             }
             @if (employee().grade) {
-              <span class="px-2 py-0.5 bg-surface-container rounded text-[10px]
-                           font-bold text-on-surface-variant uppercase">
+              <span
+                class="px-2 py-0.5 bg-surface-container rounded text-label-caps
+                           font-bold text-on-surface-variant uppercase"
+              >
                 {{ employee().grade }}
               </span>
             }
           </div>
           <!-- Row 2: role · dept -->
           <p class="text-[13px] text-outline truncate mt-0.5">
-            {{ employee().roleName ?? '—' }}{{ employee().department ? ' · ' + employee().department : '' }}
+            {{ employee().roleName ?? '—'
+            }}{{ employee().department ? ' · ' + employee().department : '' }}
           </p>
           <!-- Row 3: meta -->
           <div class="flex flex-wrap gap-4 mt-1">
@@ -87,31 +95,35 @@ import { environment } from '../../../../../environments/environment';
           @if (employee().lifecycleStatus) {
             <daf-badge
               [label]="statusBadge(employee().lifecycleStatus!).label"
-              [options]="statusBadge(employee().lifecycleStatus!).options" />
+              [options]="statusBadge(employee().lifecycleStatus!).options"
+            />
           }
         </div>
 
         <!-- Actions -->
         <div class="flex gap-2 shrink-0 items-center">
-
           <!-- Hover quick actions (edit + delete) -->
-          <div class="flex gap-1 transition-opacity duration-200"
-               [class.opacity-0]="!hovered()"
-               [class.opacity-100]="hovered()"
-               [class.pointer-events-none]="!hovered()">
+          <div
+            class="flex gap-1 transition-opacity duration-200"
+            [class.opacity-0]="!hovered()"
+            [class.opacity-100]="hovered()"
+            [class.pointer-events-none]="!hovered()"
+          >
             <button
               type="button"
               class="p-2 rounded-lg border border-outline-variant text-outline
                      hover:text-teal hover:border-teal transition-colors"
-              (click)="$event.stopPropagation(); emitEdit()">
-              <span class="material-symbols-outlined text-[16px]">edit</span>
+              (click)="$event.stopPropagation(); emitEdit()"
+            >
+              <span class="material-symbols-outlined text-body-lg">edit</span>
             </button>
             <button
               type="button"
               class="p-2 rounded-lg border border-outline-variant text-outline
                      hover:text-danger hover:border-danger transition-colors"
-              (click)="$event.stopPropagation(); emitDelete()">
-              <span class="material-symbols-outlined text-[16px]">delete</span>
+              (click)="$event.stopPropagation(); emitDelete()"
+            >
+              <span class="material-symbols-outlined text-body-lg">delete</span>
             </button>
           </div>
 
@@ -120,35 +132,36 @@ import { environment } from '../../../../../environments/environment';
             type="button"
             class="px-4 py-2 bg-[#1b3a4b] text-white rounded-lg text-[13px]
                    font-semibold hover:opacity-90 transition-opacity"
-            (click)="viewProfile.emit(employee().profileId)">
+            (click)="viewProfile.emit(employee().profileId)"
+          >
             Voir profil
           </button>
           <button
             type="button"
             class="px-3 py-2 border border-outline-variant rounded-lg
                    hover:bg-surface-container transition-colors"
-            (click)="moreActions.emit(employee().profileId)">
-            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">
+            (click)="moreActions.emit(employee().profileId)"
+          >
+            <span class="material-symbols-outlined text-body-lg text-on-surface-variant">
               more_horiz
             </span>
           </button>
         </div>
-
       </div>
     </daf-card>
   `,
 })
 export class ProfileListCardComponent {
-  readonly employee    = input.required<EmployeeListItem>();
-  readonly selected    = input<boolean>(false);
+  readonly employee = input.required<EmployeeListItem>();
+  readonly selected = input<boolean>(false);
   readonly viewProfile = output<number | null>();
   readonly moreActions = output<number | null>();
-  readonly onSelect    = output<{ userId: number; checked: boolean }>();
-  readonly onEdit      = output<number>();
-  readonly onDelete    = output<number>();
-  readonly avatarUrl    = avatarUrl;
+  readonly onSelect = output<{ userId: number; checked: boolean }>();
+  readonly onEdit = output<number>();
+  readonly onDelete = output<number>();
+  readonly avatarUrl = avatarUrl;
   readonly getAvatarUrl = getAvatarUrl;
-  readonly statusBadge  = statusBadge;
+  readonly statusBadge = statusBadge;
 
   hovered = signal(false);
 
@@ -176,7 +189,9 @@ export class ProfileListCardComponent {
   formatDate(dateStr: string | null): string {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: 'short', year: 'numeric',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     });
   }
 }

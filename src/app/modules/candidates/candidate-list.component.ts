@@ -56,7 +56,7 @@ export class CandidateListComponent implements OnInit {
   readonly userStore = inject(UserStore);
 
   candidates    = signal<PageResponse<CandidateListItem> | null>(null);
-  stats         = signal<CandidateStats>({ total: 0, pending: 0, hiredThisMonth: 0 });
+  stats         = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
   history       = signal<CandidateHistoryItem[]>([]);
   selectedId    = signal<number | null>(null);
 

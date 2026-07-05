@@ -36,8 +36,8 @@
     [options]="{ icon: 'schedule', iconBg: 'bg-secondary/10', iconColor: 'text-secondary' }"
   />
   <daf-metric-card
-    [value]="isLoadingStats() ? '…' : stats().hiredThisMonth"
-    label="Embauchés ce mois"
+    [value]="isLoadingStats() ? '…' : stats().hired"
+    label="Embauchés"
     [options]="{ icon: 'how_to_reg', iconBg: 'bg-teal/10', iconColor: 'text-teal' }"
   />
 </div>

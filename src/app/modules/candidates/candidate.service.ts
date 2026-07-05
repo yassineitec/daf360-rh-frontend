@@ -69,17 +69,27 @@ export class CandidateService {
     return this.http.get<PageResponse<CandidateListItem>>(this.base, { params });
   }
 
-  getStats(): Observable<CandidateStats> {
-    const now      = new Date();
-    const yr       = now.getFullYear();
-    const mo       = now.getMonth();
-    const firstDay = new Date(yr, mo, 1).toISOString().split('T')[0];
-    const lastDay  = new Date(yr, mo + 1, 0).toISOString().split('T')[0];
+  /**
+   * Candidate funnel counts. Each is a `totalElements`-only page probe against
+   * the paginated list endpoint (which supports `status` + tenant scoping).
+   * The old `from`/`to` "this month" probe was dropped — the backend list
+   * endpoint (CandidateController#list) does not accept date params, so it was
+   * silently ignored and returned the all-time HIRED count anyway.
+   */
+  getStats(paysId?: number): Observable<CandidateStats> {
+    const count = (status?: string) => {
+      let params = new HttpParams().set('page', 0).set('size', 1);
+      if (status) params = params.set('status', status);
+      if (paysId) params = params.set('paysId', paysId);
+      return this.http.get<PageResponse<CandidateListItem>>(this.base, { params })
+        .pipe(map(r => r.totalElements ?? 0), catchError(() => of(0)));
+    };
     return forkJoin({
-      total:          this.http.get<PageResponse<CandidateListItem>>(this.base + '?page=0&size=1').pipe(map((r: any) => r.totalElements ?? 0), catchError(() => of(0))),
-      pending:        this.http.get<PageResponse<CandidateListItem>>(this.base + '?page=0&size=1&status=PENDING').pipe(map((r: any) => r.totalElements ?? 0), catchError(() => of(0))),
-      hiredThisMonth: this.http.get<PageResponse<CandidateListItem>>(this.base + '?page=0&size=1&status=HIRED&from=' + firstDay + '&to=' + lastDay).pipe(map((r: any) => r.totalElements ?? 0), catchError(() => of(0))),
-    }).pipe(catchError(() => of({ total: 0, pending: 0, hiredThisMonth: 0 })));
+      total:    count(),
+      pending:  count('PENDING'),
+      accepted: count('ACCEPTED'),
+      hired:    count('HIRED'),
+    }).pipe(catchError(() => of({ total: 0, pending: 0, accepted: 0, hired: 0 })));
   }
 
   getHistory(candidateId: number): Observable<CandidateHistoryItem[]> {

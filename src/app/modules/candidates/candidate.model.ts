@@ -60,7 +60,13 @@ export interface CandidateDetail {
   appliedDisciplineId: number | null;
   department: string | null;
   departmentId: number | null;
-  contractType: string | null;
+  /**
+   * Contract type. The backend exposes it as an EMPLOYMENT_TYPE list value
+   * (employmentTypeId + resolved employmentTypeLabel), NOT a `contractType`
+   * enum. `employmentTypeLabel` is the human label to display.
+   */
+  employmentTypeId: number | null;
+  employmentTypeLabel: string | null;
   expectedStartDate: string | null;
   status: CandidateStatus;
   rejectionReason: string | null;
@@ -74,6 +80,8 @@ export interface CandidateDetail {
   cvOriginalName: string | null;
   cvUploadedAt: string | null;
   itProvisioning: ItProvisioningSummary | null;
+  recruitmentDemandId: number | null;
+  recruitmentDemandJobTitle: string | null;
 }
 
 export interface CreateCandidateRequest {
@@ -156,7 +164,8 @@ export const CANDIDATE_STATUS_OPTIONS = [
 export interface CandidateStats {
   total: number;
   pending: number;
-  hiredThisMonth: number;
+  accepted: number;
+  hired: number;
 }
 
 export interface CandidateHistoryItem {
