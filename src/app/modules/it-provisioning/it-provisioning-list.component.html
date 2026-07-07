@@ -1,87 +1,120 @@
-<div class="page-header">
+<div class="p-8 space-y-6">
+
+  <!-- Page header -->
   <div>
-    <h1 class="page-title">Provisioning IT</h1>
-    <p class="page-sub">Dossiers en attente de provisioning</p>
+    <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+      Provisioning IT
+    </h1>
+    <div class="flex items-center gap-2 mt-1">
+      <div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+      <p class="text-[14px] text-outline">
+        {{ stats().pending }} dossier(s) en attente de configuration.
+      </p>
+    </div>
   </div>
-  <button class="btn-refresh" type="button" (click)="load()" [disabled]="loading()" aria-label="Rafraîchir">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-    </svg>
-    Rafraîchir
-  </button>
+
+  @if (error()) {
+    <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ error() }}</div>
+  }
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <daf-metric-card
+      [value]="stats().pending"
+      label="Dossiers en attente"
+      [options]="{ icon: 'assignment_late', iconBg: 'bg-secondary/10', iconColor: 'text-secondary' }" />
+    <daf-metric-card
+      [value]="stats().overdue"
+      label="En retard"
+      [options]="{ icon: 'error', iconBg: 'bg-danger/10', iconColor: 'text-danger' }" />
+    <daf-metric-card
+      [value]="stats().hwIncomplete"
+      label="Matériel incomplet"
+      [options]="{ icon: 'package_2', iconBg: 'bg-primary/10', iconColor: 'text-primary' }" />
+    <daf-metric-card
+      [value]="stats().licIncomplete"
+      label="Licences incomplètes"
+      [options]="{ icon: 'subscriptions', iconBg: 'bg-tertiary/10', iconColor: 'text-tertiary' }" />
+  </div>
+
+  <!-- Filters -->
+  <div class="flex items-center gap-3">
+    <div class="flex-1 min-w-0">
+      <daf-toolbar
+        [searchValue]="search()"
+        searchPlaceholder="Rechercher un candidat..."
+        [actions]="[{ id: 'refresh', icon: 'cached', tooltip: 'Rafraîchir', position: 'right', callback: load.bind(this) }]"
+        (searchChange)="onSearch($event)"
+        (actionClick)="$event === 'refresh' && load()" />
+    </div>
+    <daf-select
+      [selected]="statusFilter() ? [statusFilter()] : []"
+      [options]="statusSelectOptions"
+      [config]="statusSelectConfig"
+      (selectedChange)="onStatusChange($event)" />
+  </div>
+
+  <!-- Data table -->
+  <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+
+    <ng-template dafCell="ms365Email" let-row>
+      @if (row['ms365Email']) {
+        <span class="text-body-md text-on-surface">{{ row['ms365Email'] }}</span>
+      } @else {
+        <span class="text-body-sm text-outline italic">— En attente —</span>
+      }
+    </ng-template>
+
+    <ng-template dafCell="expectedStartDate" let-row>
+      <p class="text-body-md text-on-surface">{{ row['expectedStartDate'] ?? '—' }}</p>
+      @if (row['overdue']) {
+        <p class="text-body-sm text-danger font-bold flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">error</span>
+          En retard de {{ overdueDays(row) }} jour(s)
+        </p>
+      }
+    </ng-template>
+
+    <ng-template dafCell="hwLabel" let-row>
+      <div class="flex flex-col gap-1 w-24">
+        <span class="text-body-sm font-bold" [class.text-success]="row['hwDone']">{{ row['hwLabel'] }}</span>
+        <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-primary" [style.width.%]="(row['hwCount'] / 6) * 100"></div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template dafCell="licLabel" let-row>
+      <div class="flex flex-col gap-1 w-24">
+        <span class="text-body-sm font-bold" [class.text-success]="row['licDone']">{{ row['licLabel'] }}</span>
+        <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-tertiary" [style.width.%]="(row['licCount'] / 5) * 100"></div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template dafCell="adDone" let-row>
+      <div class="inline-flex items-center gap-1.5">
+        <span class="material-symbols-outlined" [class.text-success]="row['adDone']" [class.text-outline]="!row['adDone']">
+          {{ row['adDone'] ? 'sync' : 'sync_problem' }}
+        </span>
+        <span class="text-label-sm uppercase" [class.text-success]="row['adDone']" [class.text-outline]="!row['adDone']">
+          {{ row['adDone'] ? 'Synchronisé' : 'Échec' }}
+        </span>
+      </div>
+    </ng-template>
+
+    <ng-template dafCell="_actions" let-row>
+      <button
+        class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
+               hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
+        style="background-color: #50717B"
+        type="button"
+        (click)="navigate(row['_source'].id)">
+        Compléter →
+      </button>
+    </ng-template>
+
+  </daf-data-table>
+
 </div>
-
-@if (error()) {
-  <div class="error-msg" role="alert">{{ error() }}</div>
-}
-
-@if (loading()) {
-  <div class="loading-wrap"><app-spinner /></div>
-} @else if (items().length === 0) {
-  <div class="empty-state">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="var(--color-border)">
-      <rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/>
-      <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
-    </svg>
-    <p>Aucun dossier en attente de provisioning.</p>
-  </div>
-} @else {
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Candidat</th>
-          <th>Email MS365</th>
-          <th>Statut</th>
-          <th>Début prévu</th>
-          <th>Matériel</th>
-          <th>Licences</th>
-          <th>AD</th>
-          <th class="th-actions">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (r of items(); track r.id) {
-          <tr>
-            <td>
-              <p class="cell-name">{{ r.candidateFullName }}</p>
-              @if (r.appliedPosition) {
-                <p class="cell-pos">{{ r.appliedPosition }}</p>
-              }
-            </td>
-            <td>
-              @if (r.ms365Email) {
-                <span class="email-set">{{ r.ms365Email }}</span>
-              } @else {
-                <span class="email-pending">— En attente —</span>
-              }
-            </td>
-            <td><daf-badge [label]="statusBadge(r.status).label" [options]="statusBadge(r.status).options" /></td>
-            <td class="cell-date">{{ r.expectedStartDate ?? '—' }}</td>
-            <td>
-              <div class="progress-cell" [class.done]="hwProgress(r) === '6/6'">
-                {{ hwProgress(r) }}
-              </div>
-            </td>
-            <td>
-              <div class="progress-cell" [class.done]="licProgress(r) === '5/5'">
-                {{ licProgress(r) }}
-              </div>
-            </td>
-            <td>
-              <span class="ad-badge" [class.ad-done]="r.status === 'EMAIL_CREATED' || r.status === 'COMPLETED'">
-                {{ (r.status === 'EMAIL_CREATED' || r.status === 'COMPLETED') ? '✓' : '—' }}
-              </span>
-            </td>
-            <td>
-              <button class="btn-open" type="button" (click)="navigate(r.id)">
-                Compléter →
-              </button>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-}
