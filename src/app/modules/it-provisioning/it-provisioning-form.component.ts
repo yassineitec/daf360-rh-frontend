@@ -20,12 +20,12 @@ import { ListValue } from '../../core/lists/configurable-list.model';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 
 const STEP_CARD_INFO = [
-  { title: 'Identité',        sub: 'Informations du candidat issues du dossier de recrutement.',   icon: 'badge'            },
-  { title: 'Microsoft 365',   sub: 'Créez le compte de messagerie professionnel.',                  icon: 'mail'             },
-  { title: 'Matériel',        sub: 'Enregistrez le matériel informatique remis au collaborateur.',   icon: 'devices'          },
-  { title: 'Licences',        sub: 'Sélectionnez les licences logicielles à attribuer.',             icon: 'subscriptions'    },
-  { title: 'Active Directory', sub: 'Créez le compte AD et son profil d\'accès.',                    icon: 'admin_panel_settings' },
-  { title: 'Notes & Finalisation', sub: 'Ajoutez vos observations puis clôturez le dossier.',         icon: 'fact_check'       },
+  { title: 'Identité',        sub: 'Informations du candidat issues du dossier de recrutement.',   icon: 'person'           },
+  { title: 'Microsoft 365',   sub: 'Créez le compte de messagerie professionnel.',                  icon: 'cloud'            },
+  { title: 'Matériel',        sub: 'Enregistrez le matériel informatique remis au collaborateur.',   icon: 'laptop_mac'       },
+  { title: 'Licences',        sub: 'Sélectionnez les licences logicielles à attribuer.',             icon: 'verified_user'    },
+  { title: 'Active Directory', sub: 'Créez le compte AD et son profil d\'accès.',                    icon: 'lan'              },
+  { title: 'Notes & Finalisation', sub: 'Ajoutez vos observations puis clôturez le dossier.',         icon: 'flag'             },
 ];
 
 @Component({
@@ -97,6 +97,21 @@ export class ItProvisioningFormComponent implements OnInit {
   goNext(): void { this.currentStep.update(s => Math.min(this.totalSteps, s + 1)); }
   goPrev(): void { this.currentStep.update(s => Math.max(1, s - 1)); }
   goToStep(step: number): void { this.currentStep.set(step); }
+
+  /** Circle classes for the progression panel — active / done / upcoming. */
+  stepCircleClasses(i: number): string {
+    if (this.currentStep() === i + 1) return 'bg-primary border-primary text-white ring-4 ring-primary/20';
+    if (this.stepDone()[i])           return 'bg-success border-success text-white';
+    return 'bg-surface-container border-outline-variant text-outline';
+  }
+
+  stepLabelClasses(i: number): string {
+    return this.currentStep() === i + 1 ? 'text-teal' : 'text-on-surface';
+  }
+
+  stepEyebrowClasses(i: number): string {
+    return this.currentStep() === i + 1 ? 'text-teal' : 'text-outline';
+  }
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly canComplete = computed(() => {

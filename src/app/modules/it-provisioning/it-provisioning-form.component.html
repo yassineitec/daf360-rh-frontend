@@ -42,12 +42,12 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm">
 
           <!-- Card head -->
-          <div class="flex items-center gap-3.5 px-8 py-5 border-b border-outline-variant bg-tertiary/[0.04]">
-            <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[22px]">{{ cardIcon() }}</span>
+          <div class="flex items-center gap-4 px-8 py-6 border-b border-outline-variant">
+            <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[32px]">{{ cardIcon() }}</span>
             </div>
             <div>
-              <h2 class="text-[17px] font-bold text-on-surface leading-snug">{{ cardTitle() }}</h2>
+              <h2 class="text-[18px] font-bold text-teal leading-snug">{{ cardTitle() }}</h2>
               <p class="text-[13px] text-outline">{{ cardSub() }}</p>
             </div>
           </div>
@@ -266,6 +266,42 @@
             }
 
           </div><!-- /step body -->
+
+          <!-- Bottom action bar -->
+          <div class="flex items-center justify-between gap-4 flex-wrap px-8 py-5 border-t border-outline-variant bg-surface-container-lowest">
+            <daf-button
+              [options]="{ variant: 'ghost', label: 'Précédent', iconStart: 'arrow_back', disabled: currentStep() === 1 }"
+              (onClick)="goPrev()" />
+
+            <div class="flex items-center gap-3">
+              @if (!isCompleted()) {
+                <daf-button
+                  [options]="{ variant: 'secondary', label: saving() ? 'Enregistrement…' : 'Enregistrer le brouillon', iconStart: 'save', disabled: saving(), loading: saving() }"
+                  (onClick)="onSave()" />
+              }
+              @if (currentStep() < totalSteps) {
+                <daf-button
+                  [options]="{ variant: 'teal', pill: true, label: 'Suivant', iconEnd: 'arrow_forward' }"
+                  (onClick)="goNext()" />
+              } @else {
+                <daf-button
+                  [options]="{
+                    variant: 'teal',
+                    pill: true,
+                    label: isCompleted() ? 'Provisioning terminé' : (completing() ? 'Finalisation…' : 'Marquer comme terminé'),
+                    iconStart: isCompleted() ? 'check_circle' : undefined,
+                    iconEnd: isCompleted() ? undefined : 'flag',
+                    disabled: !canComplete() || completing() || isCompleted(),
+                    loading: completing()
+                  }"
+                  (onClick)="onOpenCompleteModal()" />
+              }
+            </div>
+          </div>
+          @if (currentStep() === totalSteps && !canComplete() && !isCompleted()) {
+            <p class="text-[11px] text-outline text-center pb-4">Créez d'abord le compte MS365 et le compte AD pour finaliser.</p>
+          }
+
         </div><!-- /form card -->
       </div><!-- /form-area -->
 
@@ -274,16 +310,6 @@
       <!-- ══════════════════════════════════════════════════════════ -->
       <aside class="flex flex-col gap-4 sticky top-6">
 
-        <!-- Navigation Précédent / Suivant -->
-        <div class="flex items-center gap-2 px-3.5 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm">
-          <daf-button class="flex-1"
-            [options]="{ variant: 'ghost', label: 'Précédent', iconStart: 'arrow_back', disabled: currentStep() === 1 }"
-            (onClick)="goPrev()" />
-          <daf-button class="flex-1"
-            [options]="{ variant: 'secondary', pill: true, label: 'Suivant', iconEnd: 'arrow_forward', disabled: currentStep() === totalSteps }"
-            (onClick)="goNext()" />
-        </div>
-
         <!-- Progression -->
         <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
           <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
@@ -291,63 +317,29 @@
           </div>
           <div class="p-5">
             <div class="relative flex flex-col">
-              <div class="absolute left-[17px] top-9 bottom-9 w-0.5 bg-outline-variant rounded-full"></div>
+              <div class="absolute left-5 top-10 bottom-10 w-0.5 bg-outline-variant rounded-full"></div>
               @for (step of wizardSteps; track $index; let i = $index) {
                 <button type="button"
-                  class="relative z-10 flex items-center gap-3.5 py-2 text-left w-full"
+                  class="relative z-10 flex items-start gap-3.5 py-3 text-left w-full"
                   (click)="goToStep(i + 1)">
-                  <span class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold border-2 transition-colors"
-                        [class.bg-tertiary]="currentStep() === i + 1"
-                        [class.border-tertiary]="currentStep() === i + 1"
-                        [class.text-teal-light]="currentStep() === i + 1"
-                        [class.bg-success]="currentStep() !== i + 1 && stepDone()[i]"
-                        [class.border-success]="currentStep() !== i + 1 && stepDone()[i]"
-                        [class.text-white]="currentStep() !== i + 1 && stepDone()[i]"
-                        [class.bg-surface-container]="currentStep() !== i + 1 && !stepDone()[i]"
-                        [class.border-outline-variant]="currentStep() !== i + 1 && !stepDone()[i]"
-                        [class.text-outline]="currentStep() !== i + 1 && !stepDone()[i]">
-                    @if (currentStep() !== i + 1 && stepDone()[i]) {
-                      <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1">check</span>
-                    } @else {
-                      {{ i + 1 }}
+                  <span [class]="'w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ' + stepCircleClasses(i)">
+                    <span class="material-symbols-outlined text-[20px]">{{ step.icon }}</span>
+                  </span>
+                  <div class="pt-1 flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                      <p [class]="'text-[10px] font-bold uppercase tracking-wide ' + stepEyebrowClasses(i)">Étape {{ i + 1 }}</p>
+                      @if (stepDone()[i] && currentStep() !== i + 1) {
+                        <span class="w-2 h-2 rounded-full bg-tertiary shrink-0" title="Complété"></span>
+                      }
+                    </div>
+                    <p [class]="'text-[14px] font-bold leading-snug ' + stepLabelClasses(i)">{{ step.title }}</p>
+                    @if (currentStep() === i + 1) {
+                      <p class="text-[11px] text-outline mt-0.5">En cours de révision</p>
                     }
-                  </span>
-                  <span class="text-[13px] leading-tight"
-                        [class.font-bold]="currentStep() === i + 1"
-                        [class.text-teal]="currentStep() === i + 1"
-                        [class.text-outline]="currentStep() !== i + 1">
-                    {{ step.title }}
-                  </span>
+                  </div>
                 </button>
               }
             </div>
-          </div>
-        </daf-card>
-
-        <!-- Actions -->
-        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-          <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-outline">Actions</p>
-          </div>
-          <div class="p-5 flex flex-col gap-2.5">
-            @if (!isCompleted()) {
-              <daf-button
-                [options]="{ variant: 'ghost', label: saving() ? 'Enregistrement…' : 'Enregistrer', iconStart: 'save', fullWidth: true, disabled: saving(), loading: saving() }"
-                (onClick)="onSave()" />
-            }
-            <daf-button
-              [options]="{
-                variant: 'teal',
-                label: isCompleted() ? 'Provisioning terminé' : (completing() ? 'Finalisation…' : 'Marquer comme terminé'),
-                iconStart: isCompleted() ? 'check_circle' : undefined,
-                fullWidth: true,
-                disabled: !canComplete() || completing() || isCompleted(),
-                loading: completing()
-              }"
-              (onClick)="onOpenCompleteModal()" />
-            @if (!canComplete() && !isCompleted()) {
-              <p class="text-[11px] text-outline text-center">Créez d'abord le compte MS365 et le compte AD.</p>
-            }
           </div>
         </daf-card>
 
