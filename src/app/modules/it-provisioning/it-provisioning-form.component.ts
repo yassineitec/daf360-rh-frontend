@@ -9,9 +9,9 @@ import { ItProvisioningService }     from './it-provisioning.service';
 import { ConfirmEmailModalComponent } from './confirm-email-modal.component';
 import {
   ItAssetDto, ProvisioningDetail, UpdateAssetRequest,
-  UpdateProvisioningRequest, computeSteps,
+  UpdateProvisioningRequest,
 } from './it-provisioning.model';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { StatusBadgeComponent, ButtonComponent, CardComponent } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 import { ModalComponent }       from '../../shared/modal.component';
@@ -19,12 +19,23 @@ import { ConfigurableListService } from '../../core/lists/configurable-list.serv
 import { ListValue } from '../../core/lists/configurable-list.model';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 
+const STEP_CARD_INFO = [
+  { title: 'Identité',        sub: 'Informations du candidat issues du dossier de recrutement.',   icon: 'badge'            },
+  { title: 'Microsoft 365',   sub: 'Créez le compte de messagerie professionnel.',                  icon: 'mail'             },
+  { title: 'Matériel',        sub: 'Enregistrez le matériel informatique remis au collaborateur.',   icon: 'devices'          },
+  { title: 'Licences',        sub: 'Sélectionnez les licences logicielles à attribuer.',             icon: 'subscriptions'    },
+  { title: 'Active Directory', sub: 'Créez le compte AD et son profil d\'accès.',                    icon: 'admin_panel_settings' },
+  { title: 'Notes & Finalisation', sub: 'Ajoutez vos observations puis clôturez le dossier.',         icon: 'fact_check'       },
+];
+
 @Component({
   selector: 'app-it-provisioning-form',
   standalone: true,
-  imports: [SlicePipe, FormsModule, StatusBadgeComponent, SpinnerComponent, ModalComponent, ConfirmEmailModalComponent, PdfDownloadButtonComponent],
+  imports: [
+    SlicePipe, FormsModule, StatusBadgeComponent, ButtonComponent, CardComponent,
+    SpinnerComponent, ModalComponent, ConfirmEmailModalComponent, PdfDownloadButtonComponent,
+  ],
   templateUrl: './it-provisioning-form.component.html',
-  styleUrl:    './it-provisioning-form.component.scss',
 })
 export class ItProvisioningFormComponent implements OnInit {
   private route       = inject(ActivatedRoute);
@@ -60,9 +71,34 @@ export class ItProvisioningFormComponent implements OnInit {
   adProfileType     = signal('');
   notes             = signal('');
 
-  // ── Computed ──────────────────────────────────────────────────────────────
-  readonly steps = computed(() => computeSteps(this.prov()));
+  // ── Wizard navigation ─────────────────────────────────────────────────────
+  currentStep = signal(1);
+  readonly totalSteps = STEP_CARD_INFO.length;
+  readonly wizardSteps = STEP_CARD_INFO;
 
+  readonly cardTitle = computed(() => STEP_CARD_INFO[this.currentStep() - 1].title);
+  readonly cardSub   = computed(() => STEP_CARD_INFO[this.currentStep() - 1].sub);
+  readonly cardIcon  = computed(() => STEP_CARD_INFO[this.currentStep() - 1].icon);
+
+  /** Per-step completion, used to render check marks in the progression panel. */
+  readonly stepDone = computed<boolean[]>(() => {
+    const p = this.prov();
+    if (!p) return [false, false, false, false, false, false];
+    return [
+      true,
+      !!p.ms365Email,
+      this.editableAssets().some(a => a.provided),
+      this.licenseOffice365() || this.licenseAutocad() || this.licenseRevit() || this.licenseAutodesk() || this.licenseKaspersky(),
+      this.adAccountCreated(),
+      p.status === 'COMPLETED',
+    ];
+  });
+
+  goNext(): void { this.currentStep.update(s => Math.min(this.totalSteps, s + 1)); }
+  goPrev(): void { this.currentStep.update(s => Math.max(1, s - 1)); }
+  goToStep(step: number): void { this.currentStep.set(step); }
+
+  // ── Computed ──────────────────────────────────────────────────────────────
   readonly canComplete = computed(() => {
     const p = this.prov();
     return !!p?.ms365Email && this.adAccountCreated();
