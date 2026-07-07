@@ -1,7 +1,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { CardComponent } from '@khalilrebhiitec/daf360';
 import { EmployeeListItem } from '../../models/profile.model';
-import { getInitials } from '../../../../shared/utils/avatar.utils';
+import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
 
 @Component({
   selector: 'rh-profile-grid-card',
@@ -192,7 +192,7 @@ export class ProfileGridCardComponent {
     const photoUrl =
       emp.photoUrl && emp.profileId ? `/api/hr/profiles/${emp.profileId}/photo` : null;
     const genderUrl = emp.gender
-      ? emp.gender === 'FEMININ'
+      ? isFemale(emp.gender)
         ? '/images/avatars/female.png'
         : '/images/avatars/male.png'
       : null;

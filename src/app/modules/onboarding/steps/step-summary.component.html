@@ -32,7 +32,7 @@
         <dd>{{ val(data()?.dateOfBirth) }}</dd>
 
         <dt>Genre</dt>
-        <dd>{{ val(data()?.gender) }}</dd>
+        <dd>{{ data()?.gender ? genderLabel(data()?.gender) : '—' }}</dd>
 
         <dt>Nationalité</dt>
         <dd>{{ val(data()?.nationality) }}</dd>
