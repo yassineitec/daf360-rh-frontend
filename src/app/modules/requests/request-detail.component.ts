@@ -8,250 +8,348 @@ import { catchError, of } from 'rxjs';
 
 import { RequestsService }      from './requests.service';
 import { EmployeeRequest, GeneratedDocument } from './models/request.model';
-import { ApprovalTimelineComponent } from '../../shared/approval-timeline.component';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
-import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }          from '../../shared/spinner.component';
 import { UserStore }                 from '../../core/user.store';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
 
+const STATUS_LABELS: Record<string, string> = {
+  SUBMITTED:  'Soumis',
+  IN_REVIEW:  'En traitement',
+  PENDING_L2: 'Attente L2',
+  APPROVED:   'Approuvée',
+  REJECTED:   'Refusée',
+  CANCELLED:  'Annulée',
+};
+
+interface TimelineStep {
+  label: string;
+  done: boolean;
+  rejected?: boolean;
+  date: string | null;
+  msg: string | null;
+  estimatedDelay?: string;
+}
+
 @Component({
   selector: 'app-request-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule, SlicePipe, ApprovalTimelineComponent, StatusBadgeComponent, SpinnerComponent, PdfDownloadButtonComponent],
+  imports: [RouterLink, FormsModule, SlicePipe, SpinnerComponent, PdfDownloadButtonComponent],
   template: `
-    <nav class="breadcrumb">
-      <a routerLink="/requests" class="bc-link">Demandes</a>
-      <span class="bc-sep">›</span>
-      <span class="bc-current">Demande #{{ requestId }}</span>
-    </nav>
-
     @if (loading()) {
-      <div class="center-spinner"><app-spinner size="lg" /></div>
+      <div class="rd-loading-wrap"><app-spinner size="lg" /></div>
     } @else if (!req()) {
-      <div class="error-state">
+      <div class="rd-error-state">
+        <span class="material-symbols-outlined rd-error-icon">search_off</span>
         <p>Demande introuvable.</p>
-        <a routerLink="/requests" class="btn-ghost">Retour</a>
+        <a routerLink="/requests" class="rd-btn-ghost">Retour aux demandes</a>
       </div>
     } @else {
 
-      <div class="detail-layout">
+      <div class="rd-page">
 
-        <!-- ── Left col: request info + timeline ─────────────── -->
-        <div class="left-col">
-
-          <!-- Header -->
-          <div class="req-header card">
-            <div class="req-title-row">
-              <h1 class="req-title">{{ req()!.typeDisplayNameFr ?? 'Demande #' + req()!.requestTypeId }}</h1>
-              <daf-badge [label]="statusBadge(req()!.status).label" [options]="statusBadge(req()!.status).options" />
-            </div>
-            <div class="req-meta">
-              <span class="meta-chip">Profil #{{ req()!.employeeProfileId }}</span>
-              <span class="meta-chip">Soumis le {{ fmtDate(req()!.submissionDate) }}</span>
-              @if (req()!.assignedOfficerId) {
-                <span class="meta-chip">Officier #{{ req()!.assignedOfficerId }}</span>
-              }
-            </div>
-            @if (req()!.closureComment) {
-              <div class="closure-comment">
-                <span class="comment-label">Commentaire de clôture</span>
-                <p>"{{ req()!.closureComment }}"</p>
-              </div>
+        <!-- ── Top bar ──────────────────────────────────────── -->
+        <div class="rd-topbar">
+          <div class="rd-nav">
+            <nav class="rd-breadcrumb">
+              <a routerLink="/requests" class="rd-bc-link">Demandes</a>
+              <span class="material-symbols-outlined rd-bc-sep">chevron_right</span>
+              <span class="rd-bc-current">Demande #{{ requestId }}</span>
+            </nav>
+            <a routerLink="/requests" class="rd-back">
+              <span class="material-symbols-outlined">arrow_back</span>
+              Retour aux demandes
+            </a>
+          </div>
+          <div class="rd-topbar-actions">
+            @if (req()!.status === 'SUBMITTED' && !isOfficer()) {
+              <button class="rd-btn-cancel" type="button" (click)="cancelRequest()">
+                Annuler la demande
+              </button>
+            }
+            @if (canProcess()) {
+              <button class="rd-btn-process" type="button" (click)="scrollToAction()">
+                <span class="material-symbols-outlined">task_alt</span>
+                Prendre en charge
+              </button>
             }
           </div>
-
-          <!-- Approval timeline -->
-          <div class="card timeline-card">
-            <h2 class="section-title">Historique</h2>
-            <app-approval-timeline [request]="req()!" />
-          </div>
-
-          <!-- Documents -->
-          @if (req()!.status === 'APPROVED' && documents().length > 0) {
-            <div class="card docs-card">
-              <h2 class="section-title">Document{{ documents().length > 1 ? 's' : '' }} générés</h2>
-              <ul class="doc-list">
-                @for (doc of documents(); track doc.id) {
-                  <li class="doc-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    <div class="doc-meta">
-                      <span class="doc-name">{{ doc.documentType }}</span>
-                      <span class="doc-code">Code de vérification: {{ doc.verificationCode ?? '—' }}</span>
-                    </div>
-                    <a [href]="doc.fileUrl" target="_blank" download class="download-btn">Télécharger</a>
-                  </li>
-                }
-              </ul>
-            </div>
-          }
         </div>
 
-        <!-- ── Right col: officer action panel (HR only) ──────── -->
-        @if (isOfficer()) {
-          <div class="right-col">
+        <!-- ── Page title ───────────────────────────────────── -->
+        <div class="rd-title-area">
+          <div class="rd-title-row">
+            <h1 class="rd-title">
+              {{ req()!.typeDisplayNameFr ?? 'Demande #' + req()!.requestTypeId }}
+            </h1>
+            <span class="rd-badge" [class]="'rd-badge--' + req()!.status.toLowerCase()">
+              {{ statusLabel(req()!.status) }}
+            </span>
+          </div>
+          <div class="rd-meta">
+            <span class="rd-meta-chip">
+              <span class="material-symbols-outlined">account_circle</span>
+              Profil #{{ req()!.employeeProfileId }}
+            </span>
+            <span class="rd-meta-chip">
+              <span class="material-symbols-outlined">calendar_today</span>
+              Soumis le {{ fmtDate(req()!.submissionDate) }}
+            </span>
+            @if (req()!.assignedOfficerId) {
+              <span class="rd-meta-chip">
+                <span class="material-symbols-outlined">badge</span>
+                Officier #{{ req()!.assignedOfficerId }}
+              </span>
+            }
+          </div>
+        </div>
 
-            <!-- Profile summary card -->
-            <div class="card profile-summary">
-              <h2 class="section-title">Employé</h2>
-              <div class="profile-line">
-                <span class="profile-label">Profil ID</span>
-                <span>{{ req()!.employeeProfileId }}</span>
+        <!-- ── Grid ─────────────────────────────────────────── -->
+        <div class="rd-grid">
+
+          <!-- Left column -->
+          <div class="rd-left">
+
+            <!-- Motif de la demande -->
+            <section class="rd-card">
+              <div class="rd-card-hd">
+                <h3 class="rd-section-title">
+                  <span class="material-symbols-outlined">chat_bubble</span>
+                  Motif de la demande
+                </h3>
               </div>
-              <a [routerLink]="['/profiles', req()!.employeeProfileId]"
-                 class="profile-link">Voir le profil complet →</a>
-            </div>
+              <div class="rd-comment-box">
+                <p class="rd-comment-text">
+                  @if (req()!.closureComment) {
+                    "{{ req()!.closureComment }}"
+                  } @else {
+                    Aucun commentaire renseigné.
+                  }
+                </p>
+              </div>
+            </section>
 
-            <!-- Action panel -->
+            <!-- Documents joints -->
+            @if (req()!.attachmentUrl) {
+              <section class="rd-card">
+                <h3 class="rd-section-title">
+                  <span class="material-symbols-outlined">attachment</span>
+                  Documents joints
+                </h3>
+                <div class="rd-doc-item">
+                  <div class="rd-doc-icon">
+                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                  </div>
+                  <div class="rd-doc-meta">
+                    <p class="rd-doc-name">Justificatif.pdf</p>
+                    <p class="rd-doc-size">{{ fmtDate(req()!.submissionDate) }}</p>
+                  </div>
+                  <a [href]="req()!.attachmentUrl" target="_blank" download
+                     class="rd-doc-download" title="Télécharger">
+                    <span class="material-symbols-outlined">download</span>
+                  </a>
+                </div>
+              </section>
+            }
+
+            <!-- Documents générés (after approval) -->
+            @if (req()!.status === 'APPROVED' && documents().length > 0) {
+              <section class="rd-card">
+                <h3 class="rd-section-title">
+                  <span class="material-symbols-outlined">file_present</span>
+                  Documents générés
+                </h3>
+                <div class="rd-docs-list">
+                  @for (doc of documents(); track doc.id) {
+                    <div class="rd-doc-item">
+                      <div class="rd-doc-icon">
+                        <span class="material-symbols-outlined">description</span>
+                      </div>
+                      <div class="rd-doc-meta">
+                        <p class="rd-doc-name">{{ doc.documentType }}</p>
+                        @if (doc.verificationCode) {
+                          <p class="rd-doc-size">Code : {{ doc.verificationCode }}</p>
+                        }
+                      </div>
+                      <a [href]="doc.fileUrl" target="_blank" download
+                         class="rd-doc-download" title="Télécharger">
+                        <span class="material-symbols-outlined">download</span>
+                      </a>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            <!-- PDF doc section (document-type requests, approved) -->
+            @if (isDocumentRequest() && req()!.status === 'APPROVED') {
+              <section class="rd-card">
+                <h3 class="rd-section-title">
+                  <span class="material-symbols-outlined">picture_as_pdf</span>
+                  Document officiel
+                </h3>
+                @if (generatedDoc()) {
+                  <div class="rd-doc-ready">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <p>Document généré le {{ generatedDoc()!.generatedAt | slice:0:10 }}</p>
+                    <app-pdf-download-button
+                      label="Télécharger"
+                      [endpoint]="'/api/hr/documents/download/' + generatedDoc()!.id"
+                      [body]="null"
+                      [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
+                      variant="outline"
+                    />
+                  </div>
+                } @else {
+                  <div class="rd-doc-warn">
+                    <span class="material-symbols-outlined">warning</span>
+                    <p>Le document n'a pas été généré automatiquement.</p>
+                    <app-pdf-download-button
+                      label="Générer maintenant"
+                      [endpoint]="getDocEndpoint(req()!.typeCode ?? '')"
+                      [body]="{ employeeProfileId: req()!.employeeProfileId, requestId: req()!.id }"
+                      [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
+                      variant="primary"
+                    />
+                  </div>
+                }
+              </section>
+            }
+
+          </div><!-- /rd-left -->
+
+          <!-- Right column -->
+          <div class="rd-right">
+
+            <!-- Timeline / Historique -->
+            <section class="rd-card">
+              <h3 class="rd-section-title-plain">Historique</h3>
+              <div class="rd-timeline">
+                @for (step of timelineSteps(); track step.label; let last = $last) {
+                  <div class="rd-tl-item" [class.rd-tl-item--last]="last">
+                    <div class="rd-tl-dot-col">
+                      <div class="rd-tl-dot"
+                           [class.rd-tl-dot--done]="step.done && !step.rejected"
+                           [class.rd-tl-dot--rejected]="step.rejected">
+                        @if (step.done && !step.rejected) {
+                          <span class="material-symbols-outlined">check</span>
+                        } @else if (step.rejected) {
+                          <span class="material-symbols-outlined">close</span>
+                        } @else {
+                          <div class="rd-tl-inner-dot"></div>
+                        }
+                      </div>
+                      @if (!last) { <div class="rd-tl-line"></div> }
+                    </div>
+                    <div class="rd-tl-content">
+                      <div class="rd-tl-header">
+                        <span class="rd-tl-label" [class.rd-tl-label--pending]="!step.done">
+                          {{ step.label }}
+                        </span>
+                        @if (step.date) {
+                          <span class="rd-tl-date">{{ fmtDateTime(step.date) }}</span>
+                        }
+                      </div>
+                      @if (step.msg) {
+                        <div class="rd-tl-bubble">{{ step.msg }}</div>
+                      }
+                      @if (step.estimatedDelay) {
+                        <div class="rd-tl-delay">
+                          <span class="material-symbols-outlined">schedule</span>
+                          Délai estimé : {{ step.estimatedDelay }}
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </section>
+
+            <!-- Requérant glass card -->
+            <section class="rd-glass-card">
+              <h3 class="rd-eyebrow">Requérant</h3>
+              <div class="rd-requester-row">
+                <div class="rd-requester-avatar">
+                  <span class="material-symbols-outlined">account_circle</span>
+                </div>
+                <div>
+                  <p class="rd-requester-name">Profil #{{ req()!.employeeProfileId }}</p>
+                  <p class="rd-requester-sub">Employé</p>
+                </div>
+              </div>
+              <div class="rd-requester-details">
+                <div class="rd-detail-row">
+                  <span class="rd-detail-key">ID Profil</span>
+                  <span class="rd-detail-val">{{ req()!.employeeProfileId }}</span>
+                </div>
+                <div class="rd-detail-row">
+                  <span class="rd-detail-key">Pays</span>
+                  <span class="rd-detail-val">{{ req()!.paysId }}</span>
+                </div>
+              </div>
+              @if (isOfficer()) {
+                <a [routerLink]="['/profiles', req()!.employeeProfileId]"
+                   class="rd-profile-link">
+                  Voir le profil complet →
+                </a>
+              }
+            </section>
+
+            <!-- Action panel (officer, processable) -->
             @if (canProcess()) {
-              <div class="card action-panel">
-                <h2 class="section-title">Action de traitement</h2>
-
-                <label class="form-label">Commentaire *</label>
-                <textarea
-                  class="form-input"
+              <section class="rd-card" id="rd-action-panel">
+                <h3 class="rd-section-title-plain">Action de traitement</h3>
+                <label class="rd-form-label">Commentaire *</label>
+                <textarea class="rd-textarea"
                   [(ngModel)]="actionComment"
                   placeholder="Préciser la décision…"
                   rows="3"
                 ></textarea>
-
-                <div class="action-btns">
-                  <button
-                    class="btn-approve" type="button"
+                <div class="rd-action-btns">
+                  <button class="rd-btn-approve" type="button"
                     [disabled]="!actionComment.trim() || saving()"
-                    (click)="process('APPROVED')"
-                  >
+                    (click)="process('APPROVED')">
                     @if (saving()) { <app-spinner size="sm" /> }
-                    ✓ Approuver
+                    @else { <span class="material-symbols-outlined">check_circle</span> }
+                    Approuver
                   </button>
-                  <button
-                    class="btn-reject" type="button"
+                  <button class="rd-btn-reject" type="button"
                     [disabled]="!actionComment.trim() || saving()"
-                    (click)="process('REJECTED')"
-                  >
-                    ✕ Refuser
+                    (click)="process('REJECTED')">
+                    <span class="material-symbols-outlined">cancel</span>
+                    Refuser
                   </button>
                 </div>
-
                 @if (errorMsg()) {
-                  <div class="error-banner" role="alert">{{ errorMsg() }}</div>
+                  <div class="rd-error-banner" role="alert">{{ errorMsg() }}</div>
                 }
-              </div>
+              </section>
             }
 
-            <!-- Generate document button (DOCUMENT category, after approval) -->
+            <!-- Generate document (officer + approved + document type) -->
             @if (isDocumentType() && req()!.status === 'APPROVED' && isOfficer()) {
-              <div class="card action-panel">
-                <h2 class="section-title">Génération de document</h2>
-                <p class="section-desc">Générer le document officiel depuis le modèle défini.</p>
-                <button
-                  class="btn-generate" type="button"
+              <section class="rd-card">
+                <h3 class="rd-section-title-plain">Génération de document</h3>
+                <p class="rd-section-desc">
+                  Générer le document officiel depuis le modèle défini.
+                </p>
+                <button class="rd-btn-generate" type="button"
                   [disabled]="generating()"
-                  (click)="generateDocument()"
-                >
+                  (click)="generateDocument()">
                   @if (generating()) { <app-spinner size="sm" /> }
+                  @else { <span class="material-symbols-outlined">picture_as_pdf</span> }
                   Générer le document
                 </button>
-              </div>
+              </section>
             }
 
-          </div>
-        }
+          </div><!-- /rd-right -->
+        </div><!-- /rd-grid -->
+      </div><!-- /rd-page -->
 
-        <!-- ── Doc section (left col, document requests only) ──────── -->
-        @if (isDocumentRequest() && req()!.status === 'APPROVED') {
-          <div class="left-col" style="margin-top:0">
-            <div class="doc-section card">
-              <h3 class="doc-section-title">Document genere</h3>
-              @if (generatedDoc()) {
-                <div class="doc-card doc-card-ready">
-                  <p>Document genere automatiquement le {{ generatedDoc()!.generatedAt | slice:0:10 }}</p>
-                  <app-pdf-download-button
-                    label="Telecharger"
-                    [endpoint]="'/api/hr/documents/download/' + generatedDoc()!.id"
-                    [body]="null"
-                    [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
-                    variant="outline"
-                  />
-                </div>
-              } @else {
-                <div class="doc-card doc-card-warn">
-                  <p>Le document n'a pas ete genere automatiquement.</p>
-                  <app-pdf-download-button
-                    label="Generer maintenant"
-                    [endpoint]="getDocEndpoint(req()!.typeCode ?? '')"
-                    [body]="{ employeeProfileId: req()!.employeeProfileId, requestId: req()!.id }"
-                    [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
-                    variant="primary"
-                  />
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-      </div>
     }
   `,
-  styles: [`
-    .breadcrumb { display:flex;align-items:center;gap:6px;padding:16px 24px 0;font-size:12px }
-    .bc-link    { color:var(--color-primary,#1C4E5C);text-decoration:none }
-    .bc-link:hover { text-decoration:underline }
-    .bc-sep,.bc-current { color:var(--color-text-muted,#6B7280) }
-    .center-spinner { display:flex;justify-content:center;padding:64px }
-    .error-state    { text-align:center;padding:48px;color:var(--color-text-muted) }
-    .detail-layout  { display:grid;grid-template-columns:1fr 320px;gap:16px;padding:16px 24px 24px }
-    @media(max-width:900px) { .detail-layout { grid-template-columns:1fr } }
-    .left-col,.right-col { display:flex;flex-direction:column;gap:12px }
-    .card { background:var(--color-surface,#fff);border:1px solid var(--color-border,#E0E7E9);border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08) }
-    .section-title  { font-size:13px;font-weight:700;color:var(--color-text,#1A1C1E);margin:0 0 14px }
-    .section-desc   { font-size:12px;color:var(--color-text-muted);margin:0 0 12px }
-    .req-title-row  { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px }
-    .req-title      { font-family:var(--font-display,'DM Serif Display',serif);font-size:19px;font-weight:400;margin:0 }
-    .req-meta       { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px }
-    .meta-chip      { display:inline-block;padding:2px 10px;border-radius:999px;background:var(--color-bg-secondary,#EEF2F5);font-size:12px;color:var(--color-text-muted,#6B7280) }
-    .closure-comment { margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border) }
-    .comment-label  { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted);display:block;margin-bottom:4px }
-    .closure-comment p { font-size:13px;color:var(--color-text-muted);font-style:italic;margin:0 }
-    .timeline-card  { padding:20px }
-    .doc-list       { list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px }
-    .doc-item       { display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px }
-    .doc-meta       { flex:1;display:flex;flex-direction:column }
-    .doc-name       { font-size:13px;font-weight:500 }
-    .doc-code       { font-size:11px;color:var(--color-text-muted);font-family:monospace }
-    .download-btn   { padding:4px 10px;border:1px solid var(--color-primary);border-radius:6px;color:var(--color-primary);text-decoration:none;font-size:12px;font-weight:600 }
-    .download-btn:hover { background:var(--color-teal-50) }
-    .profile-summary {}
-    .profile-line   { display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--color-border) }
-    .profile-label  { font-weight:600;color:var(--color-text-muted) }
-    .profile-link   { display:block;margin-top:12px;font-size:13px;color:var(--color-primary);text-decoration:none;font-weight:500 }
-    .profile-link:hover { text-decoration:underline }
-    .action-panel   {}
-    .form-label     { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted);display:block;margin-bottom:6px }
-    .form-input     { padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--color-surface);color:var(--color-text);outline:none;width:100%;resize:vertical }
-    .form-input:focus { border-color:var(--color-primary) }
-    .action-btns    { display:flex;gap:8px;margin-top:12px }
-    .btn-approve { flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;background:#16A34A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer }
-    .btn-approve:disabled { opacity:.5;cursor:not-allowed }
-    .btn-reject  { flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer }
-    .btn-reject:disabled  { opacity:.5;cursor:not-allowed }
-    .btn-generate { width:100%;padding:10px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px }
-    .btn-generate:disabled { opacity:.5;cursor:not-allowed }
-    .error-banner { margin-top:10px;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:12px }
-    .btn-ghost    { padding:7px 14px;border:1px solid var(--color-border);border-radius:8px;background:none;font-size:13px;cursor:pointer;color:var(--color-text-muted);text-decoration:none }
-    .doc-section  { }
-    .doc-section-title { font-size:13px;font-weight:700;color:var(--color-text);margin:0 0 12px }
-    .doc-card     { border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap }
-    .doc-card p   { font-size:12px;margin:0;flex:1 }
-    .doc-card-ready { background:#f0fdf4;border:1px solid #bbf7d0 }
-    .doc-card-ready p { color:#15803d }
-    .doc-card-warn  { background:#fffbeb;border:1px solid #fde68a }
-    .doc-card-warn p { color:#92400e }
-  `],
+  styleUrl: './request-detail.component.scss',
 })
 export class RequestDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
@@ -259,16 +357,15 @@ export class RequestDetailComponent implements OnInit {
   private userStore = inject(UserStore);
   private pdfSvc    = inject(PdfDownloadService);
 
-  requestId  = 0;
-  loading    = signal(true);
-  saving     = signal(false);
-  generating = signal(false);
-  req        = signal<EmployeeRequest | null>(null);
-  documents  = signal<GeneratedDocument[]>([]);
-  errorMsg   = signal<string | null>(null);
+  requestId    = 0;
+  loading      = signal(true);
+  saving       = signal(false);
+  generating   = signal(false);
+  req          = signal<EmployeeRequest | null>(null);
+  documents    = signal<GeneratedDocument[]>([]);
+  errorMsg     = signal<string | null>(null);
   generatedDoc = signal<GeneratedDocumentResponse | null>(null);
   actionComment = '';
-  protected readonly statusBadge = statusBadge;
 
   readonly DOCUMENT_TYPES = [
     'ATTESTATION_TRAVAIL',
@@ -278,26 +375,78 @@ export class RequestDetailComponent implements OnInit {
     'ATTESTATION_DOMICILIATION_SALAIRE',
   ];
 
-  isOfficer      = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
-  canProcess     = computed(() => {
+  isOfficer  = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
+  canProcess = computed(() => {
     const s = this.req()?.status;
     return this.isOfficer() && (s === 'SUBMITTED' || s === 'IN_REVIEW' || s === 'PENDING_L2');
   });
-  isDocumentType = computed(() => false); // Would check type category; placeholder
+  isDocumentType    = computed(() => false);
   isDocumentRequest = computed(() => {
     const r = this.req();
     return r ? this.DOCUMENT_TYPES.includes(r.typeCode ?? '') : false;
   });
 
+  private currentProfileId = computed(() => {
+    const u = this.userStore.currentUser();
+    if (!u) return 0;
+    const fromEmployee = parseInt(u.employeeId ?? '', 10);
+    return isNaN(fromEmployee) ? u.userId : fromEmployee;
+  });
+
   private officerId = computed(() => this.userStore.currentUser()?.userId ?? 0);
+
+  timelineSteps = computed((): TimelineStep[] => {
+    const r = this.req();
+    if (!r) return [];
+
+    const steps: TimelineStep[] = [
+      {
+        label: 'Soumis',
+        done: true,
+        date: r.submissionDate,
+        msg: 'La demande a été enregistrée dans notre système.',
+      },
+    ];
+
+    if (r.status === 'CANCELLED') {
+      steps.push({ label: 'Annulée', done: true, rejected: true, date: r.updatedAt ?? null, msg: r.closureComment ?? 'La demande a été annulée.' });
+      return steps;
+    }
+
+    const inReviewDone = ['IN_REVIEW', 'PENDING_L2', 'APPROVED', 'REJECTED'].includes(r.status);
+    steps.push({
+      label: r.status === 'PENDING_L2' ? 'Attente validation L2' : 'En traitement',
+      done: inReviewDone,
+      date: null,
+      msg: inReviewDone ? 'Demande prise en charge.' : null,
+      estimatedDelay: !inReviewDone ? '24h' : undefined,
+    });
+
+    const finalDone = r.status === 'APPROVED' || r.status === 'REJECTED';
+    steps.push({
+      label: r.status === 'REJECTED' ? 'Refusée' : 'Décision finale',
+      done: finalDone,
+      rejected: r.status === 'REJECTED',
+      date: r.resolutionDate ?? null,
+      msg: finalDone
+        ? (r.closureComment ?? (r.status === 'APPROVED' ? 'Demande approuvée.' : 'Demande refusée.'))
+        : null,
+    });
+
+    return steps;
+  });
+
+  statusLabel(status: string): string {
+    return STATUS_LABELS[status] ?? status;
+  }
 
   getDocEndpoint(typeCode: string): string {
     const map: Record<string, string> = {
-      'ATTESTATION_TRAVAIL':                '/api/hr/documents/attestation-travail',
-      'ATTESTATION_SALAIRE':                '/api/hr/documents/attestation-salaire',
-      'ATTESTATION_NON_BENEFICE_PRET':      '/api/hr/documents/attestation-non-benefice-pret',
-      'ATTESTATION_TITULARISATION':         '/api/hr/documents/attestation-titularisation',
-      'ATTESTATION_DOMICILIATION_SALAIRE':  '/api/hr/documents/attestation-domiciliation-salaire',
+      'ATTESTATION_TRAVAIL':               '/api/hr/documents/attestation-travail',
+      'ATTESTATION_SALAIRE':               '/api/hr/documents/attestation-salaire',
+      'ATTESTATION_NON_BENEFICE_PRET':     '/api/hr/documents/attestation-non-benefice-pret',
+      'ATTESTATION_TITULARISATION':        '/api/hr/documents/attestation-titularisation',
+      'ATTESTATION_DOMICILIATION_SALAIRE': '/api/hr/documents/attestation-domiciliation-salaire',
     };
     return map[typeCode] ?? '/api/hr/documents/generate';
   }
@@ -317,7 +466,10 @@ export class RequestDetailComponent implements OnInit {
           this.loadDocuments();
           if (this.isDocumentRequest()) {
             this.pdfSvc.generateDocument('/api/hr/documents/by-request/' + r.id, null)
-              .subscribe({ next: doc => this.generatedDoc.set(doc as GeneratedDocumentResponse), error: () => this.generatedDoc.set(null) });
+              .subscribe({
+                next: doc => this.generatedDoc.set(doc as GeneratedDocumentResponse),
+                error: ()  => this.generatedDoc.set(null),
+              });
           }
         }
       });
@@ -326,6 +478,13 @@ export class RequestDetailComponent implements OnInit {
   private loadDocuments() {
     this.svc.listDocuments(this.requestId).pipe(catchError(() => of([])))
       .subscribe(docs => this.documents.set(docs));
+  }
+
+  cancelRequest() {
+    if (!confirm('Annuler cette demande ?')) return;
+    this.svc.cancelRequest(this.requestId, this.currentProfileId())
+      .pipe(catchError(() => of(null)))
+      .subscribe(updated => { if (updated) this.req.set(updated); });
   }
 
   process(decision: 'APPROVED' | 'REJECTED') {
@@ -353,9 +512,20 @@ export class RequestDetailComponent implements OnInit {
       });
   }
 
+  scrollToAction() {
+    document.getElementById('rd-action-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   fmtDate(iso: string | null): string {
     if (!iso) return '—';
     try { return new Date(iso).toLocaleDateString('fr-FR'); }
     catch { return iso; }
+  }
+
+  fmtDateTime(iso: string | null): string {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return iso; }
   }
 }
