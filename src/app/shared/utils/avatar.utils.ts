@@ -1,6 +1,6 @@
-/** True for any casing/variant of female (FEMALE, Female, female). */
+/** True for any casing/whitespace variant of female (FEMALE, "Female ", female). */
 export function isFemale(gender: string | null | undefined): boolean {
-  return gender?.toUpperCase() === 'FEMALE';
+  return gender?.trim().toUpperCase() === 'FEMALE';
 }
 
 export function avatarUrl(gender: string | null | undefined): string {

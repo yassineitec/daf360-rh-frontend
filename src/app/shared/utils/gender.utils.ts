@@ -23,6 +23,7 @@ const GENDER_LABELS: Record<string, string> = GENDER_OPTIONS.reduce(
 /** Maps a stored gender code to its French label; falls back to the raw value.
  *  Case-insensitive so legacy data (e.g. "Female") still resolves to a label. */
 export function genderLabel(code: string | null | undefined): string {
-  if (!code) return '—';
-  return GENDER_LABELS[code.toUpperCase()] ?? code;
+  const key = code?.trim();
+  if (!key) return '—';
+  return GENDER_LABELS[key.toUpperCase()] ?? key;
 }
