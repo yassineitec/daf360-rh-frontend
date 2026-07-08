@@ -24,7 +24,7 @@ import { UserStore }             from '../../core/user.store';
         <h1 class="page-title">Boîte de réception RH</h1>
         <p class="page-sub">{{ total() }} demande{{ total() !== 1 ? 's' : '' }} à traiter</p>
       </div>
-      <a routerLink="/requests" class="btn-ghost">← Mes demandes</a>
+      <a routerLink="/rh/requests" class="btn-ghost">← Mes demandes</a>
     </div>
 
     <!-- Filters -->
@@ -36,6 +36,13 @@ import { UserStore }             from '../../core/user.store';
         <option value="PENDING_L2">Attente L2</option>
       </select>
     </div>
+
+    @if (errorMsg()) {
+      <div class="inbox-error" role="alert">
+        {{ errorMsg() }}
+        <button type="button" class="inbox-error-close" (click)="errorMsg.set('')">×</button>
+      </div>
+    }
 
     <!-- Table -->
     <div class="card table-card">
@@ -67,7 +74,7 @@ import { UserStore }             from '../../core/user.store';
             @for (row of rows(); track row.id) {
               <tr class="data-row">
                 <td class="cell-id">{{ row.id }}</td>
-                <td class="cell-muted">Profil #{{ row.employeeProfileId }}</td>
+                <td>{{ row.employeeName ?? ('Profil #' + row.employeeProfileId) }}</td>
                 <td>
                   <div class="type-cell">
                     <span class="type-name">{{ row.typeDisplayNameFr ?? 'Demande #' + row.requestTypeId }}</span>
@@ -80,9 +87,11 @@ import { UserStore }             from '../../core/user.store';
                 </td>
                 <td><daf-badge [label]="statusBadge(row.status).label" [options]="statusBadge(row.status).options" /></td>
                 <td class="cell-actions">
-                  <a [routerLink]="['/requests', row.id]" class="action-link">Détail</a>
-                  <button class="action-approve" (click)="quickApprove(row)" type="button">✓ Approuver</button>
-                  <button class="action-refuse"  (click)="openRefuse(row)"  type="button">✕ Refuser</button>
+                  <a [routerLink]="['/rh/requests', row.id]" class="action-link">Détail</a>
+                  @if (canProcess(row.status)) {
+                    <button class="action-approve" (click)="quickApprove(row)" type="button">✓ Approuver</button>
+                    <button class="action-refuse"  (click)="openRefuse(row)"  type="button">✕ Refuser</button>
+                  }
                 </td>
               </tr>
             }
@@ -149,7 +158,12 @@ export class RequestOfficerInboxComponent implements OnInit {
   filterStatus  = '';
   refuseTarget  = signal<EmployeeRequest | null>(null);
   refuseMotif   = '';
+  errorMsg      = signal('');
   protected readonly statusBadge = statusBadge;
+
+  /** Statuses the backend allows processing on — actions are hidden otherwise. */
+  private static readonly PROCESSABLE: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
+  canProcess = (status: RequestStatus) => RequestOfficerInboxComponent.PROCESSABLE.includes(status);
 
   private officerId = computed(() => this.userStore.currentUser()?.userId ?? 0);
   private paysId    = computed(() => this.userStore.currentUser()?.paysId ?? 1);
@@ -178,10 +192,11 @@ export class RequestOfficerInboxComponent implements OnInit {
 
   quickApprove(row: EmployeeRequest) {
     if (!confirm(`Approuver la demande #${row.id} ?`)) return;
+    this.errorMsg.set('');
     this.svc.processRequest(row.id, this.officerId(), 'APPROVED', 'Approuvé via boîte de réception')
-      .pipe(catchError(() => of(null)))
-      .subscribe(updated => {
-        if (updated) this.rows.update(rs => rs.map(r => r.id === updated.id ? updated : r));
+      .subscribe({
+        next: updated => this.rows.update(rs => rs.map(r => r.id === updated.id ? updated : r)),
+        error: err => this.errorMsg.set(this.extractError(err)),
       });
   }
 
@@ -194,15 +209,25 @@ export class RequestOfficerInboxComponent implements OnInit {
     const row = this.refuseTarget();
     if (!row || !this.refuseMotif.trim()) return;
     this.saving.set(true);
+    this.errorMsg.set('');
     this.svc.processRequest(row.id, this.officerId(), 'REJECTED', this.refuseMotif)
-      .pipe(catchError(() => of(null)))
-      .subscribe(updated => {
-        this.saving.set(false);
-        if (updated) {
+      .subscribe({
+        next: updated => {
+          this.saving.set(false);
           this.rows.update(rs => rs.map(r => r.id === updated.id ? updated : r));
           this.refuseTarget.set(null);
-        }
+        },
+        error: err => {
+          this.saving.set(false);
+          this.errorMsg.set(this.extractError(err));
+        },
       });
+  }
+
+  /** Pulls the RFC-7807 `detail` from the backend error, with sensible fallbacks. */
+  private extractError(err: unknown): string {
+    const e = err as { error?: { detail?: string; message?: string } };
+    return e?.error?.detail ?? e?.error?.message ?? 'Erreur lors du traitement de la demande.';
   }
 
   slaDeadline(row: EmployeeRequest): string | null {
