@@ -26,7 +26,7 @@
   padding: 80px 24px;
   gap: 12px;
   text-align: center;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   color: #6e7a75;
 }
 
@@ -43,7 +43,7 @@
   padding: 24px;
   width: 100%;
   box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
