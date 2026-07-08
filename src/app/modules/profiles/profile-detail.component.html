@@ -105,7 +105,7 @@
             }
 
             @if (!editMode()) {
-              <app-field label="Genre" [value]="profile()!.gender" />
+              <app-field label="Genre" [value]="genderLabel(profile()!.gender)" />
             } @else {
               <daf-select [options]="genderOptions" [config]="{ label: 'Genre', searchable: true }"
                 [selected]="editForm.gender ? [editForm.gender] : []"

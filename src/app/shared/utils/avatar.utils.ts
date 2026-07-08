@@ -1,5 +1,10 @@
+/** True for any casing/whitespace variant of female (FEMALE, "Female ", female). */
+export function isFemale(gender: string | null | undefined): boolean {
+  return gender?.trim().toUpperCase() === 'FEMALE';
+}
+
 export function avatarUrl(gender: string | null | undefined): string {
-  if (gender === 'FEMININ') return '/images/avatars/female.png';
+  if (isFemale(gender)) return '/images/avatars/female.png';
   return '/images/avatars/male.png';
 }
 
@@ -9,7 +14,7 @@ export function getAvatarUrl(
   gender: string | null | undefined,
 ): string {
   if (photoUrl && profileId) return `/api/hr/profiles/${profileId}/photo`;
-  if (gender === 'FEMININ') return '/images/avatars/female.png';
+  if (isFemale(gender)) return '/images/avatars/female.png';
   return '/images/avatars/male.png';
 }
 

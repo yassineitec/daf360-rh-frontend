@@ -18,6 +18,7 @@ import { StepEmergencyComponent } from './steps/step-emergency.component';
 import { StepSummaryComponent } from './steps/step-summary.component';
 import { ConfirmSubmitModalComponent } from './confirm-submit-modal.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
+import { isFemale } from '../../shared/utils/avatar.utils';
 
 @Component({
   selector: 'app-onboarding-form',
@@ -70,7 +71,7 @@ export class OnboardingFormComponent implements OnInit {
   readonly photoFailed = signal(false);
 
   resolvePhoto(fd: OnboardingFormData): string {
-    return fd.gender === 'FEMININ'
+    return isFemale(fd.gender)
       ? '/images/avatars/female.png'
       : '/images/avatars/male.png';
   }
