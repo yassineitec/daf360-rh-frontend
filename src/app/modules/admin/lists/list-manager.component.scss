@@ -121,40 +121,9 @@
 .req { color: var(--color-error); margin-left: 2px; }
 .lm-add-actions { margin-top: 8px; display: flex; justify-content: flex-end; }
 
-/* ── Table ────────────────────────────────────────────────── */
-.lm-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-thead th {
-  padding: 9px 10px;
-  background: var(--color-bg-secondary);
-  font-weight: 600;
-  font-size: 10px;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-}
-tbody tr {
-  border-bottom: 1px solid var(--color-border);
-  transition: background .1s;
-  &:last-child { border-bottom: none; }
-  &:hover { background: var(--color-bg); }
-  &.lm-row-inactive { opacity: .6; }
-  &.lm-row-system { background: #fffbeb; }
-}
-td { padding: 8px 10px; color: var(--color-text); vertical-align: middle; }
+/* ── Table (custom daf-data-table cell content) ──────────────── */
 .td-code { font-family: monospace; font-size: 11px; color: var(--color-text-muted); }
 .td-en { color: var(--color-text-muted); }
-.th-order, .td-order { width: 65px; }
-.th-actions, .td-actions { width: 110px; text-align: right; }
-.td-empty { text-align: center; color: var(--color-text-muted); font-style: italic; padding: 20px; }
 
 /* ── Badges ───────────────────────────────────────────────── */
 .badge {

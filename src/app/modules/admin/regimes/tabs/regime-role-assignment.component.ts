@@ -1,8 +1,10 @@
 import {
   Component, OnChanges, SimpleChanges, computed, inject, input, signal,
 } from '@angular/core';
-import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import {
+  DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
@@ -12,7 +14,7 @@ import { PermissionDirective } from '../../../../shared/permission.directive';
 @Component({
   selector: 'app-regime-role-assignment',
   standalone: true,
-  imports: [NgClass, FormsModule, PermissionDirective],
+  imports: [FormsModule, PermissionDirective, DataTableComponent, DafCellDirective],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
 })
@@ -62,6 +64,31 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     const role = this.allRoles().find(r => r.id === row.roleId);
     return role?.userCount ?? 0;
   });
+
+  readonly columns: TableColumn[] = [
+    { key: 'role', label: 'Rôle' },
+    { key: 'regime', label: 'Régime assigné' },
+    { key: 'effFrom', label: "Date d'effet" },
+    { key: 'effTo', label: 'Fin' },
+    { key: 'notes', label: 'Notes' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.allRolesWithAssignment().map(row => ({
+      role: row.roleName,
+      regime: row.assignment?.regimeLabelFr ?? null,
+      effFrom: row.assignment ? this.formatDate(row.assignment.effectiveFrom) : '—',
+      effTo: row.assignment?.effectiveTo ? this.formatDate(row.assignment.effectiveTo) : '—',
+      notes: row.assignment?.notes ?? '—',
+      _source: row,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    emptyMessage: 'Aucun rôle disponible',
+  }));
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges): void {

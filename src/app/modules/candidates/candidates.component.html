@@ -149,71 +149,35 @@
 
       <!-- List table -->
       } @else {
-        <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-outline-variant bg-surface-container-low">
-                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Candidat</th>
-                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Poste</th>
-                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Statut</th>
-                <th class="py-3 px-4 text-left text-label-sm text-outline uppercase tracking-wide">Début prévu</th>
-                <th class="py-3 px-4 text-right text-label-sm text-outline uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-outline-variant">
-              @for (c of candidates(); track c.id) {
-                <tr
-                  class="cursor-pointer hover:bg-surface-container-low transition-colors"
-                  (click)="onView(c.id)">
-                  <!-- Candidat -->
-                  <td class="py-3 px-4">
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                        {{ initials(c.firstName, c.lastName) }}
-                      </div>
-                      <div>
-                        <div class="text-sm font-semibold text-on-surface">{{ c.firstName }} {{ c.lastName }}</div>
-                        <div class="text-xs text-outline">{{ c.emailPersonal }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <!-- Poste -->
-                  <td class="py-3 px-4 text-sm text-outline">{{ c.appliedPosition ?? '—' }}</td>
-                  <!-- Statut -->
-                  <td class="py-3 px-4">
-                    <daf-badge
-                      [label]="statusBadge(c.status).label"
-                      [options]="statusBadge(c.status).options" />
-                  </td>
-                  <!-- Début prévu -->
-                  <td class="py-3 px-4 text-sm text-outline">{{ formatDate(c.expectedStartDate) }}</td>
-                  <!-- Actions -->
-                  <td class="py-3 px-4 text-right" (click)="$event.stopPropagation()">
-                    <div class="inline-flex items-center gap-1 flex-wrap justify-end">
-                      @if (c.status === 'PENDING' && canAcceptReject()) {
-                        <daf-button
-                          label="Accepter"
-                          variant="ghost"
-                          [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === c.id }"
-                          (onClick)="quickAccept(c, $event)" />
-                        <daf-button
-                          label="Rejeter"
-                          variant="danger"
-                          [options]="{ iconStart: 'cancel', size: 'sm' }"
-                          (onClick)="openRejectModal(c, $event)" />
-                      }
-                      <daf-button
-                        label="Voir"
-                        variant="ghost"
-                        [options]="{ iconStart: 'open_in_new', size: 'sm' }"
-                        (onClick)="onView(c.id)" />
-                    </div>
-                  </td>
-                </tr>
+        <daf-data-table
+          [columns]="columns"
+          [rows]="rows()"
+          [config]="tableConfig()"
+          (rowClick)="onView($event['_source'].id)">
+
+          <ng-template dafCell="_actions" let-row>
+            <div class="inline-flex items-center gap-1 flex-wrap justify-end">
+              @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
+                <daf-button
+                  label="Accepter"
+                  variant="ghost"
+                  [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === row['_source'].id }"
+                  (onClick)="quickAccept(row['_source'], $event)" />
+                <daf-button
+                  label="Rejeter"
+                  variant="danger"
+                  [options]="{ iconStart: 'cancel', size: 'sm' }"
+                  (onClick)="openRejectModal(row['_source'], $event)" />
               }
-            </tbody>
-          </table>
-        </div>
+              <daf-button
+                label="Voir"
+                variant="ghost"
+                [options]="{ iconStart: 'open_in_new', size: 'sm' }"
+                (onClick)="onView(row['_source'].id)" />
+            </div>
+          </ng-template>
+
+        </daf-data-table>
 
         <!-- Count + Pagination -->
         <div class="flex items-center justify-between">

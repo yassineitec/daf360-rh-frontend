@@ -1,7 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import {
+  AvatarCell,
+  BadgeCell,
   ButtonComponent,
+  DafCellDirective,
+  DataTableComponent,
   FormFieldComponent,
   FormFieldOptions,
   MetricCardComponent,
@@ -10,6 +14,9 @@ import {
   SelectConfig,
   SelectOption,
   StatusBadgeComponent,
+  TableColumn,
+  TableConfig,
+  TableRow,
   BadgeOptions,
   BadgeVariant,
 } from '@khalilrebhiitec/daf360';
@@ -47,6 +54,8 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
     MetricCardComponent,
     PaginationComponent,
     StatusBadgeComponent,
+    DataTableComponent,
+    DafCellDirective,
   ],
   templateUrl: './candidate-list.component.html',
 })
@@ -107,6 +116,36 @@ export class CandidateListComponent implements OnInit {
   readonly skeletonRows = [1, 2, 3, 4, 5];
 
   protected readonly statusBadge = statusBadge;
+
+  // ── daf-data-table setup ──────────────────────────────────────────────────
+  readonly columns: TableColumn[] = [
+    { key: 'candidat', label: 'Candidat', type: 'avatar' },
+    { key: 'appliedPosition', label: 'Poste' },
+    { key: 'status', label: 'Statut', type: 'badge' },
+    { key: 'expectedStartDate', label: 'Début prévu' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    (this.candidates()?.content ?? []).map(c => ({
+      candidat: {
+        name: `${c.firstName} ${c.lastName}`,
+        initials: this.getInitials(c.firstName, c.lastName),
+        subtitle: c.emailPersonal,
+      } as AvatarCell,
+      appliedPosition: c.appliedPosition ?? '—',
+      status: { label: this.getStatusLabel(c.status), options: this.getStatusBadgeOptions(c.status) } as BadgeCell,
+      expectedStartDate: this.formatDateFr(c.expectedStartDate),
+      _source: c,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.isLoadingCandidates(),
+    skeletonRows: this.skeletonRows.length,
+    emptyMessage: 'Aucun candidat trouvé. Modifiez vos filtres ou ajoutez un nouveau candidat.',
+  }));
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {

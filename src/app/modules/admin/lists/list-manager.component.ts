@@ -2,6 +2,9 @@ import { AsyncPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import {
+  DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
   CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
@@ -11,7 +14,7 @@ import { UserStore } from '../../../core/user.store';
 @Component({
   selector: 'app-list-manager',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, AsyncPipe],
+  imports: [FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
 })
@@ -38,6 +41,33 @@ export class ListManagerComponent implements OnInit {
       !q || t.labelFr.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)
     );
   });
+
+  readonly columns: TableColumn[] = [
+    { key: 'order', label: 'Ordre', width: '65px' },
+    { key: 'valueCode', label: 'Code' },
+    { key: 'labelFr', label: 'Libellé FR' },
+    { key: 'labelEn', label: 'Libellé EN' },
+    { key: 'isActive', label: 'Actif' },
+    { key: 'isSystem', label: 'Système' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.values().map(v => ({
+      valueCode: v.valueCode,
+      labelFr:   v.labelFr,
+      labelEn:   v.labelEn,
+      isActive:  v.isActive,
+      isSystem:  v.isSystem,
+      _source:   v,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: false,
+    showHeader: false,
+    emptyMessage: 'Aucune valeur. Cliquez sur "+ Ajouter" pour commencer.',
+  }));
 
   editForm: FormGroup = this.fb.group({
     labelFr:   ['', Validators.required],
@@ -115,6 +145,10 @@ export class ListManagerComponent implements OnInit {
       next: () => { this.showAddForm.set(false); this.addForm.reset({ sortOrder: 0 }); this.flash('Valeur ajoutée.'); this.loadValues(type.id); },
       error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la création.'),
     });
+  }
+
+  rowIndex(value: ListValue): number {
+    return this.values().findIndex(v => v.id === value.id);
   }
 
   moveUp(value: ListValue, index: number): void {

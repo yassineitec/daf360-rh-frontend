@@ -90,122 +90,43 @@
   }
 
   <!-- Table -->
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-outline-variant bg-surface-container-low">
-          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Candidat</th>
-          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Poste</th>
-          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Statut</th>
-          <th class="py-3 px-4 text-left text-xs font-semibold text-outline uppercase tracking-wide">Début prévu</th>
-          <th class="py-3 px-4 text-right text-xs font-semibold text-outline uppercase tracking-wide">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-outline-variant">
+  <daf-data-table
+    [columns]="columns"
+    [rows]="rows()"
+    [config]="tableConfig()"
+    (rowClick)="onRowClick($event['_source'].id)"
+  >
 
-        <!-- Skeleton rows -->
-        @if (isLoadingCandidates()) {
-          @for (row of skeletonRows; track row) {
-            <tr>
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-2">
-                  <div class="w-9 h-9 rounded-full bg-surface-container-high animate-pulse shrink-0"></div>
-                  <div>
-                    <div class="w-28 h-3 rounded bg-surface-container-high animate-pulse mb-1"></div>
-                    <div class="w-40 h-2.5 rounded bg-surface-container-high animate-pulse"></div>
-                  </div>
-                </div>
-              </td>
-              <td class="py-3 px-4"><div class="w-24 h-3 rounded bg-surface-container-high animate-pulse"></div></td>
-              <td class="py-3 px-4"><div class="w-20 h-5 rounded-full bg-surface-container-high animate-pulse"></div></td>
-              <td class="py-3 px-4"><div class="w-20 h-3 rounded bg-surface-container-high animate-pulse"></div></td>
-              <td class="py-3 px-4 text-right"><div class="w-14 h-7 rounded-lg bg-surface-container-high animate-pulse inline-block"></div></td>
-            </tr>
-          }
+    <ng-template dafCell="_actions" let-row>
+      <div class="inline-flex items-center gap-1 flex-wrap justify-end" (click)="$event.stopPropagation()">
+
+        @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
+          <daf-button
+            label="Accepter"
+            variant="ghost"
+            [options]="{ iconStart: 'check_circle', size: 'sm' }"
+            [class.opacity-50]="isActioning()"
+            (onClick)="quickAccept(row['_source'], $event)"
+          />
+          <daf-button
+            label="Rejeter"
+            variant="danger"
+            [options]="{ iconStart: 'cancel', size: 'sm' }"
+            [class.opacity-50]="isActioning()"
+            (onClick)="openRejectModal(row['_source'], $event)"
+          />
         }
 
-        <!-- Actual rows -->
-        @if (!isLoadingCandidates()) {
-          @for (c of candidates()?.content ?? []; track c.id) {
-            <tr
-              class="cursor-pointer transition-colors"
-              [class.bg-primary/5]="selectedId() === c.id"
-              [class.hover:bg-surface-container-low]="selectedId() !== c.id"
-              (click)="onRowClick(c.id)"
-            >
-              <!-- Candidat -->
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                    {{ getInitials(c.firstName, c.lastName) }}
-                  </div>
-                  <div>
-                    <div class="font-semibold text-on-surface">{{ c.firstName }} {{ c.lastName }}</div>
-                    <div class="text-xs text-outline">{{ c.emailPersonal }}</div>
-                  </div>
-                </div>
-              </td>
+        <daf-button
+          label="Voir"
+          variant="ghost"
+          [options]="{ iconStart: 'open_in_new', size: 'sm' }"
+          (onClick)="router.navigate(['/rh/candidates', row['_source'].id])"
+        />
+      </div>
+    </ng-template>
 
-              <!-- Poste -->
-              <td class="py-3 px-4 text-outline">
-                {{ c.appliedPosition ?? '—' }}
-              </td>
-
-              <!-- Statut -->
-              <td class="py-3 px-4">
-                <daf-badge
-                  [label]="getStatusLabel(c.status)"
-                  [options]="getStatusBadgeOptions(c.status)"
-                />
-              </td>
-
-              <!-- Début prévu -->
-              <td class="py-3 px-4 text-outline">{{ formatDateFr(c.expectedStartDate) }}</td>
-
-              <!-- Actions -->
-              <td class="py-3 px-4 text-right" (click)="$event.stopPropagation()">
-                <div class="inline-flex items-center gap-1 flex-wrap justify-end">
-
-                  @if (c.status === 'PENDING' && canAcceptReject()) {
-                    <daf-button
-                      label="Accepter"
-                      variant="ghost"
-                      [options]="{ iconStart: 'check_circle', size: 'sm' }"
-                      [class.opacity-50]="isActioning()"
-                      (onClick)="quickAccept(c, $event)"
-                    />
-                    <daf-button
-                      label="Rejeter"
-                      variant="danger"
-                      [options]="{ iconStart: 'cancel', size: 'sm' }"
-                      [class.opacity-50]="isActioning()"
-                      (onClick)="openRejectModal(c, $event)"
-                    />
-                  }
-
-                  <daf-button
-                    label="Voir"
-                    variant="ghost"
-                    [options]="{ iconStart: 'open_in_new', size: 'sm' }"
-                    (onClick)="router.navigate(['/rh/candidates', c.id])"
-                  />
-                </div>
-              </td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Empty state -->
-  @if (!isLoadingCandidates() && (candidates()?.content?.length ?? 0) === 0) {
-    <div class="flex flex-col items-center justify-center py-16 gap-3 text-outline">
-      <span class="material-symbols-outlined text-5xl">person_search</span>
-      <p class="font-semibold text-on-surface">Aucun candidat trouvé</p>
-      <p class="text-sm">Modifiez vos filtres ou ajoutez un nouveau candidat.</p>
-    </div>
-  }
+  </daf-data-table>
 
   <!-- Pagination -->
   @if (!isLoadingCandidates() && (candidates()?.totalPages ?? 0) > 1) {

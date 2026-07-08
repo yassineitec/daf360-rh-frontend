@@ -115,66 +115,50 @@
 
             <!-- ── STEP 3 : Matériel ────────────────────────────────── -->
             @if (currentStep() === 3) {
-              @if (editableAssets().length === 0) {
-                <p class="text-[13px] text-outline">Aucun type d'actif configuré pour cette entité.</p>
-              } @else {
-                <div class="overflow-x-auto border border-outline-variant rounded-xl">
-                  <table class="w-full border-collapse text-[12px]">
-                    <thead>
-                      <tr class="bg-surface-container-low border-b border-outline-variant">
-                        <th class="w-[52px] text-center px-2.5 py-2.5 text-[11px] font-bold text-outline uppercase tracking-wide">Fourni</th>
-                        <th class="w-[140px] text-left px-2.5 py-2.5 text-[11px] font-bold text-outline uppercase tracking-wide">Matériel</th>
-                        <th class="text-left px-2.5 py-2.5 text-[11px] font-bold text-outline uppercase tracking-wide">N° de série</th>
-                        <th class="text-left px-2.5 py-2.5 text-[11px] font-bold text-outline uppercase tracking-wide">Marque / Modèle</th>
-                        <th class="text-left px-2.5 py-2.5 text-[11px] font-bold text-outline uppercase tracking-wide">Asset Tag</th>
-                        <th class="w-[140px] text-left px-2.5 py-2.5 text-[11px] font-bold text-outline uppercase tracking-wide">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (asset of editableAssets(); track asset.id; let i = $index) {
-                        <tr class="border-b border-outline-variant last:border-b-0" [class]="asset.provided ? 'bg-success/5' : 'opacity-60'">
-                          <td class="text-center align-middle px-2.5 py-2">
-                            <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer"
-                              [ngModel]="asset.provided"
-                              (ngModelChange)="toggleAssetProvided(i, $event)"
-                              [disabled]="isCompleted()" />
-                          </td>
-                          <td class="align-middle px-2.5 py-2 font-semibold text-on-surface whitespace-nowrap">{{ asset.assetTypeLabelFr }}</td>
-                          <td class="align-middle p-1.5">
-                            <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="SN-…"
-                              [ngModel]="asset.serialNumber"
-                              (ngModelChange)="setAssetField(i, 'serialNumber', $event)"
-                              [disabled]="!asset.provided || isCompleted()" />
-                          </td>
-                          <td class="align-middle p-1.5">
-                            <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="Marque / Modèle"
-                              [ngModel]="asset.brandModel"
-                              (ngModelChange)="setAssetField(i, 'brandModel', $event)"
-                              [disabled]="!asset.provided || isCompleted()" />
-                          </td>
-                          <td class="align-middle p-1.5">
-                            <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="AT-…"
-                              [ngModel]="asset.assetTag"
-                              (ngModelChange)="setAssetField(i, 'assetTag', $event)"
-                              [disabled]="!asset.provided || isCompleted()" />
-                          </td>
-                          <td class="align-middle p-1.5">
-                            <select class="w-full h-8 border border-outline-variant rounded-md px-1.5 text-[12px] outline-none bg-surface cursor-pointer focus:border-tertiary"
-                              [ngModel]="asset.status"
-                              (ngModelChange)="setAssetField(i, 'status', $event)"
-                              [disabled]="!asset.provided || isCompleted()">
-                              <option value="">—</option>
-                              @for (s of hwStatuses; track s.value) {
-                                <option [value]="s.value">{{ s.label }}</option>
-                              }
-                            </select>
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              }
+              <daf-data-table [columns]="assetColumns" [rows]="assetRows()" [config]="assetTableConfig">
+
+                <ng-template dafCell="provided" let-row>
+                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer"
+                    [ngModel]="row['provided']"
+                    (ngModelChange)="toggleAssetProvided(assetIndex(row['id']), $event)"
+                    [disabled]="isCompleted()" />
+                </ng-template>
+
+                <ng-template dafCell="serialNumber" let-row>
+                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="SN-…"
+                    [ngModel]="row['serialNumber']"
+                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'serialNumber', $event)"
+                    [disabled]="!row['provided'] || isCompleted()" />
+                </ng-template>
+
+                <ng-template dafCell="brandModel" let-row>
+                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="Marque / Modèle"
+                    [ngModel]="row['brandModel']"
+                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'brandModel', $event)"
+                    [disabled]="!row['provided'] || isCompleted()" />
+                </ng-template>
+
+                <ng-template dafCell="assetTag" let-row>
+                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="AT-…"
+                    [ngModel]="row['assetTag']"
+                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'assetTag', $event)"
+                    [disabled]="!row['provided'] || isCompleted()" />
+                </ng-template>
+
+                <ng-template dafCell="status" let-row>
+                  <select class="w-full h-8 border border-outline-variant rounded-md px-1.5 text-[12px] outline-none bg-surface cursor-pointer focus:border-tertiary"
+                    [ngModel]="row['status']"
+                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'status', $event)"
+                    [disabled]="!row['provided'] || isCompleted()">
+                    <option value="">—</option>
+                    @for (s of hwStatuses; track s.value) {
+                      <option [value]="s.value">{{ s.label }}</option>
+                    }
+                  </select>
+                </ng-template>
+
+              </daf-data-table>
+
               <div class="flex flex-col gap-1.5 mt-3.5">
                 <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">Notes matériel</label>
                 <textarea

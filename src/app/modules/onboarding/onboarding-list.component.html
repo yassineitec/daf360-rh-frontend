@@ -77,96 +77,52 @@
 
       <!-- Table -->
       } @else {
-        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-          <table class="w-full border-collapse text-[13px]">
-            <thead>
-              <tr>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Employé
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Email MS365
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Entité
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Début prévu
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Statut
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  MàJ
-                </th>
-                <th class="text-center px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of items(); track r.candidateId) {
-                <tr class="border-b border-outline-variant/20 hover:bg-surface-container-low/40
-                           transition-colors last:border-b-0">
-                  <td class="px-4 py-3.5">
-                    <p class="font-semibold text-on-surface">{{ r.candidateFullName }}</p>
-                    @if (r.appliedPosition) {
-                      <p class="text-[11px] text-outline mt-0.5">{{ r.appliedPosition }}</p>
-                    }
-                  </td>
-                  <td class="px-4 py-3.5 text-[12px] text-on-surface-variant">
-                    {{ r.ms365Email || '—' }}
-                  </td>
-                  <td class="px-4 py-3.5 text-[12px] text-outline">#{{ r.paysId }}</td>
-                  <td class="px-4 py-3.5 text-[12px] text-outline whitespace-nowrap">
-                    {{ formatDate(r.expectedStartDate) }}
-                  </td>
-                  <td class="px-4 py-3.5">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <daf-badge
-                        [label]="statusBadge(r.candidateStatus).label"
-                        [options]="statusBadge(r.candidateStatus).options"
-                      />
-                      @if (r.hasDraft) {
-                        <span class="inline-flex items-center bg-amber-50 text-amber-700
-                                     border border-amber-300 rounded-full text-[11px]
-                                     font-semibold px-2 py-0.5">
-                          Brouillon
-                        </span>
-                      }
-                    </div>
-                  </td>
-                  <td class="px-4 py-3.5 text-[12px] text-outline whitespace-nowrap">
-                    {{
-                      r.draftSavedAt
-                        ? formatDate(r.draftSavedAt)
-                        : r.ms365EmailCreatedAt
-                          ? formatDate(r.ms365EmailCreatedAt)
-                          : '—'
-                    }}
-                  </td>
-                  <td class="px-4 py-3.5 text-center">
-                    <button
-                      class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
-                             hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
-                      style="background-color: #50717B"
-                      type="button"
-                      (click)="navigate(r.candidateId)">
-                      Compléter →
-                    </button>
-                  </td>
-                </tr>
+        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+
+          <ng-template dafCell="ms365Email" let-row>
+            <span class="text-[12px] text-on-surface-variant">{{ row['ms365Email'] || '—' }}</span>
+          </ng-template>
+
+          <ng-template dafCell="entite" let-row>
+            <span class="text-[12px] text-outline">{{ row['entite'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="expectedStartDate" let-row>
+            <span class="text-[12px] text-outline whitespace-nowrap">{{ row['expectedStartDate'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="status" let-row>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <daf-badge
+                [label]="row['status'].label"
+                [options]="row['status'].options"
+              />
+              @if (row['hasDraft']) {
+                <span class="inline-flex items-center bg-amber-50 text-amber-700
+                             border border-amber-300 rounded-full text-[11px]
+                             font-semibold px-2 py-0.5">
+                  Brouillon
+                </span>
               }
-            </tbody>
-          </table>
-        </daf-card>
+            </div>
+          </ng-template>
+
+          <ng-template dafCell="maj" let-row>
+            <span class="text-[12px] text-outline whitespace-nowrap">{{ row['maj'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="_actions" let-row>
+            <button
+              class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
+                     hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
+              style="background-color: #50717B"
+              type="button"
+              (click)="navigate(row['_source'].candidateId)">
+              Compléter →
+            </button>
+          </ng-template>
+
+        </daf-data-table>
       }
 
     </div>
