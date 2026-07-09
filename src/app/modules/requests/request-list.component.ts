@@ -64,7 +64,7 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
           }
           <daf-button
             [options]="{ variant: 'teal', label: 'Nouvelle demande', iconStart: 'add' }"
-            (onClick)="showNew.set(true)" />
+            (onClick)="goToSelfService()" />
         </div>
       </div>
 
@@ -280,6 +280,13 @@ export class RequestListComponent implements OnInit {
 
   onSubmitted() { this.showNew.set(false); this.reload(); }
 
+  /** New requests are created on the shell's self-service page (a different app),
+   *  so navigate the top-level window rather than the remote's router. */
+  goToSelfService() {
+    window.location.href = '/home/self-service';
+  }
+
+  /** Computes a pseudo SLA deadline from submission + defaultSlaDays (we use 3 days as default). */
   slaDeadline(row: EmployeeRequest): string | null {
     if (!row.submissionDate) return null;
     const d = new Date(row.submissionDate);

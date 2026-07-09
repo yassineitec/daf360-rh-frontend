@@ -50,6 +50,7 @@ export interface EmployeeRequest {
   // Populated by backend enrichment
   typeCode?:           string;
   typeDisplayNameFr?:  string;
+  employeeName?:       string | null;
   approvals?:          ApprovalSummary[];
 }
 
