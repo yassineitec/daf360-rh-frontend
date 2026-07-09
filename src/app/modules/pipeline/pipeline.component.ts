@@ -78,7 +78,6 @@ export class PipelineComponent implements OnInit {
   readonly activities    = signal<PipelineActivity[]>([]);
   readonly objectives    = signal<PipelineObjective[]>([]);
   readonly loading       = signal(true);
-  readonly searchQuery   = signal('');
   readonly selectedIds   = signal(new Set<number>());
   readonly avatarFailed  = signal(new Set<number>());
 
@@ -95,13 +94,6 @@ export class PipelineComponent implements OnInit {
     }))
   );
 
-  readonly filteredCandidates = computed(() => {
-    const q = this.searchQuery().toLowerCase().trim();
-    if (!q) return this.candidates();
-    return this.candidates().filter(c =>
-      c.fullName.toLowerCase().includes(q) || c.poste.toLowerCase().includes(q)
-    );
-  });
 
   readonly selectedCount = computed(() => this.selectedIds().size);
 
@@ -147,8 +139,25 @@ export class PipelineComponent implements OnInit {
     this.router.navigate(['/rh/candidates', id]);
   }
 
-  onSearch(event: Event): void {
-    this.searchQuery.set((event.target as HTMLInputElement).value);
+  /** Desktop card: left-accent border for standout profiles — urgent (red) or top fit (teal). */
+  cardAccentClass(c: KanbanCandidate): string {
+    if (c.isUrgent) return 'border-l-4 border-l-error';
+    if (c.badgeType === 'top') return 'border-l-4 border-l-[#79D7BE]';
+    return '';
+  }
+
+  fitScoreClass(score: number): string {
+    return score >= 85 ? 'text-[#79D7BE] font-bold text-sm' : 'text-outline font-bold text-sm';
+  }
+
+  /** Up to two contextual meta items shown in a desktop card's footer, in priority order. */
+  cardMeta(c: KanbanCandidate): Array<{ icon: string; text: string }> {
+    const items: Array<{ icon: string; text: string }> = [];
+    if (c.nextEvent)        items.push({ icon: 'calendar_month', text: c.nextEvent });
+    else if (c.experience)  items.push({ icon: 'work',           text: c.experience });
+    else if (c.salary)      items.push({ icon: 'attach_money',   text: c.salary });
+    if (c.location) items.push({ icon: 'location_on', text: c.location });
+    return items.slice(0, 2);
   }
 
   onBulkAction(actionId: string): void {

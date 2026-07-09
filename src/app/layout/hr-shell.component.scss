@@ -1,0 +1,63 @@
+:host {
+  --shell-header-h:  64px;
+  --shell-sidebar-w: 256px;
+  display: block;
+}
+
+// ── Main content area ─────────────────────────────────────────────────────────
+.shell-content {
+  margin-left: var(--shell-sidebar-w);
+  height:      calc(100vh - var(--shell-header-h));
+  overflow-y:  auto;
+  overflow-x:  hidden;
+  padding:     2rem;
+  background:  var(--color-background);
+  box-sizing:  border-box;
+
+  @media (max-width: 1024px) { padding: 1.5rem; }
+  @media (max-width: 768px)  { margin-left: 0; padding: 0.5rem 0.5rem 0.5rem 3.25rem; }
+  @media (max-width: 480px)  { padding: 0.5rem 0.375rem 0.5rem 3.25rem; }
+}
+
+// ── Mobile overlay backdrop ───────────────────────────────────────────────────
+.mob-overlay {
+  display:        none;
+  position:       fixed;
+  inset:          0;
+  z-index:        39;
+  background:     rgba(0, 0, 0, 0.45);
+  opacity:        0;
+  pointer-events: none;
+  transition:     opacity 0.28s ease;
+
+  @media (max-width: 768px) { display: block; }
+
+  &--open {
+    opacity:        1;
+    pointer-events: all;
+  }
+}
+
+// ── Hamburger toggle button ───────────────────────────────────────────────────
+.mob-hamburger {
+  display:       none;
+  position:      fixed;
+  top:           calc(var(--shell-header-h) + 10px);
+  left:          12px;
+  z-index:       50;
+  width:         36px;
+  height:        36px;
+  border-radius: 10px;
+  border:        1px solid rgba(0, 0, 0, 0.08);
+  background:    #fff;
+  box-shadow:    0 2px 8px rgba(0, 0, 0, 0.10);
+  cursor:        pointer;
+  align-items:   center;
+  justify-content: center;
+  transition:    background 0.2s;
+
+  .material-symbols-outlined { font-size: 20px; color: #1e293b; }
+  &:hover { background: #f1f5f9; }
+
+  @media (max-width: 768px) { display: flex; }
+}

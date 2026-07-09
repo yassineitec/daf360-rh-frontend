@@ -1,10 +1,13 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   BadgeCell,
+  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
+  FormFieldComponent,
   SelectComponent,
   SelectConfig,
   SelectOption,
@@ -12,8 +15,6 @@ import {
   TableColumn,
   TableConfig,
   TableRow,
-  ToolbarComponent,
-  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 import { ItProvisioningService } from './it-provisioning.service';
 import { ProvisioningListItem } from './it-provisioning.model';
@@ -30,7 +31,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 @Component({
   selector: 'app-it-provisioning-list',
   standalone: true,
-  imports: [DataTableComponent, DafCellDirective, ToolbarComponent, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, ButtonComponent, FormFieldComponent, NgTemplateOutlet],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
@@ -41,17 +42,13 @@ export class ItProvisioningListComponent implements OnInit {
   loading = signal(true);
   error   = signal<string | null>(null);
 
-  search       = signal('');
-  statusFilter = signal('');
-  viewMode     = signal<'grid' | 'list'>('list');
+  search           = signal('');
+  mobileSearchOpen = signal(false);
+  statusFilter     = signal('');
+  viewMode         = signal<'grid' | 'list'>('list');
 
   readonly statusSelectOptions = STATUS_OPTIONS;
   readonly statusSelectConfig: SelectConfig = { placeholder: 'Tous les statuts' };
-
-  readonly viewToggleOptions: ToolbarToggleOption[] = [
-    { id: 'grid', icon: 'grid_view', tooltip: 'Vue grille' },
-    { id: 'list', icon: 'view_list', tooltip: 'Vue liste' },
-  ];
 
   protected readonly statusBadge = statusBadge;
 
@@ -125,10 +122,6 @@ export class ItProvisioningListComponent implements OnInit {
 
   onSearch(value: string): void {
     this.search.set(value);
-  }
-
-  onViewToggle(id: string): void {
-    if (id === 'grid' || id === 'list') this.viewMode.set(id);
   }
 
   onStatusChange(values: string[]): void {

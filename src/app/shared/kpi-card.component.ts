@@ -72,6 +72,10 @@ export type KpiCardVariant = 'green' | 'blue' | 'amber' | 'red';
       text-transform: uppercase;
       letter-spacing: 0.1em;
       color: #3e4945;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
     .kpi-card__icon {
       width: 32px;

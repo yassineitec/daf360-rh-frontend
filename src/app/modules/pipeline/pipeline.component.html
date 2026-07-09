@@ -1,25 +1,23 @@
-<div class="flex flex-col h-full overflow-hidden">
-  <div class="flex-1 overflow-y-auto">
-    <div class="p-8 space-y-6">
+<div class="space-y-6">
 
-      <!-- ── Page header ───────────────────────────────────────────── -->
+  <!-- ── Page header ───────────────────────────────────────────── -->
       <div class="flex justify-between items-end">
         <div>
-          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+          <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
             Pipeline de Recrutement
           </h1>
-          <p class="text-[16px] text-outline mt-1">
+          <p class="text-[13px] sm:text-[16px] text-outline mt-1">
             Suivi en temps réel des talents et de leur intégration.
           </p>
         </div>
       </div>
 
       <!-- ── Stage counter cards ───────────────────────────────────── -->
-      <div class="flex flex-row gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
 
         @if (stageCards().length === 0 && loading()) {
           @for (i of [1, 2, 3, 4]; track i) {
-            <div class="flex-1 min-h-32 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse">
+            <div class="min-h-32 bg-surface-container-lowest rounded-xl p-4 sm:p-6 border border-outline-variant animate-pulse">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-surface-container shrink-0"></div>
                 <div class="space-y-2">
@@ -32,7 +30,7 @@
         }
 
         @for (card of stageCards(); track card.label) {
-          <rh-kpi-card class="flex-1 block" [label]="card.label" [icon]="card.icon" [value]="card.count" [variant]="card.variant" />
+          <rh-kpi-card class="block" [label]="card.label" [icon]="card.icon" [value]="card.count" [variant]="card.variant" />
         }
       </div>
 
@@ -46,37 +44,25 @@
 
       } @else {
 
-        <!-- ── 2/3 + 1/3 main layout ─────────────────────────────────── -->
-        <div class="flex flex-row gap-6">
+        <!-- ── Main layout: stacked on mobile/tablet, 2/3 + 1/3 on desktop ── -->
+        <div class="flex flex-col lg:flex-row gap-6">
 
           <!-- ═══ LEFT: Candidatures en cours ═══ -->
-          <div class="flex-2 min-w-0 flex flex-col gap-4">
+          <div class="lg:flex-2 min-w-0 flex flex-col gap-4">
 
-            <!-- Section header + search bar -->
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-[17px] font-semibold text-on-surface shrink-0">Candidatures en cours</h2>
-              <div class="relative">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2
-                             text-[18px] text-outline pointer-events-none">search</span>
-                <input
-                  type="text"
-                  placeholder="Rechercher..."
-                  class="pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-white
-                         text-[13px] text-on-surface outline-none
-                         focus:border-[#79D7BE] focus:ring-1 focus:ring-[#79D7BE] transition-colors"
-                  [value]="searchQuery()"
-                  (input)="onSearch($event)" />
-              </div>
+            <!-- Section header -->
+            <div class="flex items-center mb-2">
+              <h2 class="text-[15px] sm:text-[17px] font-semibold text-on-surface">Candidatures en cours</h2>
             </div>
 
             <!-- ── Candidate cards ── -->
             <div class="space-y-3">
 
-              @for (candidate of filteredCandidates(); track candidate.id) {
+              @for (candidate of candidates(); track candidate.id) {
 
                 <!-- ▸ PROVISIONING IT variant -->
                 @if (getCardVariant(candidate) === 'provisioning') {
-                  <div class="bg-surface-container-lowest p-5 rounded-xl
+                  <div class="min-h-[128px] flex flex-col justify-center bg-surface-container-lowest p-5 rounded-xl
                                border border-outline-variant border-l-4 border-l-[#79D7BE]
                                hover:shadow-md transition-all">
                     <div class="flex items-start justify-between gap-4">
@@ -99,23 +85,21 @@
                         <div class="flex-1 min-w-0">
                           <p class="text-[14px] font-bold text-on-surface">{{ candidate.fullName }}</p>
                           <p class="text-[13px] text-outline">{{ candidate.poste }}</p>
-                          <!-- Provisioning progress block -->
-                          <div class="mt-3 p-3 bg-surface-container-low rounded-lg
-                                      border border-outline-variant/50">
-                            <div class="flex justify-between items-center mb-2">
-                              <span class="text-[12px] font-semibold text-on-surface flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px]">terminal</span>
-                                Provisioning IT
-                              </span>
-                              <span class="text-[12px] font-bold text-[#50717B]">75%</span>
-                            </div>
+                          <!-- Provisioning progress — compact inline row -->
+                          <div class="mt-2 flex items-center gap-2">
+                            <span class="text-[11px] font-semibold text-on-surface flex items-center gap-1 shrink-0">
+                              <span class="material-symbols-outlined text-[13px]">terminal</span>
+                              Provisioning IT
+                            </span>
                             <daf-progress-bar
+                              class="flex-1"
                               [value]="75"
                               [options]="{ variant: 'teal', size: 'xs' }" />
-                            <p class="text-[11px] text-outline mt-1.5 italic">
-                              En attente de : Accès Slack &amp; Jira
-                            </p>
+                            <span class="text-[11px] font-bold text-[#50717B] shrink-0">75%</span>
                           </div>
+                          <p class="text-[11px] text-outline mt-1 italic truncate">
+                            En attente de : Accès Slack &amp; Jira
+                          </p>
                         </div>
                       </div>
 
@@ -136,7 +120,7 @@
 
                 <!-- ▸ ONBOARDING RH variant -->
                 } @else if (getCardVariant(candidate) === 'onboarding') {
-                  <div class="bg-surface-container-lowest p-5 rounded-xl
+                  <div class="min-h-[128px] flex flex-col justify-center bg-surface-container-lowest p-5 rounded-xl
                                border border-outline-variant hover:shadow-md transition-all">
                     <div class="flex items-start justify-between gap-4">
 
@@ -158,9 +142,9 @@
                         <div class="flex-1 min-w-0">
                           <p class="text-[14px] font-bold text-on-surface">{{ candidate.fullName }}</p>
                           <p class="text-[13px] text-outline">{{ candidate.poste }}</p>
-                          <!-- Onboarding step icons -->
+                          <!-- Onboarding step icons — full stack on tablet/desktop, simplified progress-only on mobile -->
                           <div class="mt-3 flex items-center gap-4">
-                            <div class="flex -space-x-2">
+                            <div class="hidden sm:flex -space-x-2">
                               <div class="w-8 h-8 rounded-full border-2 border-white
                                           bg-green-500 flex items-center justify-center text-white"
                                    title="Contrat Signé">
@@ -182,6 +166,7 @@
                                 <span class="material-symbols-outlined text-[16px]">person_add</span>
                               </div>
                             </div>
+                            <div class="sm:hidden w-2 h-2 rounded-full bg-green-500 shrink-0"></div>
                             <span class="text-[12px] text-outline">Onboarding RH : 50%</span>
                           </div>
                         </div>
@@ -204,14 +189,16 @@
 
                 <!-- ▸ DEFAULT candidate card -->
                 } @else {
-                  <div class="profile-card bg-surface-container-lowest p-5 rounded-xl
+
+                  <!-- Mobile: unchanged -->
+                  <div class="sm:hidden profile-card bg-surface-container-lowest p-5 rounded-xl
                                border border-outline-variant hover:shadow-md transition-all
                                group relative cursor-pointer"
                        (click)="onCandidateClick(candidate.id)">
                     <div class="flex items-start justify-between gap-4">
 
                       <!-- Left: avatar + info -->
-                      <div class="flex gap-4">
+                      <div class="flex gap-4 flex-1 min-w-0">
                         <div class="w-12 h-12 rounded-full overflow-hidden shrink-0
                                     border border-outline-variant bg-surface-container-high
                                     flex items-center justify-center">
@@ -225,9 +212,9 @@
                             </span>
                           }
                         </div>
-                        <div>
-                          <p class="text-[14px] font-bold text-on-surface">{{ candidate.fullName }}</p>
-                          <p class="text-[13px] text-outline">{{ candidate.poste }}</p>
+                        <div class="min-w-0">
+                          <p class="text-[14px] font-bold text-on-surface truncate">{{ candidate.fullName }}</p>
+                          <p class="text-[13px] text-outline truncate">{{ candidate.poste }}</p>
                           <!-- Meta row: contract · date · badge -->
                           <div class="flex items-center gap-3 mt-2 flex-wrap">
                             @if (candidate.contractType) {
@@ -250,9 +237,9 @@
                         </div>
                       </div>
 
-                      <!-- Right: hover actions + checkbox -->
+                      <!-- Right: actions + checkbox — always visible on touch -->
                       <div class="flex flex-col items-end gap-2 shrink-0">
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <div class="flex gap-2">
                           <button
                             class="p-2 hover:bg-surface-container rounded-lg text-[#50717B] transition-colors"
                             title="Valider l'étape"
@@ -275,12 +262,85 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- Desktop: "RecruitFlow" reference design — badge + fit score, square avatar, skills, footer meta -->
+                  <div
+                    [class]="'hidden sm:flex sm:flex-col min-h-[128px] bg-surface-container-lowest p-4 rounded-xl border border-outline-variant ' +
+                             'shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer group relative ' +
+                             cardAccentClass(candidate)"
+                    (click)="onCandidateClick(candidate.id)">
+
+                    <div class="flex justify-between mb-3">
+                      <daf-badge [label]="candidate.badge" [options]="{ variant: badgeVariant(candidate.badgeType), size: 'sm' }" />
+                      <span [class]="fitScoreClass(candidate.fitScore)">{{ candidate.fitScore }}% Fit</span>
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-3">
+                      <div class="w-12 h-12 rounded-lg overflow-hidden shrink-0
+                                  border border-outline-variant bg-surface-container-high
+                                  flex items-center justify-center">
+                        @if (!avatarFailed().has(candidate.id)) {
+                          <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
+                               class="w-full h-full object-cover"
+                               (error)="onAvatarError(candidate.id)" />
+                        } @else {
+                          <span class="text-[14px] font-bold text-on-surface-variant">
+                            {{ candidate.initials ?? initials(candidate.fullName) }}
+                          </span>
+                        }
+                      </div>
+                      <div class="min-w-0">
+                        <h4 class="font-bold text-on-surface truncate">{{ candidate.fullName }}</h4>
+                        <p class="text-xs text-outline truncate">{{ candidate.poste }}</p>
+                      </div>
+
+                      <!-- Actions + checkbox — hover-reveal on desktop -->
+                      <div class="ml-auto flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                           (click)="$event.stopPropagation()">
+                        <button
+                          class="p-1.5 hover:bg-surface-container rounded-lg text-[#50717B] transition-colors"
+                          title="Valider l'étape"
+                          (click)="onCandidateClick(candidate.id)">
+                          <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        </button>
+                        <input
+                          type="checkbox"
+                          class="w-4 h-4 rounded border-outline-variant cursor-pointer"
+                          [checked]="isSelected(candidate.id)"
+                          (change)="toggleSelect(candidate.id, $event)" />
+                      </div>
+                    </div>
+
+                    @if (candidate.skills?.length) {
+                      <div class="flex flex-wrap gap-1.5 mb-3">
+                        @for (skill of candidate.skills.slice(0, 3); track skill) {
+                          <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ skill }}</span>
+                        }
+                      </div>
+                    }
+
+                    @if (candidate.note) {
+                      <div class="bg-surface-container-low p-2 rounded-lg mb-3 text-xs">
+                        <p class="text-on-surface-variant italic">"{{ candidate.note }}"</p>
+                      </div>
+                    }
+
+                    <div class="mt-auto flex justify-between items-center pt-3 border-t border-outline-variant text-on-surface-variant">
+                      @for (meta of cardMeta(candidate); track meta.icon) {
+                        <div class="flex items-center gap-1 text-[11px]">
+                          <span class="material-symbols-outlined text-[14px]">{{ meta.icon }}</span>
+                          {{ meta.text }}
+                        </div>
+                      }
+                    </div>
+                  </div>
+
                 }
 
               }
 
               <!-- Empty state -->
-              @if (filteredCandidates().length === 0) {
+              @if (candidates().length === 0) {
                 <div class="text-center py-16 text-outline">
                   <span class="material-symbols-outlined text-[48px] block mb-3">inbox</span>
                   <p class="text-[14px]">Aucune candidature trouvée</p>
@@ -376,10 +436,9 @@
         </div>
 
       }
-    </div>
-  </div>
+</div>
 
-  <!-- ── Bulk actions bar ─────────────────────────────────────────── -->
+<!-- ── Bulk actions bar ─────────────────────────────────────────── -->
   @if (selectedCount() > 0) {
     <daf-bulk-action-bar
       [count]="selectedCount()"
@@ -389,5 +448,3 @@
       (actionClick)="onBulkAction($event)">
     </daf-bulk-action-bar>
   }
-
-</div>

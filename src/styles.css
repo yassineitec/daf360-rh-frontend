@@ -55,7 +55,26 @@ body {
   font-family: var(--font-sans);
 }
 
+html, body {
+  overflow-x: hidden;
+}
+
 
 .modal-panel {
   transform: none !important;
+}
+
+/* ── Responsive sidebar: hide/show on mobile via global CSS ─────────────────
+   daf-side-nav renders a fixed inner <nav> — must target from global CSS
+   because ViewEncapsulation blocks component-scoped ::ng-deep from reaching it. */
+@media (max-width: 768px) {
+  daf-side-nav > nav {
+    transform: translateX(-100%) !important;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+  }
+  daf-side-nav.sidebar--open > nav {
+    transform: translateX(0) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+  }
 }

@@ -1,19 +1,28 @@
 <div class="flex flex-col h-full overflow-hidden">
   <div class="flex-1 overflow-y-auto">
-    <div class="p-8 space-y-6">
+    <div class="space-y-3 sm:space-y-6">
 
       <!-- Page header -->
-      <div class="flex justify-between items-center">
+      <div class="flex items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+          <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
             Candidats
           </h1>
-          <p class="text-[14px] text-outline mt-1">
+          <p class="text-[13px] sm:text-[14px] text-outline mt-1">
             Suivi des candidatures et des étapes de recrutement.
           </p>
         </div>
         <ng-container *appHasPermission="'CREATE_CANDIDATE'">
+          <!-- Mobile: icon-only FAB -->
+          <button type="button"
+            class="sm:hidden shrink-0 w-10 h-10 rounded-full bg-teal text-white flex items-center justify-center shadow-md active:scale-95 transition-all"
+            aria-label="Nouveau candidat"
+            (click)="onNewCandidate()">
+            <span class="material-symbols-outlined text-[22px]">add</span>
+          </button>
+          <!-- Desktop: full labeled button -->
           <daf-button
+            class="hidden sm:block"
             label="Nouveau Candidat"
             variant="teal"
             [options]="{ iconStart: 'add', size: 'md' }"
@@ -24,21 +33,17 @@
 
       <!-- KPI Cards -->
       @if (statsLoading()) {
-        <div class="grid grid-cols-4 gap-6">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-6">
           @for (i of [1, 2, 3, 4]; track i) {
-            <div class="h-32 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant animate-pulse">
-              <div class="w-10 h-10 rounded-xl bg-surface-container mb-4"></div>
-              <div class="w-16 h-7 rounded bg-surface-container mb-2"></div>
-              <div class="w-24 h-3 rounded bg-surface-container"></div>
-            </div>
+            <div class="h-32 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant animate-pulse"></div>
           }
         </div>
       } @else {
-        <div class="grid grid-cols-4 gap-6">
-          <rh-kpi-card label="Total Candidats" icon="group" [value]="stats().total" variant="blue" />
-          <rh-kpi-card label="En attente" icon="schedule" [value]="stats().pending" variant="amber" />
-          <rh-kpi-card label="Acceptés" icon="task_alt" [value]="stats().accepted" variant="green" />
-          <rh-kpi-card label="Embauchés" icon="how_to_reg" [value]="stats().hired" variant="green" />
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-6">
+          <rh-kpi-card label="Total Candidats" icon="group" [value]="stats().total" variant="blue" class="block" />
+          <rh-kpi-card label="En attente" icon="schedule" [value]="stats().pending" variant="amber" class="block" />
+          <rh-kpi-card label="Acceptés" icon="task_alt" [value]="stats().accepted" variant="green" class="block" />
+          <rh-kpi-card label="Embauchés" icon="how_to_reg" [value]="stats().hired" variant="green" class="block" />
         </div>
       }
 
@@ -58,15 +63,8 @@
         </div>
       }
 
-      <!-- Filters -->
-      <div class="flex items-center gap-3">
-        <div class="flex-1 min-w-0">
-          <daf-toolbar
-            [searchValue]="search()"
-            searchPlaceholder="Rechercher un candidat..."
-            (searchChange)="onSearch($event)"
-          />
-        </div>
+      <!-- Filters: desktop/tablet — select + toggle + compact right-aligned search -->
+      <div class="hidden sm:flex sm:items-center sm:justify-end gap-3">
         @if (viewMode() === 'list') {
           <daf-select
             [selected]="statusFilter() ? [statusFilter()] : []"
@@ -98,8 +96,16 @@
             <span class="material-symbols-outlined text-[18px]">view_kanban</span>
           </button>
         </div>
+        <div class="w-56 shrink-0">
+          <daf-form-field
+            [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
+            [value]="search()"
+            (valueChange)="onSearch($any($event) ?? '')" />
+        </div>
       </div>
 
+      <!-- ═══ Desktop / tablet: list ⇄ kanban toggle (unchanged) ═══ -->
+      <div class="hidden sm:block">
       @if (viewMode() === 'list') {
 
       <!-- Loading -->
@@ -133,38 +139,40 @@
 
       <!-- List table -->
       } @else {
-        <daf-data-table
-          [columns]="columns"
-          [rows]="rows()"
-          [config]="tableConfig()"
-          (rowClick)="onView($event['_source'].id)">
+        <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <daf-data-table
+            [columns]="columns"
+            [rows]="rows()"
+            [config]="tableConfig()"
+            (rowClick)="onView($event['_source'].id)">
 
-          <ng-template dafCell="_actions" let-row>
-            <div class="inline-flex items-center gap-1 flex-wrap justify-end">
-              @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
+            <ng-template dafCell="_actions" let-row>
+              <div class="inline-flex items-center gap-1 flex-wrap justify-end">
+                @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
+                  <daf-button
+                    label="Accepter"
+                    variant="ghost"
+                    [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === row['_source'].id }"
+                    (onClick)="quickAccept(row['_source'], $event)" />
+                  <daf-button
+                    label="Rejeter"
+                    variant="danger"
+                    [options]="{ iconStart: 'cancel', size: 'sm' }"
+                    (onClick)="openRejectModal(row['_source'], $event)" />
+                }
                 <daf-button
-                  label="Accepter"
+                  label="Voir"
                   variant="ghost"
-                  [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === row['_source'].id }"
-                  (onClick)="quickAccept(row['_source'], $event)" />
-                <daf-button
-                  label="Rejeter"
-                  variant="danger"
-                  [options]="{ iconStart: 'cancel', size: 'sm' }"
-                  (onClick)="openRejectModal(row['_source'], $event)" />
-              }
-              <daf-button
-                label="Voir"
-                variant="ghost"
-                [options]="{ iconStart: 'open_in_new', size: 'sm' }"
-                (onClick)="onView(row['_source'].id)" />
-            </div>
-          </ng-template>
+                  [options]="{ iconStart: 'open_in_new', size: 'sm' }"
+                  (onClick)="onView(row['_source'].id)" />
+              </div>
+            </ng-template>
 
-        </daf-data-table>
+          </daf-data-table>
+        </div>
 
         <!-- Count + Pagination -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span class="text-label-sm text-outline">
             <span class="font-semibold text-on-surface">{{ totalElements() }}</span> candidat(s)
           </span>
@@ -188,9 +196,10 @@
             </span>
           </div>
         } @else {
-          <div class="flex gap-4 overflow-x-auto pb-2 items-start">
+
+          <div class="flex gap-4 items-start">
             @for (col of kanbanColumns(); track col.key) {
-              <div class="flex-1 min-w-[240px] flex flex-col">
+              <div class="flex-1 min-w-0 flex flex-col">
                 <!-- Column header -->
                 <div class="flex items-center justify-between px-1 mb-3">
                   <div class="flex items-center gap-2">
@@ -212,47 +221,37 @@
                   (dragleave)="onDragLeave(col)"
                   (drop)="onDrop($event, col)">
                   @for (c of col.candidates; track c.id) {
-                    <div
-                      class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+                    <daf-card
+                      [options]="{ variant: 'outlined', padding: 'none', radius: 'xl', hoverable: true }"
+                      class="block cursor-grab active:cursor-grabbing"
                       [class.opacity-40]="draggedId() === c.id"
                       draggable="true"
                       (dragstart)="onDragStart(c)"
                       (dragend)="onDragEnd()"
                       (click)="onView(c.id)">
-                      <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                          {{ initials(c.firstName, c.lastName) }}
+                      <div class="p-4">
+                        <div class="mb-3">
+                          <daf-badge
+                            [label]="statusBadge(c.status).label"
+                            [options]="statusBadge(c.status).options" />
                         </div>
-                        <div class="min-w-0">
-                          <div class="text-sm font-semibold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</div>
-                          <div class="text-xs text-outline truncate">{{ c.appliedPosition ?? c.emailPersonal }}</div>
+
+                        <div class="flex items-center gap-3 mb-3">
+                          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                            {{ initials(c.firstName, c.lastName) }}
+                          </div>
+                          <div class="min-w-0">
+                            <h4 class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</h4>
+                            <p class="text-xs text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 pt-3 border-t border-outline-variant text-outline text-[11px]">
+                          <span class="material-symbols-outlined text-[14px]">mail</span>
+                          <span class="truncate">{{ c.emailPersonal }}</span>
                         </div>
                       </div>
-
-                      <div class="flex items-center justify-between mt-3">
-                        <daf-badge
-                          [label]="statusBadge(c.status).label"
-                          [options]="statusBadge(c.status).options" />
-                        <span class="text-xs text-outline">{{ formatDate(c.expectedStartDate) }}</span>
-                      </div>
-
-                      @if (c.status === 'PENDING' && canAcceptReject()) {
-                        <div
-                          class="flex items-center gap-1 mt-3 pt-3 border-t border-outline-variant"
-                          (click)="$event.stopPropagation()">
-                          <daf-button
-                            label="Accepter"
-                            variant="ghost"
-                            [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === c.id }"
-                            (onClick)="quickAccept(c, $event)" />
-                          <daf-button
-                            label="Rejeter"
-                            variant="danger"
-                            [options]="{ iconStart: 'cancel', size: 'sm' }"
-                            (onClick)="openRejectModal(c, $event)" />
-                        </div>
-                      }
-                    </div>
+                    </daf-card>
                   }
 
                   @if (col.candidates.length === 0) {
@@ -264,9 +263,103 @@
               </div>
             }
           </div>
+
         }
 
       }
+      </div>
+
+      <!-- ═══ Mobile: single kanban-style view — stage pills (wrap, no scroll) + card list ═══ -->
+      <div class="sm:hidden">
+        @if (kanbanLoading()) {
+          <div class="flex justify-center items-center h-48">
+            <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">
+              progress_activity
+            </span>
+          </div>
+        } @else {
+          <div class="flex flex-wrap gap-2">
+            <button type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors"
+              [class.bg-primary]="mobileStageFilter() === null"
+              [class.border-primary]="mobileStageFilter() === null"
+              [class.text-white]="mobileStageFilter() === null"
+              [class.border-outline-variant]="mobileStageFilter() !== null"
+              [class.text-outline]="mobileStageFilter() !== null"
+              (click)="mobileStageFilter.set(null)">
+              Tous <span class="opacity-70">{{ kanbanItems().length }}</span>
+            </button>
+            @for (col of kanbanColumns(); track col.key) {
+              <button type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border border-outline-variant transition-colors"
+                [class.bg-surface-container]="mobileStageFilter() === col.key"
+                [class.text-on-surface]="mobileStageFilter() === col.key"
+                [class.text-outline]="mobileStageFilter() !== col.key"
+                (click)="mobileStageFilter.set(col.key)">
+                <span class="w-2 h-2 rounded-full {{ col.dot }}"></span>
+                {{ col.label }} <span class="opacity-70">{{ col.candidates.length }}</span>
+              </button>
+            }
+          </div>
+
+          <div class="flex flex-col gap-3 mt-4">
+            @for (c of mobileFilteredCandidates(); track c.id) {
+              <daf-card
+                [options]="{ variant: 'outlined', padding: 'none', radius: 'xl', hoverable: true }"
+                class="block"
+                (click)="onView(c.id)">
+                <div class="p-4">
+                  <div class="mb-3">
+                    <daf-badge [label]="statusBadge(c.status).label" [options]="statusBadge(c.status).options" />
+                  </div>
+
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-[12px] font-bold text-white shrink-0">
+                        {{ initials(c.firstName, c.lastName) }}
+                      </div>
+                      <div class="min-w-0">
+                        <p class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</p>
+                        <p class="text-[12px] text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
+                      </div>
+                    </div>
+                    @if (!(c.status === 'PENDING' && canAcceptReject())) {
+                      <span class="material-symbols-outlined text-outline shrink-0">chevron_right</span>
+                    }
+                  </div>
+
+                  <div class="flex items-center gap-1.5 pt-3 border-t border-outline-variant text-outline text-[11px]">
+                    <span class="material-symbols-outlined text-[14px]">mail</span>
+                    <span class="truncate">{{ c.emailPersonal }}</span>
+                  </div>
+
+                  @if (c.status === 'PENDING' && canAcceptReject()) {
+                    <div class="flex items-center gap-2 mt-3 pt-3 border-t border-outline-variant" (click)="$event.stopPropagation()">
+                      <daf-button
+                        class="flex-1"
+                        label="Accepter"
+                        variant="ghost"
+                        [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === c.id }"
+                        (onClick)="quickAccept(c, $event)" />
+                      <daf-button
+                        class="flex-1"
+                        label="Rejeter"
+                        variant="danger"
+                        [options]="{ iconStart: 'cancel', size: 'sm' }"
+                        (onClick)="openRejectModal(c, $event)" />
+                    </div>
+                  }
+                </div>
+              </daf-card>
+            } @empty {
+              <div class="flex flex-col items-center gap-2 py-16 text-center text-outline">
+                <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
+                <p class="text-[13px]">Aucun candidat.</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
 
     </div>
   </div>

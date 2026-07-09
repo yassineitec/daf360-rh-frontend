@@ -1,19 +1,20 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { OnboardingService }    from './onboarding.service';
 import { OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import {
   BadgeCell,
+  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
+  FormFieldComponent,
   StatusBadgeComponent,
   TableColumn,
   TableConfig,
   TableRow,
-  ToolbarComponent,
-  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
@@ -21,7 +22,7 @@ import { KpiCardComponent } from '../../shared/kpi-card.component';
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, ToolbarComponent],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, ButtonComponent, FormFieldComponent, NgTemplateOutlet],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
@@ -37,11 +38,6 @@ export class OnboardingListComponent implements OnInit {
 
   search   = signal('');
   viewMode = signal<'grid' | 'list'>('list');
-
-  readonly viewToggleOptions: ToolbarToggleOption[] = [
-    { id: 'grid', icon: 'grid_view', tooltip: 'Vue grille' },
-    { id: 'list', icon: 'view_list', tooltip: 'Vue liste' },
-  ];
 
   protected readonly statusBadge = statusBadge;
 
@@ -78,7 +74,7 @@ export class OnboardingListComponent implements OnInit {
     { key: 'expectedStartDate', label: 'Début prévu' },
     { key: 'status', label: 'Statut' },
     { key: 'maj', label: 'MàJ' },
-    { key: '_actions', label: 'Actions', align: 'center' },
+    { key: '_actions', label: 'Actions' },
   ];
 
   readonly tableConfig = computed<TableConfig>(() => ({
@@ -107,10 +103,6 @@ export class OnboardingListComponent implements OnInit {
 
   onSearch(value: string): void {
     this.search.set(value);
-  }
-
-  onViewToggle(id: string): void {
-    if (id === 'grid' || id === 'list') this.viewMode.set(id);
   }
 
   formatDate(value: string | null): string {
