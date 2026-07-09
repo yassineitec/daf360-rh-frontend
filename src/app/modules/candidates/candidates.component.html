@@ -197,23 +197,23 @@
           </div>
         } @else {
 
-          <div class="flex gap-4 items-start">
+          <div class="flex gap-3 items-start overflow-x-hidden">
             @for (col of kanbanColumns(); track col.key) {
               <div class="flex-1 min-w-0 flex flex-col">
                 <!-- Column header -->
                 <div class="flex items-center justify-between px-1 mb-3">
-                  <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full {{ col.dot }}"></span>
-                    <span class="text-sm font-semibold text-on-surface">{{ col.label }}</span>
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-2 h-2 rounded-full shrink-0 {{ col.dot }}"></span>
+                    <span class="text-sm font-semibold text-on-surface truncate">{{ col.label }}</span>
                   </div>
-                  <span class="text-xs font-medium text-outline bg-surface-container rounded-full px-2 py-0.5">
+                  <span class="text-xs font-medium text-outline bg-surface-container rounded-full px-2 py-0.5 shrink-0">
                     {{ col.candidates.length }}
                   </span>
                 </div>
 
                 <!-- Cards (native HTML5 drop target) -->
                 <div
-                  class="flex flex-col gap-3 min-h-20 rounded-xl transition-all"
+                  class="flex flex-col gap-2 min-h-20 rounded-xl transition-all"
                   [class.ring-2]="dragOverKey() === col.key"
                   [class.ring-primary]="dragOverKey() === col.key"
                   [class.ring-offset-2]="dragOverKey() === col.key"
@@ -229,26 +229,26 @@
                       (dragstart)="onDragStart(c)"
                       (dragend)="onDragEnd()"
                       (click)="onView(c.id)">
-                      <div class="p-4">
-                        <div class="mb-3">
+                      <div class="p-3">
+                        <div class="mb-2">
                           <daf-badge
                             [label]="statusBadge(c.status).label"
                             [options]="statusBadge(c.status).options" />
                         </div>
 
-                        <div class="flex items-center gap-3 mb-3">
-                          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                        <div class="flex items-center gap-2 mb-2 min-w-0">
+                          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
                             {{ initials(c.firstName, c.lastName) }}
                           </div>
                           <div class="min-w-0">
-                            <h4 class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</h4>
+                            <h4 class="font-bold text-on-surface truncate text-sm">{{ c.firstName }} {{ c.lastName }}</h4>
                             <p class="text-xs text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
                           </div>
                         </div>
 
-                        <div class="flex items-center gap-1.5 pt-3 border-t border-outline-variant text-outline text-[11px]">
-                          <span class="material-symbols-outlined text-[14px]">mail</span>
-                          <span class="truncate">{{ c.emailPersonal }}</span>
+                        <div class="flex items-center gap-1.5 pt-2 border-t border-outline-variant text-outline text-[11px] min-w-0">
+                          <span class="material-symbols-outlined text-[14px] shrink-0">mail</span>
+                          <span class="truncate min-w-0 flex-1">{{ c.emailPersonal }}</span>
                         </div>
                       </div>
                     </daf-card>
@@ -328,9 +328,9 @@
                     }
                   </div>
 
-                  <div class="flex items-center gap-1.5 pt-3 border-t border-outline-variant text-outline text-[11px]">
-                    <span class="material-symbols-outlined text-[14px]">mail</span>
-                    <span class="truncate">{{ c.emailPersonal }}</span>
+                  <div class="flex items-center gap-1.5 pt-3 border-t border-outline-variant text-outline text-[11px] min-w-0">
+                    <span class="material-symbols-outlined text-[14px] shrink-0">mail</span>
+                    <span class="truncate min-w-0 flex-1">{{ c.emailPersonal }}</span>
                   </div>
 
                   @if (c.status === 'PENDING' && canAcceptReject()) {

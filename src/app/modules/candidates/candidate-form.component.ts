@@ -81,6 +81,37 @@ export class CandidateFormComponent implements OnInit {
     this.employmentTypes().map(t => ({ value: String(t.id), label: t.labelFr || t.labelEn })),
   );
 
+  // ── Wizard state ─────────────────────────────────────────────────────────
+  currentStep = signal(1);
+
+  private readonly STEP_INFO: { title: string; sub: string; icon: string }[] = [
+    { title: "Informations d'Identité", sub: 'Coordonnées et identité du candidat',              icon: 'person' },
+    { title: 'Poste & Contrat',          sub: 'Poste visé, type de contrat et affectation',        icon: 'work' },
+    { title: 'Curriculum Vitae',         sub: 'Téléversez le CV du candidat (optionnel)',          icon: 'description' },
+    { title: 'Notes & Commentaires',     sub: 'Observations complémentaires (optionnel)',          icon: 'edit_note' },
+  ];
+
+  readonly wizardSteps = this.STEP_INFO.map(s => ({ title: s.title }));
+  readonly cardTitle   = computed(() => this.STEP_INFO[this.currentStep() - 1].title);
+  readonly cardSub     = computed(() => this.STEP_INFO[this.currentStep() - 1].sub);
+  readonly cardIcon    = computed(() => this.STEP_INFO[this.currentStep() - 1].icon);
+
+  readonly canGoNext = computed(() => {
+    switch (this.currentStep()) {
+      case 1:  return this.identityGroup.valid;
+      case 2:  return this.positionGroup.valid;
+      default: return true;
+    }
+  });
+
+  readonly stepValidationError = computed<string | null>(() => {
+    switch (this.currentStep()) {
+      case 1:  return this.identityGroup.valid ? null : 'Veuillez renseigner le prénom, le nom et un email professionnel valide.';
+      case 2:  return this.positionGroup.valid ? null : 'Veuillez sélectionner un type de contrat et une date de début.';
+      default: return null;
+    }
+  });
+
   form: FormGroup = this.fb.group({
     identity: this.fb.group({
       firstName:     ['', Validators.required],
@@ -219,6 +250,25 @@ export class CandidateFormComponent implements OnInit {
 
   onCancel(): void {
     this.router.navigate(['/rh/candidates']);
+  }
+
+  goNext(): void {
+    this.error.set(null);
+    if (!this.canGoNext()) {
+      if (this.currentStep() === 1) this.identityGroup.markAllAsTouched();
+      if (this.currentStep() === 2) this.positionGroup.markAllAsTouched();
+      this.error.set(this.stepValidationError());
+      return;
+    }
+    if (this.currentStep() < this.STEP_INFO.length) {
+      this.currentStep.update(s => s + 1);
+    } else {
+      this.onSubmit();
+    }
+  }
+
+  goPrev(): void {
+    if (this.currentStep() > 1) this.currentStep.update(s => s - 1);
   }
 
   // ── Submit ───────────────────────────────────────────────────────────────

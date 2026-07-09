@@ -1,192 +1,251 @@
-@if (error()) {
-  <div class="mx-8 mt-6 flex items-start gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3">
-    <span class="material-symbols-outlined text-[18px] text-error mt-0.5"
-          style="font-variation-settings: 'FILL' 1">error</span>
-    <span class="text-sm text-error">{{ error() }}</span>
-  </div>
-}
-
-<div class="px-8 py-8">
+<div class="px-4 py-4 sm:px-8 sm:py-8 pb-28 sm:pb-8">
 
   <!-- ── Page Header ─────────────────────────────────────────────────────── -->
-  <div class="flex items-end justify-between mb-8">
-    <div>
-      <nav class="flex items-center gap-2 text-[13px] text-on-surface-variant mb-2">
-        <button type="button"
-                class="hover:text-teal transition-colors font-medium"
-                (click)="navigateToList()">
-          Recrutement
-        </button>
-        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-        <span class="font-medium" style="color:#50717b">Nouveau Candidat</span>
-      </nav>
-      <h1 class="text-[28px] font-bold text-on-surface leading-tight">Créer un profil candidat</h1>
-    </div>
-
-    <div class="flex gap-3 shrink-0">
-      <daf-button
-        label="Annuler"
-        [options]="{ variant: 'ghost', size: 'md' }"
-        (onClick)="onCancel()" />
-      <daf-button
-        [label]="saving() ? (cvFiles().length ? 'Envoi du CV…' : 'Enregistrement…')
-                          : (cvFiles().length ? 'Enregistrer + CV' : 'Enregistrer le profil')"
-        [options]="{ variant: 'teal', iconStart: 'save', size: 'md', loading: saving() }"
-        (onClick)="onSubmit()" />
-    </div>
+  <div class="mb-6 sm:mb-8">
+    <nav class="flex items-center gap-2 text-[13px] text-on-surface-variant mb-2">
+      <button type="button"
+              class="hover:text-teal transition-colors font-medium"
+              (click)="navigateToList()">
+        Recrutement
+      </button>
+      <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+      <span class="font-medium" style="color:#50717b">Nouveau Candidat</span>
+    </nav>
+    <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight">Créer un profil candidat</h1>
   </div>
 
-  <!-- ── Form Grid ──────────────────────────────────────────────────────── -->
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate
-        class="grid grid-cols-12 gap-6">
+  <!-- ── Wizard layout ──────────────────────────────────────────────────── -->
+  <form [formGroup]="form" (ngSubmit)="goNext()" novalidate
+        class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
 
-    <!-- ── Left column (7) ──────────────────────────────────────────────── -->
-    <div class="col-span-12 lg:col-span-7 space-y-6">
+    <!-- ══════════════════ Form area ══════════════════ -->
+    <div class="flex-1 min-w-0 bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
 
-      <!-- Identity -->
-      <section class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
-        <div class="flex items-center gap-2 mb-6" style="color:#50717b">
-          <span class="material-symbols-outlined">person</span>
-          <h3 class="text-[16px] font-semibold">Informations d'Identité</h3>
+      <!-- Card head: icon + step title + sub -->
+      <div class="flex items-center gap-3.5 px-5 sm:px-8 py-5 border-b border-outline-variant" style="background:rgba(121,215,190,0.06)">
+        <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(0,193,173,0.12); color:#00c1ad">
+          <span class="material-symbols-outlined">{{ cardIcon() }}</span>
         </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <daf-form-field
-            [options]="{ label: 'Prénom', required: true, placeholder: 'ex: Jean',
-                         error: getFieldError('identity.firstName') }"
-            [value]="getTextValue('identity.firstName')"
-            (valueChange)="setTextValue('identity.firstName', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Nom', required: true, placeholder: 'ex: Dupont',
-                         error: getFieldError('identity.lastName') }"
-            [value]="getTextValue('identity.lastName')"
-            (valueChange)="setTextValue('identity.lastName', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Email Professionnel', type: 'email', required: true,
-                         placeholder: 'jean.dupont@email.com', prefixIcon: 'mail',
-                         error: getFieldError('identity.emailPersonal') }"
-            [value]="getTextValue('identity.emailPersonal')"
-            (valueChange)="setTextValue('identity.emailPersonal', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Téléphone', placeholder: '+216 XX XXX XXX', prefixIcon: 'phone' }"
-            [value]="getTextValue('identity.phone')"
-            (valueChange)="setTextValue('identity.phone', $event)" />
-
-          <daf-multi-date-picker
-            [value]="getDateValue('identity.dateOfBirth')"
-            [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
-            (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
-            [value]="getTextValue('identity.nationalId')"
-            (valueChange)="setTextValue('identity.nationalId', $event)" />
+        <div class="min-w-0">
+          <h2 class="text-[17px] font-bold text-on-surface leading-tight truncate">{{ cardTitle() }}</h2>
+          <p class="text-[13px] text-on-surface-variant leading-snug">{{ cardSub() }}</p>
         </div>
-      </section>
+      </div>
 
-      <!-- CV Upload -->
-      <section class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
-        <div class="flex items-center gap-2 mb-6" style="color:#50717b">
-          <span class="material-symbols-outlined">description</span>
-          <h3 class="text-[16px] font-semibold">Curriculum Vitae</h3>
-        </div>
+      <!-- Step body -->
+      <div class="p-5 sm:p-8">
 
-        <!-- Scope --color-primary to tertiary so the dropzone accents (icon, "parcourir"
-             link, hover/drag border) render green instead of the dark primary. -->
-        <daf-file-upload
-          style="--color-primary: var(--color-tertiary);"
-          [(files)]="cvFiles"
-          [config]="{ accept: '.pdf,.doc,.docx', maxSizeMb: 5,
-                      hint: 'PDF, DOC ou DOCX — max 5 Mo' }" />
-      </section>
+        <!-- Step 1 — Identité -->
+        @if (currentStep() === 1) {
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <daf-form-field
+              [options]="{ label: 'Prénom', required: true, placeholder: 'ex: Jean',
+                           error: getFieldError('identity.firstName') }"
+              [value]="getTextValue('identity.firstName')"
+              (valueChange)="setTextValue('identity.firstName', $event)" />
 
-      <!-- Notes -->
-      <section class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
-        <div class="flex items-center gap-2 mb-5" style="color:#50717b">
-          <span class="material-symbols-outlined">edit_note</span>
-          <h3 class="text-[16px] font-semibold">Notes &amp; Commentaires</h3>
-        </div>
+            <daf-form-field
+              [options]="{ label: 'Nom', required: true, placeholder: 'ex: Dupont',
+                           error: getFieldError('identity.lastName') }"
+              [value]="getTextValue('identity.lastName')"
+              (valueChange)="setTextValue('identity.lastName', $event)" />
 
-        <daf-form-field
-          [options]="{ type: 'textarea', rows: 4,
-                       placeholder: 'Ajouter des observations sur le candidat, ses points forts ou ses attentes particulières…' }"
-          [value]="getTextValue('notes')"
-          (valueChange)="setTextValue('notes', $event)" />
-      </section>
-    </div>
+            <daf-form-field
+              [options]="{ label: 'Email Professionnel', type: 'email', required: true,
+                           placeholder: 'jean.dupont@email.com', prefixIcon: 'mail',
+                           error: getFieldError('identity.emailPersonal') }"
+              [value]="getTextValue('identity.emailPersonal')"
+              (valueChange)="setTextValue('identity.emailPersonal', $event)" />
 
-    <!-- ── Right column (5) ─────────────────────────────────────────────── -->
-    <div class="col-span-12 lg:col-span-5 space-y-6">
+            <daf-form-field
+              [options]="{ label: 'Téléphone', placeholder: '+216 XX XXX XXX', prefixIcon: 'phone' }"
+              [value]="getTextValue('identity.phone')"
+              (valueChange)="setTextValue('identity.phone', $event)" />
 
-      <!-- Position & Contract -->
-      <section class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
-        <div class="flex items-center gap-2 mb-6" style="color:#50717b">
-          <span class="material-symbols-outlined">work</span>
-          <h3 class="text-[16px] font-semibold">Poste &amp; Contrat</h3>
-        </div>
-
-        <div class="space-y-5">
-          <daf-form-field
-            [options]="{ label: 'Poste Requis', required: true,
-                         placeholder: 'ex: Développeur Fullstack Senior', prefixIcon: 'work_outline',
-                         error: getFieldError('position.appliedPosition') }"
-            [value]="getTextValue('position.appliedPosition')"
-            (valueChange)="setTextValue('position.appliedPosition', $event)" />
-
-          <daf-chip-group
-            [options]="employmentTypeChipOptions()"
-            [selected]="getSelectNum('position.employmentTypeId')"
-            [config]="{ label: 'Type de Contrat', required: true,
-                        error: getFieldError('position.employmentTypeId') }"
-            (selectedChange)="setSelectNum('position.employmentTypeId', $event)" />
-
-          <div class="grid grid-cols-2 gap-4">
             <daf-multi-date-picker
-              [value]="getDateValue('position.expectedStartDate')"
-              [config]="{ label: 'Date de Début', placeholder: 'Sélectionner', required: true,
-                          selectionMode: 'single', error: getFieldError('position.expectedStartDate') }"
-              (valueChange)="setDateValue('position.expectedStartDate', $event)" />
+              [value]="getDateValue('identity.dateOfBirth')"
+              [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
+              (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
+
+            <daf-form-field
+              [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
+              [value]="getTextValue('identity.nationalId')"
+              (valueChange)="setTextValue('identity.nationalId', $event)" />
+          </div>
+        }
+
+        <!-- Step 2 — Poste & Contrat -->
+        @if (currentStep() === 2) {
+          <div class="space-y-5">
+            <daf-form-field
+              [options]="{ label: 'Poste Requis', required: true,
+                           placeholder: 'ex: Développeur Fullstack Senior', prefixIcon: 'work_outline',
+                           error: getFieldError('position.appliedPosition') }"
+              [value]="getTextValue('position.appliedPosition')"
+              (valueChange)="setTextValue('position.appliedPosition', $event)" />
+
+            <daf-chip-group
+              [options]="employmentTypeChipOptions()"
+              [selected]="getSelectNum('position.employmentTypeId')"
+              [config]="{ label: 'Type de Contrat', required: true,
+                          error: getFieldError('position.employmentTypeId') }"
+              (selectedChange)="setSelectNum('position.employmentTypeId', $event)" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <daf-multi-date-picker
+                [value]="getDateValue('position.expectedStartDate')"
+                [config]="{ label: 'Date de Début', placeholder: 'Sélectionner', required: true,
+                            selectionMode: 'single', error: getFieldError('position.expectedStartDate') }"
+                (valueChange)="setDateValue('position.expectedStartDate', $event)" />
+
+              <daf-select
+                [selected]="getSelectNum('position.departmentId')"
+                [options]="departmentOptions()"
+                [config]="{ label: 'Département', placeholder: '— Sélectionner —', fullWidth: true }"
+                (selectedChange)="setSelectNum('position.departmentId', $event)" />
+            </div>
+
+            <!-- Scope --color-primary to tertiary so the track fill + thumb render green. -->
+            <daf-slider
+              style="--color-primary: var(--color-tertiary);"
+              [value]="experienceYears()"
+              (valueChange)="experienceYears.set($event)"
+              [config]="{ title: 'Niveau d\'Expérience', unit: 'ans',
+                          min: 0, max: 15, minLabel: 'Junior', maxLabel: 'Expert (15+ ans)' }" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <daf-select
+                [selected]="getSelectNum('position.appliedGradeId')"
+                [options]="gradeOptions()"
+                [config]="{ label: 'Grade', placeholder: '— Sélectionner —', fullWidth: true }"
+                (selectedChange)="setSelectNum('position.appliedGradeId', $event)" />
+
+              <daf-select
+                [selected]="getSelectNum('position.appliedDisciplineId')"
+                [options]="disciplineOptions()"
+                [config]="{ label: 'Discipline', placeholder: '— Sélectionner —', fullWidth: true }"
+                (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)" />
+            </div>
 
             <daf-select
-              [selected]="getSelectNum('position.departmentId')"
-              [options]="departmentOptions()"
-              [config]="{ label: 'Département', placeholder: '— Sélectionner —', fullWidth: true }"
-              (selectedChange)="setSelectNum('position.departmentId', $event)" />
+              [selected]="getSelectNum('position.nationalityId')"
+              [options]="nationalityOptions()"
+              [config]="{ label: 'Nationalité', placeholder: '— Sélectionner —', fullWidth: true }"
+              (selectedChange)="setSelectNum('position.nationalityId', $event)" />
           </div>
+        }
 
-          <!-- Scope --color-primary to tertiary so the track fill + thumb render green. -->
-          <daf-slider
+        <!-- Step 3 — Curriculum Vitae -->
+        @if (currentStep() === 3) {
+          <!-- Scope --color-primary to tertiary so the dropzone accents (icon, "parcourir"
+               link, hover/drag border) render green instead of the dark primary. -->
+          <daf-file-upload
             style="--color-primary: var(--color-tertiary);"
-            [value]="experienceYears()"
-            (valueChange)="experienceYears.set($event)"
-            [config]="{ title: 'Niveau d\'Expérience', unit: 'ans',
-                        min: 0, max: 15, minLabel: 'Junior', maxLabel: 'Expert (15+ ans)' }" />
+            [(files)]="cvFiles"
+            [config]="{ accept: '.pdf,.doc,.docx', maxSizeMb: 5,
+                        hint: 'PDF, DOC ou DOCX — max 5 Mo' }" />
+        }
 
-          <daf-select
-            [selected]="getSelectNum('position.appliedGradeId')"
-            [options]="gradeOptions()"
-            [config]="{ label: 'Grade', placeholder: '— Sélectionner —', fullWidth: true }"
-            (selectedChange)="setSelectNum('position.appliedGradeId', $event)" />
+        <!-- Step 4 — Notes & Commentaires -->
+        @if (currentStep() === 4) {
+          <daf-form-field
+            [options]="{ type: 'textarea', rows: 6,
+                         placeholder: 'Ajouter des observations sur le candidat, ses points forts ou ses attentes particulières…' }"
+            [value]="getTextValue('notes')"
+            (valueChange)="setTextValue('notes', $event)" />
+        }
 
-          <daf-select
-            [selected]="getSelectNum('position.appliedDisciplineId')"
-            [options]="disciplineOptions()"
-            [config]="{ label: 'Discipline', placeholder: '— Sélectionner —', fullWidth: true }"
-            (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)" />
+      </div><!-- /step body -->
 
-          <daf-select
-            [selected]="getSelectNum('position.nationalityId')"
-            [options]="nationalityOptions()"
-            [config]="{ label: 'Nationalité', placeholder: '— Sélectionner —', fullWidth: true }"
-            (selectedChange)="setSelectNum('position.nationalityId', $event)" />
+      <!-- Validation hint -->
+      @if (!canGoNext()) {
+        <div class="mx-5 sm:mx-8 mb-5 flex items-start gap-2 rounded-xl px-3.5 py-2.5" style="background:rgba(26,107,124,0.06); border:1px solid rgba(26,107,124,0.18)">
+          <span class="material-symbols-outlined text-[15px] mt-0.5" style="color:#1a6b7c">info</span>
+          <span class="text-[12.5px] leading-snug" style="color:#1a6b7c">{{ stepValidationError() }}</span>
         </div>
-      </section>
+      }
 
-      <!-- Profile Quality -->
-      <section class="bg-surface-container p-6 rounded-xl border border-outline-variant/20">
+      <!-- Error banner -->
+      @if (error()) {
+        <div class="mx-5 sm:mx-8 mb-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3">
+          <span class="material-symbols-outlined text-[18px] text-error mt-0.5"
+                style="font-variation-settings: 'FILL' 1">error</span>
+          <span class="text-sm text-error">{{ error() }}</span>
+        </div>
+      }
+
+    </div><!-- /form area -->
+
+    <!-- ══════════════════ Sidebar (desktop) ══════════════════ -->
+    <aside class="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 gap-4 lg:sticky lg:top-6">
+
+      <!-- Nav buttons -->
+      <div class="flex items-center gap-2 bg-white rounded-xl border border-outline-variant shadow-sm p-2.5">
+        @if (currentStep() > 1) {
+          <daf-button class="flex-1"
+            label="Précédent"
+            [options]="{ variant: 'ghost', iconStart: 'arrow_back' }"
+            (onClick)="goPrev()" />
+        } @else {
+          <daf-button class="flex-1"
+            label="Annuler"
+            [options]="{ variant: 'ghost' }"
+            (onClick)="onCancel()" />
+        }
+        <daf-button class="flex-1"
+          [label]="currentStep() === 4
+                     ? (saving() ? (cvFiles().length ? 'Envoi du CV…' : 'Enregistrement…') : 'Enregistrer le profil')
+                     : 'Suivant'"
+          [options]="{ variant: 'teal', pill: true,
+                       iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
+                       iconStart: currentStep() === 4 ? 'save' : undefined,
+                       loading: saving(), disabled: !canGoNext() || saving() }"
+          (onClick)="goNext()" />
+      </div>
+
+      <!-- Progression -->
+      <div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-outline">Progression</p>
+        </div>
+        <div class="p-5">
+          <div class="relative flex flex-col">
+            @for (step of wizardSteps; track $index; let i = $index) {
+              <div class="flex items-center gap-3.5 py-2 relative z-10">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold transition-colors"
+                     [class.bg-tertiary]="currentStep() === i + 1 || currentStep() > i + 1"
+                     [class.text-white]="currentStep() === i + 1 || currentStep() > i + 1"
+                     [class.bg-surface-container]="currentStep() < i + 1"
+                     [class.text-outline]="currentStep() < i + 1"
+                     [class.border]="currentStep() < i + 1"
+                     [class.border-outline-variant]="currentStep() < i + 1">
+                  @if (currentStep() > i + 1) {
+                    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;font-size:16px">check</span>
+                  } @else {
+                    {{ i + 1 }}
+                  }
+                </div>
+                <span class="text-[13px] leading-tight"
+                      [class.font-bold]="currentStep() === i + 1"
+                      [class.text-teal]="currentStep() === i + 1"
+                      [class.text-outline]="currentStep() > i + 1"
+                      [class.text-on-surface-variant]="currentStep() < i + 1">
+                  {{ step.title }}
+                </span>
+              </div>
+              @if (!$last) {
+                <div class="w-0.5 ml-[17px] my-0.5"
+                     [class.bg-tertiary]="currentStep() > i + 1"
+                     [class.bg-outline-variant]="currentStep() <= i + 1"
+                     style="height:14px"></div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Qualité du profil -->
+      <section class="bg-surface-container p-5 rounded-xl border border-outline-variant/20">
         <div class="flex items-start gap-4">
           <div class="p-3 rounded-xl shrink-0" style="background:rgba(121,215,190,0.2)">
             <span class="material-symbols-outlined text-[32px]"
@@ -238,6 +297,31 @@
         </div>
       </section>
 
-    </div>
+    </aside><!-- /sidebar -->
+
   </form>
+</div>
+
+<!-- Mobile: compact progress strip + sticky bottom Précédent/Suivant bar -->
+<div class="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center gap-1.5 px-4 py-2 bg-white border-b border-outline-variant">
+  @for (step of wizardSteps; track $index; let i = $index) {
+    <div class="flex-1 h-1.5 rounded-full transition-colors"
+         [class.bg-tertiary]="currentStep() >= i + 1"
+         [class.bg-outline-variant]="currentStep() < i + 1"></div>
+  }
+</div>
+
+<div class="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-2 p-3 bg-white border-t border-outline-variant"
+     style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))">
+  @if (currentStep() > 1) {
+    <daf-button class="flex-1" label="Précédent" [options]="{ variant: 'ghost', size: 'sm' }" (onClick)="goPrev()" />
+  } @else {
+    <daf-button class="flex-1" label="Annuler" [options]="{ variant: 'ghost', size: 'sm' }" (onClick)="onCancel()" />
+  }
+  <daf-button class="flex-1"
+    [label]="currentStep() === 4
+               ? (saving() ? 'Enregistrement…' : 'Enregistrer')
+               : 'Suivant'"
+    [options]="{ variant: 'teal', size: 'md', loading: saving(), disabled: !canGoNext() || saving() }"
+    (onClick)="goNext()" />
 </div>
