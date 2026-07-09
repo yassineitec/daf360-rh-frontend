@@ -19,22 +19,10 @@
 
   <!-- KPI Cards -->
   <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-    <daf-metric-card
-      [value]="stats().pending"
-      label="Dossiers en attente"
-      [options]="{ icon: 'assignment_late', iconBg: 'bg-secondary/10', iconColor: 'text-secondary' }" />
-    <daf-metric-card
-      [value]="stats().overdue"
-      label="En retard"
-      [options]="{ icon: 'error', iconBg: 'bg-danger/10', iconColor: 'text-danger' }" />
-    <daf-metric-card
-      [value]="stats().hwIncomplete"
-      label="Matériel incomplet"
-      [options]="{ icon: 'package_2', iconBg: 'bg-primary/10', iconColor: 'text-primary' }" />
-    <daf-metric-card
-      [value]="stats().licIncomplete"
-      label="Licences incomplètes"
-      [options]="{ icon: 'subscriptions', iconBg: 'bg-tertiary/10', iconColor: 'text-tertiary' }" />
+    <rh-kpi-card label="Dossiers en attente" icon="assignment_late" [value]="stats().pending" variant="blue" />
+    <rh-kpi-card label="En retard" icon="error" [value]="stats().overdue" variant="red" />
+    <rh-kpi-card label="Matériel incomplet" icon="package_2" [value]="stats().hwIncomplete" variant="amber" />
+    <rh-kpi-card label="Licences incomplètes" icon="subscriptions" [value]="stats().licIncomplete" variant="amber" />
   </div>
 
   <!-- Filters -->
@@ -44,8 +32,12 @@
         [searchValue]="search()"
         searchPlaceholder="Rechercher un candidat..."
         [actions]="[{ id: 'refresh', icon: 'cached', tooltip: 'Rafraîchir', position: 'right', callback: load.bind(this) }]"
+        [toggleOptions]="viewToggleOptions"
+        [activeToggle]="viewMode()"
+        togglePosition="right"
         (searchChange)="onSearch($event)"
-        (actionClick)="$event === 'refresh' && load()" />
+        (actionClick)="$event === 'refresh' && load()"
+        (toggleChange)="onViewToggle($event)" />
     </div>
     <daf-select
       [selected]="statusFilter() ? [statusFilter()] : []"
@@ -54,7 +46,92 @@
       (selectedChange)="onStatusChange($event)" />
   </div>
 
-  <!-- Data table -->
+  <!-- Grid view -->
+  @if (viewMode() === 'grid') {
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      @for (row of rows(); track row['_source'].id) {
+        <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', hoverable: true }">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-[12px] font-semibold text-on-surface-variant shrink-0">
+                {{ row['candidat'].initials }}
+              </div>
+              <div class="min-w-0">
+                <p class="font-semibold text-on-surface truncate">{{ row['candidat'].name }}</p>
+                <p class="text-[12px] text-outline truncate">{{ row['candidat'].subtitle || 'Poste non spécifié' }}</p>
+              </div>
+            </div>
+            <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
+            <div class="min-w-0">
+              <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Email MS365</p>
+              @if (row['ms365Email']) {
+                <p class="text-on-surface truncate">{{ row['ms365Email'] }}</p>
+              } @else {
+                <p class="text-outline italic">En attente</p>
+              }
+            </div>
+            <div>
+              <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Début</p>
+              <p class="text-on-surface">{{ row['expectedStartDate'] ?? '—' }}</p>
+              @if (row['overdue']) {
+                <p class="text-danger font-bold flex items-center gap-1 mt-0.5">
+                  <span class="material-symbols-outlined text-[13px]">error</span>
+                  Retard {{ overdueDays(row) }}j
+                </p>
+              }
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-outline uppercase font-bold">Matériel</span>
+                <span class="font-bold" [class.text-success]="row['hwDone']">{{ row['hwLabel'] }}</span>
+              </div>
+              <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-primary" [style.width.%]="(row['hwCount'] / 6) * 100"></div>
+              </div>
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-outline uppercase font-bold">Licences</span>
+                <span class="font-bold" [class.text-success]="row['licDone']">{{ row['licLabel'] }}</span>
+              </div>
+              <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-tertiary" [style.width.%]="(row['licCount'] / 5) * 100"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-outline-variant">
+            <span class="inline-flex items-center gap-1.5 text-[11px] uppercase font-bold"
+                  [class.text-success]="row['adDone']" [class.text-outline]="!row['adDone']">
+              <span class="material-symbols-outlined text-[16px]">{{ row['adDone'] ? 'sync' : 'sync_problem' }}</span>
+              {{ row['adDone'] ? 'AD Sync' : 'AD Échec' }}
+            </span>
+            <button
+              class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold hover:opacity-90 active:scale-95 transition-all"
+              style="background-color: #50717B"
+              type="button"
+              (click)="navigate(row['_source'].id)">
+              Compléter →
+            </button>
+          </div>
+        </daf-card>
+      } @empty {
+        <div class="col-span-full flex flex-col items-center gap-2 py-16 text-center text-outline">
+          <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
+          <p class="text-[13px]">Aucun dossier en attente de provisioning.</p>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- List view -->
+  @if (viewMode() === 'list') {
   <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
 
     <ng-template dafCell="ms365Email" let-row>
@@ -116,5 +193,6 @@
     </ng-template>
 
   </daf-data-table>
+  }
 
 </div>

@@ -9,9 +9,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   BulkActionBarComponent, BulkAction,
   PaginationComponent, PaginationConfig,
-  ToolbarComponent, ToolbarAction, ToolbarToggleOption,
+  ToolbarAction, ToolbarToggleOption,
   CheckboxComponent,
   ButtonComponent,
+  FormFieldComponent,
 } from '@khalilrebhiitec/daf360';
 
 import { ProfileListService, FilterOptions } from './services/profile-list.service';
@@ -29,9 +30,9 @@ const PAGE_SIZE = 15;
     ProfileListCardComponent,
     BulkActionBarComponent,
     PaginationComponent,
-    ToolbarComponent,
     CheckboxComponent,
     ButtonComponent,
+    FormFieldComponent,
   ],
   templateUrl: './profile-list.component.html',
 })

@@ -3,6 +3,10 @@ import {
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import {
+  AvatarCell, BadgeCell, BadgeOptions, DafCellDirective, DataTableComponent,
+  TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import {
   RegimeOverviewStats, EmployeeRegimeOverview, WorkingTimeRegime,
@@ -15,7 +19,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
 @Component({
   selector: 'app-regime-overview',
   standalone: true,
-  imports: [NgClass, FormsModule, PermissionDirective],
+  imports: [NgClass, FormsModule, PermissionDirective, DataTableComponent, DafCellDirective],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
 })
@@ -49,8 +53,6 @@ export class RegimeOverviewComponent implements OnChanges {
   isSaving          = signal(false);
   panelError        = signal<string | null>(null);
 
-  skeletonRows = [1,2,3,4,5];
-
   sourceFilters: { value: SourceFilter; label: string }[] = [
     { value: 'ALL',              label: 'Tous'            },
     { value: 'EMPLOYEE_OVERRIDE', label: 'Override'       },
@@ -70,6 +72,31 @@ export class RegimeOverviewComponent implements OnChanges {
     }
     return list;
   });
+
+  readonly columns: TableColumn[] = [
+    { key: 'employe', label: 'Employé', type: 'avatar' },
+    { key: 'role', label: 'Rôle' },
+    { key: 'regime', label: 'Régime appliqué' },
+    { key: 'source', label: 'Source', type: 'badge' },
+    { key: '_actions', label: 'Action', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.filteredEmployees().map(e => ({
+      employe: { name: e.fullName, initials: this.getInitials(e.fullName) } as AvatarCell,
+      role: e.roleName ?? '—',
+      regime: e.resolvedRegimeLabelFr,
+      source: { label: this.getSourceLabel(e.assignmentLevel), options: this.sourceBadgeOptions(e.assignmentLevel) } as BadgeCell,
+      _source: e,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.isLoadingTable(),
+    skeletonRows: 5,
+    emptyMessage: 'Aucun employé trouvé',
+  }));
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['paysId']) { this.loadAll(); }
@@ -155,5 +182,14 @@ export class RegimeOverviewComponent implements OnChanges {
     if (!name) return '?';
     const parts = name.trim().split(/\s+/);
     return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
+  }
+
+  sourceBadgeOptions(level: string | null | undefined): BadgeOptions {
+    switch (level) {
+      case 'EMPLOYEE_OVERRIDE': return { variant: 'teal' };
+      case 'ROLE_ASSIGNMENT':   return { variant: 'secondary' };
+      case 'DEFAULT':           return { variant: 'neutral' };
+      default:                  return { variant: 'danger' };
+    }
   }
 }

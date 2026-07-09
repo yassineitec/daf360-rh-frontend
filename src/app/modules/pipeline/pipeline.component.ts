@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   CardComponent,
-  MetricCardComponent,
   ProgressBarComponent,
   ButtonComponent,
   StatusBadgeComponent,
@@ -18,14 +17,13 @@ import {
   PipelineObjective,
 } from './services/pipeline.service';
 import { getAvatarUrl } from '../../shared/utils/avatar.utils';
+import { KpiCardComponent, KpiCardVariant } from '../../shared/kpi-card.component';
 
 interface StageCard {
   label: string;
   count: number;
   icon: string;
-  iconBg: string;
-  iconColor: string;
-  accent: boolean;
+  variant: KpiCardVariant;
 }
 
 interface BulkAction {
@@ -35,11 +33,11 @@ interface BulkAction {
   variant?: 'default' | 'danger';
 }
 
-const STAGE_STYLES: Array<{ label: string; icon: string; iconBg: string; iconColor: string; accent: boolean }> = [
-  { label: 'Sourcing',   icon: 'search',       iconBg: 'bg-blue-100',   iconColor: 'text-blue-600',   accent: false },
-  { label: 'Entretien',  icon: 'forum',         iconBg: 'bg-teal-100',   iconColor: 'text-teal-600',   accent: true  },
-  { label: 'Offre',      icon: 'description',   iconBg: 'bg-orange-100', iconColor: 'text-orange-500', accent: false },
-  { label: 'Recruté',    icon: 'check_circle',  iconBg: 'bg-green-100',  iconColor: 'text-green-600',  accent: false },
+const STAGE_STYLES: Array<{ label: string; icon: string; variant: KpiCardVariant }> = [
+  { label: 'Sourcing',   icon: 'search',       variant: 'blue'  },
+  { label: 'Entretien',  icon: 'forum',        variant: 'green' },
+  { label: 'Offre',      icon: 'description',  variant: 'amber' },
+  { label: 'Recruté',    icon: 'check_circle', variant: 'green' },
 ];
 
 const ACTIVITY_META: Record<string, { icon: string; bg: string; color: string }> = {
@@ -67,7 +65,7 @@ const BADGE_VARIANT: Record<string, BadgeVariant> = {
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [CardComponent, MetricCardComponent, ProgressBarComponent, ButtonComponent, StatusBadgeComponent, BulkActionBarComponent],
+  imports: [CardComponent, KpiCardComponent, ProgressBarComponent, ButtonComponent, StatusBadgeComponent, BulkActionBarComponent],
   templateUrl: './pipeline.component.html',
 })
 export class PipelineComponent implements OnInit {

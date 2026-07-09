@@ -59,64 +59,24 @@
 </div>
 
 <!-- Table -->
-<div style="background:#fff;border-radius:16px;overflow:hidden;border:1px solid #eceef0;">
-  <table style="width:100%;border-collapse:collapse;text-align:left;">
-    <thead>
-      <tr style="background:#f2f4f6;border-bottom:1px solid #eceef0;">
-        <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Employé</th>
-        <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Rôle</th>
-        <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Régime appliqué</th>
-        <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Source</th>
-        <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;text-align:right;">Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      @if (isLoadingTable()) {
-        @for (i of skeletonRows; track i) {
-          <tr style="border-bottom:1px solid #f0f2f4;">
-            <td style="padding:14px 20px;"><div style="display:flex;align-items:center;gap:10px;"><div class="skeleton" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;"></div><div class="skeleton" style="height:13px;width:120px;"></div></div></td>
-            <td style="padding:14px 20px;"><div class="skeleton" style="height:13px;width:90px;"></div></td>
-            <td style="padding:14px 20px;"><div class="skeleton" style="height:13px;width:110px;"></div></td>
-            <td style="padding:14px 20px;"><div class="skeleton" style="height:20px;width:70px;border-radius:999px;"></div></td>
-            <td style="padding:14px 20px;"></td>
-          </tr>
-        }
-      }
-      @if (!isLoadingTable()) {
-        @for (emp of filteredEmployees(); track emp.employeeProfileId) {
-          <tr style="border-bottom:1px solid #f0f2f4;transition:background .1s;" onmouseover="this.style.background='#f7f9fb'" onmouseout="this.style.background='transparent'">
-            <td style="padding:13px 20px;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4648d4,#6366f1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">{{ getInitials(emp.fullName) }}</div>
-                <p style="font-size:13px;font-weight:600;color:#1d2b3e;margin:0;">{{ emp.fullName }}</p>
-              </div>
-            </td>
-            <td style="padding:13px 20px;font-size:13px;color:#44474c;">{{ emp.roleName ?? '—' }}</td>
-            <td style="padding:13px 20px;">
-              @if (emp.resolvedRegimeLabelFr) { <p style="font-size:13px;color:#1d2b3e;margin:0;">{{ emp.resolvedRegimeLabelFr }}</p> }
-              @else { <p style="font-size:13px;color:#ba1a1a;font-style:italic;margin:0;">Non configuré</p> }
-            </td>
-            <td style="padding:13px 20px;">
-              <span style="font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;"
-                [ngClass]="getSourceClass(emp.assignmentLevel)">
-                {{ getSourceLabel(emp.assignmentLevel) }}
-              </span>
-            </td>
-            <td style="padding:13px 20px;text-align:right;">
-              <button type="button" (click)="openEmployeePanel(emp)" *appHasPermission="'ADMIN_REGIMES'"
-                style="font-size:12px;color:#4648d4;font-weight:500;border:none;background:none;cursor:pointer;display:flex;align-items:center;gap:4px;margin-left:auto;">
-                <span class="material-symbols-outlined" style="font-size:14px;">edit</span>Modifier
-              </button>
-            </td>
-          </tr>
-        }
-        @if (filteredEmployees().length === 0) {
-          <tr><td colspan="5" style="padding:48px;text-align:center;color:#75777d;font-size:13px;">Aucun employé trouvé</td></tr>
-        }
-      }
-    </tbody>
-  </table>
-</div>
+<daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+
+  <ng-template dafCell="regime" let-row>
+    @if (row['regime']) {
+      <p style="font-size:13px;color:#1d2b3e;margin:0;">{{ row['regime'] }}</p>
+    } @else {
+      <p style="font-size:13px;color:#ba1a1a;font-style:italic;margin:0;">Non configuré</p>
+    }
+  </ng-template>
+
+  <ng-template dafCell="_actions" let-row>
+    <button type="button" (click)="openEmployeePanel(row['_source'])" *appHasPermission="'ADMIN_REGIMES'"
+      style="font-size:12px;color:#4648d4;font-weight:500;border:none;background:none;cursor:pointer;display:flex;align-items:center;gap:4px;margin-left:auto;">
+      <span class="material-symbols-outlined" style="font-size:14px;">edit</span>Modifier
+    </button>
+  </ng-template>
+
+</daf-data-table>
 
 <!-- Employee Panel Modal -->
 @if (showEmployeePanel()) {

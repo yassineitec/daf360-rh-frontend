@@ -27,7 +27,7 @@ const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'profiles', label: 'Profils', icon: 'account_circle', route: 'profiles', permission: null },
   {
     id: 'recrutement',
-    label: 'Pipeline RH',
+    label: 'Pipeline de Recrutement',
     icon: 'analytics',
     route: 'recrutement',
     permission: null,

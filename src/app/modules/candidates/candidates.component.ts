@@ -1,14 +1,19 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import {
+  BadgeCell,
   ButtonComponent,
   CardComponent,
-  MetricCardComponent,
+  DafCellDirective,
+  DataTableComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
   SelectOption,
   StatusBadgeComponent,
+  TableColumn,
+  TableConfig,
+  TableRow,
   ToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { CandidateService } from './candidate.service';
@@ -16,6 +21,7 @@ import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { KpiCardComponent } from '../../shared/kpi-card.component';
 import {
   CandidateListItem,
   CandidateStats,
@@ -52,7 +58,9 @@ interface KanbanColumn {
   imports: [
     ButtonComponent,
     CardComponent,
-    MetricCardComponent,
+    DafCellDirective,
+    DataTableComponent,
+    KpiCardComponent,
     SelectComponent,
     StatusBadgeComponent,
     ToolbarComponent,
@@ -128,6 +136,34 @@ export class CandidatesComponent implements OnInit {
   };
 
   protected readonly statusBadge = statusBadge;
+
+  // ── List view data table ─────────────────────────────────────────────────────
+  readonly columns: TableColumn[] = [
+    { key: 'candidat', label: 'Candidat', type: 'avatar' },
+    { key: 'poste', label: 'Poste' },
+    { key: 'status', label: 'Statut', type: 'badge' },
+    { key: 'expectedStartDate', label: 'Début prévu' },
+    { key: '_actions', label: 'Actions', align: 'right', clickable: true },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.candidates().map(c => ({
+      candidat: {
+        name: `${c.firstName} ${c.lastName}`,
+        initials: this.initials(c.firstName, c.lastName),
+        subtitle: c.emailPersonal,
+      },
+      poste: c.appliedPosition ?? '—',
+      status: { label: this.statusBadge(c.status).label, options: this.statusBadge(c.status).options } as BadgeCell,
+      expectedStartDate: this.formatDate(c.expectedStartDate),
+      _source: c,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.loading(),
+  }));
 
   ngOnInit(): void {
     this.loadStats();

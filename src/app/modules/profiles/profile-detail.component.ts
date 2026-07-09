@@ -28,6 +28,7 @@ import {
   type UploadedFile,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { GENDER_OPTIONS, genderLabel } from '../../shared/utils/gender.utils';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { UserStore } from '../../core/user.store';
@@ -189,11 +190,11 @@ export class ProfileDetailComponent implements OnInit {
 
   readonly genderOptions: SelectOption[] = [
     ProfileDetailComponent.BLANK_OPTION,
-    { value: 'Homme', label: 'Homme' },
-    { value: 'Femme', label: 'Femme' },
-    { value: 'Autre', label: 'Autre' },
-    { value: 'Non précisé', label: 'Non précisé' },
+    ...GENDER_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
   ];
+
+  // Read-mode display helper: code (MALE/FEMALE/…) -> French label.
+  readonly genderLabel = genderLabel;
 
   readonly maritalStatusOptions: SelectOption[] = [
     ProfileDetailComponent.BLANK_OPTION,

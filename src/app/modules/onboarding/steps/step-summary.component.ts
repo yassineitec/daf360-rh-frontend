@@ -1,4 +1,5 @@
 import { Component, input, output } from '@angular/core';
+import { genderLabel } from '../../../shared/utils/gender.utils';
 
 @Component({
   selector: 'app-step-summary',
@@ -11,6 +12,8 @@ export class StepSummaryComponent {
   data = input<any>({});
   formInfo = input<any>(null);
   editStep = output<number>();
+
+  readonly genderLabel = genderLabel;
 
   val(v: any): string {
     if (v === null || v === undefined || v === '') return '—';
