@@ -46,25 +46,6 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
     SlaCountdownPipe, NewRequestComponent,
   ],
   template: `
-    <!-- ── Header ────────────────────────────────────────────────── -->
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Mes demandes RH</h1>
-        <p class="page-sub">{{ total() }} demande{{ total() !== 1 ? 's' : '' }}</p>
-      </div>
-      <div class="header-actions">
-        @if (canViewInbox()) {
-          <a routerLink="inbox" class="btn-ghost">Boîte de réception</a>
-        }
-        <button class="btn-primary" (click)="goToSelfService()" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Nouvelle demande
-        </button>
-      </div>
-    </div>
-
       <!-- ── Header ─────────────────────────────────────────────────────── -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
@@ -166,7 +147,6 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
         </div>
       </daf-card>
 
-    </div>
 
     <!-- ── New request modal ─────────────────────────────── -->
     <app-new-request
