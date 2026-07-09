@@ -53,8 +53,8 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'onboarding',
     permission: null,
   },
-  { id: 'leave', label: 'Congés', icon: 'beach_access', route: 'leave', permission: null },
-  { id: 'lifecycle', label: 'Lifecycle', icon: 'timeline', route: 'lifecycle', permission: null },
+  // { id: 'leave', label: 'Congés', icon: 'beach_access', route: 'leave', permission: null },
+  // { id: 'lifecycle', label: 'Lifecycle', icon: 'timeline', route: 'lifecycle', permission: null },
   { id: 'requests', label: 'Demandes', icon: 'inbox', route: 'requests', permission: null },
   { id: 'admin', label: 'Admin', icon: 'admin_panel_settings', route: 'admin', permission: null },
 ];

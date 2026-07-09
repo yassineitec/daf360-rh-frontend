@@ -278,6 +278,7 @@ export class RequestListComponent implements OnInit {
 
   onSubmitted() { this.showNew.set(false); this.reload(); }
 
+  /** Computes a pseudo SLA deadline from submission + defaultSlaDays (we use 3 days as default). */
   slaDeadline(row: EmployeeRequest): string | null {
     if (!row.submissionDate) return null;
     const d = new Date(row.submissionDate);

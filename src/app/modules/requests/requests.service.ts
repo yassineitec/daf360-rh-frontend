@@ -15,7 +15,7 @@ export class RequestsService {
   // ── Catalog ───────────────────────────────────────────────────────────────
   listTypes(paysId: number): Observable<RequestType[]> {
     return this.http.get<RequestType[]>(`${this.base}/request-types`, {
-      params: { pays: paysId },
+      params: { paysId },
     });
   }
 

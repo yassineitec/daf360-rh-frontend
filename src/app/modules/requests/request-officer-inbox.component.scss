@@ -2,6 +2,8 @@
 .page-title     { font-family:var(--font-display,'DM Serif Display',serif);font-size:22px;font-weight:400;margin:0 }
 .page-sub       { font-size:12px;color:var(--color-text-muted,#6B7280);margin:3px 0 0 }
 .filters-bar    { display:flex;gap:10px;padding:16px 24px }
+.inbox-error    { display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 24px 12px;padding:10px 14px;border:1px solid #FCA5A5;background:#FEF2F2;color:#991B1B;border-radius:8px;font-size:13px }
+.inbox-error-close { background:none;border:none;color:#991B1B;font-size:18px;line-height:1;cursor:pointer;padding:0 4px }
 .filter-select  { padding:8px 12px;border:1px solid var(--color-border,#E0E7E9);border-radius:8px;background:var(--color-surface,#fff);font-size:13px;outline:none;min-width:160px;cursor:pointer }
 .card           { background:var(--color-surface,#fff);border:1px solid var(--color-border,#E0E7E9);border-radius:12px }
 .table-card     { margin:0 24px 24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08) }
