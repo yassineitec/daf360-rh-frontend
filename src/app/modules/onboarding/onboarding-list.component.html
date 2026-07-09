@@ -3,48 +3,36 @@
     <div class="p-8 space-y-6">
 
       <!-- Page header -->
-      <div class="flex justify-between items-center">
-        <div>
-          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-            Onboarding RH
-          </h1>
-          <p class="text-[14px] text-outline mt-1">Dossiers en attente de complétion</p>
-        </div>
-        <button
-          type="button"
-          class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-outline-variant
-                 text-[13px] font-semibold text-on-surface-variant hover:bg-surface-container
-                 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          [disabled]="loading()"
-          (click)="load()">
-          <span class="material-symbols-outlined text-[16px]">refresh</span>
-          Rafraîchir
-        </button>
+      <div>
+        <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+          Onboarding RH
+        </h1>
+        <p class="text-[14px] text-outline mt-1">Dossiers en attente de complétion</p>
       </div>
 
       <!-- KPI Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <daf-metric-card
-          [value]="kpiStats()?.pendingCount ?? items().length"
-          label="Employés en attente"
-          [options]="{ icon: 'pending_actions', iconBg: 'bg-primary/10', iconColor: 'text-primary' }"
-        />
-        <daf-metric-card
-          [value]="kpiStats()?.profilesCreatedToday ?? '—'"
-          label="Profils créés aujourd'hui"
-          [options]="{ icon: 'person_add', iconBg: 'bg-green-100', iconColor: 'text-green-600' }"
-        />
-        <daf-metric-card
-          [value]="kpiStats()?.incompleteProfiles ?? '—'"
-          label="Profils incomplets"
-          [options]="{ icon: 'error_outline', iconBg: 'bg-error/10', iconColor: 'text-error' }"
-        />
-        <daf-metric-card
-          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' min') : '—'"
-          label="Temps moyen création"
-          [options]="{ icon: 'timer', iconBg: 'bg-orange-100', iconColor: 'text-orange-500' }"
-        />
+        <rh-kpi-card label="Employés en attente" icon="pending_actions"
+          [value]="kpiStats()?.pendingCount ?? items().length" variant="blue" />
+        <rh-kpi-card label="Profils créés aujourd'hui" icon="person_add"
+          [value]="kpiStats()?.profilesCreatedToday ?? '—'" variant="green" />
+        <rh-kpi-card label="Profils incomplets" icon="error_outline"
+          [value]="kpiStats()?.incompleteProfiles ?? '—'" variant="red" />
+        <rh-kpi-card label="Temps moyen création" icon="timer"
+          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' min') : '—'" variant="amber" />
       </div>
+
+      <!-- Filters -->
+      <daf-toolbar
+        [searchValue]="search()"
+        searchPlaceholder="Rechercher un employé..."
+        [actions]="[{ id: 'refresh', icon: 'cached', tooltip: 'Rafraîchir', position: 'right', callback: load.bind(this) }]"
+        [toggleOptions]="viewToggleOptions"
+        [activeToggle]="viewMode()"
+        togglePosition="right"
+        (searchChange)="onSearch($event)"
+        (actionClick)="$event === 'refresh' && load()"
+        (toggleChange)="onViewToggle($event)" />
 
       <!-- Error alert -->
       @if (error()) {
@@ -64,7 +52,7 @@
         </daf-card>
 
       <!-- Empty state -->
-      } @else if (items().length === 0) {
+      } @else if (filteredItems().length === 0) {
         <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
           <div class="flex flex-col items-center py-16 gap-3 text-center">
             <span class="material-symbols-outlined text-[48px] text-outline-variant">
@@ -75,98 +63,113 @@
           </div>
         </daf-card>
 
+      <!-- Grid view -->
+      } @else if (viewMode() === 'grid') {
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          @for (row of rows(); track row['_source'].candidateId) {
+            <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', hoverable: true }">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-[12px] font-semibold text-on-surface-variant shrink-0">
+                    {{ row['employe'].initials }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-semibold text-on-surface truncate">{{ row['employe'].name }}</p>
+                    <p class="text-[12px] text-outline truncate">{{ row['employe'].subtitle || 'Poste non spécifié' }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5 flex-wrap mb-3">
+                <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
+                @if (row['hasDraft']) {
+                  <span class="inline-flex items-center rounded-full text-[11px] font-semibold px-2 py-0.5"
+                        style="background-color: rgba(255,221,184,0.30); color: #4c2e00; border: 1px solid rgba(76,46,0,0.35)">
+                    Brouillon
+                  </span>
+                }
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
+                <div class="min-w-0">
+                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Email MS365</p>
+                  <p class="text-on-surface truncate">{{ row['ms365Email'] || '—' }}</p>
+                </div>
+                <div>
+                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Entité</p>
+                  <p class="text-on-surface">{{ row['entite'] }}</p>
+                </div>
+                <div>
+                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Début prévu</p>
+                  <p class="text-on-surface">{{ row['expectedStartDate'] }}</p>
+                </div>
+                <div>
+                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">MàJ</p>
+                  <p class="text-on-surface">{{ row['maj'] }}</p>
+                </div>
+              </div>
+
+              <div class="flex justify-end pt-3 border-t border-outline-variant">
+                <button
+                  class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
+                         hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
+                  style="background-color: #50717B"
+                  type="button"
+                  (click)="navigate(row['_source'].candidateId)">
+                  Compléter →
+                </button>
+              </div>
+            </daf-card>
+          }
+        </div>
+
       <!-- Table -->
       } @else {
-        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-          <table class="w-full border-collapse text-[13px]">
-            <thead>
-              <tr>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Employé
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Email MS365
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Entité
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Début prévu
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Statut
-                </th>
-                <th class="text-left px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  MàJ
-                </th>
-                <th class="text-center px-4 py-3 bg-surface-container-low/60 text-[10px] font-extrabold
-                           tracking-widest uppercase text-outline border-b border-outline-variant/30">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of items(); track r.candidateId) {
-                <tr class="border-b border-outline-variant/20 hover:bg-surface-container-low/40
-                           transition-colors last:border-b-0">
-                  <td class="px-4 py-3.5">
-                    <p class="font-semibold text-on-surface">{{ r.candidateFullName }}</p>
-                    @if (r.appliedPosition) {
-                      <p class="text-[11px] text-outline mt-0.5">{{ r.appliedPosition }}</p>
-                    }
-                  </td>
-                  <td class="px-4 py-3.5 text-[12px] text-on-surface-variant">
-                    {{ r.ms365Email || '—' }}
-                  </td>
-                  <td class="px-4 py-3.5 text-[12px] text-outline">#{{ r.paysId }}</td>
-                  <td class="px-4 py-3.5 text-[12px] text-outline whitespace-nowrap">
-                    {{ formatDate(r.expectedStartDate) }}
-                  </td>
-                  <td class="px-4 py-3.5">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <daf-badge
-                        [label]="statusBadge(r.candidateStatus).label"
-                        [options]="statusBadge(r.candidateStatus).options"
-                      />
-                      @if (r.hasDraft) {
-                        <span class="inline-flex items-center bg-amber-50 text-amber-700
-                                     border border-amber-300 rounded-full text-[11px]
-                                     font-semibold px-2 py-0.5">
-                          Brouillon
-                        </span>
-                      }
-                    </div>
-                  </td>
-                  <td class="px-4 py-3.5 text-[12px] text-outline whitespace-nowrap">
-                    {{
-                      r.draftSavedAt
-                        ? formatDate(r.draftSavedAt)
-                        : r.ms365EmailCreatedAt
-                          ? formatDate(r.ms365EmailCreatedAt)
-                          : '—'
-                    }}
-                  </td>
-                  <td class="px-4 py-3.5 text-center">
-                    <button
-                      class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
-                             hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
-                      style="background-color: #50717B"
-                      type="button"
-                      (click)="navigate(r.candidateId)">
-                      Compléter →
-                    </button>
-                  </td>
-                </tr>
+        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+
+          <ng-template dafCell="ms365Email" let-row>
+            <span class="text-[12px] text-on-surface-variant">{{ row['ms365Email'] || '—' }}</span>
+          </ng-template>
+
+          <ng-template dafCell="entite" let-row>
+            <span class="text-[12px] text-outline">{{ row['entite'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="expectedStartDate" let-row>
+            <span class="text-[12px] text-outline whitespace-nowrap">{{ row['expectedStartDate'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="status" let-row>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <daf-badge
+                [label]="row['status'].label"
+                [options]="row['status'].options"
+              />
+              @if (row['hasDraft']) {
+                <span class="inline-flex items-center rounded-full text-[11px] font-semibold px-2 py-0.5"
+                      style="background-color: rgba(255,221,184,0.30); color: #4c2e00; border: 1px solid rgba(76,46,0,0.35)">
+                  Brouillon
+                </span>
               }
-            </tbody>
-          </table>
-        </daf-card>
+            </div>
+          </ng-template>
+
+          <ng-template dafCell="maj" let-row>
+            <span class="text-[12px] text-outline whitespace-nowrap">{{ row['maj'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="_actions" let-row>
+            <button
+              class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
+                     hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
+              style="background-color: #50717B"
+              type="button"
+              (click)="navigate(row['_source'].candidateId)">
+              Compléter →
+            </button>
+          </ng-template>
+
+        </daf-data-table>
       }
 
     </div>

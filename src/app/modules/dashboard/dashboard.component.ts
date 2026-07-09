@@ -13,7 +13,7 @@ import {
 } from './services/dashboard.service';
 import { UserStore } from '../../core/user.store';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { QuickActionCardComponent } from './components/quick-action-card/quick-action-card.component';
+import { QuickActionCardComponent, QuickActionColor } from './components/quick-action-card/quick-action-card.component';
 import { AlertCardComponent, MissingDocAlert, ProbationAlert } from './components/alert-card/alert-card.component';
 import { WorkforceStatsComponent } from './components/workforce-stats/workforce-stats.component';
 import { ProfileCompletionComponent } from './components/profile-completion/profile-completion.component';
@@ -26,6 +26,7 @@ interface QuickActionDef {
   label:    string;
   sublabel: string;
   route?:   string;
+  color:    QuickActionColor;
 }
 
 @Component({
@@ -74,10 +75,10 @@ export class DashboardComponent implements OnInit {
     const s = this.stats();
     const t = (key: string, p?: object) => this.translate.instant(key, p);
     return [
-      { icon: 'inbox',        label: t('DASHBOARD.QUICK_ACTIONS.REQUESTS_LABEL'),   sublabel: t('DASHBOARD.QUICK_ACTIONS.REQUESTS_SUBLABEL',   { count: s?.pendingRequests ?? 0 }), route: 'requests' },
-      { icon: 'person_add',   label: t('DASHBOARD.QUICK_ACTIONS.ONBOARDING_LABEL'), sublabel: t('DASHBOARD.QUICK_ACTIONS.ONBOARDING_SUBLABEL'),                                      route: 'onboarding' },
-      { icon: 'beach_access', label: t('DASHBOARD.QUICK_ACTIONS.LEAVE_LABEL'),      sublabel: t('DASHBOARD.QUICK_ACTIONS.LEAVE_SUBLABEL'),                                           route: 'leave' },
-      { icon: 'analytics',    label: t('DASHBOARD.QUICK_ACTIONS.RECRUITMENT_LABEL'),sublabel: t('DASHBOARD.QUICK_ACTIONS.RECRUITMENT_SUBLABEL'),                                     route: 'recrutement' },
+      { icon: 'inbox',        label: t('DASHBOARD.QUICK_ACTIONS.REQUESTS_LABEL'),   sublabel: t('DASHBOARD.QUICK_ACTIONS.REQUESTS_SUBLABEL',   { count: s?.pendingRequests ?? 0 }), route: 'requests',    color: 'secondary' },
+      { icon: 'person_add',   label: t('DASHBOARD.QUICK_ACTIONS.ONBOARDING_LABEL'), sublabel: t('DASHBOARD.QUICK_ACTIONS.ONBOARDING_SUBLABEL'),                                      route: 'onboarding',  color: 'amber' },
+      { icon: 'beach_access', label: t('DASHBOARD.QUICK_ACTIONS.LEAVE_LABEL'),      sublabel: t('DASHBOARD.QUICK_ACTIONS.LEAVE_SUBLABEL'),                                           route: 'leave',       color: 'tertiary' },
+      { icon: 'analytics',    label: t('DASHBOARD.QUICK_ACTIONS.RECRUITMENT_LABEL'),sublabel: t('DASHBOARD.QUICK_ACTIONS.RECRUITMENT_SUBLABEL'),                                     route: 'recrutement', color: 'teal' },
     ];
   });
 

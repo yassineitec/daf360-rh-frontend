@@ -1,192 +1,172 @@
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
+
+import {
+  BadgeCell,
+  ButtonComponent,
+  CardComponent,
+  ChipGroupComponent,
+  DafCellDirective,
+  DataTableComponent,
+  PaginationComponent,
+  StatusBadgeComponent,
+  TableColumn,
+  TableConfig,
+  TableRow,
+} from '@khalilrebhiitec/daf360';
 
 import { RequestsService }               from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
-import { SlaCountdownPipe }              from '../../shared/sla-countdown.pipe';
+import { SlaCountdownPipe, SlaLevel }    from '../../shared/sla-countdown.pipe';
 import { UserStore }                     from '../../core/user.store';
 import { NewRequestComponent }           from './new-request.component';
+import { statusBadge } from '../../shared/status-badge.utils';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
 const DONE_STATUSES:   RequestStatus[] = ['APPROVED', 'REJECTED', 'CANCELLED'];
 
-const STATUS_LABELS: Record<string, string> = {
-  SUBMITTED:  'Soumis',
-  IN_REVIEW:  'En traitement',
-  PENDING_L2: 'Attente L2',
-  APPROVED:   'Approuvée',
-  REJECTED:   'Refusée',
-  CANCELLED:  'Annulée',
-};
+type TabKey = 'active' | 'done';
 
-type TabKey = 'all' | 'active' | 'done';
+const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'neutral'> = {
+  ok:       'success',
+  warning:  'warning',
+  critical: 'danger',
+  none:     'neutral',
+};
 
 @Component({
   selector: 'app-request-list',
   standalone: true,
-  imports: [RouterLink, SlaCountdownPipe, NewRequestComponent],
+  imports: [
+    ButtonComponent, CardComponent, ChipGroupComponent, StatusBadgeComponent,
+    DataTableComponent, DafCellDirective, PaginationComponent,
+    SlaCountdownPipe, NewRequestComponent,
+  ],
   template: `
-    <div class="rl-page">
+    <!-- ── Header ────────────────────────────────────────────────── -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mes demandes RH</h1>
+        <p class="page-sub">{{ total() }} demande{{ total() !== 1 ? 's' : '' }}</p>
+      </div>
+      <div class="header-actions">
+        @if (canViewInbox()) {
+          <a routerLink="inbox" class="btn-ghost">Boîte de réception</a>
+        }
+        <button class="btn-primary" (click)="goToSelfService()" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nouvelle demande
+        </button>
+      </div>
+    </div>
 
-      <!-- ── Header ──────────────────────────────────────── -->
-      <div class="rl-header">
-        <h1 class="rl-title">
-          Mes demandes RH
-          <span class="rl-count-badge">{{ total() }}</span>
-        </h1>
-        <div class="rl-header-actions">
+      <!-- ── Header ─────────────────────────────────────────────────────── -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+            Mes demandes RH
+          </h1>
+          <daf-badge [label]="total().toString()" [options]="{ variant: 'teal', pill: true }" />
+        </div>
+        <div class="flex items-center gap-3">
           @if (canViewInbox()) {
-            <a routerLink="inbox" class="rl-btn-ghost">Boîte de réception</a>
+            <daf-button
+              [options]="{ variant: 'ghost', label: 'Boîte de réception', iconStart: 'inbox' }"
+              (onClick)="goToInbox()" />
           }
-          <button class="rl-btn-primary" (click)="showNew.set(true)" type="button">
-            <span class="material-symbols-outlined">add</span>
-            + Nouvelle demande
-          </button>
+          <daf-button
+            [options]="{ variant: 'teal', label: 'Nouvelle demande', iconStart: 'add' }"
+            (onClick)="goToSelfService()" />
         </div>
       </div>
 
-      <!-- ── Glass Banner ────────────────────────────────── -->
-      <div class="rl-banner">
-        <div class="rl-banner-left">
-          <p class="rl-banner-eyebrow">Statut de vos requêtes</p>
-          <h2 class="rl-banner-title">Suivi en temps réel de vos demandes administratives.</h2>
-        </div>
-        <div class="rl-banner-stats">
-          <div class="rl-stat">
-            <span class="rl-stat-label">Délai moyen</span>
-            <span class="rl-stat-value">48h</span>
-          </div>
-          <div class="rl-stat">
-            <span class="rl-stat-label">Satisfaction</span>
-            <span class="rl-stat-value">98%</span>
-          </div>
-        </div>
-      </div>
+      <!-- ── Intro card ─────────────────────────────────────────────────── -->
+      <daf-card class="block mb-6" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+        <p class="text-[11px] font-bold uppercase tracking-widest text-teal mb-1">Statut de vos requêtes</p>
+        <h2 class="text-[18px] font-bold text-on-surface">Suivi en temps réel de vos demandes administratives.</h2>
+      </daf-card>
 
-      <!-- ── Main Card ────────────────────────────────────── -->
-      <div class="rl-card">
+      <!-- ── Main card ──────────────────────────────────────────────────── -->
+      <daf-card class="block" [options]="{ variant: 'default', padding: 'none', radius: 'xl' }">
 
         <!-- Tabs -->
-        <div class="rl-tabs">
-          <button class="rl-tab" [class.rl-tab--active]="activeTab() === 'all'"
-                  (click)="setTab('all')" type="button">
-            Toutes ({{ total() }})
-          </button>
-          <button class="rl-tab" [class.rl-tab--active]="activeTab() === 'active'"
-                  (click)="setTab('active')" type="button">
-            En cours ({{ activeCount() }})
-          </button>
-          <button class="rl-tab" [class.rl-tab--active]="activeTab() === 'done'"
-                  (click)="setTab('done')" type="button">
-            Traitées ({{ doneCount() }})
-          </button>
+        <div class="p-4 sm:p-5 border-b border-outline-variant">
+          <daf-chip-group
+            [options]="tabOptions()"
+            [selected]="[activeTab()]"
+            (selectedChange)="onTabChange($event)" />
         </div>
 
-        <!-- Loading skeleton -->
-        @if (loading()) {
-          <div class="rl-loading">
-            @for (_ of [1,2,3]; track $index) {
-              <div class="rl-skeleton"></div>
-            }
-          </div>
-        }
+        <div class="p-4 sm:p-5">
 
-        <!-- Empty state -->
-        @else if (visibleRows().length === 0) {
-          <div class="rl-empty">
-            <span class="material-symbols-outlined rl-empty-icon">move_to_inbox</span>
-            <h3 class="rl-empty-title">
-              @if (activeTab() === 'done') { Aucune demande traitée }
-              @else if (activeTab() === 'active') { Aucune demande en cours }
-              @else { Aucune demande }
-            </h3>
-            <p class="rl-empty-sub">Vos demandes apparaîtront ici.</p>
-            @if (activeTab() === 'all') {
-              <button class="rl-btn-primary" (click)="showNew.set(true)" type="button">
-                Créer ma première demande
-              </button>
-            }
-          </div>
-        }
+          <!-- Empty state -->
+          @if (!loading() && visibleRows().length === 0) {
+            <div class="flex flex-col items-center py-16 gap-3 text-center">
+              <span class="material-symbols-outlined text-[48px] text-outline-variant">move_to_inbox</span>
+              <p class="text-[16px] font-semibold text-on-surface">
+                @if (activeTab() === 'done') { Aucune demande traitée } @else { Aucune demande en cours }
+              </p>
+              <p class="text-[13px] text-outline">Vos demandes apparaîtront ici.</p>
+            </div>
 
-        <!-- Table -->
-        @else {
-          <div class="rl-table-wrap">
-            <table class="rl-table">
-              <thead>
-                <tr>
-                  <th>Type de demande</th>
-                  <th>Soumise le</th>
-                  <th>Statut</th>
-                  <th>SLA</th>
-                  <th class="rl-th-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of visibleRows(); track row.id) {
-                  <tr class="rl-row">
-                    <td class="rl-td-type">
-                      <div class="rl-type-cell">
-                        <div class="rl-type-icon">
-                          <span class="material-symbols-outlined">description</span>
-                        </div>
-                        <span class="rl-type-name">
-                          {{ row.typeDisplayNameFr ?? 'Demande #' + row.requestTypeId }}
-                        </span>
-                      </div>
-                    </td>
-                    <td class="rl-td-muted">{{ fmtDate(row.submissionDate) }}</td>
-                    <td>
-                      <span class="rl-badge" [class]="'rl-badge--' + row.status.toLowerCase()">
-                        {{ statusLabel(row.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      @if (isActive(row.status)) {
-                        @let sla = slaDeadline(row) | slaCountdown;
-                        <div class="rl-sla">
-                          <span class="rl-sla-dot" [class]="'rl-sla-dot--' + sla.level"></span>
-                          <span class="rl-sla-label" [class]="'rl-sla-label--' + sla.level">
-                            {{ sla.label }}
-                          </span>
-                        </div>
-                      } @else {
-                        <span class="rl-td-muted">—</span>
-                      }
-                    </td>
-                    <td class="rl-td-actions">
-                      <a [routerLink]="[row.id]" class="rl-action-btn rl-action-view" title="Détail">
-                        <span class="material-symbols-outlined">visibility</span>
-                      </a>
-                      @if (row.status === 'SUBMITTED') {
-                        <button class="rl-action-btn rl-action-cancel"
-                                (click)="cancel(row)" type="button" title="Annuler">
-                          <span class="material-symbols-outlined">delete_outline</span>
-                        </button>
-                      }
-                    </td>
-                  </tr>
+          <!-- Table -->
+          } @else {
+            <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+
+              <ng-template dafCell="type" let-row>
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg bg-teal/10 text-teal flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[18px]">description</span>
+                  </div>
+                  <span class="font-semibold text-on-surface">{{ row['type'] }}</span>
+                </div>
+              </ng-template>
+
+              <ng-template dafCell="sla" let-row>
+                @if (row['isActive']) {
+                  @let sla = row['slaDeadline'] | slaCountdown;
+                  <daf-badge [label]="sla.label" [options]="{ variant: slaVariant(sla.level), size: 'sm', dot: true }" />
+                } @else {
+                  <span class="text-outline">—</span>
                 }
-              </tbody>
-            </table>
+              </ng-template>
+
+              <ng-template dafCell="_actions" let-row>
+                <div class="flex items-center justify-end gap-1">
+                  <daf-button
+                    [options]="{ variant: 'ghost', size: 'sm', iconStart: 'visibility' }"
+                    (onClick)="viewDetail(row['_source'].id)" />
+                  @if (row['_source'].status === 'SUBMITTED') {
+                    <daf-button
+                      [options]="{ variant: 'danger', size: 'sm', iconStart: 'delete_outline' }"
+                      (onClick)="cancel(row['_source'])" />
+                  }
+                </div>
+              </ng-template>
+
+            </daf-data-table>
 
             @if (totalPages() > 1) {
-              <div class="rl-pagination">
-                <span class="rl-pag-info">{{ page() + 1 }} / {{ totalPages() }}</span>
-                <div class="rl-pag-controls">
-                  <button (click)="goPage(page() - 1)" [disabled]="page() <= 0" type="button">‹</button>
-                  <button (click)="goPage(page() + 1)" [disabled]="page() >= totalPages() - 1" type="button">›</button>
-                </div>
+              <div class="mt-4 flex justify-center">
+                <daf-pagination
+                  [currentPage]="page()"
+                  [totalPages]="totalPages()"
+                  [totalElements]="total()"
+                  [config]="{ showPrevNext: true, size: 'sm' }"
+                  (pageChange)="goPage($event)" />
               </div>
             }
-          </div>
-        }
+          }
 
-      </div><!-- /rl-card -->
-    </div><!-- /rl-page -->
+        </div>
+      </daf-card>
+
+    </div>
 
     <!-- ── New request modal ─────────────────────────────── -->
     <app-new-request
@@ -197,11 +177,12 @@ type TabKey = 'all' | 'active' | 'done';
       (submitted)="onSubmitted()"
     />
   `,
-  styleUrl: './request-list.component.scss',
 })
 export class RequestListComponent implements OnInit {
   private svc       = inject(RequestsService);
   private userStore = inject(UserStore);
+  private router    = inject(Router);
+  private route     = inject(ActivatedRoute);
 
   loading    = signal(false);
   allRows    = signal<EmployeeRequest[]>([]);
@@ -209,7 +190,10 @@ export class RequestListComponent implements OnInit {
   totalPages = signal(1);
   page       = signal(0);
   showNew    = signal(false);
-  activeTab  = signal<TabKey>('all');
+  activeTab  = signal<TabKey>('active');
+
+  protected readonly statusBadge = statusBadge;
+  protected readonly slaVariant  = (level: SlaLevel) => SLA_BADGE_VARIANT[level];
 
   canViewInbox    = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
   currentPaysId   = computed(() => this.userStore.currentUser()?.paysId ?? 1);
@@ -220,13 +204,16 @@ export class RequestListComponent implements OnInit {
     return isNaN(fromEmployee) ? u.userId : fromEmployee;
   });
 
+  readonly tabOptions = computed(() => [
+    { value: 'active', label: `En cours (${this.activeCount()})` },
+    { value: 'done',   label: `Traitées (${this.doneCount()})` },
+  ]);
+
   visibleRows = computed(() => {
     const all = this.allRows();
-    switch (this.activeTab()) {
-      case 'active': return all.filter(r => ACTIVE_STATUSES.includes(r.status));
-      case 'done':   return all.filter(r => DONE_STATUSES.includes(r.status));
-      default:       return all;
-    }
+    return this.activeTab() === 'active'
+      ? all.filter(r => ACTIVE_STATUSES.includes(r.status))
+      : all.filter(r => DONE_STATUSES.includes(r.status));
   });
 
   activeCount = computed(() =>
@@ -236,10 +223,42 @@ export class RequestListComponent implements OnInit {
     this.allRows().filter(r => DONE_STATUSES.includes(r.status)).length
   );
 
-  setTab(tab: TabKey) { this.activeTab.set(tab); }
+  readonly columns: TableColumn[] = [
+    { key: 'type', label: 'Type de demande' },
+    { key: 'submissionDate', label: 'Soumise le' },
+    { key: 'status', label: 'Statut', type: 'badge' },
+    { key: 'sla', label: 'SLA' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
 
-  statusLabel(status: string): string {
-    return STATUS_LABELS[status] ?? status;
+  readonly rows = computed<TableRow[]>(() =>
+    this.visibleRows().map(r => ({
+      type:            r.typeDisplayNameFr ?? 'Demande #' + r.requestTypeId,
+      submissionDate:  this.fmtDate(r.submissionDate),
+      status:          { label: this.statusBadge(r.status).label, options: this.statusBadge(r.status).options } as BadgeCell,
+      isActive:        this.isActive(r.status),
+      slaDeadline:     this.slaDeadline(r),
+      _source:         r,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.loading(),
+    emptyMessage: 'Aucune demande.',
+  }));
+
+  goToInbox(): void {
+    this.router.navigate(['inbox'], { relativeTo: this.route });
+  }
+
+  viewDetail(id: number): void {
+    this.router.navigate([id], { relativeTo: this.route });
+  }
+
+  onTabChange(values: string[]): void {
+    const value = values[0];
+    if (value === 'active' || value === 'done') this.activeTab.set(value);
   }
 
   isActive(status: string): boolean {
@@ -277,6 +296,12 @@ export class RequestListComponent implements OnInit {
   }
 
   onSubmitted() { this.showNew.set(false); this.reload(); }
+
+  /** New requests are created on the shell's self-service page (a different app),
+   *  so navigate the top-level window rather than the remote's router. */
+  goToSelfService() {
+    window.location.href = '/home/self-service';
+  }
 
   /** Computes a pseudo SLA deadline from submission + defaultSlaDays (we use 3 days as default). */
   slaDeadline(row: EmployeeRequest): string | null {

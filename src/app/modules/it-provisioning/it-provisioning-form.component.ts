@@ -11,7 +11,10 @@ import {
   ItAssetDto, ProvisioningDetail, UpdateAssetRequest,
   UpdateProvisioningRequest,
 } from './it-provisioning.model';
-import { StatusBadgeComponent, ButtonComponent, CardComponent } from '@khalilrebhiitec/daf360';
+import {
+  StatusBadgeComponent, ButtonComponent, CardComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 import { ModalComponent }       from '../../shared/modal.component';
@@ -33,6 +36,7 @@ const STEP_CARD_INFO = [
   standalone: true,
   imports: [
     SlicePipe, FormsModule, StatusBadgeComponent, ButtonComponent, CardComponent,
+    DataTableComponent, DafCellDirective,
     SpinnerComponent, ModalComponent, ConfirmEmailModalComponent, PdfDownloadButtonComponent,
   ],
   templateUrl: './it-provisioning-form.component.html',
@@ -135,6 +139,28 @@ export class ItProvisioningFormComponent implements OnInit {
     { value: 'EN_REPARATION', label: 'En réparation' },
     { value: 'DEFECTUEUX',    label: 'Défectueux' },
   ];
+
+  // ── Hardware table (daf-data-table) ─────────────────────────────────────────
+  readonly assetColumns: TableColumn[] = [
+    { key: 'provided',         label: 'Fourni',           align: 'center', width: '60px' },
+    { key: 'assetTypeLabelFr', label: 'Matériel',         width: '160px' },
+    { key: 'serialNumber',     label: 'N° de série' },
+    { key: 'brandModel',       label: 'Marque / Modèle' },
+    { key: 'assetTag',         label: 'Asset Tag' },
+    { key: 'status',           label: 'Statut',           width: '160px' },
+  ];
+
+  readonly assetRows = computed<TableRow[]>(() =>
+    this.editableAssets().map(a => ({ ...a })),
+  );
+
+  readonly assetTableConfig: TableConfig = {
+    emptyMessage: "Aucun type d'actif configuré pour cette entité.",
+  };
+
+  assetIndex(id: number): number {
+    return this.editableAssets().findIndex(a => a.id === id);
+  }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   private provId = 0;

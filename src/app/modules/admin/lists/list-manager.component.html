@@ -79,78 +79,88 @@
       @if (loadingValues()) {
         <p class="lm-loading">Chargement…</p>
       } @else {
-        <table class="lm-table">
-          <thead>
-            <tr>
-              <th class="th-order">Ordre</th>
-              <th>Code</th>
-              <th>Libellé FR</th>
-              <th>Libellé EN</th>
-              <th>Actif</th>
-              <th>Système</th>
-              <th class="th-actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (value of values(); track value.id; let i = $index) {
-              <tr [class.lm-row-inactive]="!value.isActive" [class.lm-row-system]="value.isSystem">
+        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
 
-                @if (editingId() === value.id) {
-                  <!-- ng-container provides the formGroup context for all formControlName inputs -->
-                  <ng-container [formGroup]="editForm">
-                    <td><input class="lm-input-sm" type="number" formControlName="sortOrder" min="0" /></td>
-                    <td class="td-code">{{ value.valueCode }}</td>
-                    <td><input class="lm-input-sm" formControlName="labelFr" /></td>
-                    <td><input class="lm-input-sm" formControlName="labelEn" /></td>
-                    <td><input type="checkbox" formControlName="isActive" /></td>
-                    <td>{{ value.isSystem ? 'Oui' : 'Non' }}</td>
-                    <td class="td-actions">
-                      <button class="btn-icon btn-save" type="button" (click)="saveEdit(value)" [disabled]="editForm.invalid">✓</button>
-                      <button class="btn-icon btn-cancel" type="button" (click)="cancelEdit()">✕</button>
-                    </td>
-                  </ng-container>
-
-                } @else {
-                  <td class="td-order">
-                    <div class="order-btns">
-                      <button class="btn-icon-sm" type="button" (click)="moveUp(value, i)"   [disabled]="i === 0"                   title="Monter">↑</button>
-                      <button class="btn-icon-sm" type="button" (click)="moveDown(value, i)" [disabled]="i === values().length - 1" title="Descendre">↓</button>
-                    </div>
-                  </td>
-                  <td class="td-code">{{ value.valueCode }}</td>
-                  <td>{{ value.labelFr }}</td>
-                  <td class="td-en">{{ value.labelEn }}</td>
-                  <td>
-                    <span class="badge" [class.badge-active]="value.isActive" [class.badge-inactive]="!value.isActive">
-                      {{ value.isActive ? 'Actif' : 'Inactif' }}
-                    </span>
-                  </td>
-                  <td>
-                    @if (value.isSystem) { <span class="badge-system">Système</span> }
-                  </td>
-                  <td class="td-actions">
-                    <button class="btn-icon btn-edit" type="button" (click)="startEdit(value)" title="Modifier">✏</button>
-                    @if (value.isSystem) {
-                      <button class="btn-icon btn-del-dis" type="button" disabled title="Valeur système — non supprimable">🗑</button>
-                    } @else if (confirmDeleteId() === value.id) {
-                      <span class="confirm-del">
-                        Confirmer ?
-                        <button class="btn-icon btn-del" type="button" (click)="deleteValue(value.id, value.listTypeId)">Oui</button>
-                        <button class="btn-icon" type="button" (click)="cancelDelete()">Non</button>
-                      </span>
-                    } @else {
-                      <button class="btn-icon btn-del" type="button" (click)="confirmDelete(value.id)" title="Supprimer">🗑</button>
-                    }
-                  </td>
-                }
-
-              </tr>
+          <ng-template dafCell="order" let-row>
+            @if (editingId() === row['_source'].id) {
+              <ng-container [formGroup]="editForm">
+                <input class="lm-input-sm" type="number" formControlName="sortOrder" min="0" />
+              </ng-container>
+            } @else {
+              <div class="order-btns">
+                <button class="btn-icon-sm" type="button" (click)="moveUp(row['_source'], rowIndex(row['_source']))"
+                        [disabled]="rowIndex(row['_source']) === 0" title="Monter">↑</button>
+                <button class="btn-icon-sm" type="button" (click)="moveDown(row['_source'], rowIndex(row['_source']))"
+                        [disabled]="rowIndex(row['_source']) === values().length - 1" title="Descendre">↓</button>
+              </div>
             }
-            @if (values().length === 0) {
-              <tr><td colspan="7" class="td-empty">Aucune valeur. Cliquez sur "+ Ajouter" pour commencer.</td></tr>
+          </ng-template>
+
+          <ng-template dafCell="valueCode" let-row>
+            <span class="td-code">{{ row['_source'].valueCode }}</span>
+          </ng-template>
+
+          <ng-template dafCell="labelFr" let-row>
+            @if (editingId() === row['_source'].id) {
+              <ng-container [formGroup]="editForm">
+                <input class="lm-input-sm" formControlName="labelFr" />
+              </ng-container>
+            } @else {
+              {{ row['_source'].labelFr }}
             }
-          </tbody>
-        </table>
+          </ng-template>
+
+          <ng-template dafCell="labelEn" let-row>
+            @if (editingId() === row['_source'].id) {
+              <ng-container [formGroup]="editForm">
+                <input class="lm-input-sm" formControlName="labelEn" />
+              </ng-container>
+            } @else {
+              <span class="td-en">{{ row['_source'].labelEn }}</span>
+            }
+          </ng-template>
+
+          <ng-template dafCell="isActive" let-row>
+            @if (editingId() === row['_source'].id) {
+              <ng-container [formGroup]="editForm">
+                <input type="checkbox" formControlName="isActive" />
+              </ng-container>
+            } @else {
+              <span class="badge" [class.badge-active]="row['_source'].isActive" [class.badge-inactive]="!row['_source'].isActive">
+                {{ row['_source'].isActive ? 'Actif' : 'Inactif' }}
+              </span>
+            }
+          </ng-template>
+
+          <ng-template dafCell="isSystem" let-row>
+            @if (editingId() === row['_source'].id) {
+              {{ row['_source'].isSystem ? 'Oui' : 'Non' }}
+            } @else {
+              @if (row['_source'].isSystem) { <span class="badge-system">Système</span> }
+            }
+          </ng-template>
+
+          <ng-template dafCell="_actions" let-row>
+            @if (editingId() === row['_source'].id) {
+              <button class="btn-icon btn-save" type="button" (click)="saveEdit(row['_source'])" [disabled]="editForm.invalid">✓</button>
+              <button class="btn-icon btn-cancel" type="button" (click)="cancelEdit()">✕</button>
+            } @else {
+              <button class="btn-icon btn-edit" type="button" (click)="startEdit(row['_source'])" title="Modifier">✏</button>
+              @if (row['_source'].isSystem) {
+                <button class="btn-icon btn-del-dis" type="button" disabled title="Valeur système — non supprimable">🗑</button>
+              } @else if (confirmDeleteId() === row['_source'].id) {
+                <span class="confirm-del">
+                  Confirmer ?
+                  <button class="btn-icon btn-del" type="button" (click)="deleteValue(row['_source'].id, row['_source'].listTypeId)">Oui</button>
+                  <button class="btn-icon" type="button" (click)="cancelDelete()">Non</button>
+                </span>
+              } @else {
+                <button class="btn-icon btn-del" type="button" (click)="confirmDelete(row['_source'].id)" title="Supprimer">🗑</button>
+              }
+            }
+          </ng-template>
+
+        </daf-data-table>
       }
     }
   </main>

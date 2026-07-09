@@ -7,55 +7,37 @@
 }
 
 @if (!loading()) {
-  <div style="background:#fff;border-radius:16px;overflow:hidden;border:1px solid #eceef0;">
-    <table style="width:100%;border-collapse:collapse;text-align:left;">
-      <thead>
-        <tr style="background:#f2f4f6;border-bottom:1px solid #eceef0;">
-          <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Rôle</th>
-          <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Régime assigné</th>
-          <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Date d'effet</th>
-          <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Fin</th>
-          <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Notes</th>
-          <th style="padding:12px 20px;font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;text-align:right;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of allRolesWithAssignment(); track row.roleId) {
-          <tr style="border-bottom:1px solid #f0f2f4;transition:background .1s;" onmouseover="this.style.background='#f7f9fb'" onmouseout="this.style.background='transparent'">
-            <td style="padding:14px 20px;font-size:13px;font-weight:600;color:#1d2b3e;">{{ row.roleName }}</td>
-            <td style="padding:14px 20px;">
-              @if (row.assignment) {
-                <span style="background:#e6f7f5;color:#00695c;font-size:12px;padding:4px 12px;border-radius:999px;font-weight:500;">{{ row.assignment.regimeLabelFr }}</span>
-              } @else {
-                <span style="font-size:13px;color:#75777d;font-style:italic;">Défaut ({{ defaultRegimeName() ?? 'Non configuré' }})</span>
-              }
-            </td>
-            <td style="padding:14px 20px;font-size:13px;color:#44474c;">{{ row.assignment ? formatDate(row.assignment.effectiveFrom) : '—' }}</td>
-            <td style="padding:14px 20px;font-size:13px;color:#44474c;">{{ row.assignment?.effectiveTo ? formatDate(row.assignment!.effectiveTo!) : '—' }}</td>
-            <td style="padding:14px 20px;font-size:12px;color:#44474c;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" [title]="row.assignment?.notes ?? ''">{{ row.assignment?.notes ?? '—' }}</td>
-            <td style="padding:14px 20px;text-align:right;">
-              <div style="display:flex;justify-content:flex-end;gap:6px;">
-                <button type="button" (click)="openAssignModal(row)" *appHasPermission="'ADMIN_REGIMES'"
-                  style="padding:6px 12px;border-radius:8px;border:none;background:#ede9fe;color:#4648d4;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
-                  <span class="material-symbols-outlined" style="font-size:14px;">{{ row.assignment ? 'edit' : 'add' }}</span>
-                  {{ row.assignment ? 'Modifier' : 'Assigner' }}
-                </button>
-                @if (row.assignment) {
-                  <button type="button" (click)="openRemoveModal(row)" *appHasPermission="'ADMIN_REGIMES'"
-                    style="padding:6px 8px;border-radius:8px;border:none;background:#fee2e2;color:#ba1a1a;cursor:pointer;display:flex;align-items:center;">
-                    <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
-                  </button>
-                }
-              </div>
-            </td>
-          </tr>
+  <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+
+    <ng-template dafCell="regime" let-row>
+      @if (row['regime']) {
+        <span style="background:#e6f7f5;color:#00695c;font-size:12px;padding:4px 12px;border-radius:999px;font-weight:500;">{{ row['regime'] }}</span>
+      } @else {
+        <span style="font-size:13px;color:#75777d;font-style:italic;">Défaut ({{ defaultRegimeName() ?? 'Non configuré' }})</span>
+      }
+    </ng-template>
+
+    <ng-template dafCell="notes" let-row>
+      <span style="font-size:12px;color:#44474c;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;" [title]="row['_source'].assignment?.notes ?? ''">{{ row['notes'] }}</span>
+    </ng-template>
+
+    <ng-template dafCell="_actions" let-row>
+      <div style="display:flex;justify-content:flex-end;gap:6px;">
+        <button type="button" (click)="openAssignModal(row['_source'])" *appHasPermission="'ADMIN_REGIMES'"
+          style="padding:6px 12px;border-radius:8px;border:none;background:#ede9fe;color:#4648d4;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+          <span class="material-symbols-outlined" style="font-size:14px;">{{ row['_source'].assignment ? 'edit' : 'add' }}</span>
+          {{ row['_source'].assignment ? 'Modifier' : 'Assigner' }}
+        </button>
+        @if (row['_source'].assignment) {
+          <button type="button" (click)="openRemoveModal(row['_source'])" *appHasPermission="'ADMIN_REGIMES'"
+            style="padding:6px 8px;border-radius:8px;border:none;background:#fee2e2;color:#ba1a1a;cursor:pointer;display:flex;align-items:center;">
+            <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+          </button>
         }
-        @if (allRolesWithAssignment().length === 0) {
-          <tr><td colspan="6" style="padding:48px;text-align:center;color:#75777d;font-size:13px;">Aucun rôle disponible</td></tr>
-        }
-      </tbody>
-    </table>
-  </div>
+      </div>
+    </ng-template>
+
+  </daf-data-table>
 }
 
 <!-- Assign Modal -->
