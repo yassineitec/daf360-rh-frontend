@@ -6,7 +6,6 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  MetricCardComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -22,6 +21,7 @@ import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { KpiCardComponent } from '../../shared/kpi-card.component';
 import {
   CandidateListItem,
   CandidateStats,
@@ -60,7 +60,7 @@ interface KanbanColumn {
     CardComponent,
     DafCellDirective,
     DataTableComponent,
-    MetricCardComponent,
+    KpiCardComponent,
     SelectComponent,
     StatusBadgeComponent,
     ToolbarComponent,

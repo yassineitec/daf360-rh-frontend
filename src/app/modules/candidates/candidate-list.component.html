@@ -25,21 +25,9 @@
 
 <!-- ── Stats cards ─────────────────────────────────────────────────────── -->
 <div class="grid grid-cols-3 gap-6 mb-8">
-  <daf-metric-card
-    [value]="isLoadingStats() ? '…' : stats().total"
-    label="Total candidats"
-    [options]="{ icon: 'group', iconBg: 'bg-primary/10', iconColor: 'text-primary' }"
-  />
-  <daf-metric-card
-    [value]="isLoadingStats() ? '…' : stats().pending"
-    label="En attente"
-    [options]="{ icon: 'schedule', iconBg: 'bg-secondary/10', iconColor: 'text-secondary' }"
-  />
-  <daf-metric-card
-    [value]="isLoadingStats() ? '…' : stats().hired"
-    label="Embauchés"
-    [options]="{ icon: 'how_to_reg', iconBg: 'bg-teal/10', iconColor: 'text-teal' }"
-  />
+  <rh-kpi-card label="Total candidats" icon="group" [value]="isLoadingStats() ? '…' : stats().total" variant="blue" />
+  <rh-kpi-card label="En attente" icon="schedule" [value]="isLoadingStats() ? '…' : stats().pending" variant="amber" />
+  <rh-kpi-card label="Embauchés" icon="how_to_reg" [value]="isLoadingStats() ? '…' : stats().hired" variant="green" />
 </div>
 
 <!-- ── Table section ───────────────────────────────────────────────────── -->

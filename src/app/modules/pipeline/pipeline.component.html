@@ -19,7 +19,7 @@
 
         @if (stageCards().length === 0 && loading()) {
           @for (i of [1, 2, 3, 4]; track i) {
-            <div class="flex-1 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse">
+            <div class="flex-1 min-h-32 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-surface-container shrink-0"></div>
                 <div class="space-y-2">
@@ -32,13 +32,7 @@
         }
 
         @for (card of stageCards(); track card.label) {
-          <daf-metric-card
-            class="flex-1"
-            [label]="card.label"
-            [value]="card.count"
-            [options]="{ icon: card.icon, iconBg: card.iconBg, iconColor: card.iconColor }"
-            >
-          </daf-metric-card>
+          <rh-kpi-card class="flex-1 block" [label]="card.label" [icon]="card.icon" [value]="card.count" [variant]="card.variant" />
         }
       </div>
 

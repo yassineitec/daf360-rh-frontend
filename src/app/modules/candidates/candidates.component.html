@@ -26,7 +26,7 @@
       @if (statsLoading()) {
         <div class="grid grid-cols-4 gap-6">
           @for (i of [1, 2, 3, 4]; track i) {
-            <div class="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant animate-pulse">
+            <div class="h-32 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant animate-pulse">
               <div class="w-10 h-10 rounded-xl bg-surface-container mb-4"></div>
               <div class="w-16 h-7 rounded bg-surface-container mb-2"></div>
               <div class="w-24 h-3 rounded bg-surface-container"></div>
@@ -35,26 +35,10 @@
         </div>
       } @else {
         <div class="grid grid-cols-4 gap-6">
-          <daf-metric-card
-            [value]="stats().total"
-            label="Total Candidats"
-            [options]="{ icon: 'group', iconBg: 'bg-primary/10', iconColor: 'text-primary' }"
-          />
-          <daf-metric-card
-            [value]="stats().pending"
-            label="En attente"
-            [options]="{ icon: 'schedule', iconBg: 'bg-secondary/10', iconColor: 'text-secondary' }"
-          />
-          <daf-metric-card
-            [value]="stats().accepted"
-            label="Acceptés"
-            [options]="{ icon: 'task_alt', iconBg: 'bg-teal/10', iconColor: 'text-teal' }"
-          />
-          <daf-metric-card
-            [value]="stats().hired"
-            label="Embauchés"
-            [options]="{ icon: 'how_to_reg', iconBg: 'bg-tertiary/10', iconColor: 'text-tertiary' }"
-          />
+          <rh-kpi-card label="Total Candidats" icon="group" [value]="stats().total" variant="blue" />
+          <rh-kpi-card label="En attente" icon="schedule" [value]="stats().pending" variant="amber" />
+          <rh-kpi-card label="Acceptés" icon="task_alt" [value]="stats().accepted" variant="green" />
+          <rh-kpi-card label="Embauchés" icon="how_to_reg" [value]="stats().hired" variant="green" />
         </div>
       }
 

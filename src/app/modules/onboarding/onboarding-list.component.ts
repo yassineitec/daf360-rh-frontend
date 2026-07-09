@@ -8,18 +8,20 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  MetricCardComponent,
   StatusBadgeComponent,
   TableColumn,
   TableConfig,
   TableRow,
+  ToolbarComponent,
+  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { KpiCardComponent } from '../../shared/kpi-card.component';
 
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, MetricCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, ToolbarComponent],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
@@ -33,10 +35,27 @@ export class OnboardingListComponent implements OnInit {
   error    = signal<string | null>(null);
   kpiStats = signal<OnboardingKpiStats | null>(null);
 
+  search   = signal('');
+  viewMode = signal<'grid' | 'list'>('list');
+
+  readonly viewToggleOptions: ToolbarToggleOption[] = [
+    { id: 'grid', icon: 'grid_view', tooltip: 'Vue grille' },
+    { id: 'list', icon: 'view_list', tooltip: 'Vue liste' },
+  ];
+
   protected readonly statusBadge = statusBadge;
 
+  readonly filteredItems = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    if (!term) return this.items();
+    return this.items().filter(r =>
+      r.candidateFullName.toLowerCase().includes(term)
+      || (r.ms365Email ?? '').toLowerCase().includes(term),
+    );
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.items().map(r => ({
+    this.filteredItems().map(r => ({
       employe:           { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
       ms365Email:        r.ms365Email,
       entite:            '#' + r.paysId,
@@ -84,6 +103,14 @@ export class OnboardingListComponent implements OnInit {
 
   navigate(id: number): void {
     this.router.navigate([id], { relativeTo: this.route });
+  }
+
+  onSearch(value: string): void {
+    this.search.set(value);
+  }
+
+  onViewToggle(id: string): void {
+    if (id === 'grid' || id === 'list') this.viewMode.set(id);
   }
 
   formatDate(value: string | null): string {

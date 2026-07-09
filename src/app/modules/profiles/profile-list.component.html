@@ -13,17 +13,33 @@
   </div>
 
   <!-- ── Search + controls ────────────────────────────────────────────── -->
-  <daf-toolbar
-    [searchValue]="searchQuery()"
-    searchPlaceholder="Rechercher par nom, email…"
-    [actions]="toolbarActions"
-    [toggleOptions]="viewToggleOptions"
-    []
-    [activeToggle]="viewMode()"
-    togglePosition="right"
-    (searchChange)="onSearch($event)"
-    (actionClick)="onToolbarAction($event)"
-    (toggleChange)="viewMode.set($any($event))" />
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <daf-button
+      [options]="{ variant: 'ghost', label: 'Filtres avancés', iconStart: 'tune' }"
+      (onClick)="onToolbarAction('filters')" />
+
+    <div class="flex items-center gap-3">
+      <daf-form-field
+        class="w-56"
+        [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: false }"
+        [value]="searchQuery()"
+        (valueChange)="onSearch($any($event) ?? '')" />
+
+      <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+        @for (opt of viewToggleOptions; track opt.id) {
+          <button type="button"
+            class="flex items-center justify-center w-9 h-9 transition-colors"
+            [class.bg-primary]="viewMode() === opt.id"
+            [class.text-white]="viewMode() === opt.id"
+            [class.text-outline]="viewMode() !== opt.id"
+            [title]="opt.tooltip ?? ''"
+            (click)="viewMode.set($any(opt.id))">
+            <span class="material-symbols-outlined text-[18px]">{{ opt.icon }}</span>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
 
   <!-- ── Active filter tags ────────────────────────────────────────────── -->
   @if (activeFilterTags().length > 0) {

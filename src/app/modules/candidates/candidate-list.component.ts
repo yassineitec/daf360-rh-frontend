@@ -8,7 +8,6 @@ import {
   DataTableComponent,
   FormFieldComponent,
   FormFieldOptions,
-  MetricCardComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -31,6 +30,7 @@ import {
   CANDIDATE_STATUS_OPTIONS,
 } from './candidate.model';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { KpiCardComponent } from '../../shared/kpi-card.component';
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   PENDING:        'neutral',
@@ -51,7 +51,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
     ButtonComponent,
     FormFieldComponent,
     SelectComponent,
-    MetricCardComponent,
+    KpiCardComponent,
     PaginationComponent,
     StatusBadgeComponent,
     DataTableComponent,
