@@ -1,14 +1,18 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { ParameterSet }     from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
+import { ModalComponent } from '../../shared/modal.component';
+import {
+  FormFieldComponent, ButtonComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-parameters-admin',
   standalone: true,
-  imports: [FormsModule, SpinnerComponent],
+  imports: [SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective, ModalComponent],
   template: `
     <div class="section-header">
       <div>
@@ -16,11 +20,13 @@ import { SpinnerComponent } from '../../shared/spinner.component';
         <p class="col-sub">Configuration CNSS, IRPP, CSS, devise par entité</p>
       </div>
       <div class="header-actions">
-        <button class="btn-seed" (click)="seed()" [disabled]="seeding()" type="button">
-          @if (seeding()) { <app-spinner size="sm" /> }
-          Initialiser par défaut
-        </button>
-        <button class="btn-add" (click)="startAdd()" type="button">+ Ajouter</button>
+        <daf-button
+          label="Initialiser par défaut"
+          variant="ghost"
+          [options]="{ disabled: seeding(), loading: seeding() }"
+          (onClick)="seed()"
+        />
+        <daf-button label="+ Ajouter" variant="primary" (onClick)="startAdd()" />
       </div>
     </div>
 
@@ -28,55 +34,79 @@ import { SpinnerComponent } from '../../shared/spinner.component';
     @else if (params().length === 0) {
       <div class="empty-state">
         <p>Aucun paramètre configuré.</p>
-        <button class="btn-seed" (click)="seed()" type="button">Initialiser les valeurs par défaut</button>
+        <daf-button label="Initialiser les valeurs par défaut" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
-      <table class="data-table">
-        <thead>
-          <tr><th>Clé</th><th>Valeur</th><th>Description</th><th>Modifié</th><th></th></tr>
-        </thead>
-        <tbody>
-          @for (p of params(); track p.id) {
-            <tr>
-              <td class="key-cell">{{ p.cle }}</td>
-              <td>
-                @if (editingId() === p.id) {
-                  <input class="inline-input" type="text" [(ngModel)]="editValeur" (keydown.enter)="saveEdit(p)" />
-                } @else {
-                  <span class="valeur-cell" title="{{ p.valeur }}">
-                    {{ p.valeur.length > 60 ? p.valeur.slice(0, 60) + '…' : p.valeur }}
-                  </span>
-                }
-              </td>
-              <td class="desc-cell">{{ p.description ?? '—' }}</td>
-              <td class="date-cell">{{ fmtDate(p.updatedAt) }}</td>
-              <td class="actions-cell">
-                @if (editingId() === p.id) {
-                  <button class="btn-ok"     (click)="saveEdit(p)" type="button">✓</button>
-                  <button class="btn-cancel" (click)="editingId.set(null)" type="button">✕</button>
-                } @else {
-                  <button class="btn-edit"   (click)="startEdit(p)" type="button">Modifier</button>
-                  <button class="btn-delete" (click)="del(p)" type="button">Suppr.</button>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
+      <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+        <ng-template dafCell="cle" let-row>
+          <span class="key-cell">{{ row['_source'].cle }}</span>
+        </ng-template>
 
-    <!-- Add row -->
-    @if (addMode()) {
-      <div class="add-row">
-        <input class="form-input" type="text" [(ngModel)]="newCle"     placeholder="Clé (ex: TAUX_CNSS_EMPLOYE)" />
-        <input class="form-input" type="text" [(ngModel)]="newValeur"  placeholder="Valeur" />
-        <input class="form-input" type="text" [(ngModel)]="newDesc"    placeholder="Description (opt.)" />
-        <button class="btn-ok" (click)="add()" [disabled]="!newCle.trim() || !newValeur.trim()" type="button">Créer</button>
-        <button class="btn-cancel" (click)="addMode.set(false)" type="button">Annuler</button>
-      </div>
+        <ng-template dafCell="valeur" let-row>
+          @if (editingId() === row['_source'].id) {
+            <daf-form-field
+              [options]="{ fullWidth: true }"
+              [value]="editValeur"
+              (valueChange)="editValeur = $any($event)"
+            />
+          } @else {
+            <span class="valeur-cell" [title]="row['_source'].valeur">
+              {{ row['_source'].valeur.length > 60 ? row['_source'].valeur.slice(0, 60) + '…' : row['_source'].valeur }}
+            </span>
+          }
+        </ng-template>
+
+        <ng-template dafCell="description" let-row>
+          <span class="desc-cell">{{ row['_source'].description ?? '—' }}</span>
+        </ng-template>
+
+        <ng-template dafCell="updatedAt" let-row>
+          <span class="date-cell">{{ fmtDate(row['_source'].updatedAt) }}</span>
+        </ng-template>
+
+        <ng-template dafCell="_actions" let-row>
+          @if (editingId() === row['_source'].id) {
+            <daf-button label="" variant="primary" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="saveEdit(row['_source'])" />
+            <daf-button label="" variant="secondary" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="editingId.set(null)" />
+          } @else {
+            <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
+            <daf-button label="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
+          }
+        </ng-template>
+      </daf-data-table>
     }
 
     @if (error()) { <div class="error-banner" role="alert">{{ error() }}</div> }
+
+    <!-- Add modal -->
+    <app-modal
+      title="Ajouter un paramètre"
+      [visible]="addMode()"
+      [hasFooter]="true"
+      (closed)="addMode.set(false)"
+    >
+      <div class="modal-form">
+        <daf-form-field
+          [options]="{ label: 'Clé', placeholder: 'Ex: TAUX_CNSS_EMPLOYE', required: true, fullWidth: true }"
+          [value]="newCle"
+          (valueChange)="newCle = $any($event)"
+        />
+        <daf-form-field
+          [options]="{ label: 'Valeur', required: true, fullWidth: true }"
+          [value]="newValeur"
+          (valueChange)="newValeur = $any($event)"
+        />
+        <daf-form-field
+          [options]="{ label: 'Description', placeholder: '(optionnel)', fullWidth: true }"
+          [value]="newDesc"
+          (valueChange)="newDesc = $any($event)"
+        />
+      </div>
+      <div slot="footer">
+        <daf-button label="Annuler" variant="secondary" (onClick)="addMode.set(false)" />
+        <daf-button label="Créer" variant="primary" [options]="{ disabled: !newCle.trim() || !newValeur.trim() }" (onClick)="add()" />
+      </div>
+    </app-modal>
   `,
   styles: [`
     .section-header  { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px }
@@ -84,29 +114,14 @@ import { SpinnerComponent } from '../../shared/spinner.component';
     .col-sub         { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .header-actions  { display:flex;gap:8px }
     .center          { display:flex;justify-content:center;padding:24px }
-    .data-table      { width:100%;border-collapse:collapse;font-size:13px }
-    .data-table th   { padding:8px 12px;background:var(--color-bg-secondary,#EEF2F5);border-bottom:1px solid var(--color-border);text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap }
-    .data-table td   { padding:9px 12px;border-bottom:1px solid var(--color-border);vertical-align:middle }
-    .data-table tr:last-child td { border-bottom:none }
-    .key-cell        { font-family:monospace;font-size:12px;font-weight:600;color:var(--color-primary,#1C4E5C);white-space:nowrap }
+    .key-cell        { font-family:monospace;font-size:12px;font-weight:600;color:var(--color-primary);white-space:nowrap }
     .valeur-cell     { font-family:monospace;font-size:12px;color:var(--color-text-muted) }
     .desc-cell       { font-size:12px;color:var(--color-text-muted) }
     .date-cell       { font-size:11px;color:var(--color-text-muted);white-space:nowrap }
-    .actions-cell    { display:flex;gap:6px;white-space:nowrap }
-    .inline-input    { padding:4px 8px;border:1px solid var(--color-primary);border-radius:4px;font-size:12px;font-family:monospace;width:200px;outline:none }
     .empty-state     { text-align:center;padding:36px;color:var(--color-text-muted);display:flex;flex-direction:column;align-items:center;gap:12px }
     .empty-state p   { margin:0;font-size:13px }
-    .add-row         { display:flex;gap:8px;align-items:center;margin-top:12px;padding:12px;background:var(--color-bg-secondary,#EEF2F5);border-radius:8px;flex-wrap:wrap }
-    .form-input      { padding:7px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;background:#fff;outline:none;min-width:140px;flex:1 }
-    .btn-add    { padding:6px 14px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer }
-    .btn-seed   { display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--color-border);background:none;border-radius:6px;font-size:12px;cursor:pointer;color:var(--color-text-muted) }
-    .btn-seed:disabled { opacity:.5;cursor:not-allowed }
-    .btn-edit   { padding:3px 8px;background:none;border:1px solid var(--color-border);border-radius:4px;font-size:11px;cursor:pointer;color:var(--color-primary,#1C4E5C) }
-    .btn-delete { padding:3px 8px;background:none;border:1px solid #fca5a5;border-radius:4px;font-size:11px;cursor:pointer;color:#DC2626 }
-    .btn-ok     { padding:4px 10px;background:#16A34A;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer }
-    .btn-ok:disabled { opacity:.5;cursor:not-allowed }
-    .btn-cancel { padding:4px 10px;background:#DC2626;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer }
-    .error-banner { margin-top:10px;padding:8px 12px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:12px }
+    .modal-form      { display:flex;flex-direction:column;gap:14px }
+    .error-banner { margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
   `],
 })
 export class ParametersAdminComponent implements OnChanges {
@@ -126,6 +141,28 @@ export class ParametersAdminComponent implements OnChanges {
   newCle   = '';
   newValeur = '';
   newDesc  = '';
+
+  readonly columns: TableColumn[] = [
+    { key: 'cle',         label: 'Clé' },
+    { key: 'valeur',      label: 'Valeur' },
+    { key: 'description', label: 'Description' },
+    { key: 'updatedAt',   label: 'Modifié' },
+    { key: '_actions',    label: '', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.params().map(p => ({
+      cle:         p.cle,
+      valeur:      p.valeur,
+      description: p.description,
+      updatedAt:   p.updatedAt,
+      _source:     p,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+  }));
 
   ngOnChanges() { this.load(); }
 

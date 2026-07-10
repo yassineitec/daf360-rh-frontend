@@ -18,36 +18,22 @@
 
     <!-- In-app toggle -->
     <div class="toggle-row">
-      <span class="toggle-label">Notification in-app</span>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          [checked]="sendInapp()"
-          (change)="sendInapp.set($any($event.target).checked)"
-        />
-        <span class="toggle-track"></span>
-      </label>
+      <daf-toggle
+        [options]="{ label: 'Notification in-app' }"
+        [checked]="sendInapp()"
+        (checkedChange)="sendInapp.set($event)" />
     </div>
 
     <!-- Email toggle -->
     <div class="toggle-row">
-      <span class="toggle-label">
-        Email
-        @if (!eventType().supportsEmail) {
-          <span class="toggle-tooltip" title="Ce type d'événement ne supporte pas l'envoi par email.">
-            &nbsp;(non disponible)
-          </span>
-        }
-      </span>
-      <label class="toggle-switch" [class.toggle-disabled]="!eventType().supportsEmail">
-        <input
-          type="checkbox"
-          [checked]="sendEmail()"
-          [disabled]="!eventType().supportsEmail"
-          (change)="sendEmail.set($any($event.target).checked)"
-        />
-        <span class="toggle-track"></span>
-      </label>
+      <daf-toggle
+        [options]="{
+          label: 'Email',
+          hint: !eventType().supportsEmail ? 'Ce type d\'événement ne supporte pas l\'envoi par email.' : undefined,
+          disabled: !eventType().supportsEmail
+        }"
+        [checked]="sendEmail()"
+        (checkedChange)="sendEmail.set($event)" />
     </div>
   </div>
 
@@ -60,42 +46,34 @@
 
       <!-- Titre -->
       <div class="field-group">
-        <label class="field-label">Titre</label>
-        <input
-          class="field-input"
-          type="text"
-          [ngModel]="inappTitle()"
-          (ngModelChange)="inappTitle.set($event)"
-          placeholder="Titre de la notification…"
-        />
+        <daf-form-field
+          [options]="{ label: 'Titre', placeholder: 'Titre de la notification…', fullWidth: true }"
+          [value]="inappTitle()"
+          (valueChange)="inappTitle.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(inappTitle, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(inappTitle, p)" />
           }
         </div>
       </div>
 
       <!-- Corps du message -->
       <div class="field-group">
-        <label class="field-label">Corps du message</label>
-        <textarea
-          class="field-textarea"
-          rows="3"
-          [ngModel]="inappBody()"
-          (ngModelChange)="inappBody.set($event)"
-          placeholder="Corps de la notification…"
-        ></textarea>
+        <daf-form-field
+          [options]="{ label: 'Corps du message', type: 'textarea', rows: 3, placeholder: 'Corps de la notification…', fullWidth: true }"
+          [value]="inappBody()"
+          (valueChange)="inappBody.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(inappBody, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(inappBody, p)" />
           }
         </div>
       </div>
@@ -111,42 +89,34 @@
 
       <!-- Sujet -->
       <div class="field-group">
-        <label class="field-label">Sujet</label>
-        <input
-          class="field-input"
-          type="text"
-          [ngModel]="emailSubject()"
-          (ngModelChange)="emailSubject.set($event)"
-          placeholder="Sujet de l'email…"
-        />
+        <daf-form-field
+          [options]="{ label: 'Sujet', placeholder: 'Sujet de l\'email…', fullWidth: true }"
+          [value]="emailSubject()"
+          (valueChange)="emailSubject.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(emailSubject, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(emailSubject, p)" />
           }
         </div>
       </div>
 
       <!-- Corps email -->
       <div class="field-group">
-        <label class="field-label">Corps de l'email</label>
-        <textarea
-          class="field-textarea monospace"
-          rows="8"
-          [ngModel]="emailBody()"
-          (ngModelChange)="emailBody.set($event)"
-          placeholder="Corps de l'email…"
-        ></textarea>
+        <daf-form-field
+          [options]="{ label: 'Corps de l\'email', type: 'textarea', rows: 8, placeholder: 'Corps de l\'email…', fullWidth: true }"
+          [value]="emailBody()"
+          (valueChange)="emailBody.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(emailBody, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(emailBody, p)" />
           }
         </div>
       </div>
@@ -155,14 +125,11 @@
 
   <!-- Save button + banners -->
   <div class="editor-actions">
-    <button
-      class="btn-save"
-      type="button"
-      [disabled]="saving()"
-      (click)="saveTemplates()"
-    >
-      @if (saving()) { Enregistrement… } @else { Enregistrer les modèles }
-    </button>
+    <daf-button
+      [label]="saving() ? 'Enregistrement…' : 'Enregistrer les modèles'"
+      variant="teal"
+      [options]="{ disabled: saving(), loading: saving() }"
+      (onClick)="saveTemplates()" />
   </div>
 
   @if (success()) {
@@ -241,14 +208,11 @@
       <p class="test-description">
         Simule l'envoi pour votre pays et affiche les destinataires résolus et les messages générés.
       </p>
-      <button
-        type="button"
-        class="btn-test"
-        [disabled]="testLoading()"
-        (click)="runTest()"
-      >
-        @if (testLoading()) { Chargement… } @else { Tester la configuration }
-      </button>
+      <daf-button
+        [label]="testLoading() ? 'Chargement…' : 'Tester la configuration'"
+        variant="secondary"
+        [options]="{ disabled: testLoading(), loading: testLoading() }"
+        (onClick)="runTest()" />
 
       <app-test-dispatch-modal
         [visible]="showTestModal()"

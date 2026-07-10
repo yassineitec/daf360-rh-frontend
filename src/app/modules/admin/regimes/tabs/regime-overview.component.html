@@ -1,60 +1,64 @@
 <!-- Stats cards -->
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
+<div class="ro-stats">
 
-  <div style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:14px;padding:20px 22px;display:flex;align-items:center;gap:16px;box-shadow:2px 4px 12px rgba(51,65,85,.08);">
-    <div style="width:44px;height:44px;border-radius:12px;background:rgba(26,107,124,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:22px;color:#1a6b7c;">schedule</span>
+  <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
+    <div class="ro-stat">
+      <div class="ro-stat-icon-wrap ro-stat-icon-teal">
+        <span class="material-symbols-outlined ro-stat-icon">schedule</span>
+      </div>
+      <div>
+        <p class="ro-stat-label">Régimes configurés</p>
+        @if (isLoadingStats()) { <div class="ro-skeleton ro-skeleton-sm"></div> }
+        @else { <p class="ro-stat-value">{{ stats()?.totalRegimes ?? 0 }}</p> }
+      </div>
     </div>
-    <div>
-      <p style="font-size:11px;font-weight:600;color:#44474c;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;">Régimes configurés</p>
-      @if (isLoadingStats()) { <div style="height:28px;width:48px;border-radius:6px;background:#e2e8f0;"></div> }
-      @else { <p style="font-size:26px;font-weight:800;color:#1d2b3e;margin:0;line-height:1;">{{ stats()?.totalRegimes ?? 0 }}</p> }
-    </div>
-  </div>
+  </daf-card>
 
-  <div style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:14px;padding:20px 22px;display:flex;align-items:center;gap:16px;box-shadow:2px 4px 12px rgba(51,65,85,.08);">
-    <div style="width:44px;height:44px;border-radius:12px;background:rgba(70,72,212,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:22px;color:#4648d4;">person</span>
+  <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
+    <div class="ro-stat">
+      <div class="ro-stat-icon-wrap ro-stat-icon-secondary">
+        <span class="material-symbols-outlined ro-stat-icon">person</span>
+      </div>
+      <div>
+        <p class="ro-stat-label">Overrides personnels</p>
+        @if (isLoadingStats()) { <div class="ro-skeleton ro-skeleton-xs"></div> }
+        @else { <p class="ro-stat-value">{{ stats()?.employeeOverrideCount ?? 0 }}</p> }
+      </div>
     </div>
-    <div>
-      <p style="font-size:11px;font-weight:600;color:#44474c;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;">Overrides personnels</p>
-      @if (isLoadingStats()) { <div style="height:28px;width:36px;border-radius:6px;background:#e2e8f0;"></div> }
-      @else { <p style="font-size:26px;font-weight:800;color:#1d2b3e;margin:0;line-height:1;">{{ stats()?.employeeOverrideCount ?? 0 }}</p> }
-    </div>
-  </div>
+  </daf-card>
 
-  <div style="background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:14px;padding:20px 22px;display:flex;align-items:center;gap:16px;box-shadow:2px 4px 12px rgba(51,65,85,.08);">
-    <div style="width:44px;height:44px;border-radius:12px;background:rgba(245,158,11,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:22px;color:#f59e0b;">warning</span>
+  <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
+    <div class="ro-stat">
+      <div class="ro-stat-icon-wrap ro-stat-icon-warning">
+        <span class="material-symbols-outlined ro-stat-icon">warning</span>
+      </div>
+      <div>
+        <p class="ro-stat-label">Non configurés</p>
+        @if (isLoadingStats()) { <div class="ro-skeleton ro-skeleton-xs"></div> }
+        @else {
+          <p class="ro-stat-value">{{ stats()?.unconfiguredCount ?? 0 }}</p>
+          @if ((stats()?.unconfiguredCount ?? 0) > 0) { <p class="ro-stat-hint">Aucun régime appliqué</p> }
+        }
+      </div>
     </div>
-    <div>
-      <p style="font-size:11px;font-weight:600;color:#44474c;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;">Non configurés</p>
-      @if (isLoadingStats()) { <div style="height:28px;width:36px;border-radius:6px;background:#e2e8f0;"></div> }
-      @else {
-        <p style="font-size:26px;font-weight:800;color:#1d2b3e;margin:0;line-height:1;">{{ stats()?.unconfiguredCount ?? 0 }}</p>
-        @if ((stats()?.unconfiguredCount ?? 0) > 0) { <p style="font-size:11px;color:#f59e0b;margin:2px 0 0;">Aucun régime appliqué</p> }
-      }
-    </div>
-  </div>
+  </daf-card>
 
 </div>
 
 <!-- Filters -->
-<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-  <div style="position:relative;">
-    <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:16px;color:#44474c;">search</span>
-    <input type="text" placeholder="Rechercher un employé…"
-      (input)="searchTerm.set($any($event.target).value)"
-      style="background:#fff;border:1px solid #c5c6cd;border-radius:10px;padding:8px 12px 8px 32px;font-size:13px;outline:none;width:240px;" />
+<div class="ro-filters">
+  <div class="ro-search">
+    <daf-form-field
+      [options]="{ type: 'search', placeholder: 'Rechercher un employé…', prefixIcon: 'search', fullWidth: true }"
+      [value]="searchTerm()"
+      (valueChange)="searchTerm.set($any($event) ?? '')" />
   </div>
   @for (f of sourceFilters; track f.value) {
-    <button type="button" (click)="activeFilter.set(f.value)"
-      [style.background]="activeFilter() === f.value ? '#1a6b7c' : '#fff'"
-      [style.color]="activeFilter() === f.value ? '#fff' : '#44474c'"
-      [style.border-color]="activeFilter() === f.value ? '#1a6b7c' : '#c5c6cd'"
-      style="padding:6px 14px;border-radius:999px;border:1px solid;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;">
-      {{ f.label }}
-    </button>
+    <daf-button
+      [label]="f.label"
+      variant="toggle"
+      [options]="{ active: activeFilter() === f.value, pill: true, size: 'sm' }"
+      (onClick)="activeFilter.set(f.value)" />
   }
 </div>
 
@@ -63,95 +67,103 @@
 
   <ng-template dafCell="regime" let-row>
     @if (row['regime']) {
-      <p style="font-size:13px;color:#1d2b3e;margin:0;">{{ row['regime'] }}</p>
+      <p class="ro-regime-label">{{ row['regime'] }}</p>
     } @else {
-      <p style="font-size:13px;color:#ba1a1a;font-style:italic;margin:0;">Non configuré</p>
+      <p class="ro-regime-none">Non configuré</p>
     }
   </ng-template>
 
   <ng-template dafCell="_actions" let-row>
-    <button type="button" (click)="openEmployeePanel(row['_source'])" *appHasPermission="'ADMIN_REGIMES'"
-      style="font-size:12px;color:#4648d4;font-weight:500;border:none;background:none;cursor:pointer;display:flex;align-items:center;gap:4px;margin-left:auto;">
-      <span class="material-symbols-outlined" style="font-size:14px;">edit</span>Modifier
-    </button>
+    <daf-button
+      *appHasPermission="'ADMIN_REGIMES'"
+      label="Modifier"
+      variant="ghost"
+      [options]="{ size: 'sm', iconStart: 'edit' }"
+      (onClick)="openEmployeePanel(row['_source'])" />
   </ng-template>
 
 </daf-data-table>
 
 <!-- Employee Panel Modal -->
-@if (showEmployeePanel()) {
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
-        <div>
-          <h3 style="font-size:17px;font-weight:700;color:#1d2b3e;margin:0;">{{ selectedEmployee()?.fullName }}</h3>
-          <p style="font-size:12px;color:#44474c;margin:3px 0 0;">Rôle : {{ selectedEmployee()?.roleName ?? '—' }}</p>
-        </div>
-        <button type="button" (click)="showEmployeePanel.set(false)" style="padding:4px;border:none;background:none;cursor:pointer;"><span class="material-symbols-outlined" style="font-size:20px;color:#44474c;">close</span></button>
-      </div>
+<app-modal
+  [title]="selectedEmployee()?.fullName ?? ''"
+  [visible]="showEmployeePanel()"
+  [hasFooter]="false"
+  (closed)="showEmployeePanel.set(false)">
 
-      @if (panelError()) { <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:14px;">{{ panelError() }}</div> }
+  <p class="ro-panel-role">Rôle : {{ selectedEmployee()?.roleName ?? '—' }}</p>
 
-      <!-- Current regime display -->
-      <div style="background:#f7f9fb;border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1px solid #eceef0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <p style="font-size:12px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.4px;margin:0;">Régime actuel</p>
-          <span style="font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;" [ngClass]="getSourceClass(selectedEmployee()?.assignmentLevel)">{{ getSourceLabel(selectedEmployee()?.assignmentLevel) }}</span>
-        </div>
-        @if (selectedEmployee()?.resolvedRegimeLabelFr) {
-          <p style="font-size:14px;font-weight:600;color:#1d2b3e;margin:0;">{{ selectedEmployee()!.resolvedRegimeLabelFr }}</p>
-        } @else {
-          <p style="font-size:13px;color:#ba1a1a;font-style:italic;margin:0;">Aucun régime configuré</p>
-        }
-      </div>
+  @if (panelError()) { <div class="ro-msg-error">{{ panelError() }}</div> }
 
-      <!-- Actions -->
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;">
-        <button type="button" (click)="showOverrideForm.set(!showOverrideForm())"
-          style="padding:11px;border-radius:10px;border:2px solid #4648d4;color:#4648d4;background:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;">
-          <span class="material-symbols-outlined" style="font-size:16px;">add</span>
-          Définir un override personnel
-        </button>
-        @if (selectedEmployee()?.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
-          <button type="button" (click)="removeOverride()"
-            style="padding:11px;border-radius:10px;border:2px solid #ba1a1a;color:#ba1a1a;background:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;">
-            <span class="material-symbols-outlined" style="font-size:16px;">undo</span>
-            Supprimer l'override (revenir au rôle)
-          </button>
-        }
-      </div>
+  <!-- Current regime display -->
+  <div class="ro-current-regime">
+    <div class="ro-current-regime-head">
+      <p class="ro-current-regime-label">Régime actuel</p>
+      <span class="ro-source-badge" [ngClass]="getSourceClass(selectedEmployee()?.assignmentLevel)">{{ getSourceLabel(selectedEmployee()?.assignmentLevel) }}</span>
+    </div>
+    @if (selectedEmployee()?.resolvedRegimeLabelFr) {
+      <p class="ro-current-regime-value">{{ selectedEmployee()!.resolvedRegimeLabelFr }}</p>
+    } @else {
+      <p class="ro-regime-none">Aucun régime configuré</p>
+    }
+  </div>
 
-      <!-- Override form -->
-      @if (showOverrideForm()) {
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #eceef0;">
-          <p style="font-size:12px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.4px;margin:0 0 12px;">Nouveau régime personnel</p>
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Régime *</label>
-              <select [(ngModel)]="overrideRegimeId" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;">
-                @for (r of regimes(); track r.id) { <option [value]="r.id">{{ r.labelFr }} · {{ r.hoursPerWeek }}h/sem</option> }
-              </select>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Date d'effet *</label>
-                <input type="date" [(ngModel)]="overrideEffFrom" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-              <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Date de fin</label>
-                <input type="date" [(ngModel)]="overrideEffTo" [disabled]="noEndDate()" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;" [style.opacity]="noEndDate() ? '0.4' : '1'" />
-                <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#44474c;margin-top:5px;cursor:pointer;"><input type="checkbox" [checked]="noEndDate()" (change)="noEndDate.set($any($event.target).checked)" /> Sans fin</label>
-              </div>
-            </div>
-            <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Raison *</label>
-              <textarea [(ngModel)]="overrideReason" rows="2" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;resize:none;box-sizing:border-box;"></textarea>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button type="button" (click)="showOverrideForm.set(false)" style="flex:1;padding:9px;border-radius:9px;border:1px solid #e5e7eb;background:none;font-size:13px;cursor:pointer;color:#44474c;">Annuler</button>
-              <button type="button" (click)="confirmOverride()" [disabled]="isSaving() || !overrideRegimeId || !overrideEffFrom || !overrideReason"
-                style="flex:1;padding:9px;border-radius:9px;border:none;background:#4648d4;color:#fff;font-size:13px;font-weight:700;cursor:pointer;" [style.opacity]="(isSaving() || !overrideRegimeId || !overrideEffFrom || !overrideReason) ? '0.5' : '1'">
-                Confirmer
-              </button>
-            </div>
+  <!-- Actions -->
+  <div class="ro-panel-actions">
+    <daf-button
+      label="Définir un override personnel"
+      variant="secondary"
+      [options]="{ fullWidth: true, iconStart: 'add' }"
+      (onClick)="showOverrideForm.set(!showOverrideForm())" />
+    @if (selectedEmployee()?.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
+      <daf-button
+        label="Supprimer l'override (revenir au rôle)"
+        variant="danger"
+        [options]="{ fullWidth: true, iconStart: 'undo' }"
+        (onClick)="removeOverride()" />
+    }
+  </div>
+
+  <!-- Override form -->
+  @if (showOverrideForm()) {
+    <div class="ro-override-form">
+      <p class="ro-override-title">Nouveau régime personnel</p>
+      <div class="ro-override-fields">
+        <daf-select
+          [selected]="overrideRegimeSelected()"
+          [options]="regimeOptions()"
+          [config]="{ label: 'Régime', required: true, fullWidth: true }"
+          (selectedChange)="onOverrideRegimeChange($event)" />
+        <div class="ro-form-row-2">
+          <daf-form-field
+            [options]="{ label: 'Date d\'effet', type: 'date', required: true, fullWidth: true }"
+            [value]="overrideEffFrom"
+            (valueChange)="overrideEffFrom = $any($event)" />
+          <div>
+            <daf-form-field
+              [options]="{ label: 'Date de fin', type: 'date', disabled: noEndDate(), fullWidth: true }"
+              [value]="overrideEffTo"
+              (valueChange)="overrideEffTo = $any($event)" />
+            <daf-checkbox
+              class="ro-no-end-checkbox"
+              [options]="{ label: 'Sans fin' }"
+              [checked]="noEndDate()"
+              (checkedChange)="noEndDate.set($event)" />
           </div>
         </div>
-      }
+        <daf-form-field
+          [options]="{ label: 'Raison', type: 'textarea', required: true, rows: 2, fullWidth: true }"
+          [value]="overrideReason"
+          (valueChange)="overrideReason = $any($event)" />
+        <div class="ro-override-actions">
+          <daf-button label="Annuler" variant="secondary" [options]="{ fullWidth: true }" (onClick)="showOverrideForm.set(false)" />
+          <daf-button
+            label="Confirmer"
+            variant="teal"
+            [options]="{ fullWidth: true, disabled: isSaving() || !overrideRegimeId || !overrideEffFrom || !overrideReason, loading: isSaving() }"
+            (onClick)="confirmOverride()" />
+        </div>
+      </div>
     </div>
-  </div>
-}
+  }
+</app-modal>

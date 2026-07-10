@@ -1,91 +1,92 @@
-<div style="display:grid;grid-template-columns:320px 1fr;gap:20px;min-height:500px;">
+<div class="rc-layout">
 
   <!-- LEFT PANEL: Regime list -->
-  <div style="display:flex;flex-direction:column;gap:8px;">
+  <div class="rc-list-panel">
 
     <!-- Loading skeletons -->
     @if (loading()) {
       @for (i of skeletonRows; track i) {
-        <div style="height:88px;border-radius:12px;background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
+        <div class="rc-skeleton"></div>
       }
     }
 
     <!-- Regime cards -->
     @if (!loading()) {
       @for (r of regimes(); track r.id) {
-        <div (click)="selectRegime(r)" style="padding:14px 16px;border-radius:12px;border-left:4px solid;cursor:pointer;transition:all .15s;"
-          [style.border-left-color]="selectedId() === r.id ? '#1a6b7c' : 'transparent'"
-          [style.background]="selectedId() === r.id ? '#fff' : '#f7f9fb'"
-          [style.box-shadow]="selectedId() === r.id ? '0 2px 8px rgba(51,65,85,.1)' : 'none'">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+        <daf-card
+          [options]="{ variant: 'glass', padding: 'md', radius: 'lg', clickable: true }"
+          [class.rc-card-active]="selectedId() === r.id"
+          (cardClick)="selectRegime(r)">
+          <div class="rc-card-head">
             <div>
-              <p style="font-size:13px;font-weight:600;color:#1d2b3e;margin:0;">{{ r.labelFr }}</p>
-              <p style="font-size:11px;font-family:monospace;color:#44474c;margin:2px 0 0;">{{ r.code }}</p>
+              <p class="rc-card-title">{{ r.labelFr }}</p>
+              <p class="rc-card-code">{{ r.code }}</p>
             </div>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
-              @if (r.isDefault) { <span style="background:#e6f7f5;color:#00695c;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;text-transform:uppercase;">Défaut</span> }
-              @if (r.isFlexible) { <span style="background:#ede9fe;color:#5b21b6;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;text-transform:uppercase;">Flexible</span> }
-              @if (!r.isActive) { <span style="background:#fee2e2;color:#991b1b;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700;text-transform:uppercase;">Inactif</span> }
+            <div class="rc-card-badges">
+              @if (r.isDefault) { <span class="rc-badge rc-badge-default">Défaut</span> }
+              @if (r.isFlexible) { <span class="rc-badge rc-badge-flexible">Flexible</span> }
+              @if (!r.isActive) { <span class="rc-badge rc-badge-inactive">Inactif</span> }
             </div>
           </div>
-          <div style="display:flex;gap:16px;font-size:12px;color:#44474c;">
-            <span><span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">schedule</span> {{ r.hoursPerWeek }}h/sem</span>
-            <span><span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">calendar_view_week</span> {{ r.daysPerWeek }}j/sem</span>
+          <div class="rc-card-meta">
+            <span><span class="material-symbols-outlined rc-meta-icon">schedule</span> {{ r.hoursPerWeek }}h/sem</span>
+            <span><span class="material-symbols-outlined rc-meta-icon">calendar_view_week</span> {{ r.daysPerWeek }}j/sem</span>
           </div>
           @if (detail() && selectedId() === r.id) {
-            <div style="display:flex;gap:12px;margin-top:4px;font-size:11px;color:#75777d;">
+            <div class="rc-card-usage">
               <span>{{ detail()!.employeeCount }} employé(s)</span>
               <span>{{ detail()!.roleCount }} rôle(s)</span>
             </div>
           }
-        </div>
+        </daf-card>
       }
       @if (regimes().length === 0) {
-        <div style="text-align:center;padding:40px 16px;color:#75777d;font-size:13px;">Aucun régime configuré pour cette entité.</div>
+        <div class="rc-empty">Aucun régime configuré pour cette entité.</div>
       }
     }
 
     <!-- Add button -->
-    <button type="button" (click)="showCreateModal.set(true)" *appHasPermission="'ADMIN_REGIMES'"
-      style="width:100%;margin-top:8px;padding:12px;border-radius:12px;border:2px dashed #c5c6cd;background:none;font-size:13px;color:#44474c;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;">
-      <span class="material-symbols-outlined" style="font-size:16px;">add</span>
-      Nouveau régime
-    </button>
+    <daf-button
+      *appHasPermission="'ADMIN_REGIMES'"
+      label="Nouveau régime"
+      variant="secondary"
+      [options]="{ fullWidth: true, iconStart: 'add' }"
+      (onClick)="showCreateModal.set(true)" />
   </div>
 
   <!-- RIGHT PANEL: Editor -->
   <div>
     @if (!selectedId()) {
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:80px 16px;text-align:center;">
-        <span class="material-symbols-outlined" style="font-size:52px;color:#c5c6cd;display:block;margin-bottom:12px;">schedule</span>
-        <p style="font-size:14px;color:#44474c;margin:0;">Sélectionnez un régime pour le modifier</p>
+      <div class="rc-placeholder">
+        <span class="material-symbols-outlined rc-placeholder-icon">schedule</span>
+        <p class="rc-placeholder-text">Sélectionnez un régime pour le modifier</p>
       </div>
     }
 
     @if (selectedId()) {
-      <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #eceef0;">
+      <div class="rc-editor">
 
         <!-- Messages -->
-        @if (successMsg()) { <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:13px;color:#15803d;margin-bottom:16px;">{{ successMsg() }}</div> }
-        @if (errorMsg())   { <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:16px;">{{ errorMsg() }}</div> }
+        @if (successMsg()) { <div class="rc-msg rc-msg-success">{{ successMsg() }}</div> }
+        @if (errorMsg())   { <div class="rc-msg rc-msg-error">{{ errorMsg() }}</div> }
 
         <!-- Default warning -->
         @if (showDefaultWarning()) {
-          <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:8px;font-size:13px;">
-            <span class="material-symbols-outlined" style="font-size:16px;color:#f59e0b;flex-shrink:0;margin-top:1px;">warning</span>
-            <p style="color:#92400e;margin:0;">Activer ce régime comme défaut remplacera "<strong>{{ currentDefaultName() }}</strong>" pour tous les employés sans assignation spécifique.</p>
+          <div class="rc-warning">
+            <span class="material-symbols-outlined rc-warning-icon">warning</span>
+            <p class="rc-warning-text">Activer ce régime comme défaut remplacera "<strong>{{ currentDefaultName() }}</strong>" pour tous les employés sans assignation spécifique.</p>
           </div>
         }
 
         <!-- Usage counters -->
         @if (detail()) {
-          <div style="display:flex;gap:16px;padding:12px 16px;background:#f2f4f6;border-radius:10px;margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1d2b3e;">
-              <span class="material-symbols-outlined" style="font-size:16px;color:#4648d4;">person</span>
+          <div class="rc-usage">
+            <div class="rc-usage-item">
+              <span class="material-symbols-outlined rc-usage-icon rc-usage-icon-employee">person</span>
               <strong>{{ detail()!.employeeCount }}</strong>&nbsp;employé(s) avec override direct
             </div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1d2b3e;">
-              <span class="material-symbols-outlined" style="font-size:16px;color:#1a6b7c;">badge</span>
+            <div class="rc-usage-item">
+              <span class="material-symbols-outlined rc-usage-icon rc-usage-icon-role">badge</span>
               <strong>{{ detail()!.roleCount }}</strong>&nbsp;rôle(s) assigné(s)
             </div>
           </div>
@@ -93,68 +94,72 @@
 
         <!-- Form -->
         <form [formGroup]="form">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.4px;">Code</label>
-              <input formControlName="code" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-family:monospace;font-size:13px;text-transform:uppercase;outline:none;box-sizing:border-box;" />
-            </div>
-            <div style="display:flex;align-items:center;gap:12px;margin-top:20px;">
-              <span style="font-size:13px;font-weight:500;color:#1d2b3e;">Régime par défaut</span>
-              <button type="button" (click)="toggleDefault()"
-                [style.background]="form.get('isDefault')?.value ? '#1a6b7c' : '#c5c6cd'"
-                style="position:relative;width:48px;height:26px;border-radius:999px;border:none;cursor:pointer;transition:background .2s;flex-shrink:0;">
-                <span style="position:absolute;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s;"
-                  [style.left]="form.get('isDefault')?.value ? '25px' : '3px'"></span>
-              </button>
+          <div class="rc-form-row rc-form-row-2">
+            <daf-form-field
+              [options]="{ label: 'Code', type: 'text', required: true, fullWidth: true, error: fieldError('code', 'Code requis (max 50 caractères)') }"
+              [value]="form.get('code')?.value ?? ''"
+              (valueChange)="form.get('code')?.setValue($any($event))" />
+            <div class="rc-toggle-row">
+              <span class="rc-toggle-label">Régime par défaut</span>
+              <daf-toggle
+                [checked]="!!form.get('isDefault')?.value"
+                (checkedChange)="form.get('isDefault')?.setValue($event)" />
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.4px;">Libellé français *</label>
-              <input formControlName="labelFr" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.4px;">Libellé anglais</label>
-              <input formControlName="labelEn" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-            </div>
+          <div class="rc-form-row rc-form-row-2">
+            <daf-form-field
+              [options]="{ label: 'Libellé français', type: 'text', required: true, fullWidth: true, error: fieldError('labelFr', 'Libellé français requis') }"
+              [value]="form.get('labelFr')?.value ?? ''"
+              (valueChange)="form.get('labelFr')?.setValue($any($event))" />
+            <daf-form-field
+              [options]="{ label: 'Libellé anglais', type: 'text', fullWidth: true }"
+              [value]="form.get('labelEn')?.value ?? ''"
+              (valueChange)="form.get('labelEn')?.setValue($any($event))" />
           </div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-            <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">H/sem *</label>
-              <input formControlName="hoursPerWeek" type="number" min="1" max="60" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-            <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">J/sem *</label>
-              <input formControlName="daysPerWeek" type="number" min="1" max="7" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-            <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">Début</label>
-              <input formControlName="startTime" type="time" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-            <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">Fin</label>
-              <input formControlName="endTime" type="time" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
+          <div class="rc-form-row rc-form-row-4">
+            <daf-form-field
+              [options]="{ label: 'H/sem', type: 'number', required: true, fullWidth: true, error: fieldError('hoursPerWeek', 'Entre 1 et 60') }"
+              [value]="form.get('hoursPerWeek')?.value ?? null"
+              (valueChange)="setNum('hoursPerWeek', 'form', $event)" />
+            <daf-form-field
+              [options]="{ label: 'J/sem', type: 'number', required: true, fullWidth: true, error: fieldError('daysPerWeek', 'Entre 1 et 7') }"
+              [value]="form.get('daysPerWeek')?.value ?? null"
+              (valueChange)="setNum('daysPerWeek', 'form', $event)" />
+            <daf-form-field
+              [options]="{ label: 'Début', type: 'time', fullWidth: true }"
+              [value]="form.get('startTime')?.value ?? ''"
+              (valueChange)="form.get('startTime')?.setValue($any($event))" />
+            <daf-form-field
+              [options]="{ label: 'Fin', type: 'time', fullWidth: true }"
+              [value]="form.get('endTime')?.value ?? ''"
+              (valueChange)="form.get('endTime')?.setValue($any($event))" />
           </div>
-          <div style="display:flex;gap:20px;margin-bottom:20px;">
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#1d2b3e;cursor:pointer;">
-              <input type="checkbox" formControlName="isFlexible" /> Horaires flexibles
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#1d2b3e;cursor:pointer;">
-              <input type="checkbox" formControlName="overtimeAllowed" /> Heures sup. autorisées
-            </label>
+          <div class="rc-form-row rc-toggles">
+            <daf-toggle
+              [options]="{ label: 'Horaires flexibles' }"
+              [checked]="!!form.get('isFlexible')?.value"
+              (checkedChange)="form.get('isFlexible')?.setValue($event)" />
+            <daf-toggle
+              [options]="{ label: 'Heures sup. autorisées' }"
+              [checked]="!!form.get('overtimeAllowed')?.value"
+              (checkedChange)="form.get('overtimeAllowed')?.setValue($event)" />
           </div>
         </form>
 
         <!-- Action buttons -->
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #eceef0;">
-          <button type="button" (click)="deleteRegime()" *appHasPermission="'ADMIN_REGIMES'"
-            [disabled]="!canDelete() || isDeleting()"
+        <div class="rc-actions">
+          <daf-button
+            *appHasPermission="'ADMIN_REGIMES'"
+            label="Supprimer"
+            variant="ghost"
+            [options]="{ disabled: !canDelete() || isDeleting(), iconStart: 'delete' }"
             [title]="!canDelete() ? 'Régime en cours d\'utilisation ou régime par défaut' : 'Supprimer'"
-            style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;padding:6px 0;"
-            [style.color]="canDelete() ? '#ba1a1a' : '#c5c6cd'"
-            [style.cursor]="canDelete() ? 'pointer' : 'not-allowed'">
-            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
-            Supprimer
-          </button>
-          <button type="button" (click)="saveRegime()" [disabled]="form.invalid || isSaving()"
-            style="background:#1a6b7c;color:#fff;font-weight:700;padding:9px 24px;border-radius:10px;border:none;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;"
-            [style.opacity]="(form.invalid || isSaving()) ? '0.5' : '1'">
-            @if (isSaving()) { <span class="material-symbols-outlined" style="font-size:14px;animation:spin .8s linear infinite;">progress_activity</span> }
-            Enregistrer
-          </button>
+            (onClick)="deleteRegime()" />
+          <daf-button
+            [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer'"
+            variant="teal"
+            [options]="{ disabled: form.invalid || isSaving(), loading: isSaving() }"
+            (onClick)="saveRegime()" />
         </div>
       </div>
     }
@@ -162,33 +167,53 @@
 </div>
 
 <!-- Create Modal -->
-@if (showCreateModal()) {
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;">
-      <h3 style="font-size:18px;font-weight:700;color:#1d2b3e;margin:0 0 24px;">Nouveau régime horaire</h3>
-      <form [formGroup]="createForm">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">
-          <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">Code *</label>
-            <input formControlName="code" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-family:monospace;font-size:13px;text-transform:uppercase;outline:none;box-sizing:border-box;" /></div>
-          <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">H/sem *</label>
-            <input formControlName="hoursPerWeek" type="number" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">
-          <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">Libellé français *</label>
-            <input formControlName="labelFr" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-          <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;">Libellé anglais</label>
-            <input formControlName="labelEn" style="width:100%;margin-top:4px;background:#f2f4f6;border:none;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-        </div>
-        <div style="display:flex;gap:16px;margin-bottom:14px;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" formControlName="isFlexible" /> Flexible</label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" formControlName="isDefault" /> Régime par défaut</label>
-        </div>
-      </form>
-      @if (errorMsg()) { <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:12px;">{{ errorMsg() }}</div> }
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
-        <button type="button" (click)="showCreateModal.set(false)" style="padding:8px 18px;border-radius:10px;border:1px solid #e5e7eb;background:none;font-size:13px;cursor:pointer;color:#44474c;">Annuler</button>
-        <button type="button" (click)="createRegime()" [disabled]="createForm.invalid" style="background:#4648d4;color:#fff;font-weight:700;padding:9px 20px;border-radius:10px;border:none;font-size:13px;cursor:pointer;" [style.opacity]="createForm.invalid ? '0.5' : '1'">Créer le régime</button>
-      </div>
+<app-modal
+  title="Nouveau régime horaire"
+  [visible]="showCreateModal()"
+  [hasFooter]="true"
+  (closed)="showCreateModal.set(false)">
+
+  <form [formGroup]="createForm">
+    <div class="rc-form-row rc-form-row-2">
+      <daf-form-field
+        [options]="{ label: 'Code', type: 'text', required: true, fullWidth: true, error: createFieldError('code', 'Code requis (max 50 caractères)') }"
+        [value]="createForm.get('code')?.value ?? ''"
+        (valueChange)="createForm.get('code')?.setValue($any($event))" />
+      <daf-form-field
+        [options]="{ label: 'H/sem', type: 'number', required: true, fullWidth: true, error: createFieldError('hoursPerWeek', 'Entre 1 et 60') }"
+        [value]="createForm.get('hoursPerWeek')?.value ?? null"
+        (valueChange)="setNum('hoursPerWeek', 'createForm', $event)" />
     </div>
+    <div class="rc-form-row rc-form-row-2">
+      <daf-form-field
+        [options]="{ label: 'Libellé français', type: 'text', required: true, fullWidth: true, error: createFieldError('labelFr', 'Libellé français requis') }"
+        [value]="createForm.get('labelFr')?.value ?? ''"
+        (valueChange)="createForm.get('labelFr')?.setValue($any($event))" />
+      <daf-form-field
+        [options]="{ label: 'Libellé anglais', type: 'text', fullWidth: true }"
+        [value]="createForm.get('labelEn')?.value ?? ''"
+        (valueChange)="createForm.get('labelEn')?.setValue($any($event))" />
+    </div>
+    <div class="rc-form-row rc-toggles">
+      <daf-toggle
+        [options]="{ label: 'Flexible' }"
+        [checked]="!!createForm.get('isFlexible')?.value"
+        (checkedChange)="createForm.get('isFlexible')?.setValue($event)" />
+      <daf-toggle
+        [options]="{ label: 'Régime par défaut' }"
+        [checked]="!!createForm.get('isDefault')?.value"
+        (checkedChange)="createForm.get('isDefault')?.setValue($event)" />
+    </div>
+  </form>
+
+  @if (errorMsg()) { <div class="rc-msg rc-msg-error">{{ errorMsg() }}</div> }
+
+  <div slot="footer">
+    <daf-button label="Annuler" variant="secondary" (onClick)="showCreateModal.set(false)" />
+    <daf-button
+      label="Créer le régime"
+      variant="teal"
+      [options]="{ disabled: createForm.invalid }"
+      (onClick)="createRegime()" />
   </div>
-}
+</app-modal>

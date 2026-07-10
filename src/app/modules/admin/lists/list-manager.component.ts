@@ -3,8 +3,10 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import {
-  DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
+  ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
+  FormFieldComponent, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
+import { ModalComponent } from '../../../shared/modal.component';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
   CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
@@ -14,7 +16,10 @@ import { UserStore } from '../../../core/user.store';
 @Component({
   selector: 'app-list-manager',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective],
+  imports: [
+    FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective,
+    ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent,
+  ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
 })
@@ -43,7 +48,6 @@ export class ListManagerComponent implements OnInit {
   });
 
   readonly columns: TableColumn[] = [
-    { key: 'order', label: 'Ordre', width: '65px' },
     { key: 'valueCode', label: 'Code' },
     { key: 'labelFr', label: 'Libellé FR' },
     { key: 'labelEn', label: 'Libellé EN' },
@@ -97,6 +101,11 @@ export class ListManagerComponent implements OnInit {
     this.loadValues(type.id);
   }
 
+  openAddForm(): void {
+    this.addForm.reset({ sortOrder: 0 });
+    this.showAddForm.set(true);
+  }
+
   loadValues(id: number): void {
     this.loadingValues.set(true);
     this.listService.getAllValuesForAdmin(id).subscribe({
@@ -144,35 +153,6 @@ export class ListManagerComponent implements OnInit {
     this.listService.createValue(dto).subscribe({
       next: () => { this.showAddForm.set(false); this.addForm.reset({ sortOrder: 0 }); this.flash('Valeur ajoutée.'); this.loadValues(type.id); },
       error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la création.'),
-    });
-  }
-
-  rowIndex(value: ListValue): number {
-    return this.values().findIndex(v => v.id === value.id);
-  }
-
-  moveUp(value: ListValue, index: number): void {
-    if (index === 0) return;
-    const vals = [...this.values()];
-    [vals[index - 1], vals[index]] = [vals[index], vals[index - 1]];
-    this.reorder(vals);
-  }
-
-  moveDown(value: ListValue, index: number): void {
-    const vals = this.values();
-    if (index >= vals.length - 1) return;
-    const copy = [...vals];
-    [copy[index], copy[index + 1]] = [copy[index + 1], copy[index]];
-    this.reorder(copy);
-  }
-
-  private reorder(orderedValues: ListValue[]): void {
-    this.values.set(orderedValues);
-    const type = this.selectedType();
-    if (!type) return;
-    this.listService.reorder(type.id, orderedValues.map(v => v.id)).subscribe({
-      next: () => this.flash('Ordre mis à jour.'),
-      error: () => { this.error.set("Erreur lors de la mise à jour de l'ordre."); this.loadValues(type.id); },
     });
   }
 

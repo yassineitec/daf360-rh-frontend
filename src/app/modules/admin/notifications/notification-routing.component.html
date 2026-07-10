@@ -3,13 +3,10 @@
   <aside class="nr-sidebar">
     <div class="nr-sidebar-header">
       <h2 class="nr-sidebar-title">Événements</h2>
-      <input
-        class="nr-search"
-        type="search"
-        placeholder="Rechercher…"
-        [ngModel]="searchQuery()"
-        (ngModelChange)="searchQuery.set($event)"
-      />
+      <daf-form-field
+        [options]="{ type: 'search', placeholder: 'Rechercher…', fullWidth: true }"
+        [value]="searchQuery()"
+        (valueChange)="searchQuery.set($any($event) ?? '')" />
     </div>
 
     @if (loadingTypes()) {
@@ -19,25 +16,27 @@
         <div class="nr-module-group">
           <p class="nr-module-label">{{ group.module }}</p>
           @for (type of group.types; track type.id) {
-            <button
-              class="nr-type-item"
+            <daf-card
+              class="nr-type-item-wrap"
+              [options]="{ variant: 'glass', padding: 'md', radius: 'lg', clickable: true }"
               [class.nr-type-active]="selectedType()?.id === type.id"
-              (click)="selectType(type)"
-              type="button"
+              (cardClick)="selectType(type)"
             >
-              <span class="nr-type-label">{{ type.labelFr }}</span>
-              <div class="nr-badges">
-                @if (type.sendInapp) {
-                  <span class="badge-inapp">IN-APP</span>
-                }
-                @if (type.sendEmail) {
-                  <span class="badge-email">EMAIL</span>
-                }
-                @if (type.isSystem) {
-                  <span class="badge-system">SYSTÈME</span>
-                }
+              <div class="nr-type-item">
+                <span class="nr-type-label">{{ type.labelFr }}</span>
+                <div class="nr-badges">
+                  @if (type.sendInapp) {
+                    <span class="badge-inapp">IN-APP</span>
+                  }
+                  @if (type.sendEmail) {
+                    <span class="badge-email">EMAIL</span>
+                  }
+                  @if (type.isSystem) {
+                    <span class="badge-system">SYSTÈME</span>
+                  }
+                </div>
               </div>
-            </button>
+            </daf-card>
           }
         </div>
       }

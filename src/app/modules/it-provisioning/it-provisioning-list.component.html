@@ -25,52 +25,54 @@
     <rh-kpi-card label="Licences incomplètes" icon="subscriptions" [value]="stats().licIncomplete" variant="amber" class="block" />
   </div>
 
-  <!-- ═══ Desktop / tablet: search on the left, select + refresh + view toggle on the right ═══ -->
-  <div class="hidden sm:flex items-center justify-between gap-3">
-    <div class="w-56 shrink-0">
-      <daf-form-field
-        class="block w-full"
-        [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
-        [value]="search()"
-        (valueChange)="onSearch($any($event) ?? '')" />
-    </div>
+  <!-- ═══ Desktop / tablet: search on the left, select + refresh + view toggle on the right, all inside one card (matches /finance/clients) ═══ -->
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="hidden sm:block">
+    <div class="flex items-center justify-between gap-3 p-4 sm:p-5">
+      <div class="w-56 shrink-0">
+        <daf-form-field
+          class="block w-full"
+          [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
+          [value]="search()"
+          (valueChange)="onSearch($any($event) ?? '')" />
+      </div>
 
-    <div class="flex items-center gap-3">
-      <daf-select
-        [selected]="statusFilter() ? [statusFilter()] : []"
-        [options]="statusSelectOptions"
-        [config]="statusSelectConfig"
-        (selectedChange)="onStatusChange($event)" />
+      <div class="flex items-center gap-3">
+        <daf-select
+          [selected]="statusFilter() ? [statusFilter()] : []"
+          [options]="statusSelectOptions"
+          [config]="statusSelectConfig"
+          (selectedChange)="onStatusChange($event)" />
 
-      <button type="button"
-        class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
-        title="Rafraîchir"
-        (click)="load()">
-        <span class="material-symbols-outlined text-[18px]">cached</span>
-      </button>
-
-      <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
         <button type="button"
-          class="flex items-center justify-center w-11 h-11 transition-colors"
-          [class.bg-primary]="viewMode() === 'grid'"
-          [class.text-white]="viewMode() === 'grid'"
-          [class.text-outline]="viewMode() !== 'grid'"
-          title="Vue grille"
-          (click)="viewMode.set('grid')">
-          <span class="material-symbols-outlined text-[18px]">grid_view</span>
+          class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
+          title="Rafraîchir"
+          (click)="load()">
+          <span class="material-symbols-outlined text-[18px]">cached</span>
         </button>
-        <button type="button"
-          class="flex items-center justify-center w-11 h-11 transition-colors"
-          [class.bg-primary]="viewMode() === 'list'"
-          [class.text-white]="viewMode() === 'list'"
-          [class.text-outline]="viewMode() !== 'list'"
-          title="Vue liste"
-          (click)="viewMode.set('list')">
-          <span class="material-symbols-outlined text-[18px]">view_list</span>
-        </button>
+
+        <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+          <button type="button"
+            class="flex items-center justify-center w-11 h-11 transition-colors"
+            [class.bg-primary]="viewMode() === 'grid'"
+            [class.text-white]="viewMode() === 'grid'"
+            [class.text-outline]="viewMode() !== 'grid'"
+            title="Vue grille"
+            (click)="viewMode.set('grid')">
+            <span class="material-symbols-outlined text-[18px]">grid_view</span>
+          </button>
+          <button type="button"
+            class="flex items-center justify-center w-11 h-11 transition-colors"
+            [class.bg-primary]="viewMode() === 'list'"
+            [class.text-white]="viewMode() === 'list'"
+            [class.text-outline]="viewMode() !== 'list'"
+            title="Vue liste"
+            (click)="viewMode.set('list')">
+            <span class="material-symbols-outlined text-[18px]">view_list</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </daf-card>
 
   <div class="hidden sm:block">
     @if (viewMode() === 'grid') {
@@ -145,32 +147,34 @@
   </div>
 
   <!-- ═══ Mobile: icon-only search, cards only — no toggle, no table ═══ -->
-  <div class="flex sm:hidden items-center gap-2">
-    <daf-select
-      class="flex-1 min-w-0"
-      [selected]="statusFilter() ? [statusFilter()] : []"
-      [options]="statusSelectOptions"
-      [config]="statusSelectConfig"
-      (selectedChange)="onStatusChange($event)" />
-    <button type="button"
-      class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
-      [class.bg-primary]="mobileSearchOpen()"
-      [class.text-white]="mobileSearchOpen()"
-      (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-      aria-label="Rechercher">
-      <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
-    </button>
-  </div>
-
-  @if (mobileSearchOpen()) {
-    <div class="sm:hidden">
-      <daf-form-field
-        class="block w-full"
-        [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
-        [value]="search()"
-        (valueChange)="onSearch($any($event) ?? '')" />
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="sm:hidden block">
+    <div class="flex items-center gap-2 p-4">
+      <daf-select
+        class="flex-1 min-w-0"
+        [selected]="statusFilter() ? [statusFilter()] : []"
+        [options]="statusSelectOptions"
+        [config]="statusSelectConfig"
+        (selectedChange)="onStatusChange($event)" />
+      <button type="button"
+        class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
+        [class.bg-primary]="mobileSearchOpen()"
+        [class.text-white]="mobileSearchOpen()"
+        (click)="mobileSearchOpen.set(!mobileSearchOpen())"
+        aria-label="Rechercher">
+        <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
+      </button>
     </div>
-  }
+
+    @if (mobileSearchOpen()) {
+      <div class="px-4 pb-4">
+        <daf-form-field
+          class="block w-full"
+          [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
+          [value]="search()"
+          (valueChange)="onSearch($any($event) ?? '')" />
+      </div>
+    }
+  </daf-card>
 
   <div class="grid grid-cols-1 gap-4 sm:hidden">
     <ng-container *ngTemplateOutlet="cardsTpl" />

@@ -1,16 +1,22 @@
 import {
   Component, OnChanges, SimpleChanges, inject, input, signal, computed,
 } from '@angular/core';
-import { NgClass, NgStyle } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent,
+} from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
 import { PermissionDirective } from '../../../../shared/permission.directive';
+import { ModalComponent } from '../../../../shared/modal.component';
 
 @Component({
   selector: 'app-regime-catalog',
   standalone: true,
-  imports: [NgClass, NgStyle, FormsModule, ReactiveFormsModule, PermissionDirective],
+  imports: [
+    ReactiveFormsModule, PermissionDirective,
+    ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, ModalComponent,
+  ],
   templateUrl: './regime-catalog.component.html',
   styleUrl: './regime-catalog.component.scss',
 })
@@ -44,6 +50,9 @@ export class RegimeCatalogComponent implements OnChanges {
     const val = this.form.get('isDefault')?.value;
     return val === true && this.currentDefaultName() !== null;
   });
+
+  formTouched       = signal(false);
+  createFormTouched = signal(false);
 
   // ── Forms ──────────────────────────────────────────────────────────────────
   form = this.fb.group({
@@ -116,7 +125,10 @@ export class RegimeCatalogComponent implements OnChanges {
   }
 
   saveRegime(): void {
-    if (this.form.invalid || !this.selectedId()) return;
+    if (this.form.invalid || !this.selectedId()) {
+      this.formTouched.set(true);
+      return;
+    }
     this.isSaving.set(true);
     this.errorMsg.set(null);
     const v = this.form.value;
@@ -161,7 +173,10 @@ export class RegimeCatalogComponent implements OnChanges {
   }
 
   createRegime(): void {
-    if (this.createForm.invalid) return;
+    if (this.createForm.invalid) {
+      this.createFormTouched.set(true);
+      return;
+    }
     const v = this.createForm.value;
     const dto: CreateRegimeRequest = {
       code: v.code!, labelFr: v.labelFr!, labelEn: v.labelEn ?? '',
@@ -192,4 +207,20 @@ export class RegimeCatalogComponent implements OnChanges {
   });
 
   formatTime(t: string | undefined): string { return t ?? '—'; }
+
+  fieldError(name: string, message: string): string | undefined {
+    if (!this.formTouched()) return undefined;
+    return this.form.get(name)?.invalid ? message : undefined;
+  }
+
+  createFieldError(name: string, message: string): string | undefined {
+    if (!this.createFormTouched()) return undefined;
+    return this.createForm.get(name)?.invalid ? message : undefined;
+  }
+
+  setNum(control: 'hoursPerWeek' | 'daysPerWeek' | 'maxHoursPerDay', formGroup: 'form' | 'createForm', value: unknown): void {
+    const num = value === '' || value === null || value === undefined ? null : Number(value);
+    const group = formGroup === 'form' ? this.form : this.createForm;
+    group.get(control)?.setValue(num);
+  }
 }

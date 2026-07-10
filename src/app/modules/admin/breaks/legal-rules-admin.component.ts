@@ -1,8 +1,9 @@
 import {
   Component, OnChanges, SimpleChanges, inject, input, signal,
 } from '@angular/core';
-import { NgClass } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
+} from '@khalilrebhiitec/daf360';
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
 import { PermissionDirective } from '../../../shared/permission.directive';
@@ -10,115 +11,112 @@ import { PermissionDirective } from '../../../shared/permission.directive';
 @Component({
   selector: 'app-legal-rules-admin',
   standalone: true,
-  imports: [ FormsModule, PermissionDirective],
+  imports: [ButtonComponent, FormFieldComponent, SelectComponent, CardComponent, PermissionDirective],
   template: `
 <div>
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div>
-      <h2 style="font-size:16px;font-weight:700;color:#1d2b3e;margin:0;">Règles légales de pause</h2>
-      <p style="font-size:12px;color:#44474c;margin:3px 0 0;">Seuils légaux de déduction de pause par entité</p>
+      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Règles légales de pause</h2>
+      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Seuils légaux de déduction de pause par entité</p>
     </div>
-    <button type="button" (click)="showForm.set(!showForm())" *appHasPermission="'ADMIN_BREAKS'"
-      style="padding:8px 18px;border-radius:10px;border:none;background:#1a6b7c;color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
-      <span class="material-symbols-outlined" style="font-size:16px;">{{ showForm() ? 'close' : 'add' }}</span>
-      {{ showForm() ? 'Annuler' : 'Nouvelle règle' }}
-    </button>
+    <daf-button *appHasPermission="'ADMIN_BREAKS'"
+      [label]="showForm() ? 'Annuler' : 'Nouvelle règle'" variant="teal"
+      [options]="{ iconStart: showForm() ? 'close' : 'add' }"
+      (onClick)="showForm.set(!showForm())" />
   </div>
 
   <!-- Create form -->
   @if (showForm()) {
-    <div style="background:#f7f9fb;border:1px solid #eceef0;border-radius:14px;padding:20px;margin-bottom:20px;">
-      <h3 style="font-size:13px;font-weight:700;color:#1d2b3e;margin:0 0 14px;text-transform:uppercase;letter-spacing:.4px;">Nouvelle règle</h3>
-      @if (formError()) { <div style="background:#fee2e2;border-radius:8px;padding:10px;font-size:12px;color:#991b1b;margin-bottom:12px;">{{ formError() }}</div> }
+    <div style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant);border-radius:14px;padding:20px;margin-bottom:20px;">
+      <h3 style="font-size:var(--text-body-md);font-weight:700;color:var(--color-primary);margin:0 0 14px;text-transform:uppercase;letter-spacing:.4px;">Nouvelle règle</h3>
+      @if (formError()) { <div style="background:var(--color-error-container);border-radius:8px;padding:10px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:12px;">{{ formError() }}</div> }
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div style="grid-column:span 2">
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Libellé *</label>
-          <input [(ngModel)]="formLabel" type="text" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
+          <daf-form-field
+            [options]="{ label: 'Libellé *', type: 'text', fullWidth: true }"
+            [value]="formLabel"
+            (valueChange)="formLabel = $any($event) ?? ''" />
         </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Min heures travaillées *</label>
-          <input [(ngModel)]="formMinHours" type="number" step="0.5" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Max heures (optionnel)</label>
-          <input [(ngModel)]="formMaxHours" type="number" step="0.5" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Déduction (minutes) *</label>
-          <input [(ngModel)]="formDeductionMin" type="number" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Jours applicables</label>
-          <select [(ngModel)]="formDays" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;">
-            <option value="ALL">Tous les jours</option>
-            <option value="WEEKDAYS">Jours ouvrés</option>
-            <option value="WEEKEND">Week-end</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Date d'effet *</label>
-          <input [(ngModel)]="formEffFrom" type="date" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#44474c;display:block;margin-bottom:4px;">Date de fin (optionnel)</label>
-          <input [(ngModel)]="formEffTo" type="date" style="width:100%;background:#fff;border:1px solid #c5c6cd;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;box-sizing:border-box;" />
-        </div>
+        <daf-form-field
+          [options]="{ label: 'Min heures travaillées *', type: 'number', fullWidth: true }"
+          [value]="formMinHours"
+          (valueChange)="formMinHours = Number($event) || 0" />
+        <daf-form-field
+          [options]="{ label: 'Max heures (optionnel)', type: 'number', fullWidth: true }"
+          [value]="formMaxHours"
+          (valueChange)="formMaxHours = $event === '' || $event === null ? null : Number($event)" />
+        <daf-form-field
+          [options]="{ label: 'Déduction (minutes) *', type: 'number', fullWidth: true }"
+          [value]="formDeductionMin"
+          (valueChange)="formDeductionMin = Number($event) || 0" />
+        <daf-select
+          [selected]="[formDays]"
+          [options]="daysOptions"
+          [config]="{ label: 'Jours applicables', fullWidth: true }"
+          (selectedChange)="formDays = $event[0] ?? 'ALL'" />
+        <daf-form-field
+          [options]="{ label: 'Date d\\'effet *', type: 'date', fullWidth: true }"
+          [value]="formEffFrom"
+          (valueChange)="formEffFrom = $any($event)" />
+        <daf-form-field
+          [options]="{ label: 'Date de fin (optionnel)', type: 'date', fullWidth: true }"
+          [value]="formEffTo"
+          (valueChange)="formEffTo = $any($event) ?? ''" />
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-        <button type="button" (click)="saveRule()" [disabled]="isSaving()"
-          style="padding:9px 22px;border-radius:10px;border:none;background:#4648d4;color:#fff;font-size:13px;font-weight:700;cursor:pointer;"
-          [style.opacity]="isSaving() ? '0.6' : '1'">
-          {{ isSaving() ? 'Enregistrement…' : 'Enregistrer' }}
-        </button>
+        <daf-button
+          [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer'" variant="teal"
+          [options]="{ disabled: isSaving(), loading: isSaving() }"
+          (onClick)="saveRule()" />
       </div>
     </div>
   }
 
   <!-- Rules table -->
-  <div style="background:#fff;border-radius:14px;border:1px solid #eceef0;overflow:hidden;">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'lg' }">
     @if (isLoading()) {
-      <div style="padding:32px;text-align:center;color:#44474c;font-size:13px;">Chargement…</div>
+      <div style="padding:32px;text-align:center;color:var(--color-on-surface-variant);font-size:var(--text-body-md);">Chargement…</div>
     }
     @if (!isLoading() && rules().length === 0) {
       <div style="padding:48px;text-align:center;">
-        <p style="font-size:13px;color:#75777d;margin:0;">Aucune règle légale configurée pour cette entité.</p>
+        <p style="font-size:var(--text-body-md);color:var(--color-outline);margin:0;">Aucune règle légale configurée pour cette entité.</p>
       </div>
     }
     @if (!isLoading() && rules().length > 0) {
       <table style="width:100%;border-collapse:collapse;">
         <thead>
-          <tr style="background:#f2f4f6;">
-            <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Libellé</th>
-            <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Min h. travaillées</th>
-            <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Déduction (min)</th>
-            <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Jours</th>
-            <th style="padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Effet</th>
-            <th style="padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.5px;">Action</th>
+          <tr style="background:var(--color-background);">
+            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Libellé</th>
+            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Min h. travaillées</th>
+            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Déduction (min)</th>
+            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Jours</th>
+            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Effet</th>
+            <th style="padding:10px 16px;text-align:right;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Action</th>
           </tr>
         </thead>
         <tbody>
           @for (rule of rules(); track rule.id) {
-            <tr style="border-top:1px solid #f0f2f4;">
-              <td style="padding:12px 16px;font-size:13px;font-weight:500;color:#1d2b3e;">{{ rule.labelFr }}</td>
-              <td style="padding:12px 16px;font-size:13px;color:#44474c;">{{ rule.minWorkHours }}h{{ rule.maxWorkHours ? ' – ' + rule.maxWorkHours + 'h' : '+' }}</td>
+            <tr style="border-top:1px solid var(--color-outline-variant);">
+              <td style="padding:12px 16px;font-size:var(--text-body-md);font-weight:500;color:var(--color-primary);">{{ rule.labelFr }}</td>
+              <td style="padding:12px 16px;font-size:var(--text-body-md);color:var(--color-on-surface-variant);">{{ rule.minWorkHours }}h{{ rule.maxWorkHours ? ' – ' + rule.maxWorkHours + 'h' : '+' }}</td>
               <td style="padding:12px 16px;">
-                <span style="background:#e6f4f6;color:#0f4a57;font-size:12px;padding:3px 10px;border-radius:999px;font-weight:600;">{{ rule.deductionMin }} min</span>
+                <span style="background:#e6f4f6;color:var(--color-teal-light);font-size:var(--text-body-sm);padding:3px 10px;border-radius:999px;font-weight:600;">{{ rule.deductionMin }} min</span>
               </td>
-              <td style="padding:12px 16px;font-size:12px;color:#44474c;">{{ formatDays(rule.appliesToDays) }}</td>
-              <td style="padding:12px 16px;font-size:12px;color:#44474c;">{{ rule.effectiveFrom }}{{ rule.effectiveTo ? ' → ' + rule.effectiveTo : '' }}</td>
+              <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">{{ formatDays(rule.appliesToDays) }}</td>
+              <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">{{ rule.effectiveFrom }}{{ rule.effectiveTo ? ' → ' + rule.effectiveTo : '' }}</td>
               <td style="padding:12px 16px;text-align:right;">
-                <button type="button" (click)="removeRule(rule.id)" *appHasPermission="'ADMIN_BREAKS'"
-                  style="padding:5px 8px;border-radius:8px;border:none;background:#fee2e2;color:#ba1a1a;cursor:pointer;">
-                  <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
-                </button>
+                <daf-button *appHasPermission="'ADMIN_BREAKS'"
+                  label="" variant="danger"
+                  [options]="{ iconStart: 'delete', size: 'sm' }"
+                  (onClick)="removeRule(rule.id)" />
               </td>
             </tr>
           }
         </tbody>
       </table>
     }
-  </div>
+  </daf-card>
 </div>
   `,
 })
@@ -132,6 +130,14 @@ export class LegalRulesAdminComponent implements OnChanges {
   showForm  = signal(false);
   isSaving  = signal(false);
   formError = signal<string | null>(null);
+
+  readonly daysOptions: SelectOption[] = [
+    { value: 'ALL', label: 'Tous les jours' },
+    { value: 'WEEKDAYS', label: 'Jours ouvrés' },
+    { value: 'WEEKEND', label: 'Week-end' },
+  ];
+
+  readonly Number = Number;
 
   // Form fields
   formLabel = '';

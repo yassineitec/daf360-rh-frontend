@@ -2,9 +2,9 @@ import {
   Component, OnChanges, SimpleChanges, computed, inject, input, signal,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import {
-  AvatarCell, BadgeCell, BadgeOptions, DafCellDirective, DataTableComponent,
+  AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
+  DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
   TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
@@ -13,13 +13,17 @@ import {
   AssignEmployeeOverrideRequest,
 } from '../regime.model';
 import { PermissionDirective } from '../../../../shared/permission.directive';
+import { ModalComponent } from '../../../../shared/modal.component';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
 @Component({
   selector: 'app-regime-overview',
   standalone: true,
-  imports: [NgClass, FormsModule, PermissionDirective, DataTableComponent, DafCellDirective],
+  imports: [
+    NgClass, PermissionDirective, DataTableComponent, DafCellDirective,
+    ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
+  ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
 })
@@ -52,6 +56,18 @@ export class RegimeOverviewComponent implements OnChanges {
   noEndDate         = signal(true);
   isSaving          = signal(false);
   panelError        = signal<string | null>(null);
+
+  regimeOptions = computed<SelectOption[]>(() =>
+    this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}h/sem` }))
+  );
+
+  overrideRegimeSelected(): string[] {
+    return this.overrideRegimeId ? [String(this.overrideRegimeId)] : [];
+  }
+
+  onOverrideRegimeChange(value: string[]): void {
+    this.overrideRegimeId = value[0] ? Number(value[0]) : 0;
+  }
 
   sourceFilters: { value: SourceFilter; label: string }[] = [
     { value: 'ALL',              label: 'Tous'            },

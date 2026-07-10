@@ -1,12 +1,13 @@
 import { Component, Input, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ButtonComponent, FormFieldComponent, ToggleComponent } from '@khalilrebhiitec/daf360';
+import { ModalComponent } from '../../shared/modal.component';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
 
 @Component({
   selector: 'app-interview-types-admin',
   standalone: true,
-  imports: [FormsModule],
+  imports: [ButtonComponent, FormFieldComponent, ToggleComponent, ModalComponent],
   template: `
     <div class="ita-wrap">
 
@@ -16,12 +17,11 @@ import { InterviewType } from '../candidates/interview.model';
           <h2 class="ita-title">Types d'entretiens</h2>
           <p class="ita-sub">{{ types().length }} type(s) configuré(s) pour cette entité</p>
         </div>
-        @if (!showAdd()) {
-          <button class="ita-add-btn" (click)="startAdd()" type="button">
-            <span class="material-symbols-outlined" style="font-size:16px">add</span>
-            Nouveau type
-          </button>
-        }
+        <daf-button
+          label="Nouveau type"
+          variant="teal"
+          [options]="{ iconStart: 'add' }"
+          (onClick)="startAdd()" />
       </div>
 
       <!-- Global error -->
@@ -29,38 +29,41 @@ import { InterviewType } from '../candidates/interview.model';
         <div class="ita-error">{{ error() }}</div>
       }
 
-      <!-- Add form -->
-      @if (showAdd()) {
-        <div class="ita-form-card">
-          <p class="ita-form-title">Nouveau type d'entretien</p>
-          <div class="ita-form-grid">
-            <div>
-              <label class="ita-label">Nom *</label>
-              <input class="ita-input" [(ngModel)]="newName"
-                     placeholder="Ex : Entretien Technique" maxlength="150" />
-            </div>
-            <div>
-              <label class="ita-label">Ordre d'affichage</label>
-              <input class="ita-input" type="number" [(ngModel)]="newOrder" min="0" />
-            </div>
-            <div style="grid-column:1/-1">
-              <label class="ita-label">Description</label>
-              <input class="ita-input" [(ngModel)]="newDesc"
-                     placeholder="Description optionnelle" maxlength="500" />
-            </div>
-          </div>
-          @if (addError()) {
-            <p class="ita-field-error">{{ addError() }}</p>
-          }
-          <div class="ita-form-actions">
-            <button class="ita-btn-ghost" (click)="cancelAdd()" type="button">Annuler</button>
-            <button class="ita-btn-primary" (click)="submitAdd()"
-                    [disabled]="addLoading()" type="button">
-              {{ addLoading() ? 'Enregistrement...' : 'Ajouter' }}
-            </button>
+      <!-- Add modal -->
+      <app-modal
+        title="Nouveau type d'entretien"
+        [visible]="showAdd()"
+        [hasFooter]="true"
+        (closed)="cancelAdd()"
+      >
+        <div class="ita-form-grid">
+          <daf-form-field
+            [options]="{ label: 'Nom *', placeholder: 'Ex : Entretien Technique', maxLength: 150, fullWidth: true }"
+            [value]="newName"
+            (valueChange)="newName = $any($event) ?? ''" />
+          <daf-form-field
+            [options]="{ label: 'Ordre d\\'affichage', type: 'number', fullWidth: true }"
+            [value]="newOrder"
+            (valueChange)="newOrder = $event === null || $event === '' ? 0 : +$event" />
+          <div style="grid-column:1/-1">
+            <daf-form-field
+              [options]="{ label: 'Description', placeholder: 'Description optionnelle', maxLength: 500, fullWidth: true }"
+              [value]="newDesc"
+              (valueChange)="newDesc = $any($event) ?? ''" />
           </div>
         </div>
-      }
+        @if (addError()) {
+          <p class="ita-field-error">{{ addError() }}</p>
+        }
+        <div slot="footer">
+          <daf-button label="Annuler" variant="secondary" (onClick)="cancelAdd()" />
+          <daf-button
+            [label]="addLoading() ? 'Enregistrement...' : 'Ajouter'"
+            variant="teal"
+            [options]="{ disabled: addLoading(), loading: addLoading() }"
+            (onClick)="submitAdd()" />
+        </div>
+      </app-modal>
 
       <!-- List -->
       @if (loading()) {
@@ -74,28 +77,31 @@ import { InterviewType } from '../candidates/interview.model';
               <!-- Edit row -->
               <div class="ita-edit-row">
                 <div class="ita-form-grid">
-                  <div>
-                    <label class="ita-label">Nom *</label>
-                    <input class="ita-input" [(ngModel)]="editName" maxlength="150" />
-                  </div>
-                  <div>
-                    <label class="ita-label">Ordre</label>
-                    <input class="ita-input" type="number" [(ngModel)]="editOrder" min="0" />
-                  </div>
+                  <daf-form-field
+                    [options]="{ label: 'Nom *', maxLength: 150, fullWidth: true }"
+                    [value]="editName"
+                    (valueChange)="editName = $any($event) ?? ''" />
+                  <daf-form-field
+                    [options]="{ label: 'Ordre', type: 'number', fullWidth: true }"
+                    [value]="editOrder"
+                    (valueChange)="editOrder = $event === null || $event === '' ? 0 : +$event" />
                   <div style="grid-column:1/-1">
-                    <label class="ita-label">Description</label>
-                    <input class="ita-input" [(ngModel)]="editDesc" maxlength="500" />
+                    <daf-form-field
+                      [options]="{ label: 'Description', maxLength: 500, fullWidth: true }"
+                      [value]="editDesc"
+                      (valueChange)="editDesc = $any($event) ?? ''" />
                   </div>
                 </div>
                 @if (editError()) {
                   <p class="ita-field-error">{{ editError() }}</p>
                 }
                 <div class="ita-form-actions" style="margin-top:10px">
-                  <button class="ita-btn-ghost" (click)="cancelEdit()" type="button">Annuler</button>
-                  <button class="ita-btn-primary" (click)="saveEdit(t.id)"
-                          [disabled]="editLoading()" type="button">
-                    {{ editLoading() ? 'Enregistrement...' : 'Sauvegarder' }}
-                  </button>
+                  <daf-button label="Annuler" variant="secondary" (onClick)="cancelEdit()" />
+                  <daf-button
+                    [label]="editLoading() ? 'Enregistrement...' : 'Sauvegarder'"
+                    variant="teal"
+                    [options]="{ disabled: editLoading(), loading: editLoading() }"
+                    (onClick)="saveEdit(t.id)" />
                 </div>
               </div>
             } @else {
@@ -114,18 +120,14 @@ import { InterviewType } from '../candidates/interview.model';
                   @if (!t.isActive) {
                     <span class="ita-badge-inactive">Inactif</span>
                   }
-                  <button class="ita-icon-btn" title="Modifier"
-                          (click)="startEdit(t)" type="button">
-                    <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-                  </button>
-                  <button class="ita-icon-btn"
-                          [title]="t.isActive ? 'Désactiver' : 'Activer'"
-                          (click)="toggleActive(t)" type="button"
-                          [style.color]="t.isActive ? '#50717b' : '#9CA3AF'">
-                    <span class="material-symbols-outlined" style="font-size:22px">
-                      {{ t.isActive ? 'toggle_on' : 'toggle_off' }}
-                    </span>
-                  </button>
+                  <daf-button
+                    variant="ghost"
+                    [options]="{ iconStart: 'edit', size: 'sm' }"
+                    (onClick)="startEdit(t)" />
+                  <daf-toggle
+                    [options]="{ hint: t.isActive ? 'Désactiver' : 'Activer' }"
+                    [checked]="t.isActive"
+                    (checkedChange)="toggleActive(t)" />
                 </div>
               </div>
             }
@@ -140,38 +142,26 @@ import { InterviewType } from '../candidates/interview.model';
   styles: [`
     .ita-wrap   { max-width:780px }
     .ita-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px }
-    .ita-title  { font-size:15px;font-weight:600;color:var(--color-text,#1A1C1E);margin:0 }
-    .ita-sub    { font-size:12px;color:var(--color-text-muted,#6B7280);margin:3px 0 0 }
-    .ita-add-btn { display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer }
-    .ita-add-btn:hover { opacity:.9 }
-    .ita-form-card  { background:#f8fafb;border:1px solid #E0E7E9;border-radius:10px;padding:16px;margin-bottom:16px }
-    .ita-form-title { font-size:13px;font-weight:600;margin:0 0 12px;color:#1A1C1E }
+    .ita-title  { font-size:var(--text-headline-md,15px);font-weight:600;color:var(--color-text,#1A1C1E);margin:0 }
+    .ita-sub    { font-size:var(--text-body-sm,12px);color:var(--color-text-muted,#6B7280);margin:3px 0 0 }
     .ita-form-grid  { display:grid;grid-template-columns:1fr 120px;gap:10px }
-    .ita-label  { display:block;font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px }
-    .ita-input  { width:100%;padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#1A1C1E;box-sizing:border-box }
-    .ita-input:focus { outline:none;border-color:var(--color-primary,#1C4E5C) }
-    .ita-field-error { font-size:12px;color:#BA1A1A;margin:6px 0 0 }
+    .ita-field-error { font-size:var(--text-body-sm,12px);color:var(--color-danger,#BA1A1A);margin:6px 0 0 }
     .ita-form-actions { display:flex;justify-content:flex-end;gap:8px;margin-top:12px }
-    .ita-btn-primary { padding:7px 16px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer }
-    .ita-btn-primary:disabled { opacity:.6;cursor:not-allowed }
-    .ita-btn-ghost  { padding:7px 14px;background:none;color:var(--color-text-muted,#6B7280);border:1px solid #D1D5DB;border-radius:7px;font-size:13px;cursor:pointer }
-    .ita-error  { background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:13px;color:#BA1A1A;margin-bottom:14px }
+    .ita-error  { background:var(--color-error-container,#FEF2F2);border:1px solid var(--color-error-container,#FECACA);border-radius:8px;padding:10px 14px;font-size:var(--text-body-sm,13px);color:var(--color-on-error-container,#BA1A1A);margin-bottom:14px }
     .ita-spinner-wrap { display:flex;justify-content:center;padding:32px }
-    .ita-spin   { font-size:28px;color:#9CA3AF;animation:spin 1s linear infinite }
+    .ita-spin   { font-size:28px;color:var(--color-outline,#9CA3AF);animation:spin 1s linear infinite }
     @keyframes spin { to { transform:rotate(360deg) } }
     .ita-list   { display:flex;flex-direction:column;gap:6px }
-    .ita-row    { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:#fff;border:1px solid #E0E7E9;border-radius:8px }
+    .ita-row    { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--color-surface,#fff);border:1px solid var(--color-outline-variant,#E0E7E9);border-radius:8px }
     .ita-row--inactive { opacity:.55 }
     .ita-row-meta { display:flex;align-items:center;gap:12px;min-width:0 }
-    .ita-order  { display:flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:6px;background:#f0f4f5;font-size:11px;font-weight:700;color:#50717b }
-    .ita-row-name { font-size:13px;font-weight:600;color:#1A1C1E }
-    .ita-row-desc { font-size:12px;color:#6B7280;margin-top:1px }
+    .ita-order  { display:flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:6px;background:var(--color-surface-container,#f0f4f5);font-size:var(--text-label-sm,11px);font-weight:700;color:var(--color-teal,#50717b) }
+    .ita-row-name { font-size:var(--text-body-sm,13px);font-weight:600;color:var(--color-on-surface,#1A1C1E) }
+    .ita-row-desc { font-size:var(--text-body-sm,12px);color:var(--color-on-surface-variant,#6B7280);margin-top:1px }
     .ita-row-actions { display:flex;align-items:center;gap:4px;flex-shrink:0 }
-    .ita-badge-inactive { font-size:11px;font-weight:600;color:#9CA3AF;background:#F3F4F6;padding:2px 8px;border-radius:20px }
-    .ita-icon-btn { display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:6px;background:none;color:#6B7280;cursor:pointer }
-    .ita-icon-btn:hover { background:#F3F4F6;color:#1A1C1E }
-    .ita-edit-row { padding:12px;background:#f8fafb;border:1px solid #E0E7E9;border-radius:8px }
-    .ita-empty  { font-size:13px;color:#9CA3AF;text-align:center;padding:24px }
+    .ita-badge-inactive { font-size:var(--text-label-sm,11px);font-weight:600;color:var(--color-outline,#9CA3AF);background:var(--color-surface-container,#F3F4F6);padding:2px 8px;border-radius:20px }
+    .ita-edit-row { padding:12px;background:var(--color-surface-container-low,#f8fafb);border:1px solid var(--color-outline-variant,#E0E7E9);border-radius:8px }
+    .ita-empty  { font-size:var(--text-body-sm,13px);color:var(--color-outline,#9CA3AF);text-align:center;padding:24px }
   `],
 })
 export class InterviewTypesAdminComponent implements OnInit {

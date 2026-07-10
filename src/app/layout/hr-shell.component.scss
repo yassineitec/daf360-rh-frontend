@@ -11,7 +11,9 @@
   overflow-y:  auto;
   overflow-x:  hidden;
   padding:     2rem;
-  background:  var(--color-background);
+  /* Matches the Finance shell's page background (hardcoded #f8f9fb there too)
+     instead of the lib default --color-background (#f2f4f6). */
+  background:  #f8f9fb;
   box-sizing:  border-box;
 
   @media (max-width: 1024px) { padding: 1.5rem; }

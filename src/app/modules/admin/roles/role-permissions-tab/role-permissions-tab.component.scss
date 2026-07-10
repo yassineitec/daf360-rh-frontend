@@ -25,14 +25,14 @@
 }
 
 .rpt-title {
-  font-size: 14px;
+  font-size: var(--text-body-md);
   font-weight: 700;
-  color: var(--color-text, #1a1c1e);
+  color: var(--color-on-surface);
 }
 
 .rpt-counter {
-  font-size: 12px;
-  color: var(--color-text-muted, #6b7280);
+  font-size: var(--text-label-sm);
+  color: var(--color-on-surface-variant);
   background: #f1f5f9;
   border-radius: 999px;
   padding: 2px 8px;
@@ -47,8 +47,8 @@
 .rpt-link-btn {
   background: none;
   border: none;
-  color: #1a6b7c;
-  font-size: 12px;
+  color: var(--color-teal);
+  font-size: var(--text-label-sm);
   cursor: pointer;
   text-decoration: underline;
   padding: 0;
@@ -59,12 +59,12 @@
 }
 
 .rpt-btn-save {
-  background: #1a6b7c;
+  background: var(--color-teal);
   color: #fff;
   border: none;
   border-radius: 6px;
   padding: 6px 14px;
-  font-size: 12px;
+  font-size: var(--text-label-sm);
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -86,7 +86,7 @@
 }
 
 .rpt-group {
-  border: 1px solid var(--color-border, #e0e7e9);
+  border: 1px solid var(--color-outline-variant);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -99,7 +99,7 @@
   border: none;
   padding: 10px 14px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-body-md);
   transition: background 0.12s;
 
   &:hover {
@@ -111,12 +111,12 @@
   font-weight: 600;
   flex: 1;
   text-align: left;
-  color: var(--color-text, #1a1c1e);
+  color: var(--color-on-surface);
 }
 
 .rpt-group-count {
-  font-size: 11px;
-  color: var(--color-text-muted, #6b7280);
+  font-size: var(--text-label-sm);
+  color: var(--color-on-surface-variant);
   background: #f1f5f9;
   border-radius: 999px;
   padding: 1px 6px;
@@ -124,8 +124,8 @@
 }
 
 .rpt-chevron {
-  font-size: 10px;
-  color: var(--color-text-muted, #6b7280);
+  font-size: var(--text-label-caps);
+  color: var(--color-on-surface-variant);
 }
 
 .rpt-permissions {
@@ -134,7 +134,7 @@
   flex-direction: column;
   gap: 2px;
   background: #fafafa;
-  border-top: 1px solid var(--color-border, #e0e7e9);
+  border-top: 1px solid var(--color-outline-variant);
 }
 
 .rpt-perm-row {
@@ -155,7 +155,7 @@
     width: 15px;
     height: 15px;
     cursor: pointer;
-    accent-color: #1a6b7c;
+    accent-color: var(--color-teal);
   }
 }
 
@@ -168,9 +168,9 @@
 }
 
 .rpt-code {
-  font-size: 11px;
+  font-size: var(--text-label-sm);
   font-family: monospace;
-  color: #64748b;
+  color: var(--color-on-surface-variant);
   background: #f1f5f9;
   border-radius: 4px;
   padding: 1px 5px;
@@ -178,24 +178,24 @@
 }
 
 .rpt-label {
-  font-size: 12px;
-  color: var(--color-text, #1a1c1e);
+  font-size: var(--text-label-sm);
+  color: var(--color-on-surface);
   flex: 1;
 }
 
 .rpt-spinner {
-  font-size: 14px;
-  color: #1a6b7c;
+  font-size: var(--text-body-md);
+  color: var(--color-teal);
   animation: spin 1s linear infinite;
   display: inline-block;
 }
 
 .rpt-error {
-  background: #fee2e2;
+  background: var(--color-error-container);
   border-radius: 8px;
   padding: 10px 14px;
-  color: #991b1b;
-  font-size: 12px;
+  color: var(--color-on-error-container);
+  font-size: var(--text-label-sm);
 }
 
 .rpt-success {
@@ -203,12 +203,12 @@
   border-radius: 8px;
   padding: 10px 14px;
   color: #15803d;
-  font-size: 12px;
+  font-size: var(--text-label-sm);
 }
 
 .rpt-loading {
-  color: var(--color-text-muted, #6b7280);
-  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  font-size: var(--text-body-md);
   text-align: center;
   padding: 24px;
 }

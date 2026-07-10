@@ -10,63 +10,67 @@
       }
   </div>
 
-  <!-- ── Search + controls: search on the left, filters + toggle on the right ── -->
-  <div class="flex items-center justify-between gap-3 flex-wrap">
+  <!-- ── Search + controls: search on the left, filters + toggle on the right, all inside one card (matches /finance/clients) ── -->
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
+    <div class="p-4 sm:p-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
 
-    <!-- Desktop/tablet: full search box -->
-    <div class="hidden sm:block w-56 ml-0.5">
-      <daf-form-field
-        class="block w-full"
-        [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
-        [value]="searchQuery()"
-        (valueChange)="onSearch($any($event) ?? '')" />
-    </div>
+        <!-- Desktop/tablet: full search box -->
+        <div class="hidden sm:block w-56 ml-0.5">
+          <daf-form-field
+            class="block w-full"
+            [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
+            [value]="searchQuery()"
+            (valueChange)="onSearch($any($event) ?? '')" />
+        </div>
 
-    <!-- Mobile: icon-only, expands to a full-width input on tap -->
-    <button type="button"
-      class="sm:hidden flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
-      [class.bg-primary]="mobileSearchOpen()"
-      [class.text-white]="mobileSearchOpen()"
-      (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-      aria-label="Rechercher">
-      <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
-    </button>
+        <!-- Mobile: icon-only, expands to a full-width input on tap -->
+        <button type="button"
+          class="sm:hidden flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
+          [class.bg-primary]="mobileSearchOpen()"
+          [class.text-white]="mobileSearchOpen()"
+          (click)="mobileSearchOpen.set(!mobileSearchOpen())"
+          aria-label="Rechercher">
+          <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
+        </button>
 
-    <div class="flex items-center gap-3">
-      <button type="button"
-        class="flex items-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-container transition-colors"
-        (click)="onToolbarAction('filters')">
-        <span class="material-symbols-outlined text-[18px]">tune</span>
-        Filtres avancés
-      </button>
-
-      <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
-      <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-        @for (opt of viewToggleOptions; track opt.id) {
+        <div class="flex items-center gap-3">
           <button type="button"
-            class="flex items-center justify-center w-11 h-11 transition-colors"
-            [class.bg-primary]="viewMode() === opt.id"
-            [class.text-white]="viewMode() === opt.id"
-            [class.text-outline]="viewMode() !== opt.id"
-            [title]="opt.tooltip ?? ''"
-            (click)="viewMode.set($any(opt.id))">
-            <span class="material-symbols-outlined text-[18px]">{{ opt.icon }}</span>
+            class="flex items-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-container transition-colors"
+            (click)="onToolbarAction('filters')">
+            <span class="material-symbols-outlined text-[18px]">tune</span>
+            Filtres avancés
           </button>
-        }
-      </div>
-    </div>
-  </div>
 
-  <!-- Mobile search input — appears below the row once opened -->
-  @if (mobileSearchOpen()) {
-    <div class="sm:hidden ml-0.5">
-      <daf-form-field
-        class="block w-full"
-        [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
-        [value]="searchQuery()"
-        (valueChange)="onSearch($any($event) ?? '')" />
+          <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
+          <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+            @for (opt of viewToggleOptions; track opt.id) {
+              <button type="button"
+                class="flex items-center justify-center w-11 h-11 transition-colors"
+                [class.bg-primary]="viewMode() === opt.id"
+                [class.text-white]="viewMode() === opt.id"
+                [class.text-outline]="viewMode() !== opt.id"
+                [title]="opt.tooltip ?? ''"
+                (click)="viewMode.set($any(opt.id))">
+                <span class="material-symbols-outlined text-[18px]">{{ opt.icon }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile search input — appears below the row once opened -->
+      @if (mobileSearchOpen()) {
+        <div class="sm:hidden ml-0.5 mt-3">
+          <daf-form-field
+            class="block w-full"
+            [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
+            [value]="searchQuery()"
+            (valueChange)="onSearch($any($event) ?? '')" />
+        </div>
+      }
     </div>
-  }
+  </daf-card>
 
   <!-- ── Active filter tags ────────────────────────────────────────────── -->
   @if (activeFilterTags().length > 0) {

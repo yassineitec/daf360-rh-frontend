@@ -1,16 +1,25 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { Holiday }          from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { ModalComponent }   from '../../shared/modal.component';
-import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
+import {
+  MultiDatePickerComponent,
+  FormFieldComponent,
+  ToggleComponent,
+  ButtonComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-holidays-admin',
   standalone: true,
-  imports: [FormsModule, SpinnerComponent, ModalComponent, MultiDatePickerComponent],
+  imports: [
+    SpinnerComponent, ModalComponent, MultiDatePickerComponent,
+    FormFieldComponent, ToggleComponent, ButtonComponent,
+    DataTableComponent, DafCellDirective,
+  ],
   template: `
     <div class="section-header">
       <div>
@@ -18,63 +27,41 @@ import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
         <p class="col-sub">Gestion par entité et par année</p>
       </div>
       <div class="header-actions">
-        <select class="year-select" [(ngModel)]="selectedYear" (ngModelChange)="load()">
-          @for (y of yearOptions; track y) { <option [value]="y">{{ y }}</option> }
-        </select>
-        <button class="btn-add" (click)="openAdd()" type="button">+ Ajouter</button>
+        <div class="search-field">
+          <daf-form-field
+            [options]="{ type: 'search', placeholder: 'Rechercher par nom (fr/en)…', prefixIcon: 'search', fullWidth: true }"
+            [value]="searchQuery()"
+            (valueChange)="searchQuery.set($any($event) ?? '')"
+          />
+        </div>
+        <daf-button label="+ Ajouter" variant="primary" (onClick)="openAdd()" />
       </div>
     </div>
 
     @if (loading()) { <div class="center"><app-spinner /></div> }
     @else {
-      <!-- Calendar indicators -->
-      @if (holidays().length > 0) {
-        <div class="month-grid">
-          @for (month of months; track month.num) {
-            <div class="month-card">
-              <p class="month-name">{{ month.label }}</p>
-              <div class="day-chips">
-                @for (h of getMonthHolidays(month.num); track h.id) {
-                  <span class="day-chip" [title]="h.frenchLabel">
-                    {{ dayNum(h.dateHoliday) }}
-                  </span>
-                }
-                @if (!getMonthHolidays(month.num).length) {
-                  <span class="no-holiday">—</span>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      }
-
       <!-- List -->
       @if (holidays().length === 0) {
         <div class="empty-state"><p>Aucun jour férié pour {{ selectedYear }}.</p></div>
       } @else {
-        <table class="data-table">
-          <thead>
-            <tr><th>Date</th><th>Libellé FR</th><th>Libellé EN</th><th>Récurrent</th><th></th></tr>
-          </thead>
-          <tbody>
-            @for (h of holidays(); track h.id) {
-              <tr>
-                <td class="date-td">{{ fmtDate(h.dateHoliday) }}</td>
-                <td>{{ h.frenchLabel }}</td>
-                <td class="cell-muted">{{ h.englishLabel }}</td>
-                <td>
-                  <span class="recur-badge" [class.yes]="h.isRecurring">
-                    {{ h.isRecurring ? 'Annuel' : 'Ponctuel' }}
-                  </span>
-                </td>
-                <td class="actions-cell">
-                  <button class="btn-edit"   (click)="openEdit(h)" type="button">Modifier</button>
-                  <button class="btn-delete" (click)="del(h)"      type="button">Suppr.</button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+          <ng-template dafCell="dateHoliday" let-row>
+            <span class="date-td">{{ fmtDate(row['_source'].dateHoliday) }}</span>
+          </ng-template>
+
+          <ng-template dafCell="isRecurring" let-row>
+            <span class="recur-badge" [class.yes]="row['_source'].isRecurring">
+              {{ row['_source'].isRecurring ? 'Oui' : 'Non' }}
+            </span>
+          </ng-template>
+
+          <ng-template dafCell="_actions" let-row>
+            <div class="actions-cell">
+              <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
+              <daf-button label="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
+            </div>
+          </ng-template>
+        </daf-data-table>
       }
     }
 
@@ -94,25 +81,34 @@ import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
           />
         </div>
         <div class="field-row">
-          <label class="form-label">Libellé français *</label>
-          <input class="form-input" type="text" [(ngModel)]="form.frenchLabel" />
+          <daf-form-field
+            [options]="{ label: 'Libellé français', required: true, fullWidth: true }"
+            [value]="form.frenchLabel"
+            (valueChange)="form.frenchLabel = $any($event)"
+          />
         </div>
         <div class="field-row">
-          <label class="form-label">Libellé anglais *</label>
-          <input class="form-input" type="text" [(ngModel)]="form.englishLabel" />
+          <daf-form-field
+            [options]="{ label: 'Libellé anglais', required: true, fullWidth: true }"
+            [value]="form.englishLabel"
+            (valueChange)="form.englishLabel = $any($event)"
+          />
         </div>
-        <label class="check-label">
-          <input type="checkbox" [(ngModel)]="form.isRecurring" />
-          Récurrent (chaque année)
-        </label>
+        <daf-toggle
+          [options]="{ label: 'Récurrent (chaque année)' }"
+          [checked]="form.isRecurring"
+          (checkedChange)="form.isRecurring = $event"
+        />
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
       <div slot="footer">
-        <button class="btn-ghost" (click)="showModal.set(false)" type="button">Annuler</button>
-        <button class="btn-save" [disabled]="!form.dateHoliday || !form.frenchLabel || saving()" (click)="save()" type="button">
-          @if (saving()) { <app-spinner size="sm" /> }
-          {{ editTarget() ? 'Enregistrer' : 'Créer' }}
-        </button>
+        <daf-button label="Annuler" variant="secondary" (onClick)="showModal.set(false)" />
+        <daf-button
+          [label]="editTarget() ? 'Enregistrer' : 'Créer'"
+          variant="teal"
+          [options]="{ disabled: !form.dateHoliday || !form.frenchLabel || saving(), loading: saving() }"
+          (onClick)="save()"
+        />
       </div>
     </app-modal>
   `,
@@ -121,44 +117,25 @@ import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
     .col-title { font-size:13px;font-weight:700;margin:0 }
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .header-actions { display:flex;gap:8px;align-items:center }
-    .year-select    { padding:6px 10px;border:1px solid var(--color-border);border-radius:6px;background:#fff;font-size:13px;outline:none }
-    .btn-add        { padding:6px 14px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer }
+    .search-field   { width:260px }
     .center         { display:flex;justify-content:center;padding:24px }
-    .month-grid     { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px }
-    .month-card     { padding:10px;border:1px solid var(--color-border);border-radius:8px;background:#fff }
-    .month-name     { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted);margin:0 0 6px }
-    .day-chips      { display:flex;flex-wrap:wrap;gap:4px }
-    .day-chip       { display:inline-block;width:24px;height:24px;border-radius:50%;background:var(--color-primary,#1C4E5C);color:#fff;font-size:10px;font-weight:700;text-align:center;line-height:24px }
-    .no-holiday     { font-size:11px;color:var(--color-text-muted) }
-    .data-table { width:100%;border-collapse:collapse;font-size:13px }
-    .data-table th { padding:8px 12px;background:var(--color-bg-secondary,#EEF2F5);border-bottom:1px solid var(--color-border);text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--color-text-muted) }
-    .data-table td { padding:9px 12px;border-bottom:1px solid var(--color-border);vertical-align:middle }
-    .data-table tr:last-child td { border-bottom:none }
-    .date-td   { font-weight:600;color:var(--color-primary,#1C4E5C);white-space:nowrap }
+    .date-td   { font-weight:600;color:var(--color-primary);white-space:nowrap }
     .cell-muted{ color:var(--color-text-muted) }
     .recur-badge { padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;background:var(--color-bg-secondary);color:var(--color-text-muted) }
-    .recur-badge.yes { background:#dcfce7;color:#16A34A }
+    .recur-badge.yes { background:#dcfce7;color:var(--color-success) }
     .actions-cell { display:flex;gap:6px }
-    .btn-edit   { padding:3px 8px;background:none;border:1px solid var(--color-border);border-radius:4px;font-size:11px;cursor:pointer;color:var(--color-primary) }
-    .btn-delete { padding:3px 8px;background:none;border:1px solid #fca5a5;border-radius:4px;font-size:11px;cursor:pointer;color:#DC2626 }
     .empty-state { text-align:center;padding:36px;color:var(--color-text-muted) }
     .empty-state p { margin:0;font-size:13px }
     .modal-form { display:flex;flex-direction:column;gap:12px }
     .field-row  { display:flex;flex-direction:column;gap:4px }
-    .form-label { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted) }
-    .form-input { padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:100% }
-    .form-input:focus { border-color:var(--color-primary) }
-    .check-label { display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer }
-    .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:12px }
-    .btn-ghost { padding:7px 14px;border:1px solid var(--color-border);border-radius:8px;background:none;font-size:13px;cursor:pointer;color:var(--color-text-muted) }
-    .btn-save  { display:inline-flex;align-items:center;gap:5px;padding:7px 16px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer }
-    .btn-save:disabled { opacity:.5;cursor:not-allowed }
+    .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
   `],
 })
 export class HolidaysAdminComponent implements OnChanges {
   private svc = inject(AdminService);
 
-  paysId = input(179);
+  paysId    = input(179);
+  paysLabel = input('—');
 
   loading    = signal(false);
   saving     = signal(false);
@@ -166,13 +143,43 @@ export class HolidaysAdminComponent implements OnChanges {
   showModal  = signal(false);
   editTarget = signal<Holiday | null>(null);
   modalError = signal<string | null>(null);
+  searchQuery = signal('');
   selectedYear = new Date().getFullYear();
 
-  readonly yearOptions = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 1 + i);
-  readonly months = [
-    'Janvier','Février','Mars','Avril','Mai','Juin',
-    'Juillet','Août','Septembre','Octobre','Novembre','Décembre',
-  ].map((label, i) => ({ label, num: i + 1 }));
+  readonly columns: TableColumn[] = [
+    { key: 'id',           label: 'ID',                    width: '70px' },
+    { key: 'name',         label: 'Nom' },
+    { key: 'pays',         label: 'Pays' },
+    { key: 'dateHoliday',  label: 'Date du jour férié' },
+    { key: 'isRecurring',  label: 'Récurrent' },
+    { key: '_actions',     label: 'Actions', align: 'right' },
+  ];
+
+  readonly filteredHolidays = computed(() => {
+    const q = this.searchQuery().trim().toLowerCase();
+    if (!q) return this.holidays();
+    return this.holidays().filter(h =>
+      h.frenchLabel.toLowerCase().includes(q) || h.englishLabel.toLowerCase().includes(q)
+    );
+  });
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.filteredHolidays().map(h => ({
+      id:          h.id,
+      name:        h.frenchLabel,
+      pays:        this.paysLabel(),
+      dateHoliday: h.dateHoliday,
+      isRecurring: h.isRecurring,
+      _source:     h,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    emptyMessage: 'Aucun jour férié ne correspond à la recherche.',
+  }));
+
+  readonly String = String;
 
   form = { dateHoliday: '', frenchLabel: '', englishLabel: '', isRecurring: false };
 
@@ -185,12 +192,6 @@ export class HolidaysAdminComponent implements OnChanges {
       this.loading.set(false);
     });
   }
-
-  getMonthHolidays(month: number): Holiday[] {
-    return this.holidays().filter(h => new Date(h.dateHoliday).getMonth() + 1 === month);
-  }
-
-  dayNum(iso: string): string { return String(new Date(iso).getDate()).padStart(2, '0'); }
 
   fmtDate(iso: string): string {
     try { return new Date(iso).toLocaleDateString('fr-FR'); } catch { return iso; }

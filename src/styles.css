@@ -20,6 +20,14 @@
 @source inline("{border-primary,border-secondary,border-outline,border-outline-variant,border-error}");
 
 :root {
+  /* Matches the Finance module's heading/body text color (hardcoded as
+     $on-surface: #0b1c30 in its component SCSS) so RH pages use the same
+     font color everywhere instead of the lib default (#191c1e). */
+  --color-on-surface:                #0b1c30;
+  /* Matches the Finance shell's page background (hardcoded #f8f9fb there)
+     instead of the lib default --color-background (#f2f4f6). */
+  --color-background:                #f8f9fb;
+
   --color-text:                      var(--color-on-surface);
   --color-text-muted:                var(--color-on-surface-variant);
   --color-border:                    var(--color-outline-variant);

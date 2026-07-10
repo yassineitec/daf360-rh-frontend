@@ -1,20 +1,24 @@
 import {
   Component, OnChanges, SimpleChanges, computed, inject, input, signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import {
-  DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
+  ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
+  FormFieldComponent, SelectComponent, SelectOption, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
 import { PermissionDirective } from '../../../../shared/permission.directive';
+import { ModalComponent } from '../../../../shared/modal.component';
 
 @Component({
   selector: 'app-regime-role-assignment',
   standalone: true,
-  imports: [FormsModule, PermissionDirective, DataTableComponent, DafCellDirective],
+  imports: [
+    PermissionDirective, DataTableComponent, DafCellDirective,
+    ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
+  ],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
 })
@@ -64,6 +68,21 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     const role = this.allRoles().find(r => r.id === row.roleId);
     return role?.userCount ?? 0;
   });
+
+  regimeOptions = computed<SelectOption[]>(() =>
+    this.regimes().map(r => ({
+      value: String(r.id),
+      label: `${r.labelFr} · ${r.hoursPerWeek}h/sem${r.isFlexible ? ' · Flexible' : ''}`,
+    })),
+  );
+
+  formRegimeSelected(): string[] {
+    return this.formRegimeId ? [String(this.formRegimeId)] : [];
+  }
+
+  onFormRegimeChange(value: string[]): void {
+    this.formRegimeId = value[0] ? Number(value[0]) : 0;
+  }
 
   readonly columns: TableColumn[] = [
     { key: 'role', label: 'Rôle' },

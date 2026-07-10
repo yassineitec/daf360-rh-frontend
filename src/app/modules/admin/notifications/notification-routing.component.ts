@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CardComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
 import { NotificationEventTypeWithRule } from './notification-routing.model';
 import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
@@ -7,7 +8,7 @@ import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
 @Component({
   selector: 'app-notification-routing',
   standalone: true,
-  imports: [FormsModule, RoutingRuleEditorComponent],
+  imports: [FormsModule, RoutingRuleEditorComponent, CardComponent, FormFieldComponent],
   templateUrl: './notification-routing.component.html',
   styleUrl: './notification-routing.component.scss',
 })
