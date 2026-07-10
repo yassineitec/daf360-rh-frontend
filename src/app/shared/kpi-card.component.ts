@@ -67,10 +67,10 @@ export type KpiCardVariant = 'green' | 'blue' | 'amber' | 'red';
       align-items: flex-start;
     }
     .kpi-card__label {
-      font-size: 10px;
+      font-size: 13px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       color: #3e4945;
       white-space: nowrap;
       overflow: hidden;
@@ -78,15 +78,15 @@ export type KpiCardVariant = 'green' | 'blue' | 'amber' | 'red';
       min-width: 0;
     }
     .kpi-card__icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
     }
-    .kpi-mat-icon { font-size: 18px; }
+    .kpi-mat-icon { font-size: 24px; }
     .kpi-card__bottom {
       display: flex;
       align-items: baseline;

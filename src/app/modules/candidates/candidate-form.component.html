@@ -1,4 +1,4 @@
-<div class="px-4 py-4 sm:px-8 sm:py-8 pb-28 sm:pb-8">
+<div class="px-4 sm:px-8 pb-28 sm:pb-8">
 
   <!-- ── Page Header ─────────────────────────────────────────────────────── -->
   <div class="mb-6 sm:mb-8">
@@ -180,27 +180,31 @@
     <aside class="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 gap-4 lg:sticky lg:top-6">
 
       <!-- Nav buttons -->
-      <div class="flex items-center gap-2 bg-white rounded-xl border border-outline-variant shadow-sm p-2.5">
-        @if (currentStep() > 1) {
-          <daf-button class="flex-1"
-            label="Précédent"
-            [options]="{ variant: 'ghost', iconStart: 'arrow_back' }"
-            (onClick)="goPrev()" />
-        } @else {
-          <daf-button class="flex-1"
-            label="Annuler"
-            [options]="{ variant: 'ghost' }"
-            (onClick)="onCancel()" />
-        }
-        <daf-button class="flex-1"
-          [label]="currentStep() === 4
-                     ? (saving() ? (cvFiles().length ? 'Envoi du CV…' : 'Enregistrement…') : 'Enregistrer le profil')
-                     : 'Suivant'"
-          [options]="{ variant: 'teal', pill: true,
-                       iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
-                       iconStart: currentStep() === 4 ? 'save' : undefined,
-                       loading: saving(), disabled: !canGoNext() || saving() }"
-          (onClick)="goNext()" />
+      <div class="flex items-stretch gap-2">
+        <div class="flex-1">
+          @if (currentStep() > 1) {
+            <daf-button class="block w-full"
+              label="Précédent"
+              [options]="{ variant: 'ghost', pill: true, iconStart: 'arrow_back', fullWidth: true }"
+              (onClick)="goPrev()" />
+          } @else {
+            <daf-button class="block w-full"
+              label="Annuler"
+              [options]="{ variant: 'ghost', pill: true, iconStart: 'close', fullWidth: true }"
+              (onClick)="onCancel()" />
+          }
+        </div>
+        <div class="flex-1">
+          <daf-button class="block w-full"
+            [label]="currentStep() === 4
+                       ? (saving() ? (cvFiles().length ? 'Envoi du CV…' : 'Enregistrement…') : 'Enregistrer le profil')
+                       : 'Suivant'"
+            [options]="{ variant: 'teal', pill: true, fullWidth: true,
+                         iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
+                         iconStart: currentStep() === 4 ? 'save' : undefined,
+                         loading: saving(), disabled: !canGoNext() || saving() }"
+            (onClick)="goNext()" />
+        </div>
       </div>
 
       <!-- Progression -->
@@ -313,15 +317,19 @@
 
 <div class="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-2 p-3 bg-white border-t border-outline-variant"
      style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))">
-  @if (currentStep() > 1) {
-    <daf-button class="flex-1" label="Précédent" [options]="{ variant: 'ghost', size: 'sm' }" (onClick)="goPrev()" />
-  } @else {
-    <daf-button class="flex-1" label="Annuler" [options]="{ variant: 'ghost', size: 'sm' }" (onClick)="onCancel()" />
-  }
-  <daf-button class="flex-1"
-    [label]="currentStep() === 4
-               ? (saving() ? 'Enregistrement…' : 'Enregistrer')
-               : 'Suivant'"
-    [options]="{ variant: 'teal', size: 'md', loading: saving(), disabled: !canGoNext() || saving() }"
-    (onClick)="goNext()" />
+  <div class="flex-1">
+    @if (currentStep() > 1) {
+      <daf-button class="block w-full" label="Précédent" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'arrow_back', fullWidth: true }" (onClick)="goPrev()" />
+    } @else {
+      <daf-button class="block w-full" label="Annuler" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'close', fullWidth: true }" (onClick)="onCancel()" />
+    }
+  </div>
+  <div class="flex-1">
+    <daf-button class="block w-full"
+      [label]="currentStep() === 4
+                 ? (saving() ? 'Enregistrement…' : 'Enregistrer')
+                 : 'Suivant'"
+      [options]="{ variant: 'teal', pill: true, size: 'md', fullWidth: true, loading: saving(), disabled: !canGoNext() || saving() }"
+      (onClick)="goNext()" />
+  </div>
 </div>

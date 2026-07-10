@@ -3,7 +3,6 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   BadgeCell,
-  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
@@ -31,7 +30,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 @Component({
   selector: 'app-it-provisioning-list',
   standalone: true,
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, ButtonComponent, FormFieldComponent, NgTemplateOutlet],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, FormFieldComponent, NgTemplateOutlet],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {

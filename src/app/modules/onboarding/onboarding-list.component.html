@@ -22,36 +22,43 @@
           [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' min') : '—'" variant="amber" />
       </div>
 
-      <!-- Filters -->
-      <div class="flex items-center justify-end gap-2">
-        <div class="w-full sm:w-56">
+      <!-- Filters: search full-width on its own row on mobile; side-by-side on desktop -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div class="w-full sm:w-56 ml-0.5">
           <daf-form-field
+            class="block w-full"
             [options]="{ type: 'search', placeholder: 'Rechercher un employé...', prefixIcon: 'search', fullWidth: true }"
             [value]="search()"
             (valueChange)="onSearch($any($event) ?? '')" />
         </div>
-        <daf-button
-          [options]="{ variant: 'ghost', iconStart: 'cached' }"
-          (onClick)="load()" />
-        <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+
+        <div class="flex items-center justify-end gap-2">
           <button type="button"
-            class="flex items-center justify-center w-9 h-9 transition-colors"
-            [class.bg-primary]="viewMode() === 'grid'"
-            [class.text-white]="viewMode() === 'grid'"
-            [class.text-outline]="viewMode() !== 'grid'"
-            title="Vue grille"
-            (click)="viewMode.set('grid')">
-            <span class="material-symbols-outlined text-[18px]">grid_view</span>
+            class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
+            title="Rafraîchir"
+            (click)="load()">
+            <span class="material-symbols-outlined text-[18px]">cached</span>
           </button>
-          <button type="button"
-            class="flex items-center justify-center w-9 h-9 transition-colors"
-            [class.bg-primary]="viewMode() === 'list'"
-            [class.text-white]="viewMode() === 'list'"
-            [class.text-outline]="viewMode() !== 'list'"
-            title="Vue liste"
-            (click)="viewMode.set('list')">
-            <span class="material-symbols-outlined text-[18px]">view_list</span>
-          </button>
+          <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+            <button type="button"
+              class="flex items-center justify-center w-11 h-11 transition-colors"
+              [class.bg-primary]="viewMode() === 'grid'"
+              [class.text-white]="viewMode() === 'grid'"
+              [class.text-outline]="viewMode() !== 'grid'"
+              title="Vue grille"
+              (click)="viewMode.set('grid')">
+              <span class="material-symbols-outlined text-[18px]">grid_view</span>
+            </button>
+            <button type="button"
+              class="flex items-center justify-center w-11 h-11 transition-colors"
+              [class.bg-primary]="viewMode() === 'list'"
+              [class.text-white]="viewMode() === 'list'"
+              [class.text-outline]="viewMode() !== 'list'"
+              title="Vue liste"
+              (click)="viewMode.set('list')">
+              <span class="material-symbols-outlined text-[18px]">view_list</span>
+            </button>
+          </div>
         </div>
       </div>
 

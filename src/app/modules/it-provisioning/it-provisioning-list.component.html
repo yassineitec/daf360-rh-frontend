@@ -25,44 +25,50 @@
     <rh-kpi-card label="Licences incomplètes" icon="subscriptions" [value]="stats().licIncomplete" variant="amber" class="block" />
   </div>
 
-  <!-- ═══ Desktop / tablet: select + toggle + compact right-aligned search ═══ -->
-  <div class="hidden sm:flex items-center justify-end gap-3">
-    <daf-select
-      [selected]="statusFilter() ? [statusFilter()] : []"
-      [options]="statusSelectOptions"
-      [config]="statusSelectConfig"
-      (selectedChange)="onStatusChange($event)" />
-
-    <daf-button
-      [options]="{ variant: 'ghost', iconStart: 'cached' }"
-      (onClick)="load()" />
-
-    <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-      <button type="button"
-        class="flex items-center justify-center w-9 h-9 transition-colors"
-        [class.bg-primary]="viewMode() === 'grid'"
-        [class.text-white]="viewMode() === 'grid'"
-        [class.text-outline]="viewMode() !== 'grid'"
-        title="Vue grille"
-        (click)="viewMode.set('grid')">
-        <span class="material-symbols-outlined text-[18px]">grid_view</span>
-      </button>
-      <button type="button"
-        class="flex items-center justify-center w-9 h-9 transition-colors"
-        [class.bg-primary]="viewMode() === 'list'"
-        [class.text-white]="viewMode() === 'list'"
-        [class.text-outline]="viewMode() !== 'list'"
-        title="Vue liste"
-        (click)="viewMode.set('list')">
-        <span class="material-symbols-outlined text-[18px]">view_list</span>
-      </button>
-    </div>
-
+  <!-- ═══ Desktop / tablet: search on the left, select + refresh + view toggle on the right ═══ -->
+  <div class="hidden sm:flex items-center justify-between gap-3">
     <div class="w-56 shrink-0">
       <daf-form-field
+        class="block w-full"
         [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
         [value]="search()"
         (valueChange)="onSearch($any($event) ?? '')" />
+    </div>
+
+    <div class="flex items-center gap-3">
+      <daf-select
+        [selected]="statusFilter() ? [statusFilter()] : []"
+        [options]="statusSelectOptions"
+        [config]="statusSelectConfig"
+        (selectedChange)="onStatusChange($event)" />
+
+      <button type="button"
+        class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
+        title="Rafraîchir"
+        (click)="load()">
+        <span class="material-symbols-outlined text-[18px]">cached</span>
+      </button>
+
+      <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+        <button type="button"
+          class="flex items-center justify-center w-11 h-11 transition-colors"
+          [class.bg-primary]="viewMode() === 'grid'"
+          [class.text-white]="viewMode() === 'grid'"
+          [class.text-outline]="viewMode() !== 'grid'"
+          title="Vue grille"
+          (click)="viewMode.set('grid')">
+          <span class="material-symbols-outlined text-[18px]">grid_view</span>
+        </button>
+        <button type="button"
+          class="flex items-center justify-center w-11 h-11 transition-colors"
+          [class.bg-primary]="viewMode() === 'list'"
+          [class.text-white]="viewMode() === 'list'"
+          [class.text-outline]="viewMode() !== 'list'"
+          title="Vue liste"
+          (click)="viewMode.set('list')">
+          <span class="material-symbols-outlined text-[18px]">view_list</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -147,7 +153,7 @@
       [config]="statusSelectConfig"
       (selectedChange)="onStatusChange($event)" />
     <button type="button"
-      class="flex items-center justify-center w-9 h-9 rounded-lg border border-outline-variant shrink-0"
+      class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
       [class.bg-primary]="mobileSearchOpen()"
       [class.text-white]="mobileSearchOpen()"
       (click)="mobileSearchOpen.set(!mobileSearchOpen())"
@@ -159,6 +165,7 @@
   @if (mobileSearchOpen()) {
     <div class="sm:hidden">
       <daf-form-field
+        class="block w-full"
         [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
         [value]="search()"
         (valueChange)="onSearch($any($event) ?? '')" />

@@ -63,44 +63,48 @@
         </div>
       }
 
-      <!-- Filters: desktop/tablet — select + toggle + compact right-aligned search -->
-      <div class="hidden sm:flex sm:items-center sm:justify-end gap-3">
-        @if (viewMode() === 'list') {
-          <daf-select
-            [selected]="statusFilter() ? [statusFilter()] : []"
-            [options]="statusSelectOptions"
-            [config]="statusSelectConfig"
-            (selectedChange)="onStatusChange($event)"
-          />
-        }
-        <!-- View toggle: list ⇄ kanban -->
-        <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-          <button
-            type="button"
-            class="flex items-center px-3 py-2 transition-colors"
-            [class.bg-primary]="viewMode() === 'list'"
-            [class.text-white]="viewMode() === 'list'"
-            [class.text-outline]="viewMode() !== 'list'"
-            title="Vue liste"
-            (click)="setView('list')">
-            <span class="material-symbols-outlined text-[18px]">view_list</span>
-          </button>
-          <button
-            type="button"
-            class="flex items-center px-3 py-2 transition-colors"
-            [class.bg-primary]="viewMode() === 'kanban'"
-            [class.text-white]="viewMode() === 'kanban'"
-            [class.text-outline]="viewMode() !== 'kanban'"
-            title="Vue kanban"
-            (click)="setView('kanban')">
-            <span class="material-symbols-outlined text-[18px]">view_kanban</span>
-          </button>
-        </div>
-        <div class="w-56 shrink-0">
+      <!-- Filters: desktop/tablet — search on the left, select + view toggle on the right -->
+      <div class="hidden sm:flex sm:items-center sm:justify-between gap-3">
+        <div class="w-56 shrink-0 ml-0.5">
           <daf-form-field
+            class="block w-full"
             [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
             [value]="search()"
             (valueChange)="onSearch($any($event) ?? '')" />
+        </div>
+
+        <div class="flex items-center gap-3">
+          @if (viewMode() === 'list') {
+            <daf-select
+              [selected]="statusFilter() ? [statusFilter()] : []"
+              [options]="statusSelectOptions"
+              [config]="statusSelectConfig"
+              (selectedChange)="onStatusChange($event)"
+            />
+          }
+          <!-- View toggle: list ⇄ kanban -->
+          <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+            <button
+              type="button"
+              class="flex items-center justify-center w-11 h-11 transition-colors"
+              [class.bg-primary]="viewMode() === 'list'"
+              [class.text-white]="viewMode() === 'list'"
+              [class.text-outline]="viewMode() !== 'list'"
+              title="Vue liste"
+              (click)="setView('list')">
+              <span class="material-symbols-outlined text-[18px]">view_list</span>
+            </button>
+            <button
+              type="button"
+              class="flex items-center justify-center w-11 h-11 transition-colors"
+              [class.bg-primary]="viewMode() === 'kanban'"
+              [class.text-white]="viewMode() === 'kanban'"
+              [class.text-outline]="viewMode() !== 'kanban'"
+              title="Vue kanban"
+              (click)="setView('kanban')">
+              <span class="material-symbols-outlined text-[18px]">view_kanban</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -271,6 +275,16 @@
 
       <!-- ═══ Mobile: single kanban-style view — stage pills (wrap, no scroll) + card list ═══ -->
       <div class="sm:hidden">
+
+        <!-- Search: always visible, full width, right under the KPI cards -->
+        <div class="mb-3 ml-0.5">
+          <daf-form-field
+            class="block w-full"
+            [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
+            [value]="search()"
+            (valueChange)="onSearch($any($event) ?? '')" />
+        </div>
+
         @if (kanbanLoading()) {
           <div class="flex justify-center items-center h-48">
             <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">

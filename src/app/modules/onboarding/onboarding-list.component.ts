@@ -6,7 +6,6 @@ import { OnboardingService }    from './onboarding.service';
 import { OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import {
   BadgeCell,
-  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
@@ -22,7 +21,7 @@ import { KpiCardComponent } from '../../shared/kpi-card.component';
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, ButtonComponent, FormFieldComponent, NgTemplateOutlet],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, FormFieldComponent, NgTemplateOutlet],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
