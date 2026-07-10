@@ -6,6 +6,7 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
+  FormFieldComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -14,7 +15,6 @@ import {
   TableColumn,
   TableConfig,
   TableRow,
-  ToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
@@ -60,10 +60,10 @@ interface KanbanColumn {
     CardComponent,
     DafCellDirective,
     DataTableComponent,
+    FormFieldComponent,
     KpiCardComponent,
     SelectComponent,
     StatusBadgeComponent,
-    ToolbarComponent,
     PaginationComponent,
     PermissionDirective,
     RejectModalComponent,
@@ -116,6 +116,15 @@ export class CandidatesComponent implements OnInit {
       ...def,
       candidates: all.filter(c => def.statuses.includes(c.status)),
     }));
+  });
+
+  // ── Mobile kanban: stage pills + card list instead of horizontal columns ────
+  readonly mobileStageFilter = signal<string | null>(null);
+
+  readonly mobileFilteredCandidates = computed(() => {
+    const filter = this.mobileStageFilter();
+    if (!filter) return this.kanbanItems();
+    return this.kanbanColumns().find(c => c.key === filter)?.candidates ?? [];
   });
 
   // ── Reject modal state ─────────────────────────────────────────────────────

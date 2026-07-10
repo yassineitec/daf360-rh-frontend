@@ -44,6 +44,7 @@ export class ProfileListComponent implements OnInit {
   loading        = signal(true);
   error          = signal(false);
   viewMode       = signal<'grid' | 'list'>('grid');
+  mobileSearchOpen = signal(false);
   searchQuery    = signal('');
   activeFilters  = signal<Record<string, string>>({});
   currentPage    = signal(0);

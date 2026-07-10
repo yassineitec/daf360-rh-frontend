@@ -1,11 +1,19 @@
-<div class="flex h-full overflow-hidden">
-  <daf-side-nav
-    [items]="navItems()"
-    [config]="sideNavConfig"
-    [activeRoute]="activeRoute()"
-    (itemClick)="onNavClick($event)" />
+<!-- Mobile overlay backdrop -->
+<div class="mob-overlay" [class.mob-overlay--open]="sidebarOpen()" (click)="closeSidebar()"></div>
 
-  <main class="ml-64 flex-1 overflow-y-auto bg-background">
-    <router-outlet />
-  </main>
-</div>
+<!-- Sidebar -->
+<daf-side-nav
+  [class.sidebar--open]="sidebarOpen()"
+  [items]="navItems()"
+  [config]="sideNavConfig"
+  [activeRoute]="activeRoute()"
+  (itemClick)="onNavClick($event)" />
+
+<!-- Mobile hamburger (visible only on small screens) -->
+<button class="mob-hamburger" (click)="toggleSidebar()" aria-label="Menu">
+  <span class="material-symbols-outlined">menu</span>
+</button>
+
+<main class="shell-content">
+  <router-outlet />
+</main>

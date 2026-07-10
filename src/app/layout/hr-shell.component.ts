@@ -64,6 +64,7 @@ const APP_NAV_DEFS: AppNavDef[] = [
   standalone: true,
   imports: [RouterOutlet, SideNavComponent],
   templateUrl: './hr-shell.component.html',
+  styleUrl: './hr-shell.component.scss',
   host: { style: 'display:block;height:100%' },
 })
 export class HrShellComponent implements OnInit {
@@ -93,6 +94,7 @@ export class HrShellComponent implements OnInit {
   }
 
   onboardingCount = signal(0);
+  sidebarOpen     = signal(false);
 
   readonly activeRoute = toSignal(
     this.router.events.pipe(
@@ -146,6 +148,15 @@ export class HrShellComponent implements OnInit {
     if (item.route) {
       this.router.navigate([item.route], { relativeTo: this.activatedRoute });
     }
+    this.sidebarOpen.set(false);
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update(v => !v);
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
   }
 
   logout(): void {

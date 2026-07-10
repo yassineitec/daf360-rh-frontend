@@ -50,7 +50,8 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
     NewRequestComponent,
   ],
   template: `
-    <div class="p-4 sm:p-8 space-y-6">
+    <div class="space-y-6">
+
       <!-- ── Header ─────────────────────────────────────────────────────── -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">

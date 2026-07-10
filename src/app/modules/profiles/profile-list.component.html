@@ -1,6 +1,4 @@
-<div class="flex flex-col h-full overflow-hidden">
-  <div class="flex-1 overflow-y-auto">
-    <div class="p-8 space-y-6">
+<div class="space-y-6">
 
   <!-- ── Header ──────────────────────────────────────────────────────── -->
   <div class="flex items-center justify-between">
@@ -19,13 +17,26 @@
       (onClick)="onToolbarAction('filters')" />
 
     <div class="flex items-center gap-3">
-      <daf-form-field
-        class="w-56"
-        [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: false }"
-        [value]="searchQuery()"
-        (valueChange)="onSearch($any($event) ?? '')" />
+      <!-- Desktop/tablet: full search box -->
+      <div class="hidden sm:block w-56">
+        <daf-form-field
+          [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: false }"
+          [value]="searchQuery()"
+          (valueChange)="onSearch($any($event) ?? '')" />
+      </div>
 
-      <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+      <!-- Mobile: icon-only, expands to a full-width input on tap -->
+      <button type="button"
+        class="sm:hidden flex items-center justify-center w-9 h-9 rounded-lg border border-outline-variant shrink-0"
+        [class.bg-primary]="mobileSearchOpen()"
+        [class.text-white]="mobileSearchOpen()"
+        (click)="mobileSearchOpen.set(!mobileSearchOpen())"
+        aria-label="Rechercher">
+        <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
+      </button>
+
+      <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
+      <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
         @for (opt of viewToggleOptions; track opt.id) {
           <button type="button"
             class="flex items-center justify-center w-9 h-9 transition-colors"
@@ -40,6 +51,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Mobile search input — appears below the row once opened -->
+  @if (mobileSearchOpen()) {
+    <div class="sm:hidden">
+      <daf-form-field
+        [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
+        [value]="searchQuery()"
+        (valueChange)="onSearch($any($event) ?? '')" />
+    </div>
+  }
 
   <!-- ── Active filter tags ────────────────────────────────────────────── -->
   @if (activeFilterTags().length > 0) {
@@ -179,8 +200,6 @@
     </div>
   }
 
-    </div>
-  </div>
 </div>
 
 <!-- Bulk bar: @if guard ensures it unmounts (not just hides) when count reaches 0 -->
