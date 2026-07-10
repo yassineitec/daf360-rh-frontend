@@ -20,11 +20,34 @@
             <span class="material-symbols-outlined text-[16px]">chevron_right</span>
             <span class="font-medium text-teal">{{ p.candidateFullName }}</span>
           </nav>
-          <div class="flex items-center justify-between">
-            <h1 class="text-[28px] font-bold text-on-surface leading-tight">{{ p.candidateFullName }}</h1>
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight break-words">{{ p.candidateFullName }}</h1>
             <daf-badge [label]="statusBadge(p.status).label" [options]="statusBadge(p.status).options" />
           </div>
           <p class="text-[13px] text-outline">{{ p.appliedPosition ?? 'Poste non spécifié' }}</p>
+        </div>
+
+        <!-- Mobile/tablet: compact horizontal stepper (replaces the vertical Progression panel) -->
+        <div class="lg:hidden">
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+            @for (step of wizardSteps; track $index; let i = $index) {
+              <button type="button"
+                class="shrink-0"
+                (click)="goToStep(i + 1)">
+                <span [class]="'w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold border-2 transition-colors ' + stepCircleClasses(i)">
+                  @if (stepDone()[i] && currentStep() !== i + 1) {
+                    <span class="material-symbols-outlined text-[16px]">check</span>
+                  } @else {
+                    {{ i + 1 }}
+                  }
+                </span>
+              </button>
+              @if (!$last) {
+                <div class="h-0.5 w-4 shrink-0 bg-outline-variant"></div>
+              }
+            }
+          </div>
+          <p class="text-[13px] font-bold text-teal mt-1.5">Étape {{ currentStep() }} · {{ cardTitle() }}</p>
         </div>
 
         @if (error()) {
@@ -42,18 +65,18 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm">
 
           <!-- Card head -->
-          <div class="flex items-center gap-4 px-8 py-6 border-b border-outline-variant">
-            <div class="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[32px]">{{ cardIcon() }}</span>
+          <div class="flex items-center gap-3 sm:gap-4 px-4 py-5 sm:px-8 sm:py-6 border-b border-outline-variant">
+            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[24px] sm:text-[32px]">{{ cardIcon() }}</span>
             </div>
-            <div>
-              <h2 class="text-[18px] font-bold text-teal leading-snug">{{ cardTitle() }}</h2>
-              <p class="text-[13px] text-outline">{{ cardSub() }}</p>
+            <div class="min-w-0">
+              <h2 class="text-[16px] sm:text-[18px] font-bold text-teal leading-snug truncate">{{ cardTitle() }}</h2>
+              <p class="text-[12px] sm:text-[13px] text-outline truncate">{{ cardSub() }}</p>
             </div>
           </div>
 
           <!-- Step body -->
-          <div class="px-8 py-7" [class.opacity-60]="isCompleted() && currentStep() !== 6" [class.pointer-events-none]="isCompleted() && currentStep() !== 6">
+          <div class="px-4 py-5 sm:px-8 sm:py-7" [class.opacity-60]="isCompleted() && currentStep() !== 6" [class.pointer-events-none]="isCompleted() && currentStep() !== 6">
 
             <!-- ── STEP 1 : Identité ────────────────────────────────── -->
             @if (currentStep() === 1) {
@@ -115,6 +138,7 @@
 
             <!-- ── STEP 3 : Matériel ────────────────────────────────── -->
             @if (currentStep() === 3) {
+              <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
               <daf-data-table [columns]="assetColumns" [rows]="assetRows()" [config]="assetTableConfig">
 
                 <ng-template dafCell="provided" let-row>
@@ -158,6 +182,7 @@
                 </ng-template>
 
               </daf-data-table>
+              </div>
 
               <div class="flex flex-col gap-1.5 mt-3.5">
                 <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">Notes matériel</label>
@@ -172,7 +197,7 @@
 
             <!-- ── STEP 4 : Licences ────────────────────────────────── -->
             @if (currentStep() === 4) {
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label class="flex items-center gap-2 text-[13px] text-on-surface cursor-pointer">
                   <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="licenseOffice365()" (ngModelChange)="licenseOffice365.set($event)"> Office 365
                 </label>
@@ -252,7 +277,7 @@
           </div><!-- /step body -->
 
           <!-- Bottom action bar -->
-          <div class="flex items-center justify-between gap-4 flex-wrap px-8 py-5 border-t border-outline-variant bg-surface-container-lowest">
+          <div class="flex items-center justify-between gap-4 flex-wrap px-4 py-4 sm:px-8 sm:py-5 border-t border-outline-variant bg-surface-container-lowest">
             <daf-button
               [options]="{ variant: 'ghost', label: 'Précédent', iconStart: 'arrow_back', disabled: currentStep() === 1 }"
               (onClick)="goPrev()" />
@@ -292,7 +317,7 @@
       <!-- ══════════════════════════════════════════════════════════ -->
       <!-- RIGHT — sidebar                                            -->
       <!-- ══════════════════════════════════════════════════════════ -->
-      <aside class="flex flex-col gap-4 sticky top-6">
+      <aside class="hidden lg:flex lg:flex-col gap-4 lg:sticky lg:top-6">
 
         <!-- Progression -->
         <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
