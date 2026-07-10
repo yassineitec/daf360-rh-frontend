@@ -35,6 +35,8 @@ export interface KanbanCandidate {
   email?: string;
   status?: string;
   contractType?: string;
+  /** Workflow progress (%) for the current phase: IT provisioning (OFFRE) or HR onboarding. */
+  progressPercent?: number | null;
 }
 
 export interface KanbanColumn {

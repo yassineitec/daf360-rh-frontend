@@ -139,11 +139,17 @@ export class PipelineComponent implements OnInit {
     this.router.navigate(['/rh/candidates', id]);
   }
 
-  /** Desktop card: left-accent border for standout profiles — urgent (red) or top fit (teal). */
-  cardAccentClass(c: KanbanCandidate): string {
-    if (c.isUrgent) return 'border-l-4 border-l-error';
-    if (c.badgeType === 'top') return 'border-l-4 border-l-[#79D7BE]';
-    return '';
+  /** Left-accent border colour, one distinct colour per pipeline stage. */
+  private readonly STAGE_BORDER: Record<string, string> = {
+    SCREENING: '#3755c3', // blue   — Candidatures
+    ENTRETIEN: '#79D7BE', // teal   — Entretiens
+    OFFRE:     '#F59E0B', // amber  — Offres
+    RECRUTE:   '#10B981', // green  — Recrutés
+    REJETE:    '#BA1A1A', // red    — Rejetés
+  };
+
+  stageBorderColor(c: KanbanCandidate): string {
+    return this.STAGE_BORDER[(c.stage ?? '').toUpperCase()] ?? '#C4C5D5';
   }
 
   fitScoreClass(score: number): string {
@@ -180,6 +186,11 @@ export class PipelineComponent implements OnInit {
 
   clearSelection(): void {
     this.selectedIds.set(new Set());
+  }
+
+  /** Real workflow progress (%) for provisioning/onboarding cards; 0 when unknown. */
+  progressValue(c: KanbanCandidate): number {
+    return c.progressPercent ?? 0;
   }
 
   getCardVariant(candidate: KanbanCandidate): 'provisioning' | 'onboarding' | 'default' {

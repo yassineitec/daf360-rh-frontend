@@ -84,6 +84,11 @@
             [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
             [value]="getTextValue('identity.nationalId')"
             (valueChange)="setTextValue('identity.nationalId', $event)" />
+
+          <daf-form-field
+            [options]="{ label: 'Localisation', placeholder: 'ex: Tunis', prefixIcon: 'location_on' }"
+            [value]="getTextValue('identity.location')"
+            (valueChange)="setTextValue('identity.location', $event)" />
         </div>
       </section>
 
