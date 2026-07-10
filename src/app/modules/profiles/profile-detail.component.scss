@@ -23,7 +23,7 @@
   display: flex; align-items: center; justify-content: center;
 }
 .ph-info { flex: 1; }
-.ph-name { font-family: var(--font-display, 'DM Serif Display', serif); font-size: 20px; font-weight: 400; margin: 0 0 6px; }
+.ph-name { font-family: var(--font-sans, 'Manrope', sans-serif); font-size: 20px; font-weight: 400; margin: 0 0 6px; }
 .ph-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text-muted); }
 .ph-sep  { opacity: .4; }
 .ph-actions { display: flex; gap: 10px; align-items: center; }
