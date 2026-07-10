@@ -1,13 +1,13 @@
 <div class="step-personal">
   <div class="section-header">
     <h3 class="section-title">Informations personnelles &amp; Sociales</h3>
-    <p class="section-sub">Numéro CNSS, situation familiale, coordonnées personnelles</p>
+    <p class="section-sub">Numéro de sécurité sociale, situation familiale, coordonnées personnelles</p>
   </div>
 
   <div class="form-grid">
-    <!-- Row 1: CNSS Number | CNSS Affiliation Date -->
+    <!-- Row 1: Social Security Number (DB: cnss_number) | Affiliation Date -->
     <div class="form-field">
-      <label class="form-label">N° CNSS <span class="req">*</span></label>
+      <label class="form-label">N° de Sécurité Sociale <span class="req">*</span></label>
       <daf-form-field
         [options]="{ placeholder: 'Ex: 123456789' }"
         [value]="cnssNumber()"
@@ -15,7 +15,7 @@
     </div>
 
     <div class="form-field">
-      <label class="form-label">Date d'affiliation CNSS</label>
+      <label class="form-label">Date d'affiliation Sécurité Sociale</label>
       <daf-multi-date-picker
         [value]="isoToDate(cnssAffiliationDate() || null)"
         [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"

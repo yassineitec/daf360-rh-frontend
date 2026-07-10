@@ -192,7 +192,7 @@ export class OnboardingFormComponent implements OnInit {
       return;
     }
     if (!d.cnssNumber) {
-      this.error.set('Le numéro CNSS est obligatoire (étape 4).');
+      this.error.set('Le numéro de sécurité sociale est obligatoire (étape 4).');
       this.currentStep.set(4);
       return;
     }

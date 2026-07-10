@@ -434,9 +434,9 @@
               }
 
               @if (!editMode()) {
-                <app-field label="N° sécurité sociale" [value]="profile()!.socialSecurityNumber" />
+                <app-field label="N° d'Assurance Sociale" [value]="profile()!.socialSecurityNumber" />
               } @else {
-                <daf-form-field [options]="{ label: 'N° sécurité sociale' }"
+                <daf-form-field [options]="{ label: 'N° d\'Assurance Sociale' }"
                   [value]="editForm.socialSecurityNumber ?? ''" (valueChange)="editForm.socialSecurityNumber = asText($event)" />
               }
 
@@ -448,16 +448,16 @@
               }
 
               @if (!editMode()) {
-                <app-field label="N° CNSS" [value]="profile()!.cnssNumber" />
+                <app-field label="N° de Sécurité Sociale" [value]="profile()!.cnssNumber" />
               } @else {
-                <daf-form-field [options]="{ label: 'N° CNSS' }"
+                <daf-form-field [options]="{ label: 'N° de Sécurité Sociale' }"
                   [value]="editForm.cnssNumber ?? ''" (valueChange)="editForm.cnssNumber = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="Date affiliation CNSS" [value]="fmt(profile()!.cnssAffiliationDate)" />
+                <app-field label="Date d'affiliation Sécurité Sociale" [value]="fmt(profile()!.cnssAffiliationDate)" />
               } @else {
-                <daf-multi-date-picker [config]="{ label: 'Date affiliation CNSS', selectionMode: 'single' }"
+                <daf-multi-date-picker [config]="{ label: 'Date d\'affiliation Sécurité Sociale', selectionMode: 'single' }"
                   [value]="toDate(editForm.cnssAffiliationDate)" (valueChange)="editForm.cnssAffiliationDate = fromDate($event)" />
               }
             </div>
