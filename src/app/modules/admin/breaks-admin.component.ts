@@ -189,10 +189,10 @@ type BreakTab = 'templates' | 'legal-rules';
   `,
   styles: [`
     @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-    .ba-tab-bar { display:flex;gap:4px;margin-bottom:24px;background:var(--color-background);padding:4px;border-radius:12px;width:fit-content }
-    .ba-tab-btn { display:flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:8px;background:none;font-family:var(--font-sans);font-size:var(--text-label-sm);font-weight:600;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;transition:background-color var(--duration-normal) var(--ease-smooth),color var(--duration-normal) var(--ease-smooth) }
+    .ba-tab-bar { display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--color-outline-variant);overflow-x:auto;flex-wrap:wrap }
+    .ba-tab-btn { display:flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font-sans);font-size:var(--text-label-sm);font-weight:500;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color var(--duration-normal) var(--ease-smooth),border-color var(--duration-normal) var(--ease-smooth) }
     .ba-tab-btn:hover { color:var(--color-on-surface) }
-    .ba-tab-btn.active { color:#fff;background:var(--color-teal);box-shadow:var(--shadow-sm) }
+    .ba-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
     .ba-tab-icon { font-size:18px }
   `],
 })

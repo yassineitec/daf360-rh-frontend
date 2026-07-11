@@ -1,14 +1,24 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CardComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
+import {
+  FormFieldComponent, StatusBadgeComponent, PaginationComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 import { NotificationEventTypeWithRule } from './notification-routing.model';
 import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
+import { ModalComponent } from '../../../shared/modal.component';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-notification-routing',
   standalone: true,
-  imports: [FormsModule, RoutingRuleEditorComponent, CardComponent, FormFieldComponent],
+  imports: [
+    FormsModule, RoutingRuleEditorComponent, FormFieldComponent,
+    StatusBadgeComponent, PaginationComponent, ModalComponent,
+    DataTableComponent, DafCellDirective,
+  ],
   templateUrl: './notification-routing.component.html',
   styleUrl: './notification-routing.component.scss',
 })
@@ -17,9 +27,13 @@ export class NotificationRoutingComponent implements OnInit {
 
   eventTypes = signal<NotificationEventTypeWithRule[]>([]);
   selectedType = signal<NotificationEventTypeWithRule | null>(null);
+  showModal = signal(false);
   loadingTypes = signal(true);
   error = signal<string | null>(null);
   searchQuery = signal('');
+
+  readonly PAGE_SIZE = PAGE_SIZE;
+  currentPage = signal(0);
 
   filteredTypes = computed(() => {
     const q = this.searchQuery().toLowerCase();
@@ -31,14 +45,33 @@ export class NotificationRoutingComponent implements OnInit {
     );
   });
 
-  grouped = computed(() => {
-    const byModule = new Map<string, NotificationEventTypeWithRule[]>();
-    for (const t of this.filteredTypes()) {
-      if (!byModule.has(t.module)) byModule.set(t.module, []);
-      byModule.get(t.module)!.push(t);
-    }
-    return [...byModule.entries()].map(([module, types]) => ({ module, types }));
+  readonly totalElements = computed(() => this.filteredTypes().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
+
+  readonly pagedTypes = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.filteredTypes().slice(start, start + PAGE_SIZE);
   });
+
+  readonly columns: TableColumn[] = [
+    { key: 'module',  label: 'Module' },
+    { key: 'labelFr', label: 'Événement' },
+    { key: 'badges',  label: 'Canaux' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.pagedTypes().map((t) => ({
+      module:  t.module,
+      labelFr: t.labelFr,
+      _source: t,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.loadingTypes(),
+    emptyMessage: 'Aucun événement trouvé.',
+  }));
 
   ngOnInit(): void {
     this.svc.getEventTypes().subscribe({
@@ -53,7 +86,21 @@ export class NotificationRoutingComponent implements OnInit {
     });
   }
 
+  onSearch(value: string): void {
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   selectType(type: NotificationEventTypeWithRule): void {
     this.selectedType.set(type);
+    this.showModal.set(true);
+  }
+
+  closeModal(): void {
+    this.showModal.set(false);
   }
 }

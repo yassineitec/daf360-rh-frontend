@@ -7,12 +7,18 @@ import { ModalComponent } from '../../shared/modal.component';
 import {
   FormFieldComponent, ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PaginationComponent, PaginationConfig,
 } from '@khalilrebhiitec/daf360';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-parameters-admin',
   standalone: true,
-  imports: [SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective, ModalComponent],
+  imports: [
+    SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective,
+    ModalComponent, PaginationComponent,
+  ],
   template: `
     <div class="section-header">
       <div>
@@ -74,6 +80,17 @@ import {
           }
         </ng-template>
       </daf-data-table>
+
+      @if (totalPages() > 1) {
+        <div class="pagination-row">
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="params().length"
+            [config]="paginationConfig"
+            (pageChange)="onPageChange($event)" />
+        </div>
+      }
     }
 
     @if (error()) { <div class="error-banner" role="alert">{{ error() }}</div> }
@@ -121,7 +138,15 @@ import {
     .empty-state     { text-align:center;padding:36px;color:var(--color-text-muted);display:flex;flex-direction:column;align-items:center;gap:12px }
     .empty-state p   { margin:0;font-size:13px }
     .modal-form      { display:flex;flex-direction:column;gap:14px }
+    .pagination-row  { display:flex;justify-content:flex-end;padding:10px 0 }
     .error-banner { margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
+
+    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
+       own build — force the right-aligned Actions column ourselves. */
+    :host ::ng-deep daf-data-table {
+      th:last-child { text-align: right !important; }
+      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
+    }
   `],
 })
 export class ParametersAdminComponent implements OnChanges {
@@ -150,8 +175,17 @@ export class ParametersAdminComponent implements OnChanges {
     { key: '_actions',    label: '', align: 'right' },
   ];
 
+  currentPage = signal(0);
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.params().length / PAGE_SIZE)));
+
+  readonly pagedParams = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.params().slice(start, start + PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.params().map(p => ({
+    this.pagedParams().map(p => ({
       cle:         p.cle,
       valeur:      p.valeur,
       description: p.description,
@@ -164,10 +198,22 @@ export class ParametersAdminComponent implements OnChanges {
     hoverable: true,
   }));
 
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   ngOnChanges() { this.load(); }
 
   private load() {
     this.loading.set(true);
+    this.currentPage.set(0);
     this.svc.listParameters(this.paysId()).pipe(catchError(() => of([]))).subscribe(ps => {
       this.params.set(ps);
       this.loading.set(false);

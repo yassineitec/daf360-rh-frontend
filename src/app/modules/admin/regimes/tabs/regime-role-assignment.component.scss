@@ -14,6 +14,22 @@
   animation: shimmer 1.5s infinite;
 }
 
+.rra-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.rra-count {
+  font-size: var(--text-label-sm);
+  color: var(--color-on-surface-variant);
+
+  strong { color: var(--color-on-surface); }
+}
+
 .rra-regime-badge {
   background: #e6f7f5;
   color: var(--color-teal);

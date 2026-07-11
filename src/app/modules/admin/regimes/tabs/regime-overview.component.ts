@@ -5,7 +5,7 @@ import { NgClass } from '@angular/common';
 import {
   AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
   DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
-  TableColumn, TableConfig, TableRow,
+  TableColumn, TableConfig, TableRow, PaginationComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import {
@@ -23,6 +23,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   imports: [
     NgClass, PermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
+    PaginationComponent,
   ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
@@ -42,6 +43,20 @@ export class RegimeOverviewComponent implements OnChanges {
   // Filters
   searchTerm    = signal('');
   activeFilter  = signal<SourceFilter>('ALL');
+
+  // Pagination — 5 per page, client-side over the filtered list
+  readonly PAGE_SIZE = 5;
+  currentPage = signal(0);
+
+  onSearch(value: string): void {
+    this.searchTerm.set(value);
+    this.currentPage.set(0);
+  }
+
+  onFilterChange(value: SourceFilter): void {
+    this.activeFilter.set(value);
+    this.currentPage.set(0);
+  }
 
   // Employee panel
   showEmployeePanel = signal(false);
@@ -97,8 +112,16 @@ export class RegimeOverviewComponent implements OnChanges {
     { key: '_actions', label: 'Action', align: 'right' },
   ];
 
+  readonly totalElements = computed(() => this.filteredEmployees().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
+
+  readonly pagedEmployees = computed(() => {
+    const start = this.currentPage() * this.PAGE_SIZE;
+    return this.filteredEmployees().slice(start, start + this.PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.filteredEmployees().map(e => ({
+    this.pagedEmployees().map(e => ({
       employe: { name: e.fullName, initials: this.getInitials(e.fullName) } as AvatarCell,
       role: e.roleName ?? '—',
       regime: e.resolvedRegimeLabelFr,
@@ -106,6 +129,10 @@ export class RegimeOverviewComponent implements OnChanges {
       _source: e,
     })),
   );
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,

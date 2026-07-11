@@ -4,7 +4,11 @@ import {
 import {
   ButtonComponent, FormFieldComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PaginationComponent, PaginationConfig,
 } from '@khalilrebhiitec/daf360';
+import { ModalComponent } from '../../shared/modal.component';
+
+const PAGE_SIZE = 10;
 
 import { RefDataService }      from '../../core/ref/ref-data.service';
 import { RefDataItem, CreateRefDataRequest } from '../../core/ref/ref-data.model';
@@ -34,7 +38,7 @@ const TABS: TabConfig[] = [
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, ModalComponent, PaginationComponent],
   template: `
 <div>
   <!-- Sub-tab bar -->
@@ -62,6 +66,16 @@ const TABS: TabConfig[] = [
     </div>
   }
 
+  <!-- Header -->
+  <div class="rda-header">
+    <h3 class="rda-header-title">{{ activeTab().label }}</h3>
+    <daf-button
+      label="+ Ajouter"
+      variant="teal"
+      [options]="{ iconStart: 'add' }"
+      (onClick)="showForm.set(true)" />
+  </div>
+
   <!-- Table — generic ref data -->
   @if (!isTypeContratTab()) {
     @if (loading()) {
@@ -83,48 +97,18 @@ const TABS: TabConfig[] = [
             (onClick)="deleteItem(row['_source'])" />
         </ng-template>
       </daf-data-table>
-    }
 
-    <!-- Inline create form — generic -->
-    <div style="background:var(--color-surface-container-low,#f8f9fa);border:1px solid var(--color-outline-variant,#eceef0);border-radius:12px;padding:16px 20px;">
-      <daf-button
-        [label]="showForm() ? '▲ Masquer le formulaire' : '▼ Ajouter une entrée'"
-        variant="ghost"
-        [options]="{ size: 'sm' }"
-        (onClick)="showForm.set(!showForm())" />
-
-      @if (showForm()) {
-        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">
-          <daf-form-field
-            [options]="{ label: 'Libellé FR', placeholder: 'Ex: Ingénieur Senior', required: true, fullWidth: true }"
-            [value]="createForm.labelFr"
-            (valueChange)="createForm.labelFr = $any($event) ?? ''" />
-          <daf-form-field
-            [options]="{ label: 'Libellé EN', placeholder: 'Ex: Senior Engineer', fullWidth: true }"
-            [value]="createForm.labelEn"
-            (valueChange)="createForm.labelEn = $any($event) ?? ''" />
-          <daf-form-field
-            [options]="{ label: 'Code', placeholder: 'Ex: SENIOR_ENG', fullWidth: true }"
-            [value]="createForm.code"
-            (valueChange)="createForm.code = $any($event) ?? ''" />
-          <daf-form-field
-            [options]="{ label: 'Ordre', type: 'number', placeholder: '0', fullWidth: true }"
-            [value]="createForm.sortOrder"
-            (valueChange)="createForm.sortOrder = $event === null || $event === '' ? null : +$event" />
-        </div>
-        <div style="margin-top:12px;display:flex;gap:8px;">
-          <daf-button
-            [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
-            variant="teal"
-            [options]="{ disabled: saving() || !createForm.labelFr.trim(), loading: saving() }"
-            (onClick)="onCreate()" />
-          <daf-button
-            label="Réinitialiser"
-            variant="secondary"
-            (onClick)="resetForm()" />
+      @if (totalPages() > 1) {
+        <div class="rda-pagination">
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="items().length"
+            [config]="paginationConfig"
+            (pageChange)="onPageChange($event)" />
         </div>
       }
-    </div>
+    }
   }
 
   <!-- Table — Types de contrat -->
@@ -148,55 +132,109 @@ const TABS: TabConfig[] = [
             (onClick)="deleteTypeContrat(row['_source'])" />
         </ng-template>
       </daf-data-table>
-    }
 
-    <!-- Inline create form — type contrat -->
-    <div style="background:var(--color-surface-container-low,#f8f9fa);border:1px solid var(--color-outline-variant,#eceef0);border-radius:12px;padding:16px 20px;">
-      <daf-button
-        [label]="showForm() ? '▲ Masquer le formulaire' : '▼ Ajouter un type de contrat'"
-        variant="ghost"
-        [options]="{ size: 'sm' }"
-        (onClick)="showForm.set(!showForm())" />
-
-      @if (showForm()) {
-        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;">
-          <daf-form-field
-            [options]="{ label: 'Code', placeholder: 'Ex: CDI', required: true, fullWidth: true }"
-            [value]="tcCreateCode"
-            (valueChange)="tcCreateCode = $any($event) ?? ''" />
-          <daf-form-field
-            [options]="{ label: 'Libellé FR', placeholder: 'Ex: Contrat à durée indéterminée', required: true, fullWidth: true }"
-            [value]="tcCreateLabelFr"
-            (valueChange)="tcCreateLabelFr = $any($event) ?? ''" />
-          <daf-form-field
-            [options]="{ label: 'Libellé EN', placeholder: 'Ex: Permanent contract', fullWidth: true }"
-            [value]="tcCreateLabelEn"
-            (valueChange)="tcCreateLabelEn = $any($event) ?? ''" />
-        </div>
-        <div style="margin-top:12px;display:flex;gap:8px;">
-          <daf-button
-            [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
-            variant="teal"
-            [options]="{ disabled: saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim(), loading: saving() }"
-            (onClick)="onCreateTypeContrat()" />
-          <daf-button
-            label="Réinitialiser"
-            variant="secondary"
-            (onClick)="tcCreateCode = ''; tcCreateLabelFr = ''; tcCreateLabelEn = ''" />
+      @if (totalPages() > 1) {
+        <div class="rda-pagination">
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="typeContrats().length"
+            [config]="paginationConfig"
+            (pageChange)="onPageChange($event)" />
         </div>
       }
-    </div>
+    }
   }
 </div>
+
+<!-- Add modal — generic ref data -->
+@if (!isTypeContratTab()) {
+  <app-modal
+    title="Ajouter une entrée"
+    [visible]="showForm()"
+    [hasFooter]="true"
+    (closed)="showForm.set(false)"
+  >
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <daf-form-field
+        [options]="{ label: 'Libellé FR', placeholder: 'Ex: Ingénieur Senior', required: true, fullWidth: true }"
+        [value]="createForm.labelFr"
+        (valueChange)="createForm.labelFr = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Libellé EN', placeholder: 'Ex: Senior Engineer', fullWidth: true }"
+        [value]="createForm.labelEn"
+        (valueChange)="createForm.labelEn = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Code', placeholder: 'Ex: SENIOR_ENG', fullWidth: true }"
+        [value]="createForm.code"
+        (valueChange)="createForm.code = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Ordre', type: 'number', placeholder: '0', fullWidth: true }"
+        [value]="createForm.sortOrder"
+        (valueChange)="createForm.sortOrder = $event === null || $event === '' ? null : +$event" />
+    </div>
+    <div slot="footer">
+      <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+      <daf-button
+        [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
+        variant="teal"
+        [options]="{ disabled: saving() || !createForm.labelFr.trim(), loading: saving() }"
+        (onClick)="onCreate()" />
+    </div>
+  </app-modal>
+}
+
+<!-- Add modal — type contrat -->
+@if (isTypeContratTab()) {
+  <app-modal
+    title="Ajouter un type de contrat"
+    [visible]="showForm()"
+    [hasFooter]="true"
+    (closed)="showForm.set(false)"
+  >
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <daf-form-field
+        [options]="{ label: 'Code', placeholder: 'Ex: CDI', required: true, fullWidth: true }"
+        [value]="tcCreateCode"
+        (valueChange)="tcCreateCode = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Libellé FR', placeholder: 'Ex: Contrat à durée indéterminée', required: true, fullWidth: true }"
+        [value]="tcCreateLabelFr"
+        (valueChange)="tcCreateLabelFr = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Libellé EN', placeholder: 'Ex: Permanent contract', fullWidth: true }"
+        [value]="tcCreateLabelEn"
+        (valueChange)="tcCreateLabelEn = $any($event) ?? ''" />
+    </div>
+    <div slot="footer">
+      <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+      <daf-button
+        [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
+        variant="teal"
+        [options]="{ disabled: saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim(), loading: saving() }"
+        (onClick)="onCreateTypeContrat()" />
+    </div>
+  </app-modal>
+}
   `,
   styles: [`
-    .rda-tab-bar { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;background:var(--color-surface-container);padding:4px;border-radius:12px;width:fit-content }
-    .rda-tab-btn { padding:8px 16px;border:none;border-radius:8px;background:none;font-family:var(--font-sans);font-size:var(--text-label-sm);font-weight:600;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;transition:background-color var(--duration-normal) var(--ease-smooth),color var(--duration-normal) var(--ease-smooth) }
+    .rda-tab-bar { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;border-bottom:1px solid var(--color-outline-variant);overflow-x:auto }
+    .rda-tab-btn { padding:10px 16px;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font-sans);font-size:var(--text-label-sm);font-weight:500;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color var(--duration-normal) var(--ease-smooth),border-color var(--duration-normal) var(--ease-smooth) }
     .rda-tab-btn:hover { color:var(--color-on-surface) }
-    .rda-tab-btn.active { color:#fff;background:var(--color-teal);box-shadow:var(--shadow-sm) }
+    .rda-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
+    .rda-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px }
+    .rda-header-title { font-size:var(--text-body-lg);font-weight:700;color:var(--color-on-surface);margin:0 }
     .rda-badge { font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700 }
     .rda-badge-yes { background:var(--color-tertiary-container);color:var(--color-on-tertiary-container) }
     .rda-badge-no  { background:var(--color-surface-container);color:var(--color-on-surface-variant) }
+    .rda-pagination { display:flex;justify-content:flex-end;padding:10px 0 }
+
+    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
+       own build — force the right-aligned Actions column ourselves. */
+    :host ::ng-deep daf-data-table {
+      th:last-child { text-align: right !important; }
+      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
+    }
   `],
 })
 export class RefDataAdminComponent implements OnChanges {
@@ -235,8 +273,31 @@ export class RefDataAdminComponent implements OnChanges {
     { key: '_actions',  label: '', align: 'right' },
   ];
 
+  currentPage = signal(0);
+
+  readonly totalPages = computed(() => {
+    const len = this.isTypeContratTab() ? this.typeContrats().length : this.items().length;
+    return Math.max(1, Math.ceil(len / PAGE_SIZE));
+  });
+
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  readonly pagedItems = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.items().slice(start, start + PAGE_SIZE);
+  });
+
   readonly itemRows = computed<TableRow[]>(() =>
-    this.items().map(i => ({
+    this.pagedItems().map(i => ({
       labelFr:   i.labelFr,
       labelEn:   i.labelEn,
       code:      i.code ?? '—',
@@ -254,8 +315,13 @@ export class RefDataAdminComponent implements OnChanges {
     { key: '_actions', label: '', align: 'right' },
   ];
 
+  readonly pagedTypeContrats = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.typeContrats().slice(start, start + PAGE_SIZE);
+  });
+
   readonly tcRows = computed<TableRow[]>(() =>
-    this.typeContrats().map(tc => ({
+    this.pagedTypeContrats().map(tc => ({
       code:      tc.code,
       labelFr:   tc.labelFr,
       labelEn:   tc.labelEn,
@@ -275,6 +341,7 @@ export class RefDataAdminComponent implements OnChanges {
   selectTab(tab: TabConfig): void {
     this.activeTab.set(tab);
     this.showForm.set(false);
+    this.currentPage.set(0);
     this.resetForm();
     this.loadItems();
   }

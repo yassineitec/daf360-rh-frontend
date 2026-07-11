@@ -51,14 +51,14 @@
     <daf-form-field
       [options]="{ type: 'search', placeholder: 'Rechercher un employé…', prefixIcon: 'search', fullWidth: true }"
       [value]="searchTerm()"
-      (valueChange)="searchTerm.set($any($event) ?? '')" />
+      (valueChange)="onSearch($any($event) ?? '')" />
   </div>
   @for (f of sourceFilters; track f.value) {
     <daf-button
       [label]="f.label"
       variant="toggle"
       [options]="{ active: activeFilter() === f.value, pill: true, size: 'sm' }"
-      (onClick)="activeFilter.set(f.value)" />
+      (onClick)="onFilterChange(f.value)" />
   }
 </div>
 
@@ -83,6 +83,20 @@
   </ng-template>
 
 </daf-data-table>
+
+<!-- Count + Pagination -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3">
+  <span class="text-label-sm text-outline">
+    <span class="font-semibold text-on-surface">{{ totalElements() }}</span> employé(s)
+  </span>
+  @if (totalPages() > 1) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      (pageChange)="onPageChange($event)" />
+  }
+</div>
 
 <!-- Employee Panel Modal -->
 <app-modal

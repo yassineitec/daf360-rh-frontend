@@ -4,7 +4,8 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
-  FormFieldComponent, TableColumn, TableConfig, TableRow,
+  FormFieldComponent, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
+  PaginationComponent, PaginationConfig,
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../shared/modal.component';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
@@ -13,12 +14,15 @@ import {
 } from '../../../core/lists/configurable-list.model';
 import { UserStore } from '../../../core/user.store';
 
+const PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-list-manager',
   standalone: true,
   imports: [
     FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective,
-    ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent,
+    ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent, StatusBadgeComponent,
+    PaginationComponent,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -56,8 +60,17 @@ export class ListManagerComponent implements OnInit {
     { key: '_actions', label: 'Actions', align: 'right' },
   ];
 
+  currentPage = signal(0);
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.values().length / PAGE_SIZE)));
+
+  readonly pagedValues = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.values().slice(start, start + PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.values().map(v => ({
+    this.pagedValues().map(v => ({
       valueCode: v.valueCode,
       labelFr:   v.labelFr,
       labelEn:   v.labelEn,
@@ -72,6 +85,17 @@ export class ListManagerComponent implements OnInit {
     showHeader: false,
     emptyMessage: 'Aucune valeur. Cliquez sur "+ Ajouter" pour commencer.',
   }));
+
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   editForm: FormGroup = this.fb.group({
     labelFr:   ['', Validators.required],
@@ -89,7 +113,11 @@ export class ListManagerComponent implements OnInit {
 
   ngOnInit(): void {
     this.listService.getListTypes().subscribe({
-      next: types => { this.listTypes.set(types); this.loadingTypes.set(false); },
+      next: types => {
+        this.listTypes.set(types);
+        this.loadingTypes.set(false);
+        if (types.length) this.selectType(types[0]);
+      },
       error: () => { this.error.set('Impossible de charger les types de listes.'); this.loadingTypes.set(false); },
     });
   }
@@ -108,6 +136,7 @@ export class ListManagerComponent implements OnInit {
 
   loadValues(id: number): void {
     this.loadingValues.set(true);
+    this.currentPage.set(0);
     this.listService.getAllValuesForAdmin(id).subscribe({
       next: vals => { this.values.set(vals); this.loadingValues.set(false); },
       error: () => { this.error.set('Erreur lors du chargement des valeurs.'); this.loadingValues.set(false); },

@@ -54,18 +54,6 @@ daf-card.rc-card-active {
   justify-content: flex-end;
 }
 
-.rc-badge {
-  font-size: var(--text-label-caps);
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.rc-badge-default   { background: #e6f7f5; color: var(--color-teal); }
-.rc-badge-flexible  { background: #ede9fe; color: #5b21b6; }
-.rc-badge-inactive  { background: var(--color-error-container); color: var(--color-on-error-container); }
-
 .rc-card-meta {
   display: flex;
   gap: 16px;

@@ -3,7 +3,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent, FormFieldComponent, ToggleComponent } from '@khalilrebhiitec/daf360';
+import { ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent } from '@khalilrebhiitec/daf360';
 import { NotificationRoutingService } from './notification-routing.service';
 import { UserStore } from '../../../core/user.store';
 import {
@@ -25,6 +25,7 @@ import { TestDispatchModalComponent } from './test-dispatch-modal.component';
     ButtonComponent,
     FormFieldComponent,
     ToggleComponent,
+    CardComponent,
   ],
   templateUrl: './routing-rule-editor.component.html',
   styleUrl: './routing-rule-editor.component.scss',

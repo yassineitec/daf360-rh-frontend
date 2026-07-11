@@ -7,14 +7,16 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, ToggleComponent,
+} from '@khalilrebhiitec/daf360';
 import { RoleListItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
 
 @Component({
   selector: 'app-role-info-tab',
   standalone: true,
-  imports: [FormsModule],
+  imports: [ButtonComponent, FormFieldComponent, SelectComponent, ToggleComponent],
   templateUrl: './role-info-tab.component.html',
   styleUrl: './role-info-tab.component.scss',
 })
@@ -37,6 +39,19 @@ export class RoleInfoTabComponent {
 
   otherRoles = computed(() => this.allRoles().filter(r => r.id !== this.role().id));
 
+  parentRoleOptions = computed<SelectOption[]>(() =>
+    this.otherRoles().map(r => ({ value: String(r.id), label: r.frenchName })),
+  );
+
+  parentRoleSelected(): string[] {
+    const id = this.parentRoleId();
+    return id ? [String(id)] : [];
+  }
+
+  onParentRoleChange(value: string[]): void {
+    this.parentRoleId.set(value[0] ? Number(value[0]) : null);
+  }
+
   constructor() {
     effect(() => {
       const r = this.role();
@@ -48,18 +63,6 @@ export class RoleInfoTabComponent {
       this.showDeleteConfirm.set(false);
     });
   }
-
-  // Two-way binding helpers for template (ngModel does not work directly on signals)
-  get frenchNameValue(): string { return this.frenchName(); }
-  set frenchNameValue(v: string) { this.frenchName.set(v); }
-
-  get parentRoleIdValue(): number | null { return this.parentRoleId(); }
-  set parentRoleIdValue(v: number | string | null) {
-    this.parentRoleId.set(v === '' || v === null || v === undefined ? null : Number(v));
-  }
-
-  get showAllValue(): boolean { return this.showAll(); }
-  set showAllValue(v: boolean) { this.showAll.set(v); }
 
   save(): void {
     if (this.saving()) return;

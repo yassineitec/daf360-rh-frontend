@@ -23,9 +23,9 @@
               <p class="rc-card-code">{{ r.code }}</p>
             </div>
             <div class="rc-card-badges">
-              @if (r.isDefault) { <span class="rc-badge rc-badge-default">Défaut</span> }
-              @if (r.isFlexible) { <span class="rc-badge rc-badge-flexible">Flexible</span> }
-              @if (!r.isActive) { <span class="rc-badge rc-badge-inactive">Inactif</span> }
+              @if (r.isDefault) { <daf-badge label="Défaut" [options]="{ variant: 'teal' }" /> }
+              @if (r.isFlexible) { <daf-badge label="Flexible" [options]="{ variant: 'info' }" /> }
+              @if (!r.isActive) { <daf-badge label="Inactif" [options]="{ variant: 'neutral' }" /> }
             </div>
           </div>
           <div class="rc-card-meta">

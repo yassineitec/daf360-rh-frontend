@@ -4,6 +4,7 @@ import {
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SelectComponent, SelectOption, TableColumn, TableConfig, TableRow,
+  PaginationComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
@@ -18,6 +19,7 @@ import { ModalComponent } from '../../../../shared/modal.component';
   imports: [
     PermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
+    PaginationComponent,
   ],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
@@ -45,6 +47,10 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   formEffFrom     = '';
   formEffTo       = '';
   formNotes       = '';
+
+  // Pagination — 5 per page
+  readonly PAGE_SIZE = 5;
+  currentPage = signal(0);
 
   // Merge roles + assignments
   allRolesWithAssignment = computed<RoleRow[]>(() => {
@@ -93,8 +99,16 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     { key: '_actions', label: 'Actions', align: 'right' },
   ];
 
+  readonly totalElements = computed(() => this.allRolesWithAssignment().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
+
+  readonly pagedRoles = computed(() => {
+    const start = this.currentPage() * this.PAGE_SIZE;
+    return this.allRolesWithAssignment().slice(start, start + this.PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.allRolesWithAssignment().map(row => ({
+    this.pagedRoles().map(row => ({
       role: row.roleName,
       regime: row.assignment?.regimeLabelFr ?? null,
       effFrom: row.assignment ? this.formatDate(row.assignment.effectiveFrom) : '—',
@@ -109,6 +123,10 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     emptyMessage: 'Aucun rôle disponible',
   }));
 
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['paysId']) { this.loadData(); }
@@ -116,6 +134,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   loadData(): void {
     this.loading.set(true);
+    this.currentPage.set(0);
     // Load regimes, assignments, and roles in parallel
     let pending = 3;
     const done = () => { if (--pending === 0) this.loading.set(false); };

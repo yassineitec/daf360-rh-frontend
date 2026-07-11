@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnChanges, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { Holiday }          from './models/admin.model';
@@ -10,7 +10,10 @@ import {
   ToggleComponent,
   ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PaginationComponent, PaginationConfig,
 } from '@khalilrebhiitec/daf360';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-holidays-admin',
@@ -18,7 +21,7 @@ import {
   imports: [
     SpinnerComponent, ModalComponent, MultiDatePickerComponent,
     FormFieldComponent, ToggleComponent, ButtonComponent,
-    DataTableComponent, DafCellDirective,
+    DataTableComponent, DafCellDirective, PaginationComponent,
   ],
   template: `
     <div class="section-header">
@@ -62,6 +65,17 @@ import {
             </div>
           </ng-template>
         </daf-data-table>
+
+        @if (totalPages() > 1) {
+          <div class="pagination-row">
+            <daf-pagination
+              [currentPage]="currentPage()"
+              [totalPages]="totalPages()"
+              [totalElements]="filteredHolidays().length"
+              [config]="paginationConfig"
+              (pageChange)="onPageChange($event)" />
+          </div>
+        }
       }
     }
 
@@ -127,8 +141,16 @@ import {
     .empty-state { text-align:center;padding:36px;color:var(--color-text-muted) }
     .empty-state p { margin:0;font-size:13px }
     .modal-form { display:flex;flex-direction:column;gap:12px }
+    .pagination-row { display:flex;justify-content:flex-end;padding:10px 0 }
     .field-row  { display:flex;flex-direction:column;gap:4px }
     .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
+
+    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
+       own build — force the right-aligned Actions column ourselves. */
+    :host ::ng-deep daf-data-table {
+      th:last-child { text-align: right !important; }
+      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
+    }
   `],
 })
 export class HolidaysAdminComponent implements OnChanges {
@@ -163,8 +185,17 @@ export class HolidaysAdminComponent implements OnChanges {
     );
   });
 
+  currentPage = signal(0);
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredHolidays().length / PAGE_SIZE)));
+
+  readonly pagedHolidays = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.filteredHolidays().slice(start, start + PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.filteredHolidays().map(h => ({
+    this.pagedHolidays().map(h => ({
       id:          h.id,
       name:        h.frenchLabel,
       pays:        this.paysLabel(),
@@ -178,6 +209,22 @@ export class HolidaysAdminComponent implements OnChanges {
     hoverable: true,
     emptyMessage: 'Aucun jour férié ne correspond à la recherche.',
   }));
+
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  private resetPageOnFilterChange = effect(() => {
+    this.filteredHolidays();
+    this.currentPage.set(0);
+  });
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   readonly String = String;
 

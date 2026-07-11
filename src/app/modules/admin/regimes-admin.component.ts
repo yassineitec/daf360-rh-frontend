@@ -1,5 +1,4 @@
 import { Component, input, signal } from '@angular/core';
-import { NgClass } from '@angular/common';
 import { RegimeCatalogComponent } from './regimes/tabs/regime-catalog.component';
 import { RegimeRoleAssignmentComponent } from './regimes/tabs/regime-role-assignment.component';
 import { RegimeOverviewComponent } from './regimes/tabs/regime-overview.component';
@@ -15,24 +14,22 @@ const TABS: { id: RegimeTab; label: string; icon: string }[] = [
 @Component({
   selector: 'app-regimes-admin',
   standalone: true,
-  imports: [NgClass, RegimeCatalogComponent, RegimeRoleAssignmentComponent, RegimeOverviewComponent],
+  imports: [RegimeCatalogComponent, RegimeRoleAssignmentComponent, RegimeOverviewComponent],
   template: `
     <div>
       <!-- Tab bar -->
-      <div style="display:flex;gap:4px;margin-bottom:24px;background:#eceef0;padding:4px;border-radius:12px;width:fit-content;">
+      <nav class="ra-tab-bar" role="tablist">
         @for (tab of tabs; track tab.id) {
           <button type="button"
+            class="ra-tab-btn"
+            [class.active]="activeTab() === tab.id"
             (click)="activeTab.set(tab.id)"
-            [ngClass]="{
-              'tab-active': activeTab() === tab.id,
-              'tab-inactive': activeTab() !== tab.id
-            }"
-            style="padding:8px 20px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;">
+            role="tab">
             <span class="material-symbols-outlined" style="font-size:16px;">{{ tab.icon }}</span>
             {{ tab.label }}
           </button>
         }
-      </div>
+      </nav>
 
       <!-- Tab content -->
       @if (activeTab() === 'catalog') {
@@ -47,9 +44,36 @@ const TABS: { id: RegimeTab; label: string; icon: string }[] = [
     </div>
   `,
   styles: [`
-    .tab-active   { background: #fff; color: #1d2b3e; box-shadow: 0 1px 3px rgba(51,65,85,.12); }
-    .tab-inactive { background: transparent; color: #44474c; }
-    .tab-inactive:hover { background: rgba(255,255,255,.5); }
+    .ra-tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--color-outline-variant);
+      overflow-x: auto;
+      flex-wrap: wrap;
+    }
+    .ra-tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-on-surface-variant);
+      cursor: pointer;
+      white-space: nowrap;
+      margin-bottom: -1px;
+      transition: color .15s ease, border-color .15s ease;
+    }
+    .ra-tab-btn:hover { color: var(--color-on-surface); }
+    .ra-tab-btn.active {
+      color: var(--color-tertiary);
+      border-bottom-color: var(--color-tertiary);
+      font-weight: 600;
+    }
   `],
 })
 export class RegimesAdminComponent {

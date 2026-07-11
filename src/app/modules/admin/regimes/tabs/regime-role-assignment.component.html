@@ -40,6 +40,18 @@
     </ng-template>
 
   </daf-data-table>
+
+  <!-- Count + Pagination -->
+  <div class="rra-footer">
+    <span class="rra-count"><strong>{{ totalElements() }}</strong> rôle(s)</span>
+    @if (totalPages() > 1) {
+      <daf-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages()"
+        [totalElements]="totalElements()"
+        (pageChange)="onPageChange($event)" />
+    }
+  </div>
 }
 
 <!-- Assign Modal -->

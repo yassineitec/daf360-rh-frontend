@@ -32,16 +32,63 @@ import { UserStore } from '../../../core/user.store';
       (onClick)="openNewForm()" />
   </div>
 
+  <!-- Simulator -->
+  <daf-card style="display:block;margin-bottom:20px;" [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
+    <h3 style="font-size:var(--text-body-lg);font-weight:700;color:var(--color-primary);margin:0 0 16px;display:flex;align-items:center;gap:8px;">
+      <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-secondary);">calculate</span>
+      Simulateur de calcul HS
+    </h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
+      <daf-select
+        [selected]="simPaysId ? [String(simPaysId)] : []"
+        [options]="paysOptions()"
+        [config]="{ label: 'Pays', placeholder: 'Sélectionner…', fullWidth: true }"
+        (selectedChange)="simPaysId = $event[0] ? Number($event[0]) : 0" />
+      <daf-form-field
+        [options]="{ label: 'Date', type: 'date', fullWidth: true }"
+        [value]="simDate"
+        (valueChange)="simDate = $any($event)" />
+      <daf-form-field
+        [options]="{ label: 'Heures brutes', type: 'number', fullWidth: true }"
+        [value]="simGrossHours"
+        (valueChange)="simGrossHours = Number($event) || 0" />
+      <daf-form-field
+        [options]="{ label: 'Heure début', type: 'time', fullWidth: true }"
+        [value]="simStart"
+        (valueChange)="simStart = $any($event)" />
+      <daf-form-field
+        [options]="{ label: 'Heure fin', type: 'time', fullWidth: true }"
+        [value]="simEnd"
+        (valueChange)="simEnd = $any($event)" />
+      <div style="display:flex;align-items:flex-end;">
+        <daf-button
+          [label]="isSimulating() ? 'Calcul…' : 'Simuler'" variant="teal"
+          [options]="{ disabled: isSimulating(), loading: isSimulating(), fullWidth: true }"
+          (onClick)="simulate()" />
+      </div>
+    </div>
+    @if (simResult()) {
+      <div style="background:var(--color-surface-container-low);border-radius:10px;padding:14px 16px;border:1px solid var(--color-outline-variant);">
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px;">
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Heures normales</span><br/>
+            <span style="font-size:20px;font-weight:800;color:var(--color-primary);">{{ simResult()!.normalHours | number:'1.2-2' }}h</span></div>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-danger);text-transform:uppercase;letter-spacing:.4px;">Heures supp.</span><br/>
+            <span style="font-size:20px;font-weight:800;color:var(--color-danger);">{{ simResult()!.overtimeHours | number:'1.2-2' }}h</span></div>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Règle appliquée</span><br/>
+            <span style="font-size:var(--text-body-md);font-weight:700;color:var(--color-secondary);">{{ simResult()!.ruleApplied }}</span></div>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Jour de repos ?</span><br/>
+            <span style="font-size:var(--text-body-md);font-weight:700;" [style.color]="simResult()!.isWeekendDay ? 'var(--color-danger)' : 'var(--color-success)'">
+              {{ simResult()!.isWeekendDay ? 'Oui' : 'Non' }}
+            </span></div>
+        </div>
+        <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:0;font-style:italic;">{{ simResult()!.explanation }}</p>
+      </div>
+    }
+  </daf-card>
+
   <!-- Rules table -->
   @if (isLoading()) {
     <div style="height:120px;border-radius:12px;background:linear-gradient(90deg,var(--color-outline-variant) 25%,var(--color-surface-container-low) 50%,var(--color-outline-variant) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
-  }
-
-  @if (!isLoading() && rules().length === 0) {
-    <div style="text-align:center;padding:56px;color:var(--color-outline);">
-      <span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:12px;opacity:.4;">timer</span>
-      <p style="font-size:var(--text-body-md);margin:0;">Aucune règle HS configurée.</p>
-    </div>
   }
 
   @if (!isLoading() && rules().length > 0) {
@@ -103,60 +150,6 @@ import { UserStore } from '../../../core/user.store';
       </table>
     </daf-card>
   }
-
-  <!-- Simulator -->
-  <daf-card style="margin-top:28px;display:block;" [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
-    <h3 style="font-size:var(--text-body-lg);font-weight:700;color:var(--color-primary);margin:0 0 16px;display:flex;align-items:center;gap:8px;">
-      <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-secondary);">calculate</span>
-      Simulateur de calcul HS
-    </h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
-      <daf-select
-        [selected]="simPaysId ? [String(simPaysId)] : []"
-        [options]="paysOptions()"
-        [config]="{ label: 'Pays', placeholder: 'Sélectionner…', fullWidth: true }"
-        (selectedChange)="simPaysId = $event[0] ? Number($event[0]) : 0" />
-      <daf-form-field
-        [options]="{ label: 'Date', type: 'date', fullWidth: true }"
-        [value]="simDate"
-        (valueChange)="simDate = $any($event)" />
-      <daf-form-field
-        [options]="{ label: 'Heures brutes', type: 'number', fullWidth: true }"
-        [value]="simGrossHours"
-        (valueChange)="simGrossHours = Number($event) || 0" />
-      <daf-form-field
-        [options]="{ label: 'Heure début', type: 'time', fullWidth: true }"
-        [value]="simStart"
-        (valueChange)="simStart = $any($event)" />
-      <daf-form-field
-        [options]="{ label: 'Heure fin', type: 'time', fullWidth: true }"
-        [value]="simEnd"
-        (valueChange)="simEnd = $any($event)" />
-      <div style="display:flex;align-items:flex-end;">
-        <daf-button
-          [label]="isSimulating() ? 'Calcul…' : 'Simuler'" variant="teal"
-          [options]="{ disabled: isSimulating(), loading: isSimulating(), fullWidth: true }"
-          (onClick)="simulate()" />
-      </div>
-    </div>
-    @if (simResult()) {
-      <div style="background:var(--color-surface-container-low);border-radius:10px;padding:14px 16px;border:1px solid var(--color-outline-variant);">
-        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px;">
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Heures normales</span><br/>
-            <span style="font-size:20px;font-weight:800;color:var(--color-primary);">{{ simResult()!.normalHours | number:'1.2-2' }}h</span></div>
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-danger);text-transform:uppercase;letter-spacing:.4px;">Heures supp.</span><br/>
-            <span style="font-size:20px;font-weight:800;color:var(--color-danger);">{{ simResult()!.overtimeHours | number:'1.2-2' }}h</span></div>
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Règle appliquée</span><br/>
-            <span style="font-size:var(--text-body-md);font-weight:700;color:var(--color-secondary);">{{ simResult()!.ruleApplied }}</span></div>
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Jour de repos ?</span><br/>
-            <span style="font-size:var(--text-body-md);font-weight:700;" [style.color]="simResult()!.isWeekendDay ? 'var(--color-danger)' : 'var(--color-success)'">
-              {{ simResult()!.isWeekendDay ? 'Oui' : 'Non' }}
-            </span></div>
-        </div>
-        <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:0;font-style:italic;">{{ simResult()!.explanation }}</p>
-      </div>
-    }
-  </daf-card>
 
 </div>
 

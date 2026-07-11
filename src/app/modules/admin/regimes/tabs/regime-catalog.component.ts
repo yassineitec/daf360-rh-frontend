@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
-  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent,
+  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
@@ -15,7 +15,7 @@ import { ModalComponent } from '../../../../shared/modal.component';
   standalone: true,
   imports: [
     ReactiveFormsModule, PermissionDirective,
-    ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, ModalComponent,
+    ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent, ModalComponent,
   ],
   templateUrl: './regime-catalog.component.html',
   styleUrl: './regime-catalog.component.scss',

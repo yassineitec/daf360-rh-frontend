@@ -18,7 +18,7 @@
           type="button"
         >
           {{ type.labelFr }}
-          @if (type.isSystem) { <span class="lm-badge-sys">système</span> }
+          @if (type.isSystem) { <daf-badge label="système" [options]="{ variant: 'warning', size: 'sm' }" /> }
         </button>
       }
       @if (filteredTypes().length === 0) {
@@ -89,9 +89,9 @@
                   (checkedChange)="editForm.controls['isActive'].setValue($event)" />
               </ng-container>
             } @else {
-              <span class="badge" [class.badge-active]="row['_source'].isActive" [class.badge-inactive]="!row['_source'].isActive">
-                {{ row['_source'].isActive ? 'Actif' : 'Inactif' }}
-              </span>
+              <daf-badge
+                [label]="row['_source'].isActive ? 'Actif' : 'Inactif'"
+                [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral' }" />
             }
           </ng-template>
 
@@ -99,7 +99,7 @@
             @if (editingId() === row['_source'].id) {
               {{ row['_source'].isSystem ? 'Oui' : 'Non' }}
             } @else {
-              @if (row['_source'].isSystem) { <span class="badge-system">Système</span> }
+              @if (row['_source'].isSystem) { <daf-badge label="Système" [options]="{ variant: 'warning' }" /> }
             }
           </ng-template>
 
@@ -124,6 +124,17 @@
           </ng-template>
 
         </daf-data-table>
+
+        @if (totalPages() > 1) {
+          <div class="lm-pagination">
+            <daf-pagination
+              [currentPage]="currentPage()"
+              [totalPages]="totalPages()"
+              [totalElements]="values().length"
+              [config]="paginationConfig"
+              (pageChange)="onPageChange($event)" />
+          </div>
+        }
       }
     }
   </main>

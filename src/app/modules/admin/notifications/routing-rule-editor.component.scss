@@ -4,7 +4,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 760px;
 }
 
 .editor-loading {
@@ -42,16 +41,12 @@
   margin-top: 6px;
 }
 
-.editor-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-outline-variant);
-  border-radius: 10px;
-  padding: 16px;
+.editor-section-body {
   display: flex;
   flex-direction: column;
   gap: 14px;
 
-  &.editor-section--test {
+  .editor-section--test & {
     gap: 10px;
   }
 }

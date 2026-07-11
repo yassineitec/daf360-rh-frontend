@@ -13,35 +13,38 @@
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 1 — Paramètres généraux
   ──────────────────────────────────────────────────────────────────────── -->
-  <div class="editor-section">
-    <h3 class="editor-section-title">Paramètres généraux</h3>
+  <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
+      <h3 class="editor-section-title">Paramètres généraux</h3>
 
-    <!-- In-app toggle -->
-    <div class="toggle-row">
-      <daf-toggle
-        [options]="{ label: 'Notification in-app' }"
-        [checked]="sendInapp()"
-        (checkedChange)="sendInapp.set($event)" />
-    </div>
+      <!-- In-app toggle -->
+      <div class="toggle-row">
+        <daf-toggle
+          [options]="{ label: 'Notification in-app' }"
+          [checked]="sendInapp()"
+          (checkedChange)="sendInapp.set($event)" />
+      </div>
 
-    <!-- Email toggle -->
-    <div class="toggle-row">
-      <daf-toggle
-        [options]="{
-          label: 'Email',
-          hint: !eventType().supportsEmail ? 'Ce type d\'événement ne supporte pas l\'envoi par email.' : undefined,
-          disabled: !eventType().supportsEmail
-        }"
-        [checked]="sendEmail()"
-        (checkedChange)="sendEmail.set($event)" />
+      <!-- Email toggle -->
+      <div class="toggle-row">
+        <daf-toggle
+          [options]="{
+            label: 'Email',
+            hint: !eventType().supportsEmail ? 'Ce type d\'événement ne supporte pas l\'envoi par email.' : undefined,
+            disabled: !eventType().supportsEmail
+          }"
+          [checked]="sendEmail()"
+          (checkedChange)="sendEmail.set($event)" />
+      </div>
     </div>
-  </div>
+  </daf-card>
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 2 — Modèles in-app
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendInapp()) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Modèles in-app</h3>
 
       <!-- Titre -->
@@ -78,13 +81,15 @@
         </div>
       </div>
     </div>
+    </daf-card>
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 3 — Modèles email
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendEmail() && eventType().supportsEmail) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Modèles email</h3>
 
       <!-- Sujet -->
@@ -121,6 +126,7 @@
         </div>
       </div>
     </div>
+    </daf-card>
   }
 
   <!-- Save button + banners -->
@@ -140,7 +146,8 @@
        SECTION 4 — Destinataires in-app
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendInapp() && detail()) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Destinataires in-app</h3>
       <app-recipient-tags
         [recipients]="detail()!.inappRecipients"
@@ -150,13 +157,15 @@
         (removeRecipient)="onInappRecipientRemoved($event)"
       />
     </div>
+    </daf-card>
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 5 — Destinataires email (TO / CC / BCC)
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendEmail() && eventType().supportsEmail && detail()) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Destinataires email</h3>
 
       <!-- TO -->
@@ -197,13 +206,15 @@
         />
       </div>
     </div>
+    </daf-card>
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 6 — Test
   ──────────────────────────────────────────────────────────────────────── -->
   @if (detail()) {
-    <div class="editor-section editor-section--test">
+    <daf-card class="block editor-section--test" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Test de la configuration</h3>
       <p class="test-description">
         Simule l'envoi pour votre pays et affiche les destinataires résolus et les messages générés.
@@ -221,6 +232,7 @@
         (closed)="showTestModal.set(false)"
       />
     </div>
+    </daf-card>
   }
 
 </div>
