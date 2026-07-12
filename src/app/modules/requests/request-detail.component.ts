@@ -2,9 +2,11 @@ import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { SlicePipe } from '@angular/common';
 import { catchError, of } from 'rxjs';
+import {
+  ButtonComponent, CardComponent, FormFieldComponent, StatusBadgeComponent, BadgeOptions,
+} from '@khalilrebhiitec/daf360';
 
 import { RequestsService }      from './requests.service';
 import { EmployeeRequest, GeneratedDocument } from './models/request.model';
@@ -12,6 +14,15 @@ import { SpinnerComponent }          from '../../shared/spinner.component';
 import { UserStore }                 from '../../core/user.store';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
+
+const STATUS_VARIANTS: Record<string, BadgeOptions['variant']> = {
+  SUBMITTED:  'info',
+  IN_REVIEW:  'warning',
+  PENDING_L2: 'warning',
+  APPROVED:   'success',
+  REJECTED:   'danger',
+  CANCELLED:  'neutral',
+};
 
 const STATUS_LABELS: Record<string, string> = {
   SUBMITTED:  'Soumis',
@@ -34,7 +45,10 @@ interface TimelineStep {
 @Component({
   selector: 'app-request-detail',
   standalone: true,
-  imports: [RouterLink, FormsModule, SlicePipe, SpinnerComponent, PdfDownloadButtonComponent],
+  imports: [
+    RouterLink, SlicePipe, SpinnerComponent, PdfDownloadButtonComponent,
+    ButtonComponent, CardComponent, FormFieldComponent, StatusBadgeComponent,
+  ],
   template: `
     @if (loading()) {
       <div class="rd-loading-wrap"><app-spinner size="lg" /></div>
@@ -63,15 +77,10 @@ interface TimelineStep {
           </div>
           <div class="rd-topbar-actions">
             @if (req()!.status === 'SUBMITTED' && !isOfficer()) {
-              <button class="rd-btn-cancel" type="button" (click)="cancelRequest()">
-                Annuler la demande
-              </button>
+              <daf-button label="Annuler la demande" variant="ghost" [options]="{ size: 'sm' }" (onClick)="cancelRequest()" />
             }
             @if (canProcess()) {
-              <button class="rd-btn-process" type="button" (click)="scrollToAction()">
-                <span class="material-symbols-outlined">task_alt</span>
-                Prendre en charge
-              </button>
+              <daf-button label="Prendre en charge" variant="teal" [options]="{ size: 'sm', iconStart: 'task_alt' }" (onClick)="scrollToAction()" />
             }
           </div>
         </div>
@@ -82,9 +91,7 @@ interface TimelineStep {
             <h1 class="rd-title">
               {{ req()!.typeDisplayNameFr ?? 'Demande #' + req()!.requestTypeId }}
             </h1>
-            <span class="rd-badge" [class]="'rd-badge--' + req()!.status.toLowerCase()">
-              {{ statusLabel(req()!.status) }}
-            </span>
+            <daf-badge [label]="statusLabel(req()!.status)" [options]="statusBadgeOptions(req()!.status)" />
           </div>
           <div class="rd-meta">
             <span class="rd-meta-chip">
@@ -111,7 +118,7 @@ interface TimelineStep {
           <div class="rd-left">
 
             <!-- Motif de la demande -->
-            <section class="rd-card">
+            <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
               <div class="rd-card-hd">
                 <h3 class="rd-section-title">
                   <span class="material-symbols-outlined">chat_bubble</span>
@@ -127,11 +134,11 @@ interface TimelineStep {
                   }
                 </p>
               </div>
-            </section>
+            </daf-card>
 
             <!-- Documents joints -->
             @if (req()!.attachmentUrl) {
-              <section class="rd-card">
+              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
                 <h3 class="rd-section-title">
                   <span class="material-symbols-outlined">attachment</span>
                   Documents joints
@@ -149,12 +156,12 @@ interface TimelineStep {
                     <span class="material-symbols-outlined">download</span>
                   </a>
                 </div>
-              </section>
+              </daf-card>
             }
 
             <!-- Documents générés (after approval) -->
             @if (req()!.status === 'APPROVED' && documents().length > 0) {
-              <section class="rd-card">
+              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
                 <h3 class="rd-section-title">
                   <span class="material-symbols-outlined">file_present</span>
                   Documents générés
@@ -178,12 +185,12 @@ interface TimelineStep {
                     </div>
                   }
                 </div>
-              </section>
+              </daf-card>
             }
 
             <!-- PDF doc section (document-type requests, approved) -->
             @if (isDocumentRequest() && req()!.status === 'APPROVED') {
-              <section class="rd-card">
+              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
                 <h3 class="rd-section-title">
                   <span class="material-symbols-outlined">picture_as_pdf</span>
                   Document officiel
@@ -213,7 +220,7 @@ interface TimelineStep {
                     />
                   </div>
                 }
-              </section>
+              </daf-card>
             }
 
           </div><!-- /rd-left -->
@@ -222,7 +229,7 @@ interface TimelineStep {
           <div class="rd-right">
 
             <!-- Timeline / Historique -->
-            <section class="rd-card">
+            <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
               <h3 class="rd-section-title-plain">Historique</h3>
               <div class="rd-timeline">
                 @for (step of timelineSteps(); track step.label; let last = $last) {
@@ -263,10 +270,10 @@ interface TimelineStep {
                   </div>
                 }
               </div>
-            </section>
+            </daf-card>
 
             <!-- Requérant glass card -->
-            <section class="rd-glass-card">
+            <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
               <h3 class="rd-eyebrow">Requérant</h3>
               <div class="rd-requester-row">
                 <div class="rd-requester-avatar">
@@ -293,54 +300,47 @@ interface TimelineStep {
                   Voir le profil complet →
                 </a>
               }
-            </section>
+            </daf-card>
 
             <!-- Action panel (officer, processable) -->
             @if (canProcess()) {
-              <section class="rd-card" id="rd-action-panel">
+              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" id="rd-action-panel">
                 <h3 class="rd-section-title-plain">Action de traitement</h3>
-                <label class="rd-form-label">Commentaire *</label>
-                <textarea class="rd-textarea"
-                  [(ngModel)]="actionComment"
-                  placeholder="Préciser la décision…"
-                  rows="3"
-                ></textarea>
+                <daf-form-field
+                  [options]="{ label: 'Commentaire', required: true, type: 'textarea', rows: 3, placeholder: 'Préciser la décision…', fullWidth: true }"
+                  [value]="actionComment"
+                  (valueChange)="actionComment = $any($event) ?? ''" />
                 <div class="rd-action-btns">
-                  <button class="rd-btn-approve" type="button"
-                    [disabled]="!actionComment.trim() || saving()"
-                    (click)="process('APPROVED')">
-                    @if (saving()) { <app-spinner size="sm" /> }
-                    @else { <span class="material-symbols-outlined">check_circle</span> }
-                    Approuver
-                  </button>
-                  <button class="rd-btn-reject" type="button"
-                    [disabled]="!actionComment.trim() || saving()"
-                    (click)="process('REJECTED')">
-                    <span class="material-symbols-outlined">cancel</span>
-                    Refuser
-                  </button>
+                  <daf-button
+                    label="Approuver"
+                    variant="teal"
+                    [options]="{ iconStart: 'check_circle', disabled: !actionComment.trim() || saving(), loading: saving() }"
+                    (onClick)="process('APPROVED')" />
+                  <daf-button
+                    label="Refuser"
+                    variant="danger"
+                    [options]="{ iconStart: 'cancel', disabled: !actionComment.trim() || saving() }"
+                    (onClick)="process('REJECTED')" />
                 </div>
                 @if (errorMsg()) {
                   <div class="rd-error-banner" role="alert">{{ errorMsg() }}</div>
                 }
-              </section>
+              </daf-card>
             }
 
             <!-- Generate document (officer + approved + document type) -->
             @if (isDocumentType() && req()!.status === 'APPROVED' && isOfficer()) {
-              <section class="rd-card">
+              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
                 <h3 class="rd-section-title-plain">Génération de document</h3>
                 <p class="rd-section-desc">
                   Générer le document officiel depuis le modèle défini.
                 </p>
-                <button class="rd-btn-generate" type="button"
-                  [disabled]="generating()"
-                  (click)="generateDocument()">
-                  @if (generating()) { <app-spinner size="sm" /> }
-                  @else { <span class="material-symbols-outlined">picture_as_pdf</span> }
-                  Générer le document
-                </button>
-              </section>
+                <daf-button
+                  label="Générer le document"
+                  variant="teal"
+                  [options]="{ iconStart: 'picture_as_pdf', disabled: generating(), loading: generating() }"
+                  (onClick)="generateDocument()" />
+              </daf-card>
             }
 
           </div><!-- /rd-right -->
@@ -438,6 +438,10 @@ export class RequestDetailComponent implements OnInit {
 
   statusLabel(status: string): string {
     return STATUS_LABELS[status] ?? status;
+  }
+
+  statusBadgeOptions(status: string): BadgeOptions {
+    return { variant: STATUS_VARIANTS[status] ?? 'neutral' };
   }
 
   getDocEndpoint(typeCode: string): string {

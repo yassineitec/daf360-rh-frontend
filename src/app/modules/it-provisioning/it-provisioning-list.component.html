@@ -180,6 +180,20 @@
     <ng-container *ngTemplateOutlet="cardsTpl" />
   </div>
 
+  <!-- Count + Pagination -->
+  @if (filteredItems().length > 0) {
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> dossier(s)</span>
+      @if (totalPages() > 1) {
+        <daf-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalElements]="filteredItems().length"
+          (pageChange)="onPageChange($event)" />
+      }
+    </div>
+  }
+
   <ng-template #cardsTpl>
     @for (row of rows(); track row['_source'].id) {
       <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', hoverable: true }" class="block">

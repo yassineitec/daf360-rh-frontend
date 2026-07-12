@@ -1,4 +1,4 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }        from './admin.service';
 import { RequestTypeCatalog }  from './models/admin.model';
@@ -8,14 +8,20 @@ import {
   SelectComponent, SelectOption,
   FormFieldComponent,
   ButtonComponent,
+  StatusBadgeComponent, DataTableComponent, DafCellDirective,
+  TableColumn, TableConfig, TableRow, PaginationComponent,
 } from '@khalilrebhiitec/daf360';
 
 const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','OTHER'];
+const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-request-types-admin',
   standalone: true,
-  imports: [SpinnerComponent, ModalComponent, SelectComponent, FormFieldComponent, ButtonComponent],
+  imports: [
+    SpinnerComponent, ModalComponent, SelectComponent, FormFieldComponent, ButtonComponent,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent,
+  ],
   template: `
     <div class="section-header">
       <div>
@@ -40,29 +46,35 @@ const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','O
         <daf-button label="Initialiser les 15 types par défaut" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
-      <table class="data-table">
-        <thead>
-          <tr><th>Code</th><th>Libellé</th><th>Catégorie</th><th>Approbation</th><th>SLA</th><th>Actif</th><th></th></tr>
-        </thead>
-        <tbody>
-          @for (t of types(); track t.id) {
-            <tr [class.inactive]="!t.isActive">
-              <td class="code-cell">{{ t.typeCode }}</td>
-              <td>{{ t.displayNameFr }}</td>
-              <td><span class="cat-badge">{{ t.category }}</span></td>
-              <td><span class="level-badge" [class.l2]="t.approvalLevel === 'L2'">{{ t.approvalLevel }}</span></td>
-              <td class="cell-center">{{ t.defaultSlaDays }}j</td>
-              <td class="cell-center">{{ t.isActive ? '✓' : '—' }}</td>
-              <td class="actions-cell">
-                <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openEdit(t)" />
-                @if (t.isActive) {
-                  <daf-button label="Désactiver" variant="danger" [options]="{ size: 'sm' }" (onClick)="deactivate(t)" />
-                }
-              </td>
-            </tr>
+      <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
+        <ng-template dafCell="category" let-row>
+          <daf-badge [label]="row['category']" [options]="{ variant: 'neutral', size: 'sm' }" />
+        </ng-template>
+        <ng-template dafCell="approvalLevel" let-row>
+          <daf-badge [label]="row['approvalLevel']" [options]="{ variant: row['approvalLevel'] === 'L2' ? 'warning' : 'success', size: 'sm' }" />
+        </ng-template>
+        <ng-template dafCell="isActive" let-row>
+          <daf-badge [label]="row['_source'].isActive ? 'Actif' : 'Inactif'" [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }" />
+        </ng-template>
+        <ng-template dafCell="_actions" let-row>
+          <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openEdit(row['_source'])" />
+          @if (row['_source'].isActive) {
+            <daf-button label="Désactiver" variant="danger" [options]="{ size: 'sm' }" (onClick)="deactivate(row['_source'])" />
           }
-        </tbody>
-      </table>
+        </ng-template>
+      </daf-data-table>
+
+      <!-- Count + Pagination -->
+      <div class="rta-footer">
+        <span class="rta-count"><strong>{{ totalElements() }}</strong> type(s)</span>
+        @if (totalPages() > 1) {
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="totalElements()"
+            (pageChange)="onPageChange($event)" />
+        }
+      </div>
     }
 
     <!-- Add/Edit Modal -->
@@ -145,17 +157,8 @@ const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','O
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .header-actions { display:flex;gap:8px;align-items:center }
     .center   { display:flex;justify-content:center;padding:24px }
-    .data-table { width:100%;border-collapse:collapse;font-size:13px }
-    .data-table th { padding:8px 12px;background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border);text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap }
-    .data-table td { padding:9px 12px;border-bottom:1px solid var(--color-border) }
-    .data-table tr:last-child td { border-bottom:none }
-    .inactive  { opacity:.5 }
-    .code-cell { font-family:monospace;font-size:11px;color:var(--color-primary);font-weight:600 }
-    .cat-badge { display:inline-block;padding:1px 7px;border-radius:999px;background:var(--color-bg-secondary);font-size:10px;font-weight:600;color:var(--color-text-muted) }
-    .level-badge { display:inline-block;padding:1px 7px;border-radius:999px;background:#dcfce7;color:var(--color-success);font-size:10px;font-weight:700 }
-    .level-badge.l2 { background:#fef3c7;color:var(--color-warning) }
-    .cell-center { text-align:center;color:var(--color-text-muted);font-size:13px }
-    .actions-cell { display:flex;gap:6px }
+    .rta-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px }
+    .rta-count  { font-size:12px;color:var(--color-text-muted) }
     .empty-state { text-align:center;padding:36px;color:var(--color-text-muted);display:flex;flex-direction:column;align-items:center;gap:12px }
     .empty-state p { margin:0;font-size:13px }
     .modal-form { display:flex;flex-direction:column;gap:12px }
@@ -186,10 +189,49 @@ export class RequestTypesAdminComponent implements OnChanges {
 
   form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1' as 'L1'|'L2', defaultSlaDays:2 };
 
+  readonly columns: TableColumn[] = [
+    { key: 'typeCode', label: 'Code' },
+    { key: 'displayNameFr', label: 'Libellé' },
+    { key: 'category', label: 'Catégorie' },
+    { key: 'approvalLevel', label: 'Approbation' },
+    { key: 'defaultSlaDays', label: 'SLA', align: 'center' },
+    { key: 'isActive', label: 'Actif', align: 'center' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
+
+  readonly tableConfig: TableConfig = { hoverable: true };
+
+  // Pagination — 5 per page
+  currentPage = signal(0);
+  readonly totalElements = computed(() => this.types().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
+
+  readonly pagedTypes = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.types().slice(start, start + PAGE_SIZE);
+  });
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.pagedTypes().map(t => ({
+      typeCode: t.typeCode,
+      displayNameFr: t.displayNameFr,
+      category: t.category,
+      approvalLevel: t.approvalLevel,
+      defaultSlaDays: t.defaultSlaDays + 'j',
+      isActive: t.isActive,
+      _source: t,
+    })),
+  );
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   ngOnChanges() { this.load(); }
 
   private load() {
     this.loading.set(true);
+    this.currentPage.set(0);
     this.svc.listRequestTypes(this.paysId()).pipe(catchError(() => of([]))).subscribe(ts => {
       this.types.set(ts);
       this.loading.set(false);

@@ -8,41 +8,24 @@
   }
 
   <!-- Nom du role -->
-  <div class="rit-field">
-    <label class="rit-label" for="rit-french-name">Nom du role</label>
-    <input
-      id="rit-french-name"
-      class="rit-input"
-      type="text"
-      [(ngModel)]="frenchNameValue"
-      placeholder="Ex. Responsable RH"
-    />
-  </div>
+  <daf-form-field
+    [options]="{ label: 'Nom du role', placeholder: 'Ex. Responsable RH', fullWidth: true }"
+    [value]="frenchName()"
+    (valueChange)="frenchName.set($any($event) ?? '')" />
 
   <!-- Role parent -->
-  <div class="rit-field">
-    <label class="rit-label" for="rit-parent-role">Role parent</label>
-    <select
-      id="rit-parent-role"
-      class="rit-select"
-      [(ngModel)]="parentRoleIdValue"
-    >
-      <option [ngValue]="null">Aucun</option>
-      @for (r of otherRoles(); track r.id) {
-        <option [ngValue]="r.id">{{ r.frenchName }}</option>
-      }
-    </select>
-  </div>
+  <daf-select
+    [selected]="parentRoleSelected()"
+    [options]="parentRoleOptions()"
+    [config]="{ label: 'Role parent', placeholder: 'Aucun', fullWidth: true }"
+    (selectedChange)="onParentRoleChange($event)" />
 
   <!-- Voir toutes les entites -->
   <div class="rit-toggle-row">
-    <span class="rit-label">Voir toutes les entites</span>
-    <label class="toggle-switch">
-      <input type="checkbox" [(ngModel)]="showAllValue" />
-      <span class="toggle-track">
-        <span class="toggle-thumb"></span>
-      </span>
-    </label>
+    <daf-toggle
+      [options]="{ label: 'Voir toutes les entites', labelPosition: 'left' }"
+      [checked]="showAll()"
+      (checkedChange)="showAll.set($event)" />
   </div>
 
   <!-- Compteur utilisateurs -->
@@ -51,26 +34,23 @@
   </div>
 
   <!-- Bouton sauvegarder -->
-  <button
-    class="btn-save"
-    type="button"
-    (click)="save()"
-    [disabled]="saving()"
-  >
-    {{ saving() ? 'Enregistrement...' : 'Enregistrer' }}
-  </button>
+  <daf-button
+    [label]="saving() ? 'Enregistrement...' : 'Enregistrer'"
+    variant="teal"
+    [options]="{ disabled: saving(), loading: saving() }"
+    (onClick)="save()" />
 
   <!-- Zone de suppression -->
   <div class="rit-delete-zone">
-    <button
-      class="btn-delete"
-      type="button"
-      [disabled]="role().userCount > 0 || deleting()"
+    <daf-button
+      label="Supprimer ce role"
+      variant="danger"
+      [options]="{
+        disabled: role().userCount > 0 || deleting(),
+        size: 'sm'
+      }"
       [title]="role().userCount > 0 ? 'Impossible de supprimer un role attribue a des utilisateurs actifs' : ''"
-      (click)="showDeleteConfirm.set(true)"
-    >
-      Supprimer ce role
-    </button>
+      (onClick)="showDeleteConfirm.set(true)" />
 
     @if (showDeleteConfirm()) {
       <div class="delete-confirm">
@@ -79,17 +59,16 @@
           Cette action est irreversible.
         </p>
         <div class="delete-confirm-actions">
-          <button
-            class="btn-cancel-del"
-            type="button"
-            (click)="showDeleteConfirm.set(false)"
-          >Annuler</button>
-          <button
-            class="btn-confirm-del"
-            type="button"
-            [disabled]="deleting()"
-            (click)="confirmDelete()"
-          >{{ deleting() ? 'Suppression...' : 'Confirmer' }}</button>
+          <daf-button
+            label="Annuler"
+            variant="ghost"
+            [options]="{ size: 'sm' }"
+            (onClick)="showDeleteConfirm.set(false)" />
+          <daf-button
+            [label]="deleting() ? 'Suppression...' : 'Confirmer'"
+            variant="danger"
+            [options]="{ disabled: deleting(), size: 'sm' }"
+            (onClick)="confirmDelete()" />
         </div>
       </div>
     }

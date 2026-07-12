@@ -3,6 +3,8 @@ import {
 } from '@angular/core';
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
+  StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
+  TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './breaks/break.service';
 import { RegimeService } from './regimes/regime.service';
@@ -19,8 +21,9 @@ type BreakTab = 'templates' | 'legal-rules';
   selector: 'app-breaks-admin',
   standalone: true,
   imports: [
-    ButtonComponent, FormFieldComponent, SelectComponent, CardComponent,
-    LegalRulesAdminComponent, PermissionDirective,
+    ButtonComponent, FormFieldComponent, SelectComponent,
+    LegalRulesAdminComponent, PermissionDirective, StatusBadgeComponent,
+    DataTableComponent, DafCellDirective,
   ],
   template: `
 <div>
@@ -132,49 +135,20 @@ type BreakTab = 'templates' | 'legal-rules';
               <span class="material-symbols-outlined" style="font-size:14px;color:var(--color-teal);">schedule</span>
               {{ group.regimeName }}
             </p>
-            <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'lg' }">
-              <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                  <tr style="background:var(--color-background);">
-                    <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Libellé</th>
-                    <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Type</th>
-                    <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Durée</th>
-                    <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Jours</th>
-                    <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Horaire</th>
-                    <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Déclencheur</th>
-                    <th style="padding:10px 16px;text-align:right;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (t of group.templates; track t.id) {
-                    <tr style="border-top:1px solid var(--color-outline-variant);">
-                      <td style="padding:12px 16px;font-size:var(--text-body-md);font-weight:500;color:var(--color-primary);">{{ t.labelFr }}</td>
-                      <td style="padding:12px 16px;">
-                        <span style="font-size:var(--text-body-sm);padding:3px 10px;border-radius:999px;font-weight:700;"
-                          [style.background]="t.deductionType==='MANDATORY' ? 'var(--color-error-container)' : t.deductionType==='AUTO' ? '#e6f4f6' : '#f1f5f9'"
-                          [style.color]="t.deductionType==='MANDATORY' ? 'var(--color-on-error-container)' : t.deductionType==='AUTO' ? 'var(--color-teal-light)' : '#475569'">
-                          {{ t.deductionType }}
-                        </span>
-                      </td>
-                      <td style="padding:12px 16px;">
-                        <span style="background:#e6f4f6;color:var(--color-teal-light);font-size:var(--text-body-sm);padding:3px 10px;border-radius:999px;font-weight:600;">{{ t.durationMin }} min</span>
-                      </td>
-                      <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">{{ formatDays(t.appliesToDays) }}</td>
-                      <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">{{ t.breakTimeStart ? t.breakTimeStart + ' – ' + t.breakTimeEnd : '—' }}</td>
-                      <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">
-                        {{ t.minWorkHoursTrigger ? '≥ ' + t.minWorkHoursTrigger + 'h' : '—' }}
-                      </td>
-                      <td style="padding:12px 16px;text-align:right;">
-                        <daf-button *appHasPermission="'ADMIN_BREAKS'"
-                          label="" variant="danger"
-                          [options]="{ iconStart: 'delete', size: 'sm' }"
-                          (onClick)="removeTemplate(t.id)" />
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </daf-card>
+            <daf-data-table [columns]="columns" [rows]="rowsFor(group.templates)" [config]="tableConfig">
+              <ng-template dafCell="deductionType" let-row>
+                <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
+              </ng-template>
+              <ng-template dafCell="durationMin" let-row>
+                <daf-badge [label]="row['durationMin'] + ' min'" [options]="{ variant: 'teal' }" />
+              </ng-template>
+              <ng-template dafCell="_actions" let-row>
+                <daf-button *appHasPermission="'ADMIN_BREAKS'"
+                  label="" variant="danger"
+                  [options]="{ iconStart: 'delete', size: 'sm' }"
+                  (onClick)="removeTemplate(row['_source'].id)" />
+              </ng-template>
+            </daf-data-table>
           </div>
         }
       }
@@ -224,6 +198,36 @@ export class BreaksAdminComponent implements OnChanges {
   regimeOptions = computed<SelectOption[]>(() =>
     this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}h/sem` }))
   );
+
+  readonly columns: TableColumn[] = [
+    { key: 'labelFr', label: 'Libellé' },
+    { key: 'deductionType', label: 'Type' },
+    { key: 'durationMin', label: 'Durée' },
+    { key: 'appliesToDays', label: 'Jours' },
+    { key: 'schedule', label: 'Horaire' },
+    { key: 'trigger', label: 'Déclencheur' },
+    { key: '_actions', label: 'Action', align: 'right' },
+  ];
+
+  readonly tableConfig: TableConfig = { hoverable: true };
+
+  rowsFor(templates: BreakTemplateDto[]): TableRow[] {
+    return templates.map(t => ({
+      labelFr: t.labelFr,
+      deductionType: t.deductionType,
+      durationMin: t.durationMin,
+      appliesToDays: this.formatDays(t.appliesToDays),
+      schedule: t.breakTimeStart ? `${t.breakTimeStart} – ${t.breakTimeEnd}` : '—',
+      trigger: t.minWorkHoursTrigger ? `≥ ${t.minWorkHoursTrigger}h` : '—',
+      _source: t,
+    }));
+  }
+
+  deductionBadgeOptions(type: string): BadgeOptions {
+    if (type === 'MANDATORY') return { variant: 'danger' };
+    if (type === 'AUTO') return { variant: 'teal' };
+    return { variant: 'neutral' };
+  }
 
   // Form fields
   formRegimeId  = 0;

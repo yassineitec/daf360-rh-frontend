@@ -20,6 +20,7 @@ import {
   BadgeVariant,
 } from '@khalilrebhiitec/daf360';
 import { CandidateService } from './candidate.service';
+import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
 import {
@@ -56,6 +57,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
     StatusBadgeComponent,
     DataTableComponent,
     DafCellDirective,
+    RejectModalComponent,
   ],
   templateUrl: './candidate-list.component.html',
 })
@@ -83,7 +85,6 @@ export class CandidateListComponent implements OnInit {
 
   // ── Reject modal state ────────────────────────────────────────────────────
   rejectTarget = signal<CandidateListItem | null>(null);
-  rejectReason = signal<string | number | null>('');
   isActioning  = signal(false);
   actionError  = signal<string | null>(null);
 
@@ -306,23 +307,11 @@ export class CandidateListComponent implements OnInit {
   openRejectModal(c: CandidateListItem, event: Event): void {
     event.stopPropagation();
     this.rejectTarget.set(c);
-    this.rejectReason.set('');
     this.actionError.set(null);
   }
 
-  isRejectReasonValid(): boolean {
-    const r = this.rejectReason();
-    return typeof r === 'string' && r.trim().length > 0;
-  }
-
-  confirmReject(): void {
-    const c = this.rejectTarget();
-    const reason = (this.rejectReason() as string)?.trim();
-    if (!c || !reason) return;
-    this.isActioning.set(true);
-    this.svc.reject(c.id, reason).subscribe({
-      next:  () => { this.isActioning.set(false); this.rejectTarget.set(null); this.loadCandidates(); },
-      error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? 'Erreur lors du rejet.'); },
-    });
+  onRejected(): void {
+    this.rejectTarget.set(null);
+    this.loadCandidates();
   }
 }

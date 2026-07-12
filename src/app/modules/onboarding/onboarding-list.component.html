@@ -112,10 +112,7 @@
               <div class="flex items-center gap-1.5 flex-wrap mb-3">
                 <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
                 @if (row['hasDraft']) {
-                  <span class="inline-flex items-center rounded-full text-[11px] font-semibold px-2 py-0.5"
-                        style="background-color: rgba(255,221,184,0.30); color: #4c2e00; border: 1px solid rgba(76,46,0,0.35)">
-                    Brouillon
-                  </span>
+                  <daf-badge label="Brouillon" [options]="{ variant: 'warning', size: 'sm' }" />
                 }
               </div>
 
@@ -181,10 +178,7 @@
                     [options]="row['status'].options"
                   />
                   @if (row['hasDraft']) {
-                    <span class="inline-flex items-center rounded-full text-[11px] font-semibold px-2 py-0.5"
-                          style="background-color: rgba(255,221,184,0.30); color: #4c2e00; border: 1px solid rgba(76,46,0,0.35)">
-                      Brouillon
-                    </span>
+                    <daf-badge label="Brouillon" [options]="{ variant: 'warning', size: 'sm' }" />
                   }
                 </div>
               </ng-template>
@@ -212,6 +206,18 @@
         <!-- Mobile: always cards, no table, no toggle -->
         <div class="grid grid-cols-1 gap-4 sm:hidden">
           <ng-container *ngTemplateOutlet="cardsTpl" />
+        </div>
+
+        <!-- Count + Pagination -->
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> dossier(s)</span>
+          @if (totalPages() > 1) {
+            <daf-pagination
+              [currentPage]="currentPage()"
+              [totalPages]="totalPages()"
+              [totalElements]="filteredItems().length"
+              (pageChange)="onPageChange($event)" />
+          }
         </div>
 
       }

@@ -1,10 +1,13 @@
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import {
+  BadgeOptions,
   ButtonComponent,
+  CardComponent,
   FormFieldComponent,
   MultiDatePickerComponent,
   SelectComponent,
   SelectOption,
+  StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
 import { UserStore } from '../../core/user.store';
 import { dateToIso } from '../../shared/date-picker.utils';
@@ -24,23 +27,22 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
   standalone: true,
   imports: [
     ButtonComponent,
+    CardComponent,
     SelectComponent,
     FormFieldComponent,
     MultiDatePickerComponent,
+    StatusBadgeComponent,
   ],
   template: `
-    <div class="bg-white rounded-xl border border-outline-variant p-5">
+    <daf-card class="block" [options]="{ variant: 'outlined', padding: 'lg', radius: 'xl' }">
 
       <!-- Section header -->
       <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2" style="color:#50717b">
+        <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
           <span class="material-symbols-outlined text-[18px]">record_voice_over</span>
           <h3 class="text-[12px] font-semibold uppercase tracking-wider">Entretiens</h3>
           @if (interviews().length) {
-            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-bold"
-                  style="background:rgba(28,78,92,0.1);color:#1C4E5C">
-              {{ interviews().length }}
-            </span>
+            <daf-badge [label]="interviews().length + ''" [options]="{ variant: 'teal', size: 'sm' }" />
           }
         </div>
         @if (canManage() && !showForm()) {
@@ -53,7 +55,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
       <!-- Error banner -->
       @if (error()) {
         <div class="flex items-center justify-between p-3 mb-3 rounded-lg text-[12px]"
-             style="background:#FEF2F2;color:#BA1A1A;border:1px solid #FECACA">
+             style="background:var(--color-error-container);color:var(--color-danger);border:1px solid var(--color-outline-variant)">
           <span>{{ error() }}</span>
           <button type="button" class="ml-2 font-bold text-[14px] leading-none"
                   (click)="error.set(null)">×</button>
@@ -62,7 +64,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
 
       <!-- Schedule form -->
       @if (showForm()) {
-        <div class="p-4 mb-4 rounded-xl" style="background:#f0f6f8;border:1px solid #d4e3e8">
+        <div class="p-4 mb-4 rounded-xl" style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant)">
           <p class="text-[12px] font-semibold text-on-surface mb-3">Planifier un entretien</p>
 
           @if (typesLoading()) {
@@ -119,7 +121,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
           }
 
           @if (formError()) {
-            <p class="text-[12px] mt-2" style="color:#BA1A1A">{{ formError() }}</p>
+            <p class="text-[12px] mt-2" style="color:var(--color-danger)">{{ formError() }}</p>
           }
           <div class="flex justify-end gap-2 mt-3">
             <daf-button label="Annuler" variant="ghost" [options]="{ size: 'sm' }"
@@ -148,7 +150,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
               <!-- Connector line -->
               @if (!last) {
                 <div class="absolute left-2.5 top-5 w-px"
-                     style="bottom:-12px;background:#E0E7E9"></div>
+                     style="bottom:-12px;background:var(--color-outline-variant)"></div>
               }
               <!-- Step dot -->
               <div class="absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center"
@@ -173,18 +175,10 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                       <span class="text-[13px] font-semibold text-on-surface">
                         #{{ iv.sequenceNumber }} — {{ iv.interviewTypeName }}
                       </span>
-                      <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                            [style.background]="statusBadgeBg(iv.status)"
-                            [style.color]="statusBadgeColor(iv.status)">
-                        {{ statusLabel(iv.status) }}
-                      </span>
+                      <daf-badge [label]="statusLabel(iv.status)" [options]="statusBadgeOptions(iv.status)" />
                       @if (iv.result) {
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold"
-                              [style.background]="iv.result === 'PASS'
-                                ? 'rgba(34,197,94,0.12)' : 'rgba(186,26,26,0.1)'"
-                              [style.color]="iv.result === 'PASS' ? '#16a34a' : '#BA1A1A'">
-                          {{ iv.result === 'PASS' ? '✓ Validé' : '✗ Non validé' }}
-                        </span>
+                        <daf-badge [label]="iv.result === 'PASS' ? '✓ Validé' : '✗ Non validé'"
+                                   [options]="resultBadgeOptions(iv.result)" />
                       }
                     </div>
                     <div class="flex items-center gap-3 mt-1 text-[12px] text-outline flex-wrap">
@@ -217,20 +211,20 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                     <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
                       <button type="button"
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
-                              style="border-color:#22c55e;color:#16a34a;background:rgba(34,197,94,0.06)"
+                              style="border-color:var(--color-tertiary);color:var(--color-tertiary);background:var(--color-tertiary-container)"
                               (click)="openUpdate(iv, 'DONE_PASS')">
                         Réussi
                       </button>
                       <button type="button"
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
-                              style="border-color:#f97316;color:#c2410c;background:rgba(249,115,22,0.06)"
+                              style="border-color:var(--color-danger);color:var(--color-danger);background:var(--color-error-container)"
                               (click)="openUpdate(iv, 'DONE_FAIL')">
                         Échoué
                       </button>
                       <button type="button"
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border
                                      border-outline-variant"
-                              style="color:#6B7280;background:rgba(0,0,0,0.02)"
+                              style="color:var(--color-on-surface-variant);background:var(--color-surface-container-low)"
                               (click)="openUpdate(iv, 'CANCELLED')">
                         Annuler
                       </button>
@@ -246,7 +240,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                       [options]="{ label: 'Notes (optionnel)', placeholder: 'Commentaire…', maxLength: 1000, fullWidth: true }"
                       (valueChange)="updateNotes.set($any($event) ?? '')" />
                     @if (updateError()) {
-                      <p class="text-[12px] mt-1.5" style="color:#BA1A1A">{{ updateError() }}</p>
+                      <p class="text-[12px] mt-1.5" style="color:var(--color-danger)">{{ updateError() }}</p>
                     }
                     <div class="flex gap-2 mt-2">
                       <daf-button label="Annuler" variant="ghost" [options]="{ size: 'sm' }"
@@ -270,7 +264,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
           <p class="text-[13px] text-outline">Aucun entretien planifié pour ce candidat.</p>
         </div>
       }
-    </div>
+    </daf-card>
   `,
 })
 export class CandidateInterviewsComponent implements OnInit {
@@ -440,27 +434,34 @@ export class CandidateInterviewsComponent implements OnInit {
     return s === 'PLANNED' ? 'Planifié' : s === 'DONE' ? 'Terminé' : 'Annulé';
   }
 
-  statusBadgeBg(s: string): string {
-    return s === 'PLANNED' ? 'rgba(28,78,92,0.1)' : s === 'DONE' ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)';
+  statusBadgeOptions(s: string): BadgeOptions {
+    return {
+      variant: s === 'PLANNED' ? 'teal' : s === 'DONE' ? 'success' : 'neutral',
+      size: 'sm',
+    };
   }
 
-  statusBadgeColor(s: string): string {
-    return s === 'PLANNED' ? '#1C4E5C' : s === 'DONE' ? '#16a34a' : '#9CA3AF';
+  resultBadgeOptions(result: string): BadgeOptions {
+    return { variant: result === 'PASS' ? 'success' : 'danger', size: 'sm' };
   }
 
   dotBg(s: string): string {
-    return s === 'PLANNED' ? '#E0F2F7' : s === 'DONE' ? 'rgba(34,197,94,0.15)' : '#F3F4F6';
+    return s === 'PLANNED' ? 'var(--color-tertiary-container)' : s === 'DONE' ? 'var(--color-tertiary-container)' : 'var(--color-surface-container-low)';
   }
 
   dotColor(s: string): string {
-    return s === 'PLANNED' ? '#1C4E5C' : s === 'DONE' ? '#16a34a' : '#9CA3AF';
+    return s === 'PLANNED' ? 'var(--color-teal)' : s === 'DONE' ? 'var(--color-tertiary)' : 'var(--color-on-surface-variant)';
   }
 
   dotIcon(s: string): string {
     return s === 'PLANNED' ? 'event' : s === 'DONE' ? 'check_circle' : 'cancel';
   }
 
-  cardBorder(s: string): string { return s === 'CANCELLED' ? '#E5E7EB' : '#E0E7E9'; }
+  cardBorder(s: string): string {
+    return s === 'CANCELLED' ? 'var(--color-outline-variant)' : 'var(--color-outline-variant)';
+  }
 
-  cardBg(s: string): string { return s === 'CANCELLED' ? '#FAFAFA' : '#ffffff'; }
+  cardBg(s: string): string {
+    return s === 'CANCELLED' ? 'var(--color-surface-container-low)' : 'var(--color-surface)';
+  }
 }

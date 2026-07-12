@@ -7,6 +7,7 @@ import {
   CardComponent,
   MultiDatePickerComponent,
   FormFieldComponent,
+  PaginationComponent,
   SelectComponent,
   StatusBadgeComponent,
   type SelectOption,
@@ -16,6 +17,8 @@ import {
   ContractHistoryDto, TypeContratDto, CreateContractRequest,
 } from './contract-history.model';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
+
+const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-contract-history',
@@ -27,6 +30,7 @@ import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
     CardComponent,
     MultiDatePickerComponent,
     FormFieldComponent,
+    PaginationComponent,
     SelectComponent,
     StatusBadgeComponent,
   ],
@@ -36,11 +40,11 @@ import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
     <div>
-      <p style="font-size:12px;font-weight:700;color:#44474c;text-transform:uppercase;letter-spacing:.4px;margin:0;">
+      <p style="font-size:12px;font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;margin:0;">
         Historique des contrats
       </p>
       @if (activeContract()) {
-        <p style="font-size:12px;color:#0f4a57;margin:3px 0 0;">
+        <p style="font-size:12px;color:var(--color-teal);margin:3px 0 0;">
           Contrat actif : <strong>{{ activeContract()!.typeContratLabelFr }}</strong>
           · depuis {{ activeContract()!.dateEffet | date:'dd/MM/yyyy' }}
           @if (activeContract()!.salaireNet) { · {{ activeContract()!.salaireNet | number:'1.0-0' }} TND net }
@@ -57,11 +61,11 @@ import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
   <!-- Add form -->
   @if (showForm()) {
     <daf-card [options]="{ variant: 'flat', padding: 'md' }" style="display:block;margin-bottom:18px;">
-      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;margin:0 0 12px;">
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--color-on-surface-variant);margin:0 0 12px;">
         Nouveau contrat / avenant
       </p>
       @if (formError()) {
-        <div style="background:#fee2e2;border-radius:8px;padding:9px 12px;font-size:12px;color:#991b1b;margin-bottom:10px;">
+        <div style="background:var(--color-error-container);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--color-on-error-container);margin-bottom:10px;">
           {{ formError() }}
         </div>
       }
@@ -98,13 +102,13 @@ import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
   @if (isLoading()) {
     <div style="display:flex;flex-direction:column;gap:8px;">
       @for (i of [1,2,3]; track i) {
-        <div style="height:56px;border-radius:10px;background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
+        <div style="height:56px;border-radius:10px;background:linear-gradient(90deg,var(--color-surface-container-low) 25%,var(--color-surface-container) 50%,var(--color-surface-container-low) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
       }
     </div>
   }
 
   @if (!isLoading() && history().length === 0) {
-    <div style="text-align:center;padding:32px;color:#75777d;">
+    <div style="text-align:center;padding:32px;color:var(--color-on-surface-variant);">
       <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:8px;opacity:.35;">description</span>
       <p style="font-size:13px;margin:0;">Aucun contrat enregistré.</p>
     </div>
@@ -112,29 +116,29 @@ import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
   @if (!isLoading() && history().length > 0) {
     <div style="display:flex;flex-direction:column;gap:0;position:relative;">
-      @for (c of history(); track c.id; let last = $last) {
+      @for (c of pagedHistory(); track c.id; let last = $last) {
         <div style="display:flex;gap:12px;padding-bottom:0;">
           <!-- Timeline dot + line -->
           <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:20px;">
             <div style="width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:6px;"
-              [style.background]="c.isActive ? '#1a6b7c' : '#c5c6cd'"></div>
-            @if (!last) { <div style="width:2px;flex:1;background:#eceef0;margin-top:2px;"></div> }
+              [style.background]="c.isActive ? 'var(--color-teal)' : 'var(--color-outline-variant)'"></div>
+            @if (!last) { <div style="width:2px;flex:1;background:var(--color-outline-variant);margin-top:2px;"></div> }
           </div>
           <!-- Card -->
           <daf-card [options]="{ variant: 'outlined', padding: 'sm' }" style="display:block;flex:1;margin-bottom:10px;"
-            [style.border-left-color]="c.isActive ? '#1a6b7c' : 'transparent'"
+            [style.border-left-color]="c.isActive ? 'var(--color-teal)' : 'transparent'"
             [style.border-left-width]="c.isActive ? '3px' : '1px'">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
               <div style="flex:1;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-                  <span style="font-size:13px;font-weight:700;color:#1d2b3e;">{{ c.typeContratLabelFr }}</span>
+                  <span style="font-size:13px;font-weight:700;color:var(--color-on-surface);">{{ c.typeContratLabelFr }}</span>
                   <daf-badge [label]="c.typeDocument === 'CONTRAT_INITIAL' ? 'Contrat initial' : 'Avenant'"
                     [options]="{ variant: c.typeDocument === 'CONTRAT_INITIAL' ? 'info' : 'warning', pill: true, size: 'sm' }" />
                   @if (c.isActive) {
                     <daf-badge label="Actif" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
                   }
                 </div>
-                <div style="font-size:12px;color:#44474c;display:flex;flex-wrap:wrap;gap:12px;">
+                <div style="font-size:12px;color:var(--color-on-surface-variant);display:flex;flex-wrap:wrap;gap:12px;">
                   <span>📅 Du {{ c.dateEffet | date:'dd/MM/yyyy' }}
                     @if (c.dateFin) { → {{ c.dateFin | date:'dd/MM/yyyy' }} }
                     @else { → En cours }
@@ -144,18 +148,30 @@ import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
                   }
                 </div>
                 @if (c.motif) {
-                  <p style="font-size:11px;color:#75777d;margin:4px 0 0;font-style:italic;">{{ c.motif }}</p>
+                  <p style="font-size:11px;color:var(--color-on-surface-variant);margin:4px 0 0;font-style:italic;">{{ c.motif }}</p>
                 }
                 @if (c.commentaire) {
-                  <p style="font-size:11px;color:#75777d;margin:2px 0 0;">{{ c.commentaire }}</p>
+                  <p style="font-size:11px;color:var(--color-on-surface-variant);margin:2px 0 0;">{{ c.commentaire }}</p>
                 }
               </div>
-              <span style="font-size:10px;color:#a8a9ad;white-space:nowrap;flex-shrink:0;">
+              <span style="font-size:10px;color:var(--color-outline);white-space:nowrap;flex-shrink:0;">
                 {{ c.dateCreation | date:'dd/MM/yyyy' }}
               </span>
             </div>
           </daf-card>
         </div>
+      }
+    </div>
+
+    <!-- Count + Pagination -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px;">
+      <span style="font-size:12px;color:var(--color-on-surface-variant);"><strong>{{ history().length }}</strong> contrat(s)</span>
+      @if (totalPages() > 1) {
+        <daf-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalElements]="history().length"
+          (pageChange)="onPageChange($event)" />
       }
     </div>
   }
@@ -194,6 +210,18 @@ export class ContractHistoryComponent implements OnChanges {
   formMotif     = '';
   formCommentaire = '';
 
+  currentPage = signal(0);
+  readonly totalPages = computed(() => Math.ceil(this.history().length / PAGE_SIZE));
+
+  readonly pagedHistory = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.history().slice(start, start + PAGE_SIZE);
+  });
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['profileId']) this.load();
   }
@@ -210,6 +238,7 @@ export class ContractHistoryComponent implements OnChanges {
 
   private load(): void {
     this.isLoading.set(true);
+    this.currentPage.set(0);
     this.svc.getTypeContrats().subscribe(tc => this.typeContrats.set(tc));
     this.svc.getHistory(this.profileId()).subscribe({
       next: h => {

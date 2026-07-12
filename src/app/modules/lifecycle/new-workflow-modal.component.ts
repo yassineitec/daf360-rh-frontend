@@ -1,5 +1,5 @@
 import {
-  Component, inject, input, output, signal,
+  Component, computed, inject, input, output, signal,
 } from '@angular/core';
 import {
   FormBuilder, ReactiveFormsModule, Validators,
@@ -15,11 +15,12 @@ import { WORKFLOW_EVENT_TYPES, EVENT_TYPE_LABELS } from './models/lifecycle.mode
 import { ProfileSummary }    from '../profiles/models/profile.model';
 import { ModalComponent }    from '../../shared/modal.component';
 import { SpinnerComponent }  from '../../shared/spinner.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-new-workflow-modal',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule],
+  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent],
   template: `
     <app-modal
       title="Nouveau workflow"
@@ -61,8 +62,7 @@ import { SpinnerComponent }  from '../../shared/spinner.component';
           </div>
           @if (selectedEmployee()) {
             <div class="selected-pill">
-              ✓ Profil #{{ selectedEmployee()!.id }}
-              @if (selectedEmployee()!.fullName) { — {{ selectedEmployee()!.fullName }} }
+              <daf-badge [label]="selectedEmployeeLabel()" [options]="{ variant: 'teal', size: 'sm' }" />
               <button type="button" (click)="clearEmployee()" aria-label="Retirer">✕</button>
             </div>
           }
@@ -136,7 +136,7 @@ import { SpinnerComponent }  from '../../shared/spinner.component';
     .ac-id   { font-family:monospace;font-size:12px;color:var(--color-text-muted) }
     .ac-name { font-weight:500;flex:1 }
     .ac-type { font-size:11px;color:var(--color-text-muted);background:var(--color-bg-secondary);padding:1px 6px;border-radius:999px }
-    .selected-pill { display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:4px 12px;border-radius:999px;background:var(--color-teal-50,#EBF4F7);color:var(--color-primary,#1C4E5C);font-size:12px;font-weight:600 }
+    .selected-pill { display:inline-flex;align-items:center;gap:6px;margin-top:6px }
     .selected-pill button { background:none;border:none;cursor:pointer;color:var(--color-primary);font-size:14px;padding:0 }
     .btn-primary { display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer }
     .btn-primary:disabled { opacity:.5;cursor:not-allowed }
@@ -161,6 +161,12 @@ export class NewWorkflowModalComponent {
   employeeQuery = '';
 
   readonly eventTypes = [...WORKFLOW_EVENT_TYPES];
+
+  selectedEmployeeLabel = computed(() => {
+    const s = this.selectedEmployee();
+    if (!s) return '';
+    return s.fullName ? `Profil #${s.id} — ${s.fullName}` : `Profil #${s.id}`;
+  });
 
   form = this.fb.group({
     employeeProfileId: [null as number | null, Validators.required],

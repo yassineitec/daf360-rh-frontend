@@ -1,10 +1,11 @@
 import { Component, input, output } from '@angular/core';
+import { CardComponent } from '@khalilrebhiitec/daf360';
 import { genderLabel } from '../../../shared/utils/gender.utils';
 
 @Component({
   selector: 'app-step-summary',
   standalone: true,
-  imports: [],
+  imports: [CardComponent],
   templateUrl: './step-summary.component.html',
   styleUrl: './step-summary.component.scss',
 })

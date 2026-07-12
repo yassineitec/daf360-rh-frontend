@@ -283,41 +283,10 @@
   </div>
 </div>
 
-<!-- ── Reject modal overlay ───────────────────────────────────────────────── -->
-@if (rejectTarget()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-    <div class="bg-surface rounded-2xl p-7 w-full max-w-md shadow-2xl">
-      <h3 class="text-base font-bold text-on-surface mb-1">Rejeter le candidat</h3>
-      <p class="text-sm text-outline mb-5">
-        <strong class="text-on-surface">{{ rejectTarget()!.firstName }} {{ rejectTarget()!.lastName }}</strong>
-      </p>
-
-      @if (actionError()) {
-        <div class="bg-danger/10 text-danger text-xs rounded-lg px-3 py-2 mb-4">{{ actionError() }}</div>
-      }
-
-      <div class="mb-5">
-        <daf-form-field
-          [value]="rejectReason()"
-          [options]="{ type: 'textarea', label: 'Motif du rejet *', placeholder: 'Expliquez la raison du rejet…', rows: 3, required: true, fullWidth: true }"
-          (valueChange)="rejectReason.set($event)"
-        />
-      </div>
-
-      <div class="flex gap-3 justify-end">
-        <daf-button
-          label="Annuler"
-          variant="ghost"
-          [options]="{ size: 'md' }"
-          (onClick)="rejectTarget.set(null)"
-        />
-        <daf-button
-          label="Confirmer le rejet"
-          variant="danger"
-          [options]="{ size: 'md', loading: isActioning(), disabled: isActioning() || !isRejectReasonValid() }"
-          (onClick)="confirmReject()"
-        />
-      </div>
-    </div>
-  </div>
-}
+<!-- ── Reject modal ───────────────────────────────────────────────── -->
+<app-reject-modal
+  [visible]="!!rejectTarget()"
+  [target]="rejectTarget()"
+  (closed)="rejectTarget.set(null)"
+  (rejected)="onRejected()"
+/>

@@ -1,8 +1,9 @@
 import {
-  Component, OnChanges, SimpleChanges, inject, input, signal,
+  Component, OnChanges, SimpleChanges, computed, inject, input, signal,
 } from '@angular/core';
 import {
-  ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
+  ButtonComponent, FormFieldComponent, SelectComponent, SelectOption,
+  StatusBadgeComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
@@ -11,7 +12,10 @@ import { PermissionDirective } from '../../../shared/permission.directive';
 @Component({
   selector: 'app-legal-rules-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, SelectComponent, CardComponent, PermissionDirective],
+  imports: [
+    ButtonComponent, FormFieldComponent, SelectComponent, PermissionDirective,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective,
+  ],
   template: `
 <div>
   <!-- Header -->
@@ -74,49 +78,17 @@ import { PermissionDirective } from '../../../shared/permission.directive';
   }
 
   <!-- Rules table -->
-  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'lg' }">
-    @if (isLoading()) {
-      <div style="padding:32px;text-align:center;color:var(--color-on-surface-variant);font-size:var(--text-body-md);">Chargement…</div>
-    }
-    @if (!isLoading() && rules().length === 0) {
-      <div style="padding:48px;text-align:center;">
-        <p style="font-size:var(--text-body-md);color:var(--color-outline);margin:0;">Aucune règle légale configurée pour cette entité.</p>
-      </div>
-    }
-    @if (!isLoading() && rules().length > 0) {
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="background:var(--color-background);">
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Libellé</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Min h. travaillées</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Déduction (min)</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Jours</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Effet</th>
-            <th style="padding:10px 16px;text-align:right;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (rule of rules(); track rule.id) {
-            <tr style="border-top:1px solid var(--color-outline-variant);">
-              <td style="padding:12px 16px;font-size:var(--text-body-md);font-weight:500;color:var(--color-primary);">{{ rule.labelFr }}</td>
-              <td style="padding:12px 16px;font-size:var(--text-body-md);color:var(--color-on-surface-variant);">{{ rule.minWorkHours }}h{{ rule.maxWorkHours ? ' – ' + rule.maxWorkHours + 'h' : '+' }}</td>
-              <td style="padding:12px 16px;">
-                <span style="background:#e6f4f6;color:var(--color-teal-light);font-size:var(--text-body-sm);padding:3px 10px;border-radius:999px;font-weight:600;">{{ rule.deductionMin }} min</span>
-              </td>
-              <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">{{ formatDays(rule.appliesToDays) }}</td>
-              <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">{{ rule.effectiveFrom }}{{ rule.effectiveTo ? ' → ' + rule.effectiveTo : '' }}</td>
-              <td style="padding:12px 16px;text-align:right;">
-                <daf-button *appHasPermission="'ADMIN_BREAKS'"
-                  label="" variant="danger"
-                  [options]="{ iconStart: 'delete', size: 'sm' }"
-                  (onClick)="removeRule(rule.id)" />
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
-  </daf-card>
+  <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+    <ng-template dafCell="deductionMin" let-row>
+      <daf-badge [label]="row['deductionMin'] + ' min'" [options]="{ variant: 'teal' }" />
+    </ng-template>
+    <ng-template dafCell="_actions" let-row>
+      <daf-button *appHasPermission="'ADMIN_BREAKS'"
+        label="" variant="danger"
+        [options]="{ iconStart: 'delete', size: 'sm' }"
+        (onClick)="removeRule(row['_source'].id)" />
+    </ng-template>
+  </daf-data-table>
 </div>
   `,
 })
@@ -138,6 +110,32 @@ export class LegalRulesAdminComponent implements OnChanges {
   ];
 
   readonly Number = Number;
+
+  readonly columns: TableColumn[] = [
+    { key: 'labelFr', label: 'Libellé' },
+    { key: 'hours', label: 'Min h. travaillées' },
+    { key: 'deductionMin', label: 'Déduction (min)' },
+    { key: 'appliesToDays', label: 'Jours' },
+    { key: 'effective', label: 'Effet' },
+    { key: '_actions', label: 'Action', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.rules().map(rule => ({
+      labelFr: rule.labelFr,
+      hours: `${rule.minWorkHours}h${rule.maxWorkHours ? ' – ' + rule.maxWorkHours + 'h' : '+'}`,
+      deductionMin: rule.deductionMin,
+      appliesToDays: this.formatDays(rule.appliesToDays),
+      effective: rule.effectiveFrom + (rule.effectiveTo ? ' → ' + rule.effectiveTo : ''),
+      _source: rule,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.isLoading(),
+    emptyMessage: 'Aucune règle légale configurée pour cette entité.',
+  }));
 
   // Form fields
   formLabel = '';

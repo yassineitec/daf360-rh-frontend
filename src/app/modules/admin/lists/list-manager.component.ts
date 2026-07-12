@@ -57,7 +57,7 @@ export class ListManagerComponent implements OnInit {
     { key: 'labelEn', label: 'Libellé EN' },
     { key: 'isActive', label: 'Actif' },
     { key: 'isSystem', label: 'Système' },
-    { key: '_actions', label: 'Actions', align: 'right' },
+    { key: '_actions', label: 'Actions', align: 'right', width: '120px' },
   ];
 
   currentPage = signal(0);

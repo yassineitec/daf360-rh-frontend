@@ -12,6 +12,7 @@ import { ConfigurableListService } from '../../core/lists/configurable-list.serv
 import { ListValue }               from '../../core/lists/configurable-list.model';
 import {
   ButtonComponent,
+  CardComponent,
   ChipGroupComponent,
   ChipOption,
   MultiDatePickerComponent,
@@ -30,6 +31,7 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
   imports: [
     ReactiveFormsModule,
     ButtonComponent,
+    CardComponent,
     ChipGroupComponent,
     MultiDatePickerComponent,
     FileUploadComponent,

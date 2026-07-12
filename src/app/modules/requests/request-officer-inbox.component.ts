@@ -7,17 +7,27 @@ import { catchError, of } from 'rxjs';
 
 import { RequestsService }  from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  StatusBadgeComponent, BadgeOptions, ButtonComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow, PaginationComponent,
+} from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { SlaCountdownPipe }      from '../../shared/sla-countdown.pipe';
+import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
 import { SpinnerComponent }      from '../../shared/spinner.component';
 import { ModalComponent }        from '../../shared/modal.component';
 import { UserStore }             from '../../core/user.store';
 
+const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
+  ok: 'success', warning: 'warning', critical: 'danger', none: 'neutral',
+};
+
 @Component({
   selector: 'app-request-officer-inbox',
   standalone: true,
-  imports: [RouterLink, FormsModule, StatusBadgeComponent, SlaCountdownPipe, SpinnerComponent, ModalComponent],
+  imports: [
+    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, SpinnerComponent, ModalComponent,
+    DataTableComponent, DafCellDirective, PaginationComponent,
+  ],
   template: `
     <div class="page-header">
       <div>
@@ -58,53 +68,29 @@ import { UserStore }             from '../../core/user.store';
           <p>Aucune demande en attente</p>
         </div>
       } @else {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Employé</th>
-              <th>Type</th>
-              <th>Soumis le</th>
-              <th>SLA restant</th>
-              <th>Statut</th>
-              <th>Actions rapides</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of rows(); track row.id) {
-              <tr class="data-row">
-                <td class="cell-id">{{ row.id }}</td>
-                <td>{{ row.employeeName ?? ('Profil #' + row.employeeProfileId) }}</td>
-                <td>
-                  <div class="type-cell">
-                    <span class="type-name">{{ row.typeDisplayNameFr ?? 'Demande #' + row.requestTypeId }}</span>
-                  </div>
-                </td>
-                <td class="cell-muted">{{ fmtDate(row.submissionDate) }}</td>
-                <td>
-                  @let sla = slaDeadline(row) | slaCountdown;
-                  <span class="sla-chip" [class]="'sla-chip--' + sla.level">{{ sla.label }}</span>
-                </td>
-                <td><daf-badge [label]="statusBadge(row.status).label" [options]="statusBadge(row.status).options" /></td>
-                <td class="cell-actions">
-                  <a [routerLink]="['/rh/requests', row.id]" class="action-link">Détail</a>
-                  @if (canProcess(row.status)) {
-                    <button class="action-approve" (click)="quickApprove(row)" type="button">✓ Approuver</button>
-                    <button class="action-refuse"  (click)="openRefuse(row)"  type="button">✕ Refuser</button>
-                  }
-                </td>
-              </tr>
+        <daf-data-table [columns]="columns" [rows]="tableRows()" [config]="tableConfig">
+          <ng-template dafCell="status" let-row>
+            <daf-badge [label]="statusBadge(row['_source'].status).label" [options]="statusBadge(row['_source'].status).options" />
+          </ng-template>
+          <ng-template dafCell="sla" let-row>
+            <daf-badge [label]="row['sla'].label" [options]="{ variant: slaVariant(row['sla'].level), size: 'sm' }" />
+          </ng-template>
+          <ng-template dafCell="_actions" let-row>
+            <a [routerLink]="['/rh/requests', row['_source'].id]" class="action-link">Détail</a>
+            @if (canProcess(row['_source'].status)) {
+              <daf-button label="Approuver" variant="ghost" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="quickApprove(row['_source'])" />
+              <daf-button label="Refuser" variant="danger" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="openRefuse(row['_source'])" />
             }
-          </tbody>
-        </table>
+          </ng-template>
+        </daf-data-table>
 
         @if (totalPages() > 1) {
           <div class="pagination">
-            <span class="pag-info">{{ page() + 1 }} / {{ totalPages() }}</span>
-            <div class="pag-controls">
-              <button (click)="goPage(page() - 1)" [disabled]="page() <= 0" type="button">‹</button>
-              <button (click)="goPage(page() + 1)" [disabled]="page() >= totalPages() - 1" type="button">›</button>
-            </div>
+            <daf-pagination
+              [currentPage]="page()"
+              [totalPages]="totalPages()"
+              [totalElements]="total()"
+              (pageChange)="goPage($event)" />
           </div>
         }
       }
@@ -167,6 +153,36 @@ export class RequestOfficerInboxComponent implements OnInit {
 
   private officerId = computed(() => this.userStore.currentUser()?.userId ?? 0);
   private paysId    = computed(() => this.userStore.currentUser()?.paysId ?? 1);
+
+  private slaPipe = new SlaCountdownPipe();
+
+  readonly columns: TableColumn[] = [
+    { key: 'id', label: '#' },
+    { key: 'employee', label: 'Employé' },
+    { key: 'type', label: 'Type' },
+    { key: 'submitted', label: 'Soumis le' },
+    { key: 'sla', label: 'SLA restant' },
+    { key: 'status', label: 'Statut' },
+    { key: '_actions', label: 'Actions rapides', align: 'right' },
+  ];
+
+  readonly tableConfig: TableConfig = { hoverable: true };
+
+  readonly tableRows = computed<TableRow[]>(() =>
+    this.rows().map(row => ({
+      id: row.id,
+      employee: row.employeeName ?? ('Profil #' + row.employeeProfileId),
+      type: row.typeDisplayNameFr ?? 'Demande #' + row.requestTypeId,
+      submitted: this.fmtDate(row.submissionDate),
+      sla: this.slaPipe.transform(this.slaDeadline(row)),
+      status: row.status,
+      _source: row,
+    })),
+  );
+
+  slaVariant(level: SlaLevel): BadgeOptions['variant'] {
+    return SLA_VARIANTS[level];
+  }
 
   ngOnInit() { this.reload(); }
 

@@ -89,7 +89,7 @@
   <div class="sections">
 
     <!-- 1 · Identité ─────────────────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('identite')">
+    <daf-card class="block" [class.collapsed]="!open('identite')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('identite')" type="button">
         <span class="section-title">Identité</span>
         <span class="chevron" [class.open]="open('identite')">›</span>
@@ -151,10 +151,10 @@
           </div>
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 2 · Emploi ───────────────────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('emploi')">
+    <daf-card class="block" [class.collapsed]="!open('emploi')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('emploi')" type="button">
         <span class="section-title">Emploi</span>
         <span class="chevron" [class.open]="open('emploi')">›</span>
@@ -215,10 +215,10 @@
           </div>
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 3 · Poste ────────────────────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('poste')">
+    <daf-card class="block" [class.collapsed]="!open('poste')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('poste')" type="button">
         <span class="section-title">Poste</span>
         <span class="chevron" [class.open]="open('poste')">›</span>
@@ -260,10 +260,10 @@
           </div>
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 4 · Régime horaire ───────────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('regime')">
+    <daf-card class="block" [class.collapsed]="!open('regime')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('regime')" type="button">
         <span class="section-title">Régime horaire</span>
         <span class="chevron" [class.open]="open('regime')">›</span>
@@ -320,10 +320,10 @@
           }
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 5 · Contact & Adresse ───────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('contact')">
+    <daf-card class="block" [class.collapsed]="!open('contact')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('contact')" type="button">
         <span class="section-title">Contact & Adresse</span>
         <span class="chevron" [class.open]="open('contact')">›</span>
@@ -355,10 +355,10 @@
           </div>
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 6 · Contact d'urgence ───────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('urgence')">
+    <daf-card class="block" [class.collapsed]="!open('urgence')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('urgence')" type="button">
         <span class="section-title">Contact d'urgence</span>
         <span class="chevron" [class.open]="open('urgence')">›</span>
@@ -389,11 +389,11 @@
           </div>
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 7 · Coordonnées bancaires — HR_MANAGER / FINANCE_OFFICER only ────── -->
     @if (canViewSensitive()) {
-      <section class="section-card sensitive-section" [class.collapsed]="!open('bancaire')">
+      <daf-card class="block sensitive-section" [class.collapsed]="!open('bancaire')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
         <button class="section-header" (click)="toggle('bancaire')" type="button">
           <span class="section-title">
             Coordonnées bancaires
@@ -463,16 +463,16 @@
             </div>
           </div>
         }
-      </section>
+      </daf-card>
     }
 
     <!-- 8' · Contrats & Cycle de vie ─────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('lifecycle')">
+    <daf-card class="block" [class.collapsed]="!open('lifecycle')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('lifecycle'); loadContracts()" type="button">
         <span class="section-title">
           Contrats &amp; Cycle de vie
           @if (lcContracts().length > 0) {
-            <span class="count-badge">{{ lcContracts().length }}</span>
+            <daf-badge [label]="lcContracts().length + ''" [options]="{ variant: 'neutral', size: 'sm' }" />
           }
         </span>
         <span class="chevron" [class.open]="open('lifecycle')">›</span>
@@ -516,11 +516,7 @@
                     <!-- Type + status chips -->
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                       <span style="font-size:13px;font-weight:700;color:#1d2b3e;">{{ lcTypeCfg(c.contractTypeCode).label }}</span>
-                      <span style="font-size:11px;padding:2px 9px;border-radius:999px;font-weight:600;"
-                        [style.background]="lcStatusCfg(c.currentStatusCode).bg"
-                        [style.color]="lcStatusCfg(c.currentStatusCode).color">
-                        {{ lcStatusCfg(c.currentStatusCode).label }}
-                      </span>
+                      <daf-badge [label]="lcStatusCfg(c.currentStatusCode).label" [options]="{ variant: lcStatusCfg(c.currentStatusCode).variant, size: 'sm' }" />
                       @if (c.isActive) {
                         <daf-badge label="Actif" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
                       }
@@ -587,17 +583,9 @@
                       </div>
                       <div style="background:#fff;border:1px solid #eceef0;border-radius:10px;padding:10px 14px;flex:1;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-                          <span style="font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600;"
-                            [style.background]="lcStatusCfg(h.statutAvant).bg"
-                            [style.color]="lcStatusCfg(h.statutAvant).color">
-                            {{ lcStatusCfg(h.statutAvant).label }}
-                          </span>
+                          <daf-badge [label]="lcStatusCfg(h.statutAvant).label" [options]="{ variant: lcStatusCfg(h.statutAvant).variant, size: 'sm' }" />
                           <span style="font-size:11px;color:#6B7280;">→</span>
-                          <span style="font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600;"
-                            [style.background]="lcStatusCfg(h.statutApres).bg"
-                            [style.color]="lcStatusCfg(h.statutApres).color">
-                            {{ lcStatusCfg(h.statutApres).label }}
-                          </span>
+                          <daf-badge [label]="lcStatusCfg(h.statutApres).label" [options]="{ variant: lcStatusCfg(h.statutApres).variant, size: 'sm' }" />
                           <span style="font-size:10px;color:#a8a9ad;margin-left:auto;">{{ fmt(h.triggeredAt) }}</span>
                         </div>
                         @if (h.commentaire) {
@@ -612,7 +600,7 @@
           }
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- Modal bodies — opened imperatively via ModalService (see profile-detail.component.ts) -->
     <ng-template #transitionTpl>
@@ -711,7 +699,7 @@
     }
 
     <!-- 9 · Historique des contrats ────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('contrats')">
+    <daf-card class="block" [class.collapsed]="!open('contrats')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('contrats')" type="button">
         <span class="section-title">Historique des contrats</span>
         <span class="chevron" [class.open]="open('contrats')">›</span>
@@ -724,13 +712,13 @@
           />
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- 8 · Documents ─────────────────────────────────────────────────────── -->
-    <section class="section-card" [class.collapsed]="!open('documents')">
+    <daf-card class="block" [class.collapsed]="!open('documents')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('documents'); loadDocuments()" type="button">
         <span class="section-title">Documents
-          @if (documents().length > 0) { <span class="count-badge">{{ documents().length }}</span> }
+          @if (documents().length > 0) { <daf-badge [label]="documents().length + ''" [options]="{ variant: 'neutral', size: 'sm' }" /> }
         </span>
         <span class="chevron" [class.open]="open('documents')">›</span>
       </button>
@@ -769,7 +757,7 @@
           }
         </div>
       }
-    </section>
+    </daf-card>
 
     <!-- Documents RH — visible to HR managers and Admins only ────────────── -->
     @if (canEdit()) {

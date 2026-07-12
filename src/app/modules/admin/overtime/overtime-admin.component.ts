@@ -4,6 +4,8 @@ import {
 import { DecimalPipe } from '@angular/common';
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
+  StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
+  TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../shared/modal.component';
 import { OvertimeService } from './overtime.service';
@@ -16,7 +18,10 @@ import { UserStore } from '../../../core/user.store';
 @Component({
   selector: 'app-overtime-admin',
   standalone: true,
-  imports: [DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent, ModalComponent],
+  imports: [
+    DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent, ModalComponent,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective,
+  ],
   template: `
 <div>
 
@@ -92,63 +97,27 @@ import { UserStore } from '../../../core/user.store';
   }
 
   @if (!isLoading() && rules().length > 0) {
-    <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'lg' }">
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="background:var(--color-background);">
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Pays</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Type de calcul</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Horaires normaux</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Semaine de travail</th>
-            <th style="padding:10px 16px;text-align:left;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Statut</th>
-            <th style="padding:10px 16px;text-align:right;font-size:var(--text-label-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.5px;">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (rule of rules(); track rule.idParametrage) {
-            <tr style="border-top:1px solid var(--color-outline-variant);">
-              <td style="padding:12px 16px;font-size:var(--text-body-md);font-weight:600;color:var(--color-primary);">
-                <span style="background:#e6f4f6;color:var(--color-teal-light);padding:3px 10px;border-radius:999px;font-size:var(--text-body-sm);font-weight:700;font-family:monospace;">{{ rule.paysIsoCode }}</span>
-              </td>
-              <td style="padding:12px 16px;">
-                <span style="font-size:var(--text-body-sm);padding:3px 10px;border-radius:999px;font-weight:700;"
-                  [style.background]="rule.typeCalculHs === 'WEEKEND_ONLY' ? '#dbeafe' : rule.typeCalculHs === 'AFTER_WORK_HOURS' ? '#fef3c7' : '#ede9fe'"
-                  [style.color]="rule.typeCalculHs === 'WEEKEND_ONLY' ? '#1e40af' : rule.typeCalculHs === 'AFTER_WORK_HOURS' ? '#92400e' : '#5b21b6'">
-                  {{ getTypeLabel(rule.typeCalculHs) }}
-                </span>
-              </td>
-              <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">
-                @if (rule.heureDebutTravail && rule.heureFinTravail) {
-                  {{ rule.heureDebutTravail.slice(0,5) }} → {{ rule.heureFinTravail.slice(0,5) }}
-                } @else { — }
-              </td>
-              <td style="padding:12px 16px;font-size:var(--text-body-sm);color:var(--color-on-surface-variant);">
-                @if (rule.jourDebutSemaine && rule.jourFinSemaine) {
-                  {{ getDayLabel(rule.jourDebutSemaine) }} → {{ getDayLabel(rule.jourFinSemaine) }}
-                } @else { — }
-              </td>
-              <td style="padding:12px 16px;">
-                <span style="font-size:var(--text-body-sm);padding:2px 10px;border-radius:999px;font-weight:700;"
-                  [style.background]="rule.actif ? '#dcfce7' : '#f1f5f9'"
-                  [style.color]="rule.actif ? 'var(--color-success)' : '#475569'">
-                  {{ rule.actif ? 'Actif' : 'Inactif' }}
-                </span>
-              </td>
-              <td style="padding:12px 16px;text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;">
-                @if (rule.actif) {
-                  <daf-button
-                    label="Modifier" variant="secondary" [options]="{ size: 'sm' }"
-                    (onClick)="openEditForm(rule)" />
-                  <daf-button
-                    label="Désactiver" variant="danger" [options]="{ size: 'sm' }"
-                    (onClick)="deactivate(rule.idParametrage)" />
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </daf-card>
+    <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
+      <ng-template dafCell="paysIsoCode" let-row>
+        <daf-badge [label]="row['paysIsoCode']" [options]="{ variant: 'teal' }" />
+      </ng-template>
+      <ng-template dafCell="typeCalculHs" let-row>
+        <daf-badge [label]="getTypeLabel(row['_source'].typeCalculHs)" [options]="typeBadgeOptions(row['_source'].typeCalculHs)" />
+      </ng-template>
+      <ng-template dafCell="actif" let-row>
+        <daf-badge [label]="row['_source'].actif ? 'Actif' : 'Inactif'" [options]="{ variant: row['_source'].actif ? 'success' : 'neutral' }" />
+      </ng-template>
+      <ng-template dafCell="_actions" let-row>
+        @if (row['_source'].actif) {
+          <daf-button
+            label="Modifier" variant="secondary" [options]="{ size: 'sm' }"
+            (onClick)="openEditForm(row['_source'])" />
+          <daf-button
+            label="Désactiver" variant="danger" [options]="{ size: 'sm' }"
+            (onClick)="deactivate(row['_source'].idParametrage)" />
+        }
+      </ng-template>
+    </daf-data-table>
   }
 
 </div>
@@ -254,6 +223,38 @@ export class OvertimeAdminComponent implements OnChanges {
   paysOptions = computed<SelectOption[]>(() =>
     this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel }))
   );
+
+  readonly columns: TableColumn[] = [
+    { key: 'paysIsoCode', label: 'Pays' },
+    { key: 'typeCalculHs', label: 'Type de calcul' },
+    { key: 'schedule', label: 'Horaires normaux' },
+    { key: 'week', label: 'Semaine de travail' },
+    { key: 'actif', label: 'Statut' },
+    { key: '_actions', label: 'Action', align: 'right' },
+  ];
+
+  readonly tableConfig: TableConfig = { hoverable: true };
+
+  rows = computed<TableRow[]>(() =>
+    this.rules().map(rule => ({
+      paysIsoCode: rule.paysIsoCode,
+      typeCalculHs: rule.typeCalculHs,
+      schedule: rule.heureDebutTravail && rule.heureFinTravail
+        ? `${rule.heureDebutTravail.slice(0, 5)} → ${rule.heureFinTravail.slice(0, 5)}`
+        : '—',
+      week: rule.jourDebutSemaine && rule.jourFinSemaine
+        ? `${this.getDayLabel(rule.jourDebutSemaine)} → ${this.getDayLabel(rule.jourFinSemaine)}`
+        : '—',
+      actif: rule.actif,
+      _source: rule,
+    })),
+  );
+
+  typeBadgeOptions(type: string): BadgeOptions {
+    if (type === 'WEEKEND_ONLY') return { variant: 'info' };
+    if (type === 'AFTER_WORK_HOURS') return { variant: 'warning' };
+    return { variant: 'secondary' };
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['paysId']) this.loadAll();

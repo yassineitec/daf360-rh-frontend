@@ -11,6 +11,7 @@ import {
   ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig,
+  ModalService,
 } from '@khalilrebhiitec/daf360';
 
 const PAGE_SIZE = 10;
@@ -154,7 +155,8 @@ const PAGE_SIZE = 10;
   `],
 })
 export class HolidaysAdminComponent implements OnChanges {
-  private svc = inject(AdminService);
+  private svc   = inject(AdminService);
+  private modal = inject(ModalService);
 
   paysId    = input(179);
   paysLabel = input('—');
@@ -270,9 +272,23 @@ export class HolidaysAdminComponent implements OnChanges {
   }
 
   del(h: Holiday) {
-    if (!confirm(`Supprimer "${h.frenchLabel}" ?`)) return;
-    this.svc.deleteHoliday(h.id).pipe(catchError(() => of(null))).subscribe(() => {
-      this.holidays.update(hs => hs.filter(x => x.id !== h.id));
+    this.modal.open({
+      title: 'Supprimer le jour férié',
+      body: `Voulez-vous vraiment supprimer "${h.frenchLabel}" ? Cette action est irréversible.`,
+      size: 'sm',
+      closeOnBackdrop: false,
+      buttons: [
+        { label: 'Annuler', variant: 'secondary', action: r => r.close() },
+        {
+          label: 'Supprimer', variant: 'primary', icon: 'delete',
+          action: r => {
+            this.svc.deleteHoliday(h.id).pipe(catchError(() => of(null))).subscribe(() => {
+              this.holidays.update(hs => hs.filter(x => x.id !== h.id));
+            });
+            r.close();
+          },
+        },
+      ],
     });
   }
 }

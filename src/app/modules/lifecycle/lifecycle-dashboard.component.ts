@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 
@@ -8,28 +8,32 @@ import {
   WorkflowInstance, WorkflowStatus, WORKFLOW_EVENT_TYPES, EVENT_TYPE_LABELS,
   computeProgress, findNextDueTask, WorkflowFilter,
 } from './models/lifecycle.model';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  StatusBadgeComponent, BadgeOptions, ButtonComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow, PaginationComponent,
+} from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { SlaCountdownPipe }          from '../../shared/sla-countdown.pipe';
-import { SpinnerComponent }          from '../../shared/spinner.component';
+import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
 import { NewWorkflowModalComponent } from './new-workflow-modal.component';
+
+const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
+  ok: 'success', warning: 'warning', critical: 'danger', none: 'neutral',
+};
 
 @Component({
   selector: 'app-lifecycle-dashboard',
   standalone: true,
-  imports: [RouterLink, FormsModule, StatusBadgeComponent, SlaCountdownPipe, SpinnerComponent, NewWorkflowModalComponent],
+  imports: [
+    FormsModule, StatusBadgeComponent, ButtonComponent, NewWorkflowModalComponent,
+    DataTableComponent, DafCellDirective, PaginationComponent,
+  ],
   template: `
     <div class="page-header">
       <div>
         <h1 class="page-title">Lifecycle & Workflows</h1>
         <p class="page-sub">{{ total() }} workflow{{ total() !== 1 ? 's' : '' }}</p>
       </div>
-      <button class="btn-primary" (click)="showModal.set(true)" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        Nouveau workflow
-      </button>
+      <daf-button label="Nouveau workflow" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="showModal.set(true)" />
     </div>
 
     <div class="filters-bar">
@@ -42,7 +46,7 @@ import { NewWorkflowModalComponent } from './new-workflow-modal.component';
         @for (t of eventTypes; track t) { <option [value]="t">{{ eventLabel(t) }}</option> }
       </select>
       @if (filterStatus || filterEventType) {
-        <button class="clear-btn" (click)="clearFilters()" type="button">✕ Réinitialiser</button>
+        <daf-button label="Réinitialiser" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="clearFilters()" />
       }
     </div>
 
@@ -59,59 +63,35 @@ import { NewWorkflowModalComponent } from './new-workflow-modal.component';
           <p>Aucun workflow trouvé</p>
         </div>
       } @else {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Employé</th>
-              <th>Type d'événement</th>
-              <th>Statut</th>
-              <th>Progression</th>
-              <th>Prochaine tâche</th>
-              <th>SLA</th>
-              <th>Démarré</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of rows(); track row.id) {
-              <tr class="data-row" [routerLink]="[row.id]">
-                <td class="cell-id">Profil #{{ row.employeeProfileId }}</td>
-                <td><span class="event-chip">{{ eventLabel(row.eventType) }}</span></td>
-                <td><daf-badge [label]="statusBadge(row.status).label" [options]="statusBadge(row.status).options" /></td>
-                <td>
-                  <div class="progress-cell">
-                    <div class="progress-bar">
-                      <div class="progress-fill" [style.width]="(row.progressPct ?? 0) + '%'"
-                           [class.done]="(row.progressPct ?? 0) >= 100"></div>
-                    </div>
-                    <span class="progress-pct">{{ row.progressPct ?? 0 }}%</span>
-                  </div>
-                </td>
-                <td class="cell-muted">{{ row.nextDueTask?.title ?? '—' }}</td>
-                <td>
-                  @if (row.nextDueTask?.dueDate) {
-                    @let sla = row.nextDueTask!.dueDate | slaCountdown;
-                    <span class="sla-chip" [class]="'sla-chip--' + sla.level">{{ sla.label }}</span>
-                  } @else { <span class="cell-muted">—</span> }
-                </td>
-                <td class="cell-muted">{{ fmtDate(row.startDate) }}</td>
-                <td class="cell-action">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="9 18 15 12 9 6"/>
-                  </svg>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        <daf-data-table [columns]="columns" [rows]="tableRows()" [config]="tableConfig" (rowClick)="goToWorkflow($event)">
+          <ng-template dafCell="eventType" let-row>
+            <daf-badge [label]="row['eventType']" [options]="{ variant: 'teal', size: 'sm' }" />
+          </ng-template>
+          <ng-template dafCell="status" let-row>
+            <daf-badge [label]="statusBadge(row['_source'].status).label" [options]="statusBadge(row['_source'].status).options" />
+          </ng-template>
+          <ng-template dafCell="progress" let-row>
+            <div class="progress-cell">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width]="row['progressPct'] + '%'" [class.done]="row['progressPct'] >= 100"></div>
+              </div>
+              <span class="progress-pct">{{ row['progressPct'] }}%</span>
+            </div>
+          </ng-template>
+          <ng-template dafCell="sla" let-row>
+            @if (row['sla']) {
+              <daf-badge [label]="row['sla'].label" [options]="{ variant: slaVariant(row['sla'].level), size: 'sm' }" />
+            } @else { <span class="cell-muted">—</span> }
+          </ng-template>
+        </daf-data-table>
 
         @if (totalPages() > 1) {
           <div class="pagination">
-            <span class="pag-info">{{ page() + 1 }} / {{ totalPages() }}</span>
-            <div class="pag-controls">
-              <button (click)="goPage(page() - 1)" [disabled]="page() <= 0" type="button">‹</button>
-              <button (click)="goPage(page() + 1)" [disabled]="page() >= totalPages() - 1" type="button">›</button>
-            </div>
+            <daf-pagination
+              [currentPage]="page()"
+              [totalPages]="totalPages()"
+              [totalElements]="total()"
+              (pageChange)="goPage($event)" />
           </div>
         }
       }
@@ -126,7 +106,44 @@ import { NewWorkflowModalComponent } from './new-workflow-modal.component';
   styleUrl: './lifecycle-dashboard.component.scss',
 })
 export class LifecycleDashboardComponent implements OnInit {
-  private svc = inject(LifecycleService);
+  private svc    = inject(LifecycleService);
+  private router = inject(Router);
+  private route  = inject(ActivatedRoute);
+
+  private slaPipe = new SlaCountdownPipe();
+
+  readonly columns: TableColumn[] = [
+    { key: 'employee', label: 'Employé' },
+    { key: 'eventType', label: "Type d'événement" },
+    { key: 'status', label: 'Statut' },
+    { key: 'progress', label: 'Progression' },
+    { key: 'nextTask', label: 'Prochaine tâche' },
+    { key: 'sla', label: 'SLA' },
+    { key: 'started', label: 'Démarré' },
+  ];
+
+  readonly tableConfig: TableConfig = { hoverable: true };
+
+  readonly tableRows = computed<TableRow[]>(() =>
+    this.rows().map(row => ({
+      employee: 'Profil #' + row.employeeProfileId,
+      eventType: this.eventLabel(row.eventType),
+      status: row.status,
+      progressPct: row.progressPct ?? 0,
+      nextTask: row.nextDueTask?.title ?? '—',
+      sla: row.nextDueTask?.dueDate ? this.slaPipe.transform(row.nextDueTask.dueDate) : null,
+      started: this.fmtDate(row.startDate),
+      _source: row,
+    })),
+  );
+
+  slaVariant(level: SlaLevel): BadgeOptions['variant'] {
+    return SLA_VARIANTS[level];
+  }
+
+  goToWorkflow(row: TableRow): void {
+    this.router.navigate([(row['_source'] as WorkflowInstance).id], { relativeTo: this.route });
+  }
 
   loading    = signal(false);
   rows       = signal<WorkflowInstance[]>([]);

@@ -19,7 +19,7 @@
         class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
 
     <!-- ══════════════════ Form area ══════════════════ -->
-    <div class="flex-1 min-w-0 bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+    <daf-card class="block flex-1 min-w-0" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
 
       <!-- Card head: icon + step title + sub -->
       <div class="flex items-center gap-3.5 px-5 sm:px-8 py-5 border-b border-outline-variant" style="background:rgba(121,215,190,0.06)">
@@ -174,7 +174,7 @@
         </div>
       }
 
-    </div><!-- /form area -->
+    </daf-card><!-- /form area -->
 
     <!-- ══════════════════ Sidebar (desktop) ══════════════════ -->
     <aside class="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 gap-4 lg:sticky lg:top-6">
@@ -208,7 +208,7 @@
       </div>
 
       <!-- Progression -->
-      <div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+      <daf-card class="block" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
         <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low">
           <p class="text-[10px] font-bold uppercase tracking-wider text-outline">Progression</p>
         </div>
@@ -246,7 +246,7 @@
             }
           </div>
         </div>
-      </div>
+      </daf-card>
 
       <!-- Qualité du profil -->
       <section class="bg-surface-container p-5 rounded-xl border border-outline-variant/20">
