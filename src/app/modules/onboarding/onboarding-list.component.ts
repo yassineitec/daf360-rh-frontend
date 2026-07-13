@@ -9,6 +9,7 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
+  FormFieldComponent,
   PaginationComponent,
   StatusBadgeComponent,
   TableColumn,
@@ -24,7 +25,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, FormFieldComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
