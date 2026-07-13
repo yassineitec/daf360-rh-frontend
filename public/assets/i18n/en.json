@@ -24,7 +24,8 @@
       "VIEW_ALL": "View all profiles",
       "SEARCH_PLACEHOLDER": "Search...",
       "FILTERS": "Filters",
-      "EMPTY": "No employees to display."
+      "EMPTY": "No employees to display.",
+      "NO_MATCH": "No employees match this search."
     },
     "ALERT_CARD": {
       "TITLE": "Watchlist",

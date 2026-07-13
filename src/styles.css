@@ -72,6 +72,77 @@ html, body {
   transform: none !important;
 }
 
+/* ── Icon-only Modifier/Suppr. row actions (admin tables) ───────────────────
+   daf-button has no built-in icon-only square variant — its `sm` size is
+   sized for icon+label (px-4 py-2). Table row actions here show only the
+   Material Symbol, so force a small square shape and the neutral-gray /
+   light-red glyph-only look used across every admin table's Modifier/Suppr. */
+daf-button.icon-btn-edit button,
+daf-button.icon-btn-delete button {
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  border-radius: var(--radius-md) !important;
+  gap: 0 !important;
+}
+
+daf-button.icon-btn-edit button {
+  background: var(--color-surface) !important;
+  border-color: var(--color-outline-variant) !important;
+  color: #1f1f1f !important;
+}
+
+daf-button.icon-btn-delete button {
+  background: var(--color-error-container) !important;
+  color: var(--color-danger) !important;
+}
+
+daf-button.icon-btn-edit .material-symbols-outlined,
+daf-button.icon-btn-delete .material-symbols-outlined {
+  font-size: 20px !important;
+}
+
+/* ── Icon-only toggle row action ─────────────────────────────────────────────
+   Same 34px box as icon-btn-edit/delete so it lines up at the same height,
+   but plain — no border/background box, just the glyph (this one is a
+   frameless toggle switch icon, not a button that needs a container). */
+daf-button.icon-btn-toggle button {
+  width: 34px;
+  height: 34px;
+  padding: 0 !important;
+  gap: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+daf-button.icon-btn-toggle .material-symbols-outlined {
+  font-size: 20px !important;
+}
+
+/* ── Actions column spacing (admin tables) ───────────────────────────────────
+   The lib's own <td> has no flex/gap — several _actions cell templates render
+   the edit/delete daf-buttons as direct siblings with no wrapping div, so
+   without this they sit flush against each other. Actions column is centered
+   under its "Actions" header rather than right-aligned. */
+daf-data-table td:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+daf-data-table th:last-child {
+  text-align: center;
+}
+
+/* text-align above has no effect on the header label — the lib wraps it in
+   an inner span.flex, which is block-level and ignores the parent's
+   text-align; it needs its own flex justification to line up over the
+   centered action buttons below it. */
+daf-data-table th:last-child > span {
+  justify-content: center;
+}
+
 /* ── Responsive sidebar: hide/show on mobile via global CSS ─────────────────
    daf-side-nav renders a fixed inner <nav> — must target from global CSS
    because ViewEncapsulation blocks component-scoped ::ng-deep from reaching it. */

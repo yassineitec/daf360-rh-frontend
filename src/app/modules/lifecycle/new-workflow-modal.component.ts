@@ -14,13 +14,12 @@ import { ProfileService }    from '../profiles/profile.service';
 import { WORKFLOW_EVENT_TYPES, EVENT_TYPE_LABELS } from './models/lifecycle.model';
 import { ProfileSummary }    from '../profiles/models/profile.model';
 import { ModalComponent }    from '../../shared/modal.component';
-import { SpinnerComponent }  from '../../shared/spinner.component';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-new-workflow-modal',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent],
+  imports: [ModalComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent],
   template: `
     <app-modal
       title="Nouveau workflow"
@@ -108,13 +107,13 @@ import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
       </form>
 
       <div slot="footer">
-        <button class="btn-ghost" type="button" (click)="closed.emit()">Annuler</button>
-        <button class="btn-primary" type="button"
-                [disabled]="form.invalid || saving()"
-                (click)="save()">
-          @if (saving()) { <app-spinner size="sm" /> }
-          Créer
-        </button>
+        <daf-button label="Annuler" variant="secondary" (onClick)="closed.emit()" />
+        <daf-button
+          label="Créer"
+          variant="teal"
+          [options]="{ disabled: form.invalid || saving(), loading: saving() }"
+          (onClick)="save()"
+        />
       </div>
     </app-modal>
   `,

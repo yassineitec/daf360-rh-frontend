@@ -124,6 +124,18 @@ const SIZE_WIDTH: Record<ModalSize, string> = {
       display: flex; gap: 12px; justify-content: flex-end;
       flex-shrink: 0;
     }
+    /* Consumers project their buttons wrapped in a div[slot=footer] —
+       that wrapper div is the only direct child of .dialog-footer, so the
+       gap above never reaches the buttons inside it. Style the projected
+       wrapper itself (::ng-deep needed since it lives in the caller's own
+       view, not this component's). */
+    .dialog-footer ::ng-deep [slot="footer"] {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: flex-end;
+      width: 100%;
+    }
     @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(16px) scale(.97); }

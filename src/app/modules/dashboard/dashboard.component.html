@@ -76,15 +76,11 @@
               >
                 {{ 'DASHBOARD.DIRECTORY.VIEW_ALL' | translate }}
               </button>
-              <div class="relative w-full md:w-64">
-                <span
-                  class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px] pointer-events-none"
-                  >search</span
-                >
-                <input
-                  type="text"
+              <div class="w-full md:w-64">
+                <rh-search-bar
                   [placeholder]="'DASHBOARD.DIRECTORY.SEARCH_PLACEHOLDER' | translate"
-                  class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-[14px] focus:outline-none focus:border-teal transition-colors"
+                  [value]="directorySearch()"
+                  (valueChange)="directorySearch.set($event)"
                 />
               </div>
               <button
@@ -100,11 +96,11 @@
           <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div class="lg:col-span-3">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @for (emp of employeeCards(); track emp.profileId) {
+                @for (emp of filteredEmployeeCards(); track emp.profileId) {
                   <rh-employee-card [employee]="emp" (viewProfile)="onViewProfile($event)" />
                 } @empty {
                   <p class="text-[13px] text-outline col-span-2 py-8 text-center">
-                    {{ 'DASHBOARD.DIRECTORY.EMPTY' | translate }}
+                    {{ directorySearch() ? ('DASHBOARD.DIRECTORY.NO_MATCH' | translate) : ('DASHBOARD.DIRECTORY.EMPTY' | translate) }}
                   </p>
                 }
               </div>

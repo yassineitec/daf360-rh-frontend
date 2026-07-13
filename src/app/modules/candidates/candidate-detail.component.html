@@ -473,10 +473,10 @@
       </div>
 
       <div slot="footer">
-        <daf-button label="Annuler" variant="ghost" [options]="{ size: 'md' }"
+        <daf-button label="Annuler" variant="secondary"
           (onClick)="showHireModal.set(false)" />
         <daf-button label="Confirmer le recrutement" variant="teal"
-          [options]="{ iconStart: 'how_to_reg', size: 'md', loading: hireLoading(), disabled: hireLoading() }"
+          [options]="{ iconStart: 'how_to_reg', loading: hireLoading(), disabled: hireLoading() }"
           (onClick)="confirmHire()" />
       </div>
     </app-modal>

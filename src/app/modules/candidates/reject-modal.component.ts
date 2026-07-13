@@ -31,17 +31,16 @@ import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilre
           <p class="text-xs text-danger">{{ error() }}</p>
         }
       </div>
-      <div slot="footer" class="flex justify-end gap-2">
+      <div slot="footer">
         <daf-button
           label="Annuler"
-          variant="ghost"
-          [options]="{ size: 'md' }"
+          variant="secondary"
           (onClick)="onClose()"
         />
         <daf-button
           [label]="saving() ? 'Rejet en cours…' : 'Confirmer le rejet'"
           variant="danger"
-          [options]="{ iconStart: 'cancel', size: 'md', disabled: saving() || reason().trim().length < 10 }"
+          [options]="{ iconStart: 'cancel', disabled: saving() || reason().trim().length < 10, loading: saving() }"
           (onClick)="onConfirm()"
         />
       </div>
