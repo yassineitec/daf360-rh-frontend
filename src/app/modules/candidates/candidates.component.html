@@ -65,11 +65,10 @@
       <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="hidden sm:block">
         <div class="flex sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
           <div class="w-56 shrink-0 ml-0.5">
-            <daf-form-field
-              class="block w-full"
-              [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
+            <rh-search-bar
+              placeholder="Rechercher un candidat..."
               [value]="search()"
-              (valueChange)="onSearch($any($event) ?? '')" />
+              (valueChange)="onSearch($event)" />
           </div>
 
           <div class="flex items-center gap-3">
@@ -277,11 +276,10 @@
         <!-- Search: always visible, full width, right under the KPI cards -->
         <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block mb-3">
           <div class="p-4 ml-0.5">
-            <daf-form-field
-              class="block w-full"
-              [options]="{ type: 'search', placeholder: 'Rechercher un candidat...', prefixIcon: 'search', fullWidth: true }"
+            <rh-search-bar
+              placeholder="Rechercher un candidat..."
               [value]="search()"
-              (valueChange)="onSearch($any($event) ?? '')" />
+              (valueChange)="onSearch($event)" />
           </div>
         </daf-card>
 

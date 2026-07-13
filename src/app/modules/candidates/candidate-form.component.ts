@@ -122,6 +122,7 @@ export class CandidateFormComponent implements OnInit {
       phone:         [null as string | null],
       dateOfBirth:   [null as string | null],
       nationalId:    [null as string | null],
+      location:      [null as string | null],
     }),
     position: this.fb.group({
       appliedPosition:     [null as string | null],
@@ -305,6 +306,8 @@ export class CandidateFormComponent implements OnInit {
       nationalityId:       position.nationalityId       ?? null,
       expectedStartDate:   position.expectedStartDate   || null,
       notes:               this.form.get('notes')?.value ?? null,
+      experienceYears:     this.experienceYears() || null,
+      location:            identity.location            || null,
     };
 
     this.candidateService.create(dto).subscribe({

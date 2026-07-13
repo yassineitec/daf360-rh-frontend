@@ -394,4 +394,37 @@ export class CandidatesComponent implements OnInit {
     if (isNaN(dt.getTime())) return '—';
     return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   }
+
+  /** Colour class for the fit-score chip (teal ≥85, blue ≥65, muted below). */
+  fitScoreClass(score: number | null | undefined): string {
+    if (score == null) return 'text-outline';
+    if (score >= 85) return 'text-teal';
+    if (score >= 65) return 'text-primary';
+    return 'text-error';
+  }
+
+  /** Whole days the candidate has been in the pipeline (since createdAt). */
+  daysInPipeline(createdAt: string | null | undefined): number | null {
+    if (!createdAt) return null;
+    const dt = new Date(createdAt);
+    if (isNaN(dt.getTime())) return null;
+    return Math.max(0, Math.floor((Date.now() - dt.getTime()) / 86_400_000));
+  }
+
+  /** Phase-aware primary footer metric, driven by the candidate's status. */
+  phaseMeta(c: CandidateListItem): { icon: string; text: string } {
+    switch (c.status) {
+      case 'HIRED':
+        return { icon: 'login', text: c.expectedStartDate ? 'Début ' + this.formatDate(c.expectedStartDate) : 'Embauché' };
+      case 'EMAIL_RECEIVED':
+        return { icon: 'event', text: c.expectedStartDate ? 'Début ' + this.formatDate(c.expectedStartDate) : 'Offre envoyée' };
+      case 'REJECTED':
+      case 'ARCHIVED':
+        return { icon: 'history', text: 'Clôturé' };
+      default: {
+        const d = this.daysInPipeline(c.createdAt);
+        return { icon: 'schedule', text: d != null ? 'Depuis ' + d + ' j' : 'Nouveau' };
+      }
+    }
+  }
 }

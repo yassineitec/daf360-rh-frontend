@@ -22,6 +22,11 @@ export interface CandidateListItem {
   expectedStartDate: string | null;
   status: CandidateStatus;
   createdAt: string;
+  // --- enriched card fields (backend V39) ---
+  experienceYears: number | null;
+  location: string | null;
+  fitScore: number | null;
+  applicationDate: string | null;
 }
 
 export interface ItProvisioningSummary {
@@ -82,6 +87,8 @@ export interface CandidateDetail {
   itProvisioning: ItProvisioningSummary | null;
   recruitmentDemandId: number | null;
   recruitmentDemandJobTitle: string | null;
+  experienceYears: number | null;
+  location: string | null;
 }
 
 export interface CreateCandidateRequest {
@@ -102,6 +109,8 @@ export interface CreateCandidateRequest {
   notes?: string | null;
   recruitmentDemandId?: number | null;
   employmentTypeId?: number | null;
+  experienceYears?: number | null;
+  location?: string | null;
 }
 
 export interface UpdateCandidateRequest {
@@ -118,6 +127,8 @@ export interface UpdateCandidateRequest {
   contractType?: string | null;
   expectedStartDate?: string | null;
   notes?: string | null;
+  experienceYears?: number | null;
+  location?: string | null;
 }
 
 export interface CandidateFilter {
