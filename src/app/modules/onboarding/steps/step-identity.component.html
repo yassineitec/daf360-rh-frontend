@@ -33,7 +33,7 @@
         [selected]="gender() ? [gender()] : []"
         [options]="genderOptions()"
         [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
-        (selectedChange)="gender.set($event[0] ?? ''); emit()" />
+        (selectedChange)="gender.set($event[0]); emit()" />
     </div>
 
     <!-- Row 3: nationality | nationalId -->

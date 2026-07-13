@@ -6,7 +6,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '../../environments/environment';
 import { UserStore } from '../core/user.store';
 import { AuthService } from '../core/auth.service';
-import { RemoteStylesService } from '../core/remote-styles.service';
 import { SideNavComponent } from '@khalilrebhiitec/daf360';
 import type { NavItem, SideNavConfig } from '@khalilrebhiitec/daf360';
 import { TranslateService } from '@ngx-translate/core';
@@ -75,7 +74,6 @@ export class HrShellComponent implements OnInit {
   private auth = inject(AuthService);
   private injector = inject(Injector);
   private translate = inject(TranslateService);
-  private remoteStyles = inject(RemoteStylesService);
 
   constructor() {
     // Register RH translations into whatever TranslateService is active —
@@ -124,11 +122,8 @@ export class HrShellComponent implements OnInit {
   };
 
   ngOnInit(): void {
-    const stylesUrl = environment.production
-      ? '/remotes/rh/styles.css'
-      : 'http://localhost:4203/styles.css';
-    this.remoteStyles.injectStyles(stylesUrl);
-
+    // NOTE: the remote's styles.css is injected + awaited by the shell
+    // (ensureRemoteStyles) before this route activates — no runtime injection here.
     if (this.userStore.hasPermission('HR_ONBOARDING')) {
       this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/onboarding/pending`).subscribe({
         next: (list) => this.onboardingCount.set(list.length),

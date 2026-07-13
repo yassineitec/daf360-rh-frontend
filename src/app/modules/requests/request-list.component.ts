@@ -96,10 +96,10 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
           <!-- Empty state -->
           @if (!loading() && visibleRows().length === 0) {
             <div class="flex flex-col items-center py-16 gap-3 text-center">
-              <span class="material-symbols-outlined text-[48px] text-outline-variant"
+              <span class="material-symbols-outlined text-display text-outline-variant"
                 >move_to_inbox</span
               >
-              <p class="text-[16px] font-semibold text-on-surface">
+              <p class="text-body-lg font-semibold text-on-surface">
                 @if (activeTab() === 'done') {
                   Aucune demande traitée
                 } @else {

@@ -75,8 +75,10 @@ export class CandidateFormComponent implements OnInit {
     this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr }))
   );
 
-  /** Canonical gender options (MALE/FEMALE/OTHER/UNSPECIFIED) — mirrors backend GENDER list. */
-  readonly genderOptions: SelectOption[] = GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }));
+  /** Gender options limited to Homme / Femme (canonical MALE/FEMALE codes). */
+  readonly genderOptions: SelectOption[] = GENDER_OPTIONS
+    .filter(o => o.value === 'MALE' || o.value === 'FEMALE')
+    .map(o => ({ value: o.value, label: o.label }));
 
   /**
    * Contract types come from the configurable EMPLOYMENT_TYPE list (per pays).
@@ -103,6 +105,7 @@ export class CandidateFormComponent implements OnInit {
   readonly cardIcon    = computed(() => this.STEP_INFO[this.currentStep() - 1].icon);
 
   readonly canGoNext = computed(() => {
+    this.formValue(); // FormGroup.valid isn't reactive — depend on form value so this recomputes as fields fill
     switch (this.currentStep()) {
       case 1:  return this.identityGroup.valid;
       case 2:  return this.positionGroup.valid;
@@ -111,6 +114,7 @@ export class CandidateFormComponent implements OnInit {
   });
 
   readonly stepValidationError = computed<string | null>(() => {
+    this.formValue(); // recompute on every form change (see canGoNext)
     switch (this.currentStep()) {
       case 1:  return this.identityGroup.valid ? null : 'Veuillez renseigner le prénom, le nom et un email professionnel valide.';
       case 2:  return this.positionGroup.valid ? null : 'Veuillez sélectionner un type de contrat et une date de début.';

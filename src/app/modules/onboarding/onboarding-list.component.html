@@ -82,10 +82,10 @@
       } @else if (filteredItems().length === 0) {
         <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
           <div class="flex flex-col items-center py-16 gap-3 text-center">
-            <span class="material-symbols-outlined text-[48px] text-outline-variant">
+            <span class="material-symbols-outlined text-display text-outline-variant">
               assignment_turned_in
             </span>
-            <p class="text-[16px] font-semibold text-on-surface">Aucun dossier en attente</p>
+            <p class="text-body-lg font-semibold text-on-surface">Aucun dossier en attente</p>
             <p class="text-[13px] text-outline">Tous les dossiers ont été traités.</p>
           </div>
         </daf-card>
@@ -117,19 +117,19 @@
 
               <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
                 <div class="min-w-0">
-                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Email MS365</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Email MS365</p>
                   <p class="text-on-surface truncate">{{ row['ms365Email'] || '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Entité</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Entité</p>
                   <p class="text-on-surface">{{ row['entite'] }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">Début prévu</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Début prévu</p>
                   <p class="text-on-surface">{{ row['expectedStartDate'] }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-[10px] font-bold mb-0.5">MàJ</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">MàJ</p>
                   <p class="text-on-surface">{{ row['maj'] }}</p>
                 </div>
               </div>

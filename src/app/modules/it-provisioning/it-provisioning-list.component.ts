@@ -6,7 +6,6 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  FormFieldComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -34,7 +33,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-it-provisioning-list',
   standalone: true,
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, FormFieldComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {

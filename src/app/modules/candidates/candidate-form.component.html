@@ -15,7 +15,10 @@
   </div>
 
   <!-- ── Wizard layout ──────────────────────────────────────────────────── -->
-  <form [formGroup]="form" (ngSubmit)="goNext()" novalidate
+  <!-- No (ngSubmit): step navigation is driven solely by the buttons' (onClick).
+       daf-button renders type="submit", so an ngSubmit handler here would fire
+       goNext() a second time on every click (jumping steps / cancelling "Précédent"). -->
+  <form [formGroup]="form" novalidate
         class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
 
     <!-- ══════════════════ Form area ══════════════════ -->
@@ -27,51 +30,9 @@
           <span class="material-symbols-outlined">{{ cardIcon() }}</span>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <daf-form-field
-            [options]="{ label: 'Prénom', required: true, placeholder: 'ex: Jean',
-                         error: getFieldError('identity.firstName') }"
-            [value]="getTextValue('identity.firstName')"
-            (valueChange)="setTextValue('identity.firstName', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Nom', required: true, placeholder: 'ex: Dupont',
-                         error: getFieldError('identity.lastName') }"
-            [value]="getTextValue('identity.lastName')"
-            (valueChange)="setTextValue('identity.lastName', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Email Professionnel', type: 'email', required: true,
-                         placeholder: 'jean.dupont@email.com', prefixIcon: 'mail',
-                         error: getFieldError('identity.emailPersonal') }"
-            [value]="getTextValue('identity.emailPersonal')"
-            (valueChange)="setTextValue('identity.emailPersonal', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Téléphone', placeholder: '+216 XX XXX XXX', prefixIcon: 'phone' }"
-            [value]="getTextValue('identity.phone')"
-            (valueChange)="setTextValue('identity.phone', $event)" />
-
-          <daf-multi-date-picker
-            [value]="getDateValue('identity.dateOfBirth')"
-            [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
-            (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
-
-          <daf-select
-            [selected]="getSelectStr('identity.gender')"
-            [options]="genderOptions"
-            [config]="{ label: 'Genre', placeholder: '— Sélectionner —', fullWidth: true }"
-            (selectedChange)="setSelectStr('identity.gender', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
-            [value]="getTextValue('identity.nationalId')"
-            (valueChange)="setTextValue('identity.nationalId', $event)" />
-
-          <daf-form-field
-            [options]="{ label: 'Localisation', placeholder: 'ex: Tunis', prefixIcon: 'location_on' }"
-            [value]="getTextValue('identity.location')"
-            (valueChange)="setTextValue('identity.location', $event)" />
+        <div>
+          <h3 class="text-[15px] font-semibold text-on-surface leading-tight">{{ cardTitle() }}</h3>
+          <p class="text-[12.5px] text-on-surface-variant mt-0.5">{{ cardSub() }}</p>
         </div>
       </div>
 
@@ -110,16 +71,27 @@
               [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
               (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
 
+            <daf-select
+              [selected]="getSelectStr('identity.gender')"
+              [options]="genderOptions"
+              [config]="{ label: 'Genre', placeholder: '— Sélectionner —', fullWidth: true }"
+              (selectedChange)="setSelectStr('identity.gender', $event)" />
+
             <daf-form-field
               [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
               [value]="getTextValue('identity.nationalId')"
               (valueChange)="setTextValue('identity.nationalId', $event)" />
+
+            <daf-form-field
+              [options]="{ label: 'Localisation', placeholder: 'ex: Tunis', prefixIcon: 'location_on' }"
+              [value]="getTextValue('identity.location')"
+              (valueChange)="setTextValue('identity.location', $event)" />
           </div>
         }
 
         <!-- Step 2 — Poste & Contrat -->
         @if (currentStep() === 2) {
-          <div class="space-y-5">
+          <div class="space-y-8">
             <daf-form-field
               [options]="{ label: 'Poste Requis', required: true,
                            placeholder: 'ex: Développeur Fullstack Senior', prefixIcon: 'work_outline',
