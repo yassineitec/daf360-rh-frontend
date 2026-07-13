@@ -48,10 +48,10 @@
 <!-- Filters -->
 <div class="ro-filters">
   <div class="ro-search">
-    <daf-form-field
-      [options]="{ type: 'search', placeholder: 'Rechercher un employé…', prefixIcon: 'search', fullWidth: true }"
+    <rh-search-bar
+      placeholder="Rechercher un employé…"
       [value]="searchTerm()"
-      (valueChange)="onSearch($any($event) ?? '')" />
+      (valueChange)="onSearch($event)" />
   </div>
   @for (f of sourceFilters; track f.value) {
     <daf-button
@@ -76,7 +76,8 @@
   <ng-template dafCell="_actions" let-row>
     <daf-button
       *appHasPermission="'ADMIN_REGIMES'"
-      label="Modifier"
+      class="icon-btn-edit"
+      title="Modifier"
       variant="ghost"
       [options]="{ size: 'sm', iconStart: 'edit' }"
       (onClick)="openEmployeePanel(row['_source'])" />

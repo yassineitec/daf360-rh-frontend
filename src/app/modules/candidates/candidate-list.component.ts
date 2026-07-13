@@ -6,8 +6,6 @@ import {
   ButtonComponent,
   DafCellDirective,
   DataTableComponent,
-  FormFieldComponent,
-  FormFieldOptions,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -32,7 +30,7 @@ import {
 } from './candidate.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
-import { avatarUrl } from '../../shared/utils/avatar.utils';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   PENDING:        'neutral',
@@ -51,7 +49,6 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   imports: [
     PermissionDirective,
     ButtonComponent,
-    FormFieldComponent,
     SelectComponent,
     KpiCardComponent,
     PaginationComponent,
@@ -59,6 +56,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
     DataTableComponent,
     DafCellDirective,
     RejectModalComponent,
+    RhSearchBarComponent,
   ],
   templateUrl: './candidate-list.component.html',
 })
@@ -100,13 +98,6 @@ export class CandidateListComponent implements OnInit {
   );
 
   // ── daf360 options ────────────────────────────────────────────────────────
-  readonly searchFieldOptions: FormFieldOptions = {
-    type: 'search',
-    placeholder: 'Nom, email, poste…',
-    prefixIcon: 'search',
-    fullWidth: true,
-  };
-
   readonly statusSelectConfig: SelectConfig = {
     placeholder: 'Tous les statuts',
   };
@@ -133,7 +124,6 @@ export class CandidateListComponent implements OnInit {
       candidat: {
         name: `${c.firstName} ${c.lastName}`,
         initials: this.getInitials(c.firstName, c.lastName),
-        avatar: this.avatarSrc(c.gender),
         subtitle: c.emailPersonal,
       } as AvatarCell,
       appliedPosition: c.appliedPosition ?? '—',
@@ -277,13 +267,6 @@ export class CandidateListComponent implements OnInit {
   // ── Misc helpers ──────────────────────────────────────────────────────────
   getInitials(fn: string, ln: string): string {
     return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
-  }
-
-  /** Gender-based avatar image, or undefined so the row falls back to initials. */
-  avatarSrc(gender: string | null | undefined): string | undefined {
-    const g = gender?.trim().toUpperCase();
-    if (!g || g === 'UNSPECIFIED') return undefined;
-    return avatarUrl(gender);
   }
 
   formatDateFr(d: string | null | undefined): string {

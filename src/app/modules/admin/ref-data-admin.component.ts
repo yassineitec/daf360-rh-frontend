@@ -4,7 +4,7 @@ import {
 import {
   ButtonComponent, FormFieldComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  PaginationComponent, PaginationConfig,
+  PaginationComponent, PaginationConfig, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../shared/modal.component';
 
@@ -91,7 +91,8 @@ const TABS: TabConfig[] = [
         </ng-template>
         <ng-template dafCell="_actions" let-row>
           <daf-button
-            label="Supprimer"
+            class="icon-btn-delete"
+            title="Supprimer"
             variant="danger"
             [options]="{ size: 'sm', iconStart: 'delete' }"
             (onClick)="deleteItem(row['_source'])" />
@@ -126,7 +127,8 @@ const TABS: TabConfig[] = [
         </ng-template>
         <ng-template dafCell="_actions" let-row>
           <daf-button
-            label="Supprimer"
+            class="icon-btn-delete"
+            title="Supprimer"
             variant="danger"
             [options]="{ size: 'sm', iconStart: 'delete' }"
             (onClick)="deleteTypeContrat(row['_source'])" />
@@ -240,6 +242,7 @@ const TABS: TabConfig[] = [
 export class RefDataAdminComponent implements OnChanges {
   private refSvc      = inject(RefDataService);
   private contractSvc = inject(ContractHistoryService);
+  private modal       = inject(ModalService);
 
   paysId = input<number>(179);
 
@@ -417,7 +420,17 @@ export class RefDataAdminComponent implements OnChanges {
   }
 
   deleteItem(item: RefDataItem): void {
-    if (!confirm(`Supprimer « ${item.labelFr} » ?`)) return;
+    this.modal.open({
+      title: 'Supprimer l\'entrée',
+      body:  `Supprimer « ${item.labelFr} » ?`,
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDeleteItem(item); r.close(); } },
+      ],
+    });
+  }
+
+  private doDeleteItem(item: RefDataItem): void {
     const tab = this.activeTab();
     this.refSvc.invalidateAll();
     this.refSvc.delete(tab.endpoint, item.id, tab.hasPays ? this.paysId() : undefined).subscribe({
@@ -450,7 +463,17 @@ export class RefDataAdminComponent implements OnChanges {
   }
 
   deleteTypeContrat(tc: TypeContratDto): void {
-    if (!confirm(`Supprimer « ${tc.labelFr} » ?`)) return;
+    this.modal.open({
+      title: 'Supprimer le type de contrat',
+      body:  `Supprimer « ${tc.labelFr} » ?`,
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDeleteTypeContrat(tc); r.close(); } },
+      ],
+    });
+  }
+
+  private doDeleteTypeContrat(tc: TypeContratDto): void {
     this.contractSvc.deleteTypeContrat(tc.id).subscribe({
       next: () => { this.flash('Type de contrat supprimé.'); this.loadItems(); },
       error: (err: any) => this.error.set(err?.error?.message ?? 'Erreur lors de la suppression.'),

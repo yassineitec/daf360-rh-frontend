@@ -4,10 +4,10 @@
   <div class="nr-header">
     <h2 class="nr-title">Événements</h2>
     <div class="nr-search">
-      <daf-form-field
-        [options]="{ type: 'search', placeholder: 'Rechercher…', fullWidth: true }"
+      <rh-search-bar
+        placeholder="Rechercher…"
         [value]="searchQuery()"
-        (valueChange)="onSearch($any($event) ?? '')" />
+        (valueChange)="onSearch($event)" />
     </div>
   </div>
 

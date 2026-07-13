@@ -6,7 +6,6 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  FormFieldComponent,
   MetricCardComponent,
   MetricCardOptions,
   MetricDelta,
@@ -24,6 +23,7 @@ import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { avatarUrl } from '../../shared/utils/avatar.utils';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import {
   CandidateListItem,
   CandidateDashboardStats,
@@ -65,12 +65,12 @@ interface KanbanColumn {
     CardComponent,
     DafCellDirective,
     DataTableComponent,
-    FormFieldComponent,
     MetricCardComponent,
     SelectComponent,
     PaginationComponent,
     PermissionDirective,
     RejectModalComponent,
+    RhSearchBarComponent,
   ],
   styles: [`
     /* Thin, subtle scrollbar for the horizontal kanban board. */

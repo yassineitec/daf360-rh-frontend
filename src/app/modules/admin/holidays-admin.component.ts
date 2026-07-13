@@ -4,6 +4,7 @@ import { AdminService }     from './admin.service';
 import { Holiday }          from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { ModalComponent }   from '../../shared/modal.component';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import {
   MultiDatePickerComponent,
   FormFieldComponent,
@@ -23,6 +24,7 @@ const PAGE_SIZE = 10;
     SpinnerComponent, ModalComponent, MultiDatePickerComponent,
     FormFieldComponent, ToggleComponent, ButtonComponent,
     DataTableComponent, DafCellDirective, PaginationComponent,
+    RhSearchBarComponent,
   ],
   template: `
     <div class="section-header">
@@ -32,10 +34,10 @@ const PAGE_SIZE = 10;
       </div>
       <div class="header-actions">
         <div class="search-field">
-          <daf-form-field
-            [options]="{ type: 'search', placeholder: 'Rechercher par nom (fr/en)…', prefixIcon: 'search', fullWidth: true }"
+          <rh-search-bar
+            placeholder="Rechercher par nom (fr/en)…"
             [value]="searchQuery()"
-            (valueChange)="searchQuery.set($any($event) ?? '')"
+            (valueChange)="searchQuery.set($event)"
           />
         </div>
         <daf-button label="+ Ajouter" variant="primary" (onClick)="openAdd()" />
@@ -61,8 +63,8 @@ const PAGE_SIZE = 10;
 
           <ng-template dafCell="_actions" let-row>
             <div class="actions-cell">
-              <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
-              <daf-button label="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
+              <daf-button class="icon-btn-edit" title="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
+              <daf-button class="icon-btn-delete" title="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
             </div>
           </ng-template>
         </daf-data-table>
@@ -147,10 +149,10 @@ const PAGE_SIZE = 10;
     .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
 
     /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
-       own build — force the right-aligned Actions column ourselves. */
+       own build — force the centered Actions column ourselves. */
     :host ::ng-deep daf-data-table {
-      th:last-child { text-align: right !important; }
-      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
+      th:last-child { text-align: center !important; }
+      td:last-child { display:flex;justify-content:center;align-items:center;gap:6px; }
     }
   `],
 })

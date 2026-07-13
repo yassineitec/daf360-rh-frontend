@@ -9,7 +9,7 @@ import {
   FormFieldComponent,
   ButtonComponent,
   StatusBadgeComponent, DataTableComponent, DafCellDirective,
-  TableColumn, TableConfig, TableRow, PaginationComponent,
+  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService,
 } from '@khalilrebhiitec/daf360';
 
 const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','OTHER'];
@@ -168,7 +168,8 @@ const PAGE_SIZE = 5;
   `],
 })
 export class RequestTypesAdminComponent implements OnChanges {
-  private svc = inject(AdminService);
+  private svc   = inject(AdminService);
+  private modal = inject(ModalService);
 
   paysId = input(179);
 
@@ -254,8 +255,17 @@ export class RequestTypesAdminComponent implements OnChanges {
   }
 
   deactivate(t: RequestTypeCatalog) {
-    if (!confirm(`Désactiver "${t.displayNameFr}" ?`)) return;
-    this.svc.deactivateRequestType(t.id).pipe(catchError(() => of(null))).subscribe(() => this.load());
+    this.modal.open({
+      title: 'Désactiver le type',
+      body:  `Désactiver "${t.displayNameFr}" ?`,
+      buttons: [
+        { label: 'Annuler',     variant: 'secondary', action: r => r.close() },
+        { label: 'Désactiver',  variant: 'primary',   action: r => {
+          this.svc.deactivateRequestType(t.id).pipe(catchError(() => of(null))).subscribe(() => this.load());
+          r.close();
+        } },
+      ],
+    });
   }
 
   seed() {

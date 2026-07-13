@@ -4,6 +4,7 @@ import {
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption,
   StatusBadgeComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  ModalService,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
@@ -84,6 +85,7 @@ import { PermissionDirective } from '../../../shared/permission.directive';
     </ng-template>
     <ng-template dafCell="_actions" let-row>
       <daf-button *appHasPermission="'ADMIN_BREAKS'"
+        class="icon-btn-delete" title="Supprimer"
         label="" variant="danger"
         [options]="{ iconStart: 'delete', size: 'sm' }"
         (onClick)="removeRule(row['_source'].id)" />
@@ -93,7 +95,8 @@ import { PermissionDirective } from '../../../shared/permission.directive';
   `,
 })
 export class LegalRulesAdminComponent implements OnChanges {
-  private svc = inject(BreakService);
+  private svc   = inject(BreakService);
+  private modal = inject(ModalService);
 
   readonly paysId = input<number>(179);
 
@@ -190,7 +193,17 @@ export class LegalRulesAdminComponent implements OnChanges {
   }
 
   removeRule(id: number): void {
-    if (!confirm('Supprimer cette règle ?')) return;
+    this.modal.open({
+      title: 'Supprimer la règle',
+      body:  'Supprimer cette règle ?',
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doRemoveRule(id); r.close(); } },
+      ],
+    });
+  }
+
+  private doRemoveRule(id: number): void {
     this.svc.deleteLegalRule(id).subscribe({
       next: () => this.rules.update(rs => rs.filter(r => r.id !== id)),
       error: () => {},

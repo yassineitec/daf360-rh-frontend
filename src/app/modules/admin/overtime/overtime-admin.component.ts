@@ -5,7 +5,7 @@ import { DecimalPipe } from '@angular/common';
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
-  TableColumn, TableConfig, TableRow,
+  TableColumn, TableConfig, TableRow, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../shared/modal.component';
 import { OvertimeService } from './overtime.service';
@@ -185,6 +185,7 @@ import { UserStore } from '../../../core/user.store';
 export class OvertimeAdminComponent implements OnChanges {
   private svc = inject(OvertimeService);
   private userStore = inject(UserStore);
+  private modal = inject(ModalService);
 
   readonly paysId = input<number>(179);
 
@@ -336,7 +337,17 @@ export class OvertimeAdminComponent implements OnChanges {
   }
 
   deactivate(id: number): void {
-    if (!confirm('Désactiver cette règle HS ?')) return;
+    this.modal.open({
+      title: 'Désactiver la règle',
+      body:  'Désactiver cette règle HS ?',
+      buttons: [
+        { label: 'Annuler',    variant: 'secondary', action: r => r.close() },
+        { label: 'Désactiver', variant: 'primary',   action: r => { this.doDeactivate(id); r.close(); } },
+      ],
+    });
+  }
+
+  private doDeactivate(id: number): void {
     this.svc.deactivate(id).subscribe({
       next: () => this.rules.update(rs => rs.map(r => r.idParametrage === id ? { ...r, actif: false } : r)),
       error: () => {},

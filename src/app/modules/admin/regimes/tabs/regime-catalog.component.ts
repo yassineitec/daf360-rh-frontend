@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
-  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent,
+  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
@@ -21,8 +21,9 @@ import { ModalComponent } from '../../../../shared/modal.component';
   styleUrl: './regime-catalog.component.scss',
 })
 export class RegimeCatalogComponent implements OnChanges {
-  private svc = inject(RegimeService);
-  private fb  = inject(FormBuilder);
+  private svc   = inject(RegimeService);
+  private fb    = inject(FormBuilder);
+  private modal = inject(ModalService);
 
   readonly paysId = input<number>(179);
 
@@ -157,7 +158,17 @@ export class RegimeCatalogComponent implements OnChanges {
 
   deleteRegime(): void {
     if (!this.selectedId()) return;
-    if (!confirm('Supprimer ce régime ? Cette action est irréversible.')) return;
+    this.modal.open({
+      title: 'Supprimer le régime',
+      body:  'Supprimer ce régime ? Cette action est irréversible.',
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDeleteRegime(); r.close(); } },
+      ],
+    });
+  }
+
+  private doDeleteRegime(): void {
     this.isDeleting.set(true);
     this.svc.deleteRegime(this.selectedId()!).subscribe({
       next: () => {

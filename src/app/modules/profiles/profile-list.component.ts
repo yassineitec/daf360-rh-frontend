@@ -12,7 +12,6 @@ import {
   ToolbarAction, ToolbarToggleOption,
   CheckboxComponent,
   ButtonComponent,
-  FormFieldComponent,
   CardComponent,
 } from '@khalilrebhiitec/daf360';
 
@@ -20,6 +19,7 @@ import { ProfileListService, FilterOptions } from './services/profile-list.servi
 import { EmployeeListItem } from './models/profile.model';
 import { ProfileGridCardComponent } from './components/profile-grid-card/profile-grid-card.component';
 import { ProfileListCardComponent } from './components/profile-list-card/profile-list-card.component';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 
 const PAGE_SIZE = 15;
 
@@ -33,8 +33,8 @@ const PAGE_SIZE = 15;
     PaginationComponent,
     CheckboxComponent,
     ButtonComponent,
-    FormFieldComponent,
     CardComponent,
+    RhSearchBarComponent,
   ],
   templateUrl: './profile-list.component.html',
 })

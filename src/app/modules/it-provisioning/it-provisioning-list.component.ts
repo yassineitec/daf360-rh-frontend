@@ -6,7 +6,6 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  FormFieldComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -20,6 +19,7 @@ import { ItProvisioningService } from './it-provisioning.service';
 import { ProvisioningListItem } from './it-provisioning.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: 'PENDING',       label: 'En attente' },
@@ -33,7 +33,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-it-provisioning-list',
   standalone: true,
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, FormFieldComponent, PaginationComponent, NgTemplateOutlet],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {

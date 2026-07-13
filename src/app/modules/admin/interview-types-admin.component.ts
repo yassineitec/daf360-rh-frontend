@@ -68,7 +68,7 @@ const PAGE_SIZE = 5;
           <daf-button
             [label]="saving() ? 'Enregistrement...' : (editTarget() ? 'Enregistrer' : 'Ajouter')"
             variant="teal"
-            [options]="{ disabled: saving() || !form.name.trim(), loading: saving(), iconStart: editTarget() ? 'save' : 'add' }"
+            [options]="{ disabled: saving() || !form.name.trim(), loading: saving() }"
             (onClick)="save()" />
         </div>
       </app-modal>
@@ -92,11 +92,13 @@ const PAGE_SIZE = 5;
           <ng-template dafCell="_actions" let-row>
             <div class="ita-row-actions">
               <daf-button
+                class="icon-btn-toggle"
                 variant="ghost"
                 [options]="{ iconStart: row['_source'].isActive ? 'toggle_on' : 'toggle_off', size: 'sm' }"
                 [title]="row['_source'].isActive ? 'Désactiver' : 'Activer'"
                 (onClick)="toggleActive(row['_source'])" />
               <daf-button
+                class="icon-btn-edit"
                 variant="ghost"
                 [options]="{ iconStart: 'edit', size: 'sm' }"
                 title="Modifier"

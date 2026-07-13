@@ -7,7 +7,7 @@ import { ModalComponent } from '../../shared/modal.component';
 import {
   FormFieldComponent, ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  PaginationComponent, PaginationConfig,
+  PaginationComponent, PaginationConfig, ModalService,
 } from '@khalilrebhiitec/daf360';
 
 const PAGE_SIZE = 10;
@@ -75,8 +75,8 @@ const PAGE_SIZE = 10;
             <daf-button label="" variant="primary" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="saveEdit(row['_source'])" />
             <daf-button label="" variant="secondary" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="editingId.set(null)" />
           } @else {
-            <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
-            <daf-button label="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
+            <daf-button class="icon-btn-edit" title="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
+            <daf-button class="icon-btn-delete" title="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
           }
         </ng-template>
       </daf-data-table>
@@ -121,7 +121,7 @@ const PAGE_SIZE = 10;
       </div>
       <div slot="footer">
         <daf-button label="Annuler" variant="secondary" (onClick)="addMode.set(false)" />
-        <daf-button label="Créer" variant="primary" [options]="{ disabled: !newCle.trim() || !newValeur.trim() }" (onClick)="add()" />
+        <daf-button label="Créer" variant="teal" [options]="{ disabled: !newCle.trim() || !newValeur.trim() }" (onClick)="add()" />
       </div>
     </app-modal>
   `,
@@ -150,7 +150,8 @@ const PAGE_SIZE = 10;
   `],
 })
 export class ParametersAdminComponent implements OnChanges {
-  private svc  = inject(AdminService);
+  private svc   = inject(AdminService);
+  private modal = inject(ModalService);
 
   paysId = input(179);
 
@@ -231,7 +232,17 @@ export class ParametersAdminComponent implements OnChanges {
   }
 
   del(p: ParameterSet) {
-    if (!confirm(`Supprimer "${p.cle}" ?`)) return;
+    this.modal.open({
+      title: 'Supprimer le paramètre',
+      body:  `Supprimer "${p.cle}" ?`,
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDelete(p); r.close(); } },
+      ],
+    });
+  }
+
+  private doDelete(p: ParameterSet): void {
     this.svc.deleteParameter(p.id).pipe(catchError(() => of(null))).subscribe(() => {
       this.params.update(ps => ps.filter(x => x.id !== p.id));
     });

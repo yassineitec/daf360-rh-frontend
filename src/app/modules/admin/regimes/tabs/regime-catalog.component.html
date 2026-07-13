@@ -150,7 +150,7 @@
         <div class="rc-actions">
           <daf-button
             *appHasPermission="'ADMIN_REGIMES'"
-            label="Supprimer"
+            class="icon-btn-delete"
             variant="ghost"
             [options]="{ disabled: !canDelete() || isDeleting(), iconStart: 'delete' }"
             [title]="!canDelete() ? 'Régime en cours d\'utilisation ou régime par défaut' : 'Supprimer'"
