@@ -32,6 +32,8 @@
         @if (row['_source'].assignment) {
           <daf-button
             *appHasPermission="'ADMIN_REGIMES'"
+            class="icon-btn-delete"
+            title="Supprimer"
             variant="danger"
             [options]="{ size: 'sm', iconStart: 'delete' }"
             (onClick)="openRemoveModal(row['_source'])" />

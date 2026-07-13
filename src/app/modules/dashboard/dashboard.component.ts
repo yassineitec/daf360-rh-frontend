@@ -13,6 +13,7 @@ import {
 } from './services/dashboard.service';
 import { UserStore } from '../../core/user.store';
 import { SpinnerComponent } from '../../shared/spinner.component';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { QuickActionCardComponent, QuickActionColor } from './components/quick-action-card/quick-action-card.component';
 import { AlertCardComponent, MissingDocAlert, ProbationAlert } from './components/alert-card/alert-card.component';
 import { WorkforceStatsComponent } from './components/workforce-stats/workforce-stats.component';
@@ -36,6 +37,7 @@ interface QuickActionDef {
     RouterLink,
     TranslatePipe,
     SpinnerComponent,
+    RhSearchBarComponent,
     QuickActionCardComponent,
     AlertCardComponent,
     WorkforceStatsComponent,
@@ -65,6 +67,7 @@ export class DashboardComponent implements OnInit {
   readonly missingDocsTotal         = signal<number>(0);
   private readonly anniversairesRaw = signal<AnniversaireDto[]>([]);
   readonly nouveauxEmployes         = signal<NouveauEmployeDto[]>([]);
+  readonly directorySearch          = signal('');
 
   readonly currentUser = this.userStore.currentUser;
 
@@ -124,6 +127,12 @@ export class DashboardComponent implements OnInit {
       completionSkills: false,
     }))
   );
+
+  readonly filteredEmployeeCards = computed<EmployeeCardData[]>(() => {
+    const q = this.directorySearch().trim().toLowerCase();
+    if (!q) return this.employeeCards();
+    return this.employeeCards().filter(emp => emp.fullName.toLowerCase().includes(q));
+  });
 
   readonly anniversaires = computed<AnniversaireItem[]>(() =>
     this.anniversairesRaw().map(emp => ({

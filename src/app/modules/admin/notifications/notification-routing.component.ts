@@ -1,13 +1,14 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-  FormFieldComponent, StatusBadgeComponent, PaginationComponent,
+  StatusBadgeComponent, PaginationComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { NotificationEventTypeWithRule } from './notification-routing.model';
 import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
 import { ModalComponent } from '../../../shared/modal.component';
+import { RhSearchBarComponent } from '../../../shared/search-bar.component';
 
 const PAGE_SIZE = 10;
 
@@ -15,9 +16,9 @@ const PAGE_SIZE = 10;
   selector: 'app-notification-routing',
   standalone: true,
   imports: [
-    FormsModule, RoutingRuleEditorComponent, FormFieldComponent,
+    FormsModule, RoutingRuleEditorComponent,
     StatusBadgeComponent, PaginationComponent, ModalComponent,
-    DataTableComponent, DafCellDirective,
+    DataTableComponent, DafCellDirective, RhSearchBarComponent,
   ],
   templateUrl: './notification-routing.component.html',
   styleUrl: './notification-routing.component.scss',

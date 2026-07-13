@@ -25,9 +25,7 @@
   </div>
 
   <div slot="footer">
-    <button type="button" class="btn-cancel" (click)="closed.emit()">Annuler</button>
-    <button type="button" class="btn-confirm" (click)="confirmed.emit()">
-      Confirmer la création
-    </button>
+    <daf-button label="Annuler" variant="secondary" (onClick)="closed.emit()" />
+    <daf-button label="Confirmer la création" variant="teal" (onClick)="confirmed.emit()" />
   </div>
 </app-modal>

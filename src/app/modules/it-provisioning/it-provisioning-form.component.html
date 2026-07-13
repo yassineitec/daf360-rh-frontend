@@ -376,8 +376,8 @@
       <strong>{{ p.candidateFullName }}</strong> comme <strong>terminé</strong> ?
       Cette action est définitive.
     </p>
-    <div slot="footer" class="flex gap-2 justify-end">
-      <daf-button [options]="{ variant: 'ghost', label: 'Annuler' }" (onClick)="showCompleteModal.set(false)" />
+    <div slot="footer">
+      <daf-button [options]="{ variant: 'secondary', label: 'Annuler' }" (onClick)="showCompleteModal.set(false)" />
       <daf-button [options]="{ variant: 'teal', label: 'Confirmer' }" (onClick)="onCompleteConfirmed()" />
     </div>
   </app-modal>

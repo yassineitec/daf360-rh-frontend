@@ -5,10 +5,10 @@
         <span class="rl-title">Rôles ({{ roles().length }})</span>
         <div class="rl-header-actions">
           <div class="rl-search">
-            <daf-form-field
-              [options]="{ type: 'search', placeholder: 'Rechercher un rôle…', prefixIcon: 'search', fullWidth: true }"
+            <rh-search-bar
+              placeholder="Rechercher un rôle…"
               [value]="searchQuery()"
-              (valueChange)="searchQuery.set($any($event) ?? '')" />
+              (valueChange)="searchQuery.set($event)" />
           </div>
           <daf-button
             label="+ Nouveau rôle"

@@ -13,7 +13,6 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
-import { SpinnerComponent }      from '../../shared/spinner.component';
 import { ModalComponent }        from '../../shared/modal.component';
 import { UserStore }             from '../../core/user.store';
 
@@ -25,7 +24,7 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   selector: 'app-request-officer-inbox',
   standalone: true,
   imports: [
-    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, SpinnerComponent, ModalComponent,
+    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, ModalComponent,
     DataTableComponent, DafCellDirective, PaginationComponent,
   ],
   template: `
@@ -116,15 +115,13 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
         ></textarea>
       </div>
       <div slot="footer">
-        <button class="btn-ghost" (click)="refuseTarget.set(null)" type="button">Annuler</button>
-        <button
-          class="btn-danger" type="button"
-          [disabled]="!refuseMotif.trim() || saving()"
-          (click)="confirmRefuse()"
-        >
-          @if (saving()) { <app-spinner size="sm" /> }
-          Confirmer le refus
-        </button>
+        <daf-button label="Annuler" variant="secondary" (onClick)="refuseTarget.set(null)" />
+        <daf-button
+          label="Confirmer le refus"
+          variant="danger"
+          [options]="{ disabled: !refuseMotif.trim() || saving(), loading: saving() }"
+          (onClick)="confirmRefuse()"
+        />
       </div>
     </app-modal>
   `,

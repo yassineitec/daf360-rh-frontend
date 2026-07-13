@@ -8,11 +8,12 @@ import { ProfileService }     from './profile.service';
 import { WorkingTimeRegime }  from './models/profile.model';
 import { ModalComponent }     from '../../shared/modal.component';
 import { SpinnerComponent }   from '../../shared/spinner.component';
+import { ButtonComponent }    from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-regime-assign-modal',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule],
+  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, ButtonComponent],
   template: `
     <app-modal
       title="Assigner un régime horaire"
@@ -75,15 +76,13 @@ import { SpinnerComponent }   from '../../shared/spinner.component';
       </div>
 
       <div slot="footer">
-        <button class="btn-ghost" type="button" (click)="closed.emit()">Annuler</button>
-        <button
-          class="btn-primary" type="button"
-          [disabled]="form.invalid || saving() || loadingRegimes()"
-          (click)="save()"
-        >
-          @if (saving()) { <app-spinner size="sm" /> }
-          Assigner
-        </button>
+        <daf-button label="Annuler" variant="secondary" (onClick)="closed.emit()" />
+        <daf-button
+          label="Assigner"
+          variant="teal"
+          [options]="{ disabled: form.invalid || saving() || loadingRegimes(), loading: saving() }"
+          (onClick)="save()"
+        />
       </div>
     </app-modal>
   `,

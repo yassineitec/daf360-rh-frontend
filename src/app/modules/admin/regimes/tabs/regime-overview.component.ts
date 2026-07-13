@@ -5,7 +5,7 @@ import { NgClass } from '@angular/common';
 import {
   AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
   DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
-  TableColumn, TableConfig, TableRow, PaginationComponent,
+  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import {
@@ -14,6 +14,7 @@ import {
 } from '../regime.model';
 import { PermissionDirective } from '../../../../shared/permission.directive';
 import { ModalComponent } from '../../../../shared/modal.component';
+import { RhSearchBarComponent } from '../../../../shared/search-bar.component';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
@@ -23,13 +24,14 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   imports: [
     NgClass, PermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
-    PaginationComponent,
+    PaginationComponent, RhSearchBarComponent,
   ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
 })
 export class RegimeOverviewComponent implements OnChanges {
-  private svc = inject(RegimeService);
+  private svc   = inject(RegimeService);
+  private modal = inject(ModalService);
 
   readonly paysId = input<number>(179);
 
@@ -197,7 +199,17 @@ export class RegimeOverviewComponent implements OnChanges {
   removeOverride(): void {
     const emp = this.selectedEmployee();
     if (!emp) return;
-    if (!confirm('Supprimer l\'override et revenir au régime du rôle ?')) return;
+    this.modal.open({
+      title: 'Supprimer l\'override',
+      body:  'Supprimer l\'override et revenir au régime du rôle ?',
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doRemoveOverride(emp); r.close(); } },
+      ],
+    });
+  }
+
+  private doRemoveOverride(emp: EmployeeRegimeOverview): void {
     this.svc.removeEmployeeOverride(emp.employeeProfileId).subscribe({
       next: () => { this.showEmployeePanel.set(false); this.loadAll(); },
       error: err => this.panelError.set(err?.error?.message ?? 'Erreur.'),

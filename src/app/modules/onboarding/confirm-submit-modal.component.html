@@ -14,9 +14,12 @@
     </p>
   </div>
   <div slot="footer">
-    <button type="button" class="btn-cancel" (click)="closed.emit()" [disabled]="submitting()">Annuler</button>
-    <button type="button" class="btn-confirm" (click)="confirmed.emit()" [disabled]="submitting()">
-      @if (submitting()) { Création en cours… } @else { Confirmer et créer }
-    </button>
+    <daf-button label="Annuler" variant="secondary" [options]="{ disabled: submitting() }" (onClick)="closed.emit()" />
+    <daf-button
+      [label]="submitting() ? 'Création en cours…' : 'Confirmer et créer'"
+      variant="teal"
+      [options]="{ disabled: submitting(), loading: submitting() }"
+      (onClick)="confirmed.emit()"
+    />
   </div>
 </app-modal>

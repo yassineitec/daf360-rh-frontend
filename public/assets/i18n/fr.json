@@ -24,7 +24,8 @@
       "VIEW_ALL": "Voir tous les profils",
       "SEARCH_PLACEHOLDER": "Rechercher...",
       "FILTERS": "Filtres",
-      "EMPTY": "Aucun employé à afficher."
+      "EMPTY": "Aucun employé à afficher.",
+      "NO_MATCH": "Aucun employé ne correspond à cette recherche."
     },
     "ALERT_CARD": {
       "TITLE": "À surveiller",

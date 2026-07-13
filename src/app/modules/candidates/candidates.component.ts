@@ -6,7 +6,6 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  FormFieldComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -22,6 +21,7 @@ import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
+import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import {
   CandidateListItem,
   CandidateStats,
@@ -60,13 +60,13 @@ interface KanbanColumn {
     CardComponent,
     DafCellDirective,
     DataTableComponent,
-    FormFieldComponent,
     KpiCardComponent,
     SelectComponent,
     StatusBadgeComponent,
     PaginationComponent,
     PermissionDirective,
     RejectModalComponent,
+    RhSearchBarComponent,
   ],
   templateUrl: './candidates.component.html',
 })

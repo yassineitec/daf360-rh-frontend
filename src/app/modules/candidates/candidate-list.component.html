@@ -48,9 +48,9 @@
   @if (showFilters()) {
     <div class="flex gap-3 flex-wrap items-end px-5 py-4 bg-surface-container-low border-b border-outline-variant">
       <div class="flex-1 min-w-52">
-        <daf-form-field
-          [value]="searchValue()"
-          [options]="searchFieldOptions"
+        <rh-search-bar
+          placeholder="Nom, email, poste…"
+          [value]="(searchValue() ?? '').toString()"
           (valueChange)="onSearch($event)"
         />
       </div>

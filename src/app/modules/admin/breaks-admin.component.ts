@@ -4,7 +4,7 @@ import {
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
-  TableColumn, TableConfig, TableRow,
+  TableColumn, TableConfig, TableRow, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './breaks/break.service';
 import { RegimeService } from './regimes/regime.service';
@@ -144,6 +144,7 @@ type BreakTab = 'templates' | 'legal-rules';
               </ng-template>
               <ng-template dafCell="_actions" let-row>
                 <daf-button *appHasPermission="'ADMIN_BREAKS'"
+                  class="icon-btn-delete" title="Supprimer"
                   label="" variant="danger"
                   [options]="{ iconStart: 'delete', size: 'sm' }"
                   (onClick)="removeTemplate(row['_source'].id)" />
@@ -173,6 +174,7 @@ type BreakTab = 'templates' | 'legal-rules';
 export class BreaksAdminComponent implements OnChanges {
   private breakSvc  = inject(BreakService);
   private regimeSvc = inject(RegimeService);
+  private modal     = inject(ModalService);
 
   readonly paysId = input<number>(179);
 
@@ -302,7 +304,17 @@ export class BreaksAdminComponent implements OnChanges {
   }
 
   removeTemplate(id: number): void {
-    if (!confirm('Supprimer ce modèle de pause ?')) return;
+    this.modal.open({
+      title: 'Supprimer le modèle',
+      body:  'Supprimer ce modèle de pause ?',
+      buttons: [
+        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
+        { label: 'Supprimer', variant: 'primary',   action: r => { this.doRemoveTemplate(id); r.close(); } },
+      ],
+    });
+  }
+
+  private doRemoveTemplate(id: number): void {
     this.breakSvc.deleteTemplate(id).subscribe({
       next: () => this.templates.update(ts => ts.filter(t => t.id !== id)),
       error: () => {},

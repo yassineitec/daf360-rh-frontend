@@ -17,11 +17,10 @@
 
         <!-- Desktop/tablet: full search box -->
         <div class="hidden sm:block w-56 ml-0.5">
-          <daf-form-field
-            class="block w-full"
-            [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
+          <rh-search-bar
+            placeholder="Rechercher par nom, email…"
             [value]="searchQuery()"
-            (valueChange)="onSearch($any($event) ?? '')" />
+            (valueChange)="onSearch($event)" />
         </div>
 
         <!-- Mobile: icon-only, expands to a full-width input on tap -->
@@ -62,11 +61,10 @@
       <!-- Mobile search input — appears below the row once opened -->
       @if (mobileSearchOpen()) {
         <div class="sm:hidden ml-0.5 mt-3">
-          <daf-form-field
-            class="block w-full"
-            [options]="{ type: 'search', placeholder: 'Rechercher par nom, email…', prefixIcon: 'search', fullWidth: true }"
+          <rh-search-bar
+            placeholder="Rechercher par nom, email…"
             [value]="searchQuery()"
-            (valueChange)="onSearch($any($event) ?? '')" />
+            (valueChange)="onSearch($event)" />
         </div>
       }
     </div>

@@ -1,13 +1,14 @@
 import { Component, computed, input, output, signal, effect } from '@angular/core';
-import { CardComponent, PaginationComponent, PaginationConfig, ButtonComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
+import { CardComponent, PaginationComponent, PaginationConfig, ButtonComponent } from '@khalilrebhiitec/daf360';
 import { RoleListItem } from './role.model';
+import { RhSearchBarComponent } from '../../../shared/search-bar.component';
 
 const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-role-list',
   standalone: true,
-  imports: [CardComponent, PaginationComponent, ButtonComponent, FormFieldComponent],
+  imports: [CardComponent, PaginationComponent, ButtonComponent, RhSearchBarComponent],
   templateUrl: './role-list.component.html',
   styleUrl: './role-list.component.scss',
 })

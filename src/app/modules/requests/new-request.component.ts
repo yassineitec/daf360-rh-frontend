@@ -14,7 +14,7 @@ import {
 } from './models/request.model';
 import { ModalComponent }  from '../../shared/modal.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
 
 // ── IBAN validator ─────────────────────────────────────────────────────────────
 function ibanValidator(c: AbstractControl): ValidationErrors | null {
@@ -36,7 +36,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 @Component({
   selector: 'app-new-request',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent],
+  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent],
   template: `
     <app-modal
       [title]="selectedType() ? (selectedType()!.displayNameFr) : 'Nouvelle demande RH'"
@@ -161,19 +161,17 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 
       <div slot="footer">
         @if (selectedType()) {
-          <button class="btn-ghost" (click)="selectedType.set(null)" type="button">‹ Retour</button>
+          <daf-button label="‹ Retour" variant="secondary" (onClick)="selectedType.set(null)" />
         } @else {
-          <button class="btn-ghost" (click)="onClose()" type="button">Annuler</button>
+          <daf-button label="Annuler" variant="secondary" (onClick)="onClose()" />
         }
         @if (selectedType()) {
-          <button
-            class="btn-primary" type="button"
-            [disabled]="dynamicForm.invalid || saving()"
-            (click)="submit()"
-          >
-            @if (saving()) { <app-spinner size="sm" /> }
-            Soumettre la demande
-          </button>
+          <daf-button
+            label="Soumettre la demande"
+            variant="teal"
+            [options]="{ disabled: dynamicForm.invalid || saving(), loading: saving() }"
+            (onClick)="submit()"
+          />
         }
       </div>
     </app-modal>
