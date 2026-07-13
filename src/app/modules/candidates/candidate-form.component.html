@@ -80,6 +80,12 @@
             [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
             (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
 
+          <daf-select
+            [selected]="getSelectStr('identity.gender')"
+            [options]="genderOptions"
+            [config]="{ label: 'Genre', placeholder: '— Sélectionner —', fullWidth: true }"
+            (selectedChange)="setSelectStr('identity.gender', $event)" />
+
           <daf-form-field
             [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
             [value]="getTextValue('identity.nationalId')"

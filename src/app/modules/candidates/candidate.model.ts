@@ -16,6 +16,8 @@ export interface CandidateListItem {
   firstName: string;
   lastName: string;
   emailPersonal: string;
+  /** Canonical GENDER code (MALE/FEMALE/…) — drives the avatar shown on cards/rows. */
+  gender: string | null;
   appliedPosition: string | null;
   appliedGrade: string | null;
   contractType: string | null;
@@ -27,6 +29,9 @@ export interface CandidateListItem {
   location: string | null;
   fitScore: number | null;
   applicationDate: string | null;
+  // --- next planned interview (kanban card footer) ---
+  nextInterviewAt: string | null;
+  nextInterviewLocation: string | null;
 }
 
 export interface ItProvisioningSummary {
@@ -55,6 +60,7 @@ export interface CandidateDetail {
   emailPersonal: string;
   phone: string | null;
   dateOfBirth: string | null;
+  gender: string | null;
   nationality: string | null;
   nationalityId: number | null;
   nationalId: string | null;
@@ -98,6 +104,7 @@ export interface CreateCandidateRequest {
   emailPersonal: string;
   phone?: string | null;
   dateOfBirth?: string | null;
+  gender?: string | null;
   nationalityId?: number | null;
   nationalId?: string | null;
   appliedPosition?: string | null;
@@ -119,6 +126,7 @@ export interface UpdateCandidateRequest {
   emailPersonal?: string;
   phone?: string | null;
   dateOfBirth?: string | null;
+  gender?: string | null;
   appliedPosition?: string | null;
   appliedGradeId?: number | null;
   appliedDisciplineId?: number | null;
@@ -177,6 +185,19 @@ export interface CandidateStats {
   pending: number;
   accepted: number;
   hired: number;
+}
+
+/** KPI-row metrics for the /candidates dashboard (mirrors the design's 3 tiles). */
+export interface CandidateDashboardStats {
+  totalCandidates: number;
+  /** 30-day growth vs previous 30 days, in %. null when no prior-period baseline. */
+  monthGrowthPct: number | null;
+  /** All-time average days from creation to acceptance. null when no accepted candidates. */
+  avgRecruitmentDays: number | null;
+  /** 90-day trend of the avg delay (negative = faster). null when insufficient history. */
+  avgRecruitmentDaysDelta: number | null;
+  /** Open positions needing HR action (pending recruitment demands). */
+  urgentPositions: number;
 }
 
 export interface CandidateHistoryItem {

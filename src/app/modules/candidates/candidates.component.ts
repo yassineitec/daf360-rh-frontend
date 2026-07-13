@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   BadgeCell,
@@ -7,11 +7,13 @@ import {
   DafCellDirective,
   DataTableComponent,
   FormFieldComponent,
+  MetricCardComponent,
+  MetricCardOptions,
+  MetricDelta,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
   SelectOption,
-  StatusBadgeComponent,
   TableColumn,
   TableConfig,
   TableRow,
@@ -21,10 +23,10 @@ import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
 import { PermissionDirective } from '../../shared/permission.directive';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { KpiCardComponent } from '../../shared/kpi-card.component';
+import { avatarUrl } from '../../shared/utils/avatar.utils';
 import {
   CandidateListItem,
-  CandidateStats,
+  CandidateDashboardStats,
   CandidateStatus,
   CANDIDATE_STATUS_OPTIONS,
   PageResponse,
@@ -40,7 +42,10 @@ interface KanbanColumn {
   key: string;
   label: string;
   statuses: CandidateStatus[];
-  dot: string;
+  /** Solid accent (dot, column left-border, pill text). */
+  accent: string;
+  /** Tinted background for the card status badge. */
+  badgeBg: string;
   candidates: CandidateListItem[];
 }
 
@@ -61,13 +66,18 @@ interface KanbanColumn {
     DafCellDirective,
     DataTableComponent,
     FormFieldComponent,
-    KpiCardComponent,
+    MetricCardComponent,
     SelectComponent,
-    StatusBadgeComponent,
     PaginationComponent,
     PermissionDirective,
     RejectModalComponent,
   ],
+  styles: [`
+    /* Thin, subtle scrollbar for the horizontal kanban board. */
+    .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant, #c4c5d5); border-radius: 10px; }
+  `],
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
@@ -76,7 +86,10 @@ export class CandidatesComponent implements OnInit {
   readonly userStore = inject(UserStore);
 
   readonly page          = signal<PageResponse<CandidateListItem> | null>(null);
-  readonly stats         = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
+  readonly dashStats     = signal<CandidateDashboardStats>({
+    totalCandidates: 0, monthGrowthPct: null,
+    avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,
+  });
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
   readonly search        = signal('');
@@ -86,6 +99,73 @@ export class CandidatesComponent implements OnInit {
   readonly candidates    = computed(() => this.page()?.content ?? []);
   readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
   readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
+
+  // ── KPI tiles (design: Total Candidats · Délai Recrutement Moyen · Postes Urgents) ──
+  readonly kpiTotal = computed(() => this.dashStats().totalCandidates);
+  readonly kpiGrowthText = computed(() => {
+    const g = this.dashStats().monthGrowthPct;
+    if (g == null) return null;
+    const r = Math.round(g);
+    return `${r >= 0 ? '+' : ''}${r}% ce mois`;
+  });
+  readonly kpiGrowthPositive = computed(() => (this.dashStats().monthGrowthPct ?? 0) >= 0);
+
+  readonly kpiAvgDaysText = computed(() => {
+    const a = this.dashStats().avgRecruitmentDays;
+    return a == null ? '—' : `${Math.round(a)} jours`;
+  });
+  readonly kpiAvgDeltaText = computed(() => {
+    const d = this.dashStats().avgRecruitmentDaysDelta;
+    if (d == null) return null;
+    const r = Math.round(d);
+    if (r === 0) return 'stable';
+    return `${r > 0 ? '+' : ''}${r}j vs période préc.`;
+  });
+  /** Fewer days = improvement → render the delta in a positive colour. */
+  readonly kpiAvgDeltaPositive = computed(() => (this.dashStats().avgRecruitmentDaysDelta ?? 0) <= 0);
+
+  readonly kpiUrgent = computed(() => this.dashStats().urgentPositions);
+
+  // ── daf-metric-card bindings (value / delta / options) ──────────────────────
+  readonly totalMetricOpts:  MetricCardOptions = { icon: 'group',         iconColor: 'text-primary', iconBg: 'bg-primary/10' };
+  readonly delayMetricOpts:  MetricCardOptions = { icon: 'timer',         iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
+  readonly urgentMetricOpts: MetricCardOptions = { icon: 'priority_high', iconColor: 'text-danger',  iconBg: 'bg-danger/10' };
+
+  readonly totalMetricValue = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
+  readonly totalMetricDelta = computed<MetricDelta | null>(() => {
+    const t = this.kpiGrowthText();
+    return t ? { value: t, direction: this.kpiGrowthPositive() ? 'up' : 'down' } : null;
+  });
+  readonly delayMetricDelta = computed<MetricDelta | null>(() => {
+    const t = this.kpiAvgDeltaText();
+    return t ? { value: t, direction: this.kpiAvgDeltaPositive() ? 'up' : 'down' } : null;
+  });
+  readonly urgentMetricDelta = computed<MetricDelta | null>(() =>
+    this.kpiUrgent() > 0
+      ? { value: 'Action requise', direction: 'down' }
+      : { value: 'À jour', direction: 'neutral' });
+
+  // ── Kanban board horizontal navigation map (bottom-right) ───────────────────
+  readonly boardScroll = signal({ left: 0, client: 0, scroll: 0 });
+
+  /** True when the board content overflows horizontally (the nav map is only useful then). */
+  readonly boardHasOverflow = computed(() => {
+    const b = this.boardScroll();
+    return b.scroll > b.client + 4;
+  });
+
+  /** Position/size of the viewport indicator inside the nav map, as % of the board width. */
+  readonly viewportStyle = computed(() => {
+    const b = this.boardScroll();
+    if (b.scroll <= 0) return { left: '0%', width: '100%' };
+    return {
+      left:  Math.max(0, (b.left / b.scroll) * 100) + '%',
+      width: Math.min(100, (b.client / b.scroll) * 100) + '%',
+    };
+  });
+
+  /** The horizontally-scrolling kanban board, for the left/right scroll buttons. */
+  private readonly kanbanBoard = viewChild<ElementRef<HTMLDivElement>>('kanbanBoard');
 
   // ── View toggle (kanban is the default; list on demand) ─────────────────────
   readonly viewMode      = signal<'list' | 'kanban'>('kanban');
@@ -101,20 +181,30 @@ export class CandidatesComponent implements OnInit {
   readonly dragOverKey = signal<string | null>(null);
   private draggedCandidate: CandidateListItem | null = null;
 
-  /** Kanban stages mirror the coded candidate workflow (PENDING → … → HIRED / REJECTED). */
+  /**
+   * Kanban stages mirror the coded candidate workflow (PENDING → … → HIRED / REJECTED).
+   * Each column owns a colour used for its dot, left-border and the card status badge.
+   */
   private readonly columnDefs: Omit<KanbanColumn, 'candidates'>[] = [
-    { key: 'pending',  label: 'En attente',      statuses: ['PENDING'],                                            dot: 'bg-secondary' },
-    { key: 'accepted', label: 'Acceptés',        statuses: ['ACCEPTED'],                                           dot: 'bg-teal' },
-    { key: 'progress', label: 'IT & Onboarding', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], dot: 'bg-primary' },
-    { key: 'hired',    label: 'Embauchés',       statuses: ['HIRED'],                                              dot: 'bg-tertiary' },
-    { key: 'rejected', label: 'Rejetés',         statuses: ['REJECTED', 'ARCHIVED'],                               dot: 'bg-danger' },
+    { key: 'pending',  label: 'En attente',      statuses: ['PENDING'],                                            accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)' },
+    { key: 'accepted', label: 'Acceptés',        statuses: ['ACCEPTED'],                                           accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
+    { key: 'progress', label: 'IT & Onboarding', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], accent: '#1e40af', badgeBg: 'rgba(30,64,175,0.12)' },
+    { key: 'hired',    label: 'Embauchés',       statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)' },
+    { key: 'rejected', label: 'Rejetés',         statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)' },
   ];
+
+  /** Highest fit score first; candidates without a score sink to the bottom. */
+  private byFitScoreDesc(a: CandidateListItem, b: CandidateListItem): number {
+    return (b.fitScore ?? -1) - (a.fitScore ?? -1);
+  }
 
   readonly kanbanColumns = computed<KanbanColumn[]>(() => {
     const all = this.kanbanItems();
     return this.columnDefs.map(def => ({
       ...def,
-      candidates: all.filter(c => def.statuses.includes(c.status)),
+      candidates: all
+        .filter(c => def.statuses.includes(c.status))
+        .sort((a, b) => this.byFitScoreDesc(a, b)),
     }));
   });
 
@@ -123,7 +213,7 @@ export class CandidatesComponent implements OnInit {
 
   readonly mobileFilteredCandidates = computed(() => {
     const filter = this.mobileStageFilter();
-    if (!filter) return this.kanbanItems();
+    if (!filter) return [...this.kanbanItems()].sort((a, b) => this.byFitScoreDesc(a, b));
     return this.kanbanColumns().find(c => c.key === filter)?.candidates ?? [];
   });
 
@@ -160,6 +250,7 @@ export class CandidatesComponent implements OnInit {
       candidat: {
         name: `${c.firstName} ${c.lastName}`,
         initials: this.initials(c.firstName, c.lastName),
+        avatar: this.avatarSrc(c.gender),
         subtitle: c.emailPersonal,
       },
       poste: c.appliedPosition ?? '—',
@@ -181,8 +272,8 @@ export class CandidatesComponent implements OnInit {
 
   private loadStats(): void {
     this.statsLoading.set(true);
-    this.svc.getStats(this.userStore.currentUser()?.paysId).subscribe({
-      next:  s  => { this.stats.set(s); this.statsLoading.set(false); },
+    this.svc.getDashboardStats().subscribe({
+      next:  s  => { this.dashStats.set(s); this.statsLoading.set(false); },
       error: () => this.statsLoading.set(false),
     });
   }
@@ -213,9 +304,26 @@ export class CandidatesComponent implements OnInit {
         this.kanbanItems.set(r.content);
         this.kanbanLoaded.set(true);
         this.kanbanLoading.set(false);
+        setTimeout(() => this.syncBoardMetrics()); // board is now in the DOM
       },
       error: () => this.kanbanLoading.set(false),
     });
+  }
+
+  /** Scroll a given column into view (nav-map click). */
+  scrollToColumn(index: number): void {
+    const el = this.kanbanBoard()?.nativeElement;
+    if (!el) return;
+    el.scrollTo({ left: index * 344, behavior: 'smooth' }); // 320px column + 24px gap
+  }
+
+  onBoardScroll(): void { this.syncBoardMetrics(); }
+
+  @HostListener('window:resize')
+  syncBoardMetrics(): void {
+    const el = this.kanbanBoard()?.nativeElement;
+    if (!el) return;
+    this.boardScroll.set({ left: el.scrollLeft, client: el.clientWidth, scroll: el.scrollWidth });
   }
 
   setView(mode: 'list' | 'kanban'): void {
@@ -224,6 +332,8 @@ export class CandidatesComponent implements OnInit {
     this.notice.set(null);
     if (mode === 'kanban' && !this.kanbanLoaded()) {
       this.loadKanban();
+    } else if (mode === 'kanban') {
+      setTimeout(() => this.syncBoardMetrics()); // re-measure when returning to an already-loaded board
     } else if (mode === 'list' && !this.page()) {
       this.loadCandidates();
     }
@@ -386,6 +496,39 @@ export class CandidatesComponent implements OnInit {
   // ── Display helpers ─────────────────────────────────────────────────────────
   initials(fn: string, ln: string): string {
     return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
+  }
+
+  /**
+   * Gender-based avatar image URL, or null when gender is unknown so the card/row
+   * falls back to initials. Keys off FEMALE via the shared avatar util.
+   */
+  avatarSrc(gender: string | null | undefined): string | undefined {
+    const g = gender?.trim().toUpperCase();
+    if (!g || g === 'UNSPECIFIED') return undefined;
+    return avatarUrl(gender);
+  }
+
+  /** Column definition owning a given status (drives per-status card colour on mobile). */
+  private columnForStatus(status: CandidateStatus): Omit<KanbanColumn, 'candidates'> | undefined {
+    return this.columnDefs.find(d => d.statuses.includes(status));
+  }
+
+  colorForStatus(status: CandidateStatus): string {
+    return this.columnForStatus(status)?.accent ?? '#64748b';
+  }
+
+  badgeBgForStatus(status: CandidateStatus): string {
+    return this.columnForStatus(status)?.badgeBg ?? 'rgba(100,116,139,0.12)';
+  }
+
+  /** Compact "12 juil. · 14:00" label for a scheduled interview. */
+  interviewDateText(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const date = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${date} · ${time}`;
   }
 
   formatDate(d: string | null | undefined): string {

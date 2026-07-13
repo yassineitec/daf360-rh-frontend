@@ -31,6 +31,7 @@ import {
 } from './candidate.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
+import { avatarUrl } from '../../shared/utils/avatar.utils';
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   PENDING:        'neutral',
@@ -131,6 +132,7 @@ export class CandidateListComponent implements OnInit {
       candidat: {
         name: `${c.firstName} ${c.lastName}`,
         initials: this.getInitials(c.firstName, c.lastName),
+        avatar: this.avatarSrc(c.gender),
         subtitle: c.emailPersonal,
       } as AvatarCell,
       appliedPosition: c.appliedPosition ?? '—',
@@ -274,6 +276,13 @@ export class CandidateListComponent implements OnInit {
   // ── Misc helpers ──────────────────────────────────────────────────────────
   getInitials(fn: string, ln: string): string {
     return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
+  }
+
+  /** Gender-based avatar image, or undefined so the row falls back to initials. */
+  avatarSrc(gender: string | null | undefined): string | undefined {
+    const g = gender?.trim().toUpperCase();
+    if (!g || g === 'UNSPECIFIED') return undefined;
+    return avatarUrl(gender);
   }
 
   formatDateFr(d: string | null | undefined): string {

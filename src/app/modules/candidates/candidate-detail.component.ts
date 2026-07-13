@@ -15,6 +15,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from 'src/app/shared/status-badge.utils';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
+import { genderLabel } from '../../shared/utils/gender.utils';
 
 const HIREABLE_STATUSES = ['ACCEPTED', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
 /** Contract codes the backend requires an end date for (also enforced server-side). */
@@ -58,6 +59,9 @@ export class CandidateDetailComponent implements OnInit {
 
   /** Human contract-type label from the backend (resolved EMPLOYMENT_TYPE list value). */
   readonly contractTypeLabel = computed(() => this.candidate()?.employmentTypeLabel ?? null);
+
+  /** French label for the stored gender code (MALE→Homme, …). */
+  protected readonly genderLabel = genderLabel;
 
   /** Whether the hire form should require an end date (backend enforces this too). */
   readonly requiresEndDate = computed(() => {

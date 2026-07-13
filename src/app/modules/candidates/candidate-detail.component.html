@@ -137,6 +137,15 @@
                     </div>
                   </div>
                 }
+                @if (c.gender) {
+                  <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">wc</span>
+                    <div>
+                      <p class="text-[11px] text-outline">Genre</p>
+                      <p class="text-[13px] font-medium text-on-surface">{{ genderLabel(c.gender) }}</p>
+                    </div>
+                  </div>
+                }
                 @if (c.nationality) {
                   <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">flag</span>

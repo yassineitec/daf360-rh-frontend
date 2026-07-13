@@ -23,6 +23,7 @@ import {
   UploadedFile,
 } from '@khalilrebhiitec/daf360';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
+import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
 
 @Component({
   selector: 'app-candidate-form',
@@ -72,6 +73,9 @@ export class CandidateFormComponent implements OnInit {
     this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr }))
   );
 
+  /** Canonical gender options (MALE/FEMALE/OTHER/UNSPECIFIED) — mirrors backend GENDER list. */
+  readonly genderOptions: SelectOption[] = GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }));
+
   /**
    * Contract types come from the configurable EMPLOYMENT_TYPE list (per pays).
    * The candidate stores an `employmentTypeId`; the backend later derives the
@@ -88,6 +92,7 @@ export class CandidateFormComponent implements OnInit {
       emailPersonal: ['', [Validators.required, Validators.email]],
       phone:         [null as string | null],
       dateOfBirth:   [null as string | null],
+      gender:        [null as string | null],
       nationalId:    [null as string | null],
       location:      [null as string | null],
     }),
@@ -112,7 +117,7 @@ export class CandidateFormComponent implements OnInit {
     const pos = v?.position ?? {};
     const fields = [
       id.firstName, id.lastName, id.emailPersonal, id.phone,
-      id.dateOfBirth, id.nationalId,
+      id.dateOfBirth, id.gender, id.nationalId,
       pos.appliedPosition, pos.employmentTypeId, pos.expectedStartDate,
       pos.departmentId, pos.appliedGradeId, pos.appliedDisciplineId,
       pos.nationalityId, v?.notes,
@@ -244,6 +249,7 @@ export class CandidateFormComponent implements OnInit {
       emailPersonal:       identity.emailPersonal,
       phone:               identity.phone               || null,
       dateOfBirth:         identity.dateOfBirth         || null,
+      gender:              identity.gender              || null,
       nationalId:          identity.nationalId          || null,
       appliedPosition:     position.appliedPosition     || null,
       departmentId:        position.departmentId        ?? null,

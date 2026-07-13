@@ -45,7 +45,7 @@ export class ItProvisioningListComponent implements OnInit {
   search           = signal('');
   mobileSearchOpen = signal(false);
   statusFilter     = signal('');
-  viewMode         = signal<'grid' | 'list'>('list');
+  viewMode         = signal<'grid' | 'list'>('grid');
 
   readonly statusSelectOptions = STATUS_OPTIONS;
   readonly statusSelectConfig: SelectConfig = { placeholder: 'Tous les statuts' };

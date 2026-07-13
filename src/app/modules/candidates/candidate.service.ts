@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   CandidateFilter, CandidateListItem, CandidateDetail,
   CreateCandidateRequest, UpdateCandidateRequest,
-  CandidateStats, CandidateHistoryItem, PageResponse,
+  CandidateStats, CandidateDashboardStats, CandidateHistoryItem, PageResponse,
   HireCandidateRequest,
   HireCandidateResponse,
 } from './candidate.model';
@@ -90,6 +90,16 @@ export class CandidateService {
       accepted: count('ACCEPTED'),
       hired:    count('HIRED'),
     }).pipe(catchError(() => of({ total: 0, pending: 0, accepted: 0, hired: 0 })));
+  }
+
+  /** KPI-row metrics for the /candidates dashboard (total/growth, avg delay, urgent positions). */
+  getDashboardStats(): Observable<CandidateDashboardStats> {
+    return this.http.get<CandidateDashboardStats>(`${this.base}/stats/dashboard`).pipe(
+      catchError(() => of({
+        totalCandidates: 0, monthGrowthPct: null,
+        avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,
+      } as CandidateDashboardStats)),
+    );
   }
 
   getHistory(candidateId: number): Observable<CandidateHistoryItem[]> {
