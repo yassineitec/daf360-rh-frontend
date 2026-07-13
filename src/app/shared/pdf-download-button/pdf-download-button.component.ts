@@ -100,8 +100,11 @@ export class PdfDownloadButtonComponent {
 
   // Signal inputs
   label           = input<string>('Telecharger');
-  endpoint        = input.required<string>();
+  /** Generate endpoint (POST/GET → returns the doc). Only needed when docId is not set. */
+  endpoint        = input<string>('');
   body            = input<Record<string, unknown> | null>(null);
+  /** When set, the document already exists → download it directly (no generate step). */
+  docId           = input<number | null>(null);
   filename        = input<string>('document.pdf');
   disabled        = input<boolean>(false);
   disabledTooltip = input<string>('');
@@ -117,20 +120,16 @@ export class PdfDownloadButtonComponent {
     this.state.set('loading');
     this.errorMsg.set(null);
 
+    // Already-generated document → download straight by id (no spurious generate).
+    const existingId = this.docId();
+    if (existingId != null) {
+      this.download(existingId);
+      return;
+    }
+
+    // Otherwise generate first, then download the returned document.
     this.pdfSvc.generateDocument(this.endpoint(), this.body()).subscribe({
-      next: (doc) => {
-        this.pdfSvc.downloadById(doc.id, this.filename()).subscribe({
-          next: () => {
-            this.state.set('success');
-            setTimeout(() => this.state.set('idle'), 2500);
-          },
-          error: (err) => {
-            this.state.set('idle');
-            this.errorMsg.set('Erreur lors du telechargement du fichier.');
-            setTimeout(() => this.errorMsg.set(null), 7000);
-          },
-        });
-      },
+      next: (doc) => this.download(doc.id),
       error: (err) => {
         this.state.set('idle');
         if (err instanceof PdfBusinessError) {
@@ -140,6 +139,24 @@ export class PdfDownloadButtonComponent {
         } else {
           this.errorMsg.set('Erreur inattendue lors de la generation du document.');
         }
+        setTimeout(() => this.errorMsg.set(null), 7000);
+      },
+    });
+  }
+
+  private download(id: number): void {
+    this.pdfSvc.downloadById(id, this.filename()).subscribe({
+      next: () => {
+        this.state.set('success');
+        setTimeout(() => this.state.set('idle'), 2500);
+      },
+      error: (err) => {
+        this.state.set('idle');
+        this.errorMsg.set(
+          err?.status === 503
+            ? "Le document n'a pas encore été généré. Générez-le d'abord."
+            : 'Erreur lors du telechargement du fichier.',
+        );
         setTimeout(() => this.errorMsg.set(null), 7000);
       },
     });

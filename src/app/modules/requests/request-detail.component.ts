@@ -178,10 +178,14 @@ interface TimelineStep {
                           <p class="rd-doc-size">Code : {{ doc.verificationCode }}</p>
                         }
                       </div>
-                      <a [href]="doc.fileUrl" target="_blank" download
-                         class="rd-doc-download" title="Télécharger">
-                        <span class="material-symbols-outlined">download</span>
-                      </a>
+                      <!-- Stream via the Spring endpoint (blob). doc.fileUrl is a
+                           server filesystem path, NOT a browser URL — using it as an
+                           href downloaded the SPA's index.html as a .htm ("No file"). -->
+                      <app-pdf-download-button
+                        label="Télécharger"
+                        [docId]="doc.id"
+                        [filename]="(doc.documentType || 'document').toLowerCase() + '.pdf'"
+                        variant="icon" />
                     </div>
                   }
                 </div>
@@ -201,8 +205,7 @@ interface TimelineStep {
                     <p>Document généré le {{ generatedDoc()!.generatedAt | slice:0:10 }}</p>
                     <app-pdf-download-button
                       label="Télécharger"
-                      [endpoint]="'/api/hr/documents/download/' + generatedDoc()!.id"
-                      [body]="null"
+                      [docId]="generatedDoc()!.id"
                       [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
                       variant="outline"
                     />
