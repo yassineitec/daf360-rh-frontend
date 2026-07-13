@@ -6,11 +6,11 @@ import { OnboardingService }    from './onboarding.service';
 import { OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import {
   BadgeCell,
-  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
   FormFieldComponent,
+  PaginationComponent,
   StatusBadgeComponent,
   TableColumn,
   TableConfig,
@@ -19,10 +19,12 @@ import {
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
 
+const PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, ButtonComponent, FormFieldComponent, NgTemplateOutlet],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, FormFieldComponent, PaginationComponent, NgTemplateOutlet],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
@@ -50,8 +52,20 @@ export class OnboardingListComponent implements OnInit {
     );
   });
 
+  currentPage = signal(0);
+  readonly totalPages = computed(() => Math.ceil(this.filteredItems().length / PAGE_SIZE));
+
+  readonly pagedItems = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.filteredItems().slice(start, start + PAGE_SIZE);
+  });
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   readonly rows = computed<TableRow[]>(() =>
-    this.filteredItems().map(r => ({
+    this.pagedItems().map(r => ({
       employe:           { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
       ms365Email:        r.ms365Email,
       entite:            '#' + r.paysId,
@@ -103,6 +117,7 @@ export class OnboardingListComponent implements OnInit {
 
   onSearch(value: string): void {
     this.search.set(value);
+    this.currentPage.set(0);
   }
 
   formatDate(value: string | null): string {

@@ -1,6 +1,4 @@
-<div class="flex flex-col h-full overflow-hidden">
-  <div class="flex-1 overflow-y-auto">
-    <div class="space-y-6">
+<div class="space-y-6">
 
       <!-- Page header -->
       <div>
@@ -22,38 +20,47 @@
           [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' min') : '—'" variant="amber" />
       </div>
 
-      <!-- Filters -->
-      <div class="flex items-center justify-end gap-2">
-        <div class="w-full sm:w-56">
-          <daf-form-field
-            [options]="{ type: 'search', placeholder: 'Rechercher un employé...', prefixIcon: 'search', fullWidth: true }"
-            [value]="search()"
-            (valueChange)="onSearch($any($event) ?? '')" />
+      <!-- Filters: search full-width on its own row on mobile; side-by-side on desktop — all inside one card (matches /finance/clients) -->
+      <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 sm:p-5">
+          <div class="w-full sm:w-56 ml-0.5">
+            <daf-form-field
+              class="block w-full"
+              [options]="{ type: 'search', placeholder: 'Rechercher un employé...', prefixIcon: 'search', fullWidth: true }"
+              [value]="search()"
+              (valueChange)="onSearch($any($event) ?? '')" />
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <button type="button"
+              class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
+              title="Rafraîchir"
+              (click)="load()">
+              <span class="material-symbols-outlined text-[18px]">cached</span>
+            </button>
+            <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+              <button type="button"
+                class="flex items-center justify-center w-11 h-11 transition-colors"
+                [class.bg-primary]="viewMode() === 'grid'"
+                [class.text-white]="viewMode() === 'grid'"
+                [class.text-outline]="viewMode() !== 'grid'"
+                title="Vue grille"
+                (click)="viewMode.set('grid')">
+                <span class="material-symbols-outlined text-[18px]">grid_view</span>
+              </button>
+              <button type="button"
+                class="flex items-center justify-center w-11 h-11 transition-colors"
+                [class.bg-primary]="viewMode() === 'list'"
+                [class.text-white]="viewMode() === 'list'"
+                [class.text-outline]="viewMode() !== 'list'"
+                title="Vue liste"
+                (click)="viewMode.set('list')">
+                <span class="material-symbols-outlined text-[18px]">view_list</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <daf-button
-          [options]="{ variant: 'ghost', iconStart: 'cached' }"
-          (onClick)="load()" />
-        <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-          <button type="button"
-            class="flex items-center justify-center w-9 h-9 transition-colors"
-            [class.bg-primary]="viewMode() === 'grid'"
-            [class.text-white]="viewMode() === 'grid'"
-            [class.text-outline]="viewMode() !== 'grid'"
-            title="Vue grille"
-            (click)="viewMode.set('grid')">
-            <span class="material-symbols-outlined text-[18px]">grid_view</span>
-          </button>
-          <button type="button"
-            class="flex items-center justify-center w-9 h-9 transition-colors"
-            [class.bg-primary]="viewMode() === 'list'"
-            [class.text-white]="viewMode() === 'list'"
-            [class.text-outline]="viewMode() !== 'list'"
-            title="Vue liste"
-            (click)="viewMode.set('list')">
-            <span class="material-symbols-outlined text-[18px]">view_list</span>
-          </button>
-        </div>
-      </div>
+      </daf-card>
 
       <!-- Error alert -->
       @if (error()) {
@@ -105,10 +112,7 @@
               <div class="flex items-center gap-1.5 flex-wrap mb-3">
                 <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
                 @if (row['hasDraft']) {
-                  <span class="inline-flex items-center rounded-full text-[11px] font-semibold px-2 py-0.5"
-                        style="background-color: rgba(255,221,184,0.30); color: #4c2e00; border: 1px solid rgba(76,46,0,0.35)">
-                    Brouillon
-                  </span>
+                  <daf-badge label="Brouillon" [options]="{ variant: 'warning', size: 'sm' }" />
                 }
               </div>
 
@@ -152,6 +156,7 @@
               <ng-container *ngTemplateOutlet="cardsTpl" />
             </div>
           } @else {
+            <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
 
               <ng-template dafCell="ms365Email" let-row>
@@ -173,10 +178,7 @@
                     [options]="row['status'].options"
                   />
                   @if (row['hasDraft']) {
-                    <span class="inline-flex items-center rounded-full text-[11px] font-semibold px-2 py-0.5"
-                          style="background-color: rgba(255,221,184,0.30); color: #4c2e00; border: 1px solid rgba(76,46,0,0.35)">
-                      Brouillon
-                    </span>
+                    <daf-badge label="Brouillon" [options]="{ variant: 'warning', size: 'sm' }" />
                   }
                 </div>
               </ng-template>
@@ -197,6 +199,7 @@
               </ng-template>
 
             </daf-data-table>
+            </div>
           }
         </div>
 
@@ -205,8 +208,18 @@
           <ng-container *ngTemplateOutlet="cardsTpl" />
         </div>
 
+        <!-- Count + Pagination -->
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> dossier(s)</span>
+          @if (totalPages() > 1) {
+            <daf-pagination
+              [currentPage]="currentPage()"
+              [totalPages]="totalPages()"
+              [totalElements]="filteredItems().length"
+              (pageChange)="onPageChange($event)" />
+          }
+        </div>
+
       }
 
-    </div>
-  </div>
 </div>

@@ -9,14 +9,16 @@
   <div class="rpt-header">
     <div class="rpt-header-left">
       <span class="rpt-title">Permissions de {{ role().frenchName }}</span>
-      <span class="rpt-counter">{{ checkedCount() }} / {{ totalPermissions() }} actives</span>
+      <daf-badge [label]="checkedCount() + ' / ' + totalPermissions() + ' actives'" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
     <div class="rpt-header-actions">
-      <button class="rpt-link-btn" (click)="selectAll()" type="button">Tout sélectionner</button>
-      <button class="rpt-link-btn" (click)="clearAll()" type="button">Tout désélectionner</button>
-      <button class="rpt-btn-save" (click)="saveAll()" [disabled]="saving()" type="button">
-        @if (saving()) { Enregistrement… } @else { Enregistrer tout }
-      </button>
+      <daf-button label="Tout sélectionner" variant="ghost" [options]="{ size: 'sm' }" (onClick)="selectAll()" />
+      <daf-button label="Tout désélectionner" variant="ghost" [options]="{ size: 'sm' }" (onClick)="clearAll()" />
+      <daf-button
+        [label]="saving() ? 'Enregistrement…' : 'Enregistrer tout'"
+        variant="teal"
+        [options]="{ size: 'sm', disabled: saving(), loading: saving() }"
+        (onClick)="saveAll()" />
     </div>
   </div>
 
@@ -28,29 +30,27 @@
         <div class="rpt-group">
           <button class="rpt-group-header" (click)="toggleGroup(group.groupName)" type="button">
             <span class="rpt-group-name">{{ group.groupName }}</span>
-            <span class="rpt-group-count">{{ groupCheckedCount(group) }} / {{ group.permissions.length }}</span>
-            <span class="rpt-chevron">{{ isExpanded(group.groupName) ? '▲' : '▼' }}</span>
+            <daf-badge [label]="groupCheckedCount(group) + ' / ' + group.permissions.length" [options]="{ variant: 'neutral', size: 'sm' }" />
+            <span class="rpt-chevron material-symbols-outlined">{{ isExpanded(group.groupName) ? 'expand_less' : 'expand_more' }}</span>
           </button>
           @if (isExpanded(group.groupName)) {
             <div class="rpt-permissions">
               @for (perm of group.permissions; track perm.code) {
-                <label
+                <div
                   class="rpt-perm-row"
                   [class.rpt-perm-checked]="isChecked(perm.code)"
                   [class.rpt-perm-pending]="isPending(perm.code)"
                 >
-                  <input
-                    type="checkbox"
+                  <daf-checkbox
                     [checked]="isChecked(perm.code)"
-                    (change)="toggle(perm.code)"
-                    [disabled]="isPending(perm.code)"
-                  />
+                    (checkedChange)="toggle(perm.code)"
+                    [options]="{ disabled: isPending(perm.code) }" />
                   <span class="rpt-code">{{ perm.code }}</span>
                   <span class="rpt-label">{{ perm.label }}</span>
                   @if (isPending(perm.code)) {
-                    <span class="rpt-spinner">⟳</span>
+                    <span class="rpt-spinner material-symbols-outlined">progress_activity</span>
                   }
-                </label>
+                </div>
               }
             </div>
           }

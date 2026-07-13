@@ -3,52 +3,26 @@
 /* Header */
 .rut-header        { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
 .rut-header-left   { display: flex; align-items: center; gap: 12px; }
-.rut-title         { font-size: 14px; font-weight: 700; color: var(--color-text); }
-.rut-counter       { font-size: 12px; color: var(--color-text-muted); background: #f1f5f9; border-radius: 999px; padding: 2px 9px; }
-.rut-btn-add       { background: #1a6b7c; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
-.rut-btn-add:hover { background: #155f6c; }
+.rut-title         { font-size: var(--text-body-md); font-weight: 700; color: var(--color-on-surface); }
 
 /* Add panel */
-.rut-add-panel       { background: #f8fafc; border: 1px solid var(--color-border); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-.rut-search-wrap     { position: relative; }
-.rut-search-input    { width: 100%; height: 36px; border: 1px solid var(--color-border); border-radius: 8px; padding: 0 36px 0 12px; font-size: 13px; outline: none; box-sizing: border-box; }
-.rut-search-input:focus { border-color: #1a6b7c; }
-.rut-search-spinner  { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #1a6b7c; animation: spin 0.8s linear infinite; }
+.rut-add-panel       { background: var(--color-surface-container-low); border: 1px solid var(--color-outline-variant); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 
 .rut-search-results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
-.rut-result-item    { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid var(--color-border); border-radius: 8px; }
-.rut-result-info    { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.rut-result-name    { font-size: 13px; font-weight: 600; color: var(--color-text); }
-.rut-result-email   { font-size: 12px; color: var(--color-text-muted); }
-.rut-result-pays    { font-size: 11px; color: #64748b; }
-.rut-result-role    { font-size: 11px; color: #94a3b8; font-style: italic; }
-.rut-no-role        { color: #f59e0b; }
-.rut-btn-assign     { background: #e0f7f5; color: #1a6b7c; border: 1px solid #99d6e0; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-.rut-btn-assign:hover    { background: #1a6b7c; color: #fff; }
-.rut-btn-assign:disabled { opacity: 0.5; cursor: not-allowed; }
+.rut-result-item    { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--color-surface); border: 1px solid var(--color-outline-variant); border-radius: 8px; }
+.rut-result-info    { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.rut-result-name    { font-size: var(--text-body-md); font-weight: 600; color: var(--color-on-surface); }
+.rut-result-email   { font-size: var(--text-label-sm); color: var(--color-on-surface-variant); }
+.rut-result-tags    { display: flex; gap: 4px; flex-wrap: wrap; }
 
-/* Local search filter */
-.rut-local-search input { width: 100%; height: 32px; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 10px; font-size: 12px; outline: none; box-sizing: border-box; }
-.rut-local-search input:focus { border-color: #1a6b7c; }
-
-/* User list */
-.rut-user-list     { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
-.rut-user-item     { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #fff; border: 1px solid var(--color-border); border-radius: 8px; transition: background 0.1s; }
-.rut-user-item:hover { background: #f8fafc; }
-.rut-user-avatar   { width: 32px; height: 32px; border-radius: 50%; background: #e0f7f5; color: #1a6b7c; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.rut-user-info     { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 1px; }
-.rut-user-name     { font-size: 13px; font-weight: 600; color: var(--color-text); }
-.rut-user-email    { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rut-user-pays     { font-size: 11px; color: #64748b; background: #f1f5f9; border-radius: 999px; padding: 1px 7px; white-space: nowrap; flex-shrink: 0; }
-.rut-btn-remove    { background: none; border: none; cursor: pointer; font-size: 13px; color: #94a3b8; padding: 4px; border-radius: 4px; flex-shrink: 0; }
-.rut-btn-remove:hover { color: #ef4444; background: #fee2e2; }
+/* Footer: count + pagination */
+.rut-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rut-count  { font-size: var(--text-label-sm); color: var(--color-on-surface-variant); strong { color: var(--color-on-surface); } }
 
 /* States */
-.rut-empty        { text-align: center; padding: 32px 16px; color: var(--color-text-muted); }
-.rut-empty p      { margin: 0 0 6px; font-size: 13px; }
-.rut-empty-hint   { font-size: 12px; color: #94a3b8; }
-.rut-no-results   { font-size: 13px; color: var(--color-text-muted); font-style: italic; text-align: center; padding: 12px; }
-.rut-loading      { font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 20px; }
-.rut-error        { background: #fee2e2; border-radius: 8px; padding: 10px 14px; color: #991b1b; font-size: 12px; }
-
-@keyframes spin { from { transform: translateY(-50%) rotate(0deg); } to { transform: translateY(-50%) rotate(360deg); } }
+.rut-empty        { text-align: center; padding: 32px 16px; color: var(--color-on-surface-variant); }
+.rut-empty p      { margin: 0 0 6px; font-size: var(--text-body-md); }
+.rut-empty-hint   { font-size: var(--text-label-sm); color: var(--color-outline); }
+.rut-no-results   { font-size: var(--text-body-md); color: var(--color-on-surface-variant); font-style: italic; text-align: center; padding: 12px; }
+.rut-loading      { font-size: var(--text-body-md); color: var(--color-on-surface-variant); text-align: center; padding: 20px; }
+.rut-error        { background: var(--color-error-container); border-radius: 8px; padding: 10px 14px; color: var(--color-on-error-container); font-size: var(--text-label-sm); }

@@ -1,79 +1,60 @@
-:host { display: block; height: 100%; }
+:host { display: block; }
 
 .list-manager {
   display: flex;
-  height: calc(100vh - 120px);
-  background: var(--color-bg);
-  overflow: hidden;
-}
-
-/* ── Sidebar ──────────────────────────────────────────────── */
-.lm-sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  display: flex;
   flex-direction: column;
-  overflow: hidden;
+  background: var(--color-background);
 }
 
-.lm-sidebar-header {
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.lm-sidebar-title {
-  font-size: 13px;
+.lm-header { padding: 4px 0 12px; }
+.lm-title {
+  font-size: var(--text-body-md);
   font-weight: 700;
-  color: var(--color-text);
-  margin: 0 0 8px;
-}
-
-.lm-search {
-  width: 100%;
-  height: 30px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 0 8px;
-  font-size: 12px;
-  outline: none;
-  box-sizing: border-box;
-  &:focus { border-color: #1a6b7c; }
-}
-
-.lm-type-list {
-  list-style: none;
+  color: var(--color-on-surface);
   margin: 0;
-  padding: 6px;
-  overflow-y: auto;
-  flex: 1;
 }
 
-.lm-type-item {
+/* ── Type tabs ────────────────────────────────────────────── */
+.lm-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--color-outline-variant);
+  overflow-x: auto;
+  flex-wrap: wrap;
+}
+
+.lm-tab-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-label-md);
+  font-weight: 500;
+  color: var(--color-on-surface-variant);
   cursor: pointer;
-  font-size: 12px;
-  color: var(--color-text);
-  transition: background .1s;
-  &:hover { background: var(--color-bg); }
-  &.lm-type-active { background: #f0f9fb; color: #1a6b7c; font-weight: 600; }
+  white-space: nowrap;
+  margin-bottom: -1px;
+  transition: color var(--duration-normal, .15s) var(--ease-smooth, ease), border-color var(--duration-normal, .15s) var(--ease-smooth, ease);
+
+  &:hover { color: var(--color-on-surface); }
+
+  &.active {
+    color: var(--color-tertiary);
+    border-bottom-color: var(--color-tertiary);
+    font-weight: 600;
+  }
 }
 
-.lm-type-label { flex: 1; }
-.lm-badge-pays { font-size: 10px; border-radius: 999px; padding: 1px 5px; background: #e0f2fe; color: #0369a1; flex-shrink: 0; }
-.lm-badge-sys  { font-size: 10px; border-radius: 999px; padding: 1px 5px; background: #fef9c3; color: #92400e; flex-shrink: 0; }
-.lm-type-empty { font-size: 12px; color: var(--color-text-muted); padding: 12px; text-align: center; }
+.lm-type-empty { font-size: var(--text-label-sm); color: var(--color-on-surface-variant); padding: 12px; text-align: center; }
 
 /* ── Main content ─────────────────────────────────────────── */
 .lm-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px 20px;
+  padding: 18px 0;
 }
 
 .lm-placeholder {
@@ -81,8 +62,8 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--color-text-muted);
-  font-size: 14px;
+  color: var(--color-on-surface-variant);
+  font-size: var(--text-body-md);
 }
 
 .lm-content-header {
@@ -92,117 +73,51 @@
   gap: 16px;
   margin-bottom: 14px;
 }
-.lm-content-title { font-size: 16px; font-weight: 700; color: var(--color-text); margin: 0 0 3px; }
-.lm-content-desc  { font-size: 12px; color: var(--color-text-muted); margin: 0; }
-.lm-loading { color: var(--color-text-muted); font-size: 13px; padding: 20px 0; text-align: center; }
+.lm-content-title { font-size: var(--text-body-lg); font-weight: 700; color: var(--color-on-surface); margin: 0 0 3px; }
+.lm-content-desc  { font-size: var(--text-label-sm); color: var(--color-on-surface-variant); margin: 0; }
+.lm-loading { color: var(--color-on-surface-variant); font-size: var(--text-body-md); padding: 20px 0; text-align: center; }
 
 /* ── Alerts ───────────────────────────────────────────────── */
 .lm-alert {
   border-radius: 7px;
   padding: 9px 12px;
   margin-bottom: 12px;
-  font-size: 13px;
-  &.lm-alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+  font-size: var(--text-body-md);
+  &.lm-alert-error   { background: var(--color-error-container); border: 1px solid #fecaca; color: var(--color-danger); }
   &.lm-alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
 }
 
 /* ── Add form ─────────────────────────────────────────────── */
 .lm-add-form {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  border: 1px solid var(--color-outline-variant);
   border-radius: 8px;
   padding: 14px;
   margin-bottom: 14px;
 }
 .lm-add-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 80px; gap: 10px; }
-.lm-field  { display: flex; flex-direction: column; gap: 3px; }
-.lm-label  { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); }
-.lm-input  { height: 30px; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 8px; font-size: 12px; outline: none; &:focus { border-color: #1a6b7c; } }
-.req { color: var(--color-error); margin-left: 2px; }
 .lm-add-actions { margin-top: 8px; display: flex; justify-content: flex-end; }
 
 /* ── Table (custom daf-data-table cell content) ──────────────── */
-.td-code { font-family: monospace; font-size: 11px; color: var(--color-text-muted); }
-.td-en { color: var(--color-text-muted); }
+.td-code { font-family: monospace; font-size: var(--text-label-sm); color: var(--color-on-surface-variant); }
+.td-en { color: var(--color-on-surface-variant); }
 
-/* ── Badges ───────────────────────────────────────────────── */
-.badge {
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 2px 7px;
-  &.badge-active   { background: #dcfce7; color: #15803d; }
-  &.badge-inactive { background: #f1f5f9; color: #94a3b8; }
-}
-.badge-system { font-size: 10px; background: #fef9c3; color: #92400e; border-radius: 999px; padding: 2px 7px; }
+.lm-pagination { display: flex; justify-content: flex-end; padding: 10px 0; }
 
 /* ── Buttons ──────────────────────────────────────────────── */
-.btn-add {
-  height: 32px;
-  padding: 0 14px;
-  border-radius: 7px;
-  background: #1a6b7c;
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  &:hover { opacity: .85; }
+.confirm-del { display: flex; align-items: center; gap: 3px; font-size: var(--text-label-sm); color: var(--color-danger); }
+
+/* daf-data-table ships Tailwind classes computed at runtime (e.g. text-right for
+   align:'right' columns) that its own build purges since they're never referenced
+   statically — force the Actions column's header + cells to align right ourselves. */
+::ng-deep .list-manager daf-data-table {
+  th:last-child {
+    text-align: right !important;
+  }
+  td:last-child {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+  }
 }
-
-.btn-save-add {
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 6px;
-  background: #1a6b7c;
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  &:disabled { opacity: .5; cursor: not-allowed; }
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 2px 5px;
-  border-radius: 4px;
-  &:hover:not(:disabled) { background: var(--color-bg); }
-  &.btn-edit   { color: #1a6b7c; }
-  &.btn-save   { color: #27ae60; }
-  &.btn-cancel { color: var(--color-text-muted); }
-  &.btn-del    { color: var(--color-error); }
-  &.btn-del-dis { opacity: .3; cursor: not-allowed; }
-}
-
-.btn-icon-sm {
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 10px;
-  padding: 1px 4px;
-  color: var(--color-text-muted);
-  &:hover:not(:disabled) { background: var(--color-bg-secondary); }
-  &:disabled { opacity: .3; cursor: not-allowed; }
-}
-
-.order-btns { display: flex; flex-direction: column; gap: 2px; }
-
-.lm-input-sm {
-  height: 26px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 0 6px;
-  font-size: 11px;
-  width: 100%;
-  outline: none;
-  &:focus { border-color: #1a6b7c; }
-}
-
-.confirm-del { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--color-error); }

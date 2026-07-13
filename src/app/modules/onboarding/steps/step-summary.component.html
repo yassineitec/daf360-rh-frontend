@@ -15,7 +15,7 @@
 <div class="summary-grid">
 
   <!-- Card 1 — Identité -->
-  <div class="summary-card">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">Identité</h4>
       <button type="button" class="btn-edit" (click)="editStep.emit(1)">Modifier</button>
@@ -44,10 +44,10 @@
         <dd>{{ val(data()?.passportNumber) }}</dd>
       </dl>
     </div>
-  </div>
+  </daf-card>
 
   <!-- Card 2 — Poste -->
-  <div class="summary-card">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">Poste & Contrat</h4>
       <button type="button" class="btn-edit" (click)="editStep.emit(2)">Modifier</button>
@@ -76,10 +76,10 @@
         <dd>{{ val(data()?.probationEndDate) }}</dd>
       </dl>
     </div>
-  </div>
+  </daf-card>
 
   <!-- Card 3 — Régime -->
-  <div class="summary-card">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">Régime de travail</h4>
       <button type="button" class="btn-edit" (click)="editStep.emit(3)">Modifier</button>
@@ -93,10 +93,10 @@
         <dd>{{ val(data()?.regimeStartDate) }}</dd>
       </dl>
     </div>
-  </div>
+  </daf-card>
 
   <!-- Card 4 — Informations personnelles -->
-  <div class="summary-card">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">Informations personnelles</h4>
       <button type="button" class="btn-edit" (click)="editStep.emit(4)">Modifier</button>
@@ -122,10 +122,10 @@
         <dd>{{ val(data()?.phone) }}</dd>
       </dl>
     </div>
-  </div>
+  </daf-card>
 
   <!-- Card 5 — Banque & Fiscalité -->
-  <div class="summary-card">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">Banque & Fiscalité</h4>
       <button type="button" class="btn-edit" (click)="editStep.emit(5)">Modifier</button>
@@ -151,10 +151,10 @@
         <dd>{{ val(data()?.taxId) }}</dd>
       </dl>
     </div>
-  </div>
+  </daf-card>
 
   <!-- Card 6 — Contact d'urgence -->
-  <div class="summary-card">
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">Contact d'urgence</h4>
       <button type="button" class="btn-edit" (click)="editStep.emit(6)">Modifier</button>
@@ -171,6 +171,6 @@
         <dd>{{ val(data()?.emergencyContactPhone) }}</dd>
       </dl>
     </div>
-  </div>
+  </daf-card>
 
 </div>

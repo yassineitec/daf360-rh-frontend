@@ -10,14 +10,14 @@ import {
   groupTasksByPhase, computeProgress, findNextDueTask,
 } from './models/lifecycle.model';
 import { TimelineComponent }    from '../../shared/timeline.component';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { StatusBadgeComponent, CardComponent } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 
 @Component({
   selector: 'app-workflow-detail',
   standalone: true,
-  imports: [RouterLink, TimelineComponent, StatusBadgeComponent, SpinnerComponent],
+  imports: [RouterLink, TimelineComponent, StatusBadgeComponent, SpinnerComponent, CardComponent],
   template: `
     <nav class="breadcrumb">
       <a routerLink="/lifecycle" class="bc-link">Lifecycle</a>
@@ -50,17 +50,17 @@ import { SpinnerComponent }     from '../../shared/spinner.component';
       }
 
       <!-- Header card -->
-      <div class="wf-header card">
+      <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" class="block wf-header">
         <div class="wf-meta">
           <h1 class="wf-title">{{ eventLabel(workflow()!.eventType) }}</h1>
           <div class="wf-chips">
             <daf-badge [label]="statusBadge(workflow()!.status).label" [options]="statusBadge(workflow()!.status).options" />
-            <span class="meta-chip">Profil #{{ workflow()!.employeeProfileId }}</span>
+            <daf-badge [label]="'Profil #' + workflow()!.employeeProfileId" [options]="{ variant: 'neutral', size: 'sm' }" />
             @if (workflow()!.startDate) {
-              <span class="meta-chip">Démarré {{ fmtDate(workflow()!.startDate) }}</span>
+              <daf-badge [label]="'Démarré ' + fmtDate(workflow()!.startDate)" [options]="{ variant: 'neutral', size: 'sm' }" />
             }
             @if (workflow()!.dueDate) {
-              <span class="meta-chip">Échéance {{ fmtDate(workflow()!.dueDate) }}</span>
+              <daf-badge [label]="'Échéance ' + fmtDate(workflow()!.dueDate)" [options]="{ variant: 'neutral', size: 'sm' }" />
             }
           </div>
         </div>
@@ -85,7 +85,7 @@ import { SpinnerComponent }     from '../../shared/spinner.component';
             <p>{{ workflow()!.notes }}</p>
           </div>
         }
-      </div>
+      </daf-card>
 
       <!-- Timeline -->
       <div class="timeline-section">

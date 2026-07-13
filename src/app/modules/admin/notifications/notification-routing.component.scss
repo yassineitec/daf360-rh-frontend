@@ -1,0 +1,59 @@
+:host { display: block; height: 100%; }
+
+.nr-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+.nr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.nr-title {
+  font-size: var(--text-body-lg);
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0;
+}
+
+.nr-search {
+  width: 280px;
+  max-width: 100%;
+}
+
+.nr-error {
+  background: var(--color-error-container);
+  border: 1px solid #fecaca;
+  color: var(--color-danger);
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: var(--text-body-md);
+}
+
+.nr-badges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* ── Footer: count + pagination ──────────────────────────────── */
+.nr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nr-count {
+  font-size: var(--text-label-sm);
+  color: var(--color-on-surface-variant);
+
+  strong { color: var(--color-on-surface); }
+}

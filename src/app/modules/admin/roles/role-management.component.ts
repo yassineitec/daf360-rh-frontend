@@ -5,13 +5,14 @@ import {
 import { RoleListComponent }        from './role-list.component';
 import { RoleEditorComponent }      from './role-editor/role-editor.component';
 import { CreateRoleModalComponent } from './create-role-modal/create-role-modal.component';
+import { ModalComponent }           from '../../../shared/modal.component';
 import { RoleManagementService }    from './role-management.service';
 import { RoleListItem }             from './role.model';
 
 @Component({
   selector: 'app-role-management',
   standalone: true,
-  imports: [RoleListComponent, RoleEditorComponent, CreateRoleModalComponent],
+  imports: [RoleListComponent, RoleEditorComponent, CreateRoleModalComponent, ModalComponent],
   templateUrl: './role-management.component.html',
   styleUrl: './role-management.component.scss',
 })

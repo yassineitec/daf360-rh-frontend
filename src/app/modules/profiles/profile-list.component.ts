@@ -13,6 +13,7 @@ import {
   CheckboxComponent,
   ButtonComponent,
   FormFieldComponent,
+  CardComponent,
 } from '@khalilrebhiitec/daf360';
 
 import { ProfileListService, FilterOptions } from './services/profile-list.service';
@@ -33,6 +34,7 @@ const PAGE_SIZE = 15;
     CheckboxComponent,
     ButtonComponent,
     FormFieldComponent,
+    CardComponent,
   ],
   templateUrl: './profile-list.component.html',
 })

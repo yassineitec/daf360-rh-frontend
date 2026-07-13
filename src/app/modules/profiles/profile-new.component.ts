@@ -7,6 +7,7 @@ import {
 import { catchError, of, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 
+import { CardComponent } from '@khalilrebhiitec/daf360';
 import { ProfileService }  from './profile.service';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { RefDataService }   from '../../core/ref/ref-data.service';
@@ -39,7 +40,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
 @Component({
   selector: 'app-profile-new',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, SpinnerComponent],
+  imports: [RouterLink, ReactiveFormsModule, SpinnerComponent, CardComponent],
   template: `
     <!-- ── Breadcrumb ──────────────────────────────────────────────── -->
     <nav class="breadcrumb">
@@ -66,7 +67,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
       </div>
 
       <!-- ── Form card ───────────────────────────────────────────────── -->
-      <div class="card form-card">
+      <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" class="block form-card">
 
         <!-- Step 1 — Identité -->
         @if (step() === 0) {
@@ -249,7 +250,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
           <div class="error-banner" role="alert">{{ errorMsg() }}</div>
         }
 
-      </div><!-- /form-card -->
+      </daf-card><!-- /form-card -->
     </div>
   `,
   styles: [`
@@ -260,7 +261,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
 
     .stepper-page { max-width:680px;margin:24px auto;padding:0 16px 40px }
 
-    // ── Step indicators
+    /* ── Step indicators */
     .step-indicators { display:flex;align-items:center;margin-bottom:24px }
     .step-indicator  { display:flex;align-items:center;gap:8px;flex-shrink:0 }
     .step-num        { width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--color-border);color:var(--color-text-muted);transition:all .2s }
@@ -271,9 +272,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
     .step-line { flex:1;height:1px;background:var(--color-border);margin:0 8px;transition:background .2s }
     .step-line.done { background:var(--color-success,#16A34A) }
 
-    // ── Form card
-    .card { background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm) }
-    .form-card { padding:24px }
+    /* ── Form card */
     .step-title { font-family:var(--font-display,'DM Serif Display',serif);font-size:18px;font-weight:400;margin:0 0 20px;color:var(--color-text) }
     .step-hint  { font-size:13px;color:var(--color-text-muted);margin:-12px 0 16px }
     .form-grid  { display:grid;grid-template-columns:1fr 1fr;gap:16px }
@@ -284,7 +283,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
     .form-input:focus { border-color:var(--color-primary) }
     .field-error { font-size:11px;color:var(--color-danger,#DC2626);margin-top:2px }
 
-    // ── Navigation
+    /* ── Navigation */
     .step-nav { display:flex;align-items:center;justify-content:space-between;margin-top:28px;padding-top:20px;border-top:1px solid var(--color-border) }
     .error-banner { margin-top:12px;padding:10px 14px;border-radius:var(--radius-md);background:#fee2e2;color:#991b1b;font-size:13px }
     .btn-primary { display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--color-primary);color:#fff;border:none;border-radius:var(--radius-md);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s }

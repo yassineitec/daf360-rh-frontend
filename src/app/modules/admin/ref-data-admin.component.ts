@@ -1,8 +1,14 @@
 import {
   Component, OnChanges, SimpleChanges, inject, input, signal, computed,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { NgClass } from '@angular/common';
+import {
+  ButtonComponent, FormFieldComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PaginationComponent, PaginationConfig,
+} from '@khalilrebhiitec/daf360';
+import { ModalComponent } from '../../shared/modal.component';
+
+const PAGE_SIZE = 10;
 
 import { RefDataService }      from '../../core/ref/ref-data.service';
 import { RefDataItem, CreateRefDataRequest } from '../../core/ref/ref-data.model';
@@ -32,230 +38,203 @@ const TABS: TabConfig[] = [
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [FormsModule, NgClass],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, ModalComponent, PaginationComponent],
   template: `
 <div>
   <!-- Sub-tab bar -->
-  <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;background:#eceef0;padding:4px;border-radius:12px;width:fit-content;">
+  <nav class="rda-tab-bar" role="tablist">
     @for (tab of tabs; track tab.key) {
-      <button type="button" (click)="selectTab(tab)"
-        [ngClass]="activeTab().key === tab.key ? 'sub-active' : 'sub-inactive'"
-        style="padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;">
-        {{ tab.label }}
-      </button>
+      <button
+        class="rda-tab-btn"
+        [class.active]="activeTab().key === tab.key"
+        (click)="selectTab(tab)"
+        role="tab"
+        type="button"
+      >{{ tab.label }}</button>
     }
-  </div>
+  </nav>
 
   <!-- Flash messages -->
   @if (successMsg()) {
-    <div style="background:#dcfce7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;">
+    <div style="background:var(--color-success,#dcfce7);color:#fff;border-radius:8px;padding:10px 14px;font-size:var(--text-body-sm,13px);margin-bottom:16px;">
       {{ successMsg() }}
     </div>
   }
   @if (error()) {
-    <div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;">
+    <div style="background:var(--color-error-container,#fee2e2);color:var(--color-on-error-container,#991b1b);border-radius:8px;padding:10px 14px;font-size:var(--text-body-sm,13px);margin-bottom:16px;">
       {{ error() }}
     </div>
   }
 
+  <!-- Header -->
+  <div class="rda-header">
+    <h3 class="rda-header-title">{{ activeTab().label }}</h3>
+    <daf-button
+      label="+ Ajouter"
+      variant="teal"
+      [options]="{ iconStart: 'add' }"
+      (onClick)="showForm.set(true)" />
+  </div>
+
   <!-- Table — generic ref data -->
   @if (!isTypeContratTab()) {
     @if (loading()) {
-      <p style="font-size:13px;color:#6B7280;">Chargement…</p>
+      <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">Chargement…</p>
     } @else {
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
-        <thead>
-          <tr style="border-bottom:2px solid #e5e7eb;">
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Libellé FR</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Libellé EN</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Code</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Ordre</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Actif</th>
-            <th style="padding:8px 12px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of items(); track item.id) {
-            <tr style="border-bottom:1px solid #f3f4f6;" [style.opacity]="item.isActive ? '1' : '0.5'">
-              <td style="padding:8px 12px;">{{ item.labelFr }}</td>
-              <td style="padding:8px 12px;color:#6B7280;">{{ item.labelEn }}</td>
-              <td style="padding:8px 12px;font-family:monospace;font-size:12px;">{{ item.code ?? '—' }}</td>
-              <td style="padding:8px 12px;">{{ item.sortOrder ?? '—' }}</td>
-              <td style="padding:8px 12px;">
-                @if (item.isActive) {
-                  <span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;">Oui</span>
-                } @else {
-                  <span style="background:#f3f4f6;color:#6B7280;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;">Non</span>
-                }
-              </td>
-              <td style="padding:8px 12px;text-align:right;">
-                <button type="button"
-                  (click)="deleteItem(item)"
-                  style="font-size:12px;color:#ba1a1a;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;"
-                  title="Supprimer">
-                  Supprimer
-                </button>
-              </td>
-            </tr>
+      <daf-data-table [columns]="itemColumns" [rows]="itemRows()" [config]="itemTableConfig()">
+        <ng-template dafCell="isActive" let-row>
+          @if (row['_source'].isActive) {
+            <span class="rda-badge rda-badge-yes">Oui</span>
+          } @else {
+            <span class="rda-badge rda-badge-no">Non</span>
           }
-          @if (items().length === 0) {
-            <tr>
-              <td colspan="6" style="padding:24px;text-align:center;color:#9CA3AF;font-size:13px;">
-                Aucune entrée. Utilisez le formulaire ci-dessous pour en ajouter.
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
+        </ng-template>
+        <ng-template dafCell="_actions" let-row>
+          <daf-button
+            label="Supprimer"
+            variant="danger"
+            [options]="{ size: 'sm', iconStart: 'delete' }"
+            (onClick)="deleteItem(row['_source'])" />
+        </ng-template>
+      </daf-data-table>
 
-    <!-- Inline create form — generic -->
-    <div style="background:#f8f9fa;border:1px solid #eceef0;border-radius:12px;padding:16px 20px;">
-      <button type="button"
-        (click)="showForm.set(!showForm())"
-        style="font-size:13px;font-weight:600;color:#1C4E5C;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:0;">
-        @if (showForm()) { ▲ Masquer le formulaire } @else { ▼ Ajouter une entrée }
-      </button>
-
-      @if (showForm()) {
-        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">
-              Libellé FR <span style="color:#ba1a1a;">*</span>
-            </label>
-            <input type="text" [(ngModel)]="createForm.labelFr" placeholder="Ex: Ingénieur Senior"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" />
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Libellé EN</label>
-            <input type="text" [(ngModel)]="createForm.labelEn" placeholder="Ex: Senior Engineer"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" />
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Code</label>
-            <input type="text" [(ngModel)]="createForm.code" placeholder="Ex: SENIOR_ENG"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;font-family:monospace;" />
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Ordre</label>
-            <input type="number" [(ngModel)]="createForm.sortOrder" placeholder="0"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" />
-          </div>
-        </div>
-        <div style="margin-top:12px;display:flex;gap:8px;">
-          <button type="button" (click)="onCreate()"
-            [disabled]="saving() || !createForm.labelFr.trim()"
-            style="padding:9px 20px;background:#1C4E5C;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
-            [style.opacity]="saving() || !createForm.labelFr.trim() ? '0.5' : '1'">
-            @if (saving()) { Enregistrement… } @else { Ajouter }
-          </button>
-          <button type="button" (click)="resetForm()"
-            style="padding:9px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">
-            Réinitialiser
-          </button>
+      @if (totalPages() > 1) {
+        <div class="rda-pagination">
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="items().length"
+            [config]="paginationConfig"
+            (pageChange)="onPageChange($event)" />
         </div>
       }
-    </div>
+    }
   }
 
   <!-- Table — Types de contrat -->
   @if (isTypeContratTab()) {
     @if (loading()) {
-      <p style="font-size:13px;color:#6B7280;">Chargement…</p>
+      <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">Chargement…</p>
     } @else {
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
-        <thead>
-          <tr style="border-bottom:2px solid #e5e7eb;">
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Code</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Libellé FR</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Libellé EN</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Actif</th>
-            <th style="padding:8px 12px;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (tc of typeContrats(); track tc.id) {
-            <tr style="border-bottom:1px solid #f3f4f6;" [style.opacity]="tc.isActive ? '1' : '0.5'">
-              <td style="padding:8px 12px;font-family:monospace;font-size:12px;">{{ tc.code }}</td>
-              <td style="padding:8px 12px;font-weight:500;">{{ tc.labelFr }}</td>
-              <td style="padding:8px 12px;color:#6B7280;">{{ tc.labelEn }}</td>
-              <td style="padding:8px 12px;">
-                @if (tc.isActive) {
-                  <span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;">Oui</span>
-                } @else {
-                  <span style="background:#f3f4f6;color:#6B7280;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;">Non</span>
-                }
-              </td>
-              <td style="padding:8px 12px;text-align:right;">
-                <button type="button" (click)="deleteTypeContrat(tc)"
-                  style="font-size:12px;color:#ba1a1a;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;">
-                  Supprimer
-                </button>
-              </td>
-            </tr>
+      <daf-data-table [columns]="tcColumns" [rows]="tcRows()" [config]="itemTableConfig()">
+        <ng-template dafCell="isActive" let-row>
+          @if (row['_source'].isActive) {
+            <span class="rda-badge rda-badge-yes">Oui</span>
+          } @else {
+            <span class="rda-badge rda-badge-no">Non</span>
           }
-          @if (typeContrats().length === 0) {
-            <tr>
-              <td colspan="5" style="padding:24px;text-align:center;color:#9CA3AF;font-size:13px;">
-                Aucun type de contrat. Utilisez le formulaire ci-dessous pour en ajouter.
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
+        </ng-template>
+        <ng-template dafCell="_actions" let-row>
+          <daf-button
+            label="Supprimer"
+            variant="danger"
+            [options]="{ size: 'sm', iconStart: 'delete' }"
+            (onClick)="deleteTypeContrat(row['_source'])" />
+        </ng-template>
+      </daf-data-table>
 
-    <!-- Inline create form — type contrat -->
-    <div style="background:#f8f9fa;border:1px solid #eceef0;border-radius:12px;padding:16px 20px;">
-      <button type="button"
-        (click)="showForm.set(!showForm())"
-        style="font-size:13px;font-weight:600;color:#1C4E5C;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:0;">
-        @if (showForm()) { ▲ Masquer le formulaire } @else { ▼ Ajouter un type de contrat }
-      </button>
-
-      @if (showForm()) {
-        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;">
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">
-              Code <span style="color:#ba1a1a;">*</span>
-            </label>
-            <input type="text" [(ngModel)]="tcCreateCode" placeholder="Ex: CDI"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;font-family:monospace;" />
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">
-              Libellé FR <span style="color:#ba1a1a;">*</span>
-            </label>
-            <input type="text" [(ngModel)]="tcCreateLabelFr" placeholder="Ex: Contrat à durée indéterminée"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" />
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6B7280;">Libellé EN</label>
-            <input type="text" [(ngModel)]="tcCreateLabelEn" placeholder="Ex: Permanent contract"
-              style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;" />
-          </div>
-        </div>
-        <div style="margin-top:12px;display:flex;gap:8px;">
-          <button type="button" (click)="onCreateTypeContrat()"
-            [disabled]="saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim()"
-            style="padding:9px 20px;background:#1C4E5C;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"
-            [style.opacity]="saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim() ? '0.5' : '1'">
-            @if (saving()) { Enregistrement… } @else { Ajouter }
-          </button>
-          <button type="button" (click)="tcCreateCode = ''; tcCreateLabelFr = ''; tcCreateLabelEn = ''"
-            style="padding:9px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">
-            Réinitialiser
-          </button>
+      @if (totalPages() > 1) {
+        <div class="rda-pagination">
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="typeContrats().length"
+            [config]="paginationConfig"
+            (pageChange)="onPageChange($event)" />
         </div>
       }
-    </div>
+    }
   }
 </div>
+
+<!-- Add modal — generic ref data -->
+@if (!isTypeContratTab()) {
+  <app-modal
+    title="Ajouter une entrée"
+    [visible]="showForm()"
+    [hasFooter]="true"
+    (closed)="showForm.set(false)"
+  >
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <daf-form-field
+        [options]="{ label: 'Libellé FR', placeholder: 'Ex: Ingénieur Senior', required: true, fullWidth: true }"
+        [value]="createForm.labelFr"
+        (valueChange)="createForm.labelFr = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Libellé EN', placeholder: 'Ex: Senior Engineer', fullWidth: true }"
+        [value]="createForm.labelEn"
+        (valueChange)="createForm.labelEn = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Code', placeholder: 'Ex: SENIOR_ENG', fullWidth: true }"
+        [value]="createForm.code"
+        (valueChange)="createForm.code = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Ordre', type: 'number', placeholder: '0', fullWidth: true }"
+        [value]="createForm.sortOrder"
+        (valueChange)="createForm.sortOrder = $event === null || $event === '' ? null : +$event" />
+    </div>
+    <div slot="footer">
+      <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+      <daf-button
+        [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
+        variant="teal"
+        [options]="{ disabled: saving() || !createForm.labelFr.trim(), loading: saving() }"
+        (onClick)="onCreate()" />
+    </div>
+  </app-modal>
+}
+
+<!-- Add modal — type contrat -->
+@if (isTypeContratTab()) {
+  <app-modal
+    title="Ajouter un type de contrat"
+    [visible]="showForm()"
+    [hasFooter]="true"
+    (closed)="showForm.set(false)"
+  >
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <daf-form-field
+        [options]="{ label: 'Code', placeholder: 'Ex: CDI', required: true, fullWidth: true }"
+        [value]="tcCreateCode"
+        (valueChange)="tcCreateCode = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Libellé FR', placeholder: 'Ex: Contrat à durée indéterminée', required: true, fullWidth: true }"
+        [value]="tcCreateLabelFr"
+        (valueChange)="tcCreateLabelFr = $any($event) ?? ''" />
+      <daf-form-field
+        [options]="{ label: 'Libellé EN', placeholder: 'Ex: Permanent contract', fullWidth: true }"
+        [value]="tcCreateLabelEn"
+        (valueChange)="tcCreateLabelEn = $any($event) ?? ''" />
+    </div>
+    <div slot="footer">
+      <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+      <daf-button
+        [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
+        variant="teal"
+        [options]="{ disabled: saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim(), loading: saving() }"
+        (onClick)="onCreateTypeContrat()" />
+    </div>
+  </app-modal>
+}
   `,
   styles: [`
-    .sub-active   { background:#fff; color:#1C4E5C; box-shadow:0 1px 3px rgba(0,0,0,.1); }
-    .sub-inactive { background:transparent; color:#6B7280; }
-    .sub-inactive:hover { background:#fff8; color:#1A1C1E; }
+    .rda-tab-bar { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;border-bottom:1px solid var(--color-outline-variant);overflow-x:auto }
+    .rda-tab-btn { padding:10px 16px;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font-sans);font-size:var(--text-label-sm);font-weight:500;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color var(--duration-normal) var(--ease-smooth),border-color var(--duration-normal) var(--ease-smooth) }
+    .rda-tab-btn:hover { color:var(--color-on-surface) }
+    .rda-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
+    .rda-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px }
+    .rda-header-title { font-size:var(--text-body-lg);font-weight:700;color:var(--color-on-surface);margin:0 }
+    .rda-badge { font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700 }
+    .rda-badge-yes { background:var(--color-tertiary-container);color:var(--color-on-tertiary-container) }
+    .rda-badge-no  { background:var(--color-surface-container);color:var(--color-on-surface-variant) }
+    .rda-pagination { display:flex;justify-content:flex-end;padding:10px 0 }
+
+    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
+       own build — force the right-aligned Actions column ourselves. */
+    :host ::ng-deep daf-data-table {
+      th:last-child { text-align: right !important; }
+      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
+    }
   `],
 })
 export class RefDataAdminComponent implements OnChanges {
@@ -285,6 +264,76 @@ export class RefDataAdminComponent implements OnChanges {
     labelFr: '', labelEn: '', code: '', sortOrder: null,
   };
 
+  readonly itemColumns: TableColumn[] = [
+    { key: 'labelFr',   label: 'Libellé FR' },
+    { key: 'labelEn',   label: 'Libellé EN' },
+    { key: 'code',      label: 'Code' },
+    { key: 'sortOrder', label: 'Ordre' },
+    { key: 'isActive',  label: 'Actif' },
+    { key: '_actions',  label: '', align: 'right' },
+  ];
+
+  currentPage = signal(0);
+
+  readonly totalPages = computed(() => {
+    const len = this.isTypeContratTab() ? this.typeContrats().length : this.items().length;
+    return Math.max(1, Math.ceil(len / PAGE_SIZE));
+  });
+
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  readonly pagedItems = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.items().slice(start, start + PAGE_SIZE);
+  });
+
+  readonly itemRows = computed<TableRow[]>(() =>
+    this.pagedItems().map(i => ({
+      labelFr:   i.labelFr,
+      labelEn:   i.labelEn,
+      code:      i.code ?? '—',
+      sortOrder: i.sortOrder ?? '—',
+      isActive:  i.isActive,
+      _source:   i,
+    })),
+  );
+
+  readonly tcColumns: TableColumn[] = [
+    { key: 'code',     label: 'Code' },
+    { key: 'labelFr',  label: 'Libellé FR' },
+    { key: 'labelEn',  label: 'Libellé EN' },
+    { key: 'isActive', label: 'Actif' },
+    { key: '_actions', label: '', align: 'right' },
+  ];
+
+  readonly pagedTypeContrats = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.typeContrats().slice(start, start + PAGE_SIZE);
+  });
+
+  readonly tcRows = computed<TableRow[]>(() =>
+    this.pagedTypeContrats().map(tc => ({
+      code:      tc.code,
+      labelFr:   tc.labelFr,
+      labelEn:   tc.labelEn,
+      isActive:  tc.isActive,
+      _source:   tc,
+    })),
+  );
+
+  readonly itemTableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+  }));
+
   ngOnChanges(changes: SimpleChanges): void {
     this.loadItems();
   }
@@ -292,6 +341,7 @@ export class RefDataAdminComponent implements OnChanges {
   selectTab(tab: TabConfig): void {
     this.activeTab.set(tab);
     this.showForm.set(false);
+    this.currentPage.set(0);
     this.resetForm();
     this.loadItems();
   }

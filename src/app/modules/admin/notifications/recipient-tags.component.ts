@@ -1,11 +1,12 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ButtonComponent, SelectComponent, SelectOption } from '@khalilrebhiitec/daf360';
 import { RecipientItem, RoleOption } from './notification-routing.model';
 
 @Component({
   selector: 'app-recipient-tags',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ButtonComponent, SelectComponent],
   templateUrl: './recipient-tags.component.html',
   styleUrl: './recipient-tags.component.scss',
 })
@@ -26,6 +27,18 @@ export class RecipientTagsComponent {
       !this.recipients().some(recip => recip.roleId === r.id)
     )
   );
+
+  roleOptions = computed<SelectOption[]>(() =>
+    this.unassignedRoles().map(r => ({ value: String(r.id), label: r.frenchName }))
+  );
+
+  selectedRoleValue = computed(() =>
+    this.selectedRoleId() != null ? [String(this.selectedRoleId())] : []
+  );
+
+  onSelectRole(value: string): void {
+    this.selectedRoleId.set(value ? Number(value) : null);
+  }
 
   onAdd(): void {
     const id = this.selectedRoleId();

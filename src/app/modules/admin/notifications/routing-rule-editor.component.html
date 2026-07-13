@@ -13,156 +13,129 @@
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 1 — Paramètres généraux
   ──────────────────────────────────────────────────────────────────────── -->
-  <div class="editor-section">
-    <h3 class="editor-section-title">Paramètres généraux</h3>
+  <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
+      <h3 class="editor-section-title">Paramètres généraux</h3>
 
-    <!-- In-app toggle -->
-    <div class="toggle-row">
-      <span class="toggle-label">Notification in-app</span>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
+      <!-- In-app toggle -->
+      <div class="toggle-row">
+        <daf-toggle
+          [options]="{ label: 'Notification in-app' }"
           [checked]="sendInapp()"
-          (change)="sendInapp.set($any($event.target).checked)"
-        />
-        <span class="toggle-track"></span>
-      </label>
-    </div>
+          (checkedChange)="sendInapp.set($event)" />
+      </div>
 
-    <!-- Email toggle -->
-    <div class="toggle-row">
-      <span class="toggle-label">
-        Email
-        @if (!eventType().supportsEmail) {
-          <span class="toggle-tooltip" title="Ce type d'événement ne supporte pas l'envoi par email.">
-            &nbsp;(non disponible)
-          </span>
-        }
-      </span>
-      <label class="toggle-switch" [class.toggle-disabled]="!eventType().supportsEmail">
-        <input
-          type="checkbox"
+      <!-- Email toggle -->
+      <div class="toggle-row">
+        <daf-toggle
+          [options]="{
+            label: 'Email',
+            hint: !eventType().supportsEmail ? 'Ce type d\'événement ne supporte pas l\'envoi par email.' : undefined,
+            disabled: !eventType().supportsEmail
+          }"
           [checked]="sendEmail()"
-          [disabled]="!eventType().supportsEmail"
-          (change)="sendEmail.set($any($event.target).checked)"
-        />
-        <span class="toggle-track"></span>
-      </label>
+          (checkedChange)="sendEmail.set($event)" />
+      </div>
     </div>
-  </div>
+  </daf-card>
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 2 — Modèles in-app
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendInapp()) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Modèles in-app</h3>
 
       <!-- Titre -->
       <div class="field-group">
-        <label class="field-label">Titre</label>
-        <input
-          class="field-input"
-          type="text"
-          [ngModel]="inappTitle()"
-          (ngModelChange)="inappTitle.set($event)"
-          placeholder="Titre de la notification…"
-        />
+        <daf-form-field
+          [options]="{ label: 'Titre', placeholder: 'Titre de la notification…', fullWidth: true }"
+          [value]="inappTitle()"
+          (valueChange)="inappTitle.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(inappTitle, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(inappTitle, p)" />
           }
         </div>
       </div>
 
       <!-- Corps du message -->
       <div class="field-group">
-        <label class="field-label">Corps du message</label>
-        <textarea
-          class="field-textarea"
-          rows="3"
-          [ngModel]="inappBody()"
-          (ngModelChange)="inappBody.set($event)"
-          placeholder="Corps de la notification…"
-        ></textarea>
+        <daf-form-field
+          [options]="{ label: 'Corps du message', type: 'textarea', rows: 3, placeholder: 'Corps de la notification…', fullWidth: true }"
+          [value]="inappBody()"
+          (valueChange)="inappBody.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(inappBody, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(inappBody, p)" />
           }
         </div>
       </div>
     </div>
+    </daf-card>
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 3 — Modèles email
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendEmail() && eventType().supportsEmail) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Modèles email</h3>
 
       <!-- Sujet -->
       <div class="field-group">
-        <label class="field-label">Sujet</label>
-        <input
-          class="field-input"
-          type="text"
-          [ngModel]="emailSubject()"
-          (ngModelChange)="emailSubject.set($event)"
-          placeholder="Sujet de l'email…"
-        />
+        <daf-form-field
+          [options]="{ label: 'Sujet', placeholder: 'Sujet de l\'email…', fullWidth: true }"
+          [value]="emailSubject()"
+          (valueChange)="emailSubject.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(emailSubject, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(emailSubject, p)" />
           }
         </div>
       </div>
 
       <!-- Corps email -->
       <div class="field-group">
-        <label class="field-label">Corps de l'email</label>
-        <textarea
-          class="field-textarea monospace"
-          rows="8"
-          [ngModel]="emailBody()"
-          (ngModelChange)="emailBody.set($event)"
-          placeholder="Corps de l'email…"
-        ></textarea>
+        <daf-form-field
+          [options]="{ label: 'Corps de l\'email', type: 'textarea', rows: 8, placeholder: 'Corps de l\'email…', fullWidth: true }"
+          [value]="emailBody()"
+          (valueChange)="emailBody.set($any($event) ?? '')" />
         <div class="placeholder-chips">
           @for (p of PLACEHOLDERS; track p) {
-            <button
-              type="button"
-              class="placeholder-chip"
-              (click)="insertPlaceholder(emailBody, p)"
-            >{{ p }}</button>
+            <daf-button
+              [label]="p"
+              variant="ghost"
+              [options]="{ size: 'sm', pill: true }"
+              (onClick)="insertPlaceholder(emailBody, p)" />
           }
         </div>
       </div>
     </div>
+    </daf-card>
   }
 
   <!-- Save button + banners -->
   <div class="editor-actions">
-    <button
-      class="btn-save"
-      type="button"
-      [disabled]="saving()"
-      (click)="saveTemplates()"
-    >
-      @if (saving()) { Enregistrement… } @else { Enregistrer les modèles }
-    </button>
+    <daf-button
+      [label]="saving() ? 'Enregistrement…' : 'Enregistrer les modèles'"
+      variant="teal"
+      [options]="{ disabled: saving(), loading: saving() }"
+      (onClick)="saveTemplates()" />
   </div>
 
   @if (success()) {
@@ -173,7 +146,8 @@
        SECTION 4 — Destinataires in-app
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendInapp() && detail()) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Destinataires in-app</h3>
       <app-recipient-tags
         [recipients]="detail()!.inappRecipients"
@@ -183,13 +157,15 @@
         (removeRecipient)="onInappRecipientRemoved($event)"
       />
     </div>
+    </daf-card>
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 5 — Destinataires email (TO / CC / BCC)
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendEmail() && eventType().supportsEmail && detail()) {
-    <div class="editor-section">
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Destinataires email</h3>
 
       <!-- TO -->
@@ -230,25 +206,24 @@
         />
       </div>
     </div>
+    </daf-card>
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 6 — Test
   ──────────────────────────────────────────────────────────────────────── -->
   @if (detail()) {
-    <div class="editor-section editor-section--test">
+    <daf-card class="block editor-section--test" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <div class="editor-section-body">
       <h3 class="editor-section-title">Test de la configuration</h3>
       <p class="test-description">
         Simule l'envoi pour votre pays et affiche les destinataires résolus et les messages générés.
       </p>
-      <button
-        type="button"
-        class="btn-test"
-        [disabled]="testLoading()"
-        (click)="runTest()"
-      >
-        @if (testLoading()) { Chargement… } @else { Tester la configuration }
-      </button>
+      <daf-button
+        [label]="testLoading() ? 'Chargement…' : 'Tester la configuration'"
+        variant="secondary"
+        [options]="{ disabled: testLoading(), loading: testLoading() }"
+        (onClick)="runTest()" />
 
       <app-test-dispatch-modal
         [visible]="showTestModal()"
@@ -257,6 +232,7 @@
         (closed)="showTestModal.set(false)"
       />
     </div>
+    </daf-card>
   }
 
 </div>

@@ -1,57 +1,66 @@
-<div class="nr-container">
-  <!-- LEFT: event type list -->
-  <aside class="nr-sidebar">
-    <div class="nr-sidebar-header">
-      <h2 class="nr-sidebar-title">Événements</h2>
-      <input
-        class="nr-search"
-        type="search"
-        placeholder="Rechercher…"
-        [ngModel]="searchQuery()"
-        (ngModelChange)="searchQuery.set($event)"
-      />
+<div class="nr-page">
+
+  <!-- Header -->
+  <div class="nr-header">
+    <h2 class="nr-title">Événements</h2>
+    <div class="nr-search">
+      <daf-form-field
+        [options]="{ type: 'search', placeholder: 'Rechercher…', fullWidth: true }"
+        [value]="searchQuery()"
+        (valueChange)="onSearch($any($event) ?? '')" />
     </div>
+  </div>
 
-    @if (loadingTypes()) {
-      <p class="nr-loading">Chargement…</p>
-    } @else {
-      @for (group of grouped(); track group.module) {
-        <div class="nr-module-group">
-          <p class="nr-module-label">{{ group.module }}</p>
-          @for (type of group.types; track type.id) {
-            <button
-              class="nr-type-item"
-              [class.nr-type-active]="selectedType()?.id === type.id"
-              (click)="selectType(type)"
-              type="button"
-            >
-              <span class="nr-type-label">{{ type.labelFr }}</span>
-              <div class="nr-badges">
-                @if (type.sendInapp) {
-                  <span class="badge-inapp">IN-APP</span>
-                }
-                @if (type.sendEmail) {
-                  <span class="badge-email">EMAIL</span>
-                }
-                @if (type.isSystem) {
-                  <span class="badge-system">SYSTÈME</span>
-                }
-              </div>
-            </button>
-          }
-        </div>
-      }
-    }
-  </aside>
+  @if (error()) {
+    <div class="nr-error">{{ error() }}</div>
+  }
 
-  <!-- RIGHT: routing rule editor -->
-  <main class="nr-content">
-    @if (!selectedType()) {
-      <div class="nr-placeholder">
-        <p>← Sélectionnez un événement pour configurer son routage</p>
+  <!-- Event table -->
+  <daf-data-table
+    [columns]="columns"
+    [rows]="rows()"
+    [config]="tableConfig()"
+    (rowClick)="selectType($event['_source'])">
+
+    <ng-template dafCell="badges" let-row>
+      <div class="nr-badges">
+        @if (row['_source'].sendInapp) {
+          <daf-badge label="IN-APP" [options]="{ variant: 'info', size: 'sm' }" />
+        }
+        @if (row['_source'].sendEmail) {
+          <daf-badge label="EMAIL" [options]="{ variant: 'teal', size: 'sm' }" />
+        }
+        @if (row['_source'].isSystem) {
+          <daf-badge label="SYSTÈME" [options]="{ variant: 'warning', size: 'sm' }" />
+        }
       </div>
-    } @else {
-      <app-routing-rule-editor [eventType]="selectedType()!" />
+    </ng-template>
+
+  </daf-data-table>
+
+  <!-- Count + Pagination -->
+  <div class="nr-footer">
+    <span class="nr-count">
+      <strong>{{ totalElements() }}</strong> événement(s)
+    </span>
+    @if (totalPages() > 1) {
+      <daf-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages()"
+        [totalElements]="totalElements()"
+        (pageChange)="onPageChange($event)" />
     }
-  </main>
+  </div>
+
 </div>
+
+<!-- Routing rule editor modal -->
+<app-modal
+  [title]="selectedType()?.labelFr ?? ''"
+  [visible]="showModal()"
+  size="xl"
+  (closed)="closeModal()">
+  @if (selectedType()) {
+    <app-routing-rule-editor [eventType]="selectedType()!" />
+  }
+</app-modal>

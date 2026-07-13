@@ -149,8 +149,7 @@ export class ProfileDetailComponent implements OnInit {
     return (
       this.statusCfg[code as keyof typeof STATUS_CONFIG] ?? {
         label: code,
-        bg: '#f1f5f9',
-        color: '#475569',
+        variant: 'neutral' as const,
       }
     );
   }

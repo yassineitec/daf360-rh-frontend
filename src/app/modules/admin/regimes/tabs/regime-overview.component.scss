@@ -1,6 +1,191 @@
 @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+
 .skeleton { background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;display:block; }
-.source-override { background:#e6f7f5;color:#00695c; }
+.source-override { background:#e6f7f5;color:var(--color-teal); }
 .source-role      { background:#ede9fe;color:#5b21b6; }
-.source-default   { background:#f1f5f9;color:#475569; }
-.source-none      { background:#fee2e2;color:#991b1b; }
+.source-default   { background:#f1f5f9;color:var(--color-on-surface-variant); }
+.source-none      { background:var(--color-error-container);color:var(--color-on-error-container); }
+
+.ro-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.ro-stat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ro-stat-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ro-stat-icon-teal      { background: rgba(45, 93, 110, .1); }
+.ro-stat-icon-secondary { background: rgba(70, 72, 212, .1); }
+.ro-stat-icon-warning   { background: rgba(245, 158, 11, .1); }
+
+.ro-stat-icon { font-size: 22px; }
+.ro-stat-icon-teal .ro-stat-icon      { color: var(--color-teal); }
+.ro-stat-icon-secondary .ro-stat-icon { color: var(--color-secondary); }
+.ro-stat-icon-warning .ro-stat-icon   { color: var(--color-warning); }
+
+.ro-stat-label {
+  font-size: var(--text-label-caps);
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin: 0 0 2px;
+}
+
+.ro-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-on-surface);
+  margin: 0;
+  line-height: 1;
+}
+
+.ro-stat-hint {
+  font-size: var(--text-label-caps);
+  color: var(--color-warning);
+  margin: 2px 0 0;
+}
+
+.ro-skeleton {
+  border-radius: 6px;
+  background: var(--color-outline-variant);
+  height: 28px;
+}
+
+.ro-skeleton-sm { width: 48px; }
+.ro-skeleton-xs { width: 36px; }
+
+.ro-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ro-search { width: 240px; }
+
+.ro-regime-label {
+  font-size: var(--text-body-sm);
+  color: var(--color-on-surface);
+  margin: 0;
+}
+
+.ro-regime-none {
+  font-size: var(--text-body-sm);
+  color: var(--color-danger);
+  font-style: italic;
+  margin: 0;
+}
+
+.ro-panel-role {
+  font-size: var(--text-label-caps);
+  color: var(--color-on-surface-variant);
+  margin: -12px 0 16px;
+}
+
+.ro-msg-error {
+  background: var(--color-error-container);
+  color: var(--color-on-error-container);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: var(--text-body-sm);
+  margin-bottom: 14px;
+}
+
+.ro-current-regime {
+  background: var(--color-background);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-outline-variant);
+}
+
+.ro-current-regime-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ro-current-regime-label {
+  font-size: var(--text-label-caps);
+  font-weight: 700;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin: 0;
+}
+
+.ro-source-badge {
+  font-size: var(--text-label-caps);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.ro-current-regime-value {
+  font-size: var(--text-body-md);
+  font-weight: 600;
+  color: var(--color-on-surface);
+  margin: 0;
+}
+
+.ro-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ro-override-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-outline-variant);
+}
+
+.ro-override-title {
+  font-size: var(--text-label-caps);
+  font-weight: 700;
+  color: var(--color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin: 0 0 12px;
+}
+
+.ro-override-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ro-form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ro-no-end-checkbox {
+  display: block;
+  margin-top: 6px;
+}
+
+.ro-override-actions {
+  display: flex;
+  gap: 8px;
+}

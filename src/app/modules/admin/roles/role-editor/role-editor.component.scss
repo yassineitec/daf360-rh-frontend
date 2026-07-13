@@ -18,19 +18,19 @@
   border: none;
   border-bottom: 2px solid transparent;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--text-body-md);
   cursor: pointer;
-  color: var(--color-text-muted, #6b7280);
+  color: var(--color-on-surface-variant);
   transition: color 0.15s, border-bottom-color 0.15s;
 
   &:hover:not(.re-tab-active) {
-    color: #374151;
+    color: var(--color-on-surface);
   }
 }
 
 .re-tab-active {
-  color: #1a6b7c;
-  border-bottom-color: #1a6b7c;
+  color: var(--color-teal);
+  border-bottom-color: var(--color-teal);
   font-weight: 600;
 }
 
@@ -43,9 +43,9 @@
   height: 18px;
   padding: 0 5px;
   background: #e0f7f5;
-  color: #1a6b7c;
+  color: var(--color-teal);
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--text-label-caps);
   font-weight: 700;
 }
 

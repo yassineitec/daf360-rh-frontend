@@ -1,15 +1,23 @@
 import {
   Component, computed, effect, inject, input, output, signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import {
+  ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow, AvatarCell,
+} from '@khalilrebhiitec/daf360';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
+
+const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-role-users-tab',
   standalone: true,
-  imports: [FormsModule],
+  imports: [
+    ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
+    DataTableComponent, DafCellDirective,
+  ],
   templateUrl: './role-users-tab.component.html',
   styleUrl:    './role-users-tab.component.scss',
 })
@@ -46,6 +54,46 @@ export class RoleUsersTabComponent {
       : this.users();
   });
 
+  // ── Pagination — 5 per page ─────────────────────────────────────────────────
+  currentPage = signal(0);
+
+  readonly totalElements = computed(() => this.filteredUsers().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
+
+  readonly pagedUsers = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.filteredUsers().slice(start, start + PAGE_SIZE);
+  });
+
+  readonly columns: TableColumn[] = [
+    { key: 'user', label: 'Utilisateur', type: 'avatar' },
+    { key: 'pays', label: 'Pays' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.pagedUsers().map(u => ({
+      user: { name: u.fullName, initials: u.fullName.charAt(0).toUpperCase(), subtitle: u.email } as AvatarCell,
+      pays: u.paysLabel ?? '—',
+      _source: u,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.loading(),
+    emptyMessage: 'Aucun utilisateur assigné à ce rôle.',
+  }));
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  onLocalSearch(value: string): void {
+    this.localSearch.set(value);
+    this.currentPage.set(0);
+  }
+
   constructor() {
     // Reload users whenever the selected role changes
     effect(() => {
@@ -73,6 +121,7 @@ export class RoleUsersTabComponent {
   loadUsers(roleId: number): void {
     this.loading.set(true);
     this.error.set(null);
+    this.currentPage.set(0);
     this.svc.getRoleUsers(roleId).subscribe({
       next:  us => { this.users.set(us); this.loading.set(false); },
       error: ()  => { this.loading.set(false); this.error.set('Erreur lors du chargement des utilisateurs.'); },

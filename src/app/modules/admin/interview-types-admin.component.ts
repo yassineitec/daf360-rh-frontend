@@ -1,12 +1,21 @@
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
+import { ModalComponent } from '../../shared/modal.component';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
+
+const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-interview-types-admin',
   standalone: true,
-  imports: [FormsModule],
+  imports: [
+    ButtonComponent, FormFieldComponent, ModalComponent,
+    StatusBadgeComponent, PaginationComponent, DataTableComponent, DafCellDirective,
+  ],
   template: `
     <div class="ita-wrap">
 
@@ -16,12 +25,11 @@ import { InterviewType } from '../candidates/interview.model';
           <h2 class="ita-title">Types d'entretiens</h2>
           <p class="ita-sub">{{ types().length }} type(s) configuré(s) pour cette entité</p>
         </div>
-        @if (!showAdd()) {
-          <button class="ita-add-btn" (click)="startAdd()" type="button">
-            <span class="material-symbols-outlined" style="font-size:16px">add</span>
-            Nouveau type
-          </button>
-        }
+        <daf-button
+          label="Nouveau type"
+          variant="teal"
+          [options]="{ iconStart: 'add' }"
+          (onClick)="openAdd()" />
       </div>
 
       <!-- Global error -->
@@ -29,149 +37,104 @@ import { InterviewType } from '../candidates/interview.model';
         <div class="ita-error">{{ error() }}</div>
       }
 
-      <!-- Add form -->
-      @if (showAdd()) {
-        <div class="ita-form-card">
-          <p class="ita-form-title">Nouveau type d'entretien</p>
-          <div class="ita-form-grid">
-            <div>
-              <label class="ita-label">Nom *</label>
-              <input class="ita-input" [(ngModel)]="newName"
-                     placeholder="Ex : Entretien Technique" maxlength="150" />
-            </div>
-            <div>
-              <label class="ita-label">Ordre d'affichage</label>
-              <input class="ita-input" type="number" [(ngModel)]="newOrder" min="0" />
-            </div>
-            <div style="grid-column:1/-1">
-              <label class="ita-label">Description</label>
-              <input class="ita-input" [(ngModel)]="newDesc"
-                     placeholder="Description optionnelle" maxlength="500" />
-            </div>
-          </div>
-          @if (addError()) {
-            <p class="ita-field-error">{{ addError() }}</p>
-          }
-          <div class="ita-form-actions">
-            <button class="ita-btn-ghost" (click)="cancelAdd()" type="button">Annuler</button>
-            <button class="ita-btn-primary" (click)="submitAdd()"
-                    [disabled]="addLoading()" type="button">
-              {{ addLoading() ? 'Enregistrement...' : 'Ajouter' }}
-            </button>
+      <!-- Add / Edit modal -->
+      <app-modal
+        [title]="editTarget() ? 'Modifier le type d\\'entretien' : 'Nouveau type d\\'entretien'"
+        [visible]="showModal()"
+        [hasFooter]="true"
+        (closed)="closeModal()"
+      >
+        <div class="ita-form-grid">
+          <daf-form-field
+            [options]="{ label: 'Nom *', placeholder: 'Ex : Entretien Technique', maxLength: 150, fullWidth: true }"
+            [value]="form.name"
+            (valueChange)="form.name = $any($event) ?? ''" />
+          <daf-form-field
+            [options]="{ label: 'Ordre d\\'affichage', type: 'number', fullWidth: true }"
+            [value]="form.orderIndex"
+            (valueChange)="form.orderIndex = $event === null || $event === '' ? 0 : +$event" />
+          <div style="grid-column:1/-1">
+            <daf-form-field
+              [options]="{ label: 'Description', type: 'textarea', rows: 2, placeholder: 'Description optionnelle', maxLength: 500, fullWidth: true }"
+              [value]="form.description"
+              (valueChange)="form.description = $any($event) ?? ''" />
           </div>
         </div>
-      }
+        @if (modalError()) {
+          <p class="ita-field-error">{{ modalError() }}</p>
+        }
+        <div slot="footer">
+          <daf-button label="Annuler" variant="secondary" (onClick)="closeModal()" />
+          <daf-button
+            [label]="saving() ? 'Enregistrement...' : (editTarget() ? 'Enregistrer' : 'Ajouter')"
+            variant="teal"
+            [options]="{ disabled: saving() || !form.name.trim(), loading: saving(), iconStart: editTarget() ? 'save' : 'add' }"
+            (onClick)="save()" />
+        </div>
+      </app-modal>
 
       <!-- List -->
-      @if (loading()) {
-        <div class="ita-spinner-wrap">
-          <span class="material-symbols-outlined ita-spin">progress_activity</span>
-        </div>
+      @if (types().length === 0 && !loading()) {
+        <p class="ita-empty">Aucun type d'entretien configuré. Ajoutez-en un ci-dessus.</p>
       } @else {
-        <div class="ita-list">
-          @for (t of types(); track t.id) {
-            @if (editingId() === t.id) {
-              <!-- Edit row -->
-              <div class="ita-edit-row">
-                <div class="ita-form-grid">
-                  <div>
-                    <label class="ita-label">Nom *</label>
-                    <input class="ita-input" [(ngModel)]="editName" maxlength="150" />
-                  </div>
-                  <div>
-                    <label class="ita-label">Ordre</label>
-                    <input class="ita-input" type="number" [(ngModel)]="editOrder" min="0" />
-                  </div>
-                  <div style="grid-column:1/-1">
-                    <label class="ita-label">Description</label>
-                    <input class="ita-input" [(ngModel)]="editDesc" maxlength="500" />
-                  </div>
-                </div>
-                @if (editError()) {
-                  <p class="ita-field-error">{{ editError() }}</p>
-                }
-                <div class="ita-form-actions" style="margin-top:10px">
-                  <button class="ita-btn-ghost" (click)="cancelEdit()" type="button">Annuler</button>
-                  <button class="ita-btn-primary" (click)="saveEdit(t.id)"
-                          [disabled]="editLoading()" type="button">
-                    {{ editLoading() ? 'Enregistrement...' : 'Sauvegarder' }}
-                  </button>
-                </div>
-              </div>
-            } @else {
-              <!-- Normal row -->
-              <div class="ita-row" [class.ita-row--inactive]="!t.isActive">
-                <div class="ita-row-meta">
-                  <span class="ita-order">{{ t.orderIndex }}</span>
-                  <div>
-                    <div class="ita-row-name">{{ t.name }}</div>
-                    @if (t.description) {
-                      <div class="ita-row-desc">{{ t.description }}</div>
-                    }
-                  </div>
-                </div>
-                <div class="ita-row-actions">
-                  @if (!t.isActive) {
-                    <span class="ita-badge-inactive">Inactif</span>
-                  }
-                  <button class="ita-icon-btn" title="Modifier"
-                          (click)="startEdit(t)" type="button">
-                    <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-                  </button>
-                  <button class="ita-icon-btn"
-                          [title]="t.isActive ? 'Désactiver' : 'Activer'"
-                          (click)="toggleActive(t)" type="button"
-                          [style.color]="t.isActive ? '#50717b' : '#9CA3AF'">
-                    <span class="material-symbols-outlined" style="font-size:22px">
-                      {{ t.isActive ? 'toggle_on' : 'toggle_off' }}
-                    </span>
-                  </button>
-                </div>
-              </div>
+        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+          <ng-template dafCell="name" let-row>
+            <div class="ita-row-name">{{ row['name'] }}</div>
+            @if (row['description']) {
+              <div class="ita-row-desc">{{ row['description'] }}</div>
             }
-          }
-          @if (!types().length && !loading()) {
-            <p class="ita-empty">Aucun type d'entretien configuré. Ajoutez-en un ci-dessus.</p>
-          }
-        </div>
+          </ng-template>
+          <ng-template dafCell="isActive" let-row>
+            <daf-badge
+              [label]="row['isActive'] ? 'Actif' : 'Inactif'"
+              [options]="{ variant: row['isActive'] ? 'success' : 'neutral', size: 'sm' }" />
+          </ng-template>
+          <ng-template dafCell="_actions" let-row>
+            <div class="ita-row-actions">
+              <daf-button
+                variant="ghost"
+                [options]="{ iconStart: row['_source'].isActive ? 'toggle_on' : 'toggle_off', size: 'sm' }"
+                [title]="row['_source'].isActive ? 'Désactiver' : 'Activer'"
+                (onClick)="toggleActive(row['_source'])" />
+              <daf-button
+                variant="ghost"
+                [options]="{ iconStart: 'edit', size: 'sm' }"
+                title="Modifier"
+                (onClick)="openEdit(row['_source'])" />
+            </div>
+          </ng-template>
+        </daf-data-table>
+
+        <!-- Count + Pagination -->
+        @if (types().length > 0) {
+          <div class="ita-footer">
+            <span class="ita-count"><strong>{{ types().length }}</strong> type(s)</span>
+            @if (totalPages() > 1) {
+              <daf-pagination
+                [currentPage]="currentPage()"
+                [totalPages]="totalPages()"
+                [totalElements]="types().length"
+                (pageChange)="onPageChange($event)" />
+            }
+          </div>
+        }
       }
     </div>
   `,
   styles: [`
-    .ita-wrap   { max-width:780px }
+    .ita-wrap   { width:100% }
     .ita-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px }
-    .ita-title  { font-size:15px;font-weight:600;color:var(--color-text,#1A1C1E);margin:0 }
-    .ita-sub    { font-size:12px;color:var(--color-text-muted,#6B7280);margin:3px 0 0 }
-    .ita-add-btn { display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer }
-    .ita-add-btn:hover { opacity:.9 }
-    .ita-form-card  { background:#f8fafb;border:1px solid #E0E7E9;border-radius:10px;padding:16px;margin-bottom:16px }
-    .ita-form-title { font-size:13px;font-weight:600;margin:0 0 12px;color:#1A1C1E }
-    .ita-form-grid  { display:grid;grid-template-columns:1fr 120px;gap:10px }
-    .ita-label  { display:block;font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px }
-    .ita-input  { width:100%;padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:13px;color:#1A1C1E;box-sizing:border-box }
-    .ita-input:focus { outline:none;border-color:var(--color-primary,#1C4E5C) }
-    .ita-field-error { font-size:12px;color:#BA1A1A;margin:6px 0 0 }
-    .ita-form-actions { display:flex;justify-content:flex-end;gap:8px;margin-top:12px }
-    .ita-btn-primary { padding:7px 16px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer }
-    .ita-btn-primary:disabled { opacity:.6;cursor:not-allowed }
-    .ita-btn-ghost  { padding:7px 14px;background:none;color:var(--color-text-muted,#6B7280);border:1px solid #D1D5DB;border-radius:7px;font-size:13px;cursor:pointer }
-    .ita-error  { background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:13px;color:#BA1A1A;margin-bottom:14px }
-    .ita-spinner-wrap { display:flex;justify-content:center;padding:32px }
-    .ita-spin   { font-size:28px;color:#9CA3AF;animation:spin 1s linear infinite }
-    @keyframes spin { to { transform:rotate(360deg) } }
-    .ita-list   { display:flex;flex-direction:column;gap:6px }
-    .ita-row    { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:#fff;border:1px solid #E0E7E9;border-radius:8px }
-    .ita-row--inactive { opacity:.55 }
-    .ita-row-meta { display:flex;align-items:center;gap:12px;min-width:0 }
-    .ita-order  { display:flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:6px;background:#f0f4f5;font-size:11px;font-weight:700;color:#50717b }
-    .ita-row-name { font-size:13px;font-weight:600;color:#1A1C1E }
-    .ita-row-desc { font-size:12px;color:#6B7280;margin-top:1px }
-    .ita-row-actions { display:flex;align-items:center;gap:4px;flex-shrink:0 }
-    .ita-badge-inactive { font-size:11px;font-weight:600;color:#9CA3AF;background:#F3F4F6;padding:2px 8px;border-radius:20px }
-    .ita-icon-btn { display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:6px;background:none;color:#6B7280;cursor:pointer }
-    .ita-icon-btn:hover { background:#F3F4F6;color:#1A1C1E }
-    .ita-edit-row { padding:12px;background:#f8fafb;border:1px solid #E0E7E9;border-radius:8px }
-    .ita-empty  { font-size:13px;color:#9CA3AF;text-align:center;padding:24px }
+    .ita-title  { font-size:var(--text-headline-md);font-weight:600;color:var(--color-on-surface);margin:0 }
+    .ita-sub    { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0 }
+    .ita-form-grid  { display:grid;grid-template-columns:1fr 120px;gap:12px }
+    .ita-field-error { font-size:var(--text-body-sm);color:var(--color-danger);margin:8px 0 0 }
+    .ita-error  { background:var(--color-error-container);border:1px solid var(--color-error-container);border-radius:8px;padding:10px 14px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:14px }
+    .ita-row-name { font-size:var(--text-body-sm);font-weight:600;color:var(--color-on-surface) }
+    .ita-row-desc { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin-top:1px }
+    .ita-row-actions { display:flex;align-items:center;gap:8px;justify-content:flex-end }
+    .ita-empty  { font-size:var(--text-body-sm);color:var(--color-outline);text-align:center;padding:24px }
+    .ita-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px }
+    .ita-count  { font-size:var(--text-body-sm);color:var(--color-on-surface-variant) }
   `],
 })
 export class InterviewTypesAdminComponent implements OnInit {
@@ -183,70 +146,99 @@ export class InterviewTypesAdminComponent implements OnInit {
   loading    = signal(false);
   error      = signal<string | null>(null);
 
-  showAdd    = signal(false);
-  addLoading = signal(false);
-  addError   = signal<string | null>(null);
-  newName    = '';
-  newDesc    = '';
-  newOrder   = 1;
+  showModal   = signal(false);
+  editTarget  = signal<InterviewType | null>(null);
+  saving      = signal(false);
+  modalError  = signal<string | null>(null);
 
-  editingId  = signal<number | null>(null);
-  editLoading = signal(false);
-  editError  = signal<string | null>(null);
-  editName   = '';
-  editDesc   = '';
-  editOrder  = 1;
+  form = { name: '', description: '', orderIndex: 1 };
+
+  // Pagination — 5 per page
+  currentPage = signal(0);
+  readonly totalPages = computed(() => Math.ceil(this.types().length / PAGE_SIZE));
+
+  readonly pagedTypes = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.types().slice(start, start + PAGE_SIZE);
+  });
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  readonly columns: TableColumn[] = [
+    { key: 'orderIndex', label: 'Ordre', align: 'center', width: '70px' },
+    { key: 'name', label: 'Nom' },
+    { key: 'isActive', label: 'Statut', align: 'center', width: '110px' },
+    { key: '_actions', label: 'Actions', align: 'right', width: '120px' },
+  ];
+
+  readonly tableConfig = computed<TableConfig>(() => ({
+    hoverable: true,
+    loading: this.loading(),
+    emptyMessage: 'Aucun type d\'entretien configuré.',
+  }));
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.pagedTypes().map(t => ({
+      orderIndex: t.orderIndex,
+      name: t.name,
+      description: t.description,
+      isActive: t.isActive,
+      _source: t,
+    })),
+  );
 
   ngOnInit(): void { this.load(); }
 
   private load(): void {
     this.loading.set(true);
+    this.currentPage.set(0);
     this.svc.getTypes().subscribe({
       next:  t  => { this.types.set(t); this.loading.set(false); },
       error: () => { this.error.set('Erreur lors du chargement des types.'); this.loading.set(false); },
     });
   }
 
-  startAdd(): void {
+  openAdd(): void {
     const maxOrder = this.types().reduce((m, t) => Math.max(m, t.orderIndex), 0);
-    this.newName = ''; this.newDesc = ''; this.newOrder = maxOrder + 1;
-    this.addError.set(null); this.showAdd.set(true);
+    this.editTarget.set(null);
+    this.form = { name: '', description: '', orderIndex: maxOrder + 1 };
+    this.modalError.set(null);
+    this.showModal.set(true);
   }
 
-  cancelAdd(): void { this.showAdd.set(false); }
-
-  submitAdd(): void {
-    if (!this.newName.trim()) { this.addError.set('Le nom est obligatoire.'); return; }
-    this.addLoading.set(true); this.addError.set(null);
-    this.svc.createType({
-      paysId: this.paysId,
-      name: this.newName.trim(),
-      description: this.newDesc.trim() || undefined,
-      orderIndex: this.newOrder,
-    }).subscribe({
-      next:  () => { this.addLoading.set(false); this.showAdd.set(false); this.load(); },
-      error: err => { this.addLoading.set(false); this.addError.set(err?.error?.detail ?? 'Erreur lors de la création.'); },
-    });
+  openEdit(t: InterviewType): void {
+    this.editTarget.set(t);
+    this.form = { name: t.name, description: t.description ?? '', orderIndex: t.orderIndex };
+    this.modalError.set(null);
+    this.showModal.set(true);
   }
 
-  startEdit(t: InterviewType): void {
-    this.editingId.set(t.id);
-    this.editName = t.name; this.editDesc = t.description ?? ''; this.editOrder = t.orderIndex;
-    this.editError.set(null);
-  }
+  closeModal(): void { this.showModal.set(false); }
 
-  cancelEdit(): void { this.editingId.set(null); }
+  save(): void {
+    if (!this.form.name.trim()) { this.modalError.set('Le nom est obligatoire.'); return; }
+    this.saving.set(true);
+    this.modalError.set(null);
 
-  saveEdit(id: number): void {
-    if (!this.editName.trim()) { this.editError.set('Le nom est obligatoire.'); return; }
-    this.editLoading.set(true); this.editError.set(null);
-    this.svc.updateType(id, {
-      name: this.editName.trim(),
-      description: this.editDesc.trim() || undefined,
-      orderIndex: this.editOrder,
-    }).subscribe({
-      next:  () => { this.editLoading.set(false); this.editingId.set(null); this.load(); },
-      error: err => { this.editLoading.set(false); this.editError.set(err?.error?.detail ?? 'Erreur lors de la mise à jour.'); },
+    const target = this.editTarget();
+    const dto = {
+      name: this.form.name.trim(),
+      description: this.form.description.trim() || undefined,
+      orderIndex: this.form.orderIndex,
+    };
+
+    const obs = target
+      ? this.svc.updateType(target.id, dto)
+      : this.svc.createType({ paysId: this.paysId, ...dto });
+
+    obs.subscribe({
+      next:  () => { this.saving.set(false); this.showModal.set(false); this.load(); },
+      error: err => {
+        this.saving.set(false);
+        this.modalError.set(err?.error?.detail ?? 'Erreur lors de l\'enregistrement.');
+      },
     });
   }
 

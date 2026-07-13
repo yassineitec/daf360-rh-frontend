@@ -1,17 +1,27 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }        from './admin.service';
 import { RequestTypeCatalog }  from './models/admin.model';
 import { SpinnerComponent }    from '../../shared/spinner.component';
 import { ModalComponent }      from '../../shared/modal.component';
+import {
+  SelectComponent, SelectOption,
+  FormFieldComponent,
+  ButtonComponent,
+  StatusBadgeComponent, DataTableComponent, DafCellDirective,
+  TableColumn, TableConfig, TableRow, PaginationComponent,
+} from '@khalilrebhiitec/daf360';
 
 const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','OTHER'];
+const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-request-types-admin',
   standalone: true,
-  imports: [FormsModule, SpinnerComponent, ModalComponent],
+  imports: [
+    SpinnerComponent, ModalComponent, SelectComponent, FormFieldComponent, ButtonComponent,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent,
+  ],
   template: `
     <div class="section-header">
       <div>
@@ -19,10 +29,13 @@ const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','O
         <p class="col-sub">Catalogue par entité</p>
       </div>
       <div class="header-actions">
-        <button class="btn-ghost" (click)="seed()" [disabled]="seeding()" type="button">
-          @if (seeding()) { <app-spinner size="sm" /> } Initialiser par défaut
-        </button>
-        <button class="btn-add" (click)="openAdd()" type="button">+ Ajouter</button>
+        <daf-button
+          label="Initialiser par défaut"
+          variant="ghost"
+          [options]="{ disabled: seeding(), loading: seeding() }"
+          (onClick)="seed()"
+        />
+        <daf-button label="+ Ajouter" variant="primary" (onClick)="openAdd()" />
       </div>
     </div>
 
@@ -30,32 +43,38 @@ const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','O
     @else if (types().length === 0) {
       <div class="empty-state">
         <p>Aucun type configuré.</p>
-        <button class="btn-ghost" (click)="seed()" type="button">Initialiser les 15 types par défaut</button>
+        <daf-button label="Initialiser les 15 types par défaut" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
-      <table class="data-table">
-        <thead>
-          <tr><th>Code</th><th>Libellé</th><th>Catégorie</th><th>Approbation</th><th>SLA</th><th>Actif</th><th></th></tr>
-        </thead>
-        <tbody>
-          @for (t of types(); track t.id) {
-            <tr [class.inactive]="!t.isActive">
-              <td class="code-cell">{{ t.typeCode }}</td>
-              <td>{{ t.displayNameFr }}</td>
-              <td><span class="cat-badge">{{ t.category }}</span></td>
-              <td><span class="level-badge" [class.l2]="t.approvalLevel === 'L2'">{{ t.approvalLevel }}</span></td>
-              <td class="cell-center">{{ t.defaultSlaDays }}j</td>
-              <td class="cell-center">{{ t.isActive ? '✓' : '—' }}</td>
-              <td class="actions-cell">
-                <button class="btn-edit"   (click)="openEdit(t)" type="button">Modifier</button>
-                @if (t.isActive) {
-                  <button class="btn-delete" (click)="deactivate(t)" type="button">Désactiver</button>
-                }
-              </td>
-            </tr>
+      <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
+        <ng-template dafCell="category" let-row>
+          <daf-badge [label]="row['category']" [options]="{ variant: 'neutral', size: 'sm' }" />
+        </ng-template>
+        <ng-template dafCell="approvalLevel" let-row>
+          <daf-badge [label]="row['approvalLevel']" [options]="{ variant: row['approvalLevel'] === 'L2' ? 'warning' : 'success', size: 'sm' }" />
+        </ng-template>
+        <ng-template dafCell="isActive" let-row>
+          <daf-badge [label]="row['_source'].isActive ? 'Actif' : 'Inactif'" [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }" />
+        </ng-template>
+        <ng-template dafCell="_actions" let-row>
+          <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openEdit(row['_source'])" />
+          @if (row['_source'].isActive) {
+            <daf-button label="Désactiver" variant="danger" [options]="{ size: 'sm' }" (onClick)="deactivate(row['_source'])" />
           }
-        </tbody>
-      </table>
+        </ng-template>
+      </daf-data-table>
+
+      <!-- Count + Pagination -->
+      <div class="rta-footer">
+        <span class="rta-count"><strong>{{ totalElements() }}</strong> type(s)</span>
+        @if (totalPages() > 1) {
+          <daf-pagination
+            [currentPage]="currentPage()"
+            [totalPages]="totalPages()"
+            [totalElements]="totalElements()"
+            (pageChange)="onPageChange($event)" />
+        }
+      </div>
     }
 
     <!-- Add/Edit Modal -->
@@ -66,36 +85,69 @@ const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','O
       (closed)="showModal.set(false)"
     >
       <div class="modal-form">
-        <div class="field-row"><label class="form-label">Code *</label>
-          <input class="form-input" type="text" [(ngModel)]="form.typeCode" [disabled]="!!editTarget()"
-                 placeholder="EX: ATTESTATION_TRAVAIL" style="text-transform:uppercase" /></div>
-        <div class="field-row"><label class="form-label">Libellé français *</label>
-          <input class="form-input" type="text" [(ngModel)]="form.displayNameFr" /></div>
-        <div class="field-row"><label class="form-label">Libellé anglais *</label>
-          <input class="form-input" type="text" [(ngModel)]="form.displayNameEn" /></div>
-        <div class="form-row">
-          <div class="field-row"><label class="form-label">Catégorie *</label>
-            <select class="form-input" [(ngModel)]="form.category">
-              @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
-            </select></div>
-          <div class="field-row"><label class="form-label">Niveau approbation</label>
-            <select class="form-input" [(ngModel)]="form.approvalLevel">
-              <option value="L1">L1 (simple)</option>
-              <option value="L2">L2 (double)</option>
-            </select></div>
-          <div class="field-row"><label class="form-label">SLA (jours)</label>
-            <input class="form-input" type="number" [(ngModel)]="form.defaultSlaDays" min="1" max="30" /></div>
+        <div class="field-row">
+          <daf-form-field
+            [options]="{ label: 'Code', placeholder: 'EX: ATTESTATION_TRAVAIL', required: true, disabled: !!editTarget(), fullWidth: true }"
+            [value]="form.typeCode"
+            (valueChange)="form.typeCode = $any($event).toUpperCase()"
+          />
         </div>
-        <div class="field-row"><label class="form-label">Description</label>
-          <textarea class="form-input" rows="2" [(ngModel)]="form.description"></textarea></div>
+        <div class="field-row">
+          <daf-form-field
+            [options]="{ label: 'Libellé français', required: true, fullWidth: true }"
+            [value]="form.displayNameFr"
+            (valueChange)="form.displayNameFr = $any($event)"
+          />
+        </div>
+        <div class="field-row">
+          <daf-form-field
+            [options]="{ label: 'Libellé anglais', required: true, fullWidth: true }"
+            [value]="form.displayNameEn"
+            (valueChange)="form.displayNameEn = $any($event)"
+          />
+        </div>
+        <div class="form-row">
+          <div class="field-row">
+            <daf-select
+              [selected]="[form.category]"
+              [options]="categoryOptions"
+              [config]="{ label: 'Catégorie', required: true, fullWidth: true }"
+              (selectedChange)="form.category = $event[0]"
+            />
+          </div>
+          <div class="field-row">
+            <daf-select
+              [selected]="[form.approvalLevel]"
+              [options]="approvalLevelOptions"
+              [config]="{ label: 'Niveau approbation', fullWidth: true }"
+              (selectedChange)="onApprovalLevelChange($event[0])"
+            />
+          </div>
+          <div class="field-row">
+            <daf-form-field
+              [options]="{ label: 'SLA (jours)', type: 'number', fullWidth: true }"
+              [value]="form.defaultSlaDays"
+              (valueChange)="form.defaultSlaDays = $any($event)"
+            />
+          </div>
+        </div>
+        <div class="field-row">
+          <daf-form-field
+            [options]="{ label: 'Description', type: 'textarea', rows: 2, fullWidth: true }"
+            [value]="form.description"
+            (valueChange)="form.description = $any($event)"
+          />
+        </div>
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
       <div slot="footer">
-        <button class="btn-ghost" (click)="showModal.set(false)" type="button">Annuler</button>
-        <button class="btn-save" [disabled]="!form.typeCode || !form.displayNameFr || saving()" (click)="save()" type="button">
-          @if (saving()) { <app-spinner size="sm" /> }
-          {{ editTarget() ? 'Enregistrer' : 'Créer' }}
-        </button>
+        <daf-button label="Annuler" variant="secondary" (onClick)="showModal.set(false)" />
+        <daf-button
+          [label]="editTarget() ? 'Enregistrer' : 'Créer'"
+          variant="teal"
+          [options]="{ disabled: !form.typeCode || !form.displayNameFr || saving(), loading: saving() }"
+          (onClick)="save()"
+        />
       </div>
     </app-modal>
   `,
@@ -104,34 +156,15 @@ const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','O
     .col-title { font-size:13px;font-weight:700;margin:0 }
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .header-actions { display:flex;gap:8px;align-items:center }
-    .btn-add  { padding:6px 14px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer }
-    .btn-ghost{ display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--color-border);background:none;border-radius:6px;font-size:12px;cursor:pointer;color:var(--color-text-muted) }
-    .btn-ghost:disabled { opacity:.5;cursor:not-allowed }
     .center   { display:flex;justify-content:center;padding:24px }
-    .data-table { width:100%;border-collapse:collapse;font-size:13px }
-    .data-table th { padding:8px 12px;background:var(--color-bg-secondary,#EEF2F5);border-bottom:1px solid var(--color-border);text-align:left;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--color-text-muted);white-space:nowrap }
-    .data-table td { padding:9px 12px;border-bottom:1px solid var(--color-border) }
-    .data-table tr:last-child td { border-bottom:none }
-    .inactive  { opacity:.5 }
-    .code-cell { font-family:monospace;font-size:11px;color:var(--color-primary);font-weight:600 }
-    .cat-badge { display:inline-block;padding:1px 7px;border-radius:999px;background:var(--color-bg-secondary);font-size:10px;font-weight:600;color:var(--color-text-muted) }
-    .level-badge { display:inline-block;padding:1px 7px;border-radius:999px;background:#dcfce7;color:#16A34A;font-size:10px;font-weight:700 }
-    .level-badge.l2 { background:#fef3c7;color:#D97706 }
-    .cell-center { text-align:center;color:var(--color-text-muted);font-size:13px }
-    .actions-cell { display:flex;gap:6px }
-    .btn-edit   { padding:3px 8px;background:none;border:1px solid var(--color-border);border-radius:4px;font-size:11px;cursor:pointer;color:var(--color-primary) }
-    .btn-delete { padding:3px 8px;background:none;border:1px solid #fca5a5;border-radius:4px;font-size:11px;cursor:pointer;color:#DC2626 }
+    .rta-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px }
+    .rta-count  { font-size:12px;color:var(--color-text-muted) }
     .empty-state { text-align:center;padding:36px;color:var(--color-text-muted);display:flex;flex-direction:column;align-items:center;gap:12px }
     .empty-state p { margin:0;font-size:13px }
     .modal-form { display:flex;flex-direction:column;gap:12px }
     .form-row   { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px }
     .field-row  { display:flex;flex-direction:column;gap:4px }
-    .form-label { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted) }
-    .form-input { padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:100%;background:#fff;resize:vertical }
-    .form-input:focus { border-color:var(--color-primary) }
-    .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:12px }
-    .btn-save { display:inline-flex;align-items:center;gap:5px;padding:7px 16px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer }
-    .btn-save:disabled { opacity:.5;cursor:not-allowed }
+    .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
   `],
 })
 export class RequestTypesAdminComponent implements OnChanges {
@@ -148,17 +181,65 @@ export class RequestTypesAdminComponent implements OnChanges {
   modalError = signal<string | null>(null);
 
   readonly categories = CATEGORIES;
+  readonly categoryOptions: SelectOption[] = CATEGORIES.map(c => ({ value: c, label: c }));
+  readonly approvalLevelOptions: SelectOption[] = [
+    { value: 'L1', label: 'L1 (simple)' },
+    { value: 'L2', label: 'L2 (double)' },
+  ];
 
   form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1' as 'L1'|'L2', defaultSlaDays:2 };
+
+  readonly columns: TableColumn[] = [
+    { key: 'typeCode', label: 'Code' },
+    { key: 'displayNameFr', label: 'Libellé' },
+    { key: 'category', label: 'Catégorie' },
+    { key: 'approvalLevel', label: 'Approbation' },
+    { key: 'defaultSlaDays', label: 'SLA', align: 'center' },
+    { key: 'isActive', label: 'Actif', align: 'center' },
+    { key: '_actions', label: 'Actions', align: 'right' },
+  ];
+
+  readonly tableConfig: TableConfig = { hoverable: true };
+
+  // Pagination — 5 per page
+  currentPage = signal(0);
+  readonly totalElements = computed(() => this.types().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
+
+  readonly pagedTypes = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.types().slice(start, start + PAGE_SIZE);
+  });
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.pagedTypes().map(t => ({
+      typeCode: t.typeCode,
+      displayNameFr: t.displayNameFr,
+      category: t.category,
+      approvalLevel: t.approvalLevel,
+      defaultSlaDays: t.defaultSlaDays + 'j',
+      isActive: t.isActive,
+      _source: t,
+    })),
+  );
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   ngOnChanges() { this.load(); }
 
   private load() {
     this.loading.set(true);
+    this.currentPage.set(0);
     this.svc.listRequestTypes(this.paysId()).pipe(catchError(() => of([]))).subscribe(ts => {
       this.types.set(ts);
       this.loading.set(false);
     });
+  }
+
+  onApprovalLevelChange(value: string): void {
+    this.form.approvalLevel = (value === 'L2' ? 'L2' : 'L1');
   }
 
   openAdd()  { this.editTarget.set(null); this.form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1', defaultSlaDays:2 }; this.showModal.set(true); this.modalError.set(null); }

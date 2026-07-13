@@ -14,6 +14,7 @@ import {
 } from './models/request.model';
 import { ModalComponent }  from '../../shared/modal.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
+import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 // ── IBAN validator ─────────────────────────────────────────────────────────────
 function ibanValidator(c: AbstractControl): ValidationErrors | null {
@@ -35,7 +36,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 @Component({
   selector: 'app-new-request',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule],
+  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent],
   template: `
     <app-modal
       [title]="selectedType() ? (selectedType()!.displayNameFr) : 'Nouvelle demande RH'"
@@ -67,7 +68,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
                           <span class="type-card-desc">{{ t.description }}</span>
                         }
                         @if (t.approvalLevel === 'L2') {
-                          <span class="l2-badge">Validation Finance requise</span>
+                          <daf-badge label="Validation Finance requise" [options]="{ variant: 'warning', size: 'sm' }" />
                         }
                         <span class="sla-info">SLA {{ t.defaultSlaDays }}j</span>
                       </button>
@@ -196,7 +197,6 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
     }
     .type-card-name { font-size:13px;font-weight:600;color:var(--color-text,#1A1C1E) }
     .type-card-desc { font-size:11px;color:var(--color-text-muted,#6B7280);line-height:1.3 }
-    .l2-badge       { display:inline-block;margin-top:4px;padding:1px 7px;border-radius:999px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:600 }
     .sla-info       { font-size:10px;color:var(--color-text-muted,#6B7280);margin-top:auto }
 
     /* Dynamic form */

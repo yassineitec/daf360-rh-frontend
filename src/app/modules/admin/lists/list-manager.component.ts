@@ -3,18 +3,27 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import {
-  DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
+  ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
+  FormFieldComponent, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
+  PaginationComponent, PaginationConfig,
 } from '@khalilrebhiitec/daf360';
+import { ModalComponent } from '../../../shared/modal.component';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
   CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
 } from '../../../core/lists/configurable-list.model';
 import { UserStore } from '../../../core/user.store';
 
+const PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-list-manager',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective],
+  imports: [
+    FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective,
+    ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent, StatusBadgeComponent,
+    PaginationComponent,
+  ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
 })
@@ -43,17 +52,25 @@ export class ListManagerComponent implements OnInit {
   });
 
   readonly columns: TableColumn[] = [
-    { key: 'order', label: 'Ordre', width: '65px' },
     { key: 'valueCode', label: 'Code' },
     { key: 'labelFr', label: 'Libellé FR' },
     { key: 'labelEn', label: 'Libellé EN' },
     { key: 'isActive', label: 'Actif' },
     { key: 'isSystem', label: 'Système' },
-    { key: '_actions', label: 'Actions', align: 'right' },
+    { key: '_actions', label: 'Actions', align: 'right', width: '120px' },
   ];
 
+  currentPage = signal(0);
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.values().length / PAGE_SIZE)));
+
+  readonly pagedValues = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.values().slice(start, start + PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.values().map(v => ({
+    this.pagedValues().map(v => ({
       valueCode: v.valueCode,
       labelFr:   v.labelFr,
       labelEn:   v.labelEn,
@@ -68,6 +85,17 @@ export class ListManagerComponent implements OnInit {
     showHeader: false,
     emptyMessage: 'Aucune valeur. Cliquez sur "+ Ajouter" pour commencer.',
   }));
+
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   editForm: FormGroup = this.fb.group({
     labelFr:   ['', Validators.required],
@@ -85,7 +113,11 @@ export class ListManagerComponent implements OnInit {
 
   ngOnInit(): void {
     this.listService.getListTypes().subscribe({
-      next: types => { this.listTypes.set(types); this.loadingTypes.set(false); },
+      next: types => {
+        this.listTypes.set(types);
+        this.loadingTypes.set(false);
+        if (types.length) this.selectType(types[0]);
+      },
       error: () => { this.error.set('Impossible de charger les types de listes.'); this.loadingTypes.set(false); },
     });
   }
@@ -97,8 +129,14 @@ export class ListManagerComponent implements OnInit {
     this.loadValues(type.id);
   }
 
+  openAddForm(): void {
+    this.addForm.reset({ sortOrder: 0 });
+    this.showAddForm.set(true);
+  }
+
   loadValues(id: number): void {
     this.loadingValues.set(true);
+    this.currentPage.set(0);
     this.listService.getAllValuesForAdmin(id).subscribe({
       next: vals => { this.values.set(vals); this.loadingValues.set(false); },
       error: () => { this.error.set('Erreur lors du chargement des valeurs.'); this.loadingValues.set(false); },
@@ -144,35 +182,6 @@ export class ListManagerComponent implements OnInit {
     this.listService.createValue(dto).subscribe({
       next: () => { this.showAddForm.set(false); this.addForm.reset({ sortOrder: 0 }); this.flash('Valeur ajoutée.'); this.loadValues(type.id); },
       error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la création.'),
-    });
-  }
-
-  rowIndex(value: ListValue): number {
-    return this.values().findIndex(v => v.id === value.id);
-  }
-
-  moveUp(value: ListValue, index: number): void {
-    if (index === 0) return;
-    const vals = [...this.values()];
-    [vals[index - 1], vals[index]] = [vals[index], vals[index - 1]];
-    this.reorder(vals);
-  }
-
-  moveDown(value: ListValue, index: number): void {
-    const vals = this.values();
-    if (index >= vals.length - 1) return;
-    const copy = [...vals];
-    [copy[index], copy[index + 1]] = [copy[index + 1], copy[index]];
-    this.reorder(copy);
-  }
-
-  private reorder(orderedValues: ListValue[]): void {
-    this.values.set(orderedValues);
-    const type = this.selectedType();
-    if (!type) return;
-    this.listService.reorder(type.id, orderedValues.map(v => v.id)).subscribe({
-      next: () => this.flash('Ordre mis à jour.'),
-      error: () => { this.error.set("Erreur lors de la mise à jour de l'ordre."); this.loadValues(type.id); },
     });
   }
 

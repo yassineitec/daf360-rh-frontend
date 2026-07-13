@@ -2,10 +2,10 @@ import {
   Component, OnChanges, SimpleChanges, computed, inject, input, signal,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import {
-  AvatarCell, BadgeCell, BadgeOptions, DafCellDirective, DataTableComponent,
-  TableColumn, TableConfig, TableRow,
+  AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
+  DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
+  TableColumn, TableConfig, TableRow, PaginationComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import {
@@ -13,13 +13,18 @@ import {
   AssignEmployeeOverrideRequest,
 } from '../regime.model';
 import { PermissionDirective } from '../../../../shared/permission.directive';
+import { ModalComponent } from '../../../../shared/modal.component';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
 @Component({
   selector: 'app-regime-overview',
   standalone: true,
-  imports: [NgClass, FormsModule, PermissionDirective, DataTableComponent, DafCellDirective],
+  imports: [
+    NgClass, PermissionDirective, DataTableComponent, DafCellDirective,
+    ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
+    PaginationComponent,
+  ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
 })
@@ -39,6 +44,20 @@ export class RegimeOverviewComponent implements OnChanges {
   searchTerm    = signal('');
   activeFilter  = signal<SourceFilter>('ALL');
 
+  // Pagination — 5 per page, client-side over the filtered list
+  readonly PAGE_SIZE = 5;
+  currentPage = signal(0);
+
+  onSearch(value: string): void {
+    this.searchTerm.set(value);
+    this.currentPage.set(0);
+  }
+
+  onFilterChange(value: SourceFilter): void {
+    this.activeFilter.set(value);
+    this.currentPage.set(0);
+  }
+
   // Employee panel
   showEmployeePanel = signal(false);
   showOverrideForm  = signal(false);
@@ -52,6 +71,18 @@ export class RegimeOverviewComponent implements OnChanges {
   noEndDate         = signal(true);
   isSaving          = signal(false);
   panelError        = signal<string | null>(null);
+
+  regimeOptions = computed<SelectOption[]>(() =>
+    this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}h/sem` }))
+  );
+
+  overrideRegimeSelected(): string[] {
+    return this.overrideRegimeId ? [String(this.overrideRegimeId)] : [];
+  }
+
+  onOverrideRegimeChange(value: string[]): void {
+    this.overrideRegimeId = value[0] ? Number(value[0]) : 0;
+  }
 
   sourceFilters: { value: SourceFilter; label: string }[] = [
     { value: 'ALL',              label: 'Tous'            },
@@ -81,8 +112,16 @@ export class RegimeOverviewComponent implements OnChanges {
     { key: '_actions', label: 'Action', align: 'right' },
   ];
 
+  readonly totalElements = computed(() => this.filteredEmployees().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
+
+  readonly pagedEmployees = computed(() => {
+    const start = this.currentPage() * this.PAGE_SIZE;
+    return this.filteredEmployees().slice(start, start + this.PAGE_SIZE);
+  });
+
   readonly rows = computed<TableRow[]>(() =>
-    this.filteredEmployees().map(e => ({
+    this.pagedEmployees().map(e => ({
       employe: { name: e.fullName, initials: this.getInitials(e.fullName) } as AvatarCell,
       role: e.roleName ?? '—',
       regime: e.resolvedRegimeLabelFr,
@@ -90,6 +129,10 @@ export class RegimeOverviewComponent implements OnChanges {
       _source: e,
     })),
   );
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
 
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,

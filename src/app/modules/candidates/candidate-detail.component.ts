@@ -5,8 +5,10 @@ import { CandidateService } from './candidate.service';
 import { CandidateDetail, HireCandidateRequest } from './candidate.model';
 import { CandidateInterviewsComponent } from './candidate-interviews.component';
 import { RejectModalComponent } from './reject-modal.component';
+import { ModalComponent } from '../../shared/modal.component';
 import { UserStore } from '../../core/user.store';
 import {
+  BadgeOptions,
   ButtonComponent,
   CheckboxComponent,
   FormFieldComponent,
@@ -32,6 +34,7 @@ const NEEDS_END_DATE = ['CDD', 'CIVP', 'STAGE', 'DETACHEMENT'];
     CheckboxComponent,
     RejectModalComponent,
     CandidateInterviewsComponent,
+    ModalComponent,
   ],
   templateUrl: './candidate-detail.component.html',
 })
@@ -280,15 +283,19 @@ export class CandidateDetailComponent implements OnInit {
   }
 
   stepBg(stepStatus: string, currentStatus: string): string {
-    if (stepStatus === currentStatus) return '#1b3a4b';
-    if (this.isPast(stepStatus, currentStatus)) return 'rgba(121,215,190,0.2)';
-    return 'rgba(0,0,0,0.05)';
+    if (stepStatus === currentStatus) return 'var(--color-teal)';
+    if (this.isPast(stepStatus, currentStatus)) return 'var(--color-tertiary-container)';
+    return 'var(--color-outline-variant)';
   }
 
   stepColor(stepStatus: string, currentStatus: string): string {
     if (stepStatus === currentStatus) return '#ffffff';
-    if (this.isPast(stepStatus, currentStatus)) return '#50717b';
-    return '#94a3b8';
+    return 'var(--color-on-surface-variant)';
+  }
+
+  /** Badge options for a license/entitlement pill (active vs. not provisioned). */
+  licenseBadgeOptions(active: boolean): BadgeOptions {
+    return { variant: active ? 'success' : 'neutral', size: 'sm', dot: true };
   }
 
   navigateToCandidate() {

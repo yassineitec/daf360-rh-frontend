@@ -1,5 +1,10 @@
-import { Component, inject, input, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
+import {
+  FormFieldComponent,
+  SelectComponent, SelectOption,
+  ToggleComponent,
+  ButtonComponent,
+} from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
 import { RoleManagementService } from '../role-management.service';
 import { RoleListItem } from '../role.model';
@@ -7,7 +12,7 @@ import { RoleListItem } from '../role.model';
 @Component({
   selector: 'app-create-role-modal',
   standalone: true,
-  imports: [FormsModule, ModalComponent],
+  imports: [ModalComponent, FormFieldComponent, SelectComponent, ToggleComponent, ButtonComponent],
   templateUrl: './create-role-modal.component.html',
   styleUrl: './create-role-modal.component.scss',
 })
@@ -25,6 +30,14 @@ export class CreateRoleModalComponent {
   showAll      = signal(false);
   saving       = signal(false);
   error        = signal<string | null>(null);
+
+  parentOptions = computed<SelectOption[]>(() =>
+    this.allRoles().map(r => ({ value: String(r.id), label: r.frenchName }))
+  );
+
+  parentSelected = computed(() =>
+    this.parentRoleId() != null ? [String(this.parentRoleId())] : []
+  );
 
   create(): void {
     if (!this.frenchName().trim()) return;

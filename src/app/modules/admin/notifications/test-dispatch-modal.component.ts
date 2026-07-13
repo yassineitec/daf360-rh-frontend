@@ -1,18 +1,19 @@
 import { Component, input, output, signal } from '@angular/core';
+import { ButtonComponent } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../shared/modal.component';
 import { NotificationEventTypeWithRule, TestDispatchResult } from './notification-routing.model';
 
 @Component({
   selector: 'app-test-dispatch-modal',
   standalone: true,
-  imports: [ModalComponent],
+  imports: [ModalComponent, ButtonComponent],
   template: `
     <app-modal [title]="'Aperçu — ' + (eventType()?.labelFr ?? '')" [visible]="visible()" (closed)="closed.emit()" [hasFooter]="false">
       @if (result()) {
         <div class="tdm-tabs">
-          <button class="tdm-tab" [class.tdm-tab-active]="activeTab()==='inapp'" (click)="activeTab.set('inapp')">Notification in-app</button>
+          <daf-button label="Notification in-app" variant="toggle" [options]="{ active: activeTab()==='inapp' }" (onClick)="activeTab.set('inapp')" />
           @if (eventType()?.supportsEmail) {
-            <button class="tdm-tab" [class.tdm-tab-active]="activeTab()==='email'" (click)="activeTab.set('email')">Email</button>
+            <daf-button label="Email" variant="toggle" [options]="{ active: activeTab()==='email' }" (onClick)="activeTab.set('email')" />
           }
         </div>
 
@@ -57,15 +58,13 @@ import { NotificationEventTypeWithRule, TestDispatchResult } from './notificatio
   `,
   styles: [`
     .tdm-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--color-border);padding-bottom:8px}
-    .tdm-tab{background:none;border:none;cursor:pointer;font-size:13px;padding:6px 14px;border-radius:6px;color:var(--color-text-muted)}
-    .tdm-tab.tdm-tab-active{background:#1a6b7c;color:#fff;font-weight:600}
     .tdm-section{display:flex;flex-direction:column;gap:6px}
-    .tdm-label{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-text-muted);margin:8px 0 2px}
-    .tdm-value{font-size:13px;color:var(--color-text);background:var(--color-bg);border-radius:6px;padding:8px;margin:0}
-    .tdm-recipient{font-size:12px;color:var(--color-text-muted);padding:3px 0}
-    .tdm-empty{font-size:12px;color:var(--color-text-muted);font-style:italic}
-    .tdm-html-preview{border:1px solid var(--color-border);border-radius:8px;padding:12px;font-size:13px;background:#fafafa;max-height:200px;overflow-y:auto}
-    .tdm-loading{font-size:13px;color:var(--color-text-muted);text-align:center;padding:24px}
+    .tdm-label{font-size:var(--text-label-caps);font-weight:700;text-transform:uppercase;color:var(--color-text-muted);margin:8px 0 2px}
+    .tdm-value{font-size:var(--text-body-md);color:var(--color-text);background:var(--color-bg);border-radius:6px;padding:8px;margin:0}
+    .tdm-recipient{font-size:var(--text-label-sm);color:var(--color-text-muted);padding:3px 0}
+    .tdm-empty{font-size:var(--text-label-sm);color:var(--color-text-muted);font-style:italic}
+    .tdm-html-preview{border:1px solid var(--color-border);border-radius:8px;padding:12px;font-size:var(--text-body-sm);background:var(--color-surface-container-low);max-height:200px;overflow-y:auto}
+    .tdm-loading{font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;padding:24px}
   `],
 })
 export class TestDispatchModalComponent {

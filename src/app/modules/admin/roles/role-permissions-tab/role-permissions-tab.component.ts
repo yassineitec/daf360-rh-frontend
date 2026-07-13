@@ -1,12 +1,12 @@
 import { Component, OnInit, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ButtonComponent, CheckboxComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { RoleManagementService } from '../role-management.service';
 import { PermissionGroup, RoleListItem } from '../role.model';
 
 @Component({
   selector: 'app-role-permissions-tab',
   standalone: true,
-  imports: [FormsModule],
+  imports: [ButtonComponent, CheckboxComponent, StatusBadgeComponent],
   templateUrl: './role-permissions-tab.component.html',
   styleUrl: './role-permissions-tab.component.scss',
 })

@@ -22,7 +22,7 @@
   @else if (candidate(); as c) {
 
     <!-- ── Hero Header ──────────────────────────────────────────────────────── -->
-    <div style="background:#1b3a4b" class="px-8 py-6 shrink-0">
+    <div style="background:var(--color-teal)" class="px-8 py-6 shrink-0">
 
       <!-- Breadcrumb -->
       <nav class="flex items-center gap-1.5 text-[13px] mb-4" style="color:rgba(255,255,255,0.55)">
@@ -38,7 +38,7 @@
         <div class="flex items-center gap-5">
           <div class="w-14 h-14 rounded-2xl flex items-center justify-center
                       text-[20px] font-bold text-white shrink-0"
-               style="background:rgba(121,215,190,0.22)">
+               style="background:var(--color-tertiary-container)">
             {{ initials(c) }}
           </div>
           <div>
@@ -53,11 +53,8 @@
                   {{ c.appliedPosition }}
                 </span>
               }
-              @if (contractTypeLabel()) {
-                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
-                      style="background:rgba(121,215,190,0.18);color:#79D7BE">
-                  {{ contractTypeLabel() }}
-                </span>
+              @if (contractTypeLabel(); as contractType) {
+                <daf-badge [label]="contractType" [options]="{ variant: 'teal', size: 'sm' }" />
               }
             </div>
           </div>
@@ -98,7 +95,7 @@
     </div>
 
     <!-- ── Body ─────────────────────────────────────────────────────────────── -->
-    <div class="flex-1 overflow-y-auto" style="background:#f5f7f8">
+    <div class="flex-1 overflow-y-auto" style="background:var(--color-background)">
       <div class="max-w-7xl mx-auto p-6">
         <div class="grid grid-cols-12 gap-5">
 
@@ -107,7 +104,7 @@
 
             <!-- Coordonnées -->
             <div class="bg-white rounded-xl border border-outline-variant p-5">
-              <div class="flex items-center gap-2 mb-4" style="color:#50717b">
+              <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">contact_page</span>
                 <h3 class="text-[12px] font-semibold uppercase tracking-wider">Coordonnées</h3>
               </div>
@@ -169,7 +166,7 @@
 
             <!-- Dates -->
             <div class="bg-white rounded-xl border border-outline-variant p-5">
-              <div class="flex items-center gap-2 mb-4" style="color:#50717b">
+              <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">calendar_today</span>
                 <h3 class="text-[12px] font-semibold uppercase tracking-wider">Dates</h3>
               </div>
@@ -195,7 +192,7 @@
 
             <!-- Pipeline steps -->
             <div class="bg-white rounded-xl border border-outline-variant p-5">
-              <div class="flex items-center gap-2 mb-4" style="color:#50717b">
+              <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">linear_scale</span>
                 <h3 class="text-[12px] font-semibold uppercase tracking-wider">Étapes du recrutement</h3>
               </div>
@@ -217,13 +214,13 @@
                     </div>
                     <span class="text-[13px]"
                           [class.font-semibold]="step.status === c.status"
-                          [style.color]="step.status === c.status ? '#1b3a4b'
-                                       : isPast(step.status, c.status) ? '#50717b' : '#94a3b8'">
+                          [style.color]="step.status === c.status ? 'var(--color-teal)'
+                                       : 'var(--color-on-surface-variant)'">
                       {{ step.label }}
                     </span>
                   </div>
                   @if (!last) {
-                    <div class="w-px h-2.5 ml-3" style="background:rgba(0,0,0,0.08)"></div>
+                    <div class="w-px h-2.5 ml-3" style="background:var(--color-outline-variant)"></div>
                   }
                 }
               </div>
@@ -236,7 +233,7 @@
 
             <!-- Poste & Contrat -->
             <div class="bg-white rounded-xl border border-outline-variant p-5">
-              <div class="flex items-center gap-2 mb-5" style="color:#50717b">
+              <div class="flex items-center gap-2 mb-5" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">work</span>
                 <h3 class="text-[12px] font-semibold uppercase tracking-wider">Poste &amp; Contrat</h3>
               </div>
@@ -266,19 +263,19 @@
 
             <!-- CV -->
             <div class="bg-white rounded-xl border border-outline-variant p-5">
-              <div class="flex items-center gap-2 mb-4" style="color:#50717b">
+              <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">description</span>
                 <h3 class="text-[12px] font-semibold uppercase tracking-wider">Curriculum Vitae</h3>
               </div>
 
               @if (c.cvOriginalName) {
                 <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-outline-variant"
-                     style="background:#f8fafb">
+                     style="background:var(--color-surface-container-low)">
                   <div class="flex items-center gap-3 min-w-0">
                     <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                         style="background:rgba(121,215,190,0.15)">
-                      <span class="material-symbols-outlined text-[20px]" style="color:#79D7BE"
-                            style="font-variation-settings:'FILL' 1">picture_as_pdf</span>
+                         style="background:var(--color-tertiary-container)">
+                      <span class="material-symbols-outlined text-[20px]"
+                            style="color:var(--color-tertiary);font-variation-settings:'FILL' 1">picture_as_pdf</span>
                     </div>
                     <div class="min-w-0">
                       <p class="text-[13px] font-medium text-on-surface truncate">{{ c.cvOriginalName }}</p>
@@ -301,7 +298,7 @@
                 </div>
               } @else {
                 <div class="flex items-center justify-between p-4 rounded-xl border border-dashed border-outline-variant"
-                     style="background:#f8fafb">
+                     style="background:var(--color-surface-container-low)">
                   <div class="flex items-center gap-3">
                     <span class="material-symbols-outlined text-[22px] text-outline">upload_file</span>
                     <p class="text-[13px] text-outline">Aucun CV — PDF, DOC, DOCX (max 10 Mo)</p>
@@ -319,14 +316,14 @@
                 <p class="text-[12px] text-danger mt-2">{{ cvError() }}</p>
               }
               @if (cvSuccess()) {
-                <p class="text-[12px] mt-2" style="color:#50717b">{{ cvSuccess() }}</p>
+                <p class="text-[12px] mt-2" style="color:var(--color-on-surface-variant)">{{ cvSuccess() }}</p>
               }
             </div>
 
             <!-- Notes -->
             @if (c.notes) {
               <div class="bg-white rounded-xl border border-outline-variant p-5">
-                <div class="flex items-center gap-2 mb-3" style="color:#50717b">
+                <div class="flex items-center gap-2 mb-3" style="color:var(--color-on-surface-variant)">
                   <span class="material-symbols-outlined text-[18px]">edit_note</span>
                   <h3 class="text-[12px] font-semibold uppercase tracking-wider">Notes</h3>
                 </div>
@@ -337,7 +334,7 @@
             <!-- Rejection reason -->
             @if (c.status === 'REJECTED' && c.rejectionReason) {
               <div class="rounded-xl border p-5"
-                   style="border-color:rgba(186,26,26,0.2);background:rgba(186,26,26,0.04)">
+                   style="border-color:var(--color-danger);background:var(--color-error-container)">
                 <div class="flex items-center gap-2 mb-2">
                   <span class="material-symbols-outlined text-[18px] text-danger"
                         style="font-variation-settings:'FILL' 1">cancel</span>
@@ -359,7 +356,7 @@
               @if (c.itProvisioning; as prov) {
                 <div class="bg-white rounded-xl border border-outline-variant p-5" style="margin-top:2rem">
                   <div class="flex items-center justify-between mb-5">
-                    <div class="flex items-center gap-2" style="color:#50717b">
+                    <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
                       <span class="material-symbols-outlined text-[18px]">computer</span>
                       <h3 class="text-[12px] font-semibold uppercase tracking-wider">IT Provisioning</h3>
                     </div>
@@ -369,17 +366,17 @@
 
                   @if (prov.ms365Email) {
                     <div class="flex items-center gap-2 p-3 rounded-lg mb-4"
-                         style="background:rgba(70,72,212,0.06)">
+                         style="background:var(--color-secondary-container)">
                       <span class="material-symbols-outlined text-[18px]"
-                            style="color:#4648d4">alternate_email</span>
-                      <span class="text-[13px] font-medium" style="color:#4648d4">{{ prov.ms365Email }}</span>
+                            style="color:var(--color-secondary)">alternate_email</span>
+                      <span class="text-[13px] font-medium" style="color:var(--color-secondary)">{{ prov.ms365Email }}</span>
                     </div>
                   }
 
                   <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <p class="text-[11px] text-outline uppercase tracking-wide font-semibold mb-1">Équipements</p>
-                      <p class="text-[15px] font-bold" [style.color]="prov.assetsProvided > 0 ? '#50717b' : '#94a3b8'">
+                      <p class="text-[15px] font-bold" style="color:var(--color-on-surface-variant)">
                         {{ prov.assetsProvided }}<span class="text-[13px] font-normal text-outline"> / 6</span>
                       </p>
                     </div>
@@ -400,11 +397,7 @@
                         { label: 'Revit',      active: prov.licenseRevit },
                         { label: 'Kaspersky',  active: prov.licenseKaspersky }
                       ]; track lic.label) {
-                        <span class="px-2.5 py-1 rounded-full text-[11px] font-medium"
-                              [style.background]="lic.active ? 'rgba(121,215,190,0.15)' : 'rgba(0,0,0,0.05)'"
-                              [style.color]="lic.active ? '#50717b' : '#94a3b8'">
-                          {{ lic.label }}
-                        </span>
+                        <daf-badge [label]="lic.label" [options]="licenseBadgeOptions(lic.active)" />
                       }
                     </div>
                   </div>
@@ -419,7 +412,7 @@
 
               } @else {
                 <div class="bg-white rounded-xl border border-outline-variant p-5" style="margin-top:2rem">
-                  <div class="flex items-center gap-2 mb-2" style="color:#50717b">
+                  <div class="flex items-center gap-2 mb-2" style="color:var(--color-on-surface-variant)">
                     <span class="material-symbols-outlined text-[18px]">computer</span>
                     <h3 class="text-[12px] font-semibold uppercase tracking-wider">IT Provisioning</h3>
                   </div>
@@ -441,55 +434,52 @@
     />
 
     <!-- ── Hire modal ─────────────────────────────────────────────────────── -->
-    @if (showHireModal()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-        <div class="bg-surface rounded-2xl p-7 w-full max-w-md shadow-2xl">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="material-symbols-outlined text-[20px]" style="color:#50717b">how_to_reg</span>
-            <h3 class="text-base font-bold text-on-surface">Recruter le candidat</h3>
-          </div>
-          <p class="text-sm text-outline mb-5">
-            <strong class="text-on-surface">{{ c.firstName }} {{ c.lastName }}</strong>
-            @if (contractTypeLabel()) { — {{ contractTypeLabel() }} }
-          </p>
+    <app-modal
+      title="Recruter le candidat"
+      [visible]="showHireModal()"
+      [hasFooter]="true"
+      (closed)="showHireModal.set(false)"
+    >
+      <p class="text-sm text-outline mb-5">
+        <strong class="text-on-surface">{{ c.firstName }} {{ c.lastName }}</strong>
+        @if (contractTypeLabel()) { — {{ contractTypeLabel() }} }
+      </p>
 
-          @if (hireError()) {
-            <div class="bg-danger/10 text-danger text-xs rounded-lg px-3 py-2 mb-4">{{ hireError() }}</div>
-          }
+      @if (hireError()) {
+        <div class="bg-danger/10 text-danger text-xs rounded-lg px-3 py-2 mb-4">{{ hireError() }}</div>
+      }
 
-          <div class="space-y-4">
-            <daf-multi-date-picker
-              [value]="getHireDate()"
-              [config]="{ label: 'Date d’embauche', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
-              (valueChange)="setHireDate($event)" />
+      <div class="space-y-4">
+        <daf-multi-date-picker
+          [value]="getHireDate()"
+          [config]="{ label: 'Date d’embauche', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+          (valueChange)="setHireDate($event)" />
 
-            @if (requiresEndDate()) {
-              <daf-multi-date-picker
-                [value]="getEndDate()"
-                [config]="{ label: 'Date de fin prévue', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
-                (valueChange)="setEndDate($event)" />
-            }
+        @if (requiresEndDate()) {
+          <daf-multi-date-picker
+            [value]="getEndDate()"
+            [config]="{ label: 'Date de fin prévue', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+            (valueChange)="setEndDate($event)" />
+        }
 
-            <daf-checkbox
-              [(checked)]="hireForm.managerProfile"
-              [options]="{ label: 'Profil manager (période d’essai étendue)' }" />
+        <daf-checkbox
+          [(checked)]="hireForm.managerProfile"
+          [options]="{ label: 'Profil manager (période d’essai étendue)' }" />
 
-            <daf-form-field
-              [value]="hireForm.notes ?? null"
-              [options]="{ type: 'textarea', label: 'Notes', placeholder: 'Commentaire (optionnel)…', rows: 3, fullWidth: true }"
-              (valueChange)="setHireNotes($event)" />
-          </div>
-
-          <div class="flex gap-3 justify-end mt-6">
-            <daf-button label="Annuler" variant="ghost" [options]="{ size: 'md' }"
-              (onClick)="showHireModal.set(false)" />
-            <daf-button label="Confirmer le recrutement" variant="teal"
-              [options]="{ iconStart: 'how_to_reg', size: 'md', loading: hireLoading(), disabled: hireLoading() }"
-              (onClick)="confirmHire()" />
-          </div>
-        </div>
+        <daf-form-field
+          [value]="hireForm.notes ?? null"
+          [options]="{ type: 'textarea', label: 'Notes', placeholder: 'Commentaire (optionnel)…', rows: 3, fullWidth: true }"
+          (valueChange)="setHireNotes($event)" />
       </div>
-    }
+
+      <div slot="footer">
+        <daf-button label="Annuler" variant="ghost" [options]="{ size: 'md' }"
+          (onClick)="showHireModal.set(false)" />
+        <daf-button label="Confirmer le recrutement" variant="teal"
+          [options]="{ iconStart: 'how_to_reg', size: 'md', loading: hireLoading(), disabled: hireLoading() }"
+          (onClick)="confirmHire()" />
+      </div>
+    </app-modal>
   }
 
 </div>

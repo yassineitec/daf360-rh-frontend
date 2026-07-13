@@ -1,30 +1,31 @@
 <div class="rm-layout">
   @if (error()) { <div class="rm-error">{{ error() }}</div> }
-  <aside class="rm-sidebar">
-    <app-role-list
-      [roles]="roles()"
-      [selectedRoleId]="selectedRole()?.id ?? null"
-      [loading]="loading()"
-      (roleSelected)="onRoleSelected($event)"
-      (createClicked)="showCreateModal.set(true)"
-      (deleteClicked)="onRoleDeleted($event.id)"
-    />
-  </aside>
-  <main class="rm-content">
-    @if (!selectedRole()) {
-      <div class="rm-placeholder">
-        <p>← Sélectionnez un rôle pour le modifier</p>
-      </div>
-    } @else {
-      <app-role-editor
-        [role]="selectedRole()!"
-        [allRoles]="roles()"
-        (onRoleUpdated)="onRoleUpdated($event)"
-        (onRoleDeleted)="onRoleDeleted($event)"
-      />
-    }
-  </main>
+  <app-role-list
+    [roles]="roles()"
+    [selectedRoleId]="selectedRole()?.id ?? null"
+    [loading]="loading()"
+    (roleSelected)="onRoleSelected($event)"
+    (createClicked)="showCreateModal.set(true)"
+    (deleteClicked)="onRoleDeleted($event.id)"
+  />
 </div>
+
+<app-modal
+  [visible]="!!selectedRole()"
+  [title]="selectedRole()?.frenchName ?? ''"
+  size="lg"
+  (closed)="selectedRole.set(null)"
+>
+  @if (selectedRole()) {
+    <app-role-editor
+      [role]="selectedRole()!"
+      [allRoles]="roles()"
+      (onRoleUpdated)="onRoleUpdated($event)"
+      (onRoleDeleted)="onRoleDeleted($event)"
+    />
+  }
+</app-modal>
+
 <app-create-role-modal
   [visible]="showCreateModal()"
   [allRoles]="roles()"

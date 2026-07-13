@@ -1,7 +1,7 @@
 @if (loading()) {
-  <div style="display:flex;flex-direction:column;gap:10px;">
+  <div class="rra-skeleton-wrap">
     @for (i of [1,2,3,4,5]; track i) {
-      <div style="height:56px;border-radius:10px;background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
+      <div class="rra-skeleton"></div>
     }
   </div>
 }
@@ -11,97 +11,118 @@
 
     <ng-template dafCell="regime" let-row>
       @if (row['regime']) {
-        <span style="background:#e6f7f5;color:#00695c;font-size:12px;padding:4px 12px;border-radius:999px;font-weight:500;">{{ row['regime'] }}</span>
+        <span class="rra-regime-badge">{{ row['regime'] }}</span>
       } @else {
-        <span style="font-size:13px;color:#75777d;font-style:italic;">Défaut ({{ defaultRegimeName() ?? 'Non configuré' }})</span>
+        <span class="rra-regime-none">Défaut ({{ defaultRegimeName() ?? 'Non configuré' }})</span>
       }
     </ng-template>
 
     <ng-template dafCell="notes" let-row>
-      <span style="font-size:12px;color:#44474c;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;" [title]="row['_source'].assignment?.notes ?? ''">{{ row['notes'] }}</span>
+      <span class="rra-notes" [title]="row['_source'].assignment?.notes ?? ''">{{ row['notes'] }}</span>
     </ng-template>
 
     <ng-template dafCell="_actions" let-row>
-      <div style="display:flex;justify-content:flex-end;gap:6px;">
-        <button type="button" (click)="openAssignModal(row['_source'])" *appHasPermission="'ADMIN_REGIMES'"
-          style="padding:6px 12px;border-radius:8px;border:none;background:#ede9fe;color:#4648d4;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
-          <span class="material-symbols-outlined" style="font-size:14px;">{{ row['_source'].assignment ? 'edit' : 'add' }}</span>
-          {{ row['_source'].assignment ? 'Modifier' : 'Assigner' }}
-        </button>
+      <div class="rra-actions">
+        <daf-button
+          *appHasPermission="'ADMIN_REGIMES'"
+          [label]="row['_source'].assignment ? 'Modifier' : 'Assigner'"
+          variant="secondary"
+          [options]="{ size: 'sm', iconStart: row['_source'].assignment ? 'edit' : 'add' }"
+          (onClick)="openAssignModal(row['_source'])" />
         @if (row['_source'].assignment) {
-          <button type="button" (click)="openRemoveModal(row['_source'])" *appHasPermission="'ADMIN_REGIMES'"
-            style="padding:6px 8px;border-radius:8px;border:none;background:#fee2e2;color:#ba1a1a;cursor:pointer;display:flex;align-items:center;">
-            <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
-          </button>
+          <daf-button
+            *appHasPermission="'ADMIN_REGIMES'"
+            variant="danger"
+            [options]="{ size: 'sm', iconStart: 'delete' }"
+            (onClick)="openRemoveModal(row['_source'])" />
         }
       </div>
     </ng-template>
 
   </daf-data-table>
+
+  <!-- Count + Pagination -->
+  <div class="rra-footer">
+    <span class="rra-count"><strong>{{ totalElements() }}</strong> rôle(s)</span>
+    @if (totalPages() > 1) {
+      <daf-pagination
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages()"
+        [totalElements]="totalElements()"
+        (pageChange)="onPageChange($event)" />
+    }
+  </div>
 }
 
 <!-- Assign Modal -->
-@if (showAssignModal()) {
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:480px;">
-      <h3 style="font-size:18px;font-weight:700;color:#1d2b3e;margin:0 0 6px;">Assigner un régime</h3>
-      <p style="font-size:13px;color:#44474c;margin:0 0 24px;">Rôle : <strong style="color:#4648d4;">{{ selectedRow()?.roleName }}</strong></p>
+<app-modal
+  title="Assigner un régime"
+  [visible]="showAssignModal()"
+  [hasFooter]="true"
+  (closed)="showAssignModal.set(false)">
 
-      @if (errorMsg()) { <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:16px;">{{ errorMsg() }}</div> }
+  <p class="rra-modal-subtitle">Rôle : <strong class="rra-modal-role">{{ selectedRow()?.roleName }}</strong></p>
 
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Régime *</label>
-          <select [(ngModel)]="formRegimeId" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;">
-            @for (r of regimes(); track r.id) {
-              <option [value]="r.id">{{ r.labelFr }} · {{ r.hoursPerWeek }}h/sem{{ r.isFlexible ? ' · Flexible' : '' }}</option>
-            }
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Date d'effet *</label>
-            <input type="date" [(ngModel)]="formEffFrom" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;" /></div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Date de fin</label>
-            <input type="date" [(ngModel)]="formEffTo" [disabled]="noEndDate()" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;box-sizing:border-box;" [style.opacity]="noEndDate() ? '0.4' : '1'" />
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#44474c;margin-top:6px;cursor:pointer;">
-              <input type="checkbox" [checked]="noEndDate()" (change)="noEndDate.set($any($event.target).checked)" /> Sans date de fin
-            </label>
-          </div>
-        </div>
-        <div><label style="font-size:11px;font-weight:700;color:#44474c;text-transform:uppercase;display:block;margin-bottom:4px;">Notes</label>
-          <textarea [(ngModel)]="formNotes" rows="2" style="width:100%;background:#f2f4f6;border:none;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;resize:none;box-sizing:border-box;"></textarea>
-        </div>
-        <div style="background:#f0f4ff;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:13px;color:#1d2b3e;">
-          <span class="material-symbols-outlined" style="font-size:16px;color:#4648d4;">info</span>
-          Cela affectera <strong>{{ affectedCount() }}</strong> employé(s) avec le rôle "{{ selectedRow()?.roleName }}" sans override personnel.
-        </div>
-      </div>
+  @if (errorMsg()) { <div class="rra-msg-error">{{ errorMsg() }}</div> }
 
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;">
-        <button type="button" (click)="showAssignModal.set(false)" style="padding:9px 18px;border-radius:10px;border:1px solid #e5e7eb;background:none;font-size:13px;cursor:pointer;color:#44474c;">Annuler</button>
-        <button type="button" (click)="confirmAssign()" [disabled]="isAssigning() || !formRegimeId || !formEffFrom"
-          style="background:#4648d4;color:#fff;font-weight:700;padding:9px 22px;border-radius:10px;border:none;font-size:13px;cursor:pointer;" [style.opacity]="(isAssigning() || !formRegimeId || !formEffFrom) ? '0.5' : '1'">
-          Confirmer l'assignation
-        </button>
+  <div class="rra-form">
+    <daf-select
+      [selected]="formRegimeSelected()"
+      [options]="regimeOptions()"
+      [config]="{ label: 'Régime', required: true, fullWidth: true }"
+      (selectedChange)="onFormRegimeChange($event)" />
+    <div class="rra-form-row-2">
+      <daf-form-field
+        [options]="{ label: 'Date d\'effet', type: 'date', required: true, fullWidth: true }"
+        [value]="formEffFrom"
+        (valueChange)="formEffFrom = $any($event)" />
+      <div>
+        <daf-form-field
+          [options]="{ label: 'Date de fin', type: 'date', disabled: noEndDate(), fullWidth: true }"
+          [value]="formEffTo"
+          (valueChange)="formEffTo = $any($event)" />
+        <daf-checkbox
+          class="rra-no-end-checkbox"
+          [options]="{ label: 'Sans date de fin' }"
+          [checked]="noEndDate()"
+          (checkedChange)="noEndDate.set($event)" />
       </div>
     </div>
+    <daf-form-field
+      [options]="{ label: 'Notes', type: 'textarea', rows: 2, fullWidth: true }"
+      [value]="formNotes"
+      (valueChange)="formNotes = $any($event)" />
+    <div class="rra-info-banner">
+      <span class="material-symbols-outlined rra-info-icon">info</span>
+      Cela affectera <strong>{{ affectedCount() }}</strong> employé(s) avec le rôle "{{ selectedRow()?.roleName }}" sans override personnel.
+    </div>
   </div>
-}
+
+  <div slot="footer">
+    <daf-button label="Annuler" variant="secondary" (onClick)="showAssignModal.set(false)" />
+    <daf-button
+      label="Confirmer l'assignation"
+      variant="teal"
+      [options]="{ disabled: isAssigning() || !formRegimeId || !formEffFrom, loading: isAssigning() }"
+      (onClick)="confirmAssign()" />
+  </div>
+</app-modal>
 
 <!-- Remove Modal -->
-@if (showRemoveModal()) {
-  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:440px;">
-      <h3 style="font-size:18px;font-weight:700;color:#1d2b3e;margin:0 0 14px;">Supprimer l'assignation</h3>
-      <p style="font-size:13px;color:#44474c;margin:0 0 16px;">Êtes-vous sûr de vouloir supprimer le régime "<strong>{{ selectedRow()?.assignment?.regimeLabelFr }}</strong>" du rôle "<strong>{{ selectedRow()?.roleName }}</strong>" ?</p>
-      <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#92400e;margin-bottom:20px;">
-        <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0;margin-top:1px;">warning</span>
-        <strong>{{ affectedCount() }}</strong>&nbsp;employé(s) reviendront au régime par défaut de l'entité.
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;">
-        <button type="button" (click)="showRemoveModal.set(false)" style="padding:9px 18px;border-radius:10px;border:1px solid #e5e7eb;background:none;font-size:13px;cursor:pointer;color:#44474c;">Annuler</button>
-        <button type="button" (click)="confirmRemove()" style="background:#ba1a1a;color:#fff;font-weight:700;padding:9px 22px;border-radius:10px;border:none;font-size:13px;cursor:pointer;">Supprimer</button>
-      </div>
-    </div>
+<app-modal
+  title="Supprimer l'assignation"
+  [visible]="showRemoveModal()"
+  [hasFooter]="true"
+  (closed)="showRemoveModal.set(false)">
+
+  <p class="rra-remove-text">Êtes-vous sûr de vouloir supprimer le régime "<strong>{{ selectedRow()?.assignment?.regimeLabelFr }}</strong>" du rôle "<strong>{{ selectedRow()?.roleName }}</strong>" ?</p>
+  <div class="rra-warning">
+    <span class="material-symbols-outlined rra-warning-icon">warning</span>
+    <strong>{{ affectedCount() }}</strong>&nbsp;employé(s) reviendront au régime par défaut de l'entité.
   </div>
-}
+
+  <div slot="footer">
+    <daf-button label="Annuler" variant="secondary" (onClick)="showRemoveModal.set(false)" />
+    <daf-button label="Supprimer" variant="danger" (onClick)="confirmRemove()" />
+  </div>
+</app-modal>

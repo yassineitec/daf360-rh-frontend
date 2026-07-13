@@ -1,33 +1,33 @@
 <div class="list-manager">
 
-  <!-- LEFT: Type selector -->
-  <aside class="lm-sidebar">
-    <div class="lm-sidebar-header">
-      <h2 class="lm-sidebar-title">Listes configurables</h2>
-      <input class="lm-search" type="search" placeholder="Rechercher…"
-             [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
-    </div>
+  <!-- Type tabs -->
+  <div class="lm-header">
+    <h2 class="lm-title">Listes configurables</h2>
+  </div>
 
-    @if (loadingTypes()) {
-      <p class="lm-loading">Chargement…</p>
-    } @else {
-      <ul class="lm-type-list">
-        @for (type of filteredTypes(); track type.id) {
-          <li class="lm-type-item" [class.lm-type-active]="selectedType()?.id === type.id"
-              (click)="selectType(type)">
-            <span class="lm-type-label">{{ type.labelFr }}</span>
-            @if (type.isPerPays) { <span class="lm-badge-pays">par entité</span> }
-            @if (type.isSystem)  { <span class="lm-badge-sys">système</span> }
-          </li>
-        }
-        @if (filteredTypes().length === 0) {
-          <li class="lm-type-empty">Aucune liste.</li>
-        }
-      </ul>
-    }
-  </aside>
+  @if (loadingTypes()) {
+    <p class="lm-loading">Chargement…</p>
+  } @else {
+    <nav class="lm-tab-bar" role="tablist">
+      @for (type of filteredTypes(); track type.id) {
+        <button
+          class="lm-tab-btn"
+          [class.active]="selectedType()?.id === type.id"
+          (click)="selectType(type)"
+          role="tab"
+          type="button"
+        >
+          {{ type.labelFr }}
+          @if (type.isSystem) { <daf-badge label="système" [options]="{ variant: 'warning', size: 'sm' }" /> }
+        </button>
+      }
+      @if (filteredTypes().length === 0) {
+        <span class="lm-type-empty">Aucune liste.</span>
+      }
+    </nav>
+  }
 
-  <!-- RIGHT: Values -->
+  <!-- Values -->
   <main class="lm-content">
 
     @if (!selectedType()) {
@@ -42,59 +42,16 @@
             <p class="lm-content-desc">{{ selectedType()!.description }}</p>
           }
         </div>
-        <button class="btn-add" type="button" (click)="showAddForm.set(!showAddForm())">
-          @if (showAddForm()) { ✕ Annuler } @else { + Ajouter une valeur }
-        </button>
+        <daf-button label="+ Ajouter une valeur" variant="teal" (onClick)="openAddForm()" />
       </div>
 
       @if (error())      { <div class="lm-alert lm-alert-error">{{ error() }}</div> }
       @if (successMsg()) { <div class="lm-alert lm-alert-success">{{ successMsg() }}</div> }
 
-      @if (showAddForm()) {
-        <form class="lm-add-form" [formGroup]="addForm" (ngSubmit)="addValue()">
-          <div class="lm-add-grid">
-            <div class="lm-field">
-              <label class="lm-label">Code <span class="req">*</span></label>
-              <input class="lm-input" formControlName="valueCode" placeholder="EX_CODE" />
-            </div>
-            <div class="lm-field">
-              <label class="lm-label">Libellé FR <span class="req">*</span></label>
-              <input class="lm-input" formControlName="labelFr" placeholder="En français" />
-            </div>
-            <div class="lm-field">
-              <label class="lm-label">Libellé EN <span class="req">*</span></label>
-              <input class="lm-input" formControlName="labelEn" placeholder="In English" />
-            </div>
-            <div class="lm-field">
-              <label class="lm-label">Ordre</label>
-              <input class="lm-input" type="number" formControlName="sortOrder" min="0" />
-            </div>
-          </div>
-          <div class="lm-add-actions">
-            <button class="btn-save-add" type="submit" [disabled]="addForm.invalid">Enregistrer</button>
-          </div>
-        </form>
-      }
-
       @if (loadingValues()) {
         <p class="lm-loading">Chargement…</p>
       } @else {
         <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
-
-          <ng-template dafCell="order" let-row>
-            @if (editingId() === row['_source'].id) {
-              <ng-container [formGroup]="editForm">
-                <input class="lm-input-sm" type="number" formControlName="sortOrder" min="0" />
-              </ng-container>
-            } @else {
-              <div class="order-btns">
-                <button class="btn-icon-sm" type="button" (click)="moveUp(row['_source'], rowIndex(row['_source']))"
-                        [disabled]="rowIndex(row['_source']) === 0" title="Monter">↑</button>
-                <button class="btn-icon-sm" type="button" (click)="moveDown(row['_source'], rowIndex(row['_source']))"
-                        [disabled]="rowIndex(row['_source']) === values().length - 1" title="Descendre">↓</button>
-              </div>
-            }
-          </ng-template>
 
           <ng-template dafCell="valueCode" let-row>
             <span class="td-code">{{ row['_source'].valueCode }}</span>
@@ -103,7 +60,9 @@
           <ng-template dafCell="labelFr" let-row>
             @if (editingId() === row['_source'].id) {
               <ng-container [formGroup]="editForm">
-                <input class="lm-input-sm" formControlName="labelFr" />
+                <daf-form-field
+                  [value]="editForm.controls['labelFr'].value"
+                  (valueChange)="editForm.controls['labelFr'].setValue($any($event))" />
               </ng-container>
             } @else {
               {{ row['_source'].labelFr }}
@@ -113,7 +72,9 @@
           <ng-template dafCell="labelEn" let-row>
             @if (editingId() === row['_source'].id) {
               <ng-container [formGroup]="editForm">
-                <input class="lm-input-sm" formControlName="labelEn" />
+                <daf-form-field
+                  [value]="editForm.controls['labelEn'].value"
+                  (valueChange)="editForm.controls['labelEn'].setValue($any($event))" />
               </ng-container>
             } @else {
               <span class="td-en">{{ row['_source'].labelEn }}</span>
@@ -123,12 +84,14 @@
           <ng-template dafCell="isActive" let-row>
             @if (editingId() === row['_source'].id) {
               <ng-container [formGroup]="editForm">
-                <input type="checkbox" formControlName="isActive" />
+                <daf-checkbox
+                  [checked]="editForm.controls['isActive'].value"
+                  (checkedChange)="editForm.controls['isActive'].setValue($event)" />
               </ng-container>
             } @else {
-              <span class="badge" [class.badge-active]="row['_source'].isActive" [class.badge-inactive]="!row['_source'].isActive">
-                {{ row['_source'].isActive ? 'Actif' : 'Inactif' }}
-              </span>
+              <daf-badge
+                [label]="row['_source'].isActive ? 'Actif' : 'Inactif'"
+                [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral' }" />
             }
           </ng-template>
 
@@ -136,32 +99,80 @@
             @if (editingId() === row['_source'].id) {
               {{ row['_source'].isSystem ? 'Oui' : 'Non' }}
             } @else {
-              @if (row['_source'].isSystem) { <span class="badge-system">Système</span> }
+              @if (row['_source'].isSystem) { <daf-badge label="Système" [options]="{ variant: 'warning' }" /> }
             }
           </ng-template>
 
           <ng-template dafCell="_actions" let-row>
             @if (editingId() === row['_source'].id) {
-              <button class="btn-icon btn-save" type="button" (click)="saveEdit(row['_source'])" [disabled]="editForm.invalid">✓</button>
-              <button class="btn-icon btn-cancel" type="button" (click)="cancelEdit()">✕</button>
+              <daf-button label="" variant="teal" [options]="{ size: 'sm', iconStart: 'check', disabled: editForm.invalid }" (onClick)="saveEdit(row['_source'])" />
+              <daf-button label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="cancelEdit()" />
             } @else {
-              <button class="btn-icon btn-edit" type="button" (click)="startEdit(row['_source'])" title="Modifier">✏</button>
+              <daf-button label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
               @if (row['_source'].isSystem) {
-                <button class="btn-icon btn-del-dis" type="button" disabled title="Valeur système — non supprimable">🗑</button>
+                <daf-button label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'delete', disabled: true }" />
               } @else if (confirmDeleteId() === row['_source'].id) {
                 <span class="confirm-del">
                   Confirmer ?
-                  <button class="btn-icon btn-del" type="button" (click)="deleteValue(row['_source'].id, row['_source'].listTypeId)">Oui</button>
-                  <button class="btn-icon" type="button" (click)="cancelDelete()">Non</button>
+                  <daf-button label="Oui" variant="danger" [options]="{ size: 'sm' }" (onClick)="deleteValue(row['_source'].id, row['_source'].listTypeId)" />
+                  <daf-button label="Non" variant="ghost" [options]="{ size: 'sm' }" (onClick)="cancelDelete()" />
                 </span>
               } @else {
-                <button class="btn-icon btn-del" type="button" (click)="confirmDelete(row['_source'].id)" title="Supprimer">🗑</button>
+                <daf-button label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="confirmDelete(row['_source'].id)" />
               }
             }
           </ng-template>
 
         </daf-data-table>
+
+        @if (totalPages() > 1) {
+          <div class="lm-pagination">
+            <daf-pagination
+              [currentPage]="currentPage()"
+              [totalPages]="totalPages()"
+              [totalElements]="values().length"
+              [config]="paginationConfig"
+              (pageChange)="onPageChange($event)" />
+          </div>
+        }
       }
     }
   </main>
 </div>
+
+<!-- Add value modal -->
+<app-modal
+  title="Ajouter une valeur"
+  [visible]="showAddForm()"
+  [hasFooter]="true"
+  (closed)="showAddForm.set(false)"
+>
+  <form [formGroup]="addForm" (ngSubmit)="addValue()">
+    <div class="lm-add-grid">
+      <daf-form-field
+        [options]="{ label: 'Code', placeholder: 'EX_CODE', required: true, fullWidth: true }"
+        [value]="addForm.controls['valueCode'].value"
+        (valueChange)="addForm.controls['valueCode'].setValue($any($event))" />
+      <daf-form-field
+        [options]="{ label: 'Libellé FR', placeholder: 'En français', required: true, fullWidth: true }"
+        [value]="addForm.controls['labelFr'].value"
+        (valueChange)="addForm.controls['labelFr'].setValue($any($event))" />
+      <daf-form-field
+        [options]="{ label: 'Libellé EN', placeholder: 'In English', required: true, fullWidth: true }"
+        [value]="addForm.controls['labelEn'].value"
+        (valueChange)="addForm.controls['labelEn'].setValue($any($event))" />
+      <daf-form-field
+        [options]="{ label: 'Ordre', type: 'number', fullWidth: true }"
+        [value]="addForm.controls['sortOrder'].value"
+        (valueChange)="addForm.controls['sortOrder'].setValue($any($event))" />
+    </div>
+  </form>
+  <div slot="footer">
+    <daf-button label="Annuler" variant="secondary" (onClick)="showAddForm.set(false)" />
+    <daf-button
+      label="Enregistrer"
+      variant="teal"
+      [options]="{ disabled: addForm.invalid }"
+      (onClick)="addValue()" />
+  </div>
+</app-modal>

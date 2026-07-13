@@ -1,4 +1,4 @@
-<div class="space-y-6">
+<div class="space-y-3 sm:space-y-6">
 
   <!-- Page header -->
   <div class="flex items-start sm:items-center justify-between gap-3">
@@ -62,6 +62,51 @@
   @if (actionError()) {
     <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ actionError() }}</div>
   }
+      <!-- Filters: desktop/tablet — search on the left, select + view toggle on the right, all inside one card (matches /finance/clients) -->
+      <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="hidden sm:block">
+        <div class="flex sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
+          <div class="w-56 shrink-0 ml-0.5">
+            <rh-search-bar
+              placeholder="Rechercher un candidat..."
+              [value]="search()"
+              (valueChange)="onSearch($event)" />
+          </div>
+
+          <div class="flex items-center gap-3">
+            @if (viewMode() === 'list') {
+              <daf-select
+                [selected]="statusFilter() ? [statusFilter()] : []"
+                [options]="statusSelectOptions"
+                [config]="statusSelectConfig"
+                (selectedChange)="onStatusChange($event)"
+              />
+            }
+            <!-- View toggle: list ⇄ kanban -->
+            <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+              <button
+                type="button"
+                class="flex items-center justify-center w-11 h-11 transition-colors"
+                [class.bg-primary]="viewMode() === 'list'"
+                [class.text-white]="viewMode() === 'list'"
+                [class.text-outline]="viewMode() !== 'list'"
+                title="Vue liste"
+                (click)="setView('list')">
+                <span class="material-symbols-outlined text-[18px]">view_list</span>
+              </button>
+              <button
+                type="button"
+                class="flex items-center justify-center w-11 h-11 transition-colors"
+                [class.bg-primary]="viewMode() === 'kanban'"
+                [class.text-white]="viewMode() === 'kanban'"
+                [class.text-outline]="viewMode() !== 'kanban'"
+                title="Vue kanban"
+                (click)="setView('kanban')">
+                <span class="material-symbols-outlined text-[18px]">view_kanban</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </daf-card>
 
   <!-- Drag guidance banner -->
   @if (notice()) {

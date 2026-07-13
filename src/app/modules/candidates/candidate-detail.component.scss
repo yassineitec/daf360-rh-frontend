@@ -72,21 +72,21 @@
   }
 
   &.edit {
-    border-color: #3498db;
-    color: #3498db;
-    background: #eaf4fd;
+    border-color: var(--color-secondary);
+    color: var(--color-secondary);
+    background: var(--color-secondary-container);
   }
 
   &.accept {
-    background: #16a34a;
+    background: var(--color-tertiary);
     color: #fff;
-    border-color: #16a34a;
+    border-color: var(--color-tertiary);
   }
 
   &.reject {
-    background: #b91c1c;
+    background: var(--color-danger);
     color: #fff;
-    border-color: #b91c1c;
+    border-color: var(--color-danger);
   }
 }
 
@@ -287,14 +287,14 @@ dd {
 .btn-cv-replace {
   @extend %cv-btn-base;
   background: transparent;
-  color: #1a6b7c;
-  border: 1px solid #1a6b7c;
-  &:hover { background: #f0f9fb; }
+  color: var(--color-teal);
+  border: 1px solid var(--color-teal);
+  &:hover { background: var(--color-tertiary-container); }
 }
 
 .btn-cv-upload {
   @extend %cv-btn-base;
-  background: #1a6b7c;
+  background: var(--color-teal);
   color: #fff;
   margin-left: auto;
   &:hover:not(.uploading) { opacity: .85; }
@@ -306,8 +306,8 @@ dd {
 
 /* ── Rejection box ───────────────────────────────────── */
 .rejection-box {
-  background: #fff5f5;
-  border: 1px solid #fecaca;
+  background: var(--color-error-container);
+  border: 1px solid var(--color-danger);
   border-radius: 12px;
   padding: 20px;
 }
@@ -315,7 +315,7 @@ dd {
 .rejection-label {
   font-size: 12px;
   font-weight: 700;
-  color: #dc2626;
+  color: var(--color-on-error-container);
   text-transform: uppercase;
   margin: 0 0 8px;
 }
@@ -335,16 +335,16 @@ dd {
 }
 
 .error-msg {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: var(--color-error-container);
+  border: 1px solid var(--color-danger);
+  color: var(--color-on-error-container);
   border-radius: 8px;
   padding: 16px;
 }
 
 /* ── Pipeline-navigation buttons ────────────────────── */
-.btn-action.it-prov     { border-color: #1a6b7c; color: #1a6b7c; background: #f0f9fb; }
-.btn-action.onboard     { background: #1a6b7c; color: #fff; border-color: #1a6b7c; }
+.btn-action.it-prov     { border-color: var(--color-teal); color: var(--color-teal); background: var(--color-tertiary-container); }
+.btn-action.onboard     { background: var(--color-teal); color: #fff; border-color: var(--color-teal); }
 .btn-action.profile-link {
   border-color: var(--color-primary);
   color: var(--color-primary);

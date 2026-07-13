@@ -8,29 +8,22 @@
   <div class="rut-header">
     <div class="rut-header-left">
       <span class="rut-title">Utilisateurs — {{ role().frenchName }}</span>
-      <span class="rut-counter">{{ users().length }} utilisateur(s)</span>
+      <daf-badge [label]="users().length + ' utilisateur(s)'" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
-    <button class="rut-btn-add" type="button" (click)="showAddPanel.set(!showAddPanel())">
-      @if (showAddPanel()) { ✕ Fermer } @else { + Ajouter un utilisateur }
-    </button>
+    <daf-button
+      [label]="showAddPanel() ? 'Fermer' : '+ Ajouter un utilisateur'"
+      variant="teal"
+      [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
+      (onClick)="showAddPanel.set(!showAddPanel())" />
   </div>
 
   <!-- Add-user search panel -->
   @if (showAddPanel()) {
     <div class="rut-add-panel">
-      <div class="rut-search-wrap">
-        <input
-          class="rut-search-input"
-          type="search"
-          placeholder="Rechercher un utilisateur par nom ou email…"
-          [ngModel]="addQuery()"
-          (ngModelChange)="onAddQueryChange($event)"
-          autofocus
-        />
-        @if (searching()) {
-          <span class="rut-search-spinner">⟳</span>
-        }
-      </div>
+      <daf-form-field
+        [options]="{ type: 'search', placeholder: 'Rechercher un utilisateur par nom ou email…', prefixIcon: 'search', fullWidth: true }"
+        [value]="addQuery()"
+        (valueChange)="onAddQueryChange($any($event) ?? '')" />
 
       @if (addQuery().length >= 2 && !searching()) {
         @if (searchResults().length === 0) {
@@ -42,23 +35,22 @@
                 <div class="rut-result-info">
                   <span class="rut-result-name">{{ u.fullName }}</span>
                   <span class="rut-result-email">{{ u.email }}</span>
-                  @if (u.paysLabel) {
-                    <span class="rut-result-pays">{{ u.paysLabel }}</span>
-                  }
-                  @if (u.currentRoleName) {
-                    <span class="rut-result-role">Rôle actuel : {{ u.currentRoleName }}</span>
-                  } @else {
-                    <span class="rut-result-role rut-no-role">Sans rôle</span>
-                  }
+                  <div class="rut-result-tags">
+                    @if (u.paysLabel) {
+                      <daf-badge [label]="u.paysLabel" [options]="{ variant: 'neutral', size: 'sm' }" />
+                    }
+                    @if (u.currentRoleName) {
+                      <daf-badge [label]="'Rôle actuel : ' + u.currentRoleName" [options]="{ variant: 'info', size: 'sm' }" />
+                    } @else {
+                      <daf-badge label="Sans rôle" [options]="{ variant: 'warning', size: 'sm' }" />
+                    }
+                  </div>
                 </div>
-                <button
-                  class="rut-btn-assign"
-                  type="button"
-                  [disabled]="adding() === u.userId"
-                  (click)="assignUser(u)"
-                >
-                  @if (adding() === u.userId) { … } @else { Assigner }
-                </button>
+                <daf-button
+                  [label]="adding() === u.userId ? '…' : 'Assigner'"
+                  variant="secondary"
+                  [options]="{ size: 'sm', disabled: adding() === u.userId }"
+                  (onClick)="assignUser(u)" />
               </li>
             }
           </ul>
@@ -69,47 +61,43 @@
 
   <!-- Local filter -->
   @if (users().length > 5) {
-    <div class="rut-local-search">
-      <input
-        type="search"
-        placeholder="Filtrer la liste…"
-        [ngModel]="localSearch()"
-        (ngModelChange)="localSearch.set($event)"
-      />
-    </div>
+    <daf-form-field
+      [options]="{ type: 'search', placeholder: 'Filtrer la liste…', prefixIcon: 'search', fullWidth: true }"
+      [value]="localSearch()"
+      (valueChange)="onLocalSearch($any($event) ?? '')" />
   }
 
-  <!-- Users list -->
-  @if (loading()) {
-    <p class="rut-loading">Chargement…</p>
-  } @else if (filteredUsers().length === 0 && users().length === 0) {
+  <!-- Users table -->
+  @if (filteredUsers().length === 0 && users().length === 0 && !loading()) {
     <div class="rut-empty">
       <p>Aucun utilisateur assigné à ce rôle.</p>
       <p class="rut-empty-hint">Utilisez le bouton "Ajouter" pour assigner des utilisateurs.</p>
     </div>
-  } @else if (filteredUsers().length === 0) {
+  } @else if (filteredUsers().length === 0 && !loading()) {
     <p class="rut-no-results">Aucun résultat pour "{{ localSearch() }}"</p>
   } @else {
-    <ul class="rut-user-list">
-      @for (u of filteredUsers(); track u.userId) {
-        <li class="rut-user-item">
-          <div class="rut-user-avatar">{{ u.fullName.charAt(0).toUpperCase() }}</div>
-          <div class="rut-user-info">
-            <span class="rut-user-name">{{ u.fullName }}</span>
-            <span class="rut-user-email">{{ u.email }}</span>
-          </div>
-          @if (u.paysLabel) {
-            <span class="rut-user-pays">{{ u.paysLabel }}</span>
-          }
-          <button
-            class="rut-btn-remove"
-            type="button"
-            title="Retirer de ce rôle"
-            (click)="removeUser(u)"
-          >✕</button>
-        </li>
+    <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+      <ng-template dafCell="_actions" let-row>
+        <daf-button
+          label=""
+          variant="ghost"
+          [options]="{ size: 'sm', iconStart: 'close' }"
+          title="Retirer de ce rôle"
+          (onClick)="removeUser(row['_source'])" />
+      </ng-template>
+    </daf-data-table>
+
+    <!-- Count + Pagination -->
+    <div class="rut-footer">
+      <span class="rut-count"><strong>{{ totalElements() }}</strong> utilisateur(s)</span>
+      @if (totalPages() > 1) {
+        <daf-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalElements]="totalElements()"
+          (pageChange)="onPageChange($event)" />
       }
-    </ul>
+    </div>
   }
 
 </div>

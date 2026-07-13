@@ -3,11 +3,11 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   BadgeCell,
-  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
   FormFieldComponent,
+  PaginationComponent,
   SelectComponent,
   SelectConfig,
   SelectOption,
@@ -28,10 +28,12 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'COMPLETED',     label: 'Complété' },
 ];
 
+const PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-it-provisioning-list',
   standalone: true,
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, ButtonComponent, FormFieldComponent, NgTemplateOutlet],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, FormFieldComponent, PaginationComponent, NgTemplateOutlet],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
@@ -64,8 +66,20 @@ export class ItProvisioningListComponent implements OnInit {
     });
   });
 
+  currentPage = signal(0);
+  readonly totalPages = computed(() => Math.ceil(this.filteredItems().length / PAGE_SIZE));
+
+  readonly pagedItems = computed(() => {
+    const start = this.currentPage() * PAGE_SIZE;
+    return this.filteredItems().slice(start, start + PAGE_SIZE);
+  });
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
   readonly rows = computed<TableRow[]>(() =>
-    this.filteredItems().map(r => ({
+    this.pagedItems().map(r => ({
       candidat:   { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
       ms365Email: r.ms365Email,
       status:     { label: this.statusBadge(r.status).label, options: this.statusBadge(r.status).options } as BadgeCell,
@@ -122,10 +136,12 @@ export class ItProvisioningListComponent implements OnInit {
 
   onSearch(value: string): void {
     this.search.set(value);
+    this.currentPage.set(0);
   }
 
   onStatusChange(values: string[]): void {
     this.statusFilter.set(values[0] ?? '');
+    this.currentPage.set(0);
   }
 
   initials(name: string): string {

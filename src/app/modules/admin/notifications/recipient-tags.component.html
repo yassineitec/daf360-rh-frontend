@@ -13,19 +13,17 @@
   </div>
   <div class="rt-add">
     @if (!showDropdown()) {
-      <button class="rt-add-btn" type="button" (click)="showDropdown.set(true)">
-        + Ajouter un rôle
-      </button>
+      <daf-button label="+ Ajouter un rôle" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(true)" />
     } @else {
       <div class="rt-add-row">
-        <select class="rt-select" [ngModel]="selectedRoleId()" (ngModelChange)="selectedRoleId.set($event ? +$event : null)">
-          <option [value]="null">-- Sélectionner un rôle --</option>
-          @for (r of unassignedRoles(); track r.id) {
-            <option [value]="r.id">{{ r.frenchName }}</option>
-          }
-        </select>
-        <button class="rt-confirm" type="button" (click)="onAdd()" [disabled]="!selectedRoleId()">Ajouter</button>
-        <button class="rt-cancel" type="button" (click)="showDropdown.set(false)">✕</button>
+        <daf-select
+          class="rt-select"
+          [selected]="selectedRoleValue()"
+          [options]="roleOptions()"
+          [config]="{ placeholder: '-- Sélectionner un rôle --' }"
+          (selectedChange)="onSelectRole($event[0] ?? '')" />
+        <daf-button label="Ajouter" variant="teal" [options]="{ size: 'sm', disabled: !selectedRoleId() }" (onClick)="onAdd()" />
+        <daf-button label="✕" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(false)" />
       </div>
     }
   </div>

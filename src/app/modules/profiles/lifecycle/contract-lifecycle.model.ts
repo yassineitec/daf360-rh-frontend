@@ -2,6 +2,8 @@
 // Contract Lifecycle Engine — TypeScript types (mirrors D3-95 backend DTOs)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { BadgeOptions } from '@khalilrebhiitec/daf360';
+
 export type ContractStatus =
   | 'DRAFT'
   | 'ACTIF'
@@ -151,21 +153,20 @@ export interface ConvertToCDIRequest {
 // ── UI Config ─────────────────────────────────────────────────────────────────
 
 export interface StatusConfig {
-  label: string;
-  bg:    string;
-  color: string;
+  label:   string;
+  variant: BadgeOptions['variant'];
 }
 
 export const STATUS_CONFIG: Record<ContractStatus, StatusConfig> = {
-  DRAFT:          { label: 'Brouillon',        bg: '#f1f5f9', color: '#475569' },
-  ACTIF:          { label: 'Actif',             bg: '#d1fae5', color: '#065f46' },
-  PERIODE_ESSAI:  { label: "Période d'essai",   bg: '#fef9c3', color: '#713f12' },
-  ACTIF_CONFIRME: { label: 'Confirmé',          bg: '#d1fae5', color: '#065f46' },
-  EXPIRE:         { label: 'Expiré',            bg: '#fee2e2', color: '#991b1b' },
-  RESILIE:        { label: 'Résilié',           bg: '#fee2e2', color: '#991b1b' },
-  CONVERTI:       { label: 'Converti en CDI',   bg: '#e0e7ff', color: '#3730a3' },
-  RENOUVELE:      { label: 'Renouvelé',         bg: '#dbeafe', color: '#1e40af' },
-  INACTIF:        { label: 'Inactif',           bg: '#f1f5f9', color: '#94a3b8' },
+  DRAFT:          { label: 'Brouillon',        variant: 'neutral' },
+  ACTIF:          { label: 'Actif',            variant: 'success' },
+  PERIODE_ESSAI:  { label: "Période d'essai",  variant: 'warning' },
+  ACTIF_CONFIRME: { label: 'Confirmé',         variant: 'success' },
+  EXPIRE:         { label: 'Expiré',           variant: 'danger'  },
+  RESILIE:        { label: 'Résilié',          variant: 'danger'  },
+  CONVERTI:       { label: 'Converti en CDI',  variant: 'info'    },
+  RENOUVELE:      { label: 'Renouvelé',        variant: 'info'    },
+  INACTIF:        { label: 'Inactif',          variant: 'neutral' },
 };
 
 export interface ContractTypeConfig {
