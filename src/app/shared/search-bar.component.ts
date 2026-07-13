@@ -25,6 +25,8 @@ import { FormsModule } from '@angular/forms';
     .search-wrap {
       position: relative;
       width: 100%;
+      min-width: 180px;
+      max-width: 360px;
     }
 
     .search-icon {
