@@ -240,11 +240,11 @@
                         </div>
 
                         <div class="flex items-center gap-3 mb-3 min-w-0">
-                          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                          <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm">
                             {{ initials(c.firstName, c.lastName) }}
                           </div>
                           <div class="min-w-0">
-                            <h4 class="font-semibold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</h4>
+                            <h4 class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</h4>
                             <p class="text-[12px] text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
                           </div>
                         </div>
@@ -328,11 +328,11 @@
 
                   <div class="flex items-start justify-between gap-3 mb-3">
                     <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-[12px] font-bold text-white shrink-0">
+                      <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm">
                         {{ initials(c.firstName, c.lastName) }}
                       </div>
                       <div class="min-w-0">
-                        <p class="font-semibold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</p>
+                        <p class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</p>
                         <p class="text-[12px] text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
                       </div>
                     </div>
