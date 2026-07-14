@@ -40,6 +40,8 @@
       "PRESENT": "Present",
       "REMOTE": "Remote",
       "ON_LEAVE": "On Leave",
+      "ROLE": "Role",
+      "COUNTRY": "Country",
       "SENIORITY": "Seniority:",
       "VIEW_PROFILE": "View profile",
       "COMPLETION_PERSO": "Info",
