@@ -40,6 +40,8 @@
       "PRESENT": "Présent",
       "REMOTE": "Télétravail",
       "ON_LEAVE": "En Congé",
+      "ROLE": "Poste",
+      "COUNTRY": "Pays",
       "SENIORITY": "Ancienneté :",
       "VIEW_PROFILE": "Voir profil",
       "COMPLETION_PERSO": "Perso",
