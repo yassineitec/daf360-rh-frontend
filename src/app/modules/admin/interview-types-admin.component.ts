@@ -99,7 +99,7 @@ const PAGE_SIZE = 5;
                 (onClick)="toggleActive(row['_source'])" />
               <daf-button
                 class="icon-btn-edit"
-                variant="ghost"
+                variant="primary"
                 [options]="{ iconStart: 'edit', size: 'sm' }"
                 title="Modifier"
                 (onClick)="openEdit(row['_source'])" />

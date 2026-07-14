@@ -135,14 +135,9 @@
               </div>
 
               <div class="flex justify-end pt-3 border-t border-outline-variant">
-                <button
-                  class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
-                         hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
-                  style="background-color: #50717B"
-                  type="button"
-                  (click)="navigate(row['_source'].candidateId)">
-                  Compléter →
-                </button>
+                <daf-button label="Compléter" variant="teal"
+                  [options]="{ size: 'sm' }"
+                  (onClick)="navigate(row['_source'].candidateId)" />
               </div>
             </daf-card>
           }
@@ -187,14 +182,9 @@
               </ng-template>
 
               <ng-template dafCell="_actions" let-row>
-                <button
-                  class="px-4 py-1.5 text-white rounded-lg text-[12px] font-semibold
-                         hover:opacity-90 active:scale-95 transition-all whitespace-nowrap"
-                  style="background-color: #50717B"
-                  type="button"
-                  (click)="navigate(row['_source'].candidateId)">
-                  Compléter →
-                </button>
+                <daf-button label="Compléter" variant="teal"
+                  [options]="{ size: 'sm' }"
+                  (onClick)="navigate(row['_source'].candidateId)" />
               </ng-template>
 
             </daf-data-table>

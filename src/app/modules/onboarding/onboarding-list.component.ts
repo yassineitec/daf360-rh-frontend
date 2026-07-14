@@ -6,6 +6,7 @@ import { OnboardingService }    from './onboarding.service';
 import { OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import {
   BadgeCell,
+  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
@@ -24,7 +25,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })

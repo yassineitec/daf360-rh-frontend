@@ -63,7 +63,7 @@ const PAGE_SIZE = 10;
 
           <ng-template dafCell="_actions" let-row>
             <div class="actions-cell">
-              <daf-button class="icon-btn-edit" title="Modifier" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
+              <daf-button class="icon-btn-edit" title="Modifier" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
               <daf-button class="icon-btn-delete" title="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
             </div>
           </ng-template>
