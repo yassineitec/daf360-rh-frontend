@@ -75,7 +75,7 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
             <daf-badge [label]="row['sla'].label" [options]="{ variant: slaVariant(row['sla'].level), size: 'sm' }" />
           </ng-template>
           <ng-template dafCell="_actions" let-row>
-            <a [routerLink]="['/rh/requests', row['_source'].id]" class="action-link">Détail</a>
+            <a [routerLink]="['/rh/requests', row['_source'].id]" class="action-link">Détails</a>
             @if (canProcess(row['_source'].status)) {
               <daf-button label="Approuver" variant="ghost" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="quickApprove(row['_source'])" />
               <daf-button label="Refuser" variant="danger" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="openRefuse(row['_source'])" />

@@ -133,8 +133,8 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
               >
                 TYPE DE CONTRAT
               </p>
-              <p class="font-semibold text-[13px] text-on-surface uppercase truncate">
-                {{ employee().contractType || '-' }}
+              <p class="font-semibold text-[13px] text-on-surface truncate">
+                {{ contractLabel() }}
               </p>
             </div>
 
@@ -182,6 +182,19 @@ export class ProfileGridCardComponent {
   readonly onDelete = output<number>();
 
   hovered = signal(false);
+
+  /** Human-readable contract-type label (covers the profile enum + lifecycle codes). */
+  private static readonly CONTRACT_LABELS: Record<string, string> = {
+    PERMANENT: 'CDI', FIXED_TERM: 'CDD', INTERN: 'Stage', CONSULTANT: 'Consultant',
+    CDI: 'CDI', CDD: 'CDD', CIVP: 'CIVP', STAGE: 'Stage',
+    DETACHEMENT: 'Détachement', PORTAGE: 'Portage', FREELANCE: 'Freelance',
+  };
+
+  contractLabel(): string {
+    const c = this.employee().contractType;
+    if (!c) return '-';
+    return ProfileGridCardComponent.CONTRACT_LABELS[c] ?? c;
+  }
 
   // 0 = try real photo, 1 = try gender avatar, 2 = show initials
   private readonly imgPhase = signal<0 | 1 | 2>(0);

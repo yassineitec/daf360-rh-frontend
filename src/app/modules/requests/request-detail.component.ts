@@ -96,7 +96,7 @@ interface TimelineStep {
           <div class="rd-meta">
             <span class="rd-meta-chip">
               <span class="material-symbols-outlined">account_circle</span>
-              Profil #{{ req()!.employeeProfileId }}
+              {{ req()!.employeeName ?? ('Profil #' + req()!.employeeProfileId) }}
             </span>
             <span class="rd-meta-chip">
               <span class="material-symbols-outlined">calendar_today</span>
@@ -283,18 +283,18 @@ interface TimelineStep {
                   <span class="material-symbols-outlined">account_circle</span>
                 </div>
                 <div>
-                  <p class="rd-requester-name">Profil #{{ req()!.employeeProfileId }}</p>
+                  <p class="rd-requester-name">{{ req()!.employeeName ?? ('Profil #' + req()!.employeeProfileId) }}</p>
                   <p class="rd-requester-sub">Employé</p>
                 </div>
               </div>
               <div class="rd-requester-details">
                 <div class="rd-detail-row">
-                  <span class="rd-detail-key">ID Profil</span>
-                  <span class="rd-detail-val">{{ req()!.employeeProfileId }}</span>
+                  <span class="rd-detail-key">Profil</span>
+                  <span class="rd-detail-val">{{ req()!.employeeName ?? ('Profil #' + req()!.employeeProfileId) }}</span>
                 </div>
                 <div class="rd-detail-row">
                   <span class="rd-detail-key">Pays</span>
-                  <span class="rd-detail-val">{{ req()!.paysId }}</span>
+                  <span class="rd-detail-val">{{ req()!.paysName ?? ('#' + req()!.paysId) }}</span>
                 </div>
               </div>
               @if (isOfficer()) {

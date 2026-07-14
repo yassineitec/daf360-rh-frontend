@@ -51,6 +51,7 @@ export interface EmployeeRequest {
   typeCode?:           string;
   typeDisplayNameFr?:  string;
   employeeName?:       string | null;
+  paysName?:           string | null;
   approvals?:          ApprovalSummary[];
 }
 
