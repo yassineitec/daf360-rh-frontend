@@ -8,6 +8,7 @@ export interface OnboardingListItem {
   candidateFullName: string;
   appliedPosition: string | null;
   paysId: number;
+  paysLabel: string | null;
   expectedStartDate: string | null;
   candidateStatus: CandidateOnboardingStatus;
   ms365Email: string;

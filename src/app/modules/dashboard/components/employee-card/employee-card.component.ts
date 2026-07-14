@@ -96,7 +96,7 @@ export interface EmployeeCardData {
       <!-- Profile completion grid -->
       <div class="grid grid-cols-3 gap-2 mb-4">
         @for (cell of completionCells(); track cell.key) {
-          <div class="p-2 bg-surface rounded-lg text-center border border-outline-variant">
+          <div class="p-2 text-center">
             <p class="text-[9px] text-outline uppercase font-bold mb-1">{{ cell.key | translate }}</p>
             <span class="material-symbols-outlined text-[16px]"
               [class]="cell.ok ? 'text-secondary' : 'text-error'">

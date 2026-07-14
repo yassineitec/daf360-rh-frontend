@@ -6,6 +6,7 @@ import { OnboardingService }    from './onboarding.service';
 import { OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import {
   BadgeCell,
+  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
@@ -24,7 +25,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
@@ -68,7 +69,7 @@ export class OnboardingListComponent implements OnInit {
     this.pagedItems().map(r => ({
       employe:           { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
       ms365Email:        r.ms365Email,
-      entite:            '#' + r.paysId,
+      entite:            r.paysLabel ?? '#' + r.paysId,
       expectedStartDate: this.formatDate(r.expectedStartDate),
       status:            { label: this.statusBadge(r.candidateStatus).label, options: this.statusBadge(r.candidateStatus).options } as BadgeCell,
       hasDraft:          r.hasDraft,

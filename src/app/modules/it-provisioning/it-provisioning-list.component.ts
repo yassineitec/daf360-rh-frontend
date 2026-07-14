@@ -3,10 +3,12 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   BadgeCell,
+  ButtonComponent,
   CardComponent,
   DafCellDirective,
   DataTableComponent,
   PaginationComponent,
+  ProgressBarComponent,
   SelectComponent,
   SelectConfig,
   SelectOption,
@@ -33,7 +35,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-it-provisioning-list',
   standalone: true,
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
@@ -113,7 +115,6 @@ export class ItProvisioningListComponent implements OnInit {
     { key: 'expectedStartDate', label: 'Début & Urgence' },
     { key: 'hwLabel', label: 'Matériel' },
     { key: 'licLabel', label: 'Licences' },
-    { key: 'adDone', label: 'AD Sync' },
     { key: '_actions', label: 'Actions' },
   ];
 

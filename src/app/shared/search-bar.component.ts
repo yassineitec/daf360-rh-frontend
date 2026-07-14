@@ -1,9 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-// Same markup/palette as daf360-facturation-frontend's client-list search bar
-// (/finance/clients), so search inputs look and behave identically across
-// profiles, candidates, it-provisioning and onboarding.
+
 @Component({
   selector: 'rh-search-bar',
   standalone: true,
@@ -25,6 +23,8 @@ import { FormsModule } from '@angular/forms';
     .search-wrap {
       position: relative;
       width: 100%;
+      min-width: 180px;
+      max-width: 360px;
     }
 
     .search-icon {

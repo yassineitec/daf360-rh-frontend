@@ -27,6 +27,12 @@
   /* Matches the Finance shell's page background (hardcoded #f8f9fb there)
      instead of the lib default --color-background (#f2f4f6). */
   --color-background:                #f8f9fb;
+  /* Lib bug: --color-teal-light (#1C4E5C) is actually DARKER than
+     --color-teal (#2D5D6E), so daf-button's variant="teal" hover state
+     (hover:bg-teal-light) barely changes anything visible instead of
+     lightening. Point it at the bright teal accent so hover on teal
+     buttons ("Nouveau Candidat", etc.) actually shifts toward teal. */
+  --color-teal-light:                 #00c1ad;
 
   --color-text:                      var(--color-on-surface);
   --color-text-muted:                var(--color-on-surface-variant);
@@ -75,8 +81,11 @@ html, body {
 /* ── Icon-only Modifier/Suppr. row actions (admin tables) ───────────────────
    daf-button has no built-in icon-only square variant — its `sm` size is
    sized for icon+label (px-4 py-2). Table row actions here show only the
-   Material Symbol, so force a small square shape and the neutral-gray /
-   light-red glyph-only look used across every admin table's Modifier/Suppr. */
+   Material Symbol, so force a small square shape only. Background, text
+   color and hover come entirely from the library's own variant (edit uses
+   variant="primary" → primary at rest, teal on hover; delete uses
+   variant="danger") — nothing here overrides color, so hover always works
+   exactly like every other daf-button in the app. */
 daf-button.icon-btn-edit button,
 daf-button.icon-btn-delete button {
   width: 34px;
@@ -86,33 +95,19 @@ daf-button.icon-btn-delete button {
   gap: 0 !important;
 }
 
-daf-button.icon-btn-edit button {
-  background: var(--color-surface) !important;
-  border-color: var(--color-outline-variant) !important;
-  color: #1f1f1f !important;
-}
-
-daf-button.icon-btn-delete button {
-  background: var(--color-error-container) !important;
-  color: var(--color-danger) !important;
-}
-
 daf-button.icon-btn-edit .material-symbols-outlined,
 daf-button.icon-btn-delete .material-symbols-outlined {
   font-size: 20px !important;
 }
 
 /* ── Icon-only toggle row action ─────────────────────────────────────────────
-   Same 34px box as icon-btn-edit/delete so it lines up at the same height,
-   but plain — no border/background box, just the glyph (this one is a
-   frameless toggle switch icon, not a button that needs a container). */
+   Same 34px box as icon-btn-edit/delete so it lines up at the same height.
+   Background/border/hover are left to the library's own "ghost" variant. */
 daf-button.icon-btn-toggle button {
   width: 34px;
   height: 34px;
   padding: 0 !important;
   gap: 0 !important;
-  background: transparent !important;
-  border: none !important;
 }
 
 daf-button.icon-btn-toggle .material-symbols-outlined {
@@ -156,4 +151,20 @@ daf-data-table th:last-child > span {
     transform: translateX(0) !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
   }
+}
+
+/* ── Form field labels — match daf-form-field's label style everywhere ──────
+   daf-form-field's own label is small-caps (text-[10px] uppercase tracking-wider
+   text-outline), but daf-select and daf-multi-date-picker render their label
+   with a completely different recipe (text-label-md font-medium text-on-surface
+   — larger, normal-case, dark). Same form, two different label looks side by
+   side (e.g. "Prénom" vs "Date de naissance"/"Genre"). Align them here since
+   both live in the compiled library and can't be edited directly. */
+daf-select label.text-label-md,
+daf-multi-date-picker label.text-label-md {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--color-outline) !important;
 }

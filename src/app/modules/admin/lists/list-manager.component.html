@@ -108,7 +108,7 @@
               <daf-button label="" variant="teal" [options]="{ size: 'sm', iconStart: 'check', disabled: editForm.invalid }" (onClick)="saveEdit(row['_source'])" />
               <daf-button label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="cancelEdit()" />
             } @else {
-              <daf-button class="icon-btn-edit" title="Modifier" label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
+              <daf-button class="icon-btn-edit" title="Modifier" label="" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
               @if (row['_source'].isSystem) {
                 <daf-button class="icon-btn-delete" title="Supprimer" label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'delete', disabled: true }" />
               } @else if (confirmDeleteId() === row['_source'].id) {
