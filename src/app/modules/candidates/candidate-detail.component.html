@@ -347,8 +347,19 @@
             <!-- Entretiens -->
             @if (showInterviewsSection()) {
               <app-candidate-interviews
+                class="block"
                 [candidateId]="c.id"
                 [paysId]="c.paysId" />
+            }
+
+            <!-- Offre & Négociation -->
+            @if (showOfferSection()) {
+              <app-offer-section
+                class="block"
+                [candidateId]="c.id"
+                [status]="c.status"
+                [candidateName]="c.firstName + ' ' + c.lastName"
+                (changed)="onOfferChanged()" />
             }
 
             <!-- IT Provisioning -->

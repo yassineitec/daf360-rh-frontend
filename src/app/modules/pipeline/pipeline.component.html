@@ -1,319 +1,353 @@
 <div class="space-y-6">
 
+  <!-- ── Notice banner ─────────────────────────────────────────── -->
+  @if (notice()) {
+    <div class="flex items-center gap-2 bg-secondary-container text-on-secondary-container px-4 py-2 rounded-lg text-[13px]">
+      <span class="material-symbols-outlined text-[18px]">info</span>
+      <span class="flex-1">{{ notice() }}</span>
+      <button class="material-symbols-outlined text-[18px]" (click)="notice.set(null)">close</button>
+    </div>
+  }
+
   <!-- ── Page header ───────────────────────────────────────────── -->
-      <div class="flex justify-between items-end">
-        <div>
-          <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-            Pipeline de Recrutement
-          </h1>
-          <p class="text-[13px] sm:text-[16px] text-outline mt-1">
-            Suivi en temps réel des talents et de leur intégration.
-          </p>
-        </div>
+  <div class="flex justify-between items-end gap-4">
+    <div>
+      <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+        Candidats
+      </h1>
+      <p class="text-[13px] sm:text-[16px] text-outline mt-1">
+        Suivi en temps réel des processus d'embauche actifs.
+      </p>
+    </div>
+    <daf-button
+      label="Nouveau Candidat"
+      variant="teal"
+      [options]="{ iconStart: 'add', size: 'md' }"
+      (onClick)="onNewCandidate()" />
+  </div>
+
+  <!-- ── KPI tiles (daf-metric-card, same design as Pipeline RH) ─── -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+    <daf-metric-card label="Total Candidats"        [value]="totalMetricValue()"  [options]="totalMetricOpts" />
+    <daf-metric-card label="Délai Recrutement Moy." [value]="delayMetricValue()"  [options]="delayMetricOpts" />
+    <daf-metric-card label="Postes Urgents"         [value]="urgentMetricValue()" [options]="urgentMetricOpts" />
+  </div>
+
+  <!-- ── Search + view toggle (same card as the Pipeline RH page) ── -->
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
+    <div class="flex sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
+      <div class="w-full sm:w-56 shrink-0 ml-0.5">
+        <rh-search-bar
+          placeholder="Rechercher un candidat..."
+          [value]="search()"
+          (valueChange)="onSearch($event)" />
       </div>
+      <!-- View toggle: kanban ⇄ list -->
+      <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+        <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
+          [class.bg-primary]="viewMode() === 'kanban'" [class.text-white]="viewMode() === 'kanban'" [class.text-outline]="viewMode() !== 'kanban'"
+          title="Vue kanban" (click)="setView('kanban')">
+          <span class="material-symbols-outlined text-[18px]">view_kanban</span>
+        </button>
+        <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
+          [class.bg-primary]="viewMode() === 'list'" [class.text-white]="viewMode() === 'list'" [class.text-outline]="viewMode() !== 'list'"
+          title="Vue liste" (click)="setView('list')">
+          <span class="material-symbols-outlined text-[18px]">view_list</span>
+        </button>
+      </div>
+    </div>
+  </daf-card>
 
-      <!-- ── Stage counter cards ───────────────────────────────────── -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+  <!-- Loading spinner -->
+  @if (loading()) {
+    <div class="flex justify-center items-center h-64">
+      <span class="material-symbols-outlined text-[48px] text-outline animate-spin">progress_activity</span>
+    </div>
+  } @else if (viewMode() === 'list') {
 
-        @if (stageCards().length === 0 && loading()) {
-          @for (i of [1, 2, 3, 4]; track i) {
-            <div class="min-h-32 bg-surface-container-lowest rounded-xl p-4 sm:p-6 border border-outline-variant animate-pulse">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-surface-container shrink-0"></div>
-                <div class="space-y-2">
-                  <div class="w-16 h-3 rounded bg-surface-container"></div>
-                  <div class="w-10 h-7 rounded bg-surface-container"></div>
+    <!-- ── List view ────────────────────────────────────────────── -->
+    <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <daf-data-table [columns]="listColumns" [rows]="listRows()" [config]="listConfig">
+        <ng-template dafCell="_actions" let-row>
+          <button type="button"
+            class="px-3 py-1.5 text-[12px] font-semibold rounded-lg text-[#50717B] hover:bg-surface-container transition-colors whitespace-nowrap"
+            (click)="onCandidateClick(row['_source'].id)">Voir →</button>
+        </ng-template>
+      </daf-data-table>
+    </div>
+    @if (listRows().length === 0) {
+      <div class="text-center py-12 text-outline border border-dashed border-outline-variant rounded-xl">
+        Aucun candidat trouvé.
+      </div>
+    }
+
+  } @else {
+
+    <!-- ── Kanban board ─────────────────────────────────────────── -->
+    <div #kanbanBoard class="flex gap-6 overflow-x-auto pb-6 items-start custom-scroll" (scroll)="onBoardScroll()">
+
+      @for (col of boardColumns(); track col.key) {
+        <div class="shrink-0 w-[360px] space-y-4">
+
+          <!-- Column header -->
+          <div class="flex justify-between items-center px-2 py-1">
+            <span class="font-bold text-on-surface flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" [style.backgroundColor]="col.accent"></span>
+              {{ col.label }}
+              <span class="bg-surface-container-highest px-2 py-0.5 rounded text-xs">{{ col.count }}</span>
+            </span>
+          </div>
+
+          <!-- Cards -->
+          @for (c of col.candidates; track c.id) {
+            <div
+              class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col min-h-[252px]"
+              (click)="onCandidateClick(c.id)">
+
+              <div class="flex justify-between mb-3">
+                <daf-badge [label]="c.badge" [options]="{ variant: badgeVariant(c.badgeType), size: 'sm' }" />
+                <span [class]="fitScoreClass(c.fitScore)">{{ c.fitScore }}% Fit</span>
+              </div>
+
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-outline-variant bg-surface-container-high flex items-center justify-center">
+                  @if (!avatarFailed().has(c.id)) {
+                    <img [src]="resolveAvatar(c)" [alt]="c.fullName" class="w-full h-full object-cover" (error)="onAvatarError(c.id)" />
+                  } @else {
+                    <span class="text-[14px] font-bold text-on-surface-variant">{{ c.initials ?? initials(c.fullName) }}</span>
+                  }
                 </div>
+                <div class="min-w-0">
+                  <h4 class="font-bold text-on-surface truncate">{{ c.fullName }}</h4>
+                  <p class="text-xs text-outline truncate">{{ c.poste }}</p>
+                </div>
+              </div>
+
+              <!-- Screening: skill chips -->
+              @if (col.key === 'SCREENING' && c.skills.length) {
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                  @for (skill of c.skills.slice(0, 3); track skill) {
+                    <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ skill }}</span>
+                  }
+                </div>
+              }
+
+              <!-- Offre: offer note / signature status -->
+              @if (col.key === 'OFFRE') {
+                <div class="bg-surface-container-low p-2 rounded-lg mb-3 text-xs">
+                  <p class="text-on-surface-variant italic">
+                    @if (isOfferPending(c)) {
+                      "En attente de signature@if (c.offerExpiry) { — expire le {{ c.offerExpiry }} }."
+                    } @else if (c.offerStatus === 'ACCEPTED') {
+                      "Offre acceptée — provisioning en cours."
+                    } @else {
+                      "{{ c.note || 'Offre en préparation.' }}"
+                    }
+                  </p>
+                </div>
+              }
+
+              <!-- Footer: one item left · one item (or actions) right (pinned to bottom) -->
+              <div class="mt-auto pt-3 border-t border-outline-variant flex items-center justify-between gap-2 text-on-surface-variant">
+                @switch (col.key) {
+
+                  @case ('SCREENING') {
+                    <span class="flex items-center gap-1 text-[11px] min-w-0 max-w-[55%]">
+                      <span class="material-symbols-outlined text-[14px] shrink-0">mail</span>
+                      <span class="truncate">{{ c.email || '—' }}</span>
+                    </span>
+                    <span class="flex items-center gap-1 text-[11px] min-w-0 shrink-0">
+                      <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
+                      <span class="truncate">{{ c.location || '—' }}</span>
+                    </span>
+                  }
+
+                  @case ('ENTRETIEN') {
+                    <span class="flex items-center gap-1 text-[11px] min-w-0">
+                      <span class="material-symbols-outlined text-[14px] shrink-0">calendar_month</span>
+                      <span class="truncate">{{ c.nextEvent || 'Entretien à planifier' }}</span>
+                    </span>
+                    <div class="flex items-center gap-2 shrink-0 min-w-0">
+                      @if (c.interviewLocation) {
+                        <span class="flex items-center gap-1 text-[11px] min-w-0">
+                          <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
+                          <span class="truncate max-w-[90px]">{{ c.interviewLocation }}</span>
+                        </span>
+                      }
+                      @if (canSendOffer(c)) {
+                        <button type="button" title="Envoyer une offre"
+                          class="shrink-0 p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors"
+                          (click)="openOfferModal(c, 'send', $event)">
+                          <span class="material-symbols-outlined text-[18px]">send</span>
+                        </button>
+                      }
+                    </div>
+                  }
+
+                  @case ('OFFRE') {
+                    <span class="flex items-center gap-1 text-[11px] min-w-0">
+                      <span class="material-symbols-outlined text-[14px] shrink-0">payments</span>
+                      <span class="truncate">{{ c.askedSalary || '—' }} ~ {{ c.proposedSalary || '—' }}</span>
+                    </span>
+                    @if (isOfferPending(c)) {
+                      <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" title="Accepter l'offre" [disabled]="actioningId() === c.id"
+                          class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors disabled:opacity-40"
+                          (click)="acceptOffer(c, $event)">
+                          <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        </button>
+                        <button type="button" title="Renégocier"
+                          class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors"
+                          (click)="openOfferModal(c, 'renegotiate', $event)">
+                          <span class="material-symbols-outlined text-[18px]">sync</span>
+                        </button>
+                        <button type="button" title="Refuser l'offre" [disabled]="actioningId() === c.id"
+                          class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors disabled:opacity-40"
+                          (click)="openRejectModal(c, $event)">
+                          <span class="material-symbols-outlined text-[18px]">cancel</span>
+                        </button>
+                      </div>
+                    } @else {
+                      <span class="text-[11px] shrink-0 text-outline">{{ c.offerStatus === 'ACCEPTED' ? 'Acceptée' : '' }}</span>
+                    }
+                  }
+
+                  @case ('RECRUTE') {
+                    <span class="flex items-center gap-1 text-[11px] min-w-0 max-w-[55%]">
+                      <span class="material-symbols-outlined text-[14px] shrink-0">badge</span>
+                      <span class="truncate">{{ c.contractType || '—' }}</span>
+                    </span>
+                    <span class="flex items-center gap-1 text-[11px] min-w-0 shrink-0">
+                      <span class="material-symbols-outlined text-[14px] shrink-0">login</span>
+                      <span class="truncate">{{ c.location || '—' }}</span>
+                    </span>
+                  }
+                }
               </div>
             </div>
           }
-        }
 
-        @for (card of stageCards(); track card.label) {
-          <rh-kpi-card class="block" [label]="card.label" [icon]="card.icon" [value]="card.count" [variant]="card.variant" />
-        }
-      </div>
-
-      <!-- Loading spinner -->
-      @if (loading()) {
-        <div class="flex justify-center items-center h-64">
-          <span class="material-symbols-outlined text-[48px] text-outline animate-spin">
-            progress_activity
-          </span>
+          <!-- Empty column -->
+          @if (col.candidates.length === 0) {
+            <div class="text-center py-10 text-outline border border-dashed border-outline-variant rounded-xl">
+              <span class="material-symbols-outlined text-[32px] block mb-1">inbox</span>
+              <p class="text-[12px]">Aucun candidat</p>
+            </div>
+          }
         </div>
-
-      } @else {
-
-        <!-- ── Main layout: stacked on mobile/tablet, 2/3 + 1/3 on desktop ── -->
-        <div class="flex flex-col lg:flex-row gap-6">
-
-          <!-- ═══ LEFT: Candidatures en cours ═══ -->
-          <div class="lg:flex-2 min-w-0 flex flex-col gap-4">
-
-            <!-- Section header -->
-            <div class="flex items-center mb-2">
-              <h2 class="text-[15px] sm:text-[17px] font-semibold text-on-surface">Candidatures en cours</h2>
-            </div>
-
-            <!-- ── Candidate cards ── -->
-            <div class="space-y-3">
-
-              @for (candidate of candidates(); track candidate.id) {
-
-                <!-- Mobile card — single unified variant, per-stage left border -->
-                <div class="sm:hidden profile-card bg-surface-container-lowest p-5 rounded-xl
-                             border border-outline-variant border-l-4 hover:shadow-md transition-all
-                             group relative cursor-pointer"
-                     [style.borderLeftColor]="stageBorderColor(candidate)"
-                     (click)="onCandidateClick(candidate.id)">
-                  <div class="flex items-start justify-between gap-4">
-
-                    <!-- Left: avatar + info -->
-                    <div class="flex gap-4 flex-1 min-w-0">
-                      <div class="w-12 h-12 rounded-full overflow-hidden shrink-0
-                                  border border-outline-variant bg-surface-container-high
-                                  flex items-center justify-center">
-                        @if (!avatarFailed().has(candidate.id)) {
-                          <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
-                               class="w-full h-full object-cover"
-                               (error)="onAvatarError(candidate.id)" />
-                        } @else {
-                          <span class="text-[14px] font-bold text-on-surface-variant">
-                            {{ candidate.initials ?? initials(candidate.fullName) }}
-                          </span>
-                        }
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-[14px] font-bold text-on-surface truncate">{{ candidate.fullName }}</p>
-                        <p class="text-[13px] text-outline truncate">{{ candidate.poste }}</p>
-                        <!-- Meta row: contract · date · badge -->
-                        <div class="flex items-center gap-3 mt-2 flex-wrap">
-                          @if (candidate.contractType) {
-                            <span class="flex items-center gap-1 text-[12px] text-on-surface-variant">
-                              <span class="material-symbols-outlined text-[14px]">work</span>
-                              {{ candidate.contractType }}
-                            </span>
-                          }
-                          @if (candidate.applicationDate) {
-                            <span class="flex items-center gap-1 text-[12px] text-on-surface-variant">
-                              <span class="material-symbols-outlined text-[14px]">event</span>
-                              {{ formatDate(candidate.applicationDate) }}
-                            </span>
-                          }
-                          <daf-badge
-                            [label]="candidate.badge"
-                            [options]="{ variant: badgeVariant(candidate.badgeType), size: 'sm' }">
-                          </daf-badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Right: actions + checkbox — always visible on touch -->
-                    <div class="flex flex-col items-end gap-2 shrink-0">
-                      <div class="flex gap-2">
-                        <button
-                          class="p-2 hover:bg-surface-container rounded-lg text-[#50717B] transition-colors"
-                          title="Valider l'étape"
-                          (click)="onCandidateClick(candidate.id); $event.stopPropagation()">
-                          <span class="material-symbols-outlined text-[20px]">check_circle</span>
-                        </button>
-                        <button
-                          class="p-2 hover:bg-surface-container rounded-lg text-outline transition-colors"
-                          title="Planifier"
-                          (click)="$event.stopPropagation()">
-                          <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                        </button>
-                      </div>
-                      <input
-                        type="checkbox"
-                        class="w-5 h-5 rounded border-outline-variant cursor-pointer"
-                        [checked]="isSelected(candidate.id)"
-                        (change)="toggleSelect(candidate.id, $event)"
-                        (click)="$event.stopPropagation()" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Desktop card — single unified variant, per-stage left border -->
-                <div
-                  class="hidden sm:flex sm:flex-col min-h-[128px] bg-surface-container-lowest p-4 rounded-xl border border-outline-variant border-l-4
-                         shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer group relative"
-                  [style.borderLeftColor]="stageBorderColor(candidate)"
-                  (click)="onCandidateClick(candidate.id)">
-
-                  <div class="flex justify-between mb-3">
-                    <daf-badge [label]="candidate.badge" [options]="{ variant: badgeVariant(candidate.badgeType), size: 'sm' }" />
-                    <span [class]="fitScoreClass(candidate.fitScore)">{{ candidate.fitScore }}% Fit</span>
-                  </div>
-
-                  <div class="flex items-center gap-3 mb-3">
-                    <div class="w-12 h-12 rounded-lg overflow-hidden shrink-0
-                                border border-outline-variant bg-surface-container-high
-                                flex items-center justify-center">
-                      @if (!avatarFailed().has(candidate.id)) {
-                        <img [src]="resolveAvatar(candidate)" [alt]="candidate.fullName"
-                             class="w-full h-full object-cover"
-                             (error)="onAvatarError(candidate.id)" />
-                      } @else {
-                        <span class="text-[14px] font-bold text-on-surface-variant">
-                          {{ candidate.initials ?? initials(candidate.fullName) }}
-                        </span>
-                      }
-                    </div>
-                    <div class="min-w-0">
-                      <h4 class="font-bold text-on-surface truncate">{{ candidate.fullName }}</h4>
-                      <p class="text-xs text-outline truncate">{{ candidate.poste }}</p>
-                    </div>
-
-                    <!-- Actions + checkbox — hover-reveal on desktop -->
-                    <div class="ml-auto flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                         (click)="$event.stopPropagation()">
-                      <button
-                        class="p-1.5 hover:bg-surface-container rounded-lg text-[#50717B] transition-colors"
-                        title="Valider l'étape"
-                        (click)="onCandidateClick(candidate.id)">
-                        <span class="material-symbols-outlined text-[18px]">check_circle</span>
-                      </button>
-                      <input
-                        type="checkbox"
-                        class="w-4 h-4 rounded border-outline-variant cursor-pointer"
-                        [checked]="isSelected(candidate.id)"
-                        (change)="toggleSelect(candidate.id, $event)" />
-                    </div>
-                  </div>
-
-                  @if (candidate.skills?.length) {
-                    <div class="flex flex-wrap gap-1.5 mb-3">
-                      @for (skill of candidate.skills.slice(0, 3); track skill) {
-                        <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ skill }}</span>
-                      }
-                    </div>
-                  }
-
-                  @if (candidate.note) {
-                    <div class="bg-surface-container-low p-2 rounded-lg mb-3 text-xs">
-                      <p class="text-on-surface-variant italic">"{{ candidate.note }}"</p>
-                    </div>
-                  }
-
-                  <div class="mt-auto flex justify-between items-center gap-2 pt-3 border-t border-outline-variant text-on-surface-variant whitespace-nowrap">
-                    @for (meta of cardMeta(candidate); track meta.icon) {
-                      <div class="flex items-center gap-1 shrink-0 whitespace-nowrap text-[clamp(10px,1.5vw,12px)]">
-                        <span class="material-symbols-outlined text-[14px] shrink-0">{{ meta.icon }}</span>
-                        <span>{{ meta.text }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-
-              }
-
-              <!-- Empty state -->
-              @if (candidates().length === 0) {
-                <div class="text-center py-16 text-outline">
-                  <span class="material-symbols-outlined text-[48px] block mb-3">inbox</span>
-                  <p class="text-[14px]">Aucune candidature trouvée</p>
-                </div>
-              }
-
-            </div>
-          </div>
-
-          <!-- ═══ RIGHT: Sidebar ═══ -->
-          <div class="flex-1 min-w-0 flex flex-col gap-4">
-
-            <!-- Activités Récentes -->
-            <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
-              <h3 class="text-[15px] font-bold text-on-surface mb-4">Activités Récentes</h3>
-              <div class="space-y-4">
-                @for (activity of recentActivities(); track activity.id) {
-                  <div class="flex gap-3">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                         [class]="activityMeta(activity.action).bg">
-                      <span class="material-symbols-outlined text-[18px]"
-                            [class]="activityMeta(activity.action).color">
-                        {{ activityMeta(activity.action).icon }}
-                      </span>
-                    </div>
-                    <div>
-                      <p class="text-[13px] text-on-surface">
-                        {{ activity.actionLabel }}
-                        @if (activity.candidateName) {
-                          — <b>{{ activity.candidateName }}</b>
-                        }
-                      </p>
-                      <p class="text-[11px] text-outline">{{ activity.timestamp }}</p>
-                    </div>
-                  </div>
-                }
-                @if (activities().length === 0) {
-                  <p class="text-[13px] text-outline text-center py-3">Aucune activité récente</p>
-                }
-              </div>
-              <button class="w-full mt-6 py-2 text-[13px] text-[#50717B]
-                             border border-[#50717B]/20 rounded-lg
-                             hover:bg-[#50717B]/5 transition-colors">
-                Voir tout l'historique
-              </button>
-            </daf-card>
-
-            <!-- Objectifs du Mois — dark card -->
-            <div class="rounded-xl p-6 text-white space-y-4" style="background-color: #50717B">
-              <h3 class="text-[15px] font-bold">Objectifs du Mois</h3>
-
-              <!-- Recruitment target vs actual -->
-              @if (currentObjective(); as obj) {
-                <div>
-                  <div class="flex justify-between text-[13px] mb-1">
-                    <span>Recrutements — {{ obj.monthLabel }}</span>
-                    <span class="font-bold">{{ obj.actual }}/{{ obj.target }}</span>
-                  </div>
-                  <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div class="bg-[#79D7BE] h-full rounded-full transition-all"
-                         [style.width.%]="objectiveProgress()"></div>
-                  </div>
-                </div>
-              } @else {
-                <div>
-                  <div class="flex justify-between text-[13px] mb-1">
-                    <span>Recrutements Tech</span>
-                    <span class="font-bold">—</span>
-                  </div>
-                  <div class="w-full bg-white/20 h-1.5 rounded-full"></div>
-                </div>
-              }
-
-              <!-- Pipeline delay -->
-              <div>
-                <div class="flex justify-between text-[13px] mb-1">
-                  <span>Délai de Provisioning</span>
-                  <span class="font-bold" style="color: #79D7BE">
-                    {{ stats() ? formatDelay(stats()!.delaiMoyenJours) : '—' }}
-                  </span>
-                </div>
-                <p class="text-[11px] italic" style="color: rgba(255,255,255,0.65)">
-                  @if (stats()?.urgents) {
-                    {{ stats()!.urgents }} poste(s) urgent(s) ce mois
-                  } @else {
-                    Cible : &lt; 2 jours
-                  }
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
       }
+    </div>
+  }
+
+  <!-- ═══ Kanban navigation minimap (fixed bottom-right) ═══ -->
+  @if (!loading() && viewMode() === 'kanban' && boardHasOverflow()) {
+    <div class="hidden sm:block fixed bottom-6 right-6 z-40">
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-2
+                  opacity-30 shadow-md origin-bottom-right transition-all duration-200
+                  hover:opacity-100 hover:scale-150 hover:shadow-2xl">
+        <div class="relative flex gap-1" style="width: 172px;">
+          @for (col of boardColumns(); track col.key; let i = $index) {
+            <button type="button"
+              class="flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105"
+              [style.background]="col.badgeBg"
+              [title]="col.label + ' (' + col.count + ')'"
+              (click)="scrollToColumn(i)">
+              <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
+              <span class="text-[10px] font-bold leading-none" [style.color]="col.accent">{{ col.count }}</span>
+            </button>
+          }
+          <div class="absolute top-0 bottom-0 rounded-md border-2 border-primary pointer-events-none transition-all duration-150"
+               [style.left]="viewportStyle().left" [style.width]="viewportStyle().width"></div>
+        </div>
+      </div>
+    </div>
+  }
 </div>
 
-<!-- ── Bulk actions bar ─────────────────────────────────────────── -->
-  @if (selectedCount() > 0) {
-    <daf-bulk-action-bar
-      [count]="selectedCount()"
-      [actions]="bulkActions"
-      countLabel="sélectionné(s)"
-      (cancel)="clearSelection()"
-      (actionClick)="onBulkAction($event)">
-    </daf-bulk-action-bar>
-  }
+<!-- ── Send / renegotiate offer modal ───────────────────────────── -->
+@if (offerTarget(); as target) {
+  <app-modal
+    [title]="offerMode() === 'renegotiate' ? 'Renégocier l\'offre' : 'Envoyer une offre'"
+    [visible]="true"
+    (closed)="closeOfferModal()"
+    [hasFooter]="true">
+
+    <p class="text-[13px] text-outline mb-4">{{ target.fullName }} — {{ target.poste }}</p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-on-surface">Salaire demandé (net)</label>
+        <daf-form-field [value]="offerForm.askedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onAskedChange($event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-on-surface">Salaire proposé (net)</label>
+        <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
+      </div>
+    </div>
+
+    <!-- Salary simulator (future module) -->
+    <div class="mt-2">
+      <daf-button label="Simulateur de salaire" variant="ghost"
+        [options]="{ iconStart: 'calculate', size: 'sm', disabled: true }"
+        title="Module à venir" />
+      <span class="text-[11px] text-outline ml-1">(bientôt disponible)</span>
+    </div>
+
+    <div class="flex flex-col gap-1 mt-3">
+      <label class="text-xs font-medium text-on-surface">Note (optionnel)</label>
+      <daf-form-field [value]="offerForm.salaryNote ?? null" [options]="noteFieldOpts" (valueChange)="onNoteChange($event)" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-3">
+      <daf-multi-date-picker
+        [value]="getHireDate()"
+        [config]="{ label: 'Date d’embauche prévue', placeholder: 'Sélectionner', selectionMode: 'single' }"
+        (valueChange)="setHireDate($event)" />
+      <daf-multi-date-picker
+        [value]="getExpiryDate()"
+        [config]="{ label: 'Expiration de l’offre', placeholder: 'Sélectionner', selectionMode: 'single' }"
+        (valueChange)="setExpiryDate($event)" />
+    </div>
+
+    @if (offerError()) {
+      <p class="text-xs text-danger mt-3">{{ offerError() }}</p>
+    }
+
+    <div slot="footer">
+      <daf-button label="Annuler" variant="secondary" (onClick)="closeOfferModal()" />
+      <daf-button
+        [label]="offerSubmitting() ? 'Envoi…' : (offerMode() === 'renegotiate' ? 'Renégocier' : 'Envoyer l\'offre')"
+        variant="primary"
+        [options]="{ iconStart: 'send', disabled: offerSubmitting(), loading: offerSubmitting() }"
+        (onClick)="submitOffer()" />
+    </div>
+  </app-modal>
+}
+
+<!-- ── Refuse offer modal ───────────────────────────────────────── -->
+@if (rejectTarget(); as target) {
+  <app-modal
+    [title]="'Refuser l\'offre'"
+    [visible]="true"
+    (closed)="closeRejectModal()"
+    [hasFooter]="true">
+
+    <p class="text-[13px] font-semibold text-on-surface mb-3">{{ target.fullName }}</p>
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-medium text-on-surface">Motif du refus <span class="text-danger">*</span></label>
+      <daf-form-field [value]="rejectReason" [options]="reasonFieldOpts" (valueChange)="onReasonChange($event)" />
+    </div>
+    @if (offerError()) {
+      <p class="text-xs text-danger mt-3">{{ offerError() }}</p>
+    }
+
+    <div slot="footer">
+      <daf-button label="Annuler" variant="secondary" (onClick)="closeRejectModal()" />
+      <daf-button
+        [label]="rejectSubmitting() ? 'Refus en cours…' : 'Confirmer le refus'"
+        variant="danger"
+        [options]="{ iconStart: 'cancel', disabled: rejectSubmitting() || !rejectReason.trim(), loading: rejectSubmitting() }"
+        (onClick)="submitReject()" />
+    </div>
+  </app-modal>
+}

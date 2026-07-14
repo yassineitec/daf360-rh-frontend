@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CandidateService } from './candidate.service';
 import { CandidateDetail, HireCandidateRequest } from './candidate.model';
 import { CandidateInterviewsComponent } from './candidate-interviews.component';
+import { OfferSectionComponent } from './offer-section.component';
 import { RejectModalComponent } from './reject-modal.component';
 import { ModalComponent } from '../../shared/modal.component';
 import { UserStore } from '../../core/user.store';
@@ -34,6 +35,7 @@ const NEEDS_END_DATE = ['CDD', 'CIVP', 'STAGE', 'DETACHEMENT'];
     CheckboxComponent,
     RejectModalComponent,
     CandidateInterviewsComponent,
+    OfferSectionComponent,
     ModalComponent,
   ],
   templateUrl: './candidate-detail.component.html',
@@ -101,6 +103,16 @@ export class CandidateDetailComponent implements OnInit {
     const c = this.candidate();
     return c !== null && !['REJECTED', 'ARCHIVED'].includes(c.status);
   });
+
+  /** Offer/negotiation panel: relevant from acceptance onward (and to show a refused offer). */
+  readonly showOfferSection = computed(() => {
+    const c = this.candidate();
+    return c !== null && !['PENDING', 'ARCHIVED'].includes(c.status);
+  });
+
+  onOfferChanged(): void {
+    this.loadCandidate();
+  }
 
   ngOnInit(): void {
     this.candidateId = +(this.route.snapshot.paramMap.get('id') ?? 0);
@@ -270,6 +282,7 @@ export class CandidateDetailComponent implements OnInit {
   readonly pipelineSteps: { status: string; label: string }[] = [
     { status: 'PENDING', label: 'En attente' },
     { status: 'ACCEPTED', label: 'Accepté' },
+    { status: 'OFFER_SENT', label: 'Offre envoyée' },
     { status: 'IT_IN_PROGRESS', label: 'IT en cours' },
     { status: 'EMAIL_RECEIVED', label: 'Email reçu' },
     { status: 'HR_IN_PROGRESS', label: 'RH en cours' },

@@ -184,7 +184,9 @@ export class DashboardComponent implements OnInit {
   }
 
   onQuickAction(route?: string): void {
-    if (route) this.router.navigate([route]);
+    // Navigate relative to the dashboard route so it resolves under /rh/…
+    // (both standalone and inside the federated shell), like onViewProfile.
+    if (route) this.router.navigate(['..', route], { relativeTo: this.activatedRoute });
   }
 
   private initials(name: string): string {

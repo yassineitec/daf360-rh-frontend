@@ -37,6 +37,14 @@ export interface KanbanCandidate {
   contractType?: string;
   /** Workflow progress (%) for the current phase: IT provisioning (OFFRE) or HR onboarding. */
   progressPercent?: number | null;
+  // ── Entretien column ──
+  interviewLocation?: string;
+  // ── Offre column ──
+  askedSalary?: string;
+  proposedSalary?: string;
+  offerExpiry?: string;
+  /** Offer lifecycle status: SENT | ACCEPTED | REJECTED | EXPIRED. */
+  offerStatus?: string;
 }
 
 export interface KanbanColumn {

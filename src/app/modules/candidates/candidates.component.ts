@@ -31,8 +31,24 @@ import {
   CANDIDATE_STATUS_OPTIONS,
   PageResponse,
 } from './candidate.model';
+import { PipelineService, PipelineActivity, PipelineObjective } from '../pipeline/services/pipeline.service';
 
 const PAGE_SIZE = 10;
+
+/** Icon/colour per audit action, for the "Activités Récentes" feed. */
+const ACTIVITY_META: Record<string, { icon: string; bg: string; color: string }> = {
+  ACCEPT:                   { icon: 'verified',      bg: 'bg-teal-100',   color: 'text-teal-700'   },
+  HIRE_CANDIDATE:           { icon: 'check_circle',  bg: 'bg-green-100',  color: 'text-green-600'  },
+  REJECT:                   { icon: 'person_remove', bg: 'bg-red-100',    color: 'text-red-500'    },
+  SEND_OFFER:               { icon: 'send',          bg: 'bg-amber-100',  color: 'text-amber-600'  },
+  ACCEPT_OFFER:             { icon: 'handshake',     bg: 'bg-teal-100',   color: 'text-teal-700'   },
+  REJECT_OFFER:             { icon: 'thumb_down',    bg: 'bg-red-100',    color: 'text-red-500'    },
+  RENEGOTIATE_OFFER:        { icon: 'sync',          bg: 'bg-amber-100',  color: 'text-amber-600'  },
+  CREATE:                   { icon: 'person_add',    bg: 'bg-blue-100',   color: 'text-blue-600'   },
+  UPLOAD_CV:                { icon: 'upload_file',   bg: 'bg-teal-100',   color: 'text-teal-600'   },
+  COMPLETE_IT_PROVISIONING: { icon: 'terminal',      bg: 'bg-teal-100',   color: 'text-teal-600'   },
+  UPDATE:                   { icon: 'mail_outline',  bg: 'bg-orange-100', color: 'text-orange-600' },
+};
 
 /** Kanban pulls the whole (tenant-scoped) candidate set in one page and groups it client-side. */
 const KANBAN_FETCH_SIZE = 500;
@@ -81,14 +97,37 @@ interface KanbanColumn {
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
-  private svc        = inject(CandidateService);
-  private router     = inject(Router);
-  readonly userStore = inject(UserStore);
+  private svc         = inject(CandidateService);
+  private pipelineSvc = inject(PipelineService);
+  private router      = inject(Router);
+  readonly userStore  = inject(UserStore);
+
+  // ── Recent activity + monthly objectives (pipeline data) ────────────────────
+  readonly activities = signal<PipelineActivity[]>([]);
+  readonly objectives = signal<PipelineObjective[]>([]);
+
+  readonly recentActivities = computed(() => this.activities().slice(0, 5));
+
+  readonly currentObjective = computed<PipelineObjective | null>(() => {
+    const o = this.objectives();
+    return o.length ? o[o.length - 1] : null;
+  });
+
+  readonly objectiveProgress = computed<number>(() => {
+    const o = this.currentObjective();
+    if (!o || o.target === 0) return 0;
+    return Math.min(100, Math.round((o.actual / o.target) * 100));
+  });
+
+  activityMeta(action: string): { icon: string; bg: string; color: string } {
+    return ACTIVITY_META[action] ?? { icon: 'info', bg: 'bg-surface-container', color: 'text-outline' };
+  }
 
   readonly page          = signal<PageResponse<CandidateListItem> | null>(null);
   readonly dashStats     = signal<CandidateDashboardStats>({
     totalCandidates: 0, monthGrowthPct: null,
     avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,
+    activeCandidates: 0, hiredTotal: 0, offerAcceptanceRate: null,
   });
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
@@ -125,6 +164,22 @@ export class CandidatesComponent implements OnInit {
   readonly kpiAvgDeltaPositive = computed(() => (this.dashStats().avgRecruitmentDaysDelta ?? 0) <= 0);
 
   readonly kpiUrgent = computed(() => this.dashStats().urgentPositions);
+
+  // ── Funnel-health KPIs (Pipeline RH page: distinct from the Candidats page) ──
+  readonly kpiActive     = computed(() => this.dashStats().activeCandidates);
+  readonly kpiHired      = computed(() => this.dashStats().hiredTotal);
+  readonly kpiAcceptance = computed(() => this.dashStats().offerAcceptanceRate);
+
+  readonly activeMetricOpts:     MetricCardOptions = { icon: 'groups',      iconColor: 'text-primary', iconBg: 'bg-primary/10' };
+  readonly acceptanceMetricOpts: MetricCardOptions = { icon: 'thumb_up',    iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
+  readonly hiredMetricOpts:      MetricCardOptions = { icon: 'how_to_reg',  iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
+
+  readonly activeMetricValue     = computed(() => this.kpiActive().toLocaleString('fr-FR'));
+  readonly hiredMetricValue      = computed(() => this.kpiHired().toLocaleString('fr-FR'));
+  readonly acceptanceMetricValue = computed(() => {
+    const r = this.kpiAcceptance();
+    return r == null ? '—' : `${Math.round(r)}%`;
+  });
 
   // ── daf-metric-card bindings (value / delta / options) ──────────────────────
   readonly totalMetricOpts:  MetricCardOptions = { icon: 'group',         iconColor: 'text-primary', iconBg: 'bg-primary/10' };
@@ -187,7 +242,7 @@ export class CandidatesComponent implements OnInit {
    */
   private readonly columnDefs: Omit<KanbanColumn, 'candidates'>[] = [
     { key: 'pending',  label: 'En attente',      statuses: ['PENDING'],                                            accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)' },
-    { key: 'accepted', label: 'Acceptés',        statuses: ['ACCEPTED'],                                           accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
+    { key: 'accepted', label: 'Acceptés',        statuses: ['ACCEPTED', 'OFFER_SENT'],                             accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
     { key: 'progress', label: 'IT & Onboarding', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], accent: '#1e40af', badgeBg: 'rgba(30,64,175,0.12)' },
     { key: 'hired',    label: 'Embauchés',       statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)' },
     { key: 'rejected', label: 'Rejetés',         statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)' },
@@ -268,6 +323,13 @@ export class CandidatesComponent implements OnInit {
   ngOnInit(): void {
     this.loadStats();
     this.loadKanban(); // kanban is the default view
+    this.loadPipelineExtras();
+  }
+
+  /** Recent activity + monthly objectives, from the pipeline endpoints. */
+  private loadPipelineExtras(): void {
+    this.pipelineSvc.getActivity().subscribe({ next: a => this.activities.set(a), error: () => {} });
+    this.pipelineSvc.getObjectives().subscribe({ next: o => this.objectives.set(o), error: () => {} });
   }
 
   private loadStats(): void {

@@ -4,7 +4,7 @@
   <div class="flex items-start sm:items-center justify-between gap-3">
     <div>
       <h1 class="text-headline-xl sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-        Candidats
+        Pipeline RH
       </h1>
       <p class="text-[13px] sm:text-[14px] text-outline mt-1">
         Suivi des candidatures et des étapes de recrutement.
@@ -29,7 +29,7 @@
     </ng-container>
   </div>
 
-  <!-- ═══ KPI Cards (design: Total Candidats · Délai Recrutement Moyen · Postes Urgents) ═══ -->
+  <!-- ═══ Funnel-health KPIs (Candidats actifs · Taux d'acceptation · Recrutés) ═══ -->
   @if (statsLoading()) {
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       @for (i of [1, 2, 3]; track i) {
@@ -39,22 +39,19 @@
   } @else {
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <daf-metric-card
-        label="Total Candidats"
-        [value]="totalMetricValue()"
-        [delta]="totalMetricDelta()"
-        [options]="totalMetricOpts" />
+        label="Candidats actifs"
+        [value]="activeMetricValue()"
+        [options]="activeMetricOpts" />
 
       <daf-metric-card
-        label="Délai Recrutement Moy."
-        [value]="kpiAvgDaysText()"
-        [delta]="delayMetricDelta()"
-        [options]="delayMetricOpts" />
+        label="Taux d'acceptation des offres"
+        [value]="acceptanceMetricValue()"
+        [options]="acceptanceMetricOpts" />
 
       <daf-metric-card
-        label="Postes Urgents"
-        [value]="kpiUrgent() + ' Ouverts'"
-        [delta]="urgentMetricDelta()"
-        [options]="urgentMetricOpts" />
+        label="Recrutés"
+        [value]="hiredMetricValue()"
+        [options]="hiredMetricOpts" />
     </div>
   }
 
@@ -456,10 +453,70 @@
     }
   </div>
 
+  <!-- ═══ Recent activity + monthly objectives ═══ -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+
+    <!-- Activités Récentes (2/3) -->
+    <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }" class="lg:col-span-2 block">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings:'FILL' 1">bolt</span>
+        <h3 class="text-[15px] font-bold text-on-surface">Activités Récentes</h3>
+      </div>
+      <div class="space-y-3">
+        @for (activity of recentActivities(); track activity.id) {
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                 [class]="activityMeta(activity.action).bg">
+              <span class="material-symbols-outlined text-[18px]"
+                    [class]="activityMeta(activity.action).color">{{ activityMeta(activity.action).icon }}</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-[13px] text-on-surface truncate">
+                {{ activity.actionLabel }}
+                @if (activity.candidateName) { — <b>{{ activity.candidateName }}</b> }
+              </p>
+              <p class="text-[11px] text-outline">{{ activity.timestamp }}</p>
+            </div>
+          </div>
+        }
+        @if (activities().length === 0) {
+          <p class="text-[13px] text-outline text-center py-6">Aucune activité récente</p>
+        }
+      </div>
+    </daf-card>
+
+    <!-- Objectifs du Mois (1/3) — dark card -->
+    <div class="rounded-xl p-6 text-white flex flex-col gap-5" style="background-color:#50717B">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]" style="color:#79D7BE;font-variation-settings:'FILL' 1">flag</span>
+        <h3 class="text-[15px] font-bold">Objectifs du Mois</h3>
+      </div>
+      @if (currentObjective(); as obj) {
+        <div>
+          <div class="flex justify-between items-baseline text-[13px] mb-2">
+            <span style="color:rgba(255,255,255,0.85)">Recrutements — {{ obj.monthLabel }}</span>
+            <span class="text-[20px] font-bold">{{ obj.actual }}<span class="text-[13px] font-normal" style="color:rgba(255,255,255,0.6)">/{{ obj.target }}</span></span>
+          </div>
+          <div class="w-full bg-white/20 h-2.5 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-500"
+                 style="background-color:#79D7BE" [style.width.%]="objectiveProgress()"></div>
+          </div>
+          <p class="text-[11px] mt-2" style="color:rgba(255,255,255,0.7)">
+            {{ objectiveProgress() }}% de l'objectif atteint
+          </p>
+        </div>
+      } @else {
+        <p class="text-[13px]" style="color:rgba(255,255,255,0.7)">Aucun objectif défini ce mois.</p>
+      }
+    </div>
+  </div>
+
   <!-- ═══ Kanban navigation map (fixed bottom-right, always visible) ═══ -->
   @if (viewMode() === 'kanban' && boardHasOverflow()) {
     <div class="hidden sm:block fixed bottom-6 right-6 z-40">
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg p-2">
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-2
+                  opacity-30 shadow-md origin-bottom-right transition-all duration-200
+                  hover:opacity-100 hover:scale-150 hover:shadow-2xl">
         <div class="relative flex gap-1" style="width: 172px;">
           @for (col of kanbanColumns(); track col.key; let i = $index) {
             <button type="button"

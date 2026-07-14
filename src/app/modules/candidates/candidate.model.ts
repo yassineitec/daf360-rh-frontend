@@ -2,6 +2,7 @@
 export type CandidateStatus =
   | 'PENDING'
   | 'ACCEPTED'
+  | 'OFFER_SENT'
   | 'REJECTED'
   | 'IT_IN_PROGRESS'
   | 'EMAIL_RECEIVED'
@@ -150,6 +151,7 @@ export interface CandidateFilter {
 export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
   PENDING: 'En attente',
   ACCEPTED: 'Accepté',
+  OFFER_SENT: 'Offre envoyée',
   REJECTED: 'Rejeté',
   IT_IN_PROGRESS: 'IT en cours',
   EMAIL_RECEIVED: 'Email reçu',
@@ -172,6 +174,7 @@ export const CANDIDATE_STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
   { value: 'PENDING', label: 'En attente' },
   { value: 'ACCEPTED', label: 'Accepté' },
+  { value: 'OFFER_SENT', label: 'Offre envoyée' },
   { value: 'REJECTED', label: 'Rejeté' },
   { value: 'IT_IN_PROGRESS', label: 'IT en cours' },
   { value: 'EMAIL_RECEIVED', label: 'Email reçu' },
@@ -198,6 +201,13 @@ export interface CandidateDashboardStats {
   avgRecruitmentDaysDelta: number | null;
   /** Open positions needing HR action (pending recruitment demands). */
   urgentPositions: number;
+  // ── Funnel-health KPIs (Pipeline RH page) ──
+  /** Candidates still active in the pipeline (not hired/rejected/archived). */
+  activeCandidates: number;
+  /** Total recruited (HIRED). */
+  hiredTotal: number;
+  /** Offer acceptance rate (%) among decided offers; null when none decided. */
+  offerAcceptanceRate: number | null;
 }
 
 export interface CandidateHistoryItem {

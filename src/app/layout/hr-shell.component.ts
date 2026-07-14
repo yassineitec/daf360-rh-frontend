@@ -23,10 +23,10 @@ interface AppNavDef {
 
 const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', route: 'dashboard', permission: null },
-  { id: 'profiles', label: 'Profils', icon: 'account_circle', route: 'profiles', permission: null },
+  { id: 'profiles', label: 'Profiles', icon: 'account_circle', route: 'profiles', permission: null },
   {
     id: 'recrutement',
-    label: 'Pipeline de Recrutement',
+    label: 'Pipeline RH',
     icon: 'analytics',
     route: 'recrutement',
     permission: null,

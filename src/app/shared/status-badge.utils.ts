@@ -36,6 +36,7 @@ const STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
   // Candidate
   PENDING:        { label: 'En attente',      variant: 'neutral'   },
   ACCEPTED:       { label: 'Accepté',         variant: 'success'   },
+  OFFER_SENT:     { label: 'Offre envoyée',   variant: 'warning'   },
   IT_IN_PROGRESS: { label: 'IT en cours',     variant: 'info'      },
   EMAIL_RECEIVED: { label: 'Email reçu',      variant: 'teal'      },
   HR_IN_PROGRESS: { label: 'RH en cours',     variant: 'warning'   },
