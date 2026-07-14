@@ -119,12 +119,6 @@
           </div>
         </ng-template>
 
-        <ng-template dafCell="adDone" let-row>
-          <daf-badge
-            [label]="row['adDone'] ? 'Synchronisé' : 'Échec'"
-            [options]="{ variant: row['adDone'] ? 'success' : 'neutral', size: 'sm' }" />
-        </ng-template>
-
         <ng-template dafCell="_actions" let-row>
           <daf-button label="Compléter" variant="teal"
             [options]="{ size: 'sm' }"
@@ -240,12 +234,7 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-3 border-t border-outline-variant">
-          <span class="inline-flex items-center gap-1.5 text-[11px] uppercase font-bold"
-                [class.text-success]="row['adDone']" [class.text-outline]="!row['adDone']">
-            <span class="material-symbols-outlined text-[16px]">{{ row['adDone'] ? 'sync' : 'sync_problem' }}</span>
-            {{ row['adDone'] ? 'AD Sync' : 'AD Échec' }}
-          </span>
+        <div class="flex items-center justify-end pt-3 border-t border-outline-variant">
           <daf-button label="Compléter" variant="teal"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />

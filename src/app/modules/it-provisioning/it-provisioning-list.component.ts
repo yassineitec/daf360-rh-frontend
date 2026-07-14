@@ -115,7 +115,6 @@ export class ItProvisioningListComponent implements OnInit {
     { key: 'expectedStartDate', label: 'Début & Urgence' },
     { key: 'hwLabel', label: 'Matériel' },
     { key: 'licLabel', label: 'Licences' },
-    { key: 'adDone', label: 'AD Sync' },
     { key: '_actions', label: 'Actions' },
   ];
 
