@@ -28,4 +28,12 @@ export class StepSummaryComponent {
     if (s.length <= 4) return s;
     return s.slice(0, 4) + '****';
   }
+
+  /** Resolve the selected régime's label from the form's available regimes. */
+  regimeLabel(): string {
+    const id = this.data()?.regimeTemplateId;
+    if (id == null) return '—';
+    const match = (this.formInfo()?.availableRegimes ?? []).find((r: any) => r.id === id);
+    return match?.labelFr ?? this.val(id);
+  }
 }

@@ -66,12 +66,18 @@ export class StepContractComponent implements OnInit {
     this.probationEndDate.set(d.probationEndDate ?? '');
 
     // No paysId → backend returns ALL active ref data (matches the candidate form).
-    this.refSvc.getGrades().subscribe(r => this.grades.set(r));
-    this.refSvc.getDisciplines().subscribe(r => this.disciplines.set(r));
-    this.refSvc.getNogLevels().subscribe(r => this.nogLevels.set(r));
-    this.refSvc.getDepartments().subscribe(r => this.departments.set(r));
+    // Re-emit after each list loads so prefilled ids resolve to their labels
+    // (the summary/recap displays labels, not ids).
+    this.refSvc.getGrades().subscribe(r => { this.grades.set(r); this.emit(); });
+    this.refSvc.getDisciplines().subscribe(r => { this.disciplines.set(r); this.emit(); });
+    this.refSvc.getNogLevels().subscribe(r => { this.nogLevels.set(r); this.emit(); });
+    this.refSvc.getDepartments().subscribe(r => { this.departments.set(r); this.emit(); });
 
     this.emit();
+  }
+
+  private labelOf(list: RefDataItem[], id: number | null): string | undefined {
+    return id == null ? undefined : list.find(x => x.id === id)?.labelFr;
   }
 
   emit(): void {
@@ -83,6 +89,11 @@ export class StepContractComponent implements OnInit {
       disciplineId:     this.disciplineId(),
       nogLevelId:       this.nogLevelId(),
       departmentId:     this.departmentId(),
+      // Resolved labels — what the recap displays (kept in sync with the ids).
+      grade:            this.labelOf(this.grades(),      this.gradeId()),
+      discipline:       this.labelOf(this.disciplines(), this.disciplineId()),
+      nogLevel:         this.labelOf(this.nogLevels(),   this.nogLevelId()),
+      department:       this.labelOf(this.departments(), this.departmentId()),
       isOnProbation:    this.isOnProbation(),
       probationEndDate: this.probationEndDate()  || null,
     });
