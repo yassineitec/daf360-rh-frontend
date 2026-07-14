@@ -1,27 +1,13 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router } from '@angular/router';
-import {
-  BadgeCell,
-  ButtonComponent,
-  CardComponent,
-  DafCellDirective,
-  DataTableComponent,
-  PaginationComponent,
-  ProgressBarComponent,
-  SelectComponent,
-  SelectConfig,
-  SelectOption,
-  StatusBadgeComponent,
-  TableColumn,
-  TableConfig,
-  TableRow,
-} from '@khalilrebhiitec/daf360';
+
 import { ItProvisioningService } from './it-provisioning.service';
 import { ProvisioningListItem } from './it-provisioning.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { BadgeCell, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, PaginationComponent, SelectComponent, SelectConfig, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow, ProgressBarComponent } from '@khalilrebhiitec/daf360';
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: 'PENDING',       label: 'En attente' },
@@ -33,9 +19,8 @@ const STATUS_OPTIONS: SelectOption[] = [
 const PAGE_SIZE = 10;
 
 @Component({
-  selector: 'app-it-provisioning-list',
-  standalone: true,
   imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent],
+  standalone: true,
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
