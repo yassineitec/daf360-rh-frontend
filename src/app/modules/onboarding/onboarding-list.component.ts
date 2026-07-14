@@ -69,7 +69,7 @@ export class OnboardingListComponent implements OnInit {
     this.pagedItems().map(r => ({
       employe:           { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
       ms365Email:        r.ms365Email,
-      entite:            '#' + r.paysId,
+      entite:            r.paysLabel ?? '#' + r.paysId,
       expectedStartDate: this.formatDate(r.expectedStartDate),
       status:            { label: this.statusBadge(r.candidateStatus).label, options: this.statusBadge(r.candidateStatus).options } as BadgeCell,
       hasDraft:          r.hasDraft,
