@@ -79,17 +79,18 @@ export class ItProvisioningListComponent implements OnInit {
       licDone:    this.licProgress(r) === '5/5',
       licLabel:   this.licProgress(r),
       adDone:     r.status === 'EMAIL_CREATED' || r.status === 'COMPLETED',
-      _source:    r,
+      isCompleted: r.status === 'COMPLETED',
+      _source:     r,
     })),
   );
 
   readonly stats = computed(() => {
-    const list = this.items();
+    const openList = this.items().filter(r => r.status !== 'COMPLETED');
     return {
-      pending:      list.length,
-      overdue:      list.filter(r => this.isOverdue(r)).length,
-      hwIncomplete: list.filter(r => this.hwProgress(r) !== '6/6').length,
-      licIncomplete: list.filter(r => this.licProgress(r) !== '5/5').length,
+      pending:      openList.length,
+      overdue:      openList.filter(r => this.isOverdue(r)).length,
+      hwIncomplete: openList.filter(r => this.hwProgress(r) !== '6/6').length,
+      licIncomplete: openList.filter(r => this.licProgress(r) !== '5/5').length,
     };
   });
 
@@ -106,7 +107,7 @@ export class ItProvisioningListComponent implements OnInit {
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,
     loading: this.loading(),
-    emptyMessage: 'Aucun dossier en attente de provisioning.',
+    emptyMessage: 'Aucun dossier de provisioning.',
   }));
 
   ngOnInit(): void { this.load(); }
@@ -114,7 +115,7 @@ export class ItProvisioningListComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.getPendingList().subscribe({
+    this.service.getAllList().subscribe({
       next:  (data) => { this.items.set(data); this.loading.set(false); },
       error: ()     => { this.error.set('Erreur lors du chargement.'); this.loading.set(false); },
     });

@@ -14,6 +14,11 @@ export class ItProvisioningService {
     return this.http.get<ProvisioningListItem[]>(`${this.base}/pending`);
   }
 
+  /** GET /api/hr/it-provisioning/all */
+  getAllList(): Observable<ProvisioningListItem[]> {
+    return this.http.get<ProvisioningListItem[]>(`${this.base}/all`);
+  }
+
   /** GET /api/hr/it-provisioning/{id} */
   getProvisioning(id: number): Observable<ProvisioningDetail> {
     return this.http.get<ProvisioningDetail>(`${this.base}/${id}`);

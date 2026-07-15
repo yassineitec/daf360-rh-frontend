@@ -158,8 +158,8 @@ export class ItProvisioningFormComponent implements OnInit {
     emptyMessage: "Aucun type d'actif configuré pour cette entité.",
   };
 
-  assetIndex(id: number): number {
-    return this.editableAssets().findIndex(a => a.id === id);
+  assetIndex(assetTypeCode: string): number {
+    return this.editableAssets().findIndex(a => a.assetTypeCode === assetTypeCode);
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -227,15 +227,15 @@ export class ItProvisioningFormComponent implements OnInit {
 
   // ── Save (PATCH) ──────────────────────────────────────────────────────────
   onSave(): void {
-    if (this.isCompleted()) return;
     this.saving.set(true);
     const assetUpdates: UpdateAssetRequest[] = this.editableAssets().map(a => ({
-      id:           a.id,
-      provided:     a.provided,
-      serialNumber: a.serialNumber || null,
-      brandModel:   a.brandModel   || null,
-      assetTag:     a.assetTag     || null,
-      status:       a.status       || null,
+      assetTypeCode: a.assetTypeCode,
+      id:            a.id ?? null,
+      provided:      a.provided,
+      serialNumber:  a.serialNumber || null,
+      brandModel:    a.brandModel   || null,
+      assetTag:      a.assetTag     || null,
+      status:        a.status       || null,
     }));
     const dto: UpdateProvisioningRequest = {
       assets:          assetUpdates,
@@ -297,11 +297,13 @@ export class ItProvisioningFormComponent implements OnInit {
 
     // Step 1 — save current form state (ensures adAccountCreated is persisted in DB)
     const assetUpdates = this.editableAssets().map(a => ({
-      id: a.id, provided: a.provided,
-      serialNumber: a.serialNumber || null,
-      brandModel:   a.brandModel   || null,
-      assetTag:     a.assetTag     || null,
-      status:       a.status       || null,
+      assetTypeCode: a.assetTypeCode,
+      id:            a.id ?? null,
+      provided:      a.provided,
+      serialNumber:  a.serialNumber || null,
+      brandModel:    a.brandModel   || null,
+      assetTag:      a.assetTag     || null,
+      status:        a.status       || null,
     }));
     const dto = {
       assets:           assetUpdates,

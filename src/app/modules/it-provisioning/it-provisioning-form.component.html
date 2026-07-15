@@ -76,7 +76,7 @@
           </div>
 
           <!-- Step body -->
-          <div class="px-4 py-5 sm:px-8 sm:py-7" [class.opacity-60]="isCompleted() && currentStep() !== 6" [class.pointer-events-none]="isCompleted() && currentStep() !== 6">
+          <div class="px-4 py-5 sm:px-8 sm:py-7">
 
             <!-- ── STEP 1 : Identité ────────────────────────────────── -->
             @if (currentStep() === 1) {
@@ -144,36 +144,36 @@
                 <ng-template dafCell="provided" let-row>
                   <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer"
                     [ngModel]="row['provided']"
-                    (ngModelChange)="toggleAssetProvided(assetIndex(row['id']), $event)"
-                    [disabled]="isCompleted()" />
+                    (ngModelChange)="toggleAssetProvided(assetIndex(row['assetTypeCode']), $event)"
+                     />
                 </ng-template>
 
                 <ng-template dafCell="serialNumber" let-row>
                   <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="SN-…"
                     [ngModel]="row['serialNumber']"
-                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'serialNumber', $event)"
-                    [disabled]="!row['provided'] || isCompleted()" />
+                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'serialNumber', $event)"
+                    [disabled]="!row['provided']" />
                 </ng-template>
 
                 <ng-template dafCell="brandModel" let-row>
                   <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="Marque / Modèle"
                     [ngModel]="row['brandModel']"
-                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'brandModel', $event)"
-                    [disabled]="!row['provided'] || isCompleted()" />
+                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'brandModel', $event)"
+                    [disabled]="!row['provided']" />
                 </ng-template>
 
                 <ng-template dafCell="assetTag" let-row>
                   <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="AT-…"
                     [ngModel]="row['assetTag']"
-                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'assetTag', $event)"
-                    [disabled]="!row['provided'] || isCompleted()" />
+                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'assetTag', $event)"
+                    [disabled]="!row['provided']" />
                 </ng-template>
 
                 <ng-template dafCell="status" let-row>
                   <select class="w-full h-8 border border-outline-variant rounded-md px-1.5 text-[12px] outline-none bg-surface cursor-pointer focus:border-tertiary"
                     [ngModel]="row['status']"
-                    (ngModelChange)="setAssetField(assetIndex(row['id']), 'status', $event)"
-                    [disabled]="!row['provided'] || isCompleted()">
+                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'status', $event)"
+                    [disabled]="!row['provided']">
                     <option value="">—</option>
                     @for (s of hwStatuses; track s.value) {
                       <option [value]="s.value">{{ s.label }}</option>
@@ -252,7 +252,7 @@
                   placeholder="Notes internes, observations…"
                   [ngModel]="notes()"
                   (ngModelChange)="notes.set($event)"
-                  [disabled]="isCompleted()"></textarea>
+                  ></textarea>
               </div>
 
               @if (isCompleted()) {
@@ -283,11 +283,9 @@
               (onClick)="goPrev()" />
 
             <div class="flex items-center gap-3">
-              @if (!isCompleted()) {
-                <daf-button
-                  [options]="{ variant: 'secondary', label: saving() ? 'Enregistrement…' : 'Enregistrer le brouillon', iconStart: 'save', disabled: saving(), loading: saving() }"
-                  (onClick)="onSave()" />
-              }
+              <daf-button
+                [options]="{ variant: 'secondary', label: saving() ? 'Enregistrement…' : (isCompleted() ? 'Enregistrer' : 'Enregistrer le brouillon'), iconStart: 'save', disabled: saving(), loading: saving() }"
+                (onClick)="onSave()" />
               @if (currentStep() < totalSteps) {
                 <daf-button
                   [options]="{ variant: 'teal', pill: true, label: 'Suivant', iconEnd: 'arrow_forward' }"
