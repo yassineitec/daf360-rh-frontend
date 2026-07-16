@@ -12,7 +12,8 @@ import { NotificationRoutingComponent } from './notifications/notification-routi
 import { RefDataAdminComponent }        from './ref-data-admin.component';
 import { OvertimeAdminComponent }       from './overtime/overtime-admin.component';
 import { InterviewTypesAdminComponent }      from './interview-types-admin.component';
-import { OffboardingCatalogAdminComponent }  from './offboarding-catalog-admin.component';
+import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.component';
+import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
 
 const TABS: { key: AdminTab; label: string; permission: string }[] = [
   { key: 'roles',         label: 'Rôles & Permissions',  permission: 'GET_ROLES' },
@@ -26,7 +27,8 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
   { key: 'ref-data',      label: 'Données de référence',  permission: 'ADMIN_LISTS'          },
   { key: 'overtime',        label: 'Heures supplémentaires', permission: 'GET_PAYS'             },
   { key: 'interview-types',     label: 'Types d\'entretiens',    permission: 'RH_ADMIN_INTERVIEW_TYPES' },
-  { key: 'offboarding-catalog', label: 'Tâches offboarding',    permission: 'RH_MANAGE_OFFBOARDING'    },
+  { key: 'offboarding-catalog',  label: 'Tâches offboarding',    permission: 'RH_MANAGE_OFFBOARDING'    },
+  { key: 'document-templates',   label: 'Maquettes documents',   permission: 'HR_ADMIN_ROLES'            },
 ];
 
 @Component({
@@ -45,6 +47,7 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
     OvertimeAdminComponent,
     InterviewTypesAdminComponent,
     OffboardingCatalogAdminComponent,
+    DocumentTemplatesAdminComponent,
   ],
   template: `
     @if (!isAdmin()) {
@@ -87,7 +90,8 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
           @if (activeTab() === 'ref-data')     { <app-ref-data-admin [paysId]="paysId()" /> }
           @if (activeTab() === 'overtime')          { <app-overtime-admin [paysId]="paysId()" /> }
           @if (activeTab() === 'interview-types')     { <app-interview-types-admin [paysId]="paysId()" /> }
-          @if (activeTab() === 'offboarding-catalog') { <app-offboarding-catalog-admin [paysId]="paysId()" /> }
+          @if (activeTab() === 'offboarding-catalog')  { <app-offboarding-catalog-admin [paysId]="paysId()" /> }
+          @if (activeTab() === 'document-templates')   { <app-document-templates-admin [paysId]="paysId()" /> }
         </div>
       </div>
     }

@@ -7,6 +7,7 @@ import {
   RegimeDto, RequestTypeCatalog, RequestTypeDto,
   Role, WorkingTimeRegime,
   OffboardingCatalogTask, SaveCatalogTaskRequest,
+  DocumentTemplate, SaveDocumentTemplateRequest, VariableDef,
 } from './models/admin.model';
 
 @Injectable({ providedIn: 'root' })
@@ -108,6 +109,49 @@ export class AdminService {
 
   deactivateRegime(id: number): Observable<void> {
     return this.http.delete<void>(`${this.hrBase}/regimes/${id}`);
+  }
+
+  // ── Document templates ────────────────────────────────────────────────────
+  getTemplateVariables(): Observable<VariableDef[]> {
+    return this.http.get<VariableDef[]>(`${this.base}/document-templates/variables`);
+  }
+
+  listTemplates(paysId: number, category?: string, includeInactive = false): Observable<DocumentTemplate[]> {
+    let params = new HttpParams().set('paysId', paysId).set('includeInactive', includeInactive);
+    if (category) params = params.set('category', category);
+    return this.http.get<DocumentTemplate[]>(`${this.base}/document-templates`, { params });
+  }
+
+  createTemplate(dto: SaveDocumentTemplateRequest): Observable<DocumentTemplate> {
+    return this.http.post<DocumentTemplate>(`${this.base}/document-templates`, dto);
+  }
+
+  updateTemplate(id: number, dto: SaveDocumentTemplateRequest): Observable<DocumentTemplate> {
+    return this.http.put<DocumentTemplate>(`${this.base}/document-templates/${id}`, dto);
+  }
+
+  toggleTemplateActive(id: number): Observable<DocumentTemplate> {
+    return this.http.patch<DocumentTemplate>(`${this.base}/document-templates/${id}/toggle-active`, null);
+  }
+
+  deleteTemplate(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/document-templates/${id}`);
+  }
+
+  renderTemplate(id: number, employeeProfileId?: number): Observable<Blob> {
+    return this.http.post(
+      `${this.base}/document-templates/${id}/render`,
+      { employeeProfileId: employeeProfileId ?? null },
+      { responseType: 'blob' }
+    );
+  }
+
+  previewRawTemplate(html: string, paysId: number, employeeProfileId?: number): Observable<Blob> {
+    return this.http.post(
+      `${this.base}/document-templates/preview-raw`,
+      { htmlContent: html, paysId, employeeProfileId: employeeProfileId ?? null },
+      { responseType: 'blob' }
+    );
   }
 
   // ── Offboarding task catalog ──────────────────────────────────────────────

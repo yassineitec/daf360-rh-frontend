@@ -159,7 +159,7 @@ export interface RegimeDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin tabs
 // ─────────────────────────────────────────────────────────────────────────────
-export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog';
+export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog' | 'document-templates';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Offboarding task catalog
@@ -180,6 +180,41 @@ export interface OffboardingCatalogTask {
   orderIndex:     number;
   isActive:       boolean;
   createdAt:      string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Document templates
+// ─────────────────────────────────────────────────────────────────────────────
+export const TEMPLATE_CATEGORIES = ['ATTESTATION', 'CONTRACT', 'LETTRE', 'AUTRE'] as const;
+export type TemplateCategory = typeof TEMPLATE_CATEGORIES[number];
+
+export interface VariableDef {
+  key:     string;
+  labelFr: string;
+  group:   string;
+}
+
+export interface DocumentTemplate {
+  id:          number;
+  paysId:      number;
+  category:    string;
+  name:        string;
+  description: string | null;
+  htmlContent: string;
+  variables:   string[] | null;
+  pageSize:    string;
+  isActive:    boolean;
+  createdAt:   string;
+  updatedAt:   string | null;
+}
+
+export interface SaveDocumentTemplateRequest {
+  paysId:       number;
+  category:     string;
+  name:         string;
+  description?: string;
+  htmlContent:  string;
+  pageSize?:    string;
 }
 
 export interface SaveCatalogTaskRequest {
