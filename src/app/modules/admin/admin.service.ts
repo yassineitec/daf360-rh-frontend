@@ -6,6 +6,7 @@ import {
   Holiday, HolidayDto, ParameterDto, ParameterSet,
   RegimeDto, RequestTypeCatalog, RequestTypeDto,
   Role, WorkingTimeRegime,
+  OffboardingCatalogTask, SaveCatalogTaskRequest,
 } from './models/admin.model';
 
 @Injectable({ providedIn: 'root' })
@@ -107,5 +108,29 @@ export class AdminService {
 
   deactivateRegime(id: number): Observable<void> {
     return this.http.delete<void>(`${this.hrBase}/regimes/${id}`);
+  }
+
+  // ── Offboarding task catalog ──────────────────────────────────────────────
+  listCatalogTasks(paysId: number, contractType?: string): Observable<OffboardingCatalogTask[]> {
+    let params = new HttpParams().set('paysId', paysId);
+    if (contractType) params = params.set('contractType', contractType);
+    return this.http.get<OffboardingCatalogTask[]>(`${this.base}/offboarding-catalog`, { params });
+  }
+
+  createCatalogTask(dto: SaveCatalogTaskRequest): Observable<OffboardingCatalogTask> {
+    return this.http.post<OffboardingCatalogTask>(`${this.base}/offboarding-catalog`, dto);
+  }
+
+  updateCatalogTask(id: number, dto: SaveCatalogTaskRequest): Observable<OffboardingCatalogTask> {
+    return this.http.put<OffboardingCatalogTask>(`${this.base}/offboarding-catalog/${id}`, dto);
+  }
+
+  toggleCatalogTaskActive(id: number): Observable<OffboardingCatalogTask> {
+    return this.http.patch<OffboardingCatalogTask>(
+      `${this.base}/offboarding-catalog/${id}/toggle-active`, null);
+  }
+
+  deleteCatalogTask(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/offboarding-catalog/${id}`);
   }
 }

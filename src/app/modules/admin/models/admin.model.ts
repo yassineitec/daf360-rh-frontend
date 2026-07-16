@@ -159,4 +159,37 @@ export interface RegimeDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin tabs
 // ─────────────────────────────────────────────────────────────────────────────
-export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types';
+export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Offboarding task catalog
+// ─────────────────────────────────────────────────────────────────────────────
+export const CONTRACT_TYPES = ['CDI', 'CDD', 'STAGE', 'FREELANCE', 'CIVP'] as const;
+export type ContractType = typeof CONTRACT_TYPES[number];
+
+export interface OffboardingCatalogTask {
+  id:             number;
+  paysId:         number;
+  contractType:   string;
+  taskCode:       string;
+  taskLabel:      string;
+  ownerRole:      string;
+  isMandatory:    boolean;
+  isBlocking:     boolean;
+  slaWorkingDays: number;
+  orderIndex:     number;
+  isActive:       boolean;
+  createdAt:      string;
+}
+
+export interface SaveCatalogTaskRequest {
+  paysId:         number;
+  contractType:   string;
+  taskCode:       string;
+  taskLabel:      string;
+  ownerRole:      string;
+  isMandatory:    boolean;
+  isBlocking:     boolean;
+  slaWorkingDays: number;
+  orderIndex:     number;
+}
