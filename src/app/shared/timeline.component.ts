@@ -1,7 +1,22 @@
 import {
   Component, inject, input, output,
 } from '@angular/core';
-import { PhaseGroup, WorkflowTask, TaskStatus } from '../modules/lifecycle/models/lifecycle.model';
+import { TaskStatus } from '../modules/lifecycle/models/lifecycle.model';
+
+export interface WorkflowTask {
+  id:          number;
+  title:       string;
+  description?: string;
+  status:      TaskStatus;
+  assignedTo?: number | null;
+  slaHours?:   number | null;
+  dueDate?:    string | null;
+}
+
+export interface PhaseGroup {
+  phase: string;
+  tasks: WorkflowTask[];
+}
 import { SlaCountdownPipe } from './sla-countdown.pipe';
 import { UserStore }        from '../core/user.store';
 
