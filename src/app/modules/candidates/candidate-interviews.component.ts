@@ -10,6 +10,7 @@ import {
   StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
 import { UserStore } from '../../core/user.store';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { dateToIso } from '../../shared/date-picker.utils';
 import { InterviewService } from './interview.service';
 import {
@@ -32,6 +33,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
     FormFieldComponent,
     MultiDatePickerComponent,
     StatusBadgeComponent,
+    TranslatePipe,
   ],
   template: `
     <daf-card class="block" [options]="{ variant: 'outlined', padding: 'lg', radius: 'xl' }">
@@ -40,13 +42,13 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
           <span class="material-symbols-outlined text-[18px]">record_voice_over</span>
-          <h3 class="text-[12px] font-semibold uppercase tracking-wider">Entretiens</h3>
+          <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.INTERVIEWS.TITLE' | translate }}</h3>
           @if (interviews().length) {
             <daf-badge [label]="interviews().length + ''" [options]="{ variant: 'teal', size: 'sm' }" />
           }
         </div>
         @if (canManage() && !showForm()) {
-          <daf-button label="Planifier" variant="teal"
+          <daf-button [label]="'CANDIDATES.INTERVIEWS.SCHEDULE' | translate" variant="teal"
             [options]="{ iconStart: 'add', size: 'sm' }"
             (onClick)="openForm()" />
         }
@@ -65,55 +67,55 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
       <!-- Schedule form -->
       @if (showForm()) {
         <div class="p-4 mb-4 rounded-xl" style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant)">
-          <p class="text-[12px] font-semibold text-on-surface mb-3">Planifier un entretien</p>
+          <p class="text-[12px] font-semibold text-on-surface mb-3">{{ 'CANDIDATES.INTERVIEWS.SCHEDULE_TITLE' | translate }}</p>
 
           @if (typesLoading()) {
             <div class="flex items-center gap-2 py-2 text-[12px] text-outline">
               <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-              Chargement des types...
+              {{ 'CANDIDATES.INTERVIEWS.LOADING_TYPES' | translate }}
             </div>
           } @else if (!activeTypes().length) {
             <p class="text-[12px] text-outline py-2">
-              Aucun type d'entretien actif disponible. Configurez-en dans l'Administration.
+              {{ 'CANDIDATES.INTERVIEWS.NO_TYPES' | translate }}
             </p>
           } @else {
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <daf-select
                 [selected]="typeSelected()"
                 [options]="typeOptions()"
-                [config]="{ label: 'Type', required: true, placeholder: '— Sélectionner —', fullWidth: true }"
+                [config]="{ label: ('CANDIDATES.INTERVIEWS.TYPE' | translate), required: true, placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
                 (selectedChange)="onTypeChange($event)" />
 
               <daf-multi-date-picker
                 [value]="formDate()"
-                [config]="{ label: 'Date', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+                [config]="{ label: ('CANDIDATES.INTERVIEWS.DATE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), required: true, selectionMode: 'single' }"
                 (valueChange)="onDateChange($event)" />
 
               <daf-form-field
                 [value]="formTime()"
-                [options]="{ label: 'Heure', type: 'time', fullWidth: true }"
+                [options]="{ label: ('CANDIDATES.INTERVIEWS.TIME' | translate), type: 'time', fullWidth: true }"
                 (valueChange)="formTime.set($any($event) ?? '')" />
 
               <daf-form-field
                 [value]="formLocation()"
-                [options]="{ label: 'Lieu', placeholder: 'Ex : Salle A, Zoom…', maxLength: 255, fullWidth: true }"
+                [options]="{ label: ('CANDIDATES.INTERVIEWS.LOCATION' | translate), placeholder: ('CANDIDATES.INTERVIEWS.LOCATION_PLACEHOLDER' | translate), maxLength: 255, fullWidth: true }"
                 (valueChange)="formLocation.set($any($event) ?? '')" />
 
               <div class="sm:col-span-2">
                 <daf-form-field
                   [value]="formNotes()"
-                  [options]="{ label: 'Notes (optionnel)', placeholder: 'Commentaire…', maxLength: 1000, fullWidth: true }"
+                  [options]="{ label: ('CANDIDATES.INTERVIEWS.NOTES_OPTIONAL' | translate), placeholder: ('CANDIDATES.COMMON.COMMENT_PLACEHOLDER' | translate), maxLength: 1000, fullWidth: true }"
                   (valueChange)="formNotes.set($any($event) ?? '')" />
               </div>
 
               <div class="sm:col-span-2">
                 @if (usersLoading()) {
-                  <p class="text-[12px] text-outline py-1">Chargement…</p>
+                  <p class="text-[12px] text-outline py-1">{{ 'CANDIDATES.COMMON.LOADING' | translate }}</p>
                 } @else {
                   <daf-select
                     [selected]="interviewerSelected()"
                     [options]="interviewerOptions()"
-                    [config]="{ label: 'Interviewer (optionnel)', placeholder: '— Aucun —', fullWidth: true }"
+                    [config]="{ label: ('CANDIDATES.INTERVIEWS.INTERVIEWER' | translate), placeholder: ('CANDIDATES.COMMON.NONE' | translate), fullWidth: true }"
                     (selectedChange)="onInterviewerChange($event)" />
                 }
               </div>
@@ -124,9 +126,9 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
             <p class="text-[12px] mt-2" style="color:var(--color-danger)">{{ formError() }}</p>
           }
           <div class="flex justify-end gap-2 mt-3">
-            <daf-button label="Annuler" variant="ghost" [options]="{ size: 'sm' }"
+            <daf-button [label]="'CANDIDATES.COMMON.CANCEL' | translate" variant="ghost" [options]="{ size: 'sm' }"
               (onClick)="cancelForm()" />
-            <daf-button label="Planifier" variant="teal"
+            <daf-button [label]="'CANDIDATES.INTERVIEWS.SCHEDULE' | translate" variant="teal"
               [options]="{ size: 'sm', loading: formLoading(), disabled: formLoading() || !activeTypes().length }"
               (onClick)="submitCreate()" />
           </div>
@@ -177,7 +179,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                       </span>
                       <daf-badge [label]="statusLabel(iv.status)" [options]="statusBadgeOptions(iv.status)" />
                       @if (iv.result) {
-                        <daf-badge [label]="iv.result === 'PASS' ? '✓ Validé' : '✗ Non validé'"
+                        <daf-badge [label]="(iv.result === 'PASS' ? 'CANDIDATES.INTERVIEWS.RESULT_PASS' : 'CANDIDATES.INTERVIEWS.RESULT_FAIL') | translate"
                                    [options]="resultBadgeOptions(iv.result)" />
                       }
                     </div>
@@ -213,20 +215,20 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
                               style="border-color:var(--color-tertiary);color:var(--color-tertiary);background:var(--color-tertiary-container)"
                               (click)="openUpdate(iv, 'DONE_PASS')">
-                        Réussi
+                        {{ 'CANDIDATES.INTERVIEWS.PASS' | translate }}
                       </button>
                       <button type="button"
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
                               style="border-color:var(--color-danger);color:var(--color-danger);background:var(--color-error-container)"
                               (click)="openUpdate(iv, 'DONE_FAIL')">
-                        Échoué
+                        {{ 'CANDIDATES.INTERVIEWS.FAIL' | translate }}
                       </button>
                       <button type="button"
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border
                                      border-outline-variant"
                               style="color:var(--color-on-surface-variant);background:var(--color-surface-container-low)"
                               (click)="openUpdate(iv, 'CANCELLED')">
-                        Annuler
+                        {{ 'CANDIDATES.COMMON.CANCEL' | translate }}
                       </button>
                     </div>
                   }
@@ -237,13 +239,13 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                   <div class="mt-3 pt-3 border-t border-outline-variant">
                     <daf-form-field
                       [value]="updateNotes()"
-                      [options]="{ label: 'Notes (optionnel)', placeholder: 'Commentaire…', maxLength: 1000, fullWidth: true }"
+                      [options]="{ label: ('CANDIDATES.INTERVIEWS.NOTES_OPTIONAL' | translate), placeholder: ('CANDIDATES.COMMON.COMMENT_PLACEHOLDER' | translate), maxLength: 1000, fullWidth: true }"
                       (valueChange)="updateNotes.set($any($event) ?? '')" />
                     @if (updateError()) {
                       <p class="text-[12px] mt-1.5" style="color:var(--color-danger)">{{ updateError() }}</p>
                     }
                     <div class="flex gap-2 mt-2">
-                      <daf-button label="Annuler" variant="ghost" [options]="{ size: 'sm' }"
+                      <daf-button [label]="'CANDIDATES.COMMON.CANCEL' | translate" variant="ghost" [options]="{ size: 'sm' }"
                         (onClick)="cancelUpdate()" />
                       <daf-button [label]="updateActionLabel()" variant="teal"
                         [options]="{ size: 'sm', loading: updateLoading(), disabled: updateLoading() }"
@@ -261,7 +263,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
       @else if (!loading()) {
         <div class="flex flex-col items-center justify-center py-8 gap-2">
           <span class="material-symbols-outlined text-[32px] text-outline">event_upcoming</span>
-          <p class="text-[13px] text-outline">Aucun entretien planifié pour ce candidat.</p>
+          <p class="text-[13px] text-outline">{{ 'CANDIDATES.INTERVIEWS.EMPTY' | translate }}</p>
         </div>
       }
     </daf-card>
@@ -273,6 +275,7 @@ export class CandidateInterviewsComponent implements OnInit {
 
   private svc = inject(InterviewService);
   private userStore = inject(UserStore);
+  private translate = inject(TranslateService);
 
   interviews   = signal<CandidateInterview[]>([]);
   activeTypes  = signal<InterviewType[]>([]);
@@ -304,10 +307,13 @@ export class CandidateInterviewsComponent implements OnInit {
     this.activeTypes().map(t => ({ value: String(t.id), label: t.name })),
   );
 
-  readonly interviewerOptions = computed<SelectOption[]>(() => [
-    { value: '', label: '— Aucun —' },
-    ...this.users().map(u => ({ value: String(u.id), label: u.fullName })),
-  ]);
+  readonly interviewerOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: '', label: this.translate.instant('CANDIDATES.COMMON.NONE') },
+      ...this.users().map(u => ({ value: String(u.id), label: u.fullName })),
+    ];
+  });
 
   typeSelected(): string[] {
     return this.formTypeId() ? [String(this.formTypeId())] : [];
@@ -325,11 +331,12 @@ export class CandidateInterviewsComponent implements OnInit {
   updateNotes   = signal('');
 
   readonly updateActionLabel = computed(() => {
+    this.translate.currentLang();
     const a = this.updateAction();
-    if (a === 'DONE_PASS') return 'Confirmer — Réussi';
-    if (a === 'DONE_FAIL') return 'Confirmer — Échoué';
-    if (a === 'CANCELLED') return "Confirmer l'annulation";
-    return 'Confirmer';
+    if (a === 'DONE_PASS') return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM_PASS');
+    if (a === 'DONE_FAIL') return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM_FAIL');
+    if (a === 'CANCELLED') return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM_CANCEL');
+    return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM');
   });
 
   ngOnInit(): void { this.loadInterviews(); }
@@ -338,7 +345,7 @@ export class CandidateInterviewsComponent implements OnInit {
     this.loading.set(true);
     this.svc.listByCandidate(this.candidateId).subscribe({
       next:  iv => { this.interviews.set(iv); this.loading.set(false); },
-      error: () => { this.error.set('Impossible de charger les entretiens.'); this.loading.set(false); },
+      error: () => { this.error.set(this.translate.instant('CANDIDATES.INTERVIEWS.ERR_LOAD')); this.loading.set(false); },
     });
   }
 
@@ -362,7 +369,7 @@ export class CandidateInterviewsComponent implements OnInit {
       this.typesLoading.set(true);
       this.svc.getActiveTypes(this.paysId).subscribe({
         next:  t  => { this.activeTypes.set(t); this.typesLoading.set(false); },
-        error: () => { this.error.set('Impossible de charger les types disponibles.'); this.typesLoading.set(false); },
+        error: () => { this.error.set(this.translate.instant('CANDIDATES.INTERVIEWS.ERR_LOAD_TYPES')); this.typesLoading.set(false); },
       });
     }
     if (!this.users().length) {
@@ -377,9 +384,9 @@ export class CandidateInterviewsComponent implements OnInit {
   cancelForm(): void { this.showForm.set(false); }
 
   submitCreate(): void {
-    if (!this.formTypeId()) { this.formError.set("Sélectionnez un type d'entretien."); return; }
+    if (!this.formTypeId()) { this.formError.set(this.translate.instant('CANDIDATES.INTERVIEWS.ERR_SELECT_TYPE')); return; }
     const dateIso = dateToIso(this.formDate());
-    if (!dateIso) { this.formError.set('La date est obligatoire.'); return; }
+    if (!dateIso) { this.formError.set(this.translate.instant('CANDIDATES.INTERVIEWS.ERR_DATE_REQUIRED')); return; }
     const time = this.formTime() || '09:00';
     this.formLoading.set(true); this.formError.set(null);
     const dto: CreateInterviewRequest = {
@@ -391,7 +398,7 @@ export class CandidateInterviewsComponent implements OnInit {
     };
     this.svc.createInterview(this.candidateId, dto).subscribe({
       next:  () => { this.formLoading.set(false); this.showForm.set(false); this.loadInterviews(); },
-      error: err => { this.formLoading.set(false); this.formError.set(err?.error?.detail ?? 'Erreur lors de la planification.'); },
+      error: err => { this.formLoading.set(false); this.formError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.INTERVIEWS.ERR_SCHEDULE')); },
     });
   }
 
@@ -415,7 +422,7 @@ export class CandidateInterviewsComponent implements OnInit {
         this.interviews.update(list => list.map(x => x.id === updated.id ? updated : x));
         this.updateLoading.set(false); this.updatingId.set(null); this.updateAction.set(null);
       },
-      error: err => { this.updateLoading.set(false); this.updateError.set(err?.error?.detail ?? 'Erreur lors de la mise à jour.'); },
+      error: err => { this.updateLoading.set(false); this.updateError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.INTERVIEWS.ERR_UPDATE')); },
     });
   }
 
@@ -431,7 +438,10 @@ export class CandidateInterviewsComponent implements OnInit {
   }
 
   statusLabel(s: string): string {
-    return s === 'PLANNED' ? 'Planifié' : s === 'DONE' ? 'Terminé' : 'Annulé';
+    const key = s === 'PLANNED' ? 'CANDIDATES.INTERVIEWS.STATUS_PLANNED'
+      : s === 'DONE' ? 'CANDIDATES.INTERVIEWS.STATUS_DONE'
+      : 'CANDIDATES.INTERVIEWS.STATUS_CANCELLED';
+    return this.translate.instant(key);
   }
 
   statusBadgeOptions(s: string): BadgeOptions {

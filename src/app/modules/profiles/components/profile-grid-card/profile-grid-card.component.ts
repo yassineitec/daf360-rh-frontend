@@ -1,12 +1,13 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { CardComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EmployeeListItem } from '../../models/profile.model';
 import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
 
 @Component({
   selector: 'rh-profile-grid-card',
   standalone: true,
-  imports: [CardComponent],
+  imports: [CardComponent, TranslatePipe],
   template: `
     <daf-card
       [options]="{
@@ -120,7 +121,7 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
               <p
                 class="text-label-caps font-bold uppercase tracking-wider text-on-surface-variant mb-0.5"
               >
-                PAYS
+                {{ 'PROFILES.CARD.PAYS' | translate }}
               </p>
               <p class="font-semibold text-[13px] text-on-surface truncate">
                 {{ employee().paysLabel || '-' }}
@@ -131,7 +132,7 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
               <p
                 class="text-label-caps font-bold uppercase tracking-wider text-on-surface-variant mb-0.5"
               >
-                TYPE DE CONTRAT
+                {{ 'PROFILES.CARD.CONTRACT_TYPE' | translate }}
               </p>
               <p class="font-semibold text-[13px] text-on-surface truncate">
                 {{ contractLabel() }}
@@ -142,7 +143,7 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
               <p
                 class="text-label-caps font-bold uppercase tracking-wider text-on-surface-variant mb-0.5"
               >
-                STATUT
+                {{ 'PROFILES.CARD.STATUS' | translate }}
               </p>
               <div class="flex items-center gap-1.5">
                 <span
@@ -160,7 +161,7 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
               <p
                 class="text-label-caps font-bold uppercase tracking-wider text-on-surface-variant mb-0.5"
               >
-                DATE D'EMBAUCHE
+                {{ 'PROFILES.CARD.HIRE_DATE' | translate }}
               </p>
               <p class="font-semibold text-[13px] text-on-surface">
                 {{ employee().hireDate || '-' }}
@@ -183,18 +184,22 @@ export class ProfileGridCardComponent {
 
   hovered = signal(false);
 
-  /** Human-readable contract-type label (covers the profile enum + lifecycle codes). */
-  private static readonly CONTRACT_LABELS: Record<string, string> = {
-    PERMANENT: 'CDI', FIXED_TERM: 'CDD', INTERN: 'Stage', CONSULTANT: 'Consultant',
-    CDI: 'CDI', CDD: 'CDD', CIVP: 'CIVP', STAGE: 'Stage',
-    DETACHEMENT: 'Détachement', PORTAGE: 'Portage', FREELANCE: 'Freelance',
-  };
+  private translate = inject(TranslateService);
 
-  contractLabel(): string {
+  /** Contract-type codes that have a translated label (profile enum + lifecycle codes). */
+  private static readonly CONTRACT_CODES = new Set([
+    'PERMANENT', 'FIXED_TERM', 'INTERN', 'CONSULTANT',
+    'CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEMENT', 'PORTAGE', 'FREELANCE',
+  ]);
+
+  readonly contractLabel = computed((): string => {
+    this.translate.currentLang();
     const c = this.employee().contractType;
     if (!c) return '-';
-    return ProfileGridCardComponent.CONTRACT_LABELS[c] ?? c;
-  }
+    return ProfileGridCardComponent.CONTRACT_CODES.has(c)
+      ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + c)
+      : c;
+  });
 
   // 0 = try real photo, 1 = try gender avatar, 2 = show initials
   private readonly imgPhase = signal<0 | 1 | 2>(0);
@@ -222,14 +227,14 @@ export class ProfileGridCardComponent {
     return palette[code % palette.length];
   });
 
-  private readonly STATUS_MAP: Record<string, { color: string; label: string; glow?: string }> = {
-    ACTIVE: { color: '#10b981', label: 'Actif', glow: '0 0 8px rgba(16,185,129,0.5)' },
-    ON_LEAVE: { color: '#f59e0b', label: 'En congé' },
-    ON_MISSION: { color: '#3b82f6', label: 'En mission' },
-    OFFBOARDING: { color: '#f97316', label: 'Offboarding' },
-    TERMINATED: { color: '#ef4444', label: 'Terminé' },
-    PRE_ONBOARDING: { color: '#8b5cf6', label: 'Pré-onboarding' },
-    ARCHIVED: { color: '#6b7280', label: 'Archivé' },
+  private readonly STATUS_MAP: Record<string, { color: string; glow?: string }> = {
+    ACTIVE: { color: '#10b981', glow: '0 0 8px rgba(16,185,129,0.5)' },
+    ON_LEAVE: { color: '#f59e0b' },
+    ON_MISSION: { color: '#3b82f6' },
+    OFFBOARDING: { color: '#f97316' },
+    TERMINATED: { color: '#ef4444' },
+    PRE_ONBOARDING: { color: '#8b5cf6' },
+    ARCHIVED: { color: '#6b7280' },
   };
 
   readonly statusColor = computed(() => {
@@ -237,8 +242,10 @@ export class ProfileGridCardComponent {
     return s ? (this.STATUS_MAP[s]?.color ?? '#6b7280') : '#6b7280';
   });
   readonly statusLabel = computed(() => {
+    this.translate.currentLang();
     const s = this.employee().lifecycleStatus;
-    return s ? (this.STATUS_MAP[s]?.label ?? s) : '-';
+    if (!s) return '-';
+    return this.STATUS_MAP[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
   });
   readonly statusGlow = computed(() => {
     const s = this.employee().lifecycleStatus;

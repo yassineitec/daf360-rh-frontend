@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import {
   ButtonComponent,
   FormFieldComponent,
@@ -6,6 +6,7 @@ import {
   MultiDatePickerComponent,
   StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ModalComponent } from '../../shared/modal.component';
 import { OfferService, OfferResponse, CreateOfferRequest } from '../pipeline/services/offer.service';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';

@@ -47,7 +47,7 @@
 
     <!-- Add button -->
     <daf-button
-      *appHasPermission="'ADMIN_REGIMES'"
+      *dafHasPermission="'ADMIN_REGIMES'"
       label="Nouveau régime"
       variant="secondary"
       [options]="{ fullWidth: true, iconStart: 'add' }"
@@ -149,7 +149,7 @@
         <!-- Action buttons -->
         <div class="rc-actions">
           <daf-button
-            *appHasPermission="'ADMIN_REGIMES'"
+            *dafHasPermission="'ADMIN_REGIMES'"
             class="icon-btn-delete"
             variant="ghost"
             [options]="{ disabled: !canDelete() || isDeleting(), iconStart: 'delete' }"

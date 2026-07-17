@@ -3,72 +3,72 @@
 
     <!-- Row 1: firstName | lastName -->
     <div class="form-group">
-      <label class="form-label">Prénom <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.FIRST_NAME' | translate }} <span class="req">*</span></label>
       <daf-form-field
-        [options]="{ placeholder: 'ex. Yassine' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_IDENTITY.FIRST_NAME_PH' | translate) }"
         [value]="firstName()"
         (valueChange)="firstName.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-group">
-      <label class="form-label">Nom <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.LAST_NAME' | translate }} <span class="req">*</span></label>
       <daf-form-field
-        [options]="{ placeholder: 'ex. Rhouma' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_IDENTITY.LAST_NAME_PH' | translate) }"
         [value]="lastName()"
         (valueChange)="lastName.set($any($event) ?? ''); emit()" />
     </div>
 
     <!-- Row 2: dateOfBirth | gender -->
     <div class="form-group">
-      <label class="form-label">Date de naissance</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.DOB' | translate }}</label>
       <daf-multi-date-picker
         [value]="isoToDate(dateOfBirth() || null)"
-        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
         (valueChange)="dateOfBirth.set(dateToIso($event) || ''); emit()" />
     </div>
 
     <div class="form-group">
-      <label class="form-label">Genre</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.GENDER' | translate }}</label>
       <daf-select
         [selected]="gender() ? [gender()] : []"
         [options]="genderOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="gender.set($event[0]); emit()" />
     </div>
 
     <!-- Row 3: nationality | nationalId -->
     <div class="form-group">
-      <label class="form-label">Nationalité</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.NATIONALITY' | translate }}</label>
       <daf-select
         [selected]="nationalityId() != null ? [nationalityId()!.toString()] : []"
         [options]="nationalityOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="nationalityId.set($event[0] ? +$event[0] : null); emit()" />
     </div>
 
     <div class="form-group">
-      <label class="form-label">CIN / Identifiant national</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.NATIONAL_ID' | translate }}</label>
       <daf-form-field
-        [options]="{ placeholder: 'ex. 12345678' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_IDENTITY.NATIONAL_ID_PH' | translate) }"
         [value]="nationalId()"
         (valueChange)="nationalId.set($any($event) ?? ''); emit()" />
     </div>
 
     <!-- Row 4 (full-width): passportNumber -->
     <div class="form-group form-full">
-      <label class="form-label">Numéro de passeport</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.PASSPORT' | translate }}</label>
       <daf-form-field
-        [options]="{ placeholder: 'ex. AB1234567' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_IDENTITY.PASSPORT_PH' | translate) }"
         [value]="passportNumber()"
         (valueChange)="passportNumber.set($any($event) ?? ''); emit()" />
     </div>
 
     <!-- Row 5 (full-width): photo — uploaded after profile creation -->
     <div class="form-group form-full">
-      <label class="form-label">Photo de profil</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_IDENTITY.PHOTO' | translate }}</label>
       <div style="background:#f2f4f6;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
         <span class="material-symbols-outlined" style="font-size:18px;color:#44474c;">info</span>
-        <p style="font-size:12px;color:#44474c;margin:0;">La photo de profil pourra être ajoutée depuis la fiche employé après la création du compte.</p>
+        <p style="font-size:12px;color:#44474c;margin:0;">{{ 'ONBOARDING.STEP_IDENTITY.PHOTO_HINT' | translate }}</p>
       </div>
     </div>
 

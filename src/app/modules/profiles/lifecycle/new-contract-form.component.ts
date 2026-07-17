@@ -8,6 +8,7 @@ import {
   ModalService,
   type ModalRef,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ContractLifecycleService } from './contract-lifecycle.service';
 import {
   ContractDetailDto, ContractTypeCode, CreateContractRequest,
@@ -20,7 +21,7 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
 @Component({
   selector: 'app-new-contract-form',
   standalone: true,
-  imports: [FormFieldComponent, MultiDatePickerComponent, CheckboxComponent],
+  imports: [FormFieldComponent, MultiDatePickerComponent, CheckboxComponent, TranslatePipe],
   template: `
     <ng-template #formTpl>
       <div style="display:flex;flex-direction:column;gap:16px;">
@@ -33,44 +34,44 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
 
         <!-- Type selector -->
         <div>
-          <label class="lbl">Type de contrat *</label>
+          <label class="lbl">{{ 'PROFILES.NEW_CONTRACT.TYPE' | translate }}</label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
             @for (t of types; track t) {
               <button type="button"
                 [class.type-chip--active]="contractType === t"
                 class="type-chip"
                 (click)="contractType = t; dateFinPrevue = ''"
-              >{{ cfg[t].label }}</button>
+              >{{ 'PROFILES.CONTRACT_TYPE.' + t | translate }}</button>
             }
           </div>
         </div>
 
         <!-- Dates -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <daf-multi-date-picker [config]="{ label: 'Date de début *', selectionMode: 'single' }"
+          <daf-multi-date-picker [config]="{ label: ('PROFILES.NEW_CONTRACT.START_DATE' | translate), selectionMode: 'single' }"
             [value]="toDate(dateDebut)" (valueChange)="dateDebut = fromDate($event)" />
           @if (cfg[contractType].needsEndDate) {
-            <daf-multi-date-picker [config]="{ label: 'Date de fin prévue *', selectionMode: 'single' }"
+            <daf-multi-date-picker [config]="{ label: ('PROFILES.NEW_CONTRACT.END_DATE' | translate), selectionMode: 'single' }"
               [value]="toDate(dateFinPrevue)" (valueChange)="dateFinPrevue = fromDate($event)" />
           }
         </div>
 
         <!-- Référence -->
-        <daf-form-field [options]="{ label: 'Référence contrat', placeholder: 'ex: CTR-2026-001' }"
+        <daf-form-field [options]="{ label: ('PROFILES.NEW_CONTRACT.REFERENCE' | translate), placeholder: ('PROFILES.NEW_CONTRACT.REFERENCE_PH' | translate) }"
           [value]="referenceContrat" (valueChange)="referenceContrat = asText($event)" />
 
         <!-- CDI — manager profile -->
         @if (contractType === 'CDI') {
-          <daf-checkbox [options]="{ label: 'Profil encadrant (période d\\'essai 6 mois au lieu de 3)' }"
+          <daf-checkbox [options]="{ label: ('PROFILES.NEW_CONTRACT.MANAGER_PROFILE' | translate) }"
             [checked]="managerProfile" (checkedChange)="managerProfile = $event" />
         }
 
         <!-- CIVP fields -->
         @if (contractType === 'CIVP') {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <daf-form-field [options]="{ label: 'Référence ANETI' }"
+            <daf-form-field [options]="{ label: ('PROFILES.NEW_CONTRACT.CIVP_REF' | translate) }"
               [value]="civpAnetiReference" (valueChange)="civpAnetiReference = asText($event)" />
-            <daf-multi-date-picker [config]="{ label: 'Date convention', selectionMode: 'single' }"
+            <daf-multi-date-picker [config]="{ label: ('PROFILES.NEW_CONTRACT.CIVP_DATE' | translate), selectionMode: 'single' }"
               [value]="toDate(civpConventionDate)" (valueChange)="civpConventionDate = fromDate($event)" />
           </div>
         }
@@ -78,16 +79,16 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
         <!-- STAGE fields -->
         @if (contractType === 'STAGE') {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <daf-form-field [options]="{ label: 'École / Université', placeholder: 'ex: ESPRIT Tunis' }"
+            <daf-form-field [options]="{ label: ('PROFILES.NEW_CONTRACT.SCHOOL' | translate), placeholder: ('PROFILES.NEW_CONTRACT.SCHOOL_PH' | translate) }"
               [value]="stageEcole" (valueChange)="stageEcole = asText($event)" />
-            <daf-checkbox style="margin-top:22px;" [options]="{ label: 'Convention signée' }"
+            <daf-checkbox style="margin-top:22px;" [options]="{ label: ('PROFILES.NEW_CONTRACT.CONVENTION_SIGNED' | translate) }"
               [checked]="stageConventionSignee" (checkedChange)="stageConventionSignee = $event" />
           </div>
         }
 
         <!-- DETACHEMENT fields -->
         @if (contractType === 'DETACHEMENT') {
-          <daf-multi-date-picker [config]="{ label: 'Retour prévu', selectionMode: 'single' }"
+          <daf-multi-date-picker [config]="{ label: ('PROFILES.NEW_CONTRACT.RETURN_EXPECTED' | translate), selectionMode: 'single' }"
             [value]="toDate(detachementRetourPrevu)" (valueChange)="detachementRetourPrevu = fromDate($event)" />
         }
 
@@ -121,6 +122,7 @@ export class NewContractFormComponent implements AfterViewInit {
 
   private svc = inject(ContractLifecycleService);
   private modalService = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly types = TYPE_CODES;
   readonly cfg   = CONTRACT_TYPE_CONFIG;
@@ -146,12 +148,12 @@ export class NewContractFormComponent implements AfterViewInit {
     // parent's showNewContractModal signal, so silent backdrop-dismiss would
     // leave that signal out of sync with the (now-closed) modal.
     this.modalService.open({
-      title: 'Nouveau contrat',
+      title: this.translate.instant('PROFILES.NEW_CONTRACT.MODAL_TITLE'),
       body: this.formTpl(),
       closeOnBackdrop: false,
       buttons: [
         {
-          label: 'Annuler',
+          label: this.translate.instant('PROFILES.COMMON.CANCEL'),
           variant: 'secondary',
           action: (ref) => {
             ref.close();
@@ -159,7 +161,7 @@ export class NewContractFormComponent implements AfterViewInit {
           },
         },
         {
-          label: 'Créer le contrat',
+          label: this.translate.instant('PROFILES.NEW_CONTRACT.CREATE'),
           variant: 'primary',
           action: (ref) => this.submit(ref),
         },
@@ -177,9 +179,9 @@ export class NewContractFormComponent implements AfterViewInit {
   submit(ref: ModalRef): void {
     if (this.saving()) return;
     this.error.set(null);
-    if (!this.dateDebut) { this.error.set('La date de début est obligatoire.'); return; }
+    if (!this.dateDebut) { this.error.set(this.translate.instant('PROFILES.NEW_CONTRACT.ERR_START')); return; }
     if (this.cfg[this.contractType].needsEndDate && !this.dateFinPrevue) {
-      this.error.set('La date de fin est obligatoire pour ce type de contrat.'); return;
+      this.error.set(this.translate.instant('PROFILES.NEW_CONTRACT.ERR_END')); return;
     }
 
     const req: CreateContractRequest = {
@@ -206,7 +208,7 @@ export class NewContractFormComponent implements AfterViewInit {
       },
       error: err => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? 'Erreur lors de la création du contrat.');
+        this.error.set(err?.error?.message ?? this.translate.instant('PROFILES.NEW_CONTRACT.ERR_CREATE'));
       },
     });
   }

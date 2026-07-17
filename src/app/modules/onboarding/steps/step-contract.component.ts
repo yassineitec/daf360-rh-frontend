@@ -9,12 +9,20 @@ import {
   MultiDatePickerComponent,
   SelectOption,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
+
+const CONTRACT_LABEL_KEY: Record<string, string> = {
+  PERMANENT:  'ONBOARDING.STEP_CONTRACT.CONTRACT_PERMANENT',
+  FIXED_TERM: 'ONBOARDING.STEP_CONTRACT.CONTRACT_FIXED_TERM',
+  INTERN:     'ONBOARDING.STEP_CONTRACT.CONTRACT_INTERN',
+  CONSULTANT: 'ONBOARDING.STEP_CONTRACT.CONTRACT_CONSULTANT',
+};
 
 @Component({
   selector: 'app-step-contract',
   standalone: true,
-  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent],
+  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent, TranslatePipe],
   templateUrl: './step-contract.component.html',
   styleUrl: './step-contract.component.scss',
 })
@@ -24,9 +32,14 @@ export class StepContractComponent implements OnInit {
   changed  = output<Partial<OnboardingProfileDto>>();
 
   private refSvc = inject(RefDataService);
+  private translate = inject(TranslateService);
 
-  readonly contractOptions: SelectOption[] =
-    CONTRACT_OPTIONS.filter(o => o.value !== '').map(o => ({ value: o.value, label: o.label }));
+  readonly contractOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return CONTRACT_OPTIONS
+      .filter(o => o.value !== '')
+      .map(o => ({ value: o.value, label: this.translate.instant(CONTRACT_LABEL_KEY[o.value] ?? o.label) }));
+  });
 
   hireDate         = signal('');
   contractType     = signal('');

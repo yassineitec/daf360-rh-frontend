@@ -9,19 +9,19 @@
       </svg>
     </div>
 
-    <h1 class="success-title">Dossier créé avec succès !</h1>
+    <h1 class="success-title">{{ 'ONBOARDING.SUCCESS.TITLE' | translate }}</h1>
     <p class="success-name">{{ fullName() }}</p>
     @if (profileId()) {
-      <div class="id-badge">Profil #{{ profileId() }}</div>
+      <div class="id-badge">{{ 'ONBOARDING.SUCCESS.PROFILE_BADGE' | translate:{ id: profileId() } }}</div>
     }
     <p class="success-email">
-      Un email de bienvenue a été envoyé à
+      {{ 'ONBOARDING.SUCCESS.EMAIL_SENT' | translate }}
       <strong class="email-hl">{{ ms365Email() }}</strong>
     </p>
 
     <div class="success-actions">
-      <button class="btn-profile" type="button" (click)="goToProfile()">Voir le profil employé</button>
-      <button class="btn-list"    type="button" (click)="goToList()">Retour à la liste</button>
+      <button class="btn-profile" type="button" (click)="goToProfile()">{{ 'ONBOARDING.SUCCESS.VIEW_PROFILE' | translate }}</button>
+      <button class="btn-list"    type="button" (click)="goToList()">{{ 'ONBOARDING.SUCCESS.BACK_TO_LIST' | translate }}</button>
     </div>
 
   </div>

@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, OnInit, signal, TemplateRef, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { ProfileService } from './profile.service';
 import {
@@ -48,6 +49,7 @@ import {
   CONTRACT_TYPE_CONFIG,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
+import { ConfirmService } from '../../core/confirm.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Reusable field display — defined here for colocation, imported below.
@@ -127,12 +129,14 @@ type SectionKey =
     PdfDownloadButtonComponent,
     ContractHistoryComponent,
     NewContractFormComponent,
+    TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
   styleUrl: './profile-detail.component.scss',
 })
 export class ProfileDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private confirm = inject(ConfirmService);
   private router = inject(Router);
   private svc = inject(ProfileService);
   private userStore = inject(UserStore);
@@ -141,26 +145,25 @@ export class ProfileDetailComponent implements OnInit {
   private refSvc = inject(RefDataService);
   private lcSvc = inject(ContractLifecycleService);
   private modalService = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly statusCfg = STATUS_CONFIG;
   readonly typeCfg = CONTRACT_TYPE_CONFIG;
 
   lcStatusCfg(code: string) {
-    return (
-      this.statusCfg[code as keyof typeof STATUS_CONFIG] ?? {
-        label: code,
-        variant: 'neutral' as const,
-      }
-    );
+    const cfg = this.statusCfg[code as keyof typeof STATUS_CONFIG];
+    return {
+      label: cfg ? this.translate.instant('PROFILES.CONTRACT_STATUS.' + code) : code,
+      variant: cfg?.variant ?? ('neutral' as const),
+    };
   }
   lcTypeCfg(code: string) {
-    return (
-      this.typeCfg[code as keyof typeof CONTRACT_TYPE_CONFIG] ?? {
-        label: code,
-        needsEndDate: false,
-        hasTrial: false,
-      }
-    );
+    const cfg = this.typeCfg[code as keyof typeof CONTRACT_TYPE_CONFIG];
+    return {
+      label: cfg ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + code) : code,
+      needsEndDate: cfg?.needsEndDate ?? false,
+      hasTrial: cfg?.hasTrial ?? false,
+    };
   }
   protected readonly statusBadge = statusBadge;
 
@@ -185,54 +188,65 @@ export class ProfileDetailComponent implements OnInit {
   banks = signal<RefDataItem[]>([]);
   nationalities = signal<RefDataItem[]>([]);
 
-  private static readonly BLANK_OPTION: SelectOption = { value: '', label: '— Sélectionner —' };
+  private blankOption(): SelectOption {
+    return { value: '', label: this.translate.instant('PROFILES.COMMON.SELECT_PLACEHOLDER') };
+  }
 
-  readonly genderOptions: SelectOption[] = [
-    ProfileDetailComponent.BLANK_OPTION,
-    ...GENDER_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
-  ];
+  readonly genderOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      this.blankOption(),
+      ...GENDER_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+    ];
+  });
 
   // Read-mode display helper: code (MALE/FEMALE/…) -> French label.
   readonly genderLabel = genderLabel;
 
-  readonly maritalStatusOptions: SelectOption[] = [
-    ProfileDetailComponent.BLANK_OPTION,
-    { value: 'Célibataire', label: 'Célibataire' },
-    { value: 'Marié(e)', label: 'Marié(e)' },
-    { value: 'Divorcé(e)', label: 'Divorcé(e)' },
-    { value: 'Veuf(ve)', label: 'Veuf(ve)' },
-  ];
+  readonly maritalStatusOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      this.blankOption(),
+      { value: 'Célibataire', label: this.translate.instant('PROFILES.MARITAL.SINGLE') },
+      { value: 'Marié(e)', label: this.translate.instant('PROFILES.MARITAL.MARRIED') },
+      { value: 'Divorcé(e)', label: this.translate.instant('PROFILES.MARITAL.DIVORCED') },
+      { value: 'Veuf(ve)', label: this.translate.instant('PROFILES.MARITAL.WIDOWED') },
+    ];
+  });
 
-  readonly contractTypeOptions: SelectOption[] = [
-    ProfileDetailComponent.BLANK_OPTION,
-    { value: 'PERMANENT', label: 'CDI' },
-    { value: 'FIXED_TERM', label: 'CDD' },
-    { value: 'INTERN', label: 'Stage' },
-    { value: 'CONSULTANT', label: 'Consultant' },
-  ];
+  readonly contractTypeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      this.blankOption(),
+      { value: 'PERMANENT', label: this.translate.instant('PROFILES.CONTRACT_TYPE.PERMANENT') },
+      { value: 'FIXED_TERM', label: this.translate.instant('PROFILES.CONTRACT_TYPE.FIXED_TERM') },
+      { value: 'INTERN', label: this.translate.instant('PROFILES.CONTRACT_TYPE.INTERN') },
+      { value: 'CONSULTANT', label: this.translate.instant('PROFILES.CONTRACT_TYPE.CONSULTANT') },
+    ];
+  });
 
   nationalityOptions = computed<SelectOption[]>(() => [
-    ProfileDetailComponent.BLANK_OPTION,
+    this.blankOption(),
     ...this.nationalities().map((n) => ({ value: String(n.id), label: n.labelFr })),
   ]);
   departmentOptions = computed<SelectOption[]>(() => [
-    ProfileDetailComponent.BLANK_OPTION,
+    this.blankOption(),
     ...this.departments().map((d) => ({ value: String(d.id), label: d.labelFr })),
   ]);
   gradeOptions = computed<SelectOption[]>(() => [
-    ProfileDetailComponent.BLANK_OPTION,
+    this.blankOption(),
     ...this.grades().map((g) => ({ value: String(g.id), label: g.labelFr })),
   ]);
   disciplineOptions = computed<SelectOption[]>(() => [
-    ProfileDetailComponent.BLANK_OPTION,
+    this.blankOption(),
     ...this.disciplines().map((d) => ({ value: String(d.id), label: d.labelFr })),
   ]);
   nogLevelOptions = computed<SelectOption[]>(() => [
-    ProfileDetailComponent.BLANK_OPTION,
+    this.blankOption(),
     ...this.nogLevels().map((n) => ({ value: String(n.id), label: n.labelFr })),
   ]);
   bankOptions = computed<SelectOption[]>(() => [
-    ProfileDetailComponent.BLANK_OPTION,
+    this.blankOption(),
     ...this.banks().map((b) => ({ value: String(b.id), label: b.labelFr })),
   ]);
 
@@ -350,7 +364,7 @@ export class ProfileDetailComponent implements OnInit {
   });
 
   lifecycleLabel(s: LifecycleStatus) {
-    return LIFECYCLE_LABELS[s] ?? s;
+    return LIFECYCLE_LABELS[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
   }
 
   // ── Date helper ────────────────────────────────────────────────────────────
@@ -414,11 +428,11 @@ export class ProfileDetailComponent implements OnInit {
     const tpl = this.transitionTpl();
     if (!tpl) return;
     this.modalService.open({
-      title: 'Changer le statut du profil',
+      title: this.translate.instant('PROFILES.TRANSITION.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
-        { label: 'Confirmer', variant: 'primary', action: (ref) => this.confirmTransition(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
+        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary', action: (ref) => this.confirmTransition(ref) },
       ],
     });
   }
@@ -426,7 +440,7 @@ export class ProfileDetailComponent implements OnInit {
   confirmTransition(ref: ModalRef) {
     const target = this.transitionTarget();
     if (!target || !this.transitionReason.trim()) {
-      this.transitionError.set('Sélectionnez un statut et indiquez une raison.');
+      this.transitionError.set(this.translate.instant('PROFILES.TRANSITION.ERR_SELECT'));
       return;
     }
     if (this.saving()) return;
@@ -437,7 +451,7 @@ export class ProfileDetailComponent implements OnInit {
       .pipe(
         catchError((err) => {
           this.saving.set(false);
-          this.transitionError.set(this.extractErrorMessage(err, 'Erreur lors du changement de statut.'));
+          this.transitionError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.TRANSITION.ERR_CHANGE')));
           return of(null);
         }),
       )
@@ -462,11 +476,11 @@ export class ProfileDetailComponent implements OnInit {
     // Validate client-side
     const allowed = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowed.includes(file.type)) {
-      this.photoError.set('Format non supporté. Utilisez JPEG, PNG ou WebP.');
+      this.photoError.set(this.translate.instant('PROFILES.PHOTO.ERR_FORMAT'));
       return;
     }
     if (file.size > 3 * 1024 * 1024) {
-      this.photoError.set('Photo trop volumineuse (max 3 Mo).');
+      this.photoError.set(this.translate.instant('PROFILES.PHOTO.ERR_SIZE'));
       return;
     }
     this.photoUploading.set(true);
@@ -478,7 +492,7 @@ export class ProfileDetailComponent implements OnInit {
       },
       error: (err) => {
         this.photoUploading.set(false);
-        this.photoError.set(this.extractErrorMessage(err, 'Erreur lors du téléversement.'));
+        this.photoError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.PHOTO.ERR_UPLOAD')));
       },
     });
   }
@@ -500,10 +514,14 @@ export class ProfileDetailComponent implements OnInit {
     });
   }
 
-  removeEmployeeRegimeOverride(): void {
+  async removeEmployeeRegimeOverride(): Promise<void> {
     const p = this.profile();
     if (!p) return;
-    if (!confirm("Supprimer l'override de régime et revenir au régime du rôle ?")) return;
+    if (!(await this.confirm.ask({
+      title: this.translate.instant('PROFILES.REGIME_OVERRIDE.CONFIRM_TITLE'),
+      message: this.translate.instant('PROFILES.REGIME_OVERRIDE.CONFIRM_MESSAGE'),
+      confirmLabel: this.translate.instant('PROFILES.COMMON.DELETE'), icon: 'delete',
+    }))) return;
     this.regimeSvc.removeEmployeeOverride(p.id).subscribe({
       next: () => this.loadResolvedRegime(p.id),
       error: () => {},
@@ -567,7 +585,7 @@ export class ProfileDetailComponent implements OnInit {
 
   saveProfile(): void {
     if (!this.editForm.reason?.trim()) {
-      this.editSaveError.set('La raison de modification est obligatoire.');
+      this.editSaveError.set(this.translate.instant('PROFILES.EDIT.ERR_REASON_REQUIRED'));
       return;
     }
     this.saving.set(true);
@@ -582,7 +600,7 @@ export class ProfileDetailComponent implements OnInit {
       .pipe(
         catchError((err) => {
           this.saving.set(false);
-          this.editSaveError.set(this.extractErrorMessage(err, 'Erreur lors de la sauvegarde.'));
+          this.editSaveError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.EDIT.ERR_SAVE')));
           return of(null);
         }),
       )
@@ -635,11 +653,11 @@ export class ProfileDetailComponent implements OnInit {
     const tpl = this.validateTrialTpl();
     if (!tpl) return;
     this.modalService.open({
-      title: "Valider la période d'essai",
+      title: this.translate.instant('PROFILES.TRIAL.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
-        { label: 'Confirmer', variant: 'primary', action: (ref) => this.confirmValidateTrial(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
+        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary', action: (ref) => this.confirmValidateTrial(ref) },
       ],
     });
   }
@@ -654,7 +672,7 @@ export class ProfileDetailComponent implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.lcError.set(this.extractErrorMessage(err, 'Erreur.'));
+          this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
           this.lcSaving.set(false);
           return of(null);
         }),
@@ -677,18 +695,18 @@ export class ProfileDetailComponent implements OnInit {
     const tpl = this.renewCDDTpl();
     if (!tpl) return;
     this.modalService.open({
-      title: 'Renouveler le CDD',
+      title: this.translate.instant('PROFILES.RENEW.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
-        { label: 'Renouveler', variant: 'primary', action: (ref) => this.confirmRenewCDD(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
+        { label: this.translate.instant('PROFILES.RENEW.CONFIRM'), variant: 'primary', action: (ref) => this.confirmRenewCDD(ref) },
       ],
     });
   }
 
   confirmRenewCDD(ref: ModalRef): void {
     if (this.selectedContractId === null || !this.renewDateFin) {
-      this.lcError.set('La nouvelle date de fin est obligatoire.');
+      this.lcError.set(this.translate.instant('PROFILES.RENEW.ERR_DATE'));
       return;
     }
     if (this.lcSaving()) return;
@@ -700,7 +718,7 @@ export class ProfileDetailComponent implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.lcError.set(this.extractErrorMessage(err, 'Erreur.'));
+          this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
           this.lcSaving.set(false);
           return of(null);
         }),
@@ -723,18 +741,18 @@ export class ProfileDetailComponent implements OnInit {
     const tpl = this.convertCDITpl();
     if (!tpl) return;
     this.modalService.open({
-      title: 'Convertir en CDI',
+      title: this.translate.instant('PROFILES.CONVERT.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: 'Annuler', variant: 'secondary', action: (ref) => ref.close() },
-        { label: 'Convertir', variant: 'primary', action: (ref) => this.confirmConvertCDI(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
+        { label: this.translate.instant('PROFILES.CONVERT.CONFIRM'), variant: 'primary', action: (ref) => this.confirmConvertCDI(ref) },
       ],
     });
   }
 
   confirmConvertCDI(ref: ModalRef): void {
     if (this.selectedContractId === null || !this.cdiStartDate) {
-      this.lcError.set('La date de début CDI est obligatoire.');
+      this.lcError.set(this.translate.instant('PROFILES.CONVERT.ERR_DATE'));
       return;
     }
     if (this.lcSaving()) return;
@@ -746,7 +764,7 @@ export class ProfileDetailComponent implements OnInit {
       })
       .pipe(
         catchError((err) => {
-          this.lcError.set(this.extractErrorMessage(err, 'Erreur.'));
+          this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
           this.lcSaving.set(false);
           return of(null);
         }),

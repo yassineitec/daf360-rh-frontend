@@ -3,11 +3,12 @@ import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
 import { FormFieldComponent, SelectComponent, SelectOption } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-step-bank',
   standalone: true,
-  imports: [FormFieldComponent, SelectComponent],
+  imports: [FormFieldComponent, SelectComponent, TranslatePipe],
   templateUrl: './step-bank.component.html',
   styleUrl: './step-bank.component.scss',
 })

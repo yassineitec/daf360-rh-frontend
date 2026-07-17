@@ -19,6 +19,7 @@ import {
 import { statusBadge } from 'src/app/shared/status-badge.utils';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { genderLabel } from '../../shared/utils/gender.utils';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const HIREABLE_STATUSES = ['ACCEPTED', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
 /** Contract codes the backend requires an end date for (also enforced server-side). */
@@ -37,6 +38,7 @@ const NEEDS_END_DATE = ['CDD', 'CIVP', 'STAGE', 'DETACHEMENT'];
     CandidateInterviewsComponent,
     OfferSectionComponent,
     ModalComponent,
+    TranslatePipe,
   ],
   templateUrl: './candidate-detail.component.html',
 })
@@ -45,6 +47,7 @@ export class CandidateDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly userStore = inject(UserStore);
+  private readonly translate = inject(TranslateService);
 
   candidate = signal<CandidateDetail | null>(null);
   loading = signal(true);
@@ -149,11 +152,11 @@ export class CandidateDetailComponent implements OnInit {
 
   confirmHire(): void {
     if (!this.hireForm.hireDate) {
-      this.hireError.set("La date d'embauche est obligatoire.");
+      this.hireError.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.HIRE_DATE_REQUIRED'));
       return;
     }
     if (this.requiresEndDate() && !this.hireForm.dateFinPrevue) {
-      this.hireError.set('La date de fin est obligatoire pour ce type de contrat.');
+      this.hireError.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.END_DATE_REQUIRED'));
       return;
     }
     this.hireLoading.set(true);
@@ -177,7 +180,7 @@ export class CandidateDetailComponent implements OnInit {
       error: (err) => {
         this.hireLoading.set(false);
         this.hireError.set(
-          err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'embauche.",
+          err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.DETAIL_ERRORS.HIRE'),
         );
       },
     });
@@ -192,7 +195,7 @@ export class CandidateDetailComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(err?.error?.message ?? 'Impossible de charger le candidat.');
+        this.error.set(err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.LOAD_CANDIDATE'));
         this.loading.set(false);
       },
     });
@@ -201,7 +204,7 @@ export class CandidateDetailComponent implements OnInit {
   onAccept(): void {
     this.candidateService.accept(this.candidateId).subscribe({
       next: () => this.loadCandidate(),
-      error: (err) => this.error.set(err?.error?.message ?? "Erreur lors de l'acceptation."),
+      error: (err) => this.error.set(err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.ACCEPT')),
     });
   }
 
@@ -233,11 +236,11 @@ export class CandidateDetailComponent implements OnInit {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
     if (!allowed.includes(file.type)) {
-      this.cvError.set('Format non supporté — PDF, DOC ou DOCX uniquement');
+      this.cvError.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.CV_FORMAT'));
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      this.cvError.set('Fichier trop volumineux — max 10 Mo');
+      this.cvError.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.CV_SIZE'));
       return;
     }
 
@@ -249,14 +252,14 @@ export class CandidateDetailComponent implements OnInit {
       next: (updated) => {
         this.candidate.set(updated);
         this.cvUploading.set(false);
-        this.cvSuccess.set(`CV "${file.name}" téléversé avec succès.`);
+        this.cvSuccess.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.CV_UPLOAD_SUCCESS', { name: file.name }));
         input.value = '';
         setTimeout(() => this.cvSuccess.set(null), 4000);
       },
       error: (err) => {
         this.cvUploading.set(false);
         this.cvError.set(
-          err?.error?.detail ?? err?.error?.message ?? 'Erreur lors du téléversement.',
+          err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.DETAIL_ERRORS.CV_UPLOAD'),
         );
       },
     });
@@ -279,14 +282,14 @@ export class CandidateDetailComponent implements OnInit {
     return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  readonly pipelineSteps: { status: string; label: string }[] = [
-    { status: 'PENDING', label: 'En attente' },
-    { status: 'ACCEPTED', label: 'Accepté' },
-    { status: 'OFFER_SENT', label: 'Offre envoyée' },
-    { status: 'IT_IN_PROGRESS', label: 'IT en cours' },
-    { status: 'EMAIL_RECEIVED', label: 'Email reçu' },
-    { status: 'HR_IN_PROGRESS', label: 'RH en cours' },
-    { status: 'HIRED', label: 'Embauché' },
+  readonly pipelineSteps: { status: string }[] = [
+    { status: 'PENDING' },
+    { status: 'ACCEPTED' },
+    { status: 'OFFER_SENT' },
+    { status: 'IT_IN_PROGRESS' },
+    { status: 'EMAIL_RECEIVED' },
+    { status: 'HR_IN_PROGRESS' },
+    { status: 'HIRED' },
   ];
 
   private readonly statusOrder = this.pipelineSteps.map((s) => s.status);

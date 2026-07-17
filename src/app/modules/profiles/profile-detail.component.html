@@ -1,9 +1,9 @@
 <!-- ── Breadcrumb ──────────────────────────────────────────────────────────── -->
 
-<nav class="breadcrumb" aria-label="Fil d'Ariane">
-  <a routerLink=".." class="bc-link">Profils</a>
+<nav class="breadcrumb" [attr.aria-label]="'PROFILES.COMMON.BREADCRUMB_ARIA' | translate">
+  <a routerLink=".." class="bc-link">{{ 'PROFILES.DETAIL.BREADCRUMB_LIST' | translate }}</a>
   <span class="bc-sep">›</span>
-  <span class="bc-current">Profil #{{ profileId }}</span>
+  <span class="bc-current">{{ 'PROFILES.DETAIL.PROFILE_NUM' | translate:{ id: profileId } }}</span>
 </nav>
 
 <!-- ── Loading / error ──────────────────────────────────────────────────────── -->
@@ -11,8 +11,8 @@
   <div class="center-spinner"><app-spinner size="lg" /></div>
 } @else if (!profile()) {
   <div class="error-state">
-    <p>Impossible de charger ce profil.</p>
-    <a routerLink=".." class="btn-ghost">Retour à la liste</a>
+    <p>{{ 'PROFILES.DETAIL.LOAD_ERROR' | translate }}</p>
+    <a routerLink=".." class="btn-ghost">{{ 'PROFILES.DETAIL.BACK_TO_LIST' | translate }}</a>
   </div>
 } @else {
 
@@ -22,7 +22,7 @@
       <div class="profile-header">
         <div class="ph-avatar" style="position:relative;">
           @if (profile()!.photoUrl) {
-            <img [src]="photoUrl(profile()!.photoUrl)" alt="Photo" class="avatar-lg"
+            <img [src]="photoUrl(profile()!.photoUrl)" [alt]="'PROFILES.DETAIL.PHOTO_ALT' | translate" class="avatar-lg"
                  style="object-fit:cover;" />
           } @else {
             <span class="avatar-initials-lg">{{ profile()!.fullName ? (profile()!.fullName!.split(' ')[0]?.[0] || '') + (profile()!.fullName!.split(' ')[1]?.[0] || '') : ('P' + profile()!.id) }}</span>
@@ -32,10 +32,10 @@
           @if (canEdit()) {
             <label style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;gap:3px;"
                    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"
-                   [title]="photoUploading() ? 'Téléversement…' : 'Changer la photo'">
+                   [title]="photoUploading() ? ('PROFILES.DETAIL.PHOTO_UPLOADING' | translate) : ('PROFILES.DETAIL.PHOTO_CHANGE' | translate)">
               @if (!photoUploading()) {
                 <span class="material-symbols-outlined" style="font-size:20px;color:#fff;">photo_camera</span>
-                <span style="font-size:10px;color:#fff;font-weight:600;">Modifier</span>
+                <span style="font-size:10px;color:#fff;font-weight:600;">{{ 'PROFILES.COMMON.EDIT' | translate }}</span>
               } @else {
                 <span class="material-symbols-outlined" style="font-size:18px;color:#fff;animation:spin .8s linear infinite;">progress_activity</span>
               }
@@ -53,7 +53,7 @@
           </div>
         }
         <div class="ph-info">
-          <h1 class="ph-name">{{ profile()!.fullName ?? ('Profil #' + profile()!.id) }}</h1>
+          <h1 class="ph-name">{{ profile()!.fullName ?? ('PROFILES.DETAIL.PROFILE_NUM' | translate:{ id: profile()!.id }) }}</h1>
           @if (profile()!.matricule) {
             <div style="display:inline-flex;align-items:center;gap:6px;background:#e6f4f6;border-radius:8px;padding:3px 12px;margin-bottom:6px;">
               <span class="material-symbols-outlined" style="font-size:14px;color:#0f4a57;">badge</span>
@@ -63,9 +63,9 @@
           <div class="ph-meta">
             <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
             <span class="ph-sep">·</span>
-            <span>{{ profile()!.contractType ?? 'N/A' }}</span>
+            <span>{{ profile()!.contractType ?? ('PROFILES.COMMON.NA' | translate) }}</span>
             <span class="ph-sep">·</span>
-            <span>{{ profile()!.department ?? 'N/A' }}</span>
+            <span>{{ profile()!.department ?? ('PROFILES.COMMON.NA' | translate) }}</span>
             @if (profile()!.grade) {
               <span class="ph-sep">·</span>
               <span>{{ profile()!.grade }}</span>
@@ -74,10 +74,10 @@
         </div>
         <div class="ph-actions">
           @if (canTransition()) {
-            <daf-button label="Changer le statut" variant="ghost" (onClick)="openTransitionModal()" />
+            <daf-button [label]="'PROFILES.DETAIL.CHANGE_STATUS' | translate" variant="ghost" (onClick)="openTransitionModal()" />
           }
           @if (canEdit()) {
-            <daf-button [label]="editMode() ? 'Annuler' : 'Modifier'" variant="teal"
+            <daf-button [label]="editMode() ? ('PROFILES.COMMON.CANCEL' | translate) : ('PROFILES.COMMON.EDIT' | translate)" variant="teal"
               (onClick)="editMode() ? editMode.set(false) : startEdit()" />
           }
         </div>
@@ -91,61 +91,61 @@
     <!-- 1 · Identité ─────────────────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('identite')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('identite')" type="button">
-        <span class="section-title">Identité</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.IDENTITY' | translate }}</span>
         <span class="chevron" [class.open]="open('identite')">›</span>
       </button>
       @if (open('identite')) {
         <div class="section-body">
           <div class="field-grid">
             @if (!editMode()) {
-              <app-field label="Date de naissance" [value]="fmt(profile()!.dateOfBirth)" />
+              <app-field [label]="'PROFILES.FIELDS.DOB' | translate" [value]="fmt(profile()!.dateOfBirth)" />
             } @else {
-              <daf-multi-date-picker [config]="{ label: 'Date de naissance', selectionMode: 'single' }"
+              <daf-multi-date-picker [config]="{ label: ('PROFILES.FIELDS.DOB' | translate), selectionMode: 'single' }"
                 [value]="toDate(editForm.dateOfBirth)" (valueChange)="editForm.dateOfBirth = fromDate($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Genre" [value]="genderLabel(profile()!.gender)" />
+              <app-field [label]="'PROFILES.FIELDS.GENDER' | translate" [value]="genderLabel(profile()!.gender)" />
             } @else {
-              <daf-select [options]="genderOptions" [config]="{ label: 'Genre', searchable: true }"
+              <daf-select [options]="genderOptions()" [config]="{ label: ('PROFILES.FIELDS.GENDER' | translate), searchable: true }"
                 [selected]="editForm.gender ? [editForm.gender] : []"
                 (selectedChange)="editForm.gender = $event[0]" />
             }
 
             @if (!editMode()) {
-              <app-field label="Nationalité" [value]="profile()!.nationality" />
+              <app-field [label]="'PROFILES.FIELDS.NATIONALITY' | translate" [value]="profile()!.nationality" />
             } @else {
-              <daf-select [options]="nationalityOptions()" [config]="{ label: 'Nationalité', searchable: true }"
+              <daf-select [options]="nationalityOptions()" [config]="{ label: ('PROFILES.FIELDS.NATIONALITY' | translate), searchable: true }"
                 [selected]="toSelected(editForm.nationalityId)"
                 (selectedChange)="editForm.nationalityId = fromSelected($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="N° carte d'identité" [value]="profile()!.nationalId" />
+              <app-field [label]="'PROFILES.FIELDS.NATIONAL_ID' | translate" [value]="profile()!.nationalId" />
             } @else {
-              <daf-form-field [options]="{ label: 'N° carte d\'identité' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.NATIONAL_ID' | translate) }"
                 [value]="editForm.nationalId ?? ''" (valueChange)="editForm.nationalId = asText($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="N° passeport" [value]="profile()!.passportNumber" />
+              <app-field [label]="'PROFILES.FIELDS.PASSPORT' | translate" [value]="profile()!.passportNumber" />
             } @else {
-              <daf-form-field [options]="{ label: 'N° passeport' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.PASSPORT' | translate) }"
                 [value]="editForm.passportNumber ?? ''" (valueChange)="editForm.passportNumber = asText($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Situation familiale" [value]="profile()!.maritalStatus" />
+              <app-field [label]="'PROFILES.FIELDS.MARITAL' | translate" [value]="profile()!.maritalStatus" />
             } @else {
-              <daf-select [options]="maritalStatusOptions" [config]="{ label: 'Situation familiale', searchable: true }"
+              <daf-select [options]="maritalStatusOptions()" [config]="{ label: ('PROFILES.FIELDS.MARITAL' | translate), searchable: true }"
                 [selected]="editForm.maritalStatus ? [editForm.maritalStatus] : []"
                 (selectedChange)="editForm.maritalStatus = $event[0]" />
             }
 
             @if (!editMode()) {
-              <app-field label="Nombre d'enfants" [value]="profile()!.numberOfChildren?.toString()" />
+              <app-field [label]="'PROFILES.FIELDS.CHILDREN' | translate" [value]="profile()!.numberOfChildren?.toString()" />
             } @else {
-              <daf-form-field [options]="{ label: 'Nombre d\'enfants', type: 'number' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.CHILDREN' | translate), type: 'number' }"
                 [value]="editForm.numberOfChildren ?? null" (valueChange)="editForm.numberOfChildren = asNumber($event)" />
             }
           </div>
@@ -156,60 +156,60 @@
     <!-- 2 · Emploi ───────────────────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('emploi')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('emploi')" type="button">
-        <span class="section-title">Emploi</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.EMPLOYMENT' | translate }}</span>
         <span class="chevron" [class.open]="open('emploi')">›</span>
       </button>
       @if (open('emploi')) {
         <div class="section-body">
           <div class="field-grid">
             <!-- Matricule — toujours en lecture seule, généré automatiquement -->
-            <app-field label="Matricule" [value]="profile()!.matricule" />
+            <app-field [label]="'PROFILES.FIELDS.MATRICULE' | translate" [value]="profile()!.matricule" />
 
             @if (!editMode()) {
-              <app-field label="Date d'embauche" [value]="fmt(profile()!.hireDate)" />
+              <app-field [label]="'PROFILES.FIELDS.HIRE_DATE' | translate" [value]="fmt(profile()!.hireDate)" />
             } @else {
-              <daf-multi-date-picker [config]="{ label: 'Date d\'embauche', selectionMode: 'single' }"
+              <daf-multi-date-picker [config]="{ label: ('PROFILES.FIELDS.HIRE_DATE' | translate), selectionMode: 'single' }"
                 [value]="toDate(editForm.hireDate)" (valueChange)="editForm.hireDate = fromDate($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Type de contrat" [value]="profile()!.contractType" />
+              <app-field [label]="'PROFILES.FIELDS.CONTRACT_TYPE' | translate" [value]="profile()!.contractType" />
             } @else {
-              <daf-select [options]="contractTypeOptions" [config]="{ label: 'Type de contrat', searchable: true }"
+              <daf-select [options]="contractTypeOptions()" [config]="{ label: ('PROFILES.FIELDS.CONTRACT_TYPE' | translate), searchable: true }"
                 [selected]="editForm.contractType ? [editForm.contractType] : []"
                 (selectedChange)="editForm.contractType = $event[0]" />
             }
 
             @if (!editMode()) {
-              <app-field label="Fin de contrat" [value]="fmt(profile()!.contractEndDate)" />
+              <app-field [label]="'PROFILES.FIELDS.CONTRACT_END' | translate" [value]="fmt(profile()!.contractEndDate)" />
             } @else {
-              <daf-multi-date-picker [config]="{ label: 'Fin de contrat', selectionMode: 'single' }"
+              <daf-multi-date-picker [config]="{ label: ('PROFILES.FIELDS.CONTRACT_END' | translate), selectionMode: 'single' }"
                 [value]="toDate(editForm.contractEndDate)" (valueChange)="editForm.contractEndDate = fromDate($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Fin période d'essai" [value]="fmt(profile()!.probationEndDate)" />
+              <app-field [label]="'PROFILES.FIELDS.PROBATION_END' | translate" [value]="fmt(profile()!.probationEndDate)" />
             } @else {
-              <daf-multi-date-picker [config]="{ label: 'Fin période d\'essai', selectionMode: 'single' }"
+              <daf-multi-date-picker [config]="{ label: ('PROFILES.FIELDS.PROBATION_END' | translate), selectionMode: 'single' }"
                 [value]="toDate(editForm.probationEndDate)" (valueChange)="editForm.probationEndDate = fromDate($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="En période d'essai" [value]="profile()!.isOnProbation ? 'Oui' : 'Non'" />
+              <app-field [label]="'PROFILES.FIELDS.ON_PROBATION' | translate" [value]="profile()!.isOnProbation ? ('PROFILES.COMMON.YES' | translate) : ('PROFILES.COMMON.NO' | translate)" />
             } @else {
-              <daf-toggle [options]="{ label: 'En période d\'essai' }"
+              <daf-toggle [options]="{ label: ('PROFILES.FIELDS.ON_PROBATION' | translate) }"
                 [checked]="editForm.isOnProbation ?? false" (checkedChange)="editForm.isOnProbation = $event" />
             }
 
             @if (!editMode()) {
               <daf-amount-field [value]="profile()!.salaireNetCandidat ?? undefined"
-                [options]="{ value: profile()!.salaireNetCandidat ?? null, label: 'Prétention nette candidat', currency: 'TND', currencyPosition: 'end', placeholder: '—' }" />
+                [options]="{ value: profile()!.salaireNetCandidat ?? null, label: ('PROFILES.FIELDS.SALARY_CANDIDATE' | translate), currency: 'TND', currencyPosition: 'end', placeholder: '—' }" />
               <daf-amount-field [value]="profile()!.salaireNetRh ?? undefined"
-                [options]="{ value: profile()!.salaireNetRh ?? null, label: 'Salaire net RH', currency: 'TND', currencyPosition: 'end', placeholder: '—' }" />
+                [options]="{ value: profile()!.salaireNetRh ?? null, label: ('PROFILES.FIELDS.SALARY_RH' | translate), currency: 'TND', currencyPosition: 'end', placeholder: '—' }" />
             } @else {
-              <daf-form-field [options]="{ label: 'Prétention nette candidat (TND)', type: 'number', placeholder: 'ex: 2500' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.SALARY_CANDIDATE_INPUT' | translate), type: 'number', placeholder: ('PROFILES.PLACEHOLDERS.SALARY_CANDIDATE' | translate) }"
                 [value]="editForm.salaireNetCandidat ?? null" (valueChange)="editForm.salaireNetCandidat = asNumber($event)" />
-              <daf-form-field [options]="{ label: 'Salaire net proposé RH (TND)', type: 'number', placeholder: 'ex: 2800' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.SALARY_RH_INPUT' | translate), type: 'number', placeholder: ('PROFILES.PLACEHOLDERS.SALARY_RH' | translate) }"
                 [value]="editForm.salaireNetRh ?? null" (valueChange)="editForm.salaireNetRh = asNumber($event)" />
             }
           </div>
@@ -220,40 +220,40 @@
     <!-- 3 · Poste ────────────────────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('poste')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('poste')" type="button">
-        <span class="section-title">Poste</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.POSITION' | translate }}</span>
         <span class="chevron" [class.open]="open('poste')">›</span>
       </button>
       @if (open('poste')) {
         <div class="section-body">
           <div class="field-grid">
             @if (!editMode()) {
-              <app-field label="Département" [value]="profile()!.department" />
+              <app-field [label]="'PROFILES.FIELDS.DEPARTMENT' | translate" [value]="profile()!.department" />
             } @else {
-              <daf-select [options]="departmentOptions()" [config]="{ label: 'Département', searchable: true }"
+              <daf-select [options]="departmentOptions()" [config]="{ label: ('PROFILES.FIELDS.DEPARTMENT' | translate), searchable: true }"
                 [selected]="toSelected(editForm.departmentId)"
                 (selectedChange)="editForm.departmentId = fromSelected($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Grade" [value]="profile()!.grade" />
+              <app-field [label]="'PROFILES.FIELDS.GRADE' | translate" [value]="profile()!.grade" />
             } @else {
-              <daf-select [options]="gradeOptions()" [config]="{ label: 'Grade', searchable: true }"
+              <daf-select [options]="gradeOptions()" [config]="{ label: ('PROFILES.FIELDS.GRADE' | translate), searchable: true }"
                 [selected]="toSelected(editForm.gradeId)"
                 (selectedChange)="editForm.gradeId = fromSelected($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Discipline" [value]="profile()!.discipline" />
+              <app-field [label]="'PROFILES.FIELDS.DISCIPLINE' | translate" [value]="profile()!.discipline" />
             } @else {
-              <daf-select [options]="disciplineOptions()" [config]="{ label: 'Discipline', searchable: true }"
+              <daf-select [options]="disciplineOptions()" [config]="{ label: ('PROFILES.FIELDS.DISCIPLINE' | translate), searchable: true }"
                 [selected]="toSelected(editForm.disciplineId)"
                 (selectedChange)="editForm.disciplineId = fromSelected($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Niveau NOG" [value]="profile()!.nogLevel" />
+              <app-field [label]="'PROFILES.FIELDS.NOG_LEVEL' | translate" [value]="profile()!.nogLevel" />
             } @else {
-              <daf-select [options]="nogLevelOptions()" [config]="{ label: 'Niveau NOG', searchable: true }"
+              <daf-select [options]="nogLevelOptions()" [config]="{ label: ('PROFILES.FIELDS.NOG_LEVEL' | translate), searchable: true }"
                 [selected]="toSelected(editForm.nogLevelId)"
                 (selectedChange)="editForm.nogLevelId = fromSelected($event)" />
             }
@@ -265,7 +265,7 @@
     <!-- 4 · Régime horaire ───────────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('regime')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('regime')" type="button">
-        <span class="section-title">Régime horaire</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.REGIME' | translate }}</span>
         <span class="chevron" [class.open]="open('regime')">›</span>
       </button>
       @if (open('regime')) {
@@ -282,22 +282,22 @@
               <div style="flex:1;">
                 <p style="font-size:15px;font-weight:600;color:#1d2b3e;margin:0;">{{ resolvedRegime()!.regimeLabelFr }}</p>
                 <p style="font-size:13px;color:#44474c;margin:4px 0 0;">
-                  {{ resolvedRegime()!.hoursPerWeek }}h/semaine · {{ resolvedRegime()!.daysPerWeek }} jours
+                  {{ 'PROFILES.REGIME.HOURS_DAYS' | translate:{ hours: resolvedRegime()!.hoursPerWeek, days: resolvedRegime()!.daysPerWeek } }}
                   @if (resolvedRegime()!.startTime && resolvedRegime()!.endTime) {
                     · {{ resolvedRegime()!.startTime }} — {{ resolvedRegime()!.endTime }}
                   }
                   @if (resolvedRegime()!.breakDurationMin) {
-                    · Pause {{ resolvedRegime()!.breakDurationMin }}min
+                    {{ 'PROFILES.REGIME.BREAK' | translate:{ min: resolvedRegime()!.breakDurationMin } }}
                   }
                 </p>
                 @if (resolvedRegime()!.isFlexible) {
-                  <daf-badge label="Horaires flexibles" [options]="{ variant: 'secondary', pill: true, size: 'sm' }" />
+                  <daf-badge [label]="'PROFILES.REGIME.FLEXIBLE' | translate" [options]="{ variant: 'secondary', pill: true, size: 'sm' }" />
                 }
               </div>
               <daf-badge
-                [label]="resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'Override personnel'
-                   : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? 'Assignation par rôle'
-                   : 'Défaut entité'"
+                [label]="resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? ('PROFILES.REGIME.OVERRIDE' | translate)
+                   : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? ('PROFILES.REGIME.ROLE_ASSIGNMENT' | translate)
+                   : ('PROFILES.REGIME.ENTITY_DEFAULT' | translate)"
                 [options]="{
                   variant: resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE' ? 'teal'
                     : resolvedRegime()!.assignmentLevel === 'ROLE_ASSIGNMENT' ? 'secondary' : 'neutral',
@@ -307,7 +307,7 @@
             </div>
             @if (resolvedRegime()!.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
               <daf-button variant="ghost" style="margin-top:12px;"
-                [options]="{ label: 'Supprimer l\'override (revenir au régime du rôle)', iconStart: 'undo', size: 'sm' }"
+                [options]="{ label: ('PROFILES.REGIME.REMOVE_OVERRIDE' | translate), iconStart: 'undo', size: 'sm' }"
                 (onClick)="removeEmployeeRegimeOverride()" />
             }
           }
@@ -315,7 +315,7 @@
           @if (!isLoadingRegime() && !resolvedRegime()) {
             <div style="display:flex;align-items:center;gap:8px;color:#f59e0b;">
               <span class="material-symbols-outlined" style="font-size:16px;">warning</span>
-              <p style="font-size:13px;margin:0;">Aucun régime configuré pour cet employé</p>
+              <p style="font-size:13px;margin:0;">{{ 'PROFILES.REGIME.NONE_CONFIGURED' | translate }}</p>
             </div>
           }
         </div>
@@ -325,31 +325,31 @@
     <!-- 5 · Contact & Adresse ───────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('contact')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('contact')" type="button">
-        <span class="section-title">Contact & Adresse</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.CONTACT' | translate }}</span>
         <span class="chevron" [class.open]="open('contact')">›</span>
       </button>
       @if (open('contact')) {
         <div class="section-body">
           <div class="field-grid">
             @if (!editMode()) {
-              <app-field label="Email personnel" [value]="profile()!.personalEmail" />
+              <app-field [label]="'PROFILES.FIELDS.PERSONAL_EMAIL' | translate" [value]="profile()!.personalEmail" />
             } @else {
-              <daf-form-field [options]="{ label: 'Email personnel', type: 'email' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.PERSONAL_EMAIL' | translate), type: 'email' }"
                 [value]="editForm.personalEmail ?? ''" (valueChange)="editForm.personalEmail = asText($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Téléphone" [value]="profile()!.phone" />
+              <app-field [label]="'PROFILES.FIELDS.PHONE' | translate" [value]="profile()!.phone" />
             } @else {
-              <daf-form-field [options]="{ label: 'Téléphone' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.PHONE' | translate) }"
                 [value]="editForm.phone ?? ''" (valueChange)="editForm.phone = asText($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Adresse" [value]="profile()!.personalAddress" [wide]="true" />
+              <app-field [label]="'PROFILES.FIELDS.ADDRESS' | translate" [value]="profile()!.personalAddress" [wide]="true" />
             } @else {
               <daf-form-field style="grid-column:span 2;"
-                [options]="{ label: 'Adresse', type: 'textarea', rows: 2 }"
+                [options]="{ label: ('PROFILES.FIELDS.ADDRESS' | translate), type: 'textarea', rows: 2 }"
                 [value]="editForm.personalAddress ?? ''" (valueChange)="editForm.personalAddress = asText($event)" />
             }
           </div>
@@ -360,30 +360,30 @@
     <!-- 6 · Contact d'urgence ───────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('urgence')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('urgence')" type="button">
-        <span class="section-title">Contact d'urgence</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.EMERGENCY' | translate }}</span>
         <span class="chevron" [class.open]="open('urgence')">›</span>
       </button>
       @if (open('urgence')) {
         <div class="section-body">
           <div class="field-grid">
             @if (!editMode()) {
-              <app-field label="Nom" [value]="profile()!.emergencyContactName" />
+              <app-field [label]="'PROFILES.FIELDS.NAME' | translate" [value]="profile()!.emergencyContactName" />
             } @else {
-              <daf-form-field [options]="{ label: 'Nom' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.NAME' | translate) }"
                 [value]="editForm.emergencyContactName ?? ''" (valueChange)="editForm.emergencyContactName = asText($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Relation" [value]="profile()!.emergencyContactRelation" />
+              <app-field [label]="'PROFILES.FIELDS.RELATION' | translate" [value]="profile()!.emergencyContactRelation" />
             } @else {
-              <daf-form-field [options]="{ label: 'Relation', placeholder: 'ex: Conjoint, Parent…' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.RELATION' | translate), placeholder: ('PROFILES.PLACEHOLDERS.RELATION' | translate) }"
                 [value]="editForm.emergencyContactRelation ?? ''" (valueChange)="editForm.emergencyContactRelation = asText($event)" />
             }
 
             @if (!editMode()) {
-              <app-field label="Téléphone" [value]="profile()!.emergencyContactPhone" />
+              <app-field [label]="'PROFILES.FIELDS.PHONE' | translate" [value]="profile()!.emergencyContactPhone" />
             } @else {
-              <daf-form-field [options]="{ label: 'Téléphone' }"
+              <daf-form-field [options]="{ label: ('PROFILES.FIELDS.PHONE' | translate) }"
                 [value]="editForm.emergencyContactPhone ?? ''" (valueChange)="editForm.emergencyContactPhone = asText($event)" />
             }
           </div>
@@ -396,8 +396,8 @@
       <daf-card class="block sensitive-section" [class.collapsed]="!open('bancaire')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
         <button class="section-header" (click)="toggle('bancaire')" type="button">
           <span class="section-title">
-            Coordonnées bancaires
-            <daf-badge label="Confidentiel" [options]="{ variant: 'warning', pill: true, size: 'sm' }" />
+            {{ 'PROFILES.SECTIONS.BANK' | translate }}
+            <daf-badge [label]="'PROFILES.SECTIONS.CONFIDENTIAL' | translate" [options]="{ variant: 'warning', pill: true, size: 'sm' }" />
           </span>
           <span class="chevron" [class.open]="open('bancaire')">›</span>
         </button>
@@ -405,59 +405,59 @@
           <div class="section-body">
             <div class="field-grid">
               @if (!editMode()) {
-                <app-field label="Banque" [value]="profile()!.bankName" />
+                <app-field [label]="'PROFILES.FIELDS.BANK' | translate" [value]="profile()!.bankName" />
               } @else {
-                <daf-select [options]="bankOptions()" [config]="{ label: 'Banque', searchable: true }"
+                <daf-select [options]="bankOptions()" [config]="{ label: ('PROFILES.FIELDS.BANK' | translate), searchable: true }"
                   [selected]="toSelected(editForm.bankId)"
                   (selectedChange)="editForm.bankId = fromSelected($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="IBAN" [value]="profile()!.iban" />
+                <app-field [label]="'PROFILES.FIELDS.IBAN' | translate" [value]="profile()!.iban" />
               } @else {
-                <daf-form-field [options]="{ label: 'IBAN' }"
+                <daf-form-field [options]="{ label: ('PROFILES.FIELDS.IBAN' | translate) }"
                   [value]="editForm.iban ?? ''" (valueChange)="editForm.iban = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="N° de compte" [value]="profile()!.bankAccountNumber" />
+                <app-field [label]="'PROFILES.FIELDS.ACCOUNT_NUMBER' | translate" [value]="profile()!.bankAccountNumber" />
               } @else {
-                <daf-form-field [options]="{ label: 'N° de compte' }"
+                <daf-form-field [options]="{ label: ('PROFILES.FIELDS.ACCOUNT_NUMBER' | translate) }"
                   [value]="editForm.bankAccountNumber ?? ''" (valueChange)="editForm.bankAccountNumber = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="RIB" [value]="profile()!.rib" />
+                <app-field [label]="'PROFILES.FIELDS.RIB' | translate" [value]="profile()!.rib" />
               } @else {
-                <daf-form-field [options]="{ label: 'RIB' }"
+                <daf-form-field [options]="{ label: ('PROFILES.FIELDS.RIB' | translate) }"
                   [value]="editForm.rib ?? ''" (valueChange)="editForm.rib = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="N° d'Assurance Sociale" [value]="profile()!.socialSecurityNumber" />
+                <app-field [label]="'PROFILES.FIELDS.SOCIAL_INSURANCE' | translate" [value]="profile()!.socialSecurityNumber" />
               } @else {
-                <daf-form-field [options]="{ label: 'N° d\'Assurance Sociale' }"
+                <daf-form-field [options]="{ label: ('PROFILES.FIELDS.SOCIAL_INSURANCE' | translate) }"
                   [value]="editForm.socialSecurityNumber ?? ''" (valueChange)="editForm.socialSecurityNumber = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="NIF" [value]="profile()!.taxId" />
+                <app-field [label]="'PROFILES.FIELDS.NIF' | translate" [value]="profile()!.taxId" />
               } @else {
-                <daf-form-field [options]="{ label: 'NIF' }"
+                <daf-form-field [options]="{ label: ('PROFILES.FIELDS.NIF' | translate) }"
                   [value]="editForm.taxId ?? ''" (valueChange)="editForm.taxId = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="N° de Sécurité Sociale" [value]="profile()!.cnssNumber" />
+                <app-field [label]="'PROFILES.FIELDS.CNSS' | translate" [value]="profile()!.cnssNumber" />
               } @else {
-                <daf-form-field [options]="{ label: 'N° de Sécurité Sociale' }"
+                <daf-form-field [options]="{ label: ('PROFILES.FIELDS.CNSS' | translate) }"
                   [value]="editForm.cnssNumber ?? ''" (valueChange)="editForm.cnssNumber = asText($event)" />
               }
 
               @if (!editMode()) {
-                <app-field label="Date d'affiliation Sécurité Sociale" [value]="fmt(profile()!.cnssAffiliationDate)" />
+                <app-field [label]="'PROFILES.FIELDS.CNSS_AFFILIATION' | translate" [value]="fmt(profile()!.cnssAffiliationDate)" />
               } @else {
-                <daf-multi-date-picker [config]="{ label: 'Date d\'affiliation Sécurité Sociale', selectionMode: 'single' }"
+                <daf-multi-date-picker [config]="{ label: ('PROFILES.FIELDS.CNSS_AFFILIATION' | translate), selectionMode: 'single' }"
                   [value]="toDate(editForm.cnssAffiliationDate)" (valueChange)="editForm.cnssAffiliationDate = fromDate($event)" />
               }
             </div>
@@ -470,7 +470,7 @@
     <daf-card class="block" [class.collapsed]="!open('lifecycle')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('lifecycle'); loadContracts()" type="button">
         <span class="section-title">
-          Contrats &amp; Cycle de vie
+          {{ 'PROFILES.SECTIONS.LIFECYCLE' | translate }}
           @if (lcContracts().length > 0) {
             <daf-badge [label]="lcContracts().length + ''" [options]="{ variant: 'neutral', size: 'sm' }" />
           }
@@ -488,10 +488,10 @@
             @if (profile()!.candidateId) {
               <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:13px;color:#166534;">
                 <span class="material-symbols-outlined" style="font-size:16px;">person_search</span>
-                <span>Recruté via candidature</span>
+                <span>{{ 'PROFILES.LC.FROM_CANDIDATE' | translate }}</span>
                 <a [routerLink]="['/hr/candidates', profile()!.candidateId]"
                    style="color:#0d9488;font-weight:600;text-decoration:none;margin-left:4px;">
-                  Voir le dossier candidat →
+                  {{ 'PROFILES.LC.VIEW_CANDIDATE' | translate }}
                 </a>
               </div>
             }
@@ -499,13 +499,13 @@
             <!-- Actions bar -->
             @if (canEdit()) {
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <daf-button label="+ Nouveau contrat" variant="primary" (onClick)="showNewContractModal.set(true)" />
+                <daf-button [label]="'PROFILES.LC.NEW_CONTRACT' | translate" variant="primary" (onClick)="showNewContractModal.set(true)" />
               </div>
             }
 
             <!-- No contracts -->
             @if (lcContracts().length === 0) {
-              <p class="empty-docs">Aucun contrat lifecycle enregistré.</p>
+              <p class="empty-docs">{{ 'PROFILES.LC.NONE' | translate }}</p>
             }
 
             <!-- Contract list -->
@@ -518,34 +518,33 @@
                       <span style="font-size:13px;font-weight:700;color:#1d2b3e;">{{ lcTypeCfg(c.contractTypeCode).label }}</span>
                       <daf-badge [label]="lcStatusCfg(c.currentStatusCode).label" [options]="{ variant: lcStatusCfg(c.currentStatusCode).variant, size: 'sm' }" />
                       @if (c.isActive) {
-                        <daf-badge label="Actif" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
+                        <daf-badge [label]="'PROFILES.LC.ACTIVE' | translate" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
                       }
                       @if (c.dossierLocked) {
-                        <daf-badge label="Dossier verrouillé" [options]="{ variant: 'danger', pill: true, size: 'sm' }" />
+                        <daf-badge [label]="'PROFILES.LC.LOCKED' | translate" [options]="{ variant: 'danger', pill: true, size: 'sm' }" />
                       }
                     </div>
 
                     <!-- Dates -->
                     <div style="font-size:12px;color:#44474c;display:flex;flex-wrap:wrap;gap:14px;">
-                      <span>Début : {{ fmt(c.dateDebut) }}</span>
+                      <span>{{ 'PROFILES.LC.START' | translate:{ date: fmt(c.dateDebut) } }}</span>
                       @if (c.dateFinPrevue) {
-                        <span>Fin prévue : {{ fmt(c.dateFinPrevue) }}</span>
+                        <span>{{ 'PROFILES.LC.END_EXPECTED' | translate:{ date: fmt(c.dateFinPrevue) } }}</span>
                         @if ((daysUntil(c.dateFinPrevue) ?? 999) <= 30 && c.isActive) {
                           <span style="color:#b45309;font-weight:600;">
-                            ⚠ {{ daysUntil(c.dateFinPrevue) }} jour(s) restant(s)
+                            {{ 'PROFILES.LC.DAYS_LEFT' | translate:{ days: daysUntil(c.dateFinPrevue) } }}
                           </span>
                         }
                       }
                       @if (c.dateFinPeriodeEssai && c.currentStatusCode === 'PERIODE_ESSAI') {
                         <span style="color:#713f12;font-weight:600;">
-                          Période d'essai → {{ fmt(c.dateFinPeriodeEssai) }}
-                          ({{ daysUntil(c.dateFinPeriodeEssai) }} j)
+                          {{ 'PROFILES.LC.TRIAL_UNTIL' | translate:{ date: fmt(c.dateFinPeriodeEssai), days: daysUntil(c.dateFinPeriodeEssai) } }}
                         </span>
                       }
                     </div>
 
                     @if (c.referenceContrat) {
-                      <span style="font-size:11px;color:#6B7280;">Réf : {{ c.referenceContrat }}</span>
+                      <span style="font-size:11px;color:#6B7280;">{{ 'PROFILES.LC.REF' | translate:{ ref: c.referenceContrat } }}</span>
                     }
                   </div>
 
@@ -553,13 +552,13 @@
                   @if (canEdit() && c.isActive && !c.dossierLocked) {
                     <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
                       @if (c.currentStatusCode === 'PERIODE_ESSAI') {
-                        <daf-button label="Valider période d'essai" variant="secondary" [options]="{ size: 'sm' }"
+                        <daf-button [label]="'PROFILES.LC.VALIDATE_TRIAL' | translate" variant="secondary" [options]="{ size: 'sm' }"
                           (onClick)="openValidateTrialModal(c.id)" />
                       }
                       @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
-                        <daf-button label="Renouveler CDD" variant="secondary" [options]="{ size: 'sm' }"
+                        <daf-button [label]="'PROFILES.LC.RENEW_CDD' | translate" variant="secondary" [options]="{ size: 'sm' }"
                           (onClick)="openRenewCDDModal(c.id)" />
-                        <daf-button label="Convertir en CDI" variant="secondary" [options]="{ size: 'sm' }"
+                        <daf-button [label]="'PROFILES.LC.CONVERT_CDI' | translate" variant="secondary" [options]="{ size: 'sm' }"
                           (onClick)="openConvertCDIModal(c.id)" />
                       }
                     </div>
@@ -572,7 +571,7 @@
             @if (lcHistory().length > 0) {
               <div>
                 <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#44474c;margin:0 0 10px;">
-                  Historique des transitions
+                  {{ 'PROFILES.LC.TRANSITIONS_HISTORY' | translate }}
                 </p>
                 <div style="display:flex;flex-direction:column;gap:0;position:relative;">
                   @for (h of lcHistory(); track h.id; let last = $last) {
@@ -608,10 +607,10 @@
         @if (transitionError()) {
           <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:14px;">{{ transitionError() }}</div>
         }
-        <p class="t-label">Statut actuel</p>
+        <p class="t-label">{{ 'PROFILES.TRANSITION.CURRENT_STATUS' | translate }}</p>
         <daf-badge [label]="statusBadge(profile()!.lifecycleStatus).label" [options]="statusBadge(profile()!.lifecycleStatus).options" />
 
-        <p class="t-label" style="margin-top:20px">Nouveau statut *</p>
+        <p class="t-label" style="margin-top:20px">{{ 'PROFILES.TRANSITION.NEW_STATUS' | translate }}</p>
         <div class="status-options">
           @for (s of allowedTransitions(); track s) {
             <button
@@ -627,7 +626,7 @@
         </div>
 
         <daf-form-field style="margin-top:16px;display:block;"
-          [options]="{ label: 'Raison *', type: 'textarea', rows: 3, placeholder: 'Préciser la raison de ce changement de statut…' }"
+          [options]="{ label: ('PROFILES.TRANSITION.REASON' | translate), type: 'textarea', rows: 3, placeholder: ('PROFILES.PLACEHOLDERS.TRANSITION_REASON' | translate) }"
           [value]="transitionReason" (valueChange)="transitionReason = asText($event)" />
       </div>
     </ng-template>
@@ -639,14 +638,14 @@
         }
         <daf-radio-group
           [options]="[
-            { value: 'true', label: 'Approuver — passer en ACTIF_CONFIRME' },
-            { value: 'false', label: 'Refuser — résilier le contrat' }
+            { value: 'true', label: ('PROFILES.TRIAL.APPROVE' | translate) },
+            { value: 'false', label: ('PROFILES.TRIAL.REFUSE' | translate) }
           ]"
           [config]="{ layout: 'vertical' }"
           [selected]="trialApproved ? 'true' : 'false'"
           (selectedChange)="trialApproved = $event === 'true'"
         />
-        <daf-form-field [options]="{ label: 'Commentaire', type: 'textarea', rows: 3, placeholder: 'Motif ou observations…' }"
+        <daf-form-field [options]="{ label: ('PROFILES.COMMON.COMMENT' | translate), type: 'textarea', rows: 3, placeholder: ('PROFILES.PLACEHOLDERS.TRIAL_COMMENT' | translate) }"
           [value]="trialComment" (valueChange)="trialComment = asText($event)" />
       </div>
     </ng-template>
@@ -656,9 +655,9 @@
         @if (lcError()) {
           <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
         }
-        <daf-multi-date-picker [config]="{ label: 'Nouvelle date de fin *', selectionMode: 'single' }"
+        <daf-multi-date-picker [config]="{ label: ('PROFILES.RENEW.NEW_END_DATE' | translate), selectionMode: 'single' }"
           [value]="toDate(renewDateFin)" (valueChange)="renewDateFin = fromDate($event)" />
-        <daf-form-field [options]="{ label: 'Commentaire', type: 'textarea', rows: 2 }"
+        <daf-form-field [options]="{ label: ('PROFILES.COMMON.COMMENT' | translate), type: 'textarea', rows: 2 }"
           [value]="renewComment" (valueChange)="renewComment = asText($event)" />
       </div>
     </ng-template>
@@ -668,9 +667,9 @@
         @if (lcError()) {
           <div style="background:#fee2e2;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;">{{ lcError() }}</div>
         }
-        <daf-multi-date-picker [config]="{ label: 'Date de début du CDI *', selectionMode: 'single' }"
+        <daf-multi-date-picker [config]="{ label: ('PROFILES.CONVERT.START_DATE' | translate), selectionMode: 'single' }"
           [value]="toDate(cdiStartDate)" (valueChange)="cdiStartDate = fromDate($event)" />
-        <daf-form-field [options]="{ label: 'Commentaire', type: 'textarea', rows: 2 }"
+        <daf-form-field [options]="{ label: ('PROFILES.COMMON.COMMENT' | translate), type: 'textarea', rows: 2 }"
           [value]="cdiComment" (valueChange)="cdiComment = asText($event)" />
       </div>
     </ng-template>
@@ -690,10 +689,10 @@
       <div style="background:#fff;border:1px solid #eceef0;border-radius:14px;padding:18px 20px;display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(51,65,85,.06);">
         <div style="flex:1;">
           <daf-form-field
-            [options]="{ label: 'Raison de la modification *', placeholder: 'Ex: Mise à jour coordonnées, correction données contrat…', error: editSaveError() ?? undefined }"
+            [options]="{ label: ('PROFILES.EDIT.REASON_LABEL' | translate), placeholder: ('PROFILES.PLACEHOLDERS.EDIT_REASON' | translate), error: editSaveError() ?? undefined }"
             [value]="editForm.reason" (valueChange)="editForm.reason = asText($event)" />
         </div>
-        <daf-button [label]="saving() ? 'Enregistrement…' : 'Enregistrer les modifications'" variant="teal"
+        <daf-button [label]="saving() ? ('PROFILES.COMMON.SAVING' | translate) : ('PROFILES.EDIT.SAVE' | translate)" variant="teal"
           [options]="{ disabled: saving(), loading: saving() }" (onClick)="saveProfile()" />
       </div>
     }
@@ -701,7 +700,7 @@
     <!-- 9 · Historique des contrats ────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('contrats')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('contrats')" type="button">
-        <span class="section-title">Historique des contrats</span>
+        <span class="section-title">{{ 'PROFILES.SECTIONS.CONTRACT_HISTORY' | translate }}</span>
         <span class="chevron" [class.open]="open('contrats')">›</span>
       </button>
       @if (open('contrats')) {
@@ -717,7 +716,7 @@
     <!-- 8 · Documents ─────────────────────────────────────────────────────── -->
     <daf-card class="block" [class.collapsed]="!open('documents')" [options]="{ variant: 'outlined', padding: 'none', radius: 'lg' }">
       <button class="section-header" (click)="toggle('documents'); loadDocuments()" type="button">
-        <span class="section-title">Documents
+        <span class="section-title">{{ 'PROFILES.SECTIONS.DOCUMENTS' | translate }}
           @if (documents().length > 0) { <daf-badge [label]="documents().length + ''" [options]="{ variant: 'neutral', size: 'sm' }" /> }
         </span>
         <span class="chevron" [class.open]="open('documents')">›</span>
@@ -729,14 +728,14 @@
           } @else {
             @if (canEdit()) {
               <div class="upload-bar">
-                <daf-select [options]="docTypeOptions" [config]="{ label: 'Type de document', searchable: true }"
+                <daf-select [options]="docTypeOptions" [config]="{ label: ('PROFILES.DOCUMENTS.TYPE_LABEL' | translate), searchable: true }"
                   [selected]="[uploadType]" (selectedChange)="uploadType = $event[0]" />
-                <daf-file-upload [config]="{ accept: '.pdf,.jpg,.jpeg,.png', hint: 'Importer un document' }"
+                <daf-file-upload [config]="{ accept: '.pdf,.jpg,.jpeg,.png', hint: ('PROFILES.DOCUMENTS.IMPORT_HINT' | translate) }"
                   [files]="uploadFiles()" (filesChange)="onDocumentFilesChange($event)" />
               </div>
             }
             @if (documents().length === 0) {
-              <p class="empty-docs">Aucun document enregistré.</p>
+              <p class="empty-docs">{{ 'PROFILES.DOCUMENTS.NONE' | translate }}</p>
             } @else {
               <ul class="doc-list">
                 @for (doc of documents(); track doc.id) {
@@ -747,7 +746,7 @@
                     </svg>
                     <div class="doc-meta">
                       <span class="doc-name">{{ doc.fileName ?? doc.documentType }}</span>
-                      @if (doc.fileSizeKb) { <span class="doc-size">{{ doc.fileSizeKb }} Ko</span> }
+                      @if (doc.fileSizeKb) { <span class="doc-size">{{ 'PROFILES.DOCUMENTS.SIZE_KB' | translate:{ size: doc.fileSizeKb } }}</span> }
                     </div>
                     <daf-badge [label]="statusBadge(doc.verificationStatus).label" [options]="statusBadge(doc.verificationStatus).options" />
                   </li>
@@ -762,7 +761,7 @@
     <!-- Documents RH — visible to HR managers and Admins only ────────────── -->
     @if (canEdit()) {
     <section class="profile-section">
-      <h2 class="section-title">Documents RH</h2>
+      <h2 class="section-title">{{ 'PROFILES.HR_DOCS.TITLE' | translate }}</h2>
       @if (generatedDocs().length > 0) {
         <div class="doc-history">
           @for (doc of generatedDocs(); track doc.id) {
@@ -770,7 +769,7 @@
               <span class="doc-type">{{ doc.documentType.replace('_', ' ') }}</span>
               <code class="doc-code">{{ doc.verificationCode }}</code>
               <app-pdf-download-button
-                label="Telecharger"
+                [label]="'PROFILES.HR_DOCS.DOWNLOAD' | translate"
                 [endpoint]="'/api/hr/documents/download/' + doc.id"
                 [body]="null"
                 [filename]="doc.documentType.toLowerCase() + '.pdf'"
@@ -780,23 +779,23 @@
           }
         </div>
       } @else {
-        <p class="empty-docs">Aucun document genere pour ce profil.</p>
+        <p class="empty-docs">{{ 'PROFILES.HR_DOCS.NONE' | translate }}</p>
       }
       <div class="doc-gen-grid">
-        <daf-card [options]="{ title: 'Attestation de travail', description: 'Certifie l\'emploi au sein d\'ARX Ingenierie', icon: 'description', padding: 'md' }">
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-travail" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-travail.pdf" variant="outline" />
+        <daf-card [options]="{ title: ('PROFILES.HR_DOCS.ATT_WORK_TITLE' | translate), description: ('PROFILES.HR_DOCS.ATT_WORK_DESC' | translate), icon: 'description', padding: 'md' }">
+          <app-pdf-download-button [label]="'PROFILES.HR_DOCS.GENERATE' | translate" endpoint="/api/hr/documents/attestation-travail" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-travail.pdf" variant="outline" />
         </daf-card>
-        <daf-card [options]="{ title: 'Attestation de salaire', description: 'Certifie le salaire brut annuel — nécessite une simulation de paie validée', icon: 'description', padding: 'md' }">
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-salaire" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-salaire.pdf" variant="outline" />
+        <daf-card [options]="{ title: ('PROFILES.HR_DOCS.ATT_SALARY_TITLE' | translate), description: ('PROFILES.HR_DOCS.ATT_SALARY_DESC' | translate), icon: 'description', padding: 'md' }">
+          <app-pdf-download-button [label]="'PROFILES.HR_DOCS.GENERATE' | translate" endpoint="/api/hr/documents/attestation-salaire" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-salaire.pdf" variant="outline" />
         </daf-card>
-        <daf-card [options]="{ title: 'Attestation non-benefice de pret', description: 'Certifie l\'absence d\'emprunt en cours', icon: 'description', padding: 'md' }">
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-non-benefice-pret" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-pret.pdf" variant="outline" />
+        <daf-card [options]="{ title: ('PROFILES.HR_DOCS.ATT_LOAN_TITLE' | translate), description: ('PROFILES.HR_DOCS.ATT_LOAN_DESC' | translate), icon: 'description', padding: 'md' }">
+          <app-pdf-download-button [label]="'PROFILES.HR_DOCS.GENERATE' | translate" endpoint="/api/hr/documents/attestation-non-benefice-pret" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-pret.pdf" variant="outline" />
         </daf-card>
-        <daf-card [options]="{ title: 'Attestation de titularisation', description: 'Certifie la titularisation en CDI — réservée aux contrats CDI', icon: 'description', padding: 'md' }">
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-titularisation" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-titularisation.pdf" variant="outline" [disabled]="profile()!.contractType !== 'PERMANENT'" disabledTooltip="Reservee aux employes en CDI" />
+        <daf-card [options]="{ title: ('PROFILES.HR_DOCS.ATT_TENURE_TITLE' | translate), description: ('PROFILES.HR_DOCS.ATT_TENURE_DESC' | translate), icon: 'description', padding: 'md' }">
+          <app-pdf-download-button [label]="'PROFILES.HR_DOCS.GENERATE' | translate" endpoint="/api/hr/documents/attestation-titularisation" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-titularisation.pdf" variant="outline" [disabled]="profile()!.contractType !== 'PERMANENT'" [disabledTooltip]="'PROFILES.HR_DOCS.ATT_TENURE_DISABLED' | translate" />
         </daf-card>
-        <daf-card [options]="{ title: 'Attestation de domiciliation de salaire', description: 'Certifie la domiciliation bancaire du salaire — nécessite les coordonnées bancaires', icon: 'description', padding: 'md' }">
-          <app-pdf-download-button label="Generer" endpoint="/api/hr/documents/attestation-domiciliation-salaire" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-domiciliation.pdf" variant="outline" [disabled]="!profile()!.rib && !profile()!.bankName" disabledTooltip="Completez les coordonnees bancaires" />
+        <daf-card [options]="{ title: ('PROFILES.HR_DOCS.ATT_DOMICIL_TITLE' | translate), description: ('PROFILES.HR_DOCS.ATT_DOMICIL_DESC' | translate), icon: 'description', padding: 'md' }">
+          <app-pdf-download-button [label]="'PROFILES.HR_DOCS.GENERATE' | translate" endpoint="/api/hr/documents/attestation-domiciliation-salaire" [body]="{ employeeProfileId: profile()!.id }" filename="attestation-domiciliation.pdf" variant="outline" [disabled]="!profile()!.rib && !profile()!.bankName" [disabledTooltip]="'PROFILES.HR_DOCS.ATT_DOMICIL_DISABLED' | translate" />
         </daf-card>
       </div>
     </section>

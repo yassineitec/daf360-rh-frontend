@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 import { CardComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OnboardingService } from './onboarding.service';
 import {
   OnboardingFormData,
@@ -35,6 +36,7 @@ import { isFemale } from '../../shared/utils/avatar.utils';
     StepSummaryComponent,
     ConfirmSubmitModalComponent,
     SpinnerComponent,
+    TranslatePipe,
   ],
   templateUrl: './onboarding-form.component.html',
   styleUrl: './onboarding-form.component.scss',
@@ -43,6 +45,7 @@ export class OnboardingFormComponent implements OnInit {
   private route   = inject(ActivatedRoute);
   private router  = inject(Router);
   private service = inject(OnboardingService);
+  private translate = inject(TranslateService);
 
   // State
   candidateId      = signal(0);
@@ -57,7 +60,13 @@ export class OnboardingFormComponent implements OnInit {
   successMsg       = signal<string | null>(null);
 
   // Constants
-  readonly STEPS      = STEPS;
+  readonly STEPS = computed(() => {
+    this.translate.currentLang();
+    return STEPS.map(s => ({
+      number: s.number,
+      label: this.translate.instant('ONBOARDING.STEPS.' + s.key.toUpperCase()),
+    }));
+  });
   readonly totalSteps = 7;
 
   // Computed
@@ -134,7 +143,7 @@ export class OnboardingFormComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Erreur lors du chargement du formulaire.');
+        this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_LOAD_FORM'));
         this.loading.set(false);
       },
     });
@@ -165,11 +174,11 @@ export class OnboardingFormComponent implements OnInit {
     this.service.saveDraft(this.candidateId(), this.draftData()).subscribe({
       next: () => {
         this.saving.set(false);
-        this.flash('Brouillon enregistré.');
+        this.flash(this.translate.instant('ONBOARDING.FORM.DRAFT_SAVED'));
       },
       error: () => {
         this.saving.set(false);
-        this.error.set('Erreur lors de la sauvegarde du brouillon.');
+        this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_SAVE_DRAFT'));
       },
     });
   }
@@ -177,27 +186,27 @@ export class OnboardingFormComponent implements OnInit {
   openConfirmModal(): void {
     const d = this.draftData();
     if (!d.hireDate) {
-      this.error.set('La date d\'embauche est obligatoire (étape 2).');
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_HIRE_DATE_REQUIRED'));
       this.currentStep.set(2);
       return;
     }
     if (!d.contractType) {
-      this.error.set('Le type de contrat est obligatoire (étape 2).');
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_CONTRACT_REQUIRED'));
       this.currentStep.set(2);
       return;
     }
     if (!d.regimeTemplateId) {
-      this.error.set('Le régime de travail est obligatoire (étape 3).');
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_REGIME_REQUIRED'));
       this.currentStep.set(3);
       return;
     }
     if (!d.cnssNumber) {
-      this.error.set('Le numéro de sécurité sociale est obligatoire (étape 4).');
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_CNSS_REQUIRED'));
       this.currentStep.set(4);
       return;
     }
     if (!d.rib) {
-      this.error.set('Le RIB est obligatoire (étape 5).');
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_RIB_REQUIRED'));
       this.currentStep.set(5);
       return;
     }
@@ -224,7 +233,7 @@ export class OnboardingFormComponent implements OnInit {
       error: (err) => {
         this.submitting.set(false);
         this.showConfirmModal.set(false);
-        const msg = err?.error?.detail ?? err?.error?.title ?? 'Erreur lors de la création du dossier.';
+        const msg = err?.error?.detail ?? err?.error?.title ?? this.translate.instant('ONBOARDING.FORM.ERR_CREATE');
         this.error.set(msg);
       },
     });

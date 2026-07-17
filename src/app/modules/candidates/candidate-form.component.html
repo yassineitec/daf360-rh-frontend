@@ -5,12 +5,12 @@
       <button type="button"
               class="hover:text-teal transition-colors font-medium"
               (click)="navigateToList()">
-        Recrutement
+        {{ 'CANDIDATES.FORM.BREADCRUMB' | translate }}
       </button>
       <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-      <span class="font-medium" style="color:#50717b">Nouveau Candidat</span>
+      <span class="font-medium" style="color:#50717b">{{ 'CANDIDATES.FORM.BREADCRUMB_CURRENT' | translate }}</span>
     </nav>
-    <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight">Créer un profil candidat</h1>
+    <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight">{{ 'CANDIDATES.FORM.TITLE' | translate }}</h1>
   </div>
 
   <!-- ── Wizard layout ──────────────────────────────────────────────────── -->
@@ -41,47 +41,47 @@
         @if (currentStep() === 1) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <daf-form-field
-              [options]="{ label: 'Prénom', required: true, placeholder: 'ex: Jean',
+              [options]="{ label: ('CANDIDATES.FORM.FIRST_NAME' | translate), required: true, placeholder: ('CANDIDATES.FORM.FIRST_NAME_PH' | translate),
                            error: getFieldError('identity.firstName') }"
               [value]="getTextValue('identity.firstName')"
               (valueChange)="setTextValue('identity.firstName', $event)" />
 
             <daf-form-field
-              [options]="{ label: 'Nom', required: true, placeholder: 'ex: Dupont',
+              [options]="{ label: ('CANDIDATES.FORM.LAST_NAME' | translate), required: true, placeholder: ('CANDIDATES.FORM.LAST_NAME_PH' | translate),
                            error: getFieldError('identity.lastName') }"
               [value]="getTextValue('identity.lastName')"
               (valueChange)="setTextValue('identity.lastName', $event)" />
 
             <daf-form-field
-              [options]="{ label: 'Email Professionnel', type: 'email', required: true,
-                           placeholder: 'jean.dupont@email.com', prefixIcon: 'mail',
+              [options]="{ label: ('CANDIDATES.FORM.EMAIL' | translate), type: 'email', required: true,
+                           placeholder: ('CANDIDATES.FORM.EMAIL_PH' | translate), prefixIcon: 'mail',
                            error: getFieldError('identity.emailPersonal') }"
               [value]="getTextValue('identity.emailPersonal')"
               (valueChange)="setTextValue('identity.emailPersonal', $event)" />
 
             <daf-form-field
-              [options]="{ label: 'Téléphone', placeholder: '+216 XX XXX XXX', prefixIcon: 'phone' }"
+              [options]="{ label: ('CANDIDATES.FORM.PHONE' | translate), placeholder: ('CANDIDATES.FORM.PHONE_PH' | translate), prefixIcon: 'phone' }"
               [value]="getTextValue('identity.phone')"
               (valueChange)="setTextValue('identity.phone', $event)" />
 
             <daf-multi-date-picker
               [value]="getDateValue('identity.dateOfBirth')"
-              [config]="{ label: 'Date de naissance', placeholder: 'Sélectionner', selectionMode: 'single' }"
+              [config]="{ label: ('CANDIDATES.FORM.DOB' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), selectionMode: 'single' }"
               (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
 
             <daf-select
               [selected]="getSelectStr('identity.gender')"
               [options]="genderOptions"
-              [config]="{ label: 'Genre', placeholder: '— Sélectionner —', fullWidth: true }"
+              [config]="{ label: ('CANDIDATES.FORM.GENDER' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
               (selectedChange)="setSelectStr('identity.gender', $event)" />
 
             <daf-form-field
-              [options]="{ label: 'N° CIN / Passeport', placeholder: 'ex: AB123456', prefixIcon: 'badge' }"
+              [options]="{ label: ('CANDIDATES.FORM.NATIONAL_ID' | translate), placeholder: ('CANDIDATES.FORM.NATIONAL_ID_PH' | translate), prefixIcon: 'badge' }"
               [value]="getTextValue('identity.nationalId')"
               (valueChange)="setTextValue('identity.nationalId', $event)" />
 
             <daf-form-field
-              [options]="{ label: 'Localisation', placeholder: 'ex: Tunis', prefixIcon: 'location_on' }"
+              [options]="{ label: ('CANDIDATES.FORM.LOCATION' | translate), placeholder: ('CANDIDATES.FORM.LOCATION_PH' | translate), prefixIcon: 'location_on' }"
               [value]="getTextValue('identity.location')"
               (valueChange)="setTextValue('identity.location', $event)" />
           </div>
@@ -91,8 +91,8 @@
         @if (currentStep() === 2) {
           <div class="space-y-8">
             <daf-form-field
-              [options]="{ label: 'Poste Requis', required: true,
-                           placeholder: 'ex: Développeur Fullstack Senior', prefixIcon: 'work_outline',
+              [options]="{ label: ('CANDIDATES.FORM.POSITION' | translate), required: true,
+                           placeholder: ('CANDIDATES.FORM.POSITION_PH' | translate), prefixIcon: 'work_outline',
                            error: getFieldError('position.appliedPosition') }"
               [value]="getTextValue('position.appliedPosition')"
               (valueChange)="setTextValue('position.appliedPosition', $event)" />
@@ -100,21 +100,21 @@
             <daf-chip-group
               [options]="employmentTypeChipOptions()"
               [selected]="getSelectNum('position.employmentTypeId')"
-              [config]="{ label: 'Type de Contrat', required: true,
+              [config]="{ label: ('CANDIDATES.FORM.CONTRACT_TYPE' | translate), required: true,
                           error: getFieldError('position.employmentTypeId') }"
               (selectedChange)="setSelectNum('position.employmentTypeId', $event)" />
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-multi-date-picker
                 [value]="getDateValue('position.expectedStartDate')"
-                [config]="{ label: 'Date de Début', placeholder: 'Sélectionner', required: true,
+                [config]="{ label: ('CANDIDATES.FORM.START_DATE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), required: true,
                             selectionMode: 'single', error: getFieldError('position.expectedStartDate') }"
                 (valueChange)="setDateValue('position.expectedStartDate', $event)" />
 
               <daf-select
                 [selected]="getSelectNum('position.departmentId')"
                 [options]="departmentOptions()"
-                [config]="{ label: 'Département', placeholder: '— Sélectionner —', fullWidth: true }"
+                [config]="{ label: ('CANDIDATES.FORM.DEPARTMENT' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
                 (selectedChange)="setSelectNum('position.departmentId', $event)" />
             </div>
 
@@ -123,27 +123,27 @@
               style="--color-primary: var(--color-tertiary);"
               [value]="experienceYears()"
               (valueChange)="experienceYears.set($event)"
-              [config]="{ title: 'Niveau d\'Expérience', unit: 'ans',
-                          min: 0, max: 15, minLabel: 'Junior', maxLabel: 'Expert (15+ ans)' }" />
+              [config]="{ title: ('CANDIDATES.FORM.EXPERIENCE_LEVEL' | translate), unit: ('CANDIDATES.FORM.YEARS_UNIT' | translate),
+                          min: 0, max: 15, minLabel: ('CANDIDATES.FORM.JUNIOR' | translate), maxLabel: ('CANDIDATES.FORM.EXPERT' | translate) }" />
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-select
                 [selected]="getSelectNum('position.appliedGradeId')"
                 [options]="gradeOptions()"
-                [config]="{ label: 'Grade', placeholder: '— Sélectionner —', fullWidth: true }"
+                [config]="{ label: ('CANDIDATES.FORM.GRADE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
                 (selectedChange)="setSelectNum('position.appliedGradeId', $event)" />
 
               <daf-select
                 [selected]="getSelectNum('position.appliedDisciplineId')"
                 [options]="disciplineOptions()"
-                [config]="{ label: 'Discipline', placeholder: '— Sélectionner —', fullWidth: true }"
+                [config]="{ label: ('CANDIDATES.FORM.DISCIPLINE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
                 (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)" />
             </div>
 
             <daf-select
               [selected]="getSelectNum('position.nationalityId')"
               [options]="nationalityOptions()"
-              [config]="{ label: 'Nationalité', placeholder: '— Sélectionner —', fullWidth: true }"
+              [config]="{ label: ('CANDIDATES.FORM.NATIONALITY' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
               (selectedChange)="setSelectNum('position.nationalityId', $event)" />
           </div>
         }
@@ -156,14 +156,14 @@
             style="--color-primary: var(--color-tertiary);"
             [(files)]="cvFiles"
             [config]="{ accept: '.pdf,.doc,.docx', maxSizeMb: 5,
-                        hint: 'PDF, DOC ou DOCX — max 5 Mo' }" />
+                        hint: ('CANDIDATES.FORM.CV_HINT' | translate) }" />
         }
 
         <!-- Step 4 — Notes & Commentaires -->
         @if (currentStep() === 4) {
           <daf-form-field
             [options]="{ type: 'textarea', rows: 6,
-                         placeholder: 'Ajouter des observations sur le candidat, ses points forts ou ses attentes particulières…' }"
+                         placeholder: ('CANDIDATES.FORM.NOTES_PH' | translate) }"
             [value]="getTextValue('notes')"
             (valueChange)="setTextValue('notes', $event)" />
         }
@@ -197,12 +197,12 @@
         <div class="flex-1">
           @if (currentStep() > 1) {
             <daf-button class="block w-full"
-              label="Précédent"
+              [label]="'CANDIDATES.FORM.PREV' | translate"
               [options]="{ variant: 'ghost', pill: true, iconStart: 'arrow_back', fullWidth: true }"
               (onClick)="goPrev()" />
           } @else {
             <daf-button class="block w-full"
-              label="Annuler"
+              [label]="'CANDIDATES.COMMON.CANCEL' | translate"
               [options]="{ variant: 'ghost', pill: true, iconStart: 'close', fullWidth: true }"
               (onClick)="onCancel()" />
           }
@@ -210,8 +210,8 @@
         <div class="flex-1">
           <daf-button class="block w-full"
             [label]="currentStep() === 4
-                       ? (saving() ? (cvFiles().length ? 'Envoi du CV…' : 'Enregistrement…') : 'Enregistrer le profil')
-                       : 'Suivant'"
+                       ? (saving() ? (cvFiles().length ? ('CANDIDATES.FORM.SAVING_CV' | translate) : ('CANDIDATES.FORM.SAVING' | translate)) : ('CANDIDATES.FORM.SAVE_PROFILE' | translate))
+                       : ('CANDIDATES.FORM.NEXT' | translate)"
             [options]="{ variant: 'teal', pill: true, fullWidth: true,
                          iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
                          iconStart: currentStep() === 4 ? 'save' : undefined,
@@ -223,11 +223,11 @@
       <!-- Progression -->
       <daf-card class="block" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
         <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-outline">Progression</p>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-outline">{{ 'CANDIDATES.FORM.PROGRESS' | translate }}</p>
         </div>
         <div class="p-5">
           <div class="relative flex flex-col">
-            @for (step of wizardSteps; track $index; let i = $index) {
+            @for (step of wizardSteps(); track $index; let i = $index) {
               <div class="flex items-center gap-3.5 py-2 relative z-10">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold transition-colors"
                      [class.bg-tertiary]="currentStep() === i + 1 || currentStep() > i + 1"
@@ -274,7 +274,7 @@
 
           <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between gap-2 mb-1">
-              <h4 class="text-[15px] font-semibold text-on-surface">Qualité du profil</h4>
+              <h4 class="text-[15px] font-semibold text-on-surface">{{ 'CANDIDATES.FORM.PROFILE_QUALITY' | translate }}</h4>
               <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                     style="background:rgba(121,215,190,0.15); color:#50717b">
                 {{ completenessLabel() }}
@@ -282,7 +282,7 @@
             </div>
 
             <p class="text-[13px] text-on-surface-variant mb-3">
-              En complétant toutes les sections, vous augmentez la visibilité du candidat pour les managers.
+              {{ 'CANDIDATES.FORM.QUALITY_HINT' | translate }}
             </p>
 
             <div class="w-full bg-white rounded-full h-2.5 overflow-hidden mb-1">
@@ -291,7 +291,7 @@
                    [style.width.%]="profileCompleteness()"></div>
             </div>
             <p class="text-[13px] font-semibold mb-4" style="color:#50717b">
-              {{ profileCompleteness() }}% complété
+              {{ profileCompleteness() }}{{ 'CANDIDATES.FORM.PCT_COMPLETED' | translate }}
             </p>
 
             <ul class="space-y-1.5">
@@ -321,7 +321,7 @@
 
 <!-- Mobile: compact progress strip + sticky bottom Précédent/Suivant bar -->
 <div class="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center gap-1.5 px-4 py-2 bg-white border-b border-outline-variant">
-  @for (step of wizardSteps; track $index; let i = $index) {
+  @for (step of wizardSteps(); track $index; let i = $index) {
     <div class="flex-1 h-1.5 rounded-full transition-colors"
          [class.bg-tertiary]="currentStep() >= i + 1"
          [class.bg-outline-variant]="currentStep() < i + 1"></div>
@@ -332,16 +332,16 @@
      style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))">
   <div class="flex-1">
     @if (currentStep() > 1) {
-      <daf-button class="block w-full" label="Précédent" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'arrow_back', fullWidth: true }" (onClick)="goPrev()" />
+      <daf-button class="block w-full" [label]="'CANDIDATES.FORM.PREV' | translate" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'arrow_back', fullWidth: true }" (onClick)="goPrev()" />
     } @else {
-      <daf-button class="block w-full" label="Annuler" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'close', fullWidth: true }" (onClick)="onCancel()" />
+      <daf-button class="block w-full" [label]="'CANDIDATES.COMMON.CANCEL' | translate" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'close', fullWidth: true }" (onClick)="onCancel()" />
     }
   </div>
   <div class="flex-1">
     <daf-button class="block w-full"
       [label]="currentStep() === 4
-                 ? (saving() ? 'Enregistrement…' : 'Enregistrer')
-                 : 'Suivant'"
+                 ? (saving() ? ('CANDIDATES.FORM.SAVING' | translate) : ('CANDIDATES.FORM.SAVE' | translate))
+                 : ('CANDIDATES.FORM.NEXT' | translate)"
       [options]="{ variant: 'teal', pill: true, size: 'md', fullWidth: true, loading: saving(), disabled: !canGoNext() || saving() }"
       (onClick)="goNext()" />
   </div>

@@ -1,4 +1,3 @@
-export * from './permission.directive';
 export * from './spinner.component';
 export * from './modal.component';
 export * from './data-table.component';

@@ -1,22 +1,22 @@
-<app-modal title="Confirmer la création du dossier" [visible]="visible()" (closed)="closed.emit()" [hasFooter]="true">
+<app-modal [title]="'ONBOARDING.CONFIRM.TITLE' | translate" [visible]="visible()" (closed)="closed.emit()" [hasFooter]="true">
   <div class="modal-body">
     <p class="modal-question">
-      Êtes-vous sûr de vouloir créer le dossier de
-      <strong>{{ firstName() }} {{ lastName() }}</strong> ?
+      {{ 'ONBOARDING.CONFIRM.QUESTION_PRE' | translate }}
+      <strong>{{ firstName() }} {{ lastName() }}</strong> {{ 'ONBOARDING.CONFIRM.QUESTION_POST' | translate }}
     </p>
     <div class="email-box">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       <span>{{ ms365Email() }}</span>
     </div>
     <p class="modal-warning">
-      Un email de bienvenue sera envoyé à cette adresse et le dossier employé sera créé officiellement.
-      <strong>Cette action est irréversible.</strong>
+      {{ 'ONBOARDING.CONFIRM.WARNING' | translate }}
+      <strong>{{ 'ONBOARDING.CONFIRM.WARNING_IRREVERSIBLE' | translate }}</strong>
     </p>
   </div>
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" [options]="{ disabled: submitting() }" (onClick)="closed.emit()" />
+    <daf-button [label]="'ONBOARDING.CONFIRM.CANCEL' | translate" variant="secondary" [options]="{ disabled: submitting() }" (onClick)="closed.emit()" />
     <daf-button
-      [label]="submitting() ? 'Création en cours…' : 'Confirmer et créer'"
+      [label]="submitting() ? ('ONBOARDING.CONFIRM.CREATING' | translate) : ('ONBOARDING.CONFIRM.CONFIRM_CREATE' | translate)"
       variant="teal"
       [options]="{ disabled: submitting(), loading: submitting() }"
       (onClick)="confirmed.emit()"

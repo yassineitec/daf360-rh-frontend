@@ -7,14 +7,14 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
-import { PermissionDirective } from '../../../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
 
 @Component({
   selector: 'app-regime-catalog',
   standalone: true,
   imports: [
-    ReactiveFormsModule, PermissionDirective,
+    ReactiveFormsModule, DafHasPermissionDirective,
     ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent, ModalComponent,
   ],
   templateUrl: './regime-catalog.component.html',

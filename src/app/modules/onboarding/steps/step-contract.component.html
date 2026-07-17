@@ -1,64 +1,64 @@
 <div class="step-contract">
   <div class="step-header">
-    <h2 class="step-title">Poste &amp; Contrat</h2>
-    <p class="step-subtitle">Informations relatives au poste et aux conditions contractuelles</p>
+    <h2 class="step-title">{{ 'ONBOARDING.STEP_CONTRACT.TITLE' | translate }}</h2>
+    <p class="step-subtitle">{{ 'ONBOARDING.STEP_CONTRACT.SUBTITLE' | translate }}</p>
   </div>
 
   <div class="form-grid">
 
     <!-- Row 1: hireDate | contractType -->
     <div class="form-field">
-      <label class="form-label">Date d'embauche <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.HIRE_DATE' | translate }} <span class="req">*</span></label>
       <daf-multi-date-picker
         [value]="isoToDate(hireDate() || null)"
-        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
         (valueChange)="hireDate.set(dateToIso($event) || ''); emit()" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">Type de contrat <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.CONTRACT_TYPE' | translate }} <span class="req">*</span></label>
       <daf-select
         [selected]="contractType() ? [contractType()] : []"
-        [options]="contractOptions"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true }"
+        [options]="contractOptions()"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
         (selectedChange)="contractType.set($event[0] ?? ''); emit()" />
     </div>
 
     <!-- Row 2: grade | discipline -->
     <div class="form-field">
-      <label class="form-label">Grade <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.GRADE' | translate }} <span class="req">*</span></label>
       <daf-select
         [selected]="gradeId() != null ? [gradeId()!.toString()] : []"
         [options]="gradeOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="gradeId.set($event[0] ? +$event[0] : null); emit()" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">Discipline <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.DISCIPLINE' | translate }} <span class="req">*</span></label>
       <daf-select
         [selected]="disciplineId() != null ? [disciplineId()!.toString()] : []"
         [options]="disciplineOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="disciplineId.set($event[0] ? +$event[0] : null); emit()" />
     </div>
 
     <!-- Row 3: department | nogLevel -->
     <div class="form-field">
-      <label class="form-label">Département</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.DEPARTMENT' | translate }}</label>
       <daf-select
         [selected]="departmentId() != null ? [departmentId()!.toString()] : []"
         [options]="departmentOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="departmentId.set($event[0] ? +$event[0] : null); emit()" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">Niveau NOG</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.NOG_LEVEL' | translate }}</label>
       <daf-select
         [selected]="nogLevelId() != null ? [nogLevelId()!.toString()] : []"
         [options]="nogOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="nogLevelId.set($event[0] ? +$event[0] : null); emit()" />
     </div>
 
@@ -74,26 +74,26 @@
           />
           <span class="checkbox-custom"></span>
         </span>
-        <span class="checkbox-text">Période d'essai</span>
+        <span class="checkbox-text">{{ 'ONBOARDING.STEP_CONTRACT.PROBATION' | translate }}</span>
       </label>
     </div>
 
     <!-- Row 5: probationEndDate + contractEndDate (conditional) -->
     @if (isOnProbation()) {
       <div class="form-field">
-        <label class="form-label">Fin de période d'essai</label>
+        <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.PROBATION_END' | translate }}</label>
         <daf-multi-date-picker
           [value]="isoToDate(probationEndDate() || null)"
-          [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+          [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
           (valueChange)="probationEndDate.set(dateToIso($event) || ''); emit()" />
       </div>
 
       @if (contractType() === 'FIXED_TERM') {
         <div class="form-field">
-          <label class="form-label">Date fin contrat <span class="req">*</span></label>
+          <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.CONTRACT_END' | translate }} <span class="req">*</span></label>
           <daf-multi-date-picker
             [value]="isoToDate(contractEndDate() || null)"
-            [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+            [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
             (valueChange)="contractEndDate.set(dateToIso($event) || ''); emit()" />
         </div>
       }
@@ -101,10 +101,10 @@
 
     @if (!isOnProbation() && contractType() === 'FIXED_TERM') {
       <div class="form-field">
-        <label class="form-label">Date fin contrat <span class="req">*</span></label>
+        <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.CONTRACT_END' | translate }} <span class="req">*</span></label>
         <daf-multi-date-picker
           [value]="isoToDate(contractEndDate() || null)"
-          [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+          [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
           (valueChange)="contractEndDate.set(dateToIso($event) || ''); emit()" />
       </div>
     }

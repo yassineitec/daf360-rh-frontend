@@ -1,5 +1,6 @@
 import { Component, ElementRef, HostListener, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import {
   BadgeCell,
@@ -42,11 +43,11 @@ const BADGE_VARIANT: Record<string, BadgeVariant> = {
 };
 
 /** The four columns of the design board, in order. REJETE is intentionally omitted. */
-const BOARD_STAGES: Array<{ key: string; label: string; accent: string; badgeBg: string }> = [
-  { key: 'SCREENING', label: 'Préqualification', accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'  },
-  { key: 'ENTRETIEN', label: 'Entretien', accent: '#79D7BE', badgeBg: 'rgba(121,215,190,0.18)' },
-  { key: 'OFFRE',     label: 'Offre',      accent: '#F59E0B', badgeBg: 'rgba(245,158,11,0.14)' },
-  { key: 'RECRUTE',   label: 'Recruté',    accent: '#10B981', badgeBg: 'rgba(16,185,129,0.14)' },
+const BOARD_STAGES: Array<{ key: string; labelKey: string; accent: string; badgeBg: string }> = [
+  { key: 'SCREENING', labelKey: 'PIPELINE.STAGE.SCREENING', accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'  },
+  { key: 'ENTRETIEN', labelKey: 'PIPELINE.STAGE.ENTRETIEN', accent: '#79D7BE', badgeBg: 'rgba(121,215,190,0.18)' },
+  { key: 'OFFRE',     labelKey: 'PIPELINE.STAGE.OFFRE',      accent: '#F59E0B', badgeBg: 'rgba(245,158,11,0.14)' },
+  { key: 'RECRUTE',   labelKey: 'PIPELINE.STAGE.RECRUTE',    accent: '#10B981', badgeBg: 'rgba(16,185,129,0.14)' },
 ];
 
 interface BoardColumn {
@@ -66,13 +67,14 @@ interface BoardColumn {
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, FormFieldComponent, MetricCardComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent],
+  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, FormFieldComponent, MetricCardComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './pipeline.component.html',
 })
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
   private offerService    = inject(OfferService);
   private router          = inject(Router);
+  private translate       = inject(TranslateService);
 
   readonly kanbanColumns = signal<KanbanColumn[]>([]);
   readonly stats         = signal<PipelineStats | null>(null);
@@ -84,6 +86,7 @@ export class PipelineComponent implements OnInit {
 
   /** The four design columns, populated from the pipeline kanban response. */
   readonly boardColumns = computed<BoardColumn[]>(() => {
+    this.translate.currentLang();
     const cols = this.kanbanColumns();
     const term = this.search().trim().toLowerCase();
 
@@ -109,7 +112,8 @@ export class PipelineComponent implements OnInit {
         s.key === 'SCREENING' ? prequalification :
         s.key === 'ENTRETIEN' ? entretien :
         stageOf(s.key);
-      return { ...s, count: candidates.length, candidates };
+      const { labelKey, ...rest } = s;
+      return { ...rest, label: this.translate.instant(labelKey), count: candidates.length, candidates };
     });
   });
 
@@ -147,8 +151,8 @@ export class PipelineComponent implements OnInit {
 
   // ── Lib form-field option presets ────────────────────────────────────────
   readonly salaryFieldOpts:  FormFieldOptions = { type: 'number', placeholder: '0', fullWidth: true };
-  readonly noteFieldOpts:    FormFieldOptions = { type: 'text',   placeholder: 'Avantages, prime, devise…', fullWidth: true };
-  readonly reasonFieldOpts:  FormFieldOptions = { type: 'textarea', placeholder: 'Motif du refus…', rows: 3, fullWidth: true };
+  readonly noteFieldOpts:    FormFieldOptions = { type: 'text',   placeholder: this.translate.instant('PIPELINE.OFFER.NOTE_PLACEHOLDER'), fullWidth: true };
+  readonly reasonFieldOpts:  FormFieldOptions = { type: 'textarea', placeholder: this.translate.instant('PIPELINE.OFFER.REASON_PLACEHOLDER'), rows: 3, fullWidth: true };
 
   ngOnInit(): void {
     this.load();
@@ -188,13 +192,16 @@ export class PipelineComponent implements OnInit {
   }
 
   // ── List view (flattens the filtered board into a table) ────────────────────
-  readonly listColumns: TableColumn[] = [
-    { key: 'candidat', label: 'Candidat', type: 'avatar' },
-    { key: 'poste',    label: 'Poste' },
-    { key: 'stage',    label: 'Étape', type: 'badge' },
-    { key: 'fit',      label: 'Fit', align: 'right' },
-    { key: '_actions', label: '', align: 'right', clickable: true },
-  ];
+  readonly listColumns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'candidat', label: this.translate.instant('PIPELINE.COL_CANDIDATE'), type: 'avatar' },
+      { key: 'poste',    label: this.translate.instant('PIPELINE.COL_POSITION') },
+      { key: 'stage',    label: this.translate.instant('PIPELINE.COL_STAGE'), type: 'badge' },
+      { key: 'fit',      label: this.translate.instant('PIPELINE.COL_FIT'), align: 'right' },
+      { key: '_actions', label: '', align: 'right', clickable: true },
+    ];
+  });
   readonly listConfig: TableConfig = { hoverable: true };
   readonly listRows = computed<TableRow[]>(() =>
     this.boardColumns().flatMap(col => col.candidates).map(c => ({
@@ -276,12 +283,12 @@ export class PipelineComponent implements OnInit {
       next: () => {
         this.offerSubmitting.set(false);
         this.offerTarget.set(null);
-        this.notice.set(renegotiate ? `Offre renégociée pour ${target.fullName}.` : `Offre envoyée à ${target.fullName}.`);
+        this.notice.set(this.translate.instant(renegotiate ? 'PIPELINE.NOTICE.RENEGOTIATED' : 'PIPELINE.NOTICE.SENT', { name: target.fullName }));
         this.load();
       },
       error: err => {
         this.offerSubmitting.set(false);
-        this.offerError.set(err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'envoi de l'offre.");
+        this.offerError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('PIPELINE.ERRORS.SEND'));
       },
     });
   }
@@ -291,8 +298,8 @@ export class PipelineComponent implements OnInit {
     this.actioningId.set(c.id);
     this.notice.set(null);
     this.offerService.acceptOffer(c.id).subscribe({
-      next: () => { this.actioningId.set(null); this.notice.set(`Offre acceptée — ${c.fullName} passe au provisioning IT.`); this.load(); },
-      error: err => { this.actioningId.set(null); this.notice.set(err?.error?.detail ?? "Erreur lors de l'acceptation de l'offre."); },
+      next: () => { this.actioningId.set(null); this.notice.set(this.translate.instant('PIPELINE.NOTICE.ACCEPTED', { name: c.fullName })); this.load(); },
+      error: err => { this.actioningId.set(null); this.notice.set(err?.error?.detail ?? this.translate.instant('PIPELINE.ERRORS.ACCEPT')); },
     });
   }
 
@@ -312,8 +319,8 @@ export class PipelineComponent implements OnInit {
     if (!target || !this.rejectReason.trim()) return;
     this.rejectSubmitting.set(true);
     this.offerService.rejectOffer(target.id, this.rejectReason.trim()).subscribe({
-      next: () => { this.rejectSubmitting.set(false); this.rejectTarget.set(null); this.notice.set(`Offre refusée pour ${target.fullName}.`); this.load(); },
-      error: err => { this.rejectSubmitting.set(false); this.offerError.set(err?.error?.detail ?? "Erreur lors du refus de l'offre."); },
+      next: () => { this.rejectSubmitting.set(false); this.rejectTarget.set(null); this.notice.set(this.translate.instant('PIPELINE.NOTICE.REFUSED', { name: target.fullName })); this.load(); },
+      error: err => { this.rejectSubmitting.set(false); this.offerError.set(err?.error?.detail ?? this.translate.instant('PIPELINE.ERRORS.REFUSE')); },
     });
   }
 
@@ -370,6 +377,12 @@ export class PipelineComponent implements OnInit {
   readonly urgentMetricOpts: MetricCardOptions = { icon: 'priority_high', iconColor: 'text-danger',  iconBg: 'bg-danger/10' };
 
   readonly totalMetricValue  = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
-  readonly delayMetricValue  = computed(() => this.kpiDelay() != null ? `${this.kpiDelay()} jours` : '—');
-  readonly urgentMetricValue = computed(() => `${this.kpiUrgent()} Ouverts`);
+  readonly delayMetricValue  = computed(() => {
+    this.translate.currentLang();
+    return this.kpiDelay() != null ? this.translate.instant('PIPELINE.DAYS', { count: this.kpiDelay() }) : '—';
+  });
+  readonly urgentMetricValue = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant('PIPELINE.URGENT_OPEN', { count: this.kpiUrgent() });
+  });
 }

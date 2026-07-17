@@ -1,7 +1,8 @@
 import {
-  Component, effect, inject, input, output, signal,
+  Component, computed, effect, inject, input, output, signal,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
 
 import { UserStore }               from '../../core/user.store';
@@ -22,7 +23,7 @@ import {
 @Component({
   selector: 'app-recruitment-demand-form',
   standalone: true,
-  imports: [ReactiveFormsModule, TagsInputComponent],
+  imports: [ReactiveFormsModule, TagsInputComponent, TranslatePipe],
   templateUrl: './recruitment-demand-form.component.html',
   styleUrl: './recruitment-demand-form.component.scss',
 })
@@ -36,6 +37,7 @@ export class RecruitmentDemandFormComponent {
   private listSvc   = inject(ConfigurableListService);
   private refSvc    = inject(RefDataService);
   private userStore = inject(UserStore);
+  private translate = inject(TranslateService);
 
   // Form state
   saving    = signal(false);
@@ -55,9 +57,19 @@ export class RecruitmentDemandFormComponent {
   departments      = signal<RefDataItem[]>([]);
 
   // Static reference data
-  readonly reasons  = RECRUITMENT_REASONS;
   readonly techSugg = TECHNICAL_SKILLS_SUGGESTIONS;
   readonly softSugg = SOFT_SKILLS_SUGGESTIONS;
+
+  // Translated recruitment reasons (recomputed on language change)
+  readonly reasons = computed(() => {
+    this.translate.currentLang();
+    return RECRUITMENT_REASONS.map(r => ({
+      value: r.value,
+      icon:  r.icon,
+      label:       this.translate.instant(`RECRUITMENT_DEMANDS.FORM.REASON.${r.value}_LABEL`),
+      description: this.translate.instant(`RECRUITMENT_DEMANDS.FORM.REASON.${r.value}_DESC`),
+    }));
+  });
 
   form = this.fb.group({
     jobTitle:          ['', Validators.required],
@@ -119,13 +131,13 @@ export class RecruitmentDemandFormComponent {
     this.submitted.set(true);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Veuillez remplir tous les champs obligatoires.');
+      this.error.set(this.translate.instant('RECRUITMENT_DEMANDS.FORM.ERR_REQUIRED'));
       return;
     }
 
     const paysId = this.userStore.currentUser()?.paysId;
     if (!paysId) {
-      this.error.set('Pays non déterminé — reconnectez-vous.');
+      this.error.set(this.translate.instant('RECRUITMENT_DEMANDS.FORM.ERR_NO_PAYS'));
       return;
     }
 
@@ -162,7 +174,7 @@ export class RecruitmentDemandFormComponent {
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Une erreur est survenue.');
+        this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('RECRUITMENT_DEMANDS.FORM.ERR_GENERIC'));
       },
     });
   }

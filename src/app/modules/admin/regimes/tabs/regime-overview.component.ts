@@ -12,7 +12,7 @@ import {
   RegimeOverviewStats, EmployeeRegimeOverview, WorkingTimeRegime,
   AssignEmployeeOverrideRequest,
 } from '../regime.model';
-import { PermissionDirective } from '../../../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
 import { RhSearchBarComponent } from '../../../../shared/search-bar.component';
 
@@ -22,7 +22,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   selector: 'app-regime-overview',
   standalone: true,
   imports: [
-    NgClass, PermissionDirective, DataTableComponent, DafCellDirective,
+    NgClass, DafHasPermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
     PaginationComponent, RhSearchBarComponent,
   ],

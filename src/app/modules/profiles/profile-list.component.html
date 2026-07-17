@@ -2,10 +2,10 @@
 
   <!-- ── Header ──────────────────────────────────────────────────────── -->
   <div class="flex items-center justify-between">
-      <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">Profiles</h1>
+      <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">{{ 'PROFILES.LIST.TITLE' | translate }}</h1>
       @if (!loading()) {
         <p class="text-[13px] text-outline mt-0.5">
-          {{ totalElements() }} employé{{ totalElements() !== 1 ? 's' : '' }}
+          {{ 'PROFILES.LIST.EMPLOYEES_COUNT' | translate:{ count: totalElements() } }}
         </p>
       }
   </div>
@@ -18,7 +18,7 @@
         <!-- Desktop/tablet: full search box -->
         <div class="hidden sm:block w-[360px] ml-0.5">
           <rh-search-bar
-            placeholder="Rechercher par nom, email…"
+            [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
             [value]="searchQuery()"
             (valueChange)="onSearch($event)" />
         </div>
@@ -29,7 +29,7 @@
           [class.bg-primary]="mobileSearchOpen()"
           [class.text-white]="mobileSearchOpen()"
           (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-          aria-label="Rechercher">
+          [attr.aria-label]="'PROFILES.LIST.SEARCH_ARIA' | translate">
           <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
         </button>
 
@@ -38,12 +38,12 @@
             class="flex items-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-container transition-colors"
             (click)="onToolbarAction('filters')">
             <span class="material-symbols-outlined text-[18px]">tune</span>
-            Filtres avancés
+            {{ 'PROFILES.LIST.ADVANCED_FILTERS' | translate }}
           </button>
 
           <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
           <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-            @for (opt of viewToggleOptions; track opt.id) {
+            @for (opt of viewToggleOptions(); track opt.id) {
               <button type="button"
                 class="flex items-center justify-center w-11 h-11 transition-colors"
                 [class.bg-primary]="viewMode() === opt.id"
@@ -62,7 +62,7 @@
       @if (mobileSearchOpen()) {
         <div class="sm:hidden ml-0.5 mt-3">
           <rh-search-bar
-            placeholder="Rechercher par nom, email…"
+            [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
             [value]="searchQuery()"
             (valueChange)="onSearch($event)" />
         </div>
@@ -73,7 +73,7 @@
   <!-- ── Active filter tags ────────────────────────────────────────────── -->
   @if (activeFilterTags().length > 0) {
     <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-[13px] text-outline">Filtres actifs :</span>
+      <span class="text-[13px] text-outline">{{ 'PROFILES.LIST.ACTIVE_FILTERS' | translate }}</span>
       @for (tag of activeFilterTags(); track tag.key) {
         <span class="flex items-center gap-1 px-3 py-1 bg-surface-container
                      rounded-full text-[13px] font-medium text-on-surface">
@@ -84,7 +84,7 @@
         </span>
       }
       <daf-button
-        label="Tout effacer"
+        [label]="'PROFILES.LIST.CLEAR_ALL' | translate"
         variant="ghost"
         (onClick)="clearFilters()" />
     </div>
@@ -103,10 +103,10 @@
   @else if (error()) {
     <div class="flex flex-col items-center justify-center h-64 text-outline">
       <span class="material-symbols-outlined text-display mb-3 text-error">error_outline</span>
-      <p class="text-body-lg font-medium">Erreur lors du chargement</p>
+      <p class="text-body-lg font-medium">{{ 'PROFILES.LIST.LOAD_ERROR' | translate }}</p>
       <daf-button
         class="mt-3"
-        label="Réessayer"
+        [label]="'PROFILES.LIST.RETRY' | translate"
         variant="teal"
         (onClick)="loadEmployees()" />
     </div>
@@ -117,8 +117,8 @@
     @if (employees().length === 0) {
       <div class="flex flex-col items-center justify-center h-64 text-outline">
         <span class="material-symbols-outlined text-display mb-3">person_search</span>
-        <p class="text-body-lg font-medium">Aucun employé trouvé</p>
-        <p class="text-[13px] mt-1">Modifiez vos filtres de recherche</p>
+        <p class="text-body-lg font-medium">{{ 'PROFILES.LIST.NO_EMPLOYEES' | translate }}</p>
+        <p class="text-[13px] mt-1">{{ 'PROFILES.LIST.ADJUST_FILTERS' | translate }}</p>
       </div>
     } @else {
       @let selIds = selectedIds();
@@ -129,10 +129,10 @@
           [checked]="isAllSelected()"
           [indeterminate]="selectedCount() > 0 && !isAllSelected()"
           (checkedChange)="$event ? selectAll() : clearSelection()"
-          [options]="{ label: isAllSelected() ? 'Tout désélectionner' : 'Tout sélectionner (' + employees().length + ')' }" />
+          [options]="{ label: isAllSelected() ? ('PROFILES.LIST.DESELECT_ALL' | translate) : ('PROFILES.LIST.SELECT_ALL' | translate:{ count: employees().length }) }" />
         @if (selectedCount() > 0) {
           <span class="text-[13px] font-medium text-[#50717B]">
-            {{ selectedCount() }} sélectionné(s)
+            {{ 'PROFILES.LIST.SELECTED_COUNT' | translate:{ count: selectedCount() } }}
           </span>
         }
       </div>
@@ -157,8 +157,8 @@
     @if (employees().length === 0) {
       <div class="flex flex-col items-center justify-center h-64 text-outline">
         <span class="material-symbols-outlined text-display mb-3">person_search</span>
-        <p class="text-body-lg font-medium">Aucun employé trouvé</p>
-        <p class="text-[13px] mt-1">Modifiez vos filtres de recherche</p>
+        <p class="text-body-lg font-medium">{{ 'PROFILES.LIST.NO_EMPLOYEES' | translate }}</p>
+        <p class="text-[13px] mt-1">{{ 'PROFILES.LIST.ADJUST_FILTERS' | translate }}</p>
       </div>
     } @else {
       @let selIds = selectedIds();
@@ -169,10 +169,10 @@
           [checked]="isAllSelected()"
           [indeterminate]="selectedCount() > 0 && !isAllSelected()"
           (checkedChange)="$event ? selectAll() : clearSelection()"
-          [options]="{ label: isAllSelected() ? 'Tout désélectionner' : 'Tout sélectionner (' + employees().length + ')' }" />
+          [options]="{ label: isAllSelected() ? ('PROFILES.LIST.DESELECT_ALL' | translate) : ('PROFILES.LIST.SELECT_ALL' | translate:{ count: employees().length }) }" />
         @if (selectedCount() > 0) {
           <span class="text-[13px] font-medium text-[#50717B]">
-            {{ selectedCount() }} sélectionné(s)
+            {{ 'PROFILES.LIST.SELECTED_COUNT' | translate:{ count: selectedCount() } }}
           </span>
         }
       </div>
@@ -197,7 +197,7 @@
     <div class="flex items-center justify-between pt-4
                 border-t border-outline-variant">
       <span class="text-[13px] text-outline">
-        {{ totalElements() }} employé(s)
+        {{ 'PROFILES.LIST.EMPLOYEES_COUNT' | translate:{ count: totalElements() } }}
       </span>
       <daf-pagination
         [currentPage]="currentPage()"
@@ -214,8 +214,8 @@
 @if (selectedCount() > 0) {
   <daf-bulk-action-bar
     [count]="selectedCount()"
-    [actions]="bulkActions"
-    countLabel="sélectionné(s)"
+    [actions]="bulkActions()"
+    [countLabel]="'PROFILES.BULK.COUNT_LABEL' | translate"
     (actionClick)="onBulkActionClick($event)"
     (cancel)="clearSelection()" />
 }

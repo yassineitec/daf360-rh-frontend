@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { TranslatePipe } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
 
 import { UserStore } from '../../core/user.store';
@@ -9,37 +10,36 @@ import { RecruitmentDemandService } from './recruitment-demand.service';
 import {
   RecruitmentDemandSummary,
   RecruitmentDemandStatus,
-  DEMAND_STATUS_LABELS,
   DEMAND_STATUS_BADGE,
 } from './recruitment-demand.model';
 import { RecruitmentDemandFormComponent } from './recruitment-demand-form.component';
 
-const STATUS_FILTER_OPTS: { value: string; label: string }[] = [
-  { value: '',           label: 'Tous les statuts' },
-  { value: 'EN_ATTENTE', label: 'En attente' },
-  { value: 'APPROUVEE',  label: 'Approuvées' },
-  { value: 'REJETEE',    label: 'Rejetées' },
-  { value: 'ANNULEE',    label: 'Annulées' },
-  { value: 'CLOTUREE',   label: 'Clôturées' },
+const STATUS_FILTER_OPTS: { value: string; labelKey: string }[] = [
+  { value: '',           labelKey: 'RECRUITMENT_DEMANDS.FILTER.ALL' },
+  { value: 'EN_ATTENTE', labelKey: 'RECRUITMENT_DEMANDS.FILTER.EN_ATTENTE' },
+  { value: 'APPROUVEE',  labelKey: 'RECRUITMENT_DEMANDS.FILTER.APPROUVEE' },
+  { value: 'REJETEE',    labelKey: 'RECRUITMENT_DEMANDS.FILTER.REJETEE' },
+  { value: 'ANNULEE',    labelKey: 'RECRUITMENT_DEMANDS.FILTER.ANNULEE' },
+  { value: 'CLOTUREE',   labelKey: 'RECRUITMENT_DEMANDS.FILTER.CLOTUREE' },
 ];
 
 @Component({
   selector: 'app-recruitment-demand-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, RecruitmentDemandFormComponent],
+  imports: [RouterLink, FormsModule, DatePipe, TranslatePipe, RecruitmentDemandFormComponent],
   template: `
     <!-- ── Header ─────────────────────────────────────────────────── -->
     <div class="page-header">
       <div>
-        <h1 class="page-title">Demandes de recrutement</h1>
-        <p class="page-sub">{{ total() }} demande{{ total() !== 1 ? 's' : '' }}</p>
+        <h1 class="page-title">{{ 'RECRUITMENT_DEMANDS.LIST.TITLE' | translate }}</h1>
+        <p class="page-sub">{{ total() }} {{ (total() === 1 ? 'RECRUITMENT_DEMANDS.LIST.DEMAND_SINGULAR' : 'RECRUITMENT_DEMANDS.LIST.DEMAND_PLURAL') | translate }}</p>
       </div>
       @if (canCreate()) {
         <button class="btn-primary" (click)="showForm.set(true)" type="button">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Nouvelle demande
+          {{ 'RECRUITMENT_DEMANDS.LIST.NEW_DEMAND' | translate }}
         </button>
       }
     </div>
@@ -48,20 +48,20 @@ const STATUS_FILTER_OPTS: { value: string; label: string }[] = [
     <div class="filters-bar">
       <select class="filter-select" [(ngModel)]="filterStatut" (ngModelChange)="reload()">
         @for (o of statusOpts; track o.value) {
-          <option [value]="o.value">{{ o.label }}</option>
+          <option [value]="o.value">{{ o.labelKey | translate }}</option>
         }
       </select>
     </div>
 
     <!-- ── Loading / Empty ─────────────────────────────────────────── -->
     @if (loading()) {
-      <div class="empty-state"><span class="spinner"></span> Chargement…</div>
+      <div class="empty-state"><span class="spinner"></span> {{ 'RECRUITMENT_DEMANDS.LIST.LOADING' | translate }}</div>
     } @else if (items().length === 0) {
       <div class="empty-state">
-        <p>Aucune demande de recrutement trouvée.</p>
+        <p>{{ 'RECRUITMENT_DEMANDS.LIST.EMPTY' | translate }}</p>
         @if (canCreate()) {
           <button class="btn-primary" (click)="showForm.set(true)" type="button">
-            Créer une demande
+            {{ 'RECRUITMENT_DEMANDS.LIST.CREATE_DEMAND' | translate }}
           </button>
         }
       </div>
@@ -71,13 +71,13 @@ const STATUS_FILTER_OPTS: { value: string; label: string }[] = [
         <table class="data-table">
           <thead>
             <tr>
-              <th>Poste</th>
-              <th>Motif</th>
-              <th>Urgence</th>
-              <th>Effectif</th>
-              <th>Candidats</th>
-              <th>Statut</th>
-              <th>Soumise le</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_POSITION' | translate }}</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_REASON' | translate }}</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_URGENCY' | translate }}</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_HEADCOUNT' | translate }}</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_CANDIDATES' | translate }}</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_STATUS' | translate }}</th>
+              <th>{{ 'RECRUITMENT_DEMANDS.LIST.COL_SUBMITTED' | translate }}</th>
               <th></th>
             </tr>
           </thead>
@@ -96,12 +96,12 @@ const STATUS_FILTER_OPTS: { value: string; label: string }[] = [
                 <td>{{ d.candidateCount }}</td>
                 <td>
                   <span [class]="'badge ' + badgeClass(d.statut)">
-                    {{ statusLabel(d.statut) }}
+                    {{ ('RECRUITMENT_DEMANDS.STATUS.' + d.statut) | translate }}
                   </span>
                 </td>
                 <td class="text-muted">{{ d.submittedAt | date:'dd/MM/yyyy' }}</td>
                 <td>
-                  <a [routerLink]="[d.id]" class="link-action">Voir</a>
+                  <a [routerLink]="[d.id]" class="link-action">{{ 'RECRUITMENT_DEMANDS.LIST.VIEW' | translate }}</a>
                 </td>
               </tr>
             }
@@ -112,9 +112,9 @@ const STATUS_FILTER_OPTS: { value: string; label: string }[] = [
       <!-- ── Pagination ─────────────────────────────────────────────── -->
       @if (totalPages() > 1) {
         <div class="pagination-bar">
-          <button class="btn-ghost" [disabled]="page() === 0" (click)="changePage(page() - 1)" type="button">‹ Préc.</button>
-          <span class="page-info">Page {{ page() + 1 }} / {{ totalPages() }}</span>
-          <button class="btn-ghost" [disabled]="page() >= totalPages() - 1" (click)="changePage(page() + 1)" type="button">Suiv. ›</button>
+          <button class="btn-ghost" [disabled]="page() === 0" (click)="changePage(page() - 1)" type="button">{{ 'RECRUITMENT_DEMANDS.LIST.PREV' | translate }}</button>
+          <span class="page-info">{{ 'RECRUITMENT_DEMANDS.LIST.PAGE_INFO' | translate:{ page: page() + 1, total: totalPages() } }}</span>
+          <button class="btn-ghost" [disabled]="page() >= totalPages() - 1" (click)="changePage(page() + 1)" type="button">{{ 'RECRUITMENT_DEMANDS.LIST.NEXT' | translate }}</button>
         </div>
       }
     }
@@ -189,7 +189,6 @@ export class RecruitmentDemandListComponent implements OnInit {
     this.load();
   }
 
-  statusLabel(s: RecruitmentDemandStatus): string { return DEMAND_STATUS_LABELS[s]; }
   badgeClass(s: RecruitmentDemandStatus): string  { return DEMAND_STATUS_BADGE[s]; }
 
   private load(): void {

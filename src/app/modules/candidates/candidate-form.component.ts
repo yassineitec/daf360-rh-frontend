@@ -25,6 +25,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-candidate-form',
@@ -39,6 +40,7 @@ import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
     FormFieldComponent,
     SelectComponent,
     SliderComponent,
+    TranslatePipe,
   ],
   templateUrl: './candidate-form.component.html',
 })
@@ -50,6 +52,7 @@ export class CandidateFormComponent implements OnInit {
   private refSvc           = inject(RefDataService);
   private listSvc          = inject(ConfigurableListService);
   private router           = inject(Router);
+  private translate        = inject(TranslateService);
 
   saving          = signal(false);
   error           = signal<string | null>(null);
@@ -92,16 +95,25 @@ export class CandidateFormComponent implements OnInit {
   // ── Wizard state ─────────────────────────────────────────────────────────
   currentStep = signal(1);
 
-  private readonly STEP_INFO: { title: string; sub: string; icon: string }[] = [
-    { title: "Informations d'Identité", sub: 'Coordonnées et identité du candidat',              icon: 'person' },
-    { title: 'Poste & Contrat',          sub: 'Poste visé, type de contrat et affectation',        icon: 'work' },
-    { title: 'Curriculum Vitae',         sub: 'Téléversez le CV du candidat (optionnel)',          icon: 'description' },
-    { title: 'Notes & Commentaires',     sub: 'Observations complémentaires (optionnel)',          icon: 'edit_note' },
+  private readonly STEP_INFO: { titleKey: string; subKey: string; icon: string }[] = [
+    { titleKey: 'CANDIDATES.FORM.STEP1_TITLE', subKey: 'CANDIDATES.FORM.STEP1_SUB', icon: 'person' },
+    { titleKey: 'CANDIDATES.FORM.STEP2_TITLE', subKey: 'CANDIDATES.FORM.STEP2_SUB', icon: 'work' },
+    { titleKey: 'CANDIDATES.FORM.STEP3_TITLE', subKey: 'CANDIDATES.FORM.STEP3_SUB', icon: 'description' },
+    { titleKey: 'CANDIDATES.FORM.STEP4_TITLE', subKey: 'CANDIDATES.FORM.STEP4_SUB', icon: 'edit_note' },
   ];
 
-  readonly wizardSteps = this.STEP_INFO.map(s => ({ title: s.title }));
-  readonly cardTitle   = computed(() => this.STEP_INFO[this.currentStep() - 1].title);
-  readonly cardSub     = computed(() => this.STEP_INFO[this.currentStep() - 1].sub);
+  readonly wizardSteps = computed(() => {
+    this.translate.currentLang();
+    return this.STEP_INFO.map(s => ({ title: this.translate.instant(s.titleKey) }));
+  });
+  readonly cardTitle   = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant(this.STEP_INFO[this.currentStep() - 1].titleKey);
+  });
+  readonly cardSub     = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant(this.STEP_INFO[this.currentStep() - 1].subKey);
+  });
   readonly cardIcon    = computed(() => this.STEP_INFO[this.currentStep() - 1].icon);
 
   readonly canGoNext = computed(() => {
@@ -115,9 +127,10 @@ export class CandidateFormComponent implements OnInit {
 
   readonly stepValidationError = computed<string | null>(() => {
     this.formValue(); // recompute on every form change (see canGoNext)
+    this.translate.currentLang();
     switch (this.currentStep()) {
-      case 1:  return this.identityGroup.valid ? null : 'Veuillez renseigner le prénom, le nom et un email professionnel valide.';
-      case 2:  return this.positionGroup.valid ? null : 'Veuillez sélectionner un type de contrat et une date de début.';
+      case 1:  return this.identityGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP1_ERR');
+      case 2:  return this.positionGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP2_ERR');
       default: return null;
     }
   });
@@ -166,24 +179,26 @@ export class CandidateFormComponent implements OnInit {
   });
 
   readonly completenessLabel = computed(() => {
+    this.translate.currentLang();
     const p = this.profileCompleteness();
-    if (p >= 100) return 'Complet';
-    if (p >= 75)  return 'Très bon';
-    if (p >= 50)  return 'Bon';
-    if (p >= 25)  return 'En cours';
-    return 'À compléter';
+    if (p >= 100) return this.translate.instant('CANDIDATES.FORM.COMPLETE');
+    if (p >= 75)  return this.translate.instant('CANDIDATES.FORM.VERY_GOOD');
+    if (p >= 50)  return this.translate.instant('CANDIDATES.FORM.GOOD');
+    if (p >= 25)  return this.translate.instant('CANDIDATES.FORM.IN_PROGRESS');
+    return this.translate.instant('CANDIDATES.FORM.TO_COMPLETE');
   });
 
   readonly requiredFieldsStatus = computed(() => {
+    this.translate.currentLang();
     const v   = this.formValue() as any;
     const id  = v?.identity ?? {};
     const pos = v?.position ?? {};
     return [
-      { label: 'Prénom et Nom',       done: !!(id.firstName && id.lastName) },
-      { label: 'Email professionnel', done: !!id.emailPersonal },
-      { label: 'Poste souhaité',      done: !!pos.appliedPosition },
-      { label: 'Type de contrat',     done: !!pos.employmentTypeId },
-      { label: 'Date de début',       done: !!pos.expectedStartDate },
+      { label: this.translate.instant('CANDIDATES.FORM.RF_NAME'),     done: !!(id.firstName && id.lastName) },
+      { label: this.translate.instant('CANDIDATES.FORM.RF_EMAIL'),    done: !!id.emailPersonal },
+      { label: this.translate.instant('CANDIDATES.FORM.RF_POSITION'), done: !!pos.appliedPosition },
+      { label: this.translate.instant('CANDIDATES.FORM.RF_CONTRACT'), done: !!pos.employmentTypeId },
+      { label: this.translate.instant('CANDIDATES.FORM.RF_START'),    done: !!pos.expectedStartDate },
     ];
   });
 
@@ -235,8 +250,8 @@ export class CandidateFormComponent implements OnInit {
   getFieldError(path: string): string {
     const ctrl = this.form.get(path);
     if (!ctrl?.touched || !ctrl?.invalid) return '';
-    if (ctrl.hasError('required')) return 'Ce champ est obligatoire.';
-    if (ctrl.hasError('email')) return "Format d'email invalide.";
+    if (ctrl.hasError('required')) return this.translate.instant('CANDIDATES.FORM.FIELD_REQUIRED');
+    if (ctrl.hasError('email')) return this.translate.instant('CANDIDATES.FORM.EMAIL_INVALID');
     return '';
   }
 
@@ -288,7 +303,7 @@ export class CandidateFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Veuillez remplir tous les champs obligatoires (marqués *).');
+      this.error.set(this.translate.instant('CANDIDATES.FORM.ERR_REQUIRED_STAR'));
       return;
     }
     this.error.set(null);
@@ -324,7 +339,7 @@ export class CandidateFormComponent implements OnInit {
       next:  created => this.afterSave(created.id),
       error: err     => {
         this.saving.set(false);
-        this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la création.');
+        this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.FORM.ERR_CREATE'));
       },
     });
   }
@@ -343,7 +358,7 @@ export class CandidateFormComponent implements OnInit {
       },
       error: () => {
         this.saving.set(false);
-        this.error.set('Candidat enregistré, mais le téléversement du CV a échoué. Réessayez depuis la fiche.');
+        this.error.set(this.translate.instant('CANDIDATES.FORM.ERR_CV_AFTER_SAVE'));
         setTimeout(() => this.router.navigate(['/rh/candidates', candidateId]), 3000);
       },
     });

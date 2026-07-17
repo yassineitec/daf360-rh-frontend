@@ -22,6 +22,7 @@ import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
 import { UserStore } from '../../core/user.store';
 import { NewRequestComponent } from './new-request.component';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { ConfirmService } from '../../core/confirm.service';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
 const DONE_STATUSES: RequestStatus[] = ['APPROVED', 'REJECTED', 'CANCELLED'];
@@ -178,6 +179,7 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
 })
 export class RequestListComponent implements OnInit {
   private svc = inject(RequestsService);
+  private confirm = inject(ConfirmService);
   private userStore = inject(UserStore);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -293,8 +295,12 @@ export class RequestListComponent implements OnInit {
     this.reload(false);
   }
 
-  cancel(row: EmployeeRequest) {
-    if (!confirm('Annuler cette demande ?')) return;
+  async cancel(row: EmployeeRequest) {
+    if (!(await this.confirm.ask({
+      title: 'Annuler la demande',
+      message: 'Annuler cette demande ?',
+      confirmLabel: 'Annuler la demande', cancelLabel: 'Retour',
+    }))) return;
     this.svc
       .cancelRequest(row.id, this.currentProfileId())
       .pipe(catchError(() => of(null)))

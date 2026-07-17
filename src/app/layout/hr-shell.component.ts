@@ -6,7 +6,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '../../environments/environment';
 import { UserStore } from '../core/user.store';
 import { AuthService } from '../core/auth.service';
-import { SideNavComponent } from '@khalilrebhiitec/daf360';
+import { SideNavComponent, PermissionService } from '@khalilrebhiitec/daf360';
 import type { NavItem, SideNavConfig } from '@khalilrebhiitec/daf360';
 import { TranslateService } from '@ngx-translate/core';
 import en from '@public/assets/i18n/en.json';
@@ -18,44 +18,49 @@ interface AppNavDef {
   label: string;
   icon: string;
   route: string;
-  permission: string | null;
+  /** Any-of gate; empty = visible to every authenticated user. */
+  permissions: string[];
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', route: 'dashboard', permission: null },
-  { id: 'profiles', label: 'Profiles', icon: 'account_circle', route: 'profiles', permission: null },
+  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', route: 'dashboard', permissions: [] },
+  { id: 'profiles', label: 'Profiles', icon: 'account_circle', route: 'profiles', permissions: [] },
   {
     id: 'recrutement',
     label: 'Pipeline RH',
     icon: 'analytics',
     route: 'recrutement',
-    permission: null,
+    permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE'],
   },
   {
     id: 'candidates',
     label: 'Candidats',
     icon: 'group_add',
     route: 'candidates',
-    permission: null,
+    permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'],
   },
   {
     id: 'it-provisioning',
     label: 'Provisioning IT',
     icon: 'devices',
     route: 'it-provisioning',
-    permission: null,
+    permissions: ['IT_PROVISIONING'],
   },
   {
     id: 'onboarding',
     label: 'Onboarding',
     icon: 'person_add',
     route: 'onboarding',
-    permission: null,
+    permissions: ['HR_ONBOARDING'],
   },
-  // { id: 'leave', label: 'Congés', icon: 'beach_access', route: 'leave', permission: null },
-  // { id: 'lifecycle', label: 'Lifecycle', icon: 'timeline', route: 'lifecycle', permission: null },
-  { id: 'requests', label: 'Demandes', icon: 'inbox', route: 'requests', permission: null },
-  { id: 'admin', label: 'Admin', icon: 'admin_panel_settings', route: 'admin', permission: null },
+  { id: 'requests', label: 'Demandes', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
+  {
+    id: 'admin',
+    label: 'Admin',
+    icon: 'admin_panel_settings',
+    route: 'admin',
+    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS'],
+  },
 ];
 
 @Component({
@@ -68,6 +73,7 @@ const APP_NAV_DEFS: AppNavDef[] = [
 })
 export class HrShellComponent implements OnInit {
   private userStore = inject(UserStore);
+  private perm = inject(PermissionService);
   private http = inject(HttpClient);
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
@@ -76,11 +82,11 @@ export class HrShellComponent implements OnInit {
   private translate = inject(TranslateService);
 
   constructor() {
-    // Register RH translations into whatever TranslateService is active —
-    // standalone: the one from appConfig; federated: the shell's singleton.
-    // Must run before child routes render so pipes find the keys on first eval.
-    // setTranslation is called BEFORE use() so loadOrExtendLanguage sees the
-    // translations as already present and skips the loader entirely.
+    // Populate the RH translation store. The shell route now provides an ISOLATED
+    // child TranslateService (see app.routes), so this writes to RH's OWN store and
+    // never clobbers the shell host's translations. Runs before child routes render
+    // so pipes find the keys on first eval; setTranslation before use() lets
+    // loadOrExtendLanguage skip the loader.
     this.translate.setTranslation('fr', fr, true);
     this.translate.setTranslation('en', en, true);
     this.translate.setTranslation('ar', ar, true);
@@ -94,7 +100,7 @@ export class HrShellComponent implements OnInit {
   onboardingCount = signal(0);
   sidebarOpen     = signal(false);
 
-  readonly activeRoute = toSignal(
+  private readonly rawUrl = toSignal(
     this.router.events.pipe(
       filter((e) => e instanceof NavigationEnd),
       map(() => this.router.url),
@@ -102,9 +108,21 @@ export class HrShellComponent implements OnInit {
     { initialValue: this.router.url, injector: this.injector },
   );
 
+  // daf-side-nav highlights on an exact `activeRoute === item.route` match, but nav
+  // routes are single segments ('dashboard', 'admin', …) while the URL is absolute
+  // (e.g. /rh/admin/roles). Map the live URL to the matching nav segment (longest
+  // match first) so nested/child routes still light up their top-level item.
+  readonly activeRoute = computed(() => {
+    const url = (this.rawUrl() ?? '').split(/[?#]/)[0];
+    const match = [...APP_NAV_DEFS]
+      .sort((a, b) => b.route.length - a.route.length)
+      .find((d) => new RegExp(`(^|/)${d.route}(/|$)`).test(url));
+    return match ? match.route : '';
+  });
+
   readonly navItems = computed<NavItem[]>(() =>
     APP_NAV_DEFS.filter(
-      (def) => def.permission === null || this.userStore.hasPermission(def.permission),
+      (def) => def.permissions.length === 0 || this.perm.hasAny(def.permissions),
     ).map((def) => ({
       id: def.id,
       label: def.label,

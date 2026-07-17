@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
@@ -27,30 +28,31 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { key: 'pending',   label: 'Candidatures',         statuses: ['PENDING'],
+  { key: 'pending',   label: 'RECRUITMENT_PIPELINE.STAGE.PENDING',    statuses: ['PENDING'],
     color: '#95a5a6', icon: '📋', nextRoute: null, nextLabel: null },
-  { key: 'accepted',  label: 'Acceptés — IT à faire', statuses: ['ACCEPTED'],
-    color: '#27ae60', icon: '✅', nextRoute: () => '/it-provisioning', nextLabel: 'Provisioning IT →' },
-  { key: 'it',        label: 'Provisioning IT',       statuses: ['IT_IN_PROGRESS','EMAIL_CREATED'],
-    color: '#3498db', icon: '💻', nextRoute: () => '/it-provisioning', nextLabel: 'Ouvrir →' },
-  { key: 'onboarding',label: 'Onboarding RH',         statuses: ['EMAIL_RECEIVED','HR_IN_PROGRESS'],
-    color: '#f39c12', icon: '📝', nextRoute: (c) => '/onboarding/' + c.id, nextLabel: 'Compléter →' },
-  { key: 'hired',     label: 'Embauchés',             statuses: ['HIRED'],
-    color: '#1e8449', icon: '🎉', nextRoute: () => '/profiles', nextLabel: 'Voir les profils →' },
-  { key: 'rejected',  label: 'Rejetés / Archivés',    statuses: ['REJECTED','ARCHIVED'],
+  { key: 'accepted',  label: 'RECRUITMENT_PIPELINE.STAGE.ACCEPTED',   statuses: ['ACCEPTED'],
+    color: '#27ae60', icon: '✅', nextRoute: () => '/it-provisioning', nextLabel: 'RECRUITMENT_PIPELINE.ACTION.ACCEPTED' },
+  { key: 'it',        label: 'RECRUITMENT_PIPELINE.STAGE.IT',         statuses: ['IT_IN_PROGRESS','EMAIL_CREATED'],
+    color: '#3498db', icon: '💻', nextRoute: () => '/it-provisioning', nextLabel: 'RECRUITMENT_PIPELINE.ACTION.IT' },
+  { key: 'onboarding',label: 'RECRUITMENT_PIPELINE.STAGE.ONBOARDING', statuses: ['EMAIL_RECEIVED','HR_IN_PROGRESS'],
+    color: '#f39c12', icon: '📝', nextRoute: (c) => '/onboarding/' + c.id, nextLabel: 'RECRUITMENT_PIPELINE.ACTION.ONBOARDING' },
+  { key: 'hired',     label: 'RECRUITMENT_PIPELINE.STAGE.HIRED',      statuses: ['HIRED'],
+    color: '#1e8449', icon: '🎉', nextRoute: () => '/profiles', nextLabel: 'RECRUITMENT_PIPELINE.ACTION.HIRED' },
+  { key: 'rejected',  label: 'RECRUITMENT_PIPELINE.STAGE.REJECTED',   statuses: ['REJECTED','ARCHIVED'],
     color: '#e74c3c', icon: '❌', nextRoute: null, nextLabel: null },
 ];
 
 @Component({
   selector: 'app-recruitment-pipeline',
   standalone: true,
-  imports: [StatusBadgeComponent, SpinnerComponent],
+  imports: [StatusBadgeComponent, SpinnerComponent, TranslatePipe],
   templateUrl: './recruitment-pipeline.component.html',
   styleUrl:    './recruitment-pipeline.component.scss',
 })
 export class RecruitmentPipelineComponent implements OnInit {
   private http   = inject(HttpClient);
   private router = inject(Router);
+  private translate = inject(TranslateService);
 
   all     = signal<PipelineCandidate[]>([]);
   loading = signal(true);
@@ -83,7 +85,7 @@ export class RecruitmentPipelineComponent implements OnInit {
       .get<{ content: PipelineCandidate[] }>(`${environment.hrApiUrl}/api/hr/candidates?size=500&page=0`)
       .subscribe({
         next:  page => { this.all.set(page.content ?? []); this.loading.set(false); },
-        error: ()   => { this.error.set('Impossible de charger le pipeline.'); this.loading.set(false); },
+        error: ()   => { this.error.set(this.translate.instant('RECRUITMENT_PIPELINE.ERR_LOAD')); this.loading.set(false); },
       });
   }
 

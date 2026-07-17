@@ -1,5 +1,6 @@
 import { Component, input, output, signal } from '@angular/core';
 import { CardComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 import { EmployeeListItem } from '../../models/profile.model';
 import { avatarUrl, getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 import { statusBadge } from '../../../../shared/status-badge.utils';
@@ -8,7 +9,7 @@ import { environment } from '../../../../../environments/environment';
 @Component({
   selector: 'rh-profile-list-card',
   standalone: true,
-  imports: [StatusBadgeComponent, CardComponent],
+  imports: [StatusBadgeComponent, CardComponent, TranslatePipe],
   template: `
     <daf-card
       [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }"
@@ -134,7 +135,7 @@ import { environment } from '../../../../../environments/environment';
                    font-semibold hover:opacity-90 transition-opacity"
             (click)="viewProfile.emit(employee().profileId)"
           >
-            Voir profil
+            {{ 'PROFILES.CARD.VIEW_PROFILE' | translate }}
           </button>
           <button
             type="button"
