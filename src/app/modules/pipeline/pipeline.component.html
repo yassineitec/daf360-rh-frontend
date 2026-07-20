@@ -19,29 +19,90 @@
         {{ 'PIPELINE.SUBTITLE' | translate }}
       </p>
     </div>
+    <!-- Mobile: icon-only "+" -->
     <daf-button
+      class="sm:hidden icon-btn-toggle"
+      variant="teal"
+      [options]="{ iconStart: 'add', size: 'md' }"
+      [title]="'PIPELINE.NEW_CANDIDATE' | translate"
+      (onClick)="onNewCandidate()" />
+    <!-- Desktop/tablet: full label -->
+    <daf-button
+      class="hidden sm:inline-flex"
       [label]="'PIPELINE.NEW_CANDIDATE' | translate"
       variant="teal"
       [options]="{ iconStart: 'add', size: 'md' }"
       (onClick)="onNewCandidate()" />
   </div>
 
-  <!-- ── KPI tiles (daf-metric-card, same design as Pipeline RH) ─── -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+  <!-- ── KPI tiles: daf-metric-card on desktop/tablet — mobile gets its own
+       compact stat-tile card (same style as the dashboard's résumé hero) ── -->
+  <div class="hidden md:grid grid-cols-3 gap-6">
     <daf-metric-card [label]="'PIPELINE.KPI_TOTAL' | translate"     [value]="totalMetricValue()"  [options]="totalMetricOpts" />
     <daf-metric-card [label]="'PIPELINE.KPI_AVG_DELAY' | translate" [value]="delayMetricValue()"  [options]="delayMetricOpts" />
     <daf-metric-card [label]="'PIPELINE.KPI_URGENT' | translate"    [value]="urgentMetricValue()" [options]="urgentMetricOpts" />
   </div>
 
+  <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+    <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+          <span class="material-symbols-outlined text-[18px]">group</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiTotal() }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">{{ 'PIPELINE.KPI_TOTAL' | translate }}</p>
+      </div>
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+          <span class="material-symbols-outlined text-[18px]">timer</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiDelay() ?? '—' }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">{{ 'PIPELINE.KPI_AVG_DELAY' | translate }}</p>
+      </div>
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-danger/10 text-danger">
+          <span class="material-symbols-outlined text-[18px]">priority_high</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiUrgent() }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">{{ 'PIPELINE.KPI_URGENT' | translate }}</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Search + view toggle (same card as the Pipeline RH page) ── -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
-    <div class="flex sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
-      <div class="w-full sm:w-56 shrink-0 ml-0.5">
+    <div class="flex items-center justify-between gap-3 p-4 sm:p-5">
+
+      <!-- Desktop/tablet: full search box -->
+      <div class="hidden sm:block w-56 shrink-0 ml-0.5">
         <rh-search-bar
           [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
           [value]="search()"
           (valueChange)="onSearch($event)" />
       </div>
+
+      <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
+      @if (mobileSearchOpen()) {
+        <div class="sm:hidden flex-1 flex items-center gap-2">
+          <rh-search-bar
+            class="flex-1"
+            [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
+            [value]="search()"
+            (valueChange)="onSearch($event)" />
+          <daf-button
+            class="icon-btn-toggle shrink-0"
+            [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+            (onClick)="mobileSearchOpen.set(false)" />
+        </div>
+      } @else {
+        <!-- Mobile, search closed: icon-only toggle, consistent with the rest of the app -->
+        <daf-button
+          class="sm:hidden icon-btn-toggle shrink-0"
+          [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+          [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+          (onClick)="mobileSearchOpen.set(true)" />
+
       <!-- View toggle: kanban ⇄ list -->
       <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
         <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
@@ -55,6 +116,7 @@
           <span class="material-symbols-outlined text-[18px]">view_list</span>
         </button>
       </div>
+      }
     </div>
   </daf-card>
 
@@ -87,7 +149,7 @@
     <div #kanbanBoard class="flex gap-6 overflow-x-auto pb-6 items-start custom-scroll" (scroll)="onBoardScroll()">
 
       @for (col of boardColumns(); track col.key) {
-        <div class="shrink-0 w-[360px] space-y-4">
+        <div class="shrink-0 w-[85vw] max-w-[320px] sm:w-[360px] sm:max-w-none space-y-4">
 
           <!-- Column header -->
           <div class="flex justify-between items-center px-2 py-1">

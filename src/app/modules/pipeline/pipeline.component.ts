@@ -82,6 +82,7 @@ export class PipelineComponent implements OnInit {
   readonly avatarFailed  = signal(new Set<number>());
   readonly notice        = signal<string | null>(null);
   readonly search        = signal('');
+  readonly mobileSearchOpen = signal(false);
   readonly viewMode      = signal<'kanban' | 'list'>('kanban');
 
   /** The four design columns, populated from the pipeline kanban response. */

@@ -38,6 +38,9 @@ export class ItProvisioningListComponent implements OnInit {
 
   readonly statusSelectOptions = STATUS_OPTIONS;
   readonly statusSelectConfig: SelectConfig = { placeholder: 'Tous les statuts' };
+  // Mobile filter row needs a compact, left-aligned select (not full-width)
+  // so it sits naturally beside the search icon toggle.
+  readonly statusSelectConfigCompact: SelectConfig = { placeholder: 'Tous les statuts', fullWidth: false };
 
   protected readonly statusBadge = statusBadge;
 

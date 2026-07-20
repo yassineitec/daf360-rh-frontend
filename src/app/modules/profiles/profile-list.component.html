@@ -23,50 +23,53 @@
             (valueChange)="onSearch($event)" />
         </div>
 
-        <!-- Mobile: icon-only, expands to a full-width input on tap -->
-        <button type="button"
-          class="sm:hidden flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
-          [class.bg-primary]="mobileSearchOpen()"
-          [class.text-white]="mobileSearchOpen()"
-          (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-          [attr.aria-label]="'PROFILES.LIST.SEARCH_ARIA' | translate">
-          <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
-        </button>
-
-        <div class="flex items-center gap-3">
-          <button type="button"
-            class="flex items-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-container transition-colors"
-            (click)="onToolbarAction('filters')">
-            <span class="material-symbols-outlined text-[18px]">tune</span>
-            {{ 'PROFILES.LIST.ADVANCED_FILTERS' | translate }}
-          </button>
-
-          <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
-          <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-            @for (opt of viewToggleOptions(); track opt.id) {
-              <button type="button"
-                class="flex items-center justify-center w-11 h-11 transition-colors"
-                [class.bg-primary]="viewMode() === opt.id"
-                [class.text-white]="viewMode() === opt.id"
-                [class.text-outline]="viewMode() !== opt.id"
-                [title]="opt.tooltip ?? ''"
-                (click)="viewMode.set($any(opt.id))">
-                <span class="material-symbols-outlined text-[18px]">{{ opt.icon }}</span>
-              </button>
-            }
+        <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
+        @if (mobileSearchOpen()) {
+          <div class="sm:hidden flex-1 flex items-center gap-2">
+            <rh-search-bar
+              class="flex-1"
+              [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
+              [value]="searchQuery()"
+              (valueChange)="onSearch($event)" />
+            <daf-button
+              class="icon-btn-toggle shrink-0"
+              [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+              [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+              (onClick)="mobileSearchOpen.set(false)" />
           </div>
-        </div>
-      </div>
+        } @else {
+          <!-- Mobile, search closed: icon-only toggle, consistent with the rest of the app -->
+          <daf-button
+            class="sm:hidden icon-btn-toggle shrink-0"
+            [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+            (onClick)="mobileSearchOpen.set(true)" />
 
-      <!-- Mobile search input — appears below the row once opened -->
-      @if (mobileSearchOpen()) {
-        <div class="sm:hidden ml-0.5 mt-3">
-          <rh-search-bar
-            [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
-            [value]="searchQuery()"
-            (valueChange)="onSearch($event)" />
-        </div>
-      }
+          <div class="flex items-center gap-3">
+            <button type="button"
+              class="flex items-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-container transition-colors"
+              (click)="onToolbarAction('filters')">
+              <span class="material-symbols-outlined text-[18px]">tune</span>
+              {{ 'PROFILES.LIST.ADVANCED_FILTERS' | translate }}
+            </button>
+
+            <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
+            <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+              @for (opt of viewToggleOptions(); track opt.id) {
+                <button type="button"
+                  class="flex items-center justify-center w-11 h-11 transition-colors"
+                  [class.bg-primary]="viewMode() === opt.id"
+                  [class.text-white]="viewMode() === opt.id"
+                  [class.text-outline]="viewMode() !== opt.id"
+                  [title]="opt.tooltip ?? ''"
+                  (click)="viewMode.set($any(opt.id))">
+                  <span class="material-symbols-outlined text-[18px]">{{ opt.icon }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
     </div>
   </daf-card>
 

@@ -66,6 +66,10 @@
     "NEW_EMPLOYEES": {
       "TITLE": "Nouveaux employés",
       "EMPTY": "Aucun nouvel employé récemment"
+    },
+    "MOBILE_TABS": {
+      "DIRECTORY": "Annuaire",
+      "ACTIVITY": "Activité"
     }
   },
   "CANDIDATES": {

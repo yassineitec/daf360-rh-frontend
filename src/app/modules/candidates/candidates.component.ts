@@ -147,6 +147,7 @@ export class CandidatesComponent implements OnInit {
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
   readonly search        = signal('');
+  readonly mobileSearchOpen = signal(false);
   readonly statusFilter  = signal('');
   readonly currentPage   = signal(0);
 

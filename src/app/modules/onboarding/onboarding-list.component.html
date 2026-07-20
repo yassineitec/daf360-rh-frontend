@@ -8,8 +8,10 @@
         <p class="text-[14px] text-outline mt-1">{{ 'ONBOARDING.LIST.SUBTITLE' | translate }}</p>
       </div>
 
-      <!-- KPI Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- KPI Cards: rh-kpi-card grid on desktop/tablet — mobile gets its own
+           compact stat-tile card (same style as the dashboard's résumé hero),
+           reusing the exact same icon colors as the desktop cards -->
+      <div class="hidden md:grid grid-cols-4 gap-4">
         <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_PENDING' | translate" icon="pending_actions"
           [value]="kpiStats()?.pendingCount ?? items().length" variant="blue" />
         <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate" icon="person_add"
@@ -20,44 +22,98 @@
           [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—'" variant="amber" />
       </div>
 
-      <!-- Filters: search full-width on its own row on mobile; side-by-side on desktop — all inside one card (matches /finance/clients) -->
+      <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+        <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
+          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(221,225,255,0.30); color:#00288e">
+              <span class="material-symbols-outlined text-[18px]">pending_actions</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.pendingCount ?? items().length }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_PENDING' | translate }}</p>
+          </div>
+          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(108,248,187,0.30); color:#006c49">
+              <span class="material-symbols-outlined text-[18px]">person_add</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.profilesCreatedToday ?? '—' }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate }}</p>
+          </div>
+          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,218,214,0.30); color:#ba1a1a">
+              <span class="material-symbols-outlined text-[18px]">error_outline</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.incompleteProfiles ?? '—' }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_INCOMPLETE' | translate }}</p>
+          </div>
+          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,221,184,0.30); color:#4c2e00">
+              <span class="material-symbols-outlined text-[18px]">timer</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—' }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_AVG_TIME' | translate }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters: desktop/tablet — full search box; mobile — icon-only toggle -->
       <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 sm:p-5">
-          <div class="w-full sm:w-[360px] ml-0.5">
+        <div class="flex items-center justify-between gap-2 p-4 sm:p-5">
+          <div class="hidden sm:block w-[360px] ml-0.5">
             <rh-search-bar
               [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
               [value]="search()"
               (valueChange)="onSearch($event)" />
           </div>
 
-          <div class="flex items-center justify-end gap-2">
-            <button type="button"
-              class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
-              [title]="'ONBOARDING.LIST.REFRESH' | translate"
-              (click)="load()">
-              <span class="material-symbols-outlined text-[18px]">cached</span>
-            </button>
-            <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-              <button type="button"
-                class="flex items-center justify-center w-11 h-11 transition-colors"
-                [class.bg-primary]="viewMode() === 'grid'"
-                [class.text-white]="viewMode() === 'grid'"
-                [class.text-outline]="viewMode() !== 'grid'"
-                [title]="'ONBOARDING.LIST.VIEW_GRID' | translate"
-                (click)="viewMode.set('grid')">
-                <span class="material-symbols-outlined text-[18px]">grid_view</span>
-              </button>
-              <button type="button"
-                class="flex items-center justify-center w-11 h-11 transition-colors"
-                [class.bg-primary]="viewMode() === 'list'"
-                [class.text-white]="viewMode() === 'list'"
-                [class.text-outline]="viewMode() !== 'list'"
-                [title]="'ONBOARDING.LIST.VIEW_LIST' | translate"
-                (click)="viewMode.set('list')">
-                <span class="material-symbols-outlined text-[18px]">view_list</span>
-              </button>
+          @if (mobileSearchOpen()) {
+            <div class="sm:hidden flex-1 flex items-center gap-2">
+              <rh-search-bar
+                class="flex-1"
+                [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
+                [value]="search()"
+                (valueChange)="onSearch($event)" />
+              <daf-button
+                class="icon-btn-toggle shrink-0"
+                [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+                [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+                (onClick)="mobileSearchOpen.set(false)" />
             </div>
-          </div>
+          } @else {
+            <daf-button
+              class="sm:hidden icon-btn-toggle shrink-0"
+              [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+              [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+              (onClick)="mobileSearchOpen.set(true)" />
+
+            <div class="flex items-center justify-end gap-2">
+              <button type="button"
+                class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
+                [title]="'ONBOARDING.LIST.REFRESH' | translate"
+                (click)="load()">
+                <span class="material-symbols-outlined text-[18px]">cached</span>
+              </button>
+              <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
+                <button type="button"
+                  class="flex items-center justify-center w-11 h-11 transition-colors"
+                  [class.bg-primary]="viewMode() === 'grid'"
+                  [class.text-white]="viewMode() === 'grid'"
+                  [class.text-outline]="viewMode() !== 'grid'"
+                  [title]="'ONBOARDING.LIST.VIEW_GRID' | translate"
+                  (click)="viewMode.set('grid')">
+                  <span class="material-symbols-outlined text-[18px]">grid_view</span>
+                </button>
+                <button type="button"
+                  class="flex items-center justify-center w-11 h-11 transition-colors"
+                  [class.bg-primary]="viewMode() === 'list'"
+                  [class.text-white]="viewMode() === 'list'"
+                  [class.text-outline]="viewMode() !== 'list'"
+                  [title]="'ONBOARDING.LIST.VIEW_LIST' | translate"
+                  (click)="viewMode.set('list')">
+                  <span class="material-symbols-outlined text-[18px]">view_list</span>
+                </button>
+              </div>
+            </div>
+          }
         </div>
       </daf-card>
 

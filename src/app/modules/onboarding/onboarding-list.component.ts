@@ -42,6 +42,7 @@ export class OnboardingListComponent implements OnInit {
   kpiStats = signal<OnboardingKpiStats | null>(null);
 
   search   = signal('');
+  mobileSearchOpen = signal(false);
   viewMode = signal<'grid' | 'list'>('grid');
 
   protected readonly statusBadge = statusBadge;

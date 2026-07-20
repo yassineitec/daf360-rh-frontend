@@ -17,12 +17,47 @@
     <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ error() }}</div>
   }
 
-  <!-- KPI Cards -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+  <!-- KPI Cards: rh-kpi-card grid on desktop/tablet — mobile gets its own
+       compact stat-tile card (same style as the dashboard's résumé hero),
+       reusing the exact same icon colors as the desktop cards ── -->
+  <div class="hidden md:grid grid-cols-4 gap-6">
     <rh-kpi-card label="Dossiers en attente" icon="assignment_late" [value]="stats().pending" variant="blue" class="block" />
     <rh-kpi-card label="En retard" icon="error" [value]="stats().overdue" variant="red" class="block" />
     <rh-kpi-card label="Matériel incomplet" icon="package_2" [value]="stats().hwIncomplete" variant="amber" class="block" />
     <rh-kpi-card label="Licences incomplètes" icon="subscriptions" [value]="stats().licIncomplete" variant="amber" class="block" />
+  </div>
+
+  <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+    <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(221,225,255,0.30); color:#00288e">
+          <span class="material-symbols-outlined text-[18px]">assignment_late</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().pending }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">Dossiers en attente</p>
+      </div>
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,218,214,0.30); color:#ba1a1a">
+          <span class="material-symbols-outlined text-[18px]">error</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().overdue }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">En retard</p>
+      </div>
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,221,184,0.30); color:#4c2e00">
+          <span class="material-symbols-outlined text-[18px]">package_2</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().hwIncomplete }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">Matériel incomplet</p>
+      </div>
+      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,221,184,0.30); color:#4c2e00">
+          <span class="material-symbols-outlined text-[18px]">subscriptions</span>
+        </span>
+        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().licIncomplete }}</span>
+        <p class="text-[10.5px] text-outline leading-tight">Licences incomplètes</p>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ Desktop / tablet: search on the left, select + refresh + view toggle on the right, all inside one card (matches /finance/clients) ═══ -->
@@ -133,21 +168,18 @@
 
   <!-- ═══ Mobile: icon-only search, cards only — no toggle, no table ═══ -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="sm:hidden block">
-    <div class="flex items-center gap-2 p-4">
+    <div class="flex items-center justify-between gap-2 p-4">
       <daf-select
-        class="flex-1 min-w-0"
+        class="shrink-0"
         [selected]="statusFilter() ? [statusFilter()] : []"
         [options]="statusSelectOptions"
-        [config]="statusSelectConfig"
+        [config]="statusSelectConfigCompact"
         (selectedChange)="onStatusChange($event)" />
-      <button type="button"
-        class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
-        [class.bg-primary]="mobileSearchOpen()"
-        [class.text-white]="mobileSearchOpen()"
-        (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-        aria-label="Rechercher">
-        <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
-      </button>
+      <daf-button
+        class="icon-btn-toggle shrink-0"
+        [options]="{ iconStart: mobileSearchOpen() ? 'close' : 'search', variant: mobileSearchOpen() ? 'teal' : 'ghost', size: 'sm' }"
+        title="Rechercher"
+        (onClick)="mobileSearchOpen.set(!mobileSearchOpen())" />
     </div>
 
     @if (mobileSearchOpen()) {

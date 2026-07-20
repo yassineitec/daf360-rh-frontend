@@ -37,7 +37,10 @@
       }
     </div>
   } @else {
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- daf-metric-card grid on desktop/tablet — mobile gets its own compact
+         stat-tile card (same style as the dashboard's résumé hero), reusing
+         the exact same icon colors as the desktop cards -->
+    <div class="hidden md:grid grid-cols-3 gap-6">
       <daf-metric-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate"
         [value]="activeMetricValue()"
@@ -52,6 +55,32 @@
         [label]="'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate"
         [value]="hiredMetricValue()"
         [options]="hiredMetricOpts" />
+    </div>
+
+    <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+      <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
+        <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+          <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
+            <span class="material-symbols-outlined text-[18px]">groups</span>
+          </span>
+          <span class="text-[20px] font-bold text-on-surface leading-none">{{ activeMetricValue() }}</span>
+          <p class="text-[10.5px] text-outline leading-tight">{{ 'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate }}</p>
+        </div>
+        <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+          <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+            <span class="material-symbols-outlined text-[18px]">thumb_up</span>
+          </span>
+          <span class="text-[20px] font-bold text-on-surface leading-none">{{ acceptanceMetricValue() }}</span>
+          <p class="text-[10.5px] text-outline leading-tight">{{ 'CANDIDATES.PIPELINE_RH.KPI_ACCEPTANCE' | translate }}</p>
+        </div>
+        <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+          <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+            <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
+          </span>
+          <span class="text-[20px] font-bold text-on-surface leading-none">{{ hiredMetricValue() }}</span>
+          <p class="text-[10.5px] text-outline leading-tight">{{ 'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate }}</p>
+        </div>
+      </div>
     </div>
   }
 
@@ -319,13 +348,27 @@
   <!-- ═══ Mobile: stage pills (wrap) + card list ═══ -->
   <div class="sm:hidden">
 
-    <!-- Search: always visible, full width, right under the KPI cards -->
+    <!-- Search: icon-only toggle, expands in place — consistent with the rest of the app -->
     <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block mb-3">
-      <div class="p-4 ml-0.5">
-        <rh-search-bar
-          [placeholder]="'CANDIDATES.PIPELINE_RH.SEARCH_PLACEHOLDER' | translate"
-          [value]="search()"
-          (valueChange)="onSearch($event)" />
+      <div class="p-3 flex items-center gap-2">
+        @if (mobileSearchOpen()) {
+          <rh-search-bar
+            class="flex-1"
+            [placeholder]="'CANDIDATES.PIPELINE_RH.SEARCH_PLACEHOLDER' | translate"
+            [value]="search()"
+            (valueChange)="onSearch($event)" />
+          <daf-button
+            class="icon-btn-toggle shrink-0"
+            [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+            (onClick)="mobileSearchOpen.set(false)" />
+        } @else {
+          <daf-button
+            class="icon-btn-toggle shrink-0"
+            [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+            (onClick)="mobileSearchOpen.set(true)" />
+        }
       </div>
     </daf-card>
 
