@@ -12,6 +12,7 @@ import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-regime-role-assignment',
@@ -19,7 +20,7 @@ import { ModalComponent } from '../../../../shared/modal.component';
   imports: [
     DafHasPermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
-    PaginationComponent,
+    PaginationComponent, TranslatePipe,
   ],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
@@ -27,6 +28,7 @@ import { ModalComponent } from '../../../../shared/modal.component';
 export class RegimeRoleAssignmentComponent implements OnChanges {
   private svc      = inject(RegimeService);
   private roleSvc  = inject(RoleManagementService);
+  private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
 
@@ -75,12 +77,13 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     return role?.userCount ?? 0;
   });
 
-  regimeOptions = computed<SelectOption[]>(() =>
-    this.regimes().map(r => ({
+  regimeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return this.regimes().map(r => ({
       value: String(r.id),
-      label: `${r.labelFr} · ${r.hoursPerWeek}h/sem${r.isFlexible ? ' · Flexible' : ''}`,
-    })),
-  );
+      label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}${r.isFlexible ? this.translate.instant('ADMIN.regimes.roles.flexibleSuffix') : ''}`,
+    }));
+  });
 
   formRegimeSelected(): string[] {
     return this.formRegimeId ? [String(this.formRegimeId)] : [];
@@ -91,12 +94,12 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   }
 
   readonly columns: TableColumn[] = [
-    { key: 'role', label: 'Rôle' },
-    { key: 'regime', label: 'Régime assigné' },
-    { key: 'effFrom', label: "Date d'effet" },
-    { key: 'effTo', label: 'Fin' },
-    { key: 'notes', label: 'Notes' },
-    { key: '_actions', label: 'Actions', align: 'right' },
+    { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role') },
+    { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime') },
+    { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom') },
+    { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo') },
+    { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes') },
+    { key: '_actions', label: this.translate.instant('ADMIN.regimes.roles.columns.actions'), align: 'right' },
   ];
 
   readonly totalElements = computed(() => this.allRolesWithAssignment().length);
@@ -118,10 +121,13 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    emptyMessage: 'Aucun rôle disponible',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      emptyMessage: this.translate.instant('ADMIN.regimes.roles.empty'),
+    };
+  });
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
@@ -183,7 +189,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
       },
       error: err => {
         this.isAssigning.set(false);
-        this.errorMsg.set(err?.error?.message ?? 'Erreur lors de l\'assignation.');
+        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.roles.errorAssign'));
       },
     });
   }
@@ -196,7 +202,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
         this.assignments.update(as => as.filter(a => a.id !== row.assignment!.id));
         this.showRemoveModal.set(false);
       },
-      error: err => this.errorMsg.set(err?.error?.message ?? 'Erreur lors de la suppression.'),
+      error: err => this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorDelete')),
     });
   }
 

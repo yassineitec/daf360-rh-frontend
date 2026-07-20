@@ -6,14 +6,16 @@ import { catchError, of } from 'rxjs';
 import { LifecycleService } from './lifecycle.service';
 import {
   OffboardingWorkflowInstance, OffboardingStatus,
-  OFFBOARDING_STATUS_LABELS, DEPARTURE_REASON_LABELS,
+  OFFBOARDING_STATUS_LABELS,
   computeProgress, findNextDueTask,
 } from './models/lifecycle.model';
 import {
   StatusBadgeComponent, BadgeOptions, ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { NewWorkflowModalComponent } from './new-workflow-modal.component';
+import { UserStore } from '../../core/user.store';
 
 type BadgeVariant = BadgeOptions['variant'];
 
@@ -31,26 +33,28 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
   standalone: true,
   imports: [
     FormsModule, StatusBadgeComponent, ButtonComponent,
-    NewWorkflowModalComponent, DataTableComponent, DafCellDirective,
+    NewWorkflowModalComponent, DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
     <div class="page-header">
       <div>
-        <h1 class="page-title">Offboarding</h1>
-        <p class="page-sub">{{ rows().length }} dossier{{ rows().length !== 1 ? 's' : '' }}</p>
+        <h1 class="page-title">{{ 'LIFECYCLE.DASHBOARD.TITLE' | translate }}</h1>
+        <p class="page-sub">{{ 'LIFECYCLE.DASHBOARD.COUNT' | translate:{ count: rows().length } }}</p>
       </div>
-      <daf-button label="Démarrer un offboarding" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="showModal.set(true)" />
+      @if (canManage()) {
+        <daf-button [label]="'LIFECYCLE.DASHBOARD.START_BUTTON' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="showModal.set(true)" />
+      }
     </div>
 
     <div class="filters-bar">
       <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
-        <option value="">Tous les statuts</option>
-        @for (s of statusOptions; track s.value) {
+        <option value="">{{ 'LIFECYCLE.DASHBOARD.ALL_STATUSES' | translate }}</option>
+        @for (s of statusOptions(); track s.value) {
           <option [value]="s.value">{{ s.label }}</option>
         }
       </select>
       @if (filterStatus) {
-        <daf-button label="Réinitialiser" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="clearFilter()" />
+        <daf-button [label]="'LIFECYCLE.DASHBOARD.RESET' | translate" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="clearFilter()" />
       }
     </div>
 
@@ -62,10 +66,10 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
       } @else if (filtered().length === 0) {
         <div class="empty-state">
           <span class="material-symbols-outlined" style="font-size:48px;color:var(--color-outline)">inbox</span>
-          <p>Aucun dossier d'offboarding{{ filterStatus ? ' pour ce statut' : '' }}</p>
+          <p>{{ (filterStatus ? 'LIFECYCLE.DASHBOARD.EMPTY_FILTERED' : 'LIFECYCLE.DASHBOARD.EMPTY') | translate }}</p>
         </div>
       } @else {
-        <daf-data-table [columns]="columns" [rows]="tableRows()" [config]="tableConfig" (rowClick)="open($event)">
+        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig" (rowClick)="open($event)">
 
           <ng-template dafCell="status" let-row>
             <daf-badge
@@ -76,9 +80,9 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
 
           <ng-template dafCell="sla" let-row>
             @if (row['_slaBreached']) {
-              <daf-badge label="SLA dépassé" [options]="{ variant: 'danger', size: 'sm' }" />
+              <daf-badge [label]="'LIFECYCLE.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
             } @else if (row['_overdue']) {
-              <daf-badge label="En retard" [options]="{ variant: 'warning', size: 'sm' }" />
+              <daf-badge [label]="'LIFECYCLE.BADGE.OVERDUE' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
             } @else {
               <span class="cell-muted">—</span>
             }
@@ -130,11 +134,16 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
   styleUrl: './lifecycle-dashboard.component.scss',
 })
 export class LifecycleDashboardComponent implements OnInit {
-  private svc    = inject(LifecycleService);
-  private router = inject(Router);
-  private route  = inject(ActivatedRoute);
+  private svc       = inject(LifecycleService);
+  private router    = inject(Router);
+  private route     = inject(ActivatedRoute);
+  private translate = inject(TranslateService);
+  private userStore = inject(UserStore);
 
   protected readonly OFFBOARDING_STATUS_LABELS = OFFBOARDING_STATUS_LABELS;
+
+  /** Only RH_MANAGE_LIFECYCLE holders may start an offboarding. */
+  readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_LIFECYCLE'));
 
   loading      = signal(false);
   rows         = signal<OffboardingWorkflowInstance[]>([]);
@@ -147,15 +156,15 @@ export class LifecycleDashboardComponent implements OnInit {
     return all.filter(r => r.status === (this.filterStatus as OffboardingStatus));
   });
 
-  readonly columns: TableColumn[] = [
-    { key: 'employee',       label: 'Employé',         width: '130px' },
-    { key: 'motif',          label: 'Motif',            width: '160px' },
-    { key: 'triggerDate',    label: 'Déclenchement',   width: '130px' },
-    { key: 'lastWorkingDay', label: 'Dernier jour',     width: '120px' },
-    { key: 'status',         label: 'Statut',           width: '130px' },
-    { key: 'sla',            label: 'SLA',              width: '120px' },
-    { key: 'progress',       label: 'Tâches',           width: '130px' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => [
+    { key: 'employee',       label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_EMPLOYEE'), width: '130px' },
+    { key: 'motif',          label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_REASON'),   width: '160px' },
+    { key: 'triggerDate',    label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_TRIGGER'),  width: '130px' },
+    { key: 'lastWorkingDay', label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_LAST_DAY'), width: '120px' },
+    { key: 'status',         label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_STATUS'),   width: '130px' },
+    { key: 'sla',            label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_SLA'),       width: '120px' },
+    { key: 'progress',       label: this.translate.instant('LIFECYCLE.DASHBOARD.COL_PROGRESS'), width: '130px' },
+  ]);
 
   readonly tableConfig: TableConfig = { hoverable: true };
 
@@ -165,8 +174,8 @@ export class LifecycleDashboardComponent implements OnInit {
       const nextDue = findNextDueTask(w.tasks ?? []);
       const overdue = !!(nextDue?.dueDate && new Date(nextDue.dueDate) < new Date());
       return {
-        employee:       w.employeeFullName ?? 'Profil #' + w.employeeProfileId,
-        motif:          DEPARTURE_REASON_LABELS[w.departureReason] ?? w.departureReason,
+        employee:       w.employeeFullName ?? this.translate.instant('LIFECYCLE.DASHBOARD.PROFILE_PREFIX', { id: w.employeeProfileId }),
+        motif:          this.translate.instant('LIFECYCLE.REASON.' + w.departureReason),
         triggerDate:    this.fmt(w.triggerDate),
         lastWorkingDay: this.fmt(w.lastWorkingDay),
         status:         '',
@@ -182,11 +191,13 @@ export class LifecycleDashboardComponent implements OnInit {
     }),
   );
 
-  readonly statusOptions = (Object.keys(OFFBOARDING_STATUS_LABELS) as OffboardingStatus[]).map(v => ({
-    value: v, label: OFFBOARDING_STATUS_LABELS[v],
-  }));
+  readonly statusOptions = computed(() =>
+    (Object.keys(OFFBOARDING_STATUS_LABELS) as OffboardingStatus[]).map(v => ({
+      value: v, label: this.translate.instant('LIFECYCLE.STATUS.' + v),
+    })),
+  );
 
-  statusLabel(s: string): string  { return OFFBOARDING_STATUS_LABELS[s as OffboardingStatus] ?? s; }
+  statusLabel(s: string): string  { return this.translate.instant('LIFECYCLE.STATUS.' + s); }
   statusVariant(s: string): BadgeVariant { return STATUS_VARIANTS[s as OffboardingStatus] ?? 'neutral'; }
 
   ngOnInit() { this.load(); }

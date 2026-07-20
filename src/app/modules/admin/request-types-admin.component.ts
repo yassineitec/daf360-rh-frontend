@@ -11,6 +11,7 @@ import {
   StatusBadgeComponent, DataTableComponent, DafCellDirective,
   TableColumn, TableConfig, TableRow, PaginationComponent, ModalService,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','OTHER'];
 const PAGE_SIZE = 5;
@@ -21,32 +22,33 @@ const PAGE_SIZE = 5;
   imports: [
     SpinnerComponent, ModalComponent, SelectComponent, FormFieldComponent, ButtonComponent,
     StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent,
+    TranslatePipe,
   ],
   template: `
     <div class="section-header">
       <div>
-        <h3 class="col-title">Types de demandes RH</h3>
-        <p class="col-sub">Catalogue par entité</p>
+        <h3 class="col-title">{{ 'ADMIN.catalog.requestTypes.title' | translate }}</h3>
+        <p class="col-sub">{{ 'ADMIN.catalog.requestTypes.subtitle' | translate }}</p>
       </div>
       <div class="header-actions">
         <daf-button
-          label="Initialiser par défaut"
+          [label]="'ADMIN.catalog.requestTypes.initDefault' | translate"
           variant="ghost"
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button label="+ Ajouter" variant="primary" (onClick)="openAdd()" />
+        <daf-button [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="primary" (onClick)="openAdd()" />
       </div>
     </div>
 
     @if (loading()) { <div class="center"><app-spinner /></div> }
     @else if (types().length === 0) {
       <div class="empty-state">
-        <p>Aucun type configuré.</p>
-        <daf-button label="Initialiser les 15 types par défaut" variant="ghost" (onClick)="seed()" />
+        <p>{{ 'ADMIN.catalog.requestTypes.empty' | translate }}</p>
+        <daf-button [label]="'ADMIN.catalog.requestTypes.initFull' | translate" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
-      <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig">
         <ng-template dafCell="category" let-row>
           <daf-badge [label]="row['category']" [options]="{ variant: 'neutral', size: 'sm' }" />
         </ng-template>
@@ -54,19 +56,19 @@ const PAGE_SIZE = 5;
           <daf-badge [label]="row['approvalLevel']" [options]="{ variant: row['approvalLevel'] === 'L2' ? 'warning' : 'success', size: 'sm' }" />
         </ng-template>
         <ng-template dafCell="isActive" let-row>
-          <daf-badge [label]="row['_source'].isActive ? 'Actif' : 'Inactif'" [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }" />
+          <daf-badge [label]="(row['_source'].isActive ? 'ADMIN.catalog.requestTypes.statusActive' : 'ADMIN.catalog.requestTypes.statusInactive') | translate" [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }" />
         </ng-template>
         <ng-template dafCell="_actions" let-row>
-          <daf-button label="Modifier" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openEdit(row['_source'])" />
+          <daf-button [label]="'ADMIN.catalog.requestTypes.actionEdit' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openEdit(row['_source'])" />
           @if (row['_source'].isActive) {
-            <daf-button label="Désactiver" variant="danger" [options]="{ size: 'sm' }" (onClick)="deactivate(row['_source'])" />
+            <daf-button [label]="'ADMIN.catalog.requestTypes.actionDeactivate' | translate" variant="danger" [options]="{ size: 'sm' }" (onClick)="deactivate(row['_source'])" />
           }
         </ng-template>
       </daf-data-table>
 
       <!-- Count + Pagination -->
       <div class="rta-footer">
-        <span class="rta-count"><strong>{{ totalElements() }}</strong> type(s)</span>
+        <span class="rta-count"><strong>{{ totalElements() }}</strong> {{ 'ADMIN.catalog.requestTypes.countUnit' | translate }}</span>
         @if (totalPages() > 1) {
           <daf-pagination
             [currentPage]="currentPage()"
@@ -79,7 +81,7 @@ const PAGE_SIZE = 5;
 
     <!-- Add/Edit Modal -->
     <app-modal
-      [title]="editTarget() ? 'Modifier le type' : 'Nouveau type de demande'"
+      [title]="(editTarget() ? 'ADMIN.catalog.requestTypes.modalTitleEdit' : 'ADMIN.catalog.requestTypes.modalTitleNew') | translate"
       [visible]="showModal()"
       [hasFooter]="true"
       (closed)="showModal.set(false)"
@@ -87,21 +89,21 @@ const PAGE_SIZE = 5;
       <div class="modal-form">
         <div class="field-row">
           <daf-form-field
-            [options]="{ label: 'Code', placeholder: 'EX: ATTESTATION_TRAVAIL', required: true, disabled: !!editTarget(), fullWidth: true }"
+            [options]="{ label: ('ADMIN.catalog.requestTypes.fieldCode' | translate), placeholder: ('ADMIN.catalog.requestTypes.placeholderCode' | translate), required: true, disabled: !!editTarget(), fullWidth: true }"
             [value]="form.typeCode"
             (valueChange)="form.typeCode = $any($event).toUpperCase()"
           />
         </div>
         <div class="field-row">
           <daf-form-field
-            [options]="{ label: 'Libellé français', required: true, fullWidth: true }"
+            [options]="{ label: ('ADMIN.catalog.requestTypes.fieldLabelFr' | translate), required: true, fullWidth: true }"
             [value]="form.displayNameFr"
             (valueChange)="form.displayNameFr = $any($event)"
           />
         </div>
         <div class="field-row">
           <daf-form-field
-            [options]="{ label: 'Libellé anglais', required: true, fullWidth: true }"
+            [options]="{ label: ('ADMIN.catalog.requestTypes.fieldLabelEn' | translate), required: true, fullWidth: true }"
             [value]="form.displayNameEn"
             (valueChange)="form.displayNameEn = $any($event)"
           />
@@ -111,21 +113,21 @@ const PAGE_SIZE = 5;
             <daf-select
               [selected]="[form.category]"
               [options]="categoryOptions"
-              [config]="{ label: 'Catégorie', required: true, fullWidth: true }"
+              [config]="{ label: ('ADMIN.catalog.requestTypes.fieldCategory' | translate), required: true, fullWidth: true }"
               (selectedChange)="form.category = $event[0]"
             />
           </div>
           <div class="field-row">
             <daf-select
               [selected]="[form.approvalLevel]"
-              [options]="approvalLevelOptions"
-              [config]="{ label: 'Niveau approbation', fullWidth: true }"
+              [options]="approvalLevelOptions()"
+              [config]="{ label: ('ADMIN.catalog.requestTypes.fieldApprovalLevel' | translate), fullWidth: true }"
               (selectedChange)="onApprovalLevelChange($event[0])"
             />
           </div>
           <div class="field-row">
             <daf-form-field
-              [options]="{ label: 'SLA (jours)', type: 'number', fullWidth: true }"
+              [options]="{ label: ('ADMIN.catalog.requestTypes.fieldSla' | translate), type: 'number', fullWidth: true }"
               [value]="form.defaultSlaDays"
               (valueChange)="form.defaultSlaDays = $any($event)"
             />
@@ -133,7 +135,7 @@ const PAGE_SIZE = 5;
         </div>
         <div class="field-row">
           <daf-form-field
-            [options]="{ label: 'Description', type: 'textarea', rows: 2, fullWidth: true }"
+            [options]="{ label: ('ADMIN.catalog.requestTypes.fieldDescription' | translate), type: 'textarea', rows: 2, fullWidth: true }"
             [value]="form.description"
             (valueChange)="form.description = $any($event)"
           />
@@ -141,9 +143,9 @@ const PAGE_SIZE = 5;
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="showModal.set(false)" />
+        <daf-button [label]="'ADMIN.catalog.requestTypes.cancel' | translate" variant="secondary" (onClick)="showModal.set(false)" />
         <daf-button
-          [label]="editTarget() ? 'Enregistrer' : 'Créer'"
+          [label]="(editTarget() ? 'ADMIN.catalog.requestTypes.save' : 'ADMIN.catalog.requestTypes.create') | translate"
           variant="teal"
           [options]="{ disabled: !form.typeCode || !form.displayNameFr || saving(), loading: saving() }"
           (onClick)="save()"
@@ -170,6 +172,7 @@ const PAGE_SIZE = 5;
 export class RequestTypesAdminComponent implements OnChanges {
   private svc   = inject(AdminService);
   private modal = inject(ModalService);
+  private translate = inject(TranslateService);
 
   paysId = input(179);
 
@@ -183,22 +186,28 @@ export class RequestTypesAdminComponent implements OnChanges {
 
   readonly categories = CATEGORIES;
   readonly categoryOptions: SelectOption[] = CATEGORIES.map(c => ({ value: c, label: c }));
-  readonly approvalLevelOptions: SelectOption[] = [
-    { value: 'L1', label: 'L1 (simple)' },
-    { value: 'L2', label: 'L2 (double)' },
-  ];
+  readonly approvalLevelOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'L1', label: this.translate.instant('ADMIN.catalog.requestTypes.approvalL1') },
+      { value: 'L2', label: this.translate.instant('ADMIN.catalog.requestTypes.approvalL2') },
+    ];
+  });
 
   form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1' as 'L1'|'L2', defaultSlaDays:2 };
 
-  readonly columns: TableColumn[] = [
-    { key: 'typeCode', label: 'Code' },
-    { key: 'displayNameFr', label: 'Libellé' },
-    { key: 'category', label: 'Catégorie' },
-    { key: 'approvalLevel', label: 'Approbation' },
-    { key: 'defaultSlaDays', label: 'SLA', align: 'center' },
-    { key: 'isActive', label: 'Actif', align: 'center' },
-    { key: '_actions', label: 'Actions', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'typeCode', label: this.translate.instant('ADMIN.catalog.requestTypes.colCode') },
+      { key: 'displayNameFr', label: this.translate.instant('ADMIN.catalog.requestTypes.colLabel') },
+      { key: 'category', label: this.translate.instant('ADMIN.catalog.requestTypes.colCategory') },
+      { key: 'approvalLevel', label: this.translate.instant('ADMIN.catalog.requestTypes.colApproval') },
+      { key: 'defaultSlaDays', label: this.translate.instant('ADMIN.catalog.requestTypes.colSla'), align: 'center' },
+      { key: 'isActive', label: this.translate.instant('ADMIN.catalog.requestTypes.colActive'), align: 'center' },
+      { key: '_actions', label: this.translate.instant('ADMIN.catalog.requestTypes.colActions'), align: 'right' },
+    ];
+  });
 
   readonly tableConfig: TableConfig = { hoverable: true };
 
@@ -212,17 +221,19 @@ export class RequestTypesAdminComponent implements OnChanges {
     return this.types().slice(start, start + PAGE_SIZE);
   });
 
-  readonly rows = computed<TableRow[]>(() =>
-    this.pagedTypes().map(t => ({
+  readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const suffix = this.translate.instant('ADMIN.catalog.requestTypes.slaSuffix');
+    return this.pagedTypes().map(t => ({
       typeCode: t.typeCode,
       displayNameFr: t.displayNameFr,
       category: t.category,
       approvalLevel: t.approvalLevel,
-      defaultSlaDays: t.defaultSlaDays + 'j',
+      defaultSlaDays: t.defaultSlaDays + suffix,
       isActive: t.isActive,
       _source: t,
-    })),
-  );
+    }));
+  });
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
@@ -250,17 +261,17 @@ export class RequestTypesAdminComponent implements OnChanges {
     this.saving.set(true);
     const dto = { paysId:this.paysId(), ...this.form };
     const obs = this.editTarget() ? this.svc.updateRequestType(this.editTarget()!.id, dto) : this.svc.createRequestType(dto);
-    obs.pipe(catchError(err => { this.modalError.set(err?.error?.message ?? 'Erreur'); this.saving.set(false); return of(null); }))
+    obs.pipe(catchError(err => { this.modalError.set(err?.error?.message ?? this.translate.instant('ADMIN.catalog.requestTypes.error')); this.saving.set(false); return of(null); }))
        .subscribe(r => { this.saving.set(false); if (r) { this.showModal.set(false); this.load(); } });
   }
 
   deactivate(t: RequestTypeCatalog) {
     this.modal.open({
-      title: 'Désactiver le type',
-      body:  `Désactiver "${t.displayNameFr}" ?`,
+      title: this.translate.instant('ADMIN.catalog.requestTypes.deactivateTitle'),
+      body:  this.translate.instant('ADMIN.catalog.requestTypes.deactivateBody', { name: t.displayNameFr }),
       buttons: [
-        { label: 'Annuler',     variant: 'secondary', action: r => r.close() },
-        { label: 'Désactiver',  variant: 'primary',   action: r => {
+        { label: this.translate.instant('ADMIN.catalog.requestTypes.cancel'),            variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.catalog.requestTypes.actionDeactivate'),  variant: 'primary',   action: r => {
           this.svc.deactivateRequestType(t.id).pipe(catchError(() => of(null))).subscribe(() => this.load());
           r.close();
         } },

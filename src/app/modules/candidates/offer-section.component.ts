@@ -19,7 +19,7 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 @Component({
   selector: 'app-offer-section',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent, StatusBadgeComponent],
+  imports: [ModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './offer-section.component.html',
 })
 export class OfferSectionComponent {

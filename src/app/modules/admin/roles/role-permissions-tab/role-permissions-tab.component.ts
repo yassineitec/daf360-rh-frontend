@@ -2,11 +2,12 @@ import { Component, OnInit, computed, effect, inject, input, output, signal, unt
 import { ButtonComponent, CheckboxComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { RoleManagementService } from '../role-management.service';
 import { PermissionGroup, RoleListItem } from '../role.model';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-role-permissions-tab',
   standalone: true,
-  imports: [ButtonComponent, CheckboxComponent, StatusBadgeComponent],
+  imports: [ButtonComponent, CheckboxComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './role-permissions-tab.component.html',
   styleUrl: './role-permissions-tab.component.scss',
 })
@@ -15,6 +16,7 @@ export class RolePermissionsTabComponent implements OnInit {
   permissionsUpdated = output<RoleListItem>();
 
   private svc = inject(RoleManagementService);
+  private translate = inject(TranslateService);
 
   catalog        = signal<PermissionGroup[]>([]);
   loadingCatalog = signal(true);
@@ -106,7 +108,7 @@ export class RolePermissionsTabComponent implements OnInit {
         p.delete(code);
         this.pendingCodes.set(p);
 
-        this.error.set('Impossible de modifier la permission — réessayez');
+        this.error.set(this.translate.instant('ADMIN.roles.permissions.TOGGLE_ERROR'));
       },
     });
   }
@@ -127,7 +129,7 @@ export class RolePermissionsTabComponent implements OnInit {
     this.svc.updateAllPermissions(this.role().id, codes).subscribe({
       next: () => {
         this.saving.set(false);
-        this.success.set('Permissions mises à jour avec succès.');
+        this.success.set(this.translate.instant('ADMIN.roles.permissions.SAVE_SUCCESS'));
         // Emit using LOCAL codes (what we just saved) — not the server response,
         // which avoids any risk of the parent resetting checkedSet via the effect.
         this.permissionsUpdated.emit({
@@ -139,7 +141,7 @@ export class RolePermissionsTabComponent implements OnInit {
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? 'Erreur lors de la sauvegarde.');
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.roles.permissions.SAVE_ERROR'));
       },
     });
   }

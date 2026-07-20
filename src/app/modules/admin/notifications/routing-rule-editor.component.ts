@@ -14,6 +14,7 @@ import {
 } from './notification-routing.model';
 import { RecipientTagsComponent } from './recipient-tags.component';
 import { TestDispatchModalComponent } from './test-dispatch-modal.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-routing-rule-editor',
@@ -26,6 +27,7 @@ import { TestDispatchModalComponent } from './test-dispatch-modal.component';
     FormFieldComponent,
     ToggleComponent,
     CardComponent,
+    TranslatePipe,
   ],
   templateUrl: './routing-rule-editor.component.html',
   styleUrl: './routing-rule-editor.component.scss',
@@ -37,6 +39,7 @@ export class RoutingRuleEditorComponent {
   // ── Services ────────────────────────────────────────────────────────────
   private readonly svc = inject(NotificationRoutingService);
   private readonly userStore = inject(UserStore);
+  private readonly translate = inject(TranslateService);
 
   // ── Server state ────────────────────────────────────────────────────────
   readonly detail     = signal<RoutingRuleDetail | null>(null);
@@ -90,7 +93,7 @@ export class RoutingRuleEditorComponent {
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(err?.error?.message ?? 'Erreur lors du chargement de la règle.');
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.ruleLoadError'));
         this.loading.set(false);
       },
     });
@@ -113,12 +116,12 @@ export class RoutingRuleEditorComponent {
     }).subscribe({
       next: () => {
         this.saving.set(false);
-        this.success.set('Modèles enregistrés avec succès.');
+        this.success.set(this.translate.instant('ADMIN.notifications.saveSuccess'));
         setTimeout(() => this.success.set(null), 3000);
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? 'Erreur lors de la sauvegarde.');
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.saveError'));
       },
     });
   }
@@ -131,7 +134,7 @@ export class RoutingRuleEditorComponent {
       next: (item) => {
         this.detail.set({ ...d, inappRecipients: [...d.inappRecipients, item] });
       },
-      error: (err) => this.error.set(err?.error?.message ?? 'Erreur ajout destinataire in-app.'),
+      error: (err) => this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.addInappError')),
     });
   }
 
@@ -145,7 +148,7 @@ export class RoutingRuleEditorComponent {
           inappRecipients: d.inappRecipients.filter(r => r.id !== id),
         });
       },
-      error: (err) => this.error.set(err?.error?.message ?? 'Erreur suppression destinataire in-app.'),
+      error: (err) => this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.removeInappError')),
     });
   }
 
@@ -161,7 +164,7 @@ export class RoutingRuleEditorComponent {
         if (payload.field === 'BCC') updated.emailBccRecipients = [...d.emailBccRecipients, item];
         this.detail.set(updated);
       },
-      error: (err) => this.error.set(err?.error?.message ?? 'Erreur ajout destinataire email.'),
+      error: (err) => this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.addEmailError')),
     });
   }
 
@@ -176,7 +179,7 @@ export class RoutingRuleEditorComponent {
         if (payload.field === 'BCC') updated.emailBccRecipients = d.emailBccRecipients.filter(r => r.id !== payload.id);
         this.detail.set(updated);
       },
-      error: (err) => this.error.set(err?.error?.message ?? 'Erreur suppression destinataire email.'),
+      error: (err) => this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.removeEmailError')),
     });
   }
 
@@ -193,7 +196,7 @@ export class RoutingRuleEditorComponent {
         this.testLoading.set(false);
       },
       error: (err) => {
-        this.error.set(err?.error?.message ?? 'Erreur lors du test.');
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.testError'));
         this.testLoading.set(false);
       },
     });

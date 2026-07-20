@@ -13,7 +13,7 @@
       @if (row['regime']) {
         <span class="rra-regime-badge">{{ row['regime'] }}</span>
       } @else {
-        <span class="rra-regime-none">Défaut ({{ defaultRegimeName() ?? 'Non configuré' }})</span>
+        <span class="rra-regime-none">{{ 'ADMIN.regimes.roleAssign.defaultLabel' | translate }} ({{ defaultRegimeName() ?? ('ADMIN.regimes.roleAssign.notConfigured' | translate) }})</span>
       }
     </ng-template>
 
@@ -25,7 +25,7 @@
       <div class="rra-actions">
         <daf-button
           *dafHasPermission="'ADMIN_REGIMES'"
-          [label]="row['_source'].assignment ? 'Modifier' : 'Assigner'"
+          [label]="(row['_source'].assignment ? 'ADMIN.regimes.common.edit' : 'ADMIN.regimes.roleAssign.assign') | translate"
           variant="secondary"
           [options]="{ size: 'sm', iconStart: row['_source'].assignment ? 'edit' : 'add' }"
           (onClick)="openAssignModal(row['_source'])" />
@@ -33,7 +33,7 @@
           <daf-button
             *dafHasPermission="'ADMIN_REGIMES'"
             class="icon-btn-delete"
-            title="Supprimer"
+            [title]="'ADMIN.regimes.common.delete' | translate"
             variant="danger"
             [options]="{ size: 'sm', iconStart: 'delete' }"
             (onClick)="openRemoveModal(row['_source'])" />
@@ -45,7 +45,7 @@
 
   <!-- Count + Pagination -->
   <div class="rra-footer">
-    <span class="rra-count"><strong>{{ totalElements() }}</strong> rôle(s)</span>
+    <span class="rra-count"><strong>{{ totalElements() }}</strong> {{ 'ADMIN.regimes.roleAssign.roleCount' | translate }}</span>
     @if (totalPages() > 1) {
       <daf-pagination
         [currentPage]="currentPage()"
@@ -58,12 +58,12 @@
 
 <!-- Assign Modal -->
 <app-modal
-  title="Assigner un régime"
+  [title]="'ADMIN.regimes.roleAssign.assignModalTitle' | translate"
   [visible]="showAssignModal()"
   [hasFooter]="true"
   (closed)="showAssignModal.set(false)">
 
-  <p class="rra-modal-subtitle">Rôle : <strong class="rra-modal-role">{{ selectedRow()?.roleName }}</strong></p>
+  <p class="rra-modal-subtitle">{{ 'ADMIN.regimes.roleAssign.roleLabel' | translate }} <strong class="rra-modal-role">{{ selectedRow()?.roleName }}</strong></p>
 
   @if (errorMsg()) { <div class="rra-msg-error">{{ errorMsg() }}</div> }
 
@@ -71,39 +71,39 @@
     <daf-select
       [selected]="formRegimeSelected()"
       [options]="regimeOptions()"
-      [config]="{ label: 'Régime', required: true, fullWidth: true }"
+      [config]="{ label: ('ADMIN.regimes.roleAssign.fieldRegime' | translate), required: true, fullWidth: true }"
       (selectedChange)="onFormRegimeChange($event)" />
     <div class="rra-form-row-2">
       <daf-form-field
-        [options]="{ label: 'Date d\'effet', type: 'date', required: true, fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.roleAssign.effFrom' | translate), type: 'date', required: true, fullWidth: true }"
         [value]="formEffFrom"
         (valueChange)="formEffFrom = $any($event)" />
       <div>
         <daf-form-field
-          [options]="{ label: 'Date de fin', type: 'date', disabled: noEndDate(), fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.roleAssign.effTo' | translate), type: 'date', disabled: noEndDate(), fullWidth: true }"
           [value]="formEffTo"
           (valueChange)="formEffTo = $any($event)" />
         <daf-checkbox
           class="rra-no-end-checkbox"
-          [options]="{ label: 'Sans date de fin' }"
+          [options]="{ label: ('ADMIN.regimes.roleAssign.noEnd' | translate) }"
           [checked]="noEndDate()"
           (checkedChange)="noEndDate.set($event)" />
       </div>
     </div>
     <daf-form-field
-      [options]="{ label: 'Notes', type: 'textarea', rows: 2, fullWidth: true }"
+      [options]="{ label: ('ADMIN.regimes.roleAssign.notes' | translate), type: 'textarea', rows: 2, fullWidth: true }"
       [value]="formNotes"
       (valueChange)="formNotes = $any($event)" />
     <div class="rra-info-banner">
       <span class="material-symbols-outlined rra-info-icon">info</span>
-      Cela affectera <strong>{{ affectedCount() }}</strong> employé(s) avec le rôle "{{ selectedRow()?.roleName }}" sans override personnel.
+      {{ 'ADMIN.regimes.roleAssign.affectBefore' | translate }}<strong>{{ affectedCount() }}</strong>{{ 'ADMIN.regimes.roleAssign.affectRoleMid' | translate }}"{{ selectedRow()?.roleName }}"{{ 'ADMIN.regimes.roleAssign.affectRoleEnd' | translate }}
     </div>
   </div>
 
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="showAssignModal.set(false)" />
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showAssignModal.set(false)" />
     <daf-button
-      label="Confirmer l'assignation"
+      [label]="'ADMIN.regimes.roleAssign.confirmAssign' | translate"
       variant="teal"
       [options]="{ disabled: isAssigning() || !formRegimeId || !formEffFrom, loading: isAssigning() }"
       (onClick)="confirmAssign()" />
@@ -112,19 +112,19 @@
 
 <!-- Remove Modal -->
 <app-modal
-  title="Supprimer l'assignation"
+  [title]="'ADMIN.regimes.roleAssign.removeModalTitle' | translate"
   [visible]="showRemoveModal()"
   [hasFooter]="true"
   (closed)="showRemoveModal.set(false)">
 
-  <p class="rra-remove-text">Êtes-vous sûr de vouloir supprimer le régime "<strong>{{ selectedRow()?.assignment?.regimeLabelFr }}</strong>" du rôle "<strong>{{ selectedRow()?.roleName }}</strong>" ?</p>
+  <p class="rra-remove-text">{{ 'ADMIN.regimes.roleAssign.removeBefore' | translate }}"<strong>{{ selectedRow()?.assignment?.regimeLabelFr }}</strong>"{{ 'ADMIN.regimes.roleAssign.removeMid' | translate }}"<strong>{{ selectedRow()?.roleName }}</strong>"{{ 'ADMIN.regimes.roleAssign.removeAfter' | translate }}</p>
   <div class="rra-warning">
     <span class="material-symbols-outlined rra-warning-icon">warning</span>
-    <strong>{{ affectedCount() }}</strong>&nbsp;employé(s) reviendront au régime par défaut de l'entité.
+    <strong>{{ affectedCount() }}</strong>&nbsp;{{ 'ADMIN.regimes.roleAssign.revertWarning' | translate }}
   </div>
 
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="showRemoveModal.set(false)" />
-    <daf-button label="Supprimer" variant="danger" (onClick)="confirmRemove()" />
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showRemoveModal.set(false)" />
+    <daf-button [label]="'ADMIN.regimes.common.delete' | translate" variant="danger" (onClick)="confirmRemove()" />
   </div>
 </app-modal>

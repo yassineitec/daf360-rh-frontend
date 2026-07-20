@@ -2,13 +2,14 @@ import { Component, computed, input, output, signal, effect } from '@angular/cor
 import { CardComponent, PaginationComponent, PaginationConfig, ButtonComponent } from '@khalilrebhiitec/daf360';
 import { RoleListItem } from './role.model';
 import { RhSearchBarComponent } from '../../../shared/search-bar.component';
+import { TranslatePipe } from '@ngx-translate/core';
 
 const PAGE_SIZE = 5;
 
 @Component({
   selector: 'app-role-list',
   standalone: true,
-  imports: [CardComponent, PaginationComponent, ButtonComponent, RhSearchBarComponent],
+  imports: [CardComponent, PaginationComponent, ButtonComponent, RhSearchBarComponent, TranslatePipe],
   templateUrl: './role-list.component.html',
   styleUrl: './role-list.component.scss',
 })

@@ -15,7 +15,7 @@
         <div class="flex flex-col gap-1 mb-1">
           <nav class="flex items-center gap-1 text-[13px] text-on-surface-variant">
             <button type="button" class="font-medium hover:underline transition-colors" (click)="goBack()">
-              Provisioning IT
+              {{ 'IT_PROVISIONING.form.breadcrumb' | translate }}
             </button>
             <span class="material-symbols-outlined text-[16px]">chevron_right</span>
             <span class="font-medium text-teal">{{ p.candidateFullName }}</span>
@@ -24,7 +24,7 @@
             <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight break-words">{{ p.candidateFullName }}</h1>
             <daf-badge [label]="statusBadge(p.status).label" [options]="statusBadge(p.status).options" />
           </div>
-          <p class="text-[13px] text-outline">{{ p.appliedPosition ?? 'Poste non spécifié' }}</p>
+          <p class="text-[13px] text-outline">{{ p.appliedPosition ?? ('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED' | translate) }}</p>
         </div>
 
         <!-- Mobile/tablet: compact horizontal stepper (replaces the vertical Progression panel) -->
@@ -47,7 +47,7 @@
               }
             }
           </div>
-          <p class="text-[13px] font-bold text-teal mt-1.5">Étape {{ currentStep() }} · {{ cardTitle() }}</p>
+          <p class="text-[13px] font-bold text-teal mt-1.5">{{ 'IT_PROVISIONING.form.step' | translate:{ n: currentStep() } }} · {{ cardTitle() }}</p>
         </div>
 
         @if (error()) {
@@ -82,19 +82,19 @@
             @if (currentStep() === 1) {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">Nom complet</span>
+                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.fullName' | translate }}</span>
                   <span class="text-[14px] text-on-surface">{{ p.candidateFullName }}</span>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">Poste</span>
+                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.position' | translate }}</span>
                   <span class="text-[14px] text-on-surface">{{ p.appliedPosition ?? '—' }}</span>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">Début prévu</span>
+                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.expectedStart' | translate }}</span>
                   <span class="text-[14px] text-on-surface">{{ p.expectedStartDate ?? '—' }}</span>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">Statut</span>
+                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.status' | translate }}</span>
                   <daf-badge [label]="statusBadge(p.status).label" [options]="statusBadge(p.status).options" />
                 </div>
               </div>
@@ -107,31 +107,31 @@
                   <span class="material-symbols-outlined text-success">check_circle</span>
                   <div>
                     <p class="text-[14px] font-bold text-on-surface">{{ p.ms365Email }}</p>
-                    <p class="text-[12px] text-outline">Soumis le {{ p.ms365EmailCreatedAt ? (p.ms365EmailCreatedAt | slice:0:10) : '—' }}</p>
+                    <p class="text-[12px] text-outline">{{ 'IT_PROVISIONING.form.submittedOn' | translate }} {{ p.ms365EmailCreatedAt ? (p.ms365EmailCreatedAt | slice:0:10) : '—' }}</p>
                   </div>
                 </div>
               } @else {
                 <div class="flex gap-3 items-end">
                   <div class="flex flex-col gap-1.5 flex-1">
                     <label class="text-[12px] font-semibold text-outline uppercase tracking-wide" for="ms365Email">
-                      Adresse email MS365 <span class="text-danger">*</span>
+                      {{ 'IT_PROVISIONING.form.emailFieldLabel' | translate }} <span class="text-danger">*</span>
                     </label>
                     <input
                       id="ms365Email"
                       class="h-9 border border-outline-variant rounded-lg px-3 text-[13px] text-on-surface outline-none focus:border-tertiary focus:ring-2 focus:ring-tertiary/20"
                       type="email"
-                      placeholder="prenom.nom@itecgroupe.com"
+                      [placeholder]="'IT_PROVISIONING.form.emailPlaceholder' | translate"
                       [ngModel]="emailInput()"
                       (ngModelChange)="emailInput.set($event)"
                       [disabled]="submittingEmail()"
                       autocomplete="off" />
                   </div>
                   <daf-button
-                    [options]="{ variant: 'teal', label: submittingEmail() ? 'En cours…' : 'Soumettre l\'email', size: 'md', disabled: !emailIsValid() || submittingEmail(), loading: submittingEmail() }"
+                    [options]="{ variant: 'teal', label: (submittingEmail() ? 'IT_PROVISIONING.form.submitting' : 'IT_PROVISIONING.form.submitEmail') | translate, size: 'md', disabled: !emailIsValid() || submittingEmail(), loading: submittingEmail() }"
                     (onClick)="onOpenEmailModal()" />
                 </div>
                 @if (!emailIsValid() && emailInput().length > 0) {
-                  <p class="text-[11px] text-danger mt-1">Adresse email invalide.</p>
+                  <p class="text-[11px] text-danger mt-1">{{ 'IT_PROVISIONING.form.emailInvalid' | translate }}</p>
                 }
               }
             }
@@ -139,7 +139,7 @@
             <!-- ── STEP 3 : Matériel ────────────────────────────────── -->
             @if (currentStep() === 3) {
               <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-              <daf-data-table [columns]="assetColumns" [rows]="assetRows()" [config]="assetTableConfig">
+              <daf-data-table [columns]="assetColumns()" [rows]="assetRows()" [config]="assetTableConfig()">
 
                 <ng-template dafCell="provided" let-row>
                   <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer"
@@ -156,7 +156,7 @@
                 </ng-template>
 
                 <ng-template dafCell="brandModel" let-row>
-                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="Marque / Modèle"
+                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" [placeholder]="'IT_PROVISIONING.form.assetCol.brandModel' | translate"
                     [ngModel]="row['brandModel']"
                     (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'brandModel', $event)"
                     [disabled]="!row['provided']" />
@@ -175,7 +175,7 @@
                     (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'status', $event)"
                     [disabled]="!row['provided']">
                     <option value="">—</option>
-                    @for (s of hwStatuses; track s.value) {
+                    @for (s of hwStatuses(); track s.value) {
                       <option [value]="s.value">{{ s.label }}</option>
                     }
                   </select>
@@ -185,11 +185,11 @@
               </div>
 
               <div class="flex flex-col gap-1.5 mt-3.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">Notes matériel</label>
+                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.hardwareNotes' | translate }}</label>
                 <textarea
                   class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-[13px] outline-none resize-y focus:border-tertiary"
                   rows="3"
-                  placeholder="Observations sur le matériel…"
+                  [placeholder]="'IT_PROVISIONING.form.hardwareNotesPlaceholder' | translate"
                   [ngModel]="hardwareNotes()"
                   (ngModelChange)="hardwareNotes.set($event)"></textarea>
               </div>
@@ -215,11 +215,11 @@
                 </label>
               </div>
               <div class="flex flex-col gap-1.5 mt-3.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">Autres licences</label>
+                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.otherLicenses' | translate }}</label>
                 <input
                   class="h-9 border border-outline-variant rounded-lg px-3 text-[13px] outline-none focus:border-tertiary"
                   type="text"
-                  placeholder="Logiciels spéciaux…"
+                  [placeholder]="'IT_PROVISIONING.form.otherLicensesPlaceholder' | translate"
                   [ngModel]="licenseOther()"
                   (ngModelChange)="licenseOther.set($event)" />
               </div>
@@ -229,10 +229,10 @@
             @if (currentStep() === 5) {
               <label class="flex items-center gap-2 text-[14px] font-semibold text-on-surface cursor-pointer">
                 <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="adAccountCreated()" (ngModelChange)="adAccountCreated.set($event)">
-                Compte Active Directory créé
+                {{ 'IT_PROVISIONING.form.adAccountCreated' | translate }}
               </label>
               <div class="flex flex-col gap-1.5 mt-3.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">Type de profil AD</label>
+                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.adProfileType' | translate }}</label>
                 <select class="h-9 border border-outline-variant rounded-lg px-3 text-[13px] outline-none bg-surface cursor-pointer focus:border-tertiary"
                   [ngModel]="adProfileType()" (ngModelChange)="adProfileType.set($event)">
                   @for (opt of adOptions(); track opt.valueCode) {
@@ -245,11 +245,11 @@
             <!-- ── STEP 6 : Notes & finalisation ─────────────────────── -->
             @if (currentStep() === 6) {
               <div class="flex flex-col gap-1.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">Notes générales</label>
+                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.generalNotes' | translate }}</label>
                 <textarea
                   class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-[13px] outline-none resize-y focus:border-tertiary"
                   rows="4"
-                  placeholder="Notes internes, observations…"
+                  [placeholder]="'IT_PROVISIONING.form.generalNotesPlaceholder' | translate"
                   [ngModel]="notes()"
                   (ngModelChange)="notes.set($event)"
                   ></textarea>
@@ -260,12 +260,12 @@
                   <div class="flex items-start gap-3 flex-1">
                     <span class="material-symbols-outlined text-teal">description</span>
                     <div>
-                      <p class="text-[13px] font-bold text-on-surface">Décharge de responsabilité</p>
-                      <p class="text-[12px] text-outline">Ce document formalise la remise du matériel informatique au collaborateur.</p>
+                      <p class="text-[13px] font-bold text-on-surface">{{ 'IT_PROVISIONING.form.dischargeTitle' | translate }}</p>
+                      <p class="text-[12px] text-outline">{{ 'IT_PROVISIONING.form.dischargeSub' | translate }}</p>
                     </div>
                   </div>
                   <app-pdf-download-button
-                    label="Générer la décharge"
+                    [label]="'IT_PROVISIONING.form.generateDischarge' | translate"
                     endpoint="/api/hr/documents/decharge-responsabilite"
                     [body]="{ candidateId: prov()!.candidateId, itProvisioningId: prov()!.id, context: 'IT_COMPLETE' }"
                     [filename]="'decharge-responsabilite.pdf'"
@@ -279,23 +279,23 @@
           <!-- Bottom action bar -->
           <div class="flex items-center justify-between gap-4 flex-wrap px-4 py-4 sm:px-8 sm:py-5 border-t border-outline-variant bg-surface-container-lowest">
             <daf-button
-              [options]="{ variant: 'ghost', label: 'Précédent', iconStart: 'arrow_back', disabled: currentStep() === 1 }"
+              [options]="{ variant: 'ghost', label: ('IT_PROVISIONING.form.previous' | translate), iconStart: 'arrow_back', disabled: currentStep() === 1 }"
               (onClick)="goPrev()" />
 
             <div class="flex items-center gap-3">
               <daf-button
-                [options]="{ variant: 'secondary', label: saving() ? 'Enregistrement…' : (isCompleted() ? 'Enregistrer' : 'Enregistrer le brouillon'), iconStart: 'save', disabled: saving(), loading: saving() }"
+                [options]="{ variant: 'secondary', label: (saving() ? 'IT_PROVISIONING.form.saving' : (isCompleted() ? 'IT_PROVISIONING.form.save' : 'IT_PROVISIONING.form.saveDraft')) | translate, iconStart: 'save', disabled: saving(), loading: saving() }"
                 (onClick)="onSave()" />
               @if (currentStep() < totalSteps) {
                 <daf-button
-                  [options]="{ variant: 'teal', pill: true, label: 'Suivant', iconEnd: 'arrow_forward' }"
+                  [options]="{ variant: 'teal', pill: true, label: ('IT_PROVISIONING.form.next' | translate), iconEnd: 'arrow_forward' }"
                   (onClick)="goNext()" />
               } @else {
                 <daf-button
                   [options]="{
                     variant: 'teal',
                     pill: true,
-                    label: isCompleted() ? 'Provisioning terminé' : (completing() ? 'Finalisation…' : 'Marquer comme terminé'),
+                    label: (isCompleted() ? 'IT_PROVISIONING.form.provDone' : (completing() ? 'IT_PROVISIONING.form.finalizing' : 'IT_PROVISIONING.form.markComplete')) | translate,
                     iconStart: isCompleted() ? 'check_circle' : undefined,
                     iconEnd: isCompleted() ? undefined : 'flag',
                     disabled: !canComplete() || completing() || isCompleted(),
@@ -306,7 +306,7 @@
             </div>
           </div>
           @if (currentStep() === totalSteps && !canComplete() && !isCompleted()) {
-            <p class="text-[11px] text-outline text-center pb-4">Créez d'abord le compte MS365 et le compte AD pour finaliser.</p>
+            <p class="text-[11px] text-outline text-center pb-4">{{ 'IT_PROVISIONING.form.completeHint' | translate }}</p>
           }
 
         </daf-card><!-- /form card -->
@@ -320,7 +320,7 @@
         <!-- Progression -->
         <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
           <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-outline">Progression</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-outline">{{ 'IT_PROVISIONING.form.progression' | translate }}</p>
           </div>
           <div class="p-5">
             <div class="relative flex flex-col">
@@ -334,14 +334,14 @@
                   </span>
                   <div class="pt-1 flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-2">
-                      <p [class]="'text-[10px] font-bold uppercase tracking-wide ' + stepEyebrowClasses(i)">Étape {{ i + 1 }}</p>
+                      <p [class]="'text-[10px] font-bold uppercase tracking-wide ' + stepEyebrowClasses(i)">{{ 'IT_PROVISIONING.form.step' | translate:{ n: i + 1 } }}</p>
                       @if (stepDone()[i] && currentStep() !== i + 1) {
-                        <span class="w-2 h-2 rounded-full bg-tertiary shrink-0" title="Complété"></span>
+                        <span class="w-2 h-2 rounded-full bg-tertiary shrink-0" [title]="'IT_PROVISIONING.form.completed' | translate"></span>
                       }
                     </div>
-                    <p [class]="'text-[14px] font-bold leading-snug ' + stepLabelClasses(i)">{{ step.title }}</p>
+                    <p [class]="'text-[14px] font-bold leading-snug ' + stepLabelClasses(i)">{{ 'IT_PROVISIONING.form.steps.' + step.key + '.title' | translate }}</p>
                     @if (currentStep() === i + 1) {
-                      <p class="text-[11px] text-outline mt-0.5">En cours de révision</p>
+                      <p class="text-[11px] text-outline mt-0.5">{{ 'IT_PROVISIONING.form.underReview' | translate }}</p>
                     }
                   </div>
                 </button>
@@ -365,18 +365,16 @@
 
   <!-- ── Complete confirmation modal ──────────────────────────────────── -->
   <app-modal
-    title="Confirmer la finalisation"
+    [title]="'IT_PROVISIONING.form.confirmCompleteTitle' | translate"
     [visible]="showCompleteModal()"
     (closed)="showCompleteModal.set(false)"
     [hasFooter]="true">
     <p class="text-[14px] text-on-surface leading-relaxed">
-      Êtes-vous sûr de vouloir marquer le provisioning de
-      <strong>{{ p.candidateFullName }}</strong> comme <strong>terminé</strong> ?
-      Cette action est définitive.
+      {{ 'IT_PROVISIONING.form.confirmCompleteBefore' | translate }}<strong>{{ p.candidateFullName }}</strong>{{ 'IT_PROVISIONING.form.confirmCompleteMid' | translate }}<strong>{{ 'IT_PROVISIONING.form.confirmCompleteStrong' | translate }}</strong>{{ 'IT_PROVISIONING.form.confirmCompleteAfter' | translate }}
     </p>
     <div slot="footer">
-      <daf-button [options]="{ variant: 'secondary', label: 'Annuler' }" (onClick)="showCompleteModal.set(false)" />
-      <daf-button [options]="{ variant: 'teal', label: 'Confirmer' }" (onClick)="onCompleteConfirmed()" />
+      <daf-button [options]="{ variant: 'secondary', label: ('IT_PROVISIONING.form.cancel' | translate) }" (onClick)="showCompleteModal.set(false)" />
+      <daf-button [options]="{ variant: 'teal', label: ('IT_PROVISIONING.form.confirm' | translate) }" (onClick)="onCompleteConfirmed()" />
     </div>
   </app-modal>
 

@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { AdminService } from './admin.service';
 import {
@@ -10,13 +11,6 @@ import {
   TEMPLATE_CATEGORIES, VariableDef,
 } from './models/admin.model';
 import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  ATTESTATION: 'Attestation',
-  CONTRACT:    'Contrat',
-  LETTRE:      'Lettre / Courrier',
-  AUTRE:       'Autre',
-};
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="fr">
@@ -58,28 +52,28 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 @Component({
   selector: 'app-document-templates-admin',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, StatusBadgeComponent],
+  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, TranslatePipe],
   template: `
     <!-- Header -->
     <div class="tmpl-header">
       <div>
-        <h3 class="section-title">Maquettes de documents</h3>
-        <p class="section-sub">Créez des modèles réutilisables avec variables dynamiques ({{'{{'}}variable.clé{{'}}'}}).</p>
+        <h3 class="section-title">{{ 'ADMIN.docs.templates.title' | translate }}</h3>
+        <p class="section-sub">{{ 'ADMIN.docs.templates.subtitle' | translate }} ({{'{{'}}variable.clé{{'}}'}}).</p>
       </div>
-      <daf-button label="Nouvelle maquette" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button [label]="'ADMIN.docs.templates.newTemplate' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
     </div>
 
     <!-- Filter bar -->
     <div class="filter-bar">
       <select class="filter-select" [(ngModel)]="filterCategory" (ngModelChange)="load()">
-        <option value="">Toutes catégories</option>
+        <option value="">{{ 'ADMIN.docs.templates.allCategories' | translate }}</option>
         @for (c of TEMPLATE_CATEGORIES; track c) {
           <option [value]="c">{{ categoryLabel(c) }}</option>
         }
       </select>
       <label class="show-inactive-toggle">
         <input type="checkbox" [(ngModel)]="showInactive" (ngModelChange)="load()" />
-        <span>Afficher les inactifs</span>
+        <span>{{ 'ADMIN.docs.templates.showInactive' | translate }}</span>
       </label>
     </div>
 
@@ -91,15 +85,15 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     } @else if (rows().length === 0) {
       <div class="empty-state">
         <span class="material-symbols-outlined">description</span>
-        <p>Aucune maquette configurée. Créez-en une pour commencer.</p>
+        <p>{{ 'ADMIN.docs.templates.empty' | translate }}</p>
       </div>
     } @else {
       <div class="tmpl-table">
         <div class="tmpl-head">
-          <span class="col-name">Nom</span>
-          <span class="col-cat">Catégorie</span>
-          <span class="col-vars">Variables</span>
-          <span class="col-status">Statut</span>
+          <span class="col-name">{{ 'ADMIN.docs.templates.colName' | translate }}</span>
+          <span class="col-cat">{{ 'ADMIN.docs.templates.colCategory' | translate }}</span>
+          <span class="col-vars">{{ 'ADMIN.docs.templates.colVariables' | translate }}</span>
+          <span class="col-status">{{ 'ADMIN.docs.templates.colStatus' | translate }}</span>
           <span class="col-actions"></span>
         </div>
         @for (t of rows(); track t.id) {
@@ -113,20 +107,20 @@ const DEFAULT_HTML = `<!DOCTYPE html>
             </span>
             <span class="col-vars">
               @if (t.variables?.length) {
-                <span class="var-count">{{ t.variables!.length }} variable{{ t.variables!.length > 1 ? 's' : '' }}</span>
+                <span class="var-count">{{ t.variables!.length }} {{ (t.variables!.length > 1 ? 'ADMIN.docs.templates.variablePlural' : 'ADMIN.docs.templates.variableSingular') | translate }}</span>
               } @else {
                 <span class="no-vars">—</span>
               }
             </span>
             <span class="col-status">
-              <daf-badge [label]="t.isActive ? 'Actif' : 'Inactif'"
+              <daf-badge [label]="(t.isActive ? 'ADMIN.docs.templates.active' : 'ADMIN.docs.templates.inactive') | translate"
                 [options]="{ variant: t.isActive ? 'success' : 'neutral', size: 'sm' }" />
             </span>
             <span class="col-actions">
-              <button class="icon-btn" title="Modifier" (click)="openEdit(t)">
+              <button class="icon-btn" [title]="'ADMIN.docs.templates.edit' | translate" (click)="openEdit(t)">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="icon-btn" [title]="t.isActive ? 'Désactiver' : 'Activer'" (click)="toggleActive(t)">
+              <button class="icon-btn" [title]="(t.isActive ? 'ADMIN.docs.templates.deactivate' : 'ADMIN.docs.templates.activate') | translate" (click)="toggleActive(t)">
                 <span class="material-symbols-outlined">{{ t.isActive ? 'toggle_on' : 'toggle_off' }}</span>
               </button>
             </span>
@@ -141,7 +135,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
         <div class="modal-panel modal-xl" (click)="$event.stopPropagation()">
 
           <div class="modal-header">
-            <h4>{{ editingId() ? 'Modifier la maquette' : 'Nouvelle maquette' }}</h4>
+            <h4>{{ (editingId() ? 'ADMIN.docs.templates.editTitle' : 'ADMIN.docs.templates.newTemplate') | translate }}</h4>
             <button class="icon-btn" (click)="closeForm()">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -151,23 +145,23 @@ const DEFAULT_HTML = `<!DOCTYPE html>
             <!-- Meta fields -->
             <div class="meta-grid">
               <div>
-                <label class="form-label">Nom *</label>
+                <label class="form-label">{{ 'ADMIN.docs.templates.nameLabel' | translate }}</label>
                 <input class="form-input" type="text" [(ngModel)]="form.name"
-                  placeholder="ex: Attestation de travail standard" />
+                  [placeholder]="'ADMIN.docs.templates.namePlaceholder' | translate" />
               </div>
               <div>
-                <label class="form-label">Catégorie *</label>
+                <label class="form-label">{{ 'ADMIN.docs.templates.categoryLabel' | translate }}</label>
                 <select class="form-input" [(ngModel)]="form.category">
-                  <option value="">Sélectionner…</option>
+                  <option value="">{{ 'ADMIN.docs.templates.selectPlaceholder' | translate }}</option>
                   @for (c of TEMPLATE_CATEGORIES; track c) {
                     <option [value]="c">{{ categoryLabel(c) }}</option>
                   }
                 </select>
               </div>
               <div class="field-full">
-                <label class="form-label">Description</label>
+                <label class="form-label">{{ 'ADMIN.docs.templates.descriptionLabel' | translate }}</label>
                 <input class="form-input" type="text" [(ngModel)]="form.description"
-                  placeholder="Description optionnelle visible dans la liste" />
+                  [placeholder]="'ADMIN.docs.templates.descriptionPlaceholder' | translate" />
               </div>
             </div>
 
@@ -176,10 +170,10 @@ const DEFAULT_HTML = `<!DOCTYPE html>
               <!-- Left: HTML editor -->
               <div class="editor-pane">
                 <div class="editor-toolbar">
-                  <label class="form-label" style="margin:0">Contenu HTML *</label>
-                  <button class="toolbar-btn" title="Insérer le gabarit par défaut"
+                  <label class="form-label" style="margin:0">{{ 'ADMIN.docs.templates.htmlLabel' | translate }}</label>
+                  <button class="toolbar-btn" [title]="'ADMIN.docs.templates.insertDefaultTooltip' | translate"
                     (click)="insertDefaultTemplate()">
-                    <span class="material-symbols-outlined">restart_alt</span> Gabarit
+                    <span class="material-symbols-outlined">restart_alt</span> {{ 'ADMIN.docs.templates.templateBtn' | translate }}
                   </button>
                 </div>
                 <textarea
@@ -189,17 +183,17 @@ const DEFAULT_HTML = `<!DOCTYPE html>
                   [(ngModel)]="form.htmlContent"
                   rows="22"
                   spellcheck="false"
-                  placeholder="Tapez votre HTML ici ou cliquez sur Gabarit pour commencer…"
+                  [placeholder]="'ADMIN.docs.templates.htmlPlaceholder' | translate"
                 ></textarea>
               </div>
 
               <!-- Right: Variable picker -->
               <div class="var-panel">
-                <div class="var-panel-title">Variables disponibles</div>
-                <p class="var-hint">Cliquez sur une variable pour l'insérer à la position du curseur dans l'éditeur.</p>
+                <div class="var-panel-title">{{ 'ADMIN.docs.templates.availableVariables' | translate }}</div>
+                <p class="var-hint">{{ 'ADMIN.docs.templates.variableHint' | translate }}</p>
 
                 @if (variableGroups().length === 0) {
-                  <div class="var-loading">Chargement…</div>
+                  <div class="var-loading">{{ 'ADMIN.docs.templates.loading' | translate }}</div>
                 } @else {
                   @for (group of variableGroups(); track group.name) {
                     <div class="var-group">
@@ -216,11 +210,11 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
                 <!-- Preview profile ID -->
                 <div class="preview-section">
-                  <div class="var-group-label" style="margin-top:16px">Aperçu</div>
-                  <label class="form-label" style="margin-top:8px">ID profil employé (optionnel)</label>
+                  <div class="var-group-label" style="margin-top:16px">{{ 'ADMIN.docs.templates.preview' | translate }}</div>
+                  <label class="form-label" style="margin-top:8px">{{ 'ADMIN.docs.templates.previewProfileLabel' | translate }}</label>
                   <input class="form-input" type="number" [(ngModel)]="previewProfileId"
-                    placeholder="Laisser vide pour données fictives" />
-                  <daf-button label="Aperçu PDF" variant="ghost"
+                    [placeholder]="'ADMIN.docs.templates.previewProfilePlaceholder' | translate" />
+                  <daf-button [label]="'ADMIN.docs.templates.previewPdf' | translate" variant="ghost"
                     [options]="{ iconStart: 'visibility', loading: previewing(), size: 'sm' }"
                     (onClick)="preview()" style="margin-top:8px;display:block" />
                 </div>
@@ -233,9 +227,9 @@ const DEFAULT_HTML = `<!DOCTYPE html>
           </div>
 
           <div class="modal-footer">
-            <daf-button label="Annuler" variant="secondary" (onClick)="closeForm()" />
+            <daf-button [label]="'ADMIN.docs.templates.cancel' | translate" variant="secondary" (onClick)="closeForm()" />
             <daf-button
-              [label]="editingId() ? 'Enregistrer' : 'Créer'"
+              [label]="(editingId() ? 'ADMIN.docs.templates.save' : 'ADMIN.docs.templates.create') | translate"
               variant="teal"
               [options]="{ loading: saving(), disabled: !isFormValid() }"
               (onClick)="save()"
@@ -334,6 +328,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 })
 export class DocumentTemplatesAdminComponent implements OnInit {
   private svc = inject(AdminService);
+  private translate = inject(TranslateService);
 
   paysId = input.required<number>();
 
@@ -457,7 +452,7 @@ export class DocumentTemplatesAdminComponent implements OnInit {
 
     req$.pipe(
       catchError(err => {
-        this.formError.set(err?.error?.message ?? err?.error?.detail ?? 'Erreur lors de l\'enregistrement');
+        this.formError.set(err?.error?.message ?? err?.error?.detail ?? this.translate.instant('ADMIN.docs.templates.saveError'));
         this.saving.set(false);
         return of(null);
       }),
@@ -495,6 +490,8 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   }
 
   categoryLabel(cat: string): string {
-    return CATEGORY_LABELS[cat] ?? cat;
+    const key = `ADMIN.docs.templates.category.${cat}`;
+    const val = this.translate.instant(key);
+    return val === key ? cat : val;
   }
 }

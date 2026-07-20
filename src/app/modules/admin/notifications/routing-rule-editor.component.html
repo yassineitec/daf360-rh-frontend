@@ -2,7 +2,7 @@
 
   <!-- Loading state -->
   @if (loading()) {
-    <div class="editor-loading">Chargement de la règle…</div>
+    <div class="editor-loading">{{ 'ADMIN.notifications.loadingRule' | translate }}</div>
   }
 
   <!-- Error banner (global) -->
@@ -15,12 +15,12 @@
   ──────────────────────────────────────────────────────────────────────── -->
   <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
-      <h3 class="editor-section-title">Paramètres généraux</h3>
+      <h3 class="editor-section-title">{{ 'ADMIN.notifications.generalSettings' | translate }}</h3>
 
       <!-- In-app toggle -->
       <div class="toggle-row">
         <daf-toggle
-          [options]="{ label: 'Notification in-app' }"
+          [options]="{ label: ('ADMIN.notifications.toggleInapp' | translate) }"
           [checked]="sendInapp()"
           (checkedChange)="sendInapp.set($event)" />
       </div>
@@ -29,8 +29,8 @@
       <div class="toggle-row">
         <daf-toggle
           [options]="{
-            label: 'Email',
-            hint: !eventType().supportsEmail ? 'Ce type d\'événement ne supporte pas l\'envoi par email.' : undefined,
+            label: ('ADMIN.notifications.toggleEmail' | translate),
+            hint: !eventType().supportsEmail ? ('ADMIN.notifications.emailUnsupportedHint' | translate) : undefined,
             disabled: !eventType().supportsEmail
           }"
           [checked]="sendEmail()"
@@ -45,12 +45,12 @@
   @if (sendInapp()) {
     <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
-      <h3 class="editor-section-title">Modèles in-app</h3>
+      <h3 class="editor-section-title">{{ 'ADMIN.notifications.inappTemplates' | translate }}</h3>
 
       <!-- Titre -->
       <div class="field-group">
         <daf-form-field
-          [options]="{ label: 'Titre', placeholder: 'Titre de la notification…', fullWidth: true }"
+          [options]="{ label: ('ADMIN.notifications.fieldTitle' | translate), placeholder: ('ADMIN.notifications.titlePlaceholder' | translate), fullWidth: true }"
           [value]="inappTitle()"
           (valueChange)="inappTitle.set($any($event) ?? '')" />
         <div class="placeholder-chips">
@@ -67,7 +67,7 @@
       <!-- Corps du message -->
       <div class="field-group">
         <daf-form-field
-          [options]="{ label: 'Corps du message', type: 'textarea', rows: 3, placeholder: 'Corps de la notification…', fullWidth: true }"
+          [options]="{ label: ('ADMIN.notifications.fieldBody' | translate), type: 'textarea', rows: 3, placeholder: ('ADMIN.notifications.bodyPlaceholder' | translate), fullWidth: true }"
           [value]="inappBody()"
           (valueChange)="inappBody.set($any($event) ?? '')" />
         <div class="placeholder-chips">
@@ -90,12 +90,12 @@
   @if (sendEmail() && eventType().supportsEmail) {
     <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
-      <h3 class="editor-section-title">Modèles email</h3>
+      <h3 class="editor-section-title">{{ 'ADMIN.notifications.emailTemplates' | translate }}</h3>
 
       <!-- Sujet -->
       <div class="field-group">
         <daf-form-field
-          [options]="{ label: 'Sujet', placeholder: 'Sujet de l\'email…', fullWidth: true }"
+          [options]="{ label: ('ADMIN.notifications.fieldSubject' | translate), placeholder: ('ADMIN.notifications.subjectPlaceholder' | translate), fullWidth: true }"
           [value]="emailSubject()"
           (valueChange)="emailSubject.set($any($event) ?? '')" />
         <div class="placeholder-chips">
@@ -112,7 +112,7 @@
       <!-- Corps email -->
       <div class="field-group">
         <daf-form-field
-          [options]="{ label: 'Corps de l\'email', type: 'textarea', rows: 8, placeholder: 'Corps de l\'email…', fullWidth: true }"
+          [options]="{ label: ('ADMIN.notifications.fieldEmailBody' | translate), type: 'textarea', rows: 8, placeholder: ('ADMIN.notifications.emailBodyPlaceholder' | translate), fullWidth: true }"
           [value]="emailBody()"
           (valueChange)="emailBody.set($any($event) ?? '')" />
         <div class="placeholder-chips">
@@ -132,7 +132,7 @@
   <!-- Save button + banners -->
   <div class="editor-actions">
     <daf-button
-      [label]="saving() ? 'Enregistrement…' : 'Enregistrer les modèles'"
+      [label]="(saving() ? 'ADMIN.notifications.saving' : 'ADMIN.notifications.saveTemplates') | translate"
       variant="teal"
       [options]="{ disabled: saving(), loading: saving() }"
       (onClick)="saveTemplates()" />
@@ -148,11 +148,11 @@
   @if (sendInapp() && detail()) {
     <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
-      <h3 class="editor-section-title">Destinataires in-app</h3>
+      <h3 class="editor-section-title">{{ 'ADMIN.notifications.inappRecipients' | translate }}</h3>
       <app-recipient-tags
         [recipients]="detail()!.inappRecipients"
         [availableRoles]="detail()!.availableRoles"
-        sectionTitle="Notification in-app"
+        [sectionTitle]="'ADMIN.notifications.sectionInapp' | translate"
         (addRecipient)="onInappRecipientAdded($event)"
         (removeRecipient)="onInappRecipientRemoved($event)"
       />
@@ -166,20 +166,20 @@
   @if (sendEmail() && eventType().supportsEmail && detail()) {
     <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
-      <h3 class="editor-section-title">Destinataires email</h3>
+      <h3 class="editor-section-title">{{ 'ADMIN.notifications.emailRecipients' | translate }}</h3>
 
       <!-- TO -->
       <div class="email-field-block">
         <app-recipient-tags
           [recipients]="detail()!.emailToRecipients"
           [availableRoles]="detail()!.availableRoles"
-          sectionTitle="À (TO)"
+          [sectionTitle]="'ADMIN.notifications.sectionTo' | translate"
           (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'TO' })"
           (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'TO' })"
         />
         @if (detail()!.emailToRecipients.length === 0) {
           <div class="warning-banner">
-            Attention : aucun destinataire en TO. L'email ne sera pas envoyé.
+            {{ 'ADMIN.notifications.warningNoTo' | translate }}
           </div>
         }
       </div>
@@ -189,7 +189,7 @@
         <app-recipient-tags
           [recipients]="detail()!.emailCcRecipients"
           [availableRoles]="detail()!.availableRoles"
-          sectionTitle="Copie (CC)"
+          [sectionTitle]="'ADMIN.notifications.sectionCc' | translate"
           (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'CC' })"
           (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'CC' })"
         />
@@ -200,7 +200,7 @@
         <app-recipient-tags
           [recipients]="detail()!.emailBccRecipients"
           [availableRoles]="detail()!.availableRoles"
-          sectionTitle="Copie cachée (BCC)"
+          [sectionTitle]="'ADMIN.notifications.sectionBcc' | translate"
           (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'BCC' })"
           (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'BCC' })"
         />
@@ -215,12 +215,12 @@
   @if (detail()) {
     <daf-card class="block editor-section--test" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
-      <h3 class="editor-section-title">Test de la configuration</h3>
+      <h3 class="editor-section-title">{{ 'ADMIN.notifications.testTitle' | translate }}</h3>
       <p class="test-description">
-        Simule l'envoi pour votre pays et affiche les destinataires résolus et les messages générés.
+        {{ 'ADMIN.notifications.testDescription' | translate }}
       </p>
       <daf-button
-        [label]="testLoading() ? 'Chargement…' : 'Tester la configuration'"
+        [label]="(testLoading() ? 'ADMIN.notifications.testLoading' : 'ADMIN.notifications.testButton') | translate"
         variant="secondary"
         [options]="{ disabled: testLoading(), loading: testLoading() }"
         (onClick)="runTest()" />

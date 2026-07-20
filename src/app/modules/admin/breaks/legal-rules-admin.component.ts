@@ -9,24 +9,25 @@ import {
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-legal-rules-admin',
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent, DafHasPermissionDirective,
-    StatusBadgeComponent, DataTableComponent, DafCellDirective,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
 <div>
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div>
-      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Règles légales de pause</h2>
-      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Seuils légaux de déduction de pause par entité</p>
+      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.legal.title' | translate }}</h2>
+      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.legal.subtitle' | translate }}</p>
     </div>
     <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-      [label]="showForm() ? 'Annuler' : 'Nouvelle règle'" variant="teal"
+      [label]="(showForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.legal.newRule') | translate" variant="teal"
       [options]="{ iconStart: showForm() ? 'close' : 'add' }"
       (onClick)="showForm.set(!showForm())" />
   </div>
@@ -34,44 +35,44 @@ import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
   <!-- Create form -->
   @if (showForm()) {
     <div style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant);border-radius:14px;padding:20px;margin-bottom:20px;">
-      <h3 style="font-size:var(--text-body-md);font-weight:700;color:var(--color-primary);margin:0 0 14px;text-transform:uppercase;letter-spacing:.4px;">Nouvelle règle</h3>
+      <h3 style="font-size:var(--text-body-md);font-weight:700;color:var(--color-primary);margin:0 0 14px;text-transform:uppercase;letter-spacing:.4px;">{{ 'ADMIN.regimes.legal.formTitle' | translate }}</h3>
       @if (formError()) { <div style="background:var(--color-error-container);border-radius:8px;padding:10px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:12px;">{{ formError() }}</div> }
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div style="grid-column:span 2">
           <daf-form-field
-            [options]="{ label: 'Libellé *', type: 'text', fullWidth: true }"
+            [options]="{ label: ('ADMIN.regimes.legal.label' | translate), type: 'text', fullWidth: true }"
             [value]="formLabel"
             (valueChange)="formLabel = $any($event) ?? ''" />
         </div>
         <daf-form-field
-          [options]="{ label: 'Min heures travaillées *', type: 'number', fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.legal.minHours' | translate), type: 'number', fullWidth: true }"
           [value]="formMinHours"
           (valueChange)="formMinHours = Number($event) || 0" />
         <daf-form-field
-          [options]="{ label: 'Max heures (optionnel)', type: 'number', fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.legal.maxHours' | translate), type: 'number', fullWidth: true }"
           [value]="formMaxHours"
           (valueChange)="formMaxHours = $event === '' || $event === null ? null : Number($event)" />
         <daf-form-field
-          [options]="{ label: 'Déduction (minutes) *', type: 'number', fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.legal.deduction' | translate), type: 'number', fullWidth: true }"
           [value]="formDeductionMin"
           (valueChange)="formDeductionMin = Number($event) || 0" />
         <daf-select
           [selected]="[formDays]"
-          [options]="daysOptions"
-          [config]="{ label: 'Jours applicables', fullWidth: true }"
+          [options]="daysOptions()"
+          [config]="{ label: ('ADMIN.regimes.legal.applicableDays' | translate), fullWidth: true }"
           (selectedChange)="formDays = $event[0] ?? 'ALL'" />
         <daf-form-field
-          [options]="{ label: 'Date d\\'effet *', type: 'date', fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.legal.effFrom' | translate), type: 'date', fullWidth: true }"
           [value]="formEffFrom"
           (valueChange)="formEffFrom = $any($event)" />
         <daf-form-field
-          [options]="{ label: 'Date de fin (optionnel)', type: 'date', fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.legal.effTo' | translate), type: 'date', fullWidth: true }"
           [value]="formEffTo"
           (valueChange)="formEffTo = $any($event) ?? ''" />
       </div>
       <div style="display:flex;justify-content:flex-end;margin-top:14px;">
         <daf-button
-          [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer'" variant="teal"
+          [label]="(isSaving() ? 'ADMIN.regimes.common.saving' : 'ADMIN.regimes.common.save') | translate" variant="teal"
           [options]="{ disabled: isSaving(), loading: isSaving() }"
           (onClick)="saveRule()" />
       </div>
@@ -79,13 +80,13 @@ import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
   }
 
   <!-- Rules table -->
-  <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+  <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
     <ng-template dafCell="deductionMin" let-row>
-      <daf-badge [label]="row['deductionMin'] + ' min'" [options]="{ variant: 'teal' }" />
+      <daf-badge [label]="row['deductionMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
     </ng-template>
     <ng-template dafCell="_actions" let-row>
       <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-        class="icon-btn-delete" title="Supprimer"
+        class="icon-btn-delete" [title]="'ADMIN.regimes.common.delete' | translate"
         label="" variant="danger"
         [options]="{ iconStart: 'delete', size: 'sm' }"
         (onClick)="removeRule(row['_source'].id)" />
@@ -97,6 +98,7 @@ import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 export class LegalRulesAdminComponent implements OnChanges {
   private svc   = inject(BreakService);
   private modal = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
 
@@ -106,22 +108,28 @@ export class LegalRulesAdminComponent implements OnChanges {
   isSaving  = signal(false);
   formError = signal<string | null>(null);
 
-  readonly daysOptions: SelectOption[] = [
-    { value: 'ALL', label: 'Tous les jours' },
-    { value: 'WEEKDAYS', label: 'Jours ouvrés' },
-    { value: 'WEEKEND', label: 'Week-end' },
-  ];
+  readonly daysOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'ALL', label: this.translate.instant('ADMIN.regimes.legal.daysOptions.ALL') },
+      { value: 'WEEKDAYS', label: this.translate.instant('ADMIN.regimes.legal.daysOptions.WEEKDAYS') },
+      { value: 'WEEKEND', label: this.translate.instant('ADMIN.regimes.legal.daysOptions.WEEKEND') },
+    ];
+  });
 
   readonly Number = Number;
 
-  readonly columns: TableColumn[] = [
-    { key: 'labelFr', label: 'Libellé' },
-    { key: 'hours', label: 'Min h. travaillées' },
-    { key: 'deductionMin', label: 'Déduction (min)' },
-    { key: 'appliesToDays', label: 'Jours' },
-    { key: 'effective', label: 'Effet' },
-    { key: '_actions', label: 'Action', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'labelFr', label: this.translate.instant('ADMIN.regimes.legal.columns.label') },
+      { key: 'hours', label: this.translate.instant('ADMIN.regimes.legal.columns.minHours') },
+      { key: 'deductionMin', label: this.translate.instant('ADMIN.regimes.legal.columns.deduction') },
+      { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.legal.columns.days') },
+      { key: 'effective', label: this.translate.instant('ADMIN.regimes.legal.columns.effective') },
+      { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
+    ];
+  });
 
   readonly rows = computed<TableRow[]>(() =>
     this.rules().map(rule => ({
@@ -134,11 +142,14 @@ export class LegalRulesAdminComponent implements OnChanges {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.isLoading(),
-    emptyMessage: 'Aucune règle légale configurée pour cette entité.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.isLoading(),
+      emptyMessage: this.translate.instant('ADMIN.regimes.legal.empty'),
+    };
+  });
 
   // Form fields
   formLabel = '';
@@ -163,7 +174,7 @@ export class LegalRulesAdminComponent implements OnChanges {
 
   saveRule(): void {
     if (!this.formLabel || !this.formMinHours || !this.formDeductionMin || !this.formEffFrom) {
-      this.formError.set('Libellé, heures minimum, déduction et date d\'effet sont obligatoires.');
+      this.formError.set(this.translate.instant('ADMIN.regimes.legal.errorRequired'));
       return;
     }
     this.isSaving.set(true);
@@ -187,18 +198,18 @@ export class LegalRulesAdminComponent implements OnChanges {
       },
       error: err => {
         this.isSaving.set(false);
-        this.formError.set(err?.error?.message ?? 'Erreur lors de la création.');
+        this.formError.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate'));
       },
     });
   }
 
   removeRule(id: number): void {
     this.modal.open({
-      title: 'Supprimer la règle',
-      body:  'Supprimer cette règle ?',
+      title: this.translate.instant('ADMIN.regimes.legal.deleteTitle'),
+      body:  this.translate.instant('ADMIN.regimes.legal.deleteBody'),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doRemoveRule(id); r.close(); } },
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'),   variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.regimes.common.delete'), variant: 'primary',   action: r => { this.doRemoveRule(id); r.close(); } },
       ],
     });
   }
@@ -211,7 +222,11 @@ export class LegalRulesAdminComponent implements OnChanges {
   }
 
   formatDays(d: string): string {
-    const m: Record<string, string> = { ALL: 'Tous', WEEKDAYS: 'Jours ouvrés', WEEKEND: 'Week-end' };
+    const m: Record<string, string> = {
+      ALL: this.translate.instant('ADMIN.regimes.legal.daysShort.ALL'),
+      WEEKDAYS: this.translate.instant('ADMIN.regimes.legal.daysShort.WEEKDAYS'),
+      WEEKEND: this.translate.instant('ADMIN.regimes.legal.daysShort.WEEKEND'),
+    };
     return m[d] ?? d;
   }
 }

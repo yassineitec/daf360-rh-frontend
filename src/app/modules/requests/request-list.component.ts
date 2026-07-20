@@ -23,6 +23,7 @@ import { UserStore } from '../../core/user.store';
 import { NewRequestComponent } from './new-request.component';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { ConfirmService } from '../../core/confirm.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
 const DONE_STATUSES: RequestStatus[] = ['APPROVED', 'REJECTED', 'CANCELLED'];
@@ -49,6 +50,7 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
     PaginationComponent,
     SlaCountdownPipe,
     NewRequestComponent,
+    TranslatePipe,
   ],
   template: `
     <div class="space-y-6">
@@ -57,19 +59,19 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-            Mes demandes RH
+            {{ 'REQUESTS.LIST.TITLE' | translate }}
           </h1>
           <daf-badge [label]="total().toString()" [options]="{ variant: 'teal', pill: true }" />
         </div>
         <div class="flex items-center gap-3">
           @if (canViewInbox()) {
             <daf-button
-              [options]="{ variant: 'ghost', label: 'Boîte de réception', iconStart: 'inbox' }"
+              [options]="{ variant: 'ghost', label: ('REQUESTS.LIST.INBOX_BTN' | translate), iconStart: 'inbox' }"
               (onClick)="goToInbox()"
             />
           }
           <daf-button
-            [options]="{ variant: 'teal', label: 'Nouvelle demande', iconStart: 'add' }"
+            [options]="{ variant: 'teal', label: ('REQUESTS.LIST.NEW_BTN' | translate), iconStart: 'add' }"
             (onClick)="showNew.set(true)"
           />
         </div>
@@ -77,10 +79,10 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
       <!-- ── Intro card ─────────────────────────────────────────────────── -->
       <daf-card class="block mb-6" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
         <p class="text-[11px] font-bold uppercase tracking-widest text-teal mb-1">
-          Statut de vos requêtes
+          {{ 'REQUESTS.LIST.INTRO_EYEBROW' | translate }}
         </p>
         <h2 class="text-[18px] font-bold text-on-surface">
-          Suivi en temps réel de vos demandes administratives.
+          {{ 'REQUESTS.LIST.INTRO_TITLE' | translate }}
         </h2>
       </daf-card>
       <!-- ── Main card ──────────────────────────────────────────────────── -->
@@ -102,17 +104,17 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
               >
               <p class="text-body-lg font-semibold text-on-surface">
                 @if (activeTab() === 'done') {
-                  Aucune demande traitée
+                  {{ 'REQUESTS.LIST.EMPTY_DONE' | translate }}
                 } @else {
-                  Aucune demande en cours
+                  {{ 'REQUESTS.LIST.EMPTY_ACTIVE' | translate }}
                 }
               </p>
-              <p class="text-[13px] text-outline">Vos demandes apparaîtront ici.</p>
+              <p class="text-[13px] text-outline">{{ 'REQUESTS.LIST.EMPTY_HINT' | translate }}</p>
             </div>
 
             <!-- Table -->
           } @else {
-            <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+            <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
               <ng-template dafCell="type" let-row>
                 <div class="flex items-center gap-3">
                   <div
@@ -183,6 +185,7 @@ export class RequestListComponent implements OnInit {
   private userStore = inject(UserStore);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private translate = inject(TranslateService);
 
   loading = signal(false);
   allRows = signal<EmployeeRequest[]>([]);
@@ -204,10 +207,13 @@ export class RequestListComponent implements OnInit {
     return isNaN(fromEmployee) ? u.userId : fromEmployee;
   });
 
-  readonly tabOptions = computed(() => [
-    { value: 'active', label: `En cours (${this.activeCount()})` },
-    { value: 'done', label: `Traitées (${this.doneCount()})` },
-  ]);
+  readonly tabOptions = computed(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'active', label: this.translate.instant('REQUESTS.LIST.TAB_ACTIVE', { count: this.activeCount() }) },
+      { value: 'done', label: this.translate.instant('REQUESTS.LIST.TAB_DONE', { count: this.doneCount() }) },
+    ];
+  });
 
   visibleRows = computed(() => {
     const all = this.allRows();
@@ -221,17 +227,21 @@ export class RequestListComponent implements OnInit {
   );
   doneCount = computed(() => this.allRows().filter((r) => DONE_STATUSES.includes(r.status)).length);
 
-  readonly columns: TableColumn[] = [
-    { key: 'type', label: 'Type de demande' },
-    { key: 'submissionDate', label: 'Soumise le' },
-    { key: 'status', label: 'Statut', type: 'badge' },
-    { key: 'sla', label: 'SLA' },
-    { key: '_actions', label: 'Actions', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'type', label: this.translate.instant('REQUESTS.LIST.COL_TYPE') },
+      { key: 'submissionDate', label: this.translate.instant('REQUESTS.LIST.COL_SUBMITTED') },
+      { key: 'status', label: this.translate.instant('REQUESTS.LIST.COL_STATUS'), type: 'badge' },
+      { key: 'sla', label: this.translate.instant('REQUESTS.LIST.COL_SLA') },
+      { key: '_actions', label: this.translate.instant('REQUESTS.LIST.COL_ACTIONS'), align: 'right' },
+    ];
+  });
 
-  readonly rows = computed<TableRow[]>(() =>
-    this.visibleRows().map((r) => ({
-      type: r.typeDisplayNameFr ?? 'Demande #' + r.requestTypeId,
+  readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return this.visibleRows().map((r) => ({
+      type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
       submissionDate: this.fmtDate(r.submissionDate),
       status: {
         label: this.statusBadge(r.status).label,
@@ -240,14 +250,17 @@ export class RequestListComponent implements OnInit {
       isActive: this.isActive(r.status),
       slaDeadline: this.slaDeadline(r),
       _source: r,
-    })),
-  );
+    }));
+  });
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.loading(),
-    emptyMessage: 'Aucune demande.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.loading(),
+      emptyMessage: this.translate.instant('REQUESTS.LIST.TABLE_EMPTY'),
+    };
+  });
 
   goToInbox(): void {
     this.router.navigate(['inbox'], { relativeTo: this.route });
@@ -297,9 +310,10 @@ export class RequestListComponent implements OnInit {
 
   async cancel(row: EmployeeRequest) {
     if (!(await this.confirm.ask({
-      title: 'Annuler la demande',
-      message: 'Annuler cette demande ?',
-      confirmLabel: 'Annuler la demande', cancelLabel: 'Retour',
+      title: this.translate.instant('REQUESTS.CANCEL.TITLE'),
+      message: this.translate.instant('REQUESTS.CANCEL.MESSAGE'),
+      confirmLabel: this.translate.instant('REQUESTS.CANCEL.CONFIRM'),
+      cancelLabel: this.translate.instant('REQUESTS.CANCEL.BACK'),
     }))) return;
     this.svc
       .cancelRequest(row.id, this.currentProfileId())

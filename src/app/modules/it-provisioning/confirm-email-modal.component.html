@@ -1,5 +1,5 @@
 <app-modal
-  title="Confirmer la création du compte"
+  [title]="'IT_PROVISIONING.CONFIRM_EMAIL.TITLE' | translate"
   [visible]="visible()"
   (closed)="closed.emit()"
   [hasFooter]="true"
@@ -12,20 +12,19 @@
         <line x1="12" y1="17" x2="12.01" y2="17"/>
       </svg>
     </div>
-    <p class="confirm-title">Action irréversible</p>
+    <p class="confirm-title">{{ 'IT_PROVISIONING.CONFIRM_EMAIL.IRREVERSIBLE_TITLE' | translate }}</p>
     <p class="confirm-text">
-      Vous êtes sur le point de créer le compte utilisateur officiel pour
-      <strong>{{ candidateName() }}</strong> avec l'adresse email :
+      {{ 'IT_PROVISIONING.CONFIRM_EMAIL.BODY_BEFORE' | translate }}
+      <strong>{{ candidateName() }}</strong> {{ 'IT_PROVISIONING.CONFIRM_EMAIL.BODY_AFTER' | translate }}
     </p>
     <p class="confirm-email">{{ email() }}</p>
     <p class="confirm-warning">
-      Cette action créera un compte dans le système DAF360 et est <strong>irréversible</strong>.
-      Veuillez vérifier l'adresse email avant de confirmer.
+      {{ 'IT_PROVISIONING.CONFIRM_EMAIL.WARNING_BEFORE' | translate }} <strong>{{ 'IT_PROVISIONING.CONFIRM_EMAIL.WARNING_STRONG' | translate }}</strong>{{ 'IT_PROVISIONING.CONFIRM_EMAIL.WARNING_AFTER' | translate }}
     </p>
   </div>
 
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="closed.emit()" />
-    <daf-button label="Confirmer la création" variant="teal" (onClick)="confirmed.emit()" />
+    <daf-button [label]="'IT_PROVISIONING.CONFIRM_EMAIL.CANCEL' | translate" variant="secondary" (onClick)="closed.emit()" />
+    <daf-button [label]="'IT_PROVISIONING.CONFIRM_EMAIL.CONFIRM' | translate" variant="teal" (onClick)="confirmed.emit()" />
   </div>
 </app-modal>

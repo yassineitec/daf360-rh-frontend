@@ -2,11 +2,11 @@
   <div class="flex items-center justify-between mb-4">
     <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
       <span class="material-symbols-outlined text-[18px]">handshake</span>
-      <h3 class="text-[12px] font-semibold uppercase tracking-wider">Offre &amp; Négociation</h3>
+      <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.OFFER.TITLE' | translate }}</h3>
     </div>
     @if (offer(); as o) {
       <daf-badge
-        [label]="o.status === 'ACCEPTED' ? 'Acceptée' : (o.status === 'REJECTED' ? 'Refusée' : (o.status === 'EXPIRED' ? 'Expirée' : 'Envoyée'))"
+        [label]="(o.status === 'ACCEPTED' ? 'CANDIDATES.OFFER.STATUS_ACCEPTED' : (o.status === 'REJECTED' ? 'CANDIDATES.OFFER.STATUS_REJECTED' : (o.status === 'EXPIRED' ? 'CANDIDATES.OFFER.STATUS_EXPIRED' : 'CANDIDATES.OFFER.STATUS_SENT'))) | translate"
         [options]="{ variant: o.status === 'ACCEPTED' ? 'success' : (o.status === 'REJECTED' ? 'danger' : 'warning'), size: 'sm' }" />
     }
   </div>
@@ -14,35 +14,35 @@
   @if (loading()) {
     <div class="flex items-center gap-2 text-outline text-[13px] py-3">
       <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
-      Chargement…
+      {{ 'CANDIDATES.OFFER.LOADING' | translate }}
     </div>
   } @else if (offer(); as o) {
 
     <!-- Offer details -->
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
       <div>
-        <p class="text-[11px] text-outline mb-0.5">Salaire demandé</p>
+        <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.ASKED_SALARY' | translate }}</p>
         <p class="text-[14px] font-semibold text-on-surface">{{ formatSalary(o.askedSalary) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-outline mb-0.5">Salaire proposé</p>
+        <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.PROPOSED_SALARY' | translate }}</p>
         <p class="text-[14px] font-semibold" style="color:var(--color-teal)">{{ formatSalary(o.proposedSalary) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-outline mb-0.5">Date d'embauche</p>
+        <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.HIRE_DATE' | translate }}</p>
         <p class="text-[14px] font-semibold text-on-surface">{{ formatDate(o.expectedHireDate) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-outline mb-0.5">Offre envoyée le</p>
+        <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.SENT_ON' | translate }}</p>
         <p class="text-[14px] font-semibold text-on-surface">{{ formatDate(o.sentAt) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-outline mb-0.5">Expire le</p>
+        <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.EXPIRES_ON' | translate }}</p>
         <p class="text-[14px] font-semibold text-on-surface">{{ formatDate(o.expiryDate) }}</p>
       </div>
       @if (o.decidedAt) {
         <div>
-          <p class="text-[11px] text-outline mb-0.5">Décision le</p>
+          <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.DECIDED_ON' | translate }}</p>
           <p class="text-[14px] font-semibold text-on-surface">{{ formatDate(o.decidedAt) }}</p>
         </div>
       }
@@ -53,7 +53,7 @@
     }
     @if (o.status === 'REJECTED' && o.rejectionReason) {
       <div class="mt-4 rounded-lg px-3 py-2 text-[13px]" style="background:var(--color-error-container);color:var(--color-on-surface)">
-        <strong class="text-danger">Motif du refus :</strong> {{ o.rejectionReason }}
+        <strong class="text-danger">{{ 'CANDIDATES.OFFER.REJECTION_REASON' | translate }}</strong> {{ o.rejectionReason }}
       </div>
     }
 
@@ -64,13 +64,13 @@
     <!-- Actions while the offer is still open -->
     @if (isPending) {
       <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-outline-variant">
-        <daf-button label="Accepter l'offre" variant="teal"
+        <daf-button [label]="'CANDIDATES.OFFER.ACCEPT' | translate" variant="teal"
           [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioning(), disabled: actioning() }"
           (onClick)="acceptOffer()" />
-        <daf-button label="Renégocier" variant="secondary"
+        <daf-button [label]="'CANDIDATES.OFFER.RENEGOTIATE' | translate" variant="secondary"
           [options]="{ iconStart: 'sync', size: 'sm' }"
           (onClick)="openOfferModal('renegotiate')" />
-        <daf-button label="Refuser" variant="danger"
+        <daf-button [label]="'CANDIDATES.OFFER.REJECT' | translate" variant="danger"
           [options]="{ iconStart: 'cancel', size: 'sm' }"
           (onClick)="openRejectModal()" />
       </div>
@@ -80,21 +80,21 @@
     <!-- No offer yet, candidate accepted → can extend one -->
     <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-dashed border-outline-variant"
          style="background:var(--color-surface-container-low)">
-      <p class="text-[13px] text-outline">Aucune offre envoyée — le candidat est prêt à recevoir une proposition.</p>
-      <daf-button label="Envoyer une offre" variant="teal"
+      <p class="text-[13px] text-outline">{{ 'CANDIDATES.OFFER.NONE_READY' | translate }}</p>
+      <daf-button [label]="'CANDIDATES.OFFER.SEND' | translate" variant="teal"
         [options]="{ iconStart: 'send', size: 'sm' }"
         (onClick)="openOfferModal('send')" />
     </div>
   } @else {
     <p class="text-[13px] text-outline">
-      L'offre pourra être envoyée une fois le candidat accepté après les entretiens.
+      {{ 'CANDIDATES.OFFER.NOT_YET' | translate }}
     </p>
   }
 </div>
 
 <!-- ── Send / renegotiate modal ─────────────────────────────────────────────── -->
 <app-modal
-  [title]="offerMode() === 'renegotiate' ? 'Renégocier l\'offre' : 'Envoyer une offre'"
+  [title]="(offerMode() === 'renegotiate' ? 'CANDIDATES.OFFER.MODAL_RENEGOTIATE_TITLE' : 'CANDIDATES.OFFER.MODAL_SEND_TITLE') | translate"
   [visible]="showOfferModal()"
   [hasFooter]="true"
   (closed)="showOfferModal.set(false)">
@@ -103,36 +103,36 @@
 
   <div class="grid grid-cols-2 gap-3">
     <div class="flex flex-col gap-1">
-      <label class="text-xs font-medium text-on-surface">Salaire demandé (net)</label>
+      <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.ASKED_SALARY_NET' | translate }}</label>
       <daf-form-field [value]="offerForm.askedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onAskedChange($event)" />
     </div>
     <div class="flex flex-col gap-1">
-      <label class="text-xs font-medium text-on-surface">Salaire proposé (net)</label>
+      <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.PROPOSED_SALARY_NET' | translate }}</label>
       <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
     </div>
   </div>
 
   <!-- Salary simulator (future module) -->
   <div class="mt-2">
-    <daf-button label="Simulateur de salaire" variant="ghost"
+    <daf-button [label]="'CANDIDATES.OFFER.SIMULATOR' | translate" variant="ghost"
       [options]="{ iconStart: 'calculate', size: 'sm', disabled: true }"
-      title="Module à venir" />
-    <span class="text-[11px] text-outline ml-1">(bientôt disponible)</span>
+      [title]="'CANDIDATES.OFFER.SIMULATOR_SOON_TITLE' | translate" />
+    <span class="text-[11px] text-outline ml-1">{{ 'CANDIDATES.OFFER.SOON' | translate }}</span>
   </div>
 
   <div class="flex flex-col gap-1 mt-3">
-    <label class="text-xs font-medium text-on-surface">Note (optionnel)</label>
+    <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.NOTE' | translate }}</label>
     <daf-form-field [value]="offerForm.salaryNote ?? null" [options]="noteFieldOpts" (valueChange)="onNoteChange($event)" />
   </div>
 
   <div class="grid grid-cols-2 gap-3 mt-3">
     <daf-multi-date-picker
       [value]="getHireDate()"
-      [config]="{ label: 'Date d’embauche prévue', placeholder: 'Sélectionner', selectionMode: 'single' }"
+      [config]="{ label: ('CANDIDATES.OFFER.HIRE_DATE_PLANNED' | translate), placeholder: ('CANDIDATES.OFFER.SELECT' | translate), selectionMode: 'single' }"
       (valueChange)="setHireDate($event)" />
     <daf-multi-date-picker
       [value]="getExpiryDate()"
-      [config]="{ label: 'Expiration de l’offre', placeholder: 'Sélectionner', selectionMode: 'single' }"
+      [config]="{ label: ('CANDIDATES.OFFER.EXPIRY_LABEL' | translate), placeholder: ('CANDIDATES.OFFER.SELECT' | translate), selectionMode: 'single' }"
       (valueChange)="setExpiryDate($event)" />
   </div>
 
@@ -141,9 +141,9 @@
   }
 
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="showOfferModal.set(false)" />
+    <daf-button [label]="'CANDIDATES.OFFER.CANCEL' | translate" variant="secondary" (onClick)="showOfferModal.set(false)" />
     <daf-button
-      [label]="offerSubmitting() ? 'Envoi…' : (offerMode() === 'renegotiate' ? 'Renégocier' : 'Envoyer l\'offre')"
+      [label]="(offerSubmitting() ? 'CANDIDATES.OFFER.SENDING' : (offerMode() === 'renegotiate' ? 'CANDIDATES.OFFER.RENEGOTIATE' : 'CANDIDATES.OFFER.SEND_SUBMIT')) | translate"
       variant="teal"
       [options]="{ iconStart: 'send', disabled: offerSubmitting(), loading: offerSubmitting() }"
       (onClick)="submitOffer()" />
@@ -152,14 +152,14 @@
 
 <!-- ── Refuse modal ─────────────────────────────────────────────────────────── -->
 <app-modal
-  [title]="'Refuser l\'offre'"
+  [title]="'CANDIDATES.OFFER.MODAL_REJECT_TITLE' | translate"
   [visible]="showRejectModal()"
   [hasFooter]="true"
   (closed)="showRejectModal.set(false)">
 
   <p class="text-[13px] font-semibold text-on-surface mb-3">{{ candidateName() }}</p>
   <div class="flex flex-col gap-1">
-    <label class="text-xs font-medium text-on-surface">Motif du refus <span class="text-danger">*</span></label>
+    <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.REJECT_REASON_LABEL' | translate }} <span class="text-danger">*</span></label>
     <daf-form-field [value]="rejectReason" [options]="reasonFieldOpts" (valueChange)="onReasonChange($event)" />
   </div>
   @if (actionError()) {
@@ -167,9 +167,9 @@
   }
 
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="showRejectModal.set(false)" />
+    <daf-button [label]="'CANDIDATES.OFFER.CANCEL' | translate" variant="secondary" (onClick)="showRejectModal.set(false)" />
     <daf-button
-      [label]="rejectSubmitting() ? 'Refus en cours…' : 'Confirmer le refus'"
+      [label]="(rejectSubmitting() ? 'CANDIDATES.OFFER.REJECTING' : 'CANDIDATES.OFFER.CONFIRM_REJECT') | translate"
       variant="danger"
       [options]="{ iconStart: 'cancel', disabled: rejectSubmitting() || !rejectReason.trim(), loading: rejectSubmitting() }"
       (onClick)="submitReject()" />

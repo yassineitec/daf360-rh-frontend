@@ -8,6 +8,7 @@ import { CreateRoleModalComponent } from './create-role-modal/create-role-modal.
 import { ModalComponent }           from '../../../shared/modal.component';
 import { RoleManagementService }    from './role-management.service';
 import { RoleListItem }             from './role.model';
+import { TranslateService }         from '@ngx-translate/core';
 
 @Component({
   selector: 'app-role-management',
@@ -18,6 +19,7 @@ import { RoleListItem }             from './role.model';
 })
 export class RoleManagementComponent implements OnInit {
   private svc = inject(RoleManagementService);
+  private translate = inject(TranslateService);
 
   roles         = signal<RoleListItem[]>([]);
   selectedRole  = signal<RoleListItem | null>(null);
@@ -33,7 +35,7 @@ export class RoleManagementComponent implements OnInit {
     this.loading.set(true);
     this.svc.getRoles().subscribe({
       next:  (r) => { this.roles.set(r); this.loading.set(false); },
-      error: ()  => { this.loading.set(false); this.error.set('Erreur lors du chargement des rôles.'); },
+      error: ()  => { this.loading.set(false); this.error.set(this.translate.instant('ADMIN.roles.management.LOAD_ERROR')); },
     });
   }
 

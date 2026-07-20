@@ -1,5 +1,5 @@
 <app-modal
-  title="Créer un nouveau rôle"
+  [title]="'ADMIN.roles.create.TITLE' | translate"
   [visible]="visible()"
   [hasFooter]="true"
   (closed)="closed.emit()"
@@ -12,7 +12,7 @@
     <!-- Nom du rôle -->
     <div class="crm-field">
       <daf-form-field
-        [options]="{ label: 'Nom du rôle', placeholder: 'Ex : Responsable paie', required: true, disabled: saving(), fullWidth: true }"
+        [options]="{ label: ('ADMIN.roles.create.NAME_LABEL' | translate), placeholder: ('ADMIN.roles.create.NAME_PLACEHOLDER' | translate), required: true, disabled: saving(), fullWidth: true }"
         [value]="frenchName()"
         (valueChange)="frenchName.set($any($event))" />
     </div>
@@ -22,14 +22,14 @@
       <daf-select
         [selected]="parentSelected()"
         [options]="parentOptions()"
-        [config]="{ label: 'Rôle parent', placeholder: '— Aucun —', disabled: saving(), fullWidth: true }"
+        [config]="{ label: ('ADMIN.roles.create.PARENT_LABEL' | translate), placeholder: ('ADMIN.roles.create.PARENT_PLACEHOLDER' | translate), disabled: saving(), fullWidth: true }"
         (selectedChange)="onParentChange($event[0] ?? '')" />
     </div>
 
     <!-- Voir toutes les entités -->
     <div class="crm-field crm-field-toggle">
       <daf-toggle
-        [options]="{ label: 'Voir toutes les entités', hint: 'Ce rôle peut accéder aux données de toutes les entités', disabled: saving() }"
+        [options]="{ label: ('ADMIN.roles.create.SHOW_ALL_LABEL' | translate), hint: ('ADMIN.roles.create.SHOW_ALL_HINT' | translate), disabled: saving() }"
         [checked]="showAll()"
         (checkedChange)="showAll.set($event)" />
     </div>
@@ -38,12 +38,12 @@
   <!-- Footer -->
   <div slot="footer">
     <daf-button
-      label="Annuler"
+      [label]="'ADMIN.roles.create.CANCEL' | translate"
       variant="secondary"
       [options]="{ disabled: saving() }"
       (onClick)="closed.emit()" />
     <daf-button
-      [label]="saving() ? 'Création en cours…' : 'Créer le rôle'"
+      [label]="saving() ? ('ADMIN.roles.create.SAVING' | translate) : ('ADMIN.roles.create.SUBMIT' | translate)"
       variant="teal"
       [options]="{ disabled: saving() || !frenchName().trim(), loading: saving() }"
       (onClick)="create()" />

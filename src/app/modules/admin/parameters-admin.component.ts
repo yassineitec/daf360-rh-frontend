@@ -9,6 +9,7 @@ import {
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig, ModalService,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
@@ -17,33 +18,33 @@ const PAGE_SIZE = 10;
   standalone: true,
   imports: [
     SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective,
-    ModalComponent, PaginationComponent,
+    ModalComponent, PaginationComponent, TranslatePipe,
   ],
   template: `
     <div class="section-header">
       <div>
-        <h3 class="col-title">Paramètres de paie</h3>
-        <p class="col-sub">Configuration CNSS, IRPP, CSS, devise par entité</p>
+        <h3 class="col-title">{{ 'ADMIN.data.parameters.TITLE' | translate }}</h3>
+        <p class="col-sub">{{ 'ADMIN.data.parameters.SUBTITLE' | translate }}</p>
       </div>
       <div class="header-actions">
         <daf-button
-          label="Initialiser par défaut"
+          [label]="'ADMIN.data.parameters.INIT_DEFAULT' | translate"
           variant="ghost"
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button label="+ Ajouter" variant="primary" (onClick)="startAdd()" />
+        <daf-button [label]="'ADMIN.data.parameters.ADD' | translate" variant="primary" (onClick)="startAdd()" />
       </div>
     </div>
 
     @if (loading()) { <div class="center"><app-spinner /></div> }
     @else if (params().length === 0) {
       <div class="empty-state">
-        <p>Aucun paramètre configuré.</p>
-        <daf-button label="Initialiser les valeurs par défaut" variant="ghost" (onClick)="seed()" />
+        <p>{{ 'ADMIN.data.parameters.EMPTY' | translate }}</p>
+        <daf-button [label]="'ADMIN.data.parameters.INIT_DEFAULT_VALUES' | translate" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
-      <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
         <ng-template dafCell="cle" let-row>
           <span class="key-cell">{{ row['_source'].cle }}</span>
         </ng-template>
@@ -75,8 +76,8 @@ const PAGE_SIZE = 10;
             <daf-button label="" variant="primary" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="saveEdit(row['_source'])" />
             <daf-button label="" variant="secondary" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="editingId.set(null)" />
           } @else {
-            <daf-button class="icon-btn-edit" title="Modifier" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
-            <daf-button class="icon-btn-delete" title="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
+            <daf-button class="icon-btn-edit" [title]="'ADMIN.data.parameters.EDIT' | translate" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
+            <daf-button class="icon-btn-delete" [title]="'ADMIN.data.parameters.DELETE_SHORT' | translate" variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
           }
         </ng-template>
       </daf-data-table>
@@ -97,31 +98,31 @@ const PAGE_SIZE = 10;
 
     <!-- Add modal -->
     <app-modal
-      title="Ajouter un paramètre"
+      [title]="'ADMIN.data.parameters.ADD_TITLE' | translate"
       [visible]="addMode()"
       [hasFooter]="true"
       (closed)="addMode.set(false)"
     >
       <div class="modal-form">
         <daf-form-field
-          [options]="{ label: 'Clé', placeholder: 'Ex: TAUX_CNSS_EMPLOYE', required: true, fullWidth: true }"
+          [options]="{ label: ('ADMIN.data.parameters.KEY' | translate), placeholder: ('ADMIN.data.parameters.KEY_PLACEHOLDER' | translate), required: true, fullWidth: true }"
           [value]="newCle"
           (valueChange)="newCle = $any($event)"
         />
         <daf-form-field
-          [options]="{ label: 'Valeur', required: true, fullWidth: true }"
+          [options]="{ label: ('ADMIN.data.parameters.VALUE' | translate), required: true, fullWidth: true }"
           [value]="newValeur"
           (valueChange)="newValeur = $any($event)"
         />
         <daf-form-field
-          [options]="{ label: 'Description', placeholder: '(optionnel)', fullWidth: true }"
+          [options]="{ label: ('ADMIN.data.parameters.DESCRIPTION' | translate), placeholder: ('ADMIN.data.parameters.OPTIONAL' | translate), fullWidth: true }"
           [value]="newDesc"
           (valueChange)="newDesc = $any($event)"
         />
       </div>
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="addMode.set(false)" />
-        <daf-button label="Créer" variant="teal" [options]="{ disabled: !newCle.trim() || !newValeur.trim() }" (onClick)="add()" />
+        <daf-button [label]="'ADMIN.data.parameters.CANCEL' | translate" variant="secondary" (onClick)="addMode.set(false)" />
+        <daf-button [label]="'ADMIN.data.parameters.CREATE' | translate" variant="teal" [options]="{ disabled: !newCle.trim() || !newValeur.trim() }" (onClick)="add()" />
       </div>
     </app-modal>
   `,
@@ -152,6 +153,7 @@ const PAGE_SIZE = 10;
 export class ParametersAdminComponent implements OnChanges {
   private svc   = inject(AdminService);
   private modal = inject(ModalService);
+  private t     = inject(TranslateService);
 
   paysId = input(179);
 
@@ -168,13 +170,16 @@ export class ParametersAdminComponent implements OnChanges {
   newValeur = '';
   newDesc  = '';
 
-  readonly columns: TableColumn[] = [
-    { key: 'cle',         label: 'Clé' },
-    { key: 'valeur',      label: 'Valeur' },
-    { key: 'description', label: 'Description' },
-    { key: 'updatedAt',   label: 'Modifié' },
-    { key: '_actions',    label: '', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.t.currentLang();
+    return [
+      { key: 'cle',         label: this.t.instant('ADMIN.data.parameters.KEY') },
+      { key: 'valeur',      label: this.t.instant('ADMIN.data.parameters.VALUE') },
+      { key: 'description', label: this.t.instant('ADMIN.data.parameters.DESCRIPTION') },
+      { key: 'updatedAt',   label: this.t.instant('ADMIN.data.parameters.COL_UPDATED') },
+      { key: '_actions',    label: '', align: 'right' },
+    ];
+  });
 
   currentPage = signal(0);
 
@@ -225,7 +230,7 @@ export class ParametersAdminComponent implements OnChanges {
 
   saveEdit(p: ParameterSet) {
     this.svc.updateParameter(p.id, { paysId: this.paysId(), cle: p.cle, valeur: this.editValeur, description: p.description ?? undefined })
-      .pipe(catchError(err => { this.error.set(err?.error?.message ?? 'Erreur'); return of(null); }))
+      .pipe(catchError(err => { this.error.set(err?.error?.message ?? this.t.instant('ADMIN.data.parameters.ERROR')); return of(null); }))
       .subscribe(updated => {
         if (updated) { this.params.update(ps => ps.map(x => x.id === updated.id ? updated : x)); this.editingId.set(null); }
       });
@@ -233,11 +238,11 @@ export class ParametersAdminComponent implements OnChanges {
 
   del(p: ParameterSet) {
     this.modal.open({
-      title: 'Supprimer le paramètre',
-      body:  `Supprimer "${p.cle}" ?`,
+      title: this.t.instant('ADMIN.data.parameters.DELETE_TITLE'),
+      body:  this.t.instant('ADMIN.data.parameters.DELETE_BODY', { cle: p.cle }),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDelete(p); r.close(); } },
+        { label: this.t.instant('ADMIN.data.parameters.CANCEL'), variant: 'secondary', action: r => r.close() },
+        { label: this.t.instant('ADMIN.data.parameters.DELETE'), variant: 'primary',   action: r => { this.doDelete(p); r.close(); } },
       ],
     });
   }
@@ -252,7 +257,7 @@ export class ParametersAdminComponent implements OnChanges {
 
   add() {
     this.svc.createParameter({ paysId: this.paysId(), cle: this.newCle.toUpperCase(), valeur: this.newValeur, description: this.newDesc || undefined })
-      .pipe(catchError(err => { this.error.set(err?.error?.message ?? 'Erreur'); return of(null); }))
+      .pipe(catchError(err => { this.error.set(err?.error?.message ?? this.t.instant('ADMIN.data.parameters.ERROR')); return of(null); }))
       .subscribe(created => {
         if (created) { this.params.update(ps => [...ps, created]); this.addMode.set(false); }
       });

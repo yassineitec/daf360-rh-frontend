@@ -2,11 +2,12 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent, SelectComponent, SelectOption } from '@khalilrebhiitec/daf360';
 import { RecipientItem, RoleOption } from './notification-routing.model';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-recipient-tags',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, SelectComponent],
+  imports: [FormsModule, ButtonComponent, SelectComponent, TranslatePipe],
   templateUrl: './recipient-tags.component.html',
   styleUrl: './recipient-tags.component.scss',
 })

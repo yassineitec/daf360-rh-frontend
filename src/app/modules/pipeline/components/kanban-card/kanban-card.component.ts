@@ -1,13 +1,14 @@
 import { Component, input, output, signal } from '@angular/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import type { BadgeOptions } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 import { KanbanCandidate } from '../../services/pipeline.service';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
 
 @Component({
   selector: 'rh-kanban-card',
   standalone: true,
-  imports: [StatusBadgeComponent],
+  imports: [StatusBadgeComponent, TranslatePipe],
   styles: [`
     .card-accent-urgent { border-left: 4px solid var(--md-sys-color-error, #B3261E); }
     .card-accent-top    { border-left: 4px solid #79D7BE; }
@@ -25,7 +26,7 @@ import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
       <div class="flex justify-between mb-3">
         <daf-badge [label]="candidate().badge" [options]="badgeOptions()" />
         <span class="font-bold text-sm" style="color:#79D7BE">
-          {{ candidate().fitScore }}% Fit
+          {{ 'PIPELINE.FIT_SCORE' | translate: { score: candidate().fitScore } }}
         </span>
       </div>
 

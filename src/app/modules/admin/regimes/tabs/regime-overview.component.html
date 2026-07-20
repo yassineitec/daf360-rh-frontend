@@ -7,7 +7,7 @@
         <span class="material-symbols-outlined ro-stat-icon">schedule</span>
       </div>
       <div>
-        <p class="ro-stat-label">Régimes configurés</p>
+        <p class="ro-stat-label">{{ 'ADMIN.regimes.overview.statRegimes' | translate }}</p>
         @if (isLoadingStats()) { <div class="ro-skeleton ro-skeleton-sm"></div> }
         @else { <p class="ro-stat-value">{{ stats()?.totalRegimes ?? 0 }}</p> }
       </div>
@@ -20,7 +20,7 @@
         <span class="material-symbols-outlined ro-stat-icon">person</span>
       </div>
       <div>
-        <p class="ro-stat-label">Overrides personnels</p>
+        <p class="ro-stat-label">{{ 'ADMIN.regimes.overview.statOverrides' | translate }}</p>
         @if (isLoadingStats()) { <div class="ro-skeleton ro-skeleton-xs"></div> }
         @else { <p class="ro-stat-value">{{ stats()?.employeeOverrideCount ?? 0 }}</p> }
       </div>
@@ -33,11 +33,11 @@
         <span class="material-symbols-outlined ro-stat-icon">warning</span>
       </div>
       <div>
-        <p class="ro-stat-label">Non configurés</p>
+        <p class="ro-stat-label">{{ 'ADMIN.regimes.overview.statUnconfigured' | translate }}</p>
         @if (isLoadingStats()) { <div class="ro-skeleton ro-skeleton-xs"></div> }
         @else {
           <p class="ro-stat-value">{{ stats()?.unconfiguredCount ?? 0 }}</p>
-          @if ((stats()?.unconfiguredCount ?? 0) > 0) { <p class="ro-stat-hint">Aucun régime appliqué</p> }
+          @if ((stats()?.unconfiguredCount ?? 0) > 0) { <p class="ro-stat-hint">{{ 'ADMIN.regimes.overview.statUnconfiguredHint' | translate }}</p> }
         }
       </div>
     </div>
@@ -49,7 +49,7 @@
 <div class="ro-filters">
   <div class="ro-search">
     <rh-search-bar
-      placeholder="Rechercher un employé…"
+      [placeholder]="'ADMIN.regimes.overview.searchPlaceholder' | translate"
       [value]="searchTerm()"
       (valueChange)="onSearch($event)" />
   </div>
@@ -69,7 +69,7 @@
     @if (row['regime']) {
       <p class="ro-regime-label">{{ row['regime'] }}</p>
     } @else {
-      <p class="ro-regime-none">Non configuré</p>
+      <p class="ro-regime-none">{{ 'ADMIN.regimes.overview.regimeNone' | translate }}</p>
     }
   </ng-template>
 
@@ -77,7 +77,7 @@
     <daf-button
       *dafHasPermission="'ADMIN_REGIMES'"
       class="icon-btn-edit"
-      title="Modifier"
+      [title]="'ADMIN.regimes.common.edit' | translate"
       variant="primary"
       [options]="{ size: 'sm', iconStart: 'edit' }"
       (onClick)="openEmployeePanel(row['_source'])" />
@@ -88,7 +88,7 @@
 <!-- Count + Pagination -->
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3">
   <span class="text-label-sm text-outline">
-    <span class="font-semibold text-on-surface">{{ totalElements() }}</span> employé(s)
+    <span class="font-semibold text-on-surface">{{ totalElements() }}</span> {{ 'ADMIN.regimes.overview.countSuffix' | translate }}
   </span>
   @if (totalPages() > 1) {
     <daf-pagination
@@ -106,33 +106,33 @@
   [hasFooter]="false"
   (closed)="showEmployeePanel.set(false)">
 
-  <p class="ro-panel-role">Rôle : {{ selectedEmployee()?.roleName ?? '—' }}</p>
+  <p class="ro-panel-role">{{ 'ADMIN.regimes.overview.panelRole' | translate:{ role: (selectedEmployee()?.roleName ?? '—') } }}</p>
 
   @if (panelError()) { <div class="ro-msg-error">{{ panelError() }}</div> }
 
   <!-- Current regime display -->
   <div class="ro-current-regime">
     <div class="ro-current-regime-head">
-      <p class="ro-current-regime-label">Régime actuel</p>
+      <p class="ro-current-regime-label">{{ 'ADMIN.regimes.overview.currentRegime' | translate }}</p>
       <span class="ro-source-badge" [ngClass]="getSourceClass(selectedEmployee()?.assignmentLevel)">{{ getSourceLabel(selectedEmployee()?.assignmentLevel) }}</span>
     </div>
     @if (selectedEmployee()?.resolvedRegimeLabelFr) {
       <p class="ro-current-regime-value">{{ selectedEmployee()!.resolvedRegimeLabelFr }}</p>
     } @else {
-      <p class="ro-regime-none">Aucun régime configuré</p>
+      <p class="ro-regime-none">{{ 'ADMIN.regimes.overview.noRegimeConfigured' | translate }}</p>
     }
   </div>
 
   <!-- Actions -->
   <div class="ro-panel-actions">
     <daf-button
-      label="Définir un override personnel"
+      [label]="'ADMIN.regimes.overview.setOverride' | translate"
       variant="secondary"
       [options]="{ fullWidth: true, iconStart: 'add' }"
       (onClick)="showOverrideForm.set(!showOverrideForm())" />
     @if (selectedEmployee()?.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
       <daf-button
-        label="Supprimer l'override (revenir au rôle)"
+        [label]="'ADMIN.regimes.overview.removeOverride' | translate"
         variant="danger"
         [options]="{ fullWidth: true, iconStart: 'undo' }"
         (onClick)="removeOverride()" />
@@ -142,38 +142,38 @@
   <!-- Override form -->
   @if (showOverrideForm()) {
     <div class="ro-override-form">
-      <p class="ro-override-title">Nouveau régime personnel</p>
+      <p class="ro-override-title">{{ 'ADMIN.regimes.overview.newPersonalRegime' | translate }}</p>
       <div class="ro-override-fields">
         <daf-select
           [selected]="overrideRegimeSelected()"
           [options]="regimeOptions()"
-          [config]="{ label: 'Régime', required: true, fullWidth: true }"
+          [config]="{ label: ('ADMIN.regimes.overview.fieldRegime' | translate), required: true, fullWidth: true }"
           (selectedChange)="onOverrideRegimeChange($event)" />
         <div class="ro-form-row-2">
           <daf-form-field
-            [options]="{ label: 'Date d\'effet', type: 'date', required: true, fullWidth: true }"
+            [options]="{ label: ('ADMIN.regimes.overview.effFrom' | translate), type: 'date', required: true, fullWidth: true }"
             [value]="overrideEffFrom"
             (valueChange)="overrideEffFrom = $any($event)" />
           <div>
             <daf-form-field
-              [options]="{ label: 'Date de fin', type: 'date', disabled: noEndDate(), fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.overview.effTo' | translate), type: 'date', disabled: noEndDate(), fullWidth: true }"
               [value]="overrideEffTo"
               (valueChange)="overrideEffTo = $any($event)" />
             <daf-checkbox
               class="ro-no-end-checkbox"
-              [options]="{ label: 'Sans fin' }"
+              [options]="{ label: ('ADMIN.regimes.overview.noEnd' | translate) }"
               [checked]="noEndDate()"
               (checkedChange)="noEndDate.set($event)" />
           </div>
         </div>
         <daf-form-field
-          [options]="{ label: 'Raison', type: 'textarea', required: true, rows: 2, fullWidth: true }"
+          [options]="{ label: ('ADMIN.regimes.overview.reason' | translate), type: 'textarea', required: true, rows: 2, fullWidth: true }"
           [value]="overrideReason"
           (valueChange)="overrideReason = $any($event)" />
         <div class="ro-override-actions">
-          <daf-button label="Annuler" variant="secondary" [options]="{ fullWidth: true }" (onClick)="showOverrideForm.set(false)" />
+          <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" [options]="{ fullWidth: true }" (onClick)="showOverrideForm.set(false)" />
           <daf-button
-            label="Confirmer"
+            [label]="'ADMIN.regimes.overview.confirm' | translate"
             variant="teal"
             [options]="{ fullWidth: true, disabled: isSaving() || !overrideRegimeId || !overrideEffFrom || !overrideReason, loading: isSaving() }"
             (onClick)="confirmOverride()" />

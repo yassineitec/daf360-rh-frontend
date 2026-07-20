@@ -1,13 +1,14 @@
 import { Component, input, output } from '@angular/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import type { BadgeOptions } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 import { KanbanCandidate } from '../../services/pipeline.service';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'rh-pipeline-list-row',
   standalone: true,
-  imports: [StatusBadgeComponent],
+  imports: [StatusBadgeComponent, TranslatePipe],
   template: `
     <div
       class="bg-white border border-outline-variant rounded-xl p-4
@@ -44,7 +45,7 @@ import { environment } from '../../../../../environments/environment';
 
       <!-- Fit score -->
       <span class="font-bold text-sm flex-shrink-0" style="color:#79D7BE">
-        {{ candidate().fitScore }}% Fit
+        {{ 'PIPELINE.FIT_SCORE' | translate: { score: candidate().fitScore } }}
       </span>
 
       <!-- Location + experience -->
@@ -65,7 +66,7 @@ import { environment } from '../../../../../environments/environment';
 
       <!-- Action -->
       <button class="text-primary font-semibold text-sm flex-shrink-0 hover:underline">
-        Voir →
+        {{ 'PIPELINE.VIEW_ARROW' | translate }}
       </button>
     </div>
   `,

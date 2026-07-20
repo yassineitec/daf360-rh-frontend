@@ -16,6 +16,7 @@ import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
 import { ModalComponent }        from '../../shared/modal.component';
 import { UserStore }             from '../../core/user.store';
 import { ConfirmService } from '../../core/confirm.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   ok: 'success', warning: 'warning', critical: 'danger', none: 'neutral',
@@ -26,24 +27,24 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   standalone: true,
   imports: [
     RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, ModalComponent,
-    DataTableComponent, DafCellDirective, PaginationComponent,
+    DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe,
   ],
   template: `
     <div class="page-header">
       <div>
-        <h1 class="page-title">Boîte de réception RH</h1>
-        <p class="page-sub">{{ total() }} demande{{ total() !== 1 ? 's' : '' }} à traiter</p>
+        <h1 class="page-title">{{ 'REQUESTS.INBOX.TITLE' | translate }}</h1>
+        <p class="page-sub">{{ 'REQUESTS.INBOX.SUBTITLE' | translate:{ count: total() } }}</p>
       </div>
-      <a routerLink="/rh/requests" class="btn-ghost">← Mes demandes</a>
+      <a routerLink="/rh/requests" class="btn-ghost">{{ 'REQUESTS.INBOX.BACK_MY_REQUESTS' | translate }}</a>
     </div>
 
     <!-- Filters -->
     <div class="filters-bar">
       <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="reload()">
-        <option value="">Toutes les demandes</option>
-        <option value="SUBMITTED">Soumises</option>
-        <option value="IN_REVIEW">En traitement</option>
-        <option value="PENDING_L2">Attente L2</option>
+        <option value="">{{ 'REQUESTS.INBOX.FILTER_ALL' | translate }}</option>
+        <option value="SUBMITTED">{{ 'REQUESTS.INBOX.FILTER_SUBMITTED' | translate }}</option>
+        <option value="IN_REVIEW">{{ 'REQUESTS.INBOX.FILTER_IN_REVIEW' | translate }}</option>
+        <option value="PENDING_L2">{{ 'REQUESTS.INBOX.FILTER_PENDING_L2' | translate }}</option>
       </select>
     </div>
 
@@ -65,10 +66,10 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
           </svg>
-          <p>Aucune demande en attente</p>
+          <p>{{ 'REQUESTS.INBOX.EMPTY' | translate }}</p>
         </div>
       } @else {
-        <daf-data-table [columns]="columns" [rows]="tableRows()" [config]="tableConfig">
+        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig">
           <ng-template dafCell="status" let-row>
             <daf-badge [label]="statusBadge(row['_source'].status).label" [options]="statusBadge(row['_source'].status).options" />
           </ng-template>
@@ -76,10 +77,10 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
             <daf-badge [label]="row['sla'].label" [options]="{ variant: slaVariant(row['sla'].level), size: 'sm' }" />
           </ng-template>
           <ng-template dafCell="_actions" let-row>
-            <a [routerLink]="['/rh/requests', row['_source'].id]" class="action-link">Détails</a>
+            <a [routerLink]="['/rh/requests', row['_source'].id]" class="action-link">{{ 'REQUESTS.INBOX.DETAILS' | translate }}</a>
             @if (canProcess(row['_source'].status)) {
-              <daf-button label="Approuver" variant="ghost" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="quickApprove(row['_source'])" />
-              <daf-button label="Refuser" variant="danger" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="openRefuse(row['_source'])" />
+              <daf-button [label]="'REQUESTS.INBOX.APPROVE' | translate" variant="ghost" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="quickApprove(row['_source'])" />
+              <daf-button [label]="'REQUESTS.INBOX.REJECT' | translate" variant="danger" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="openRefuse(row['_source'])" />
             }
           </ng-template>
         </daf-data-table>
@@ -98,27 +99,27 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
 
     <!-- Refuse modal -->
     <app-modal
-      title="Refuser la demande"
+      [title]="'REQUESTS.INBOX.REFUSE_TITLE' | translate"
       [visible]="!!refuseTarget()"
       [hasFooter]="true"
       (closed)="refuseTarget.set(null)"
     >
       <div class="refuse-body">
         <p class="refuse-desc">
-          Demande #{{ refuseTarget()?.id }} — {{ refuseTarget()?.typeDisplayNameFr }}
+          {{ 'REQUESTS.INBOX.REFUSE_DESC' | translate:{ id: refuseTarget()?.id, type: refuseTarget()?.typeDisplayNameFr } }}
         </p>
-        <label class="form-label">Motif de refus *</label>
+        <label class="form-label">{{ 'REQUESTS.INBOX.REFUSE_MOTIF_LABEL' | translate }}</label>
         <textarea
           class="form-input"
           [(ngModel)]="refuseMotif"
-          placeholder="Préciser la raison du refus…"
+          [placeholder]="'REQUESTS.INBOX.REFUSE_PLACEHOLDER' | translate"
           rows="4"
         ></textarea>
       </div>
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="refuseTarget.set(null)" />
+        <daf-button [label]="'REQUESTS.INBOX.CANCEL' | translate" variant="secondary" (onClick)="refuseTarget.set(null)" />
         <daf-button
-          label="Confirmer le refus"
+          [label]="'REQUESTS.INBOX.CONFIRM_REFUSE' | translate"
           variant="danger"
           [options]="{ disabled: !refuseMotif.trim() || saving(), loading: saving() }"
           (onClick)="confirmRefuse()"
@@ -132,6 +133,7 @@ export class RequestOfficerInboxComponent implements OnInit {
   private svc       = inject(RequestsService);
   private confirm = inject(ConfirmService);
   private userStore = inject(UserStore);
+  private translate = inject(TranslateService);
 
   loading    = signal(false);
   saving     = signal(false);
@@ -155,29 +157,33 @@ export class RequestOfficerInboxComponent implements OnInit {
 
   private slaPipe = new SlaCountdownPipe();
 
-  readonly columns: TableColumn[] = [
-    { key: 'id', label: '#' },
-    { key: 'employee', label: 'Employé' },
-    { key: 'type', label: 'Type' },
-    { key: 'submitted', label: 'Soumis le' },
-    { key: 'sla', label: 'SLA restant' },
-    { key: 'status', label: 'Statut' },
-    { key: '_actions', label: 'Actions rapides', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'id', label: this.translate.instant('REQUESTS.INBOX.COL_ID') },
+      { key: 'employee', label: this.translate.instant('REQUESTS.INBOX.COL_EMPLOYEE') },
+      { key: 'type', label: this.translate.instant('REQUESTS.INBOX.COL_TYPE') },
+      { key: 'submitted', label: this.translate.instant('REQUESTS.INBOX.COL_SUBMITTED') },
+      { key: 'sla', label: this.translate.instant('REQUESTS.INBOX.COL_SLA') },
+      { key: 'status', label: this.translate.instant('REQUESTS.INBOX.COL_STATUS') },
+      { key: '_actions', label: this.translate.instant('REQUESTS.INBOX.COL_ACTIONS'), align: 'right' },
+    ];
+  });
 
   readonly tableConfig: TableConfig = { hoverable: true };
 
-  readonly tableRows = computed<TableRow[]>(() =>
-    this.rows().map(row => ({
+  readonly tableRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return this.rows().map(row => ({
       id: row.id,
-      employee: row.employeeName ?? ('Profil #' + row.employeeProfileId),
-      type: row.typeDisplayNameFr ?? 'Demande #' + row.requestTypeId,
+      employee: row.employeeName ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: row.employeeProfileId }),
+      type: row.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: row.requestTypeId }),
       submitted: this.fmtDate(row.submissionDate),
       sla: this.slaPipe.transform(this.slaDeadline(row)),
       status: row.status,
       _source: row,
-    })),
-  );
+    }));
+  });
 
   slaVariant(level: SlaLevel): BadgeOptions['variant'] {
     return SLA_VARIANTS[level];
@@ -207,9 +213,9 @@ export class RequestOfficerInboxComponent implements OnInit {
 
   async quickApprove(row: EmployeeRequest) {
     if (!(await this.confirm.ask({
-      title: 'Approuver la demande',
-      message: `Approuver la demande #${row.id} ?`,
-      confirmLabel: 'Approuver', icon: 'check',
+      title: this.translate.instant('REQUESTS.INBOX.APPROVE_TITLE'),
+      message: this.translate.instant('REQUESTS.INBOX.APPROVE_MESSAGE', { id: row.id }),
+      confirmLabel: this.translate.instant('REQUESTS.INBOX.APPROVE'), icon: 'check',
     }))) return;
     this.errorMsg.set('');
     this.svc.processRequest(row.id, this.officerId(), 'APPROVED', 'Approuvé via boîte de réception')
@@ -246,7 +252,7 @@ export class RequestOfficerInboxComponent implements OnInit {
   /** Pulls the RFC-7807 `detail` from the backend error, with sensible fallbacks. */
   private extractError(err: unknown): string {
     const e = err as { error?: { detail?: string; message?: string } };
-    return e?.error?.detail ?? e?.error?.message ?? 'Erreur lors du traitement de la demande.';
+    return e?.error?.detail ?? e?.error?.message ?? this.translate.instant('REQUESTS.INBOX.ERROR');
   }
 
   slaDeadline(row: EmployeeRequest): string | null {

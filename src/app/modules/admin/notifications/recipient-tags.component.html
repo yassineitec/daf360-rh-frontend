@@ -4,25 +4,25 @@
     @for (r of recipients(); track r.id) {
       <span class="rt-tag">
         {{ r.roleName }}
-        <button class="rt-remove" type="button" (click)="onRemove(r.id)" title="Retirer">×</button>
+        <button class="rt-remove" type="button" (click)="onRemove(r.id)" [title]="'ADMIN.notifications.removeTitle' | translate">×</button>
       </span>
     }
     @if (recipients().length === 0) {
-      <span class="rt-empty">Aucun rôle configuré</span>
+      <span class="rt-empty">{{ 'ADMIN.notifications.emptyRoles' | translate }}</span>
     }
   </div>
   <div class="rt-add">
     @if (!showDropdown()) {
-      <daf-button label="+ Ajouter un rôle" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(true)" />
+      <daf-button [label]="'ADMIN.notifications.addRole' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(true)" />
     } @else {
       <div class="rt-add-row">
         <daf-select
           class="rt-select"
           [selected]="selectedRoleValue()"
           [options]="roleOptions()"
-          [config]="{ placeholder: '-- Sélectionner un rôle --' }"
+          [config]="{ placeholder: ('ADMIN.notifications.selectRolePlaceholder' | translate) }"
           (selectedChange)="onSelectRole($event[0] ?? '')" />
-        <daf-button label="Ajouter" variant="teal" [options]="{ size: 'sm', disabled: !selectedRoleId() }" (onClick)="onAdd()" />
+        <daf-button [label]="'ADMIN.notifications.add' | translate" variant="teal" [options]="{ size: 'sm', disabled: !selectedRoleId() }" (onClick)="onAdd()" />
         <daf-button label="✕" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(false)" />
       </div>
     }

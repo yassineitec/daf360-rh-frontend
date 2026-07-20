@@ -21,14 +21,15 @@ import { ModalComponent }       from '../../shared/modal.component';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue } from '../../core/lists/configurable-list.model';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const STEP_CARD_INFO = [
-  { title: 'Identité',        sub: 'Informations du candidat issues du dossier de recrutement.',   icon: 'person'           },
-  { title: 'Microsoft 365',   sub: 'Créez le compte de messagerie professionnel.',                  icon: 'cloud'            },
-  { title: 'Matériel',        sub: 'Enregistrez le matériel informatique remis au collaborateur.',   icon: 'laptop_mac'       },
-  { title: 'Licences',        sub: 'Sélectionnez les licences logicielles à attribuer.',             icon: 'verified_user'    },
-  { title: 'Active Directory', sub: 'Créez le compte AD et son profil d\'accès.',                    icon: 'lan'              },
-  { title: 'Notes & Finalisation', sub: 'Ajoutez vos observations puis clôturez le dossier.',         icon: 'flag'             },
+  { key: 'identity',  icon: 'person'        },
+  { key: 'ms365',     icon: 'cloud'         },
+  { key: 'hardware',  icon: 'laptop_mac'    },
+  { key: 'licenses',  icon: 'verified_user' },
+  { key: 'ad',        icon: 'lan'           },
+  { key: 'notes',     icon: 'flag'          },
 ];
 
 @Component({
@@ -38,6 +39,7 @@ const STEP_CARD_INFO = [
     SlicePipe, FormsModule, StatusBadgeComponent, ButtonComponent, CardComponent,
     DataTableComponent, DafCellDirective,
     SpinnerComponent, ModalComponent, ConfirmEmailModalComponent, PdfDownloadButtonComponent,
+    TranslatePipe,
   ],
   templateUrl: './it-provisioning-form.component.html',
 })
@@ -46,6 +48,7 @@ export class ItProvisioningFormComponent implements OnInit {
   private router      = inject(Router);
   private service     = inject(ItProvisioningService);
   private listService = inject(ConfigurableListService);
+  private translate   = inject(TranslateService);
 
   // ── Page state ────────────────────────────────────────────────────────────
   prov            = signal<ProvisioningDetail | null>(null);
@@ -80,8 +83,14 @@ export class ItProvisioningFormComponent implements OnInit {
   readonly totalSteps = STEP_CARD_INFO.length;
   readonly wizardSteps = STEP_CARD_INFO;
 
-  readonly cardTitle = computed(() => STEP_CARD_INFO[this.currentStep() - 1].title);
-  readonly cardSub   = computed(() => STEP_CARD_INFO[this.currentStep() - 1].sub);
+  readonly cardTitle = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant('IT_PROVISIONING.form.steps.' + STEP_CARD_INFO[this.currentStep() - 1].key + '.title');
+  });
+  readonly cardSub   = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant('IT_PROVISIONING.form.steps.' + STEP_CARD_INFO[this.currentStep() - 1].key + '.sub');
+  });
   readonly cardIcon  = computed(() => STEP_CARD_INFO[this.currentStep() - 1].icon);
 
   /** Per-step completion, used to render check marks in the progression panel. */
@@ -132,31 +141,35 @@ export class ItProvisioningFormComponent implements OnInit {
 
   readonly adOptions = signal<ListValue[]>([]);
 
-  readonly hwStatuses: { value: string; label: string }[] = [
-    { value: 'NEUF',          label: 'Neuf' },
-    { value: 'BON_ETAT',      label: 'Bon état' },
-    { value: 'USAGE',         label: 'Usagé' },
-    { value: 'EN_REPARATION', label: 'En réparation' },
-    { value: 'DEFECTUEUX',    label: 'Défectueux' },
-  ];
+  readonly hwStatuses = computed<{ value: string; label: string }[]>(() => {
+    this.translate.currentLang();
+    return ['NEUF', 'BON_ETAT', 'USAGE', 'EN_REPARATION', 'DEFECTUEUX'].map(value => ({
+      value,
+      label: this.translate.instant('IT_PROVISIONING.form.hwStatus.' + value),
+    }));
+  });
 
   // ── Hardware table (daf-data-table) ─────────────────────────────────────────
-  readonly assetColumns: TableColumn[] = [
-    { key: 'provided',         label: 'Fourni',           align: 'center', width: '60px' },
-    { key: 'assetTypeLabelFr', label: 'Matériel',         width: '160px' },
-    { key: 'serialNumber',     label: 'N° de série' },
-    { key: 'brandModel',       label: 'Marque / Modèle' },
-    { key: 'assetTag',         label: 'Asset Tag' },
-    { key: 'status',           label: 'Statut',           width: '160px' },
-  ];
+  readonly assetColumns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'provided',         label: this.translate.instant('IT_PROVISIONING.form.assetCol.provided'),  align: 'center', width: '60px' },
+      { key: 'assetTypeLabelFr', label: this.translate.instant('IT_PROVISIONING.form.assetCol.material'), width: '160px' },
+      { key: 'serialNumber',     label: this.translate.instant('IT_PROVISIONING.form.assetCol.serial') },
+      { key: 'brandModel',       label: this.translate.instant('IT_PROVISIONING.form.assetCol.brandModel') },
+      { key: 'assetTag',         label: this.translate.instant('IT_PROVISIONING.form.assetCol.assetTag') },
+      { key: 'status',           label: this.translate.instant('IT_PROVISIONING.form.assetCol.status'), width: '160px' },
+    ];
+  });
 
   readonly assetRows = computed<TableRow[]>(() =>
     this.editableAssets().map(a => ({ ...a })),
   );
 
-  readonly assetTableConfig: TableConfig = {
-    emptyMessage: "Aucun type d'actif configuré pour cette entité.",
-  };
+  readonly assetTableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return { emptyMessage: this.translate.instant('IT_PROVISIONING.form.assetEmpty') };
+  });
 
   assetIndex(assetTypeCode: string): number {
     return this.editableAssets().findIndex(a => a.assetTypeCode === assetTypeCode);
@@ -182,7 +195,7 @@ export class ItProvisioningFormComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Impossible de charger le dossier de provisioning.');
+        this.error.set(this.translate.instant('IT_PROVISIONING.form.loadError'));
         this.loading.set(false);
       },
     });
@@ -255,11 +268,11 @@ export class ItProvisioningFormComponent implements OnInit {
         this.prov.set(p);
         this.initFromProv(p);
         this.saving.set(false);
-        this.flash('Modifications enregistrées avec succès.');
+        this.flash(this.translate.instant('IT_PROVISIONING.form.saveSuccess'));
       },
       error: () => {
         this.saving.set(false);
-        this.error.set("Erreur lors de l'enregistrement.");
+        this.error.set(this.translate.instant('IT_PROVISIONING.form.saveError'));
       },
     });
   }
@@ -275,11 +288,11 @@ export class ItProvisioningFormComponent implements OnInit {
         this.prov.set(p);
         this.initFromProv(p);
         this.submittingEmail.set(false);
-        this.flash('Email MS365 soumis. Compte utilisateur créé avec succès.');
+        this.flash(this.translate.instant('IT_PROVISIONING.form.emailSuccess'));
       },
       error: (err) => {
         this.submittingEmail.set(false);
-        const msg = err?.error?.detail ?? err?.error?.title ?? "Erreur lors de la soumission de l'email.";
+        const msg = err?.error?.detail ?? err?.error?.title ?? this.translate.instant('IT_PROVISIONING.form.emailError');
         this.error.set(msg);
       },
     });
@@ -327,18 +340,18 @@ export class ItProvisioningFormComponent implements OnInit {
           next: () => {
             this.completing.set(false);
             this.load();
-            this.flash('Provisioning marqué comme terminé !');
+            this.flash(this.translate.instant('IT_PROVISIONING.form.completeSuccess'));
           },
           error: (err) => {
             this.completing.set(false);
-            const msg = err?.error?.message ?? err?.error?.detail ?? 'Erreur lors de la finalisation.';
+            const msg = err?.error?.message ?? err?.error?.detail ?? this.translate.instant('IT_PROVISIONING.form.completeError');
             this.error.set(msg);
           },
         });
       },
       error: (err) => {
         this.completing.set(false);
-        this.error.set(err?.error?.message ?? "Erreur lors de l'enregistrement avant finalisation.");
+        this.error.set(err?.error?.message ?? this.translate.instant('IT_PROVISIONING.form.saveBeforeCompleteError'));
       },
     });
   }

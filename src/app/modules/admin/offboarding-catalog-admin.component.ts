@@ -4,6 +4,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { catchError, of } from 'rxjs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { AdminService } from './admin.service';
 import {
@@ -11,37 +12,29 @@ import {
 } from './models/admin.model';
 import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
-const CONTRACT_TYPE_LABELS: Record<string, string> = {
-  CDI:      'CDI',
-  CDD:      'CDD',
-  STAGE:    'Stage',
-  FREELANCE:'Freelance',
-  CIVP:     'CIVP',
-};
-
 @Component({
   selector: 'app-offboarding-catalog-admin',
   standalone: true,
-  imports: [FormsModule, NgTemplateOutlet, ButtonComponent, StatusBadgeComponent],
+  imports: [FormsModule, NgTemplateOutlet, ButtonComponent, StatusBadgeComponent, TranslatePipe],
   template: `
     <div class="cat-header">
       <div>
-        <h3 class="section-title">Catalogue des tâches d'offboarding</h3>
-        <p class="section-sub">Définissez les tâches par type de contrat pour les dossiers d'offboarding.</p>
+        <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
+        <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
       </div>
-      <daf-button label="Ajouter une tâche" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button [label]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
     </div>
 
     <!-- Filter bar -->
     <div class="filter-bar">
       <select class="filter-select" [(ngModel)]="filterContractType" (ngModelChange)="load()">
-        <option value="">Tous les types de contrat</option>
+        <option value="">{{ 'ADMIN.docs.offboarding.allContractTypes' | translate }}</option>
         @for (ct of CONTRACT_TYPES; track ct) {
           <option [value]="ct">{{ contractTypeLabel(ct) }}</option>
         }
       </select>
       @if (filterContractType) {
-        <daf-button label="Réinitialiser" variant="ghost"
+        <daf-button [label]="'ADMIN.docs.offboarding.reset' | translate" variant="ghost"
           [options]="{ size: 'sm', iconStart: 'close' }"
           (onClick)="filterContractType = ''; load()" />
       }
@@ -55,7 +48,7 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
     } @else if (rows().length === 0) {
       <div class="empty-state">
         <span class="material-symbols-outlined">list_alt</span>
-        <p>Aucune tâche configurée{{ filterContractType ? ' pour ce type de contrat' : '' }}.</p>
+        <p>{{ 'ADMIN.docs.offboarding.empty' | translate }}{{ filterContractType ? (' ' + ('ADMIN.docs.offboarding.emptyForContract' | translate)) : '' }}.</p>
       </div>
     } @else {
 
@@ -64,7 +57,7 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
         @for (group of groupedRows(); track group.contractType) {
           <div class="group-header">
             <span class="group-label">{{ contractTypeLabel(group.contractType) }}</span>
-            <span class="group-count">{{ group.tasks.length }} tâche{{ group.tasks.length !== 1 ? 's' : '' }}</span>
+            <span class="group-count">{{ group.tasks.length }} {{ (group.tasks.length !== 1 ? 'ADMIN.docs.offboarding.tasks' : 'ADMIN.docs.offboarding.task') | translate }}</span>
           </div>
           <ng-container *ngTemplateOutlet="taskTable; context: { $implicit: group.tasks }" />
         }
@@ -78,12 +71,12 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
       <div class="cat-table">
         <div class="cat-table-head">
           <span class="col-order">#</span>
-          <span class="col-label">Tâche</span>
-          <span class="col-code">Code</span>
-          <span class="col-role">Responsable</span>
-          <span class="col-sla">SLA (jours)</span>
-          <span class="col-flags">Options</span>
-          <span class="col-status">Statut</span>
+          <span class="col-label">{{ 'ADMIN.docs.offboarding.colLabel' | translate }}</span>
+          <span class="col-code">{{ 'ADMIN.docs.offboarding.colCode' | translate }}</span>
+          <span class="col-role">{{ 'ADMIN.docs.offboarding.colRole' | translate }}</span>
+          <span class="col-sla">{{ 'ADMIN.docs.offboarding.colSla' | translate }}</span>
+          <span class="col-flags">{{ 'ADMIN.docs.offboarding.colOptions' | translate }}</span>
+          <span class="col-status">{{ 'ADMIN.docs.offboarding.colStatus' | translate }}</span>
           <span class="col-actions"></span>
         </div>
         @for (task of tasks; track task.id) {
@@ -97,23 +90,23 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
             <span class="col-sla">{{ task.slaWorkingDays }}</span>
             <span class="col-flags">
               @if (task.isMandatory) {
-                <span class="flag-chip mandatory">Obligatoire</span>
+                <span class="flag-chip mandatory">{{ 'ADMIN.docs.offboarding.mandatory' | translate }}</span>
               }
               @if (task.isBlocking) {
-                <span class="flag-chip blocking">Bloquant</span>
+                <span class="flag-chip blocking">{{ 'ADMIN.docs.offboarding.blocking' | translate }}</span>
               }
             </span>
             <span class="col-status">
               <daf-badge
-                [label]="task.isActive ? 'Actif' : 'Inactif'"
+                [label]="(task.isActive ? 'ADMIN.docs.offboarding.active' : 'ADMIN.docs.offboarding.inactive') | translate"
                 [options]="{ variant: task.isActive ? 'success' : 'neutral', size: 'sm' }"
               />
             </span>
             <span class="col-actions">
-              <button class="icon-btn" title="Modifier" (click)="openEdit(task)">
+              <button class="icon-btn" [title]="'ADMIN.docs.offboarding.edit' | translate" (click)="openEdit(task)">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="icon-btn" [title]="task.isActive ? 'Désactiver' : 'Activer'"
+              <button class="icon-btn" [title]="(task.isActive ? 'ADMIN.docs.offboarding.deactivate' : 'ADMIN.docs.offboarding.activate') | translate"
                 (click)="toggleActive(task)">
                 <span class="material-symbols-outlined">{{ task.isActive ? 'toggle_on' : 'toggle_off' }}</span>
               </button>
@@ -128,7 +121,7 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
       <div class="modal-backdrop" (click)="closeForm()">
         <div class="modal-panel" (click)="$event.stopPropagation()">
           <div class="modal-header">
-            <h4>{{ editingId() ? 'Modifier la tâche' : 'Ajouter une tâche' }}</h4>
+            <h4>{{ (editingId() ? 'ADMIN.docs.offboarding.editTitle' : 'ADMIN.docs.offboarding.addTask') | translate }}</h4>
             <button class="icon-btn" (click)="closeForm()">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -137,9 +130,9 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
           <div class="modal-body">
             <div class="form-grid">
               <div>
-                <label class="form-label">Type de contrat *</label>
+                <label class="form-label">{{ 'ADMIN.docs.offboarding.contractTypeLabel' | translate }}</label>
                 <select class="form-input" [(ngModel)]="form.contractType" [disabled]="!!editingId()">
-                  <option value="">Sélectionner…</option>
+                  <option value="">{{ 'ADMIN.docs.offboarding.selectPlaceholder' | translate }}</option>
                   @for (ct of CONTRACT_TYPES; track ct) {
                     <option [value]="ct">{{ contractTypeLabel(ct) }}</option>
                   }
@@ -147,42 +140,42 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
               </div>
 
               <div>
-                <label class="form-label">Code tâche *</label>
+                <label class="form-label">{{ 'ADMIN.docs.offboarding.taskCodeLabel' | translate }}</label>
                 <input class="form-input" type="text" [(ngModel)]="form.taskCode"
-                  placeholder="ex: IT_ACCESS_REVOKE" [disabled]="!!editingId()"
+                  [placeholder]="'ADMIN.docs.offboarding.taskCodePlaceholder' | translate" [disabled]="!!editingId()"
                   style="text-transform:uppercase" />
               </div>
 
               <div class="field-full">
-                <label class="form-label">Libellé *</label>
+                <label class="form-label">{{ 'ADMIN.docs.offboarding.taskLabelLabel' | translate }}</label>
                 <input class="form-input" type="text" [(ngModel)]="form.taskLabel"
-                  placeholder="ex: Désactivation des accès informatiques" />
+                  [placeholder]="'ADMIN.docs.offboarding.taskLabelPlaceholder' | translate" />
               </div>
 
               <div>
-                <label class="form-label">Rôle responsable *</label>
+                <label class="form-label">{{ 'ADMIN.docs.offboarding.ownerRoleLabel' | translate }}</label>
                 <input class="form-input" type="text" [(ngModel)]="form.ownerRole"
-                  placeholder="ex: IT_OFFICER" />
+                  [placeholder]="'ADMIN.docs.offboarding.ownerRolePlaceholder' | translate" />
               </div>
 
               <div>
-                <label class="form-label">SLA (jours ouvrés) *</label>
+                <label class="form-label">{{ 'ADMIN.docs.offboarding.slaLabel' | translate }}</label>
                 <input class="form-input" type="number" [(ngModel)]="form.slaWorkingDays" min="1" max="60" />
               </div>
 
               <div>
-                <label class="form-label">Ordre d'affichage</label>
+                <label class="form-label">{{ 'ADMIN.docs.offboarding.orderLabel' | translate }}</label>
                 <input class="form-input" type="number" [(ngModel)]="form.orderIndex" min="0" />
               </div>
 
               <div class="field-full toggles-row">
                 <label class="toggle-label">
                   <input type="checkbox" [(ngModel)]="form.isMandatory" />
-                  <span>Obligatoire</span>
+                  <span>{{ 'ADMIN.docs.offboarding.mandatory' | translate }}</span>
                 </label>
                 <label class="toggle-label">
                   <input type="checkbox" [(ngModel)]="form.isBlocking" />
-                  <span>Bloquant (empêche la validation si non complété)</span>
+                  <span>{{ 'ADMIN.docs.offboarding.blockingToggle' | translate }}</span>
                 </label>
               </div>
             </div>
@@ -193,9 +186,9 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
           </div>
 
           <div class="modal-footer">
-            <daf-button label="Annuler" variant="secondary" (onClick)="closeForm()" />
+            <daf-button [label]="'ADMIN.docs.offboarding.cancel' | translate" variant="secondary" (onClick)="closeForm()" />
             <daf-button
-              [label]="editingId() ? 'Enregistrer' : 'Ajouter'"
+              [label]="(editingId() ? 'ADMIN.docs.offboarding.save' : 'ADMIN.docs.offboarding.add') | translate"
               variant="teal"
               [options]="{ loading: saving(), disabled: !isFormValid() }"
               (onClick)="save()"
@@ -263,6 +256,7 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
 })
 export class OffboardingCatalogAdminComponent implements OnInit {
   private svc = inject(AdminService);
+  private translate = inject(TranslateService);
 
   paysId = input.required<number>();
 
@@ -368,7 +362,7 @@ export class OffboardingCatalogAdminComponent implements OnInit {
 
     req$.pipe(
       catchError(err => {
-        this.formError.set(err?.error?.message ?? err?.error?.detail ?? 'Erreur lors de l\'enregistrement');
+        this.formError.set(err?.error?.message ?? err?.error?.detail ?? this.translate.instant('ADMIN.docs.offboarding.saveError'));
         this.saving.set(false);
         return of(null);
       }),
@@ -392,6 +386,8 @@ export class OffboardingCatalogAdminComponent implements OnInit {
   }
 
   contractTypeLabel(ct: string): string {
-    return CONTRACT_TYPE_LABELS[ct] ?? ct;
+    const key = `ADMIN.docs.offboarding.contractType.${ct}`;
+    const val = this.translate.instant(key);
+    return val === key ? ct : val;
   }
 }

@@ -7,6 +7,7 @@ import {
   PaginationComponent, PaginationConfig, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../shared/modal.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
@@ -25,20 +26,20 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { key: 'grades',        label: 'Grades',             hasPays: true,  endpoint: 'grades'        },
-  { key: 'disciplines',   label: 'Disciplines',         hasPays: true,  endpoint: 'disciplines'   },
-  { key: 'nog-levels',    label: 'Niveaux NOG',         hasPays: true,  endpoint: 'nog-levels'    },
-  { key: 'departments',   label: 'Départements',        hasPays: true,  endpoint: 'departments'   },
-  { key: 'banks',         label: 'Banques',              hasPays: true,  endpoint: 'banks'         },
-  { key: 'nationalities', label: 'Nationalités',         hasPays: false, endpoint: 'nationalities' },
-  { key: 'type-contrat',    label: 'Types de contrat',     hasPays: false, endpoint: 'type-contrat'   },
-  { key: 'it-asset-types',  label: 'Matériels informatiques', hasPays: false, endpoint: 'it-asset-types' },
+  { key: 'grades',        label: 'ADMIN.data.refData.TAB_GRADES',        hasPays: true,  endpoint: 'grades'        },
+  { key: 'disciplines',   label: 'ADMIN.data.refData.TAB_DISCIPLINES',   hasPays: true,  endpoint: 'disciplines'   },
+  { key: 'nog-levels',    label: 'ADMIN.data.refData.TAB_NOG_LEVELS',    hasPays: true,  endpoint: 'nog-levels'    },
+  { key: 'departments',   label: 'ADMIN.data.refData.TAB_DEPARTMENTS',   hasPays: true,  endpoint: 'departments'   },
+  { key: 'banks',         label: 'ADMIN.data.refData.TAB_BANKS',         hasPays: true,  endpoint: 'banks'         },
+  { key: 'nationalities', label: 'ADMIN.data.refData.TAB_NATIONALITIES', hasPays: false, endpoint: 'nationalities' },
+  { key: 'type-contrat',    label: 'ADMIN.data.refData.TAB_TYPE_CONTRAT', hasPays: false, endpoint: 'type-contrat'   },
+  { key: 'it-asset-types',  label: 'ADMIN.data.refData.TAB_IT_ASSETS',    hasPays: false, endpoint: 'it-asset-types' },
 ];
 
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, ModalComponent, PaginationComponent],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, ModalComponent, PaginationComponent, TranslatePipe],
   template: `
 <div>
   <!-- Sub-tab bar -->
@@ -50,7 +51,7 @@ const TABS: TabConfig[] = [
         (click)="selectTab(tab)"
         role="tab"
         type="button"
-      >{{ tab.label }}</button>
+      >{{ tab.label | translate }}</button>
     }
   </nav>
 
@@ -68,9 +69,9 @@ const TABS: TabConfig[] = [
 
   <!-- Header -->
   <div class="rda-header">
-    <h3 class="rda-header-title">{{ activeTab().label }}</h3>
+    <h3 class="rda-header-title">{{ activeTab().label | translate }}</h3>
     <daf-button
-      label="+ Ajouter"
+      [label]="'ADMIN.data.refData.ADD' | translate"
       variant="teal"
       [options]="{ iconStart: 'add' }"
       (onClick)="showForm.set(true)" />
@@ -79,20 +80,20 @@ const TABS: TabConfig[] = [
   <!-- Table — generic ref data -->
   @if (!isTypeContratTab()) {
     @if (loading()) {
-      <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">Chargement…</p>
+      <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
-      <daf-data-table [columns]="itemColumns" [rows]="itemRows()" [config]="itemTableConfig()">
+      <daf-data-table [columns]="itemColumns()" [rows]="itemRows()" [config]="itemTableConfig()">
         <ng-template dafCell="isActive" let-row>
           @if (row['_source'].isActive) {
-            <span class="rda-badge rda-badge-yes">Oui</span>
+            <span class="rda-badge rda-badge-yes">{{ 'ADMIN.data.refData.YES' | translate }}</span>
           } @else {
-            <span class="rda-badge rda-badge-no">Non</span>
+            <span class="rda-badge rda-badge-no">{{ 'ADMIN.data.refData.NO' | translate }}</span>
           }
         </ng-template>
         <ng-template dafCell="_actions" let-row>
           <daf-button
             class="icon-btn-delete"
-            title="Supprimer"
+            [title]="'ADMIN.data.refData.DELETE' | translate"
             variant="danger"
             [options]="{ size: 'sm', iconStart: 'delete' }"
             (onClick)="deleteItem(row['_source'])" />
@@ -115,20 +116,20 @@ const TABS: TabConfig[] = [
   <!-- Table — Types de contrat -->
   @if (isTypeContratTab()) {
     @if (loading()) {
-      <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">Chargement…</p>
+      <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
-      <daf-data-table [columns]="tcColumns" [rows]="tcRows()" [config]="itemTableConfig()">
+      <daf-data-table [columns]="tcColumns()" [rows]="tcRows()" [config]="itemTableConfig()">
         <ng-template dafCell="isActive" let-row>
           @if (row['_source'].isActive) {
-            <span class="rda-badge rda-badge-yes">Oui</span>
+            <span class="rda-badge rda-badge-yes">{{ 'ADMIN.data.refData.YES' | translate }}</span>
           } @else {
-            <span class="rda-badge rda-badge-no">Non</span>
+            <span class="rda-badge rda-badge-no">{{ 'ADMIN.data.refData.NO' | translate }}</span>
           }
         </ng-template>
         <ng-template dafCell="_actions" let-row>
           <daf-button
             class="icon-btn-delete"
-            title="Supprimer"
+            [title]="'ADMIN.data.refData.DELETE' | translate"
             variant="danger"
             [options]="{ size: 'sm', iconStart: 'delete' }"
             (onClick)="deleteTypeContrat(row['_source'])" />
@@ -152,33 +153,33 @@ const TABS: TabConfig[] = [
 <!-- Add modal — generic ref data -->
 @if (!isTypeContratTab()) {
   <app-modal
-    title="Ajouter une entrée"
+    [title]="'ADMIN.data.refData.MODAL_ADD_ENTRY' | translate"
     [visible]="showForm()"
     [hasFooter]="true"
     (closed)="showForm.set(false)"
   >
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <daf-form-field
-        [options]="{ label: 'Libellé FR', placeholder: 'Ex: Ingénieur Senior', required: true, fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.FIELD_LABEL_FR' | translate), placeholder: ('ADMIN.data.refData.PH_LABEL_FR' | translate), required: true, fullWidth: true }"
         [value]="createForm.labelFr"
         (valueChange)="createForm.labelFr = $any($event) ?? ''" />
       <daf-form-field
-        [options]="{ label: 'Libellé EN', placeholder: 'Ex: Senior Engineer', fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.FIELD_LABEL_EN' | translate), placeholder: ('ADMIN.data.refData.PH_LABEL_EN' | translate), fullWidth: true }"
         [value]="createForm.labelEn"
         (valueChange)="createForm.labelEn = $any($event) ?? ''" />
       <daf-form-field
-        [options]="{ label: 'Code', placeholder: 'Ex: SENIOR_ENG', fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.FIELD_CODE' | translate), placeholder: ('ADMIN.data.refData.PH_CODE' | translate), fullWidth: true }"
         [value]="createForm.code"
         (valueChange)="createForm.code = $any($event) ?? ''" />
       <daf-form-field
-        [options]="{ label: 'Ordre', type: 'number', placeholder: '0', fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.FIELD_ORDER' | translate), type: 'number', placeholder: ('ADMIN.data.refData.PH_ORDER' | translate), fullWidth: true }"
         [value]="createForm.sortOrder"
         (valueChange)="createForm.sortOrder = $event === null || $event === '' ? null : +$event" />
     </div>
     <div slot="footer">
-      <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+      <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="showForm.set(false)" />
       <daf-button
-        [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
+        [label]="saving() ? ('ADMIN.data.refData.SAVING' | translate) : ('ADMIN.data.refData.ADD_SHORT' | translate)"
         variant="teal"
         [options]="{ disabled: saving() || !createForm.labelFr.trim(), loading: saving() }"
         (onClick)="onCreate()" />
@@ -189,29 +190,29 @@ const TABS: TabConfig[] = [
 <!-- Add modal — type contrat -->
 @if (isTypeContratTab()) {
   <app-modal
-    title="Ajouter un type de contrat"
+    [title]="'ADMIN.data.refData.MODAL_ADD_TC' | translate"
     [visible]="showForm()"
     [hasFooter]="true"
     (closed)="showForm.set(false)"
   >
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <daf-form-field
-        [options]="{ label: 'Code', placeholder: 'Ex: CDI', required: true, fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.TC_FIELD_CODE' | translate), placeholder: ('ADMIN.data.refData.TC_PH_CODE' | translate), required: true, fullWidth: true }"
         [value]="tcCreateCode"
         (valueChange)="tcCreateCode = $any($event) ?? ''" />
       <daf-form-field
-        [options]="{ label: 'Libellé FR', placeholder: 'Ex: Contrat à durée indéterminée', required: true, fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.TC_FIELD_LABEL_FR' | translate), placeholder: ('ADMIN.data.refData.TC_PH_LABEL_FR' | translate), required: true, fullWidth: true }"
         [value]="tcCreateLabelFr"
         (valueChange)="tcCreateLabelFr = $any($event) ?? ''" />
       <daf-form-field
-        [options]="{ label: 'Libellé EN', placeholder: 'Ex: Permanent contract', fullWidth: true }"
+        [options]="{ label: ('ADMIN.data.refData.TC_FIELD_LABEL_EN' | translate), placeholder: ('ADMIN.data.refData.TC_PH_LABEL_EN' | translate), fullWidth: true }"
         [value]="tcCreateLabelEn"
         (valueChange)="tcCreateLabelEn = $any($event) ?? ''" />
     </div>
     <div slot="footer">
-      <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+      <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="showForm.set(false)" />
       <daf-button
-        [label]="saving() ? 'Enregistrement…' : 'Ajouter'"
+        [label]="saving() ? ('ADMIN.data.refData.SAVING' | translate) : ('ADMIN.data.refData.ADD_SHORT' | translate)"
         variant="teal"
         [options]="{ disabled: saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim(), loading: saving() }"
         (onClick)="onCreateTypeContrat()" />
@@ -243,6 +244,7 @@ export class RefDataAdminComponent implements OnChanges {
   private refSvc      = inject(RefDataService);
   private contractSvc = inject(ContractHistoryService);
   private modal       = inject(ModalService);
+  private translate   = inject(TranslateService);
 
   paysId = input<number>(179);
 
@@ -267,14 +269,17 @@ export class RefDataAdminComponent implements OnChanges {
     labelFr: '', labelEn: '', code: '', sortOrder: null,
   };
 
-  readonly itemColumns: TableColumn[] = [
-    { key: 'labelFr',   label: 'Libellé FR' },
-    { key: 'labelEn',   label: 'Libellé EN' },
-    { key: 'code',      label: 'Code' },
-    { key: 'sortOrder', label: 'Ordre' },
-    { key: 'isActive',  label: 'Actif' },
-    { key: '_actions',  label: '', align: 'right' },
-  ];
+  readonly itemColumns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'labelFr',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR') },
+      { key: 'labelEn',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN') },
+      { key: 'code',      label: this.translate.instant('ADMIN.data.refData.COL_CODE') },
+      { key: 'sortOrder', label: this.translate.instant('ADMIN.data.refData.COL_ORDER') },
+      { key: 'isActive',  label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
+      { key: '_actions',  label: '', align: 'right' },
+    ];
+  });
 
   currentPage = signal(0);
 
@@ -310,13 +315,16 @@ export class RefDataAdminComponent implements OnChanges {
     })),
   );
 
-  readonly tcColumns: TableColumn[] = [
-    { key: 'code',     label: 'Code' },
-    { key: 'labelFr',  label: 'Libellé FR' },
-    { key: 'labelEn',  label: 'Libellé EN' },
-    { key: 'isActive', label: 'Actif' },
-    { key: '_actions', label: '', align: 'right' },
-  ];
+  readonly tcColumns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'code',     label: this.translate.instant('ADMIN.data.refData.COL_CODE') },
+      { key: 'labelFr',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR') },
+      { key: 'labelEn',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN') },
+      { key: 'isActive', label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
+      { key: '_actions', label: '', align: 'right' },
+    ];
+  });
 
   readonly pagedTypeContrats = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
@@ -357,7 +365,7 @@ export class RefDataAdminComponent implements OnChanges {
     if (tab.key === 'type-contrat') {
       this.contractSvc.getTypeContrats().subscribe({
         next: tc => { this.typeContrats.set(tc); this.loading.set(false); },
-        error: () => { this.error.set('Impossible de charger les types de contrat.'); this.loading.set(false); },
+        error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_TC')); this.loading.set(false); },
       });
       return;
     }
@@ -365,7 +373,7 @@ export class RefDataAdminComponent implements OnChanges {
     if (tab.key === 'it-asset-types') {
       this.refSvc.getItAssetTypes().subscribe({
         next: r  => { this.items.set(r); this.loading.set(false); },
-        error: () => { this.error.set('Impossible de charger les matériels.'); this.loading.set(false); },
+        error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_ASSETS')); this.loading.set(false); },
       });
       return;
     }
@@ -376,7 +384,7 @@ export class RefDataAdminComponent implements OnChanges {
 
     obs.subscribe({
       next: r  => { this.items.set(r); this.loading.set(false); },
-      error: () => { this.error.set('Impossible de charger les données.'); this.loading.set(false); },
+      error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_DATA')); this.loading.set(false); },
     });
   }
 
@@ -409,23 +417,23 @@ export class RefDataAdminComponent implements OnChanges {
         this.saving.set(false);
         this.resetForm();
         this.showForm.set(false);
-        this.flash('Entrée créée avec succès.');
+        this.flash(this.translate.instant('ADMIN.data.refData.MSG_CREATED'));
         this.loadItems();
       },
       error: err => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? 'Erreur lors de la création.');
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.data.refData.ERR_CREATE'));
       },
     });
   }
 
   deleteItem(item: RefDataItem): void {
     this.modal.open({
-      title: 'Supprimer l\'entrée',
-      body:  `Supprimer « ${item.labelFr} » ?`,
+      title: this.translate.instant('ADMIN.data.refData.DELETE_ENTRY_TITLE'),
+      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: item.labelFr }),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDeleteItem(item); r.close(); } },
+        { label: this.translate.instant('ADMIN.data.refData.CANCEL'), variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.data.refData.DELETE'), variant: 'primary',   action: r => { this.doDeleteItem(item); r.close(); } },
       ],
     });
   }
@@ -434,8 +442,8 @@ export class RefDataAdminComponent implements OnChanges {
     const tab = this.activeTab();
     this.refSvc.invalidateAll();
     this.refSvc.delete(tab.endpoint, item.id, tab.hasPays ? this.paysId() : undefined).subscribe({
-      next: () => { this.flash('Entrée supprimée.'); this.loadItems(); },
-      error: err => this.error.set(err?.error?.message ?? 'Erreur lors de la suppression.'),
+      next: () => { this.flash(this.translate.instant('ADMIN.data.refData.MSG_DELETED')); this.loadItems(); },
+      error: err => this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.data.refData.ERR_DELETE')),
     });
   }
 
@@ -452,31 +460,31 @@ export class RefDataAdminComponent implements OnChanges {
         this.saving.set(false);
         this.tcCreateCode = ''; this.tcCreateLabelFr = ''; this.tcCreateLabelEn = '';
         this.showForm.set(false);
-        this.flash('Type de contrat créé.');
+        this.flash(this.translate.instant('ADMIN.data.refData.MSG_TC_CREATED'));
         this.loadItems();
       },
       error: (err: any) => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? 'Erreur lors de la création.');
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.data.refData.ERR_CREATE'));
       },
     });
   }
 
   deleteTypeContrat(tc: TypeContratDto): void {
     this.modal.open({
-      title: 'Supprimer le type de contrat',
-      body:  `Supprimer « ${tc.labelFr} » ?`,
+      title: this.translate.instant('ADMIN.data.refData.DELETE_TC_TITLE'),
+      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: tc.labelFr }),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDeleteTypeContrat(tc); r.close(); } },
+        { label: this.translate.instant('ADMIN.data.refData.CANCEL'), variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.data.refData.DELETE'), variant: 'primary',   action: r => { this.doDeleteTypeContrat(tc); r.close(); } },
       ],
     });
   }
 
   private doDeleteTypeContrat(tc: TypeContratDto): void {
     this.contractSvc.deleteTypeContrat(tc.id).subscribe({
-      next: () => { this.flash('Type de contrat supprimé.'); this.loadItems(); },
-      error: (err: any) => this.error.set(err?.error?.message ?? 'Erreur lors de la suppression.'),
+      next: () => { this.flash(this.translate.instant('ADMIN.data.refData.MSG_TC_DELETED')); this.loadItems(); },
+      error: (err: any) => this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.data.refData.ERR_DELETE')),
     });
   }
 

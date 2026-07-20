@@ -15,6 +15,7 @@ import {
 import { ModalComponent }  from '../../shared/modal.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 // ── IBAN validator ─────────────────────────────────────────────────────────────
 function ibanValidator(c: AbstractControl): ValidationErrors | null {
@@ -36,10 +37,10 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 @Component({
   selector: 'app-new-request',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent],
+  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent, TranslatePipe],
   template: `
     <app-modal
-      [title]="selectedType() ? (selectedType()!.displayNameFr) : 'Nouvelle demande RH'"
+      [title]="selectedType() ? (selectedType()!.displayNameFr) : ('REQUESTS.NEW.TITLE' | translate)"
       [visible]="visible()"
       [hasFooter]="true"
       (closed)="onClose()"
@@ -68,9 +69,9 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
                           <span class="type-card-desc">{{ t.description }}</span>
                         }
                         @if (t.approvalLevel === 'L2') {
-                          <daf-badge label="Validation Finance requise" [options]="{ variant: 'warning', size: 'sm' }" />
+                          <daf-badge [label]="'REQUESTS.NEW.FINANCE_VALIDATION_BADGE' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
                         }
-                        <span class="sla-info">SLA {{ t.defaultSlaDays }}j</span>
+                        <span class="sla-info">{{ 'REQUESTS.NEW.SLA_DAYS' | translate:{ days: t.defaultSlaDays } }}</span>
                       </button>
                     }
                   </div>
@@ -91,7 +92,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
-                Cette demande requiert une double validation (RH + Finance).
+                {{ 'REQUESTS.NEW.L2_NOTICE' | translate }}
               </div>
             }
           </div>
@@ -118,7 +119,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
                         <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
                         <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                       </svg>
-                      {{ fileNames()[field.key] ?? 'Choisir un fichier…' }}
+                      {{ fileNames()[field.key] ?? ('REQUESTS.NEW.CHOOSE_FILE' | translate) }}
                       <input type="file" hidden (change)="onFileSelect($event, field.key)"
                              [accept]="field.key === 'photo' ? 'image/*' : '.pdf,.jpg,.jpeg,.png'" />
                     </label>
@@ -143,10 +144,10 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
                 }
 
                 @if (touched(field.key) && required(field.key)) {
-                  <span class="field-error">Ce champ est obligatoire</span>
+                  <span class="field-error">{{ 'REQUESTS.NEW.FIELD_REQUIRED' | translate }}</span>
                 }
                 @if (touched(field.key) && ibanError(field.key)) {
-                  <span class="field-error">Format IBAN invalide</span>
+                  <span class="field-error">{{ 'REQUESTS.NEW.IBAN_INVALID' | translate }}</span>
                 }
               </div>
             }
@@ -161,13 +162,13 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 
       <div slot="footer">
         @if (selectedType()) {
-          <daf-button label="‹ Retour" variant="secondary" (onClick)="selectedType.set(null)" />
+          <daf-button [label]="'REQUESTS.NEW.BACK' | translate" variant="secondary" (onClick)="selectedType.set(null)" />
         } @else {
-          <daf-button label="Annuler" variant="secondary" (onClick)="onClose()" />
+          <daf-button [label]="'REQUESTS.NEW.CANCEL' | translate" variant="secondary" (onClick)="onClose()" />
         }
         @if (selectedType()) {
           <daf-button
-            label="Soumettre la demande"
+            [label]="'REQUESTS.NEW.SUBMIT' | translate"
             variant="teal"
             [options]="{ disabled: dynamicForm.invalid || saving(), loading: saving() }"
             (onClick)="submit()"
@@ -227,6 +228,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 export class NewRequestComponent implements OnChanges {
   private fb  = inject(FormBuilder);
   private svc = inject(RequestsService);
+  private translate = inject(TranslateService);
 
   profileId = input(0);
   paysId    = input(1);
@@ -309,7 +311,7 @@ export class NewRequestComponent implements OnChanges {
     const requiredFiles = this.fields().filter(f => isFileField(f) && f.required);
     for (const rf of requiredFiles) {
       if (!this.fileMap.has(rf.key)) {
-        this.errorMsg.set(`Veuillez joindre le fichier requis : ${rf.label}`);
+        this.errorMsg.set(this.translate.instant('REQUESTS.NEW.FILE_REQUIRED', { label: rf.label }));
         return;
       }
     }
@@ -323,7 +325,7 @@ export class NewRequestComponent implements OnChanges {
 
     this.svc.submitRequest(this.profileId(), t.id, comment, attachment)
       .pipe(catchError(err => {
-        this.errorMsg.set(err?.error?.message ?? 'Erreur lors de la soumission');
+        this.errorMsg.set(err?.error?.message ?? this.translate.instant('REQUESTS.NEW.ERROR_SUBMIT'));
         this.saving.set(false);
         return of(null);
       }))

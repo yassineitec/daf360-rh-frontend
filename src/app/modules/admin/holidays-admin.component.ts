@@ -14,6 +14,7 @@ import {
   PaginationComponent, PaginationConfig,
   ModalService,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
@@ -25,22 +26,23 @@ const PAGE_SIZE = 10;
     FormFieldComponent, ToggleComponent, ButtonComponent,
     DataTableComponent, DafCellDirective, PaginationComponent,
     RhSearchBarComponent,
+    TranslatePipe,
   ],
   template: `
     <div class="section-header">
       <div>
-        <h3 class="col-title">Jours fériés</h3>
-        <p class="col-sub">Gestion par entité et par année</p>
+        <h3 class="col-title">{{ 'ADMIN.catalog.holidays.title' | translate }}</h3>
+        <p class="col-sub">{{ 'ADMIN.catalog.holidays.subtitle' | translate }}</p>
       </div>
       <div class="header-actions">
         <div class="search-field">
           <rh-search-bar
-            placeholder="Rechercher par nom (fr/en)…"
+            [placeholder]="'ADMIN.catalog.holidays.searchPlaceholder' | translate"
             [value]="searchQuery()"
             (valueChange)="searchQuery.set($event)"
           />
         </div>
-        <daf-button label="+ Ajouter" variant="primary" (onClick)="openAdd()" />
+        <daf-button [label]="'ADMIN.catalog.holidays.add' | translate" variant="primary" (onClick)="openAdd()" />
       </div>
     </div>
 
@@ -48,23 +50,23 @@ const PAGE_SIZE = 10;
     @else {
       <!-- List -->
       @if (holidays().length === 0) {
-        <div class="empty-state"><p>Aucun jour férié pour {{ selectedYear }}.</p></div>
+        <div class="empty-state"><p>{{ 'ADMIN.catalog.holidays.empty' | translate:{ year: selectedYear } }}</p></div>
       } @else {
-        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
           <ng-template dafCell="dateHoliday" let-row>
             <span class="date-td">{{ fmtDate(row['_source'].dateHoliday) }}</span>
           </ng-template>
 
           <ng-template dafCell="isRecurring" let-row>
             <span class="recur-badge" [class.yes]="row['_source'].isRecurring">
-              {{ row['_source'].isRecurring ? 'Oui' : 'Non' }}
+              {{ (row['_source'].isRecurring ? 'ADMIN.catalog.holidays.recurringYes' : 'ADMIN.catalog.holidays.recurringNo') | translate }}
             </span>
           </ng-template>
 
           <ng-template dafCell="_actions" let-row>
             <div class="actions-cell">
-              <daf-button class="icon-btn-edit" title="Modifier" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
-              <daf-button class="icon-btn-delete" title="Suppr." variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
+              <daf-button class="icon-btn-edit" [title]="'ADMIN.catalog.holidays.actionEdit' | translate" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
+              <daf-button class="icon-btn-delete" [title]="'ADMIN.catalog.holidays.actionDelete' | translate" variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
             </div>
           </ng-template>
         </daf-data-table>
@@ -84,7 +86,7 @@ const PAGE_SIZE = 10;
 
     <!-- Add/Edit Modal -->
     <app-modal
-      [title]="editTarget() ? 'Modifier le jour férié' : 'Nouveau jour férié'"
+      [title]="(editTarget() ? 'ADMIN.catalog.holidays.modalTitleEdit' : 'ADMIN.catalog.holidays.modalTitleNew') | translate"
       [visible]="showModal()"
       [hasFooter]="true"
       (closed)="showModal.set(false)"
@@ -93,35 +95,35 @@ const PAGE_SIZE = 10;
         <div class="field-row">
           <daf-multi-date-picker
             [value]="holidayPickerValue"
-            [config]="{ label: 'Date', selectionMode: 'single', required: true, placeholder: 'Sélectionner une date' }"
+            [config]="{ label: ('ADMIN.catalog.holidays.fieldDate' | translate), selectionMode: 'single', required: true, placeholder: ('ADMIN.catalog.holidays.datePlaceholder' | translate) }"
             (valueChange)="onHolidayDateChange($event)"
           />
         </div>
         <div class="field-row">
           <daf-form-field
-            [options]="{ label: 'Libellé français', required: true, fullWidth: true }"
+            [options]="{ label: ('ADMIN.catalog.holidays.fieldLabelFr' | translate), required: true, fullWidth: true }"
             [value]="form.frenchLabel"
             (valueChange)="form.frenchLabel = $any($event)"
           />
         </div>
         <div class="field-row">
           <daf-form-field
-            [options]="{ label: 'Libellé anglais', required: true, fullWidth: true }"
+            [options]="{ label: ('ADMIN.catalog.holidays.fieldLabelEn' | translate), required: true, fullWidth: true }"
             [value]="form.englishLabel"
             (valueChange)="form.englishLabel = $any($event)"
           />
         </div>
         <daf-toggle
-          [options]="{ label: 'Récurrent (chaque année)' }"
+          [options]="{ label: ('ADMIN.catalog.holidays.toggleRecurring' | translate) }"
           [checked]="form.isRecurring"
           (checkedChange)="form.isRecurring = $event"
         />
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="showModal.set(false)" />
+        <daf-button [label]="'ADMIN.catalog.holidays.cancel' | translate" variant="secondary" (onClick)="showModal.set(false)" />
         <daf-button
-          [label]="editTarget() ? 'Enregistrer' : 'Créer'"
+          [label]="(editTarget() ? 'ADMIN.catalog.holidays.save' : 'ADMIN.catalog.holidays.create') | translate"
           variant="teal"
           [options]="{ disabled: !form.dateHoliday || !form.frenchLabel || saving(), loading: saving() }"
           (onClick)="save()"
@@ -159,6 +161,7 @@ const PAGE_SIZE = 10;
 export class HolidaysAdminComponent implements OnChanges {
   private svc   = inject(AdminService);
   private modal = inject(ModalService);
+  private translate = inject(TranslateService);
 
   paysId    = input(179);
   paysLabel = input('—');
@@ -172,14 +175,17 @@ export class HolidaysAdminComponent implements OnChanges {
   searchQuery = signal('');
   selectedYear = new Date().getFullYear();
 
-  readonly columns: TableColumn[] = [
-    { key: 'id',           label: 'ID',                    width: '70px' },
-    { key: 'name',         label: 'Nom' },
-    { key: 'pays',         label: 'Pays' },
-    { key: 'dateHoliday',  label: 'Date du jour férié' },
-    { key: 'isRecurring',  label: 'Récurrent' },
-    { key: '_actions',     label: 'Actions', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'id',           label: this.translate.instant('ADMIN.catalog.holidays.colId'),       width: '70px' },
+      { key: 'name',         label: this.translate.instant('ADMIN.catalog.holidays.colName') },
+      { key: 'pays',         label: this.translate.instant('ADMIN.catalog.holidays.colCountry') },
+      { key: 'dateHoliday',  label: this.translate.instant('ADMIN.catalog.holidays.colDate') },
+      { key: 'isRecurring',  label: this.translate.instant('ADMIN.catalog.holidays.colRecurring') },
+      { key: '_actions',     label: this.translate.instant('ADMIN.catalog.holidays.colActions'), align: 'right' },
+    ];
+  });
 
   readonly filteredHolidays = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
@@ -209,10 +215,13 @@ export class HolidaysAdminComponent implements OnChanges {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    emptyMessage: 'Aucun jour férié ne correspond à la recherche.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      emptyMessage: this.translate.instant('ADMIN.catalog.holidays.emptyMessage'),
+    };
+  });
 
   readonly paginationConfig: PaginationConfig = {
     showFirstLast: true,
@@ -266,7 +275,7 @@ export class HolidaysAdminComponent implements OnChanges {
       ? this.svc.updateHoliday(this.editTarget()!.id, dto)
       : this.svc.createHoliday(dto);
 
-    obs.pipe(catchError(err => { this.modalError.set(err?.error?.message ?? 'Erreur'); this.saving.set(false); return of(null); }))
+    obs.pipe(catchError(err => { this.modalError.set(err?.error?.message ?? this.translate.instant('ADMIN.catalog.holidays.error')); this.saving.set(false); return of(null); }))
       .subscribe(result => {
         this.saving.set(false);
         if (result) { this.showModal.set(false); this.load(); }
@@ -275,14 +284,14 @@ export class HolidaysAdminComponent implements OnChanges {
 
   del(h: Holiday) {
     this.modal.open({
-      title: 'Supprimer le jour férié',
-      body: `Voulez-vous vraiment supprimer "${h.frenchLabel}" ? Cette action est irréversible.`,
+      title: this.translate.instant('ADMIN.catalog.holidays.deleteTitle'),
+      body: this.translate.instant('ADMIN.catalog.holidays.deleteBody', { name: h.frenchLabel }),
       size: 'sm',
       closeOnBackdrop: false,
       buttons: [
-        { label: 'Annuler', variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.catalog.holidays.cancel'), variant: 'secondary', action: r => r.close() },
         {
-          label: 'Supprimer', variant: 'primary', icon: 'delete',
+          label: this.translate.instant('ADMIN.catalog.holidays.deleteConfirm'), variant: 'primary', icon: 'delete',
           action: r => {
             this.svc.deleteHoliday(h.id).pipe(catchError(() => of(null))).subscribe(() => {
               this.holidays.update(hs => hs.filter(x => x.id !== h.id));

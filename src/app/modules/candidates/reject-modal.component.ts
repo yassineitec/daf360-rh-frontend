@@ -1,15 +1,16 @@
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, input, output, signal, inject, computed } from '@angular/core';
 import { ModalComponent } from '../../shared/modal.component';
 import { CandidateService } from './candidate.service';
 import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-reject-modal',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent],
+  imports: [ModalComponent, ButtonComponent, FormFieldComponent, TranslatePipe],
   template: `
     <app-modal
-      [title]="'Rejeter le candidat'"
+      [title]="'CANDIDATES.REJECT.TITLE' | translate"
       [visible]="visible()"
       (closed)="onClose()"
       [hasFooter]="true"
@@ -19,12 +20,12 @@ import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilre
       }
       <div class="flex flex-col gap-1">
         <label class="text-xs font-medium text-on-surface">
-          Motif du rejet <span class="text-danger">*</span>
-          <span class="font-normal text-outline"> (min. 10 car.)</span>
+          {{ 'CANDIDATES.REJECT.REASON_LABEL' | translate }} <span class="text-danger">*</span>
+          <span class="font-normal text-outline">{{ 'CANDIDATES.REJECT.MIN_CHARS' | translate }}</span>
         </label>
         <daf-form-field
           [value]="reason()"
-          [options]="reasonFieldOptions"
+          [options]="reasonFieldOptions()"
           (valueChange)="onReasonChange($event)"
         />
         @if (error()) {
@@ -33,12 +34,12 @@ import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilre
       </div>
       <div slot="footer">
         <daf-button
-          label="Annuler"
+          [label]="'CANDIDATES.COMMON.CANCEL' | translate"
           variant="secondary"
           (onClick)="onClose()"
         />
         <daf-button
-          [label]="saving() ? 'Rejet en cours…' : 'Confirmer le rejet'"
+          [label]="saving() ? ('CANDIDATES.REJECT.SUBMITTING' | translate) : ('CANDIDATES.REJECT.CONFIRM' | translate)"
           variant="danger"
           [options]="{ iconStart: 'cancel', disabled: saving() || reason().trim().length < 10, loading: saving() }"
           (onClick)="onConfirm()"
@@ -54,17 +55,21 @@ export class RejectModalComponent {
   rejected = output<void>();
 
   private candidateService = inject(CandidateService);
+  private translate = inject(TranslateService);
 
   reason  = signal('');
   error   = signal<string | null>(null);
   saving  = signal(false);
 
-  readonly reasonFieldOptions: FormFieldOptions = {
-    type: 'textarea',
-    placeholder: 'Expliquez le motif du rejet…',
-    fullWidth: true,
-    rows: 4,
-  };
+  readonly reasonFieldOptions = computed<FormFieldOptions>(() => {
+    this.translate.currentLang();
+    return {
+      type: 'textarea',
+      placeholder: this.translate.instant('CANDIDATES.REJECT.PLACEHOLDER'),
+      fullWidth: true,
+      rows: 4,
+    };
+  });
 
   get candidateName(): string {
     const t = this.target();
@@ -84,7 +89,7 @@ export class RejectModalComponent {
   onConfirm(): void {
     const r = this.reason().trim();
     if (r.length < 10) {
-      this.error.set('Le motif doit comporter au moins 10 caractères.');
+      this.error.set(this.translate.instant('CANDIDATES.REJECT.ERR_MIN'));
       return;
     }
     const t = this.target();
@@ -98,7 +103,7 @@ export class RejectModalComponent {
       },
       error: () => {
         this.saving.set(false);
-        this.error.set('Erreur lors du rejet. Veuillez réessayer.');
+        this.error.set(this.translate.instant('CANDIDATES.REJECT.ERR'));
       },
     });
   }

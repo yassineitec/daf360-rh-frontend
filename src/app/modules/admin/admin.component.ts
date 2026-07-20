@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { UserStore }   from '../../core/user.store';
 import { AdminTab }    from './models/admin.model';
 import { RolesAdminComponent }        from './roles-admin.component';
@@ -15,20 +16,20 @@ import { InterviewTypesAdminComponent }      from './interview-types-admin.compo
 import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.component';
 import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
 
-const TABS: { key: AdminTab; label: string; permission: string }[] = [
-  { key: 'roles',         label: 'Rôles & Permissions',  permission: 'GET_ROLES' },
-  { key: 'parameters',    label: 'Paramètres de paie',   permission: 'GET_PAYS' },
-  { key: 'holidays',      label: 'Jours fériés',         permission: 'GET_HOLIDAYS' },
-  { key: 'request-types', label: 'Types de demandes',    permission: 'GET_ROLES' },
-  { key: 'regimes',       label: 'Régimes horaires',     permission: 'GET_ROLES' },
-  { key: 'lists',         label: 'Listes configurables', permission: 'ADMIN_LISTS' },
-  { key: 'notifications', label: 'Notifications & Emails', permission: 'ADMIN_NOTIFICATIONS' },
-  { key: 'breaks',        label: 'Gestion des pauses',    permission: 'ADMIN_BREAKS'         },
-  { key: 'ref-data',      label: 'Données de référence',  permission: 'ADMIN_LISTS'          },
-  { key: 'overtime',        label: 'Heures supplémentaires', permission: 'GET_PAYS'             },
-  { key: 'interview-types',     label: 'Types d\'entretiens',    permission: 'RH_ADMIN_INTERVIEW_TYPES' },
-  { key: 'offboarding-catalog',  label: 'Tâches offboarding',    permission: 'RH_MANAGE_OFFBOARDING'    },
-  { key: 'document-templates',   label: 'Maquettes documents',   permission: 'HR_ADMIN_ROLES'            },
+const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
+  { key: 'roles',         labelKey: 'ADMIN.shell.tabs.roles',        permission: 'GET_ROLES' },
+  { key: 'parameters',    labelKey: 'ADMIN.shell.tabs.parameters',   permission: 'GET_PAYS' },
+  { key: 'holidays',      labelKey: 'ADMIN.shell.tabs.holidays',     permission: 'GET_HOLIDAYS' },
+  { key: 'request-types', labelKey: 'ADMIN.shell.tabs.requestTypes', permission: 'GET_ROLES' },
+  { key: 'regimes',       labelKey: 'ADMIN.shell.tabs.regimes',      permission: 'GET_ROLES' },
+  { key: 'lists',         labelKey: 'ADMIN.shell.tabs.lists',        permission: 'ADMIN_LISTS' },
+  { key: 'notifications', labelKey: 'ADMIN.shell.tabs.notifications', permission: 'ADMIN_NOTIFICATIONS' },
+  { key: 'breaks',        labelKey: 'ADMIN.shell.tabs.breaks',        permission: 'ADMIN_BREAKS'         },
+  { key: 'ref-data',      labelKey: 'ADMIN.shell.tabs.refData',       permission: 'ADMIN_LISTS'          },
+  { key: 'overtime',        labelKey: 'ADMIN.shell.tabs.overtime',    permission: 'GET_PAYS'             },
+  { key: 'interview-types',     labelKey: 'ADMIN.shell.tabs.interviewTypes',     permission: 'RH_ADMIN_INTERVIEW_TYPES' },
+  { key: 'offboarding-catalog',  labelKey: 'ADMIN.shell.tabs.offboardingCatalog', permission: 'RH_MANAGE_OFFBOARDING'    },
+  { key: 'document-templates',   labelKey: 'ADMIN.shell.tabs.documentTemplates',  permission: 'HR_ADMIN_ROLES'            },
 ];
 
 @Component({
@@ -48,6 +49,7 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
     InterviewTypesAdminComponent,
     OffboardingCatalogAdminComponent,
     DocumentTemplatesAdminComponent,
+    TranslatePipe,
   ],
   template: `
     @if (!isAdmin()) {
@@ -56,13 +58,13 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
           <circle cx="12" cy="12" r="10"/>
           <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
         </svg>
-        <h2>Accès refusé</h2>
-        <p>Seuls les administrateurs peuvent accéder à ce panneau.</p>
+        <h2>{{ 'ADMIN.shell.accessDenied.title' | translate }}</h2>
+        <p>{{ 'ADMIN.shell.accessDenied.message' | translate }}</p>
       </div>
     } @else {
       <div class="page-header">
-        <h2 class="page-title">Administration</h2>
-        <p class="page-sub">Entité {{ currentPays() }}</p>
+        <h2 class="page-title">{{ 'ADMIN.shell.title' | translate }}</h2>
+        <p class="page-sub">{{ 'ADMIN.shell.entity' | translate:{ pays: currentPays() } }}</p>
       </div>
 
       <div class="admin-layout">
@@ -74,7 +76,7 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
               (click)="activeTab.set(tab.key)"
               role="tab"
               type="button"
-            >{{ tab.label }}</button>
+            >{{ tab.labelKey | translate }}</button>
           }
         </nav>
 

@@ -3,12 +3,12 @@
   <!-- Page header -->
   <div>
     <h1 class="text-headline-xl sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-      Provisioning IT
+      {{ 'IT_PROVISIONING.LIST.TITLE' | translate }}
     </h1>
     <div class="flex items-center gap-2 mt-1">
       <div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
       <p class="text-[13px] sm:text-[14px] text-outline">
-        {{ stats().pending }} dossier(s) en attente de configuration.
+        {{ 'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending } }}
       </p>
     </div>
   </div>
@@ -19,10 +19,10 @@
 
   <!-- KPI Cards -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-    <rh-kpi-card label="Dossiers en attente" icon="assignment_late" [value]="stats().pending" variant="blue" class="block" />
-    <rh-kpi-card label="En retard" icon="error" [value]="stats().overdue" variant="red" class="block" />
-    <rh-kpi-card label="Matériel incomplet" icon="package_2" [value]="stats().hwIncomplete" variant="amber" class="block" />
-    <rh-kpi-card label="Licences incomplètes" icon="subscriptions" [value]="stats().licIncomplete" variant="amber" class="block" />
+    <rh-kpi-card [label]="'IT_PROVISIONING.LIST.KPI_PENDING' | translate" icon="assignment_late" [value]="stats().pending" variant="blue" class="block" />
+    <rh-kpi-card [label]="'IT_PROVISIONING.LIST.KPI_OVERDUE' | translate" icon="error" [value]="stats().overdue" variant="red" class="block" />
+    <rh-kpi-card [label]="'IT_PROVISIONING.LIST.KPI_HW_INCOMPLETE' | translate" icon="package_2" [value]="stats().hwIncomplete" variant="amber" class="block" />
+    <rh-kpi-card [label]="'IT_PROVISIONING.LIST.KPI_LIC_INCOMPLETE' | translate" icon="subscriptions" [value]="stats().licIncomplete" variant="amber" class="block" />
   </div>
 
   <!-- ═══ Desktop / tablet: search on the left, select + refresh + view toggle on the right, all inside one card (matches /finance/clients) ═══ -->
@@ -30,7 +30,7 @@
     <div class="flex items-center justify-between gap-3 p-4 sm:p-5">
       <div class="w-[360px] shrink-0">
         <rh-search-bar
-          placeholder="Rechercher un candidat..."
+          [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
           [value]="search()"
           (valueChange)="onSearch($event)" />
       </div>
@@ -38,13 +38,13 @@
       <div class="flex items-center gap-3">
         <daf-select
           [selected]="statusFilter() ? [statusFilter()] : []"
-          [options]="statusSelectOptions"
-          [config]="statusSelectConfig"
+          [options]="statusSelectOptions()"
+          [config]="statusSelectConfig()"
           (selectedChange)="onStatusChange($event)" />
 
         <button type="button"
           class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
-          title="Rafraîchir"
+          [title]="'IT_PROVISIONING.LIST.REFRESH' | translate"
           (click)="load()">
           <span class="material-symbols-outlined text-[18px]">cached</span>
         </button>
@@ -55,7 +55,7 @@
             [class.bg-primary]="viewMode() === 'grid'"
             [class.text-white]="viewMode() === 'grid'"
             [class.text-outline]="viewMode() !== 'grid'"
-            title="Vue grille"
+            [title]="'IT_PROVISIONING.LIST.VIEW_GRID' | translate"
             (click)="viewMode.set('grid')">
             <span class="material-symbols-outlined text-[18px]">grid_view</span>
           </button>
@@ -64,7 +64,7 @@
             [class.bg-primary]="viewMode() === 'list'"
             [class.text-white]="viewMode() === 'list'"
             [class.text-outline]="viewMode() !== 'list'"
-            title="Vue liste"
+            [title]="'IT_PROVISIONING.LIST.VIEW_LIST' | translate"
             (click)="viewMode.set('list')">
             <span class="material-symbols-outlined text-[18px]">view_list</span>
           </button>
@@ -81,13 +81,13 @@
     }
 
     @if (viewMode() === 'list') {
-      <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
 
         <ng-template dafCell="ms365Email" let-row>
           @if (row['ms365Email']) {
             <span class="text-body-md text-on-surface">{{ row['ms365Email'] }}</span>
           } @else {
-            <span class="text-body-sm text-outline italic">— En attente —</span>
+            <span class="text-body-sm text-outline italic">{{ 'IT_PROVISIONING.LIST.EMAIL_PENDING_TABLE' | translate }}</span>
           }
         </ng-template>
 
@@ -96,7 +96,7 @@
           @if (row['overdue']) {
             <p class="text-body-sm text-danger font-bold flex items-center gap-1">
               <span class="material-symbols-outlined text-body-lg">error</span>
-              En retard de {{ overdueDays(row) }} jour(s)
+              {{ 'IT_PROVISIONING.LIST.OVERDUE_DAYS' | translate:{ days: overdueDays(row) } }}
             </p>
           }
         </ng-template>
@@ -121,7 +121,7 @@
 
         <ng-template dafCell="_actions" let-row>
           <daf-button
-            [label]="row['isCompleted'] ? 'Voir' : 'Compléter'"
+            [label]="(row['isCompleted'] ? 'IT_PROVISIONING.LIST.VIEW' : 'IT_PROVISIONING.LIST.COMPLETE') | translate"
             [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />
@@ -137,15 +137,15 @@
       <daf-select
         class="flex-1 min-w-0"
         [selected]="statusFilter() ? [statusFilter()] : []"
-        [options]="statusSelectOptions"
-        [config]="statusSelectConfig"
+        [options]="statusSelectOptions()"
+        [config]="statusSelectConfig()"
         (selectedChange)="onStatusChange($event)" />
       <button type="button"
         class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
         [class.bg-primary]="mobileSearchOpen()"
         [class.text-white]="mobileSearchOpen()"
         (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-        aria-label="Rechercher">
+        [attr.aria-label]="'IT_PROVISIONING.LIST.SEARCH_ARIA' | translate">
         <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
       </button>
     </div>
@@ -153,7 +153,7 @@
     @if (mobileSearchOpen()) {
       <div class="px-4 pb-4">
         <rh-search-bar
-          placeholder="Rechercher un candidat..."
+          [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
           [value]="search()"
           (valueChange)="onSearch($event)" />
       </div>
@@ -167,7 +167,7 @@
   <!-- Count + Pagination -->
   @if (filteredItems().length > 0) {
     <div class="flex items-center justify-between gap-3 flex-wrap">
-      <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> dossier(s)</span>
+      <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> {{ 'IT_PROVISIONING.LIST.COUNT_SUFFIX' | translate }}</span>
       @if (totalPages() > 1) {
         <daf-pagination
           [currentPage]="currentPage()"
@@ -188,7 +188,7 @@
             </div>
             <div class="min-w-0">
               <p class="font-semibold text-on-surface truncate">{{ row['candidat'].name }}</p>
-              <p class="text-[12px] text-outline truncate">{{ row['candidat'].subtitle || 'Poste non spécifié' }}</p>
+              <p class="text-[12px] text-outline truncate">{{ row['candidat'].subtitle || ('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED' | translate) }}</p>
             </div>
           </div>
           <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
@@ -196,20 +196,20 @@
 
         <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
           <div class="min-w-0">
-            <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Email MS365</p>
+            <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'IT_PROVISIONING.LIST.EMAIL_LABEL' | translate }}</p>
             @if (row['ms365Email']) {
               <p class="text-on-surface truncate">{{ row['ms365Email'] }}</p>
             } @else {
-              <p class="text-outline italic">En attente</p>
+              <p class="text-outline italic">{{ 'IT_PROVISIONING.LIST.EMAIL_PENDING' | translate }}</p>
             }
           </div>
           <div>
-            <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Début</p>
+            <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'IT_PROVISIONING.LIST.START_LABEL' | translate }}</p>
             <p class="text-on-surface">{{ row['expectedStartDate'] ?? '—' }}</p>
             @if (row['overdue']) {
               <p class="text-danger font-bold flex items-center gap-1 mt-0.5">
                 <span class="material-symbols-outlined text-[13px]">error</span>
-                Retard {{ overdueDays(row) }}j
+                {{ 'IT_PROVISIONING.LIST.OVERDUE_SHORT' | translate:{ days: overdueDays(row) } }}
               </p>
             }
           </div>
@@ -218,7 +218,7 @@
         <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="flex flex-col gap-1">
             <div class="flex items-center justify-between text-[11px]">
-              <span class="text-outline uppercase font-bold">Matériel</span>
+              <span class="text-outline uppercase font-bold">{{ 'IT_PROVISIONING.LIST.HARDWARE_LABEL' | translate }}</span>
               <span class="font-bold" [class.text-success]="row['hwDone']">{{ row['hwLabel'] }}</span>
             </div>
             <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
@@ -227,7 +227,7 @@
           </div>
           <div class="flex flex-col gap-1">
             <div class="flex items-center justify-between text-[11px]">
-              <span class="text-outline uppercase font-bold">Licences</span>
+              <span class="text-outline uppercase font-bold">{{ 'IT_PROVISIONING.LIST.LICENSES_LABEL' | translate }}</span>
               <span class="font-bold" [class.text-success]="row['licDone']">{{ row['licLabel'] }}</span>
             </div>
             <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
@@ -238,7 +238,7 @@
 
         <div class="flex items-center justify-end pt-3 border-t border-outline-variant">
           <daf-button
-            [label]="row['isCompleted'] ? 'Voir' : 'Compléter'"
+            [label]="(row['isCompleted'] ? 'IT_PROVISIONING.LIST.VIEW' : 'IT_PROVISIONING.LIST.COMPLETE') | translate"
             [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />
@@ -247,7 +247,7 @@
     } @empty {
       <div class="col-span-full flex flex-col items-center gap-2 py-16 text-center text-outline">
         <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
-        <p class="text-[13px]">Aucun dossier en attente de provisioning.</p>
+        <p class="text-[13px]">{{ 'IT_PROVISIONING.LIST.EMPTY' | translate }}</p>
       </div>
     }
   </ng-template>

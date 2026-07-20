@@ -12,11 +12,12 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-role-info-tab',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, SelectComponent, ToggleComponent],
+  imports: [ButtonComponent, FormFieldComponent, SelectComponent, ToggleComponent, TranslatePipe],
   templateUrl: './role-info-tab.component.html',
   styleUrl: './role-info-tab.component.scss',
 })
@@ -27,6 +28,7 @@ export class RoleInfoTabComponent {
   roleDeleted = output<number>();
 
   private svc = inject(RoleManagementService);
+  private translate = inject(TranslateService);
 
   frenchName        = signal('');
   parentRoleId      = signal<number | null>(null);
@@ -79,13 +81,13 @@ export class RoleInfoTabComponent {
       .subscribe({
         next: updated => {
           this.saving.set(false);
-          this.success.set('Modifications enregistrees.');
+          this.success.set(this.translate.instant('ADMIN.roles.info.SAVE_SUCCESS'));
           this.roleUpdated.emit(updated);
         },
         error: err => {
           this.saving.set(false);
           this.error.set(
-            err?.error?.message ?? 'Une erreur est survenue lors de la sauvegarde.',
+            err?.error?.message ?? this.translate.instant('ADMIN.roles.info.SAVE_ERROR'),
           );
         },
       });
@@ -105,7 +107,7 @@ export class RoleInfoTabComponent {
         this.deleting.set(false);
         this.showDeleteConfirm.set(false);
         this.error.set(
-          err?.error?.message ?? 'Impossible de supprimer ce role.',
+          err?.error?.message ?? this.translate.instant('ADMIN.roles.info.DELETE_ERROR'),
         );
       },
     });

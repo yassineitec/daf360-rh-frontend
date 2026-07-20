@@ -23,32 +23,32 @@
               <p class="rc-card-code">{{ r.code }}</p>
             </div>
             <div class="rc-card-badges">
-              @if (r.isDefault) { <daf-badge label="Défaut" [options]="{ variant: 'teal' }" /> }
-              @if (r.isFlexible) { <daf-badge label="Flexible" [options]="{ variant: 'info' }" /> }
-              @if (!r.isActive) { <daf-badge label="Inactif" [options]="{ variant: 'neutral' }" /> }
+              @if (r.isDefault) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeDefault' | translate" [options]="{ variant: 'teal' }" /> }
+              @if (r.isFlexible) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeFlexible' | translate" [options]="{ variant: 'info' }" /> }
+              @if (!r.isActive) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeInactive' | translate" [options]="{ variant: 'neutral' }" /> }
             </div>
           </div>
           <div class="rc-card-meta">
-            <span><span class="material-symbols-outlined rc-meta-icon">schedule</span> {{ r.hoursPerWeek }}h/sem</span>
-            <span><span class="material-symbols-outlined rc-meta-icon">calendar_view_week</span> {{ r.daysPerWeek }}j/sem</span>
+            <span><span class="material-symbols-outlined rc-meta-icon">schedule</span> {{ 'ADMIN.regimes.catalog.hoursPerWeek' | translate:{ h: r.hoursPerWeek } }}</span>
+            <span><span class="material-symbols-outlined rc-meta-icon">calendar_view_week</span> {{ 'ADMIN.regimes.catalog.daysPerWeek' | translate:{ d: r.daysPerWeek } }}</span>
           </div>
           @if (detail() && selectedId() === r.id) {
             <div class="rc-card-usage">
-              <span>{{ detail()!.employeeCount }} employé(s)</span>
-              <span>{{ detail()!.roleCount }} rôle(s)</span>
+              <span>{{ 'ADMIN.regimes.catalog.employeeCount' | translate:{ count: detail()!.employeeCount } }}</span>
+              <span>{{ 'ADMIN.regimes.catalog.roleCount' | translate:{ count: detail()!.roleCount } }}</span>
             </div>
           }
         </daf-card>
       }
       @if (regimes().length === 0) {
-        <div class="rc-empty">Aucun régime configuré pour cette entité.</div>
+        <div class="rc-empty">{{ 'ADMIN.regimes.catalog.emptyList' | translate }}</div>
       }
     }
 
     <!-- Add button -->
     <daf-button
       *dafHasPermission="'ADMIN_REGIMES'"
-      label="Nouveau régime"
+      [label]="'ADMIN.regimes.catalog.newRegime' | translate"
       variant="secondary"
       [options]="{ fullWidth: true, iconStart: 'add' }"
       (onClick)="showCreateModal.set(true)" />
@@ -59,7 +59,7 @@
     @if (!selectedId()) {
       <div class="rc-placeholder">
         <span class="material-symbols-outlined rc-placeholder-icon">schedule</span>
-        <p class="rc-placeholder-text">Sélectionnez un régime pour le modifier</p>
+        <p class="rc-placeholder-text">{{ 'ADMIN.regimes.catalog.selectPrompt' | translate }}</p>
       </div>
     }
 
@@ -74,7 +74,7 @@
         @if (showDefaultWarning()) {
           <div class="rc-warning">
             <span class="material-symbols-outlined rc-warning-icon">warning</span>
-            <p class="rc-warning-text">Activer ce régime comme défaut remplacera "<strong>{{ currentDefaultName() }}</strong>" pour tous les employés sans assignation spécifique.</p>
+            <p class="rc-warning-text">{{ 'ADMIN.regimes.catalog.defaultWarningBefore' | translate }}"<strong>{{ currentDefaultName() }}</strong>"{{ 'ADMIN.regimes.catalog.defaultWarningAfter' | translate }}</p>
           </div>
         }
 
@@ -83,11 +83,11 @@
           <div class="rc-usage">
             <div class="rc-usage-item">
               <span class="material-symbols-outlined rc-usage-icon rc-usage-icon-employee">person</span>
-              <strong>{{ detail()!.employeeCount }}</strong>&nbsp;employé(s) avec override direct
+              <strong>{{ detail()!.employeeCount }}</strong>&nbsp;{{ 'ADMIN.regimes.catalog.employeesWithOverride' | translate }}
             </div>
             <div class="rc-usage-item">
               <span class="material-symbols-outlined rc-usage-icon rc-usage-icon-role">badge</span>
-              <strong>{{ detail()!.roleCount }}</strong>&nbsp;rôle(s) assigné(s)
+              <strong>{{ detail()!.roleCount }}</strong>&nbsp;{{ 'ADMIN.regimes.catalog.rolesAssigned' | translate }}
             </div>
           </div>
         }
@@ -96,11 +96,11 @@
         <form [formGroup]="form">
           <div class="rc-form-row rc-form-row-2">
             <daf-form-field
-              [options]="{ label: 'Code', type: 'text', required: true, fullWidth: true, error: fieldError('code', 'Code requis (max 50 caractères)') }"
+              [options]="{ label: ('ADMIN.regimes.catalog.fieldCode' | translate), type: 'text', required: true, fullWidth: true, error: fieldError('code', ('ADMIN.regimes.catalog.errorCode' | translate)) }"
               [value]="form.get('code')?.value ?? ''"
               (valueChange)="form.get('code')?.setValue($any($event))" />
             <div class="rc-toggle-row">
-              <span class="rc-toggle-label">Régime par défaut</span>
+              <span class="rc-toggle-label">{{ 'ADMIN.regimes.catalog.defaultRegime' | translate }}</span>
               <daf-toggle
                 [checked]="!!form.get('isDefault')?.value"
                 (checkedChange)="form.get('isDefault')?.setValue($event)" />
@@ -108,39 +108,39 @@
           </div>
           <div class="rc-form-row rc-form-row-2">
             <daf-form-field
-              [options]="{ label: 'Libellé français', type: 'text', required: true, fullWidth: true, error: fieldError('labelFr', 'Libellé français requis') }"
+              [options]="{ label: ('ADMIN.regimes.catalog.labelFr' | translate), type: 'text', required: true, fullWidth: true, error: fieldError('labelFr', ('ADMIN.regimes.catalog.errorLabelFr' | translate)) }"
               [value]="form.get('labelFr')?.value ?? ''"
               (valueChange)="form.get('labelFr')?.setValue($any($event))" />
             <daf-form-field
-              [options]="{ label: 'Libellé anglais', type: 'text', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.catalog.labelEn' | translate), type: 'text', fullWidth: true }"
               [value]="form.get('labelEn')?.value ?? ''"
               (valueChange)="form.get('labelEn')?.setValue($any($event))" />
           </div>
           <div class="rc-form-row rc-form-row-4">
             <daf-form-field
-              [options]="{ label: 'H/sem', type: 'number', required: true, fullWidth: true, error: fieldError('hoursPerWeek', 'Entre 1 et 60') }"
+              [options]="{ label: ('ADMIN.regimes.catalog.fieldHours' | translate), type: 'number', required: true, fullWidth: true, error: fieldError('hoursPerWeek', ('ADMIN.regimes.catalog.errorHours' | translate)) }"
               [value]="form.get('hoursPerWeek')?.value ?? null"
               (valueChange)="setNum('hoursPerWeek', 'form', $event)" />
             <daf-form-field
-              [options]="{ label: 'J/sem', type: 'number', required: true, fullWidth: true, error: fieldError('daysPerWeek', 'Entre 1 et 7') }"
+              [options]="{ label: ('ADMIN.regimes.catalog.fieldDays' | translate), type: 'number', required: true, fullWidth: true, error: fieldError('daysPerWeek', ('ADMIN.regimes.catalog.errorDays' | translate)) }"
               [value]="form.get('daysPerWeek')?.value ?? null"
               (valueChange)="setNum('daysPerWeek', 'form', $event)" />
             <daf-form-field
-              [options]="{ label: 'Début', type: 'time', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.catalog.startTime' | translate), type: 'time', fullWidth: true }"
               [value]="form.get('startTime')?.value ?? ''"
               (valueChange)="form.get('startTime')?.setValue($any($event))" />
             <daf-form-field
-              [options]="{ label: 'Fin', type: 'time', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.catalog.endTime' | translate), type: 'time', fullWidth: true }"
               [value]="form.get('endTime')?.value ?? ''"
               (valueChange)="form.get('endTime')?.setValue($any($event))" />
           </div>
           <div class="rc-form-row rc-toggles">
             <daf-toggle
-              [options]="{ label: 'Horaires flexibles' }"
+              [options]="{ label: ('ADMIN.regimes.catalog.flexibleHours' | translate) }"
               [checked]="!!form.get('isFlexible')?.value"
               (checkedChange)="form.get('isFlexible')?.setValue($event)" />
             <daf-toggle
-              [options]="{ label: 'Heures sup. autorisées' }"
+              [options]="{ label: ('ADMIN.regimes.catalog.overtimeAllowed' | translate) }"
               [checked]="!!form.get('overtimeAllowed')?.value"
               (checkedChange)="form.get('overtimeAllowed')?.setValue($event)" />
           </div>
@@ -153,10 +153,10 @@
             class="icon-btn-delete"
             variant="ghost"
             [options]="{ disabled: !canDelete() || isDeleting(), iconStart: 'delete' }"
-            [title]="!canDelete() ? 'Régime en cours d\'utilisation ou régime par défaut' : 'Supprimer'"
+            [title]="(!canDelete() ? 'ADMIN.regimes.catalog.deleteInUseTitle' : 'ADMIN.regimes.common.delete') | translate"
             (onClick)="deleteRegime()" />
           <daf-button
-            [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer'"
+            [label]="(isSaving() ? 'ADMIN.regimes.common.saving' : 'ADMIN.regimes.common.save') | translate"
             variant="teal"
             [options]="{ disabled: form.invalid || isSaving(), loading: isSaving() }"
             (onClick)="saveRegime()" />
@@ -168,7 +168,7 @@
 
 <!-- Create Modal -->
 <app-modal
-  title="Nouveau régime horaire"
+  [title]="'ADMIN.regimes.catalog.createModalTitle' | translate"
   [visible]="showCreateModal()"
   [hasFooter]="true"
   (closed)="showCreateModal.set(false)">
@@ -176,31 +176,31 @@
   <form [formGroup]="createForm">
     <div class="rc-form-row rc-form-row-2">
       <daf-form-field
-        [options]="{ label: 'Code', type: 'text', required: true, fullWidth: true, error: createFieldError('code', 'Code requis (max 50 caractères)') }"
+        [options]="{ label: ('ADMIN.regimes.catalog.fieldCode' | translate), type: 'text', required: true, fullWidth: true, error: createFieldError('code', ('ADMIN.regimes.catalog.errorCode' | translate)) }"
         [value]="createForm.get('code')?.value ?? ''"
         (valueChange)="createForm.get('code')?.setValue($any($event))" />
       <daf-form-field
-        [options]="{ label: 'H/sem', type: 'number', required: true, fullWidth: true, error: createFieldError('hoursPerWeek', 'Entre 1 et 60') }"
+        [options]="{ label: ('ADMIN.regimes.catalog.fieldHours' | translate), type: 'number', required: true, fullWidth: true, error: createFieldError('hoursPerWeek', ('ADMIN.regimes.catalog.errorHours' | translate)) }"
         [value]="createForm.get('hoursPerWeek')?.value ?? null"
         (valueChange)="setNum('hoursPerWeek', 'createForm', $event)" />
     </div>
     <div class="rc-form-row rc-form-row-2">
       <daf-form-field
-        [options]="{ label: 'Libellé français', type: 'text', required: true, fullWidth: true, error: createFieldError('labelFr', 'Libellé français requis') }"
+        [options]="{ label: ('ADMIN.regimes.catalog.labelFr' | translate), type: 'text', required: true, fullWidth: true, error: createFieldError('labelFr', ('ADMIN.regimes.catalog.errorLabelFr' | translate)) }"
         [value]="createForm.get('labelFr')?.value ?? ''"
         (valueChange)="createForm.get('labelFr')?.setValue($any($event))" />
       <daf-form-field
-        [options]="{ label: 'Libellé anglais', type: 'text', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.catalog.labelEn' | translate), type: 'text', fullWidth: true }"
         [value]="createForm.get('labelEn')?.value ?? ''"
         (valueChange)="createForm.get('labelEn')?.setValue($any($event))" />
     </div>
     <div class="rc-form-row rc-toggles">
       <daf-toggle
-        [options]="{ label: 'Flexible' }"
+        [options]="{ label: ('ADMIN.regimes.catalog.badgeFlexible' | translate) }"
         [checked]="!!createForm.get('isFlexible')?.value"
         (checkedChange)="createForm.get('isFlexible')?.setValue($event)" />
       <daf-toggle
-        [options]="{ label: 'Régime par défaut' }"
+        [options]="{ label: ('ADMIN.regimes.catalog.defaultRegime' | translate) }"
         [checked]="!!createForm.get('isDefault')?.value"
         (checkedChange)="createForm.get('isDefault')?.setValue($event)" />
     </div>
@@ -209,9 +209,9 @@
   @if (errorMsg()) { <div class="rc-msg rc-msg-error">{{ errorMsg() }}</div> }
 
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="showCreateModal.set(false)" />
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showCreateModal.set(false)" />
     <daf-button
-      label="Créer le régime"
+      [label]="'ADMIN.regimes.catalog.createSubmit' | translate"
       variant="teal"
       [options]="{ disabled: createForm.invalid }"
       (onClick)="createRegime()" />

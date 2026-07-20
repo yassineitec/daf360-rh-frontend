@@ -3,6 +3,7 @@ import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ModalComponent } from '../../shared/modal.component';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
@@ -15,6 +16,7 @@ const PAGE_SIZE = 5;
   imports: [
     ButtonComponent, FormFieldComponent, ModalComponent,
     StatusBadgeComponent, PaginationComponent, DataTableComponent, DafCellDirective,
+    TranslatePipe,
   ],
   template: `
     <div class="ita-wrap">
@@ -22,11 +24,11 @@ const PAGE_SIZE = 5;
       <!-- Header -->
       <div class="ita-header">
         <div>
-          <h2 class="ita-title">Types d'entretiens</h2>
-          <p class="ita-sub">{{ types().length }} type(s) configuré(s) pour cette entité</p>
+          <h2 class="ita-title">{{ 'ADMIN.docs.interviews.title' | translate }}</h2>
+          <p class="ita-sub">{{ 'ADMIN.docs.interviews.subtitle' | translate:{ count: types().length } }}</p>
         </div>
         <daf-button
-          label="Nouveau type"
+          [label]="'ADMIN.docs.interviews.newType' | translate"
           variant="teal"
           [options]="{ iconStart: 'add' }"
           (onClick)="openAdd()" />
@@ -39,23 +41,23 @@ const PAGE_SIZE = 5;
 
       <!-- Add / Edit modal -->
       <app-modal
-        [title]="editTarget() ? 'Modifier le type d\\'entretien' : 'Nouveau type d\\'entretien'"
+        [title]="(editTarget() ? 'ADMIN.docs.interviews.editTitle' : 'ADMIN.docs.interviews.newTypeTitle') | translate"
         [visible]="showModal()"
         [hasFooter]="true"
         (closed)="closeModal()"
       >
         <div class="ita-form-grid">
           <daf-form-field
-            [options]="{ label: 'Nom *', placeholder: 'Ex : Entretien Technique', maxLength: 150, fullWidth: true }"
+            [options]="{ label: ('ADMIN.docs.interviews.nameLabel' | translate), placeholder: ('ADMIN.docs.interviews.namePlaceholder' | translate), maxLength: 150, fullWidth: true }"
             [value]="form.name"
             (valueChange)="form.name = $any($event) ?? ''" />
           <daf-form-field
-            [options]="{ label: 'Ordre d\\'affichage', type: 'number', fullWidth: true }"
+            [options]="{ label: ('ADMIN.docs.interviews.orderLabel' | translate), type: 'number', fullWidth: true }"
             [value]="form.orderIndex"
             (valueChange)="form.orderIndex = $event === null || $event === '' ? 0 : +$event" />
           <div style="grid-column:1/-1">
             <daf-form-field
-              [options]="{ label: 'Description', type: 'textarea', rows: 2, placeholder: 'Description optionnelle', maxLength: 500, fullWidth: true }"
+              [options]="{ label: ('ADMIN.docs.interviews.descriptionLabel' | translate), type: 'textarea', rows: 2, placeholder: ('ADMIN.docs.interviews.descriptionPlaceholder' | translate), maxLength: 500, fullWidth: true }"
               [value]="form.description"
               (valueChange)="form.description = $any($event) ?? ''" />
           </div>
@@ -64,9 +66,9 @@ const PAGE_SIZE = 5;
           <p class="ita-field-error">{{ modalError() }}</p>
         }
         <div slot="footer">
-          <daf-button label="Annuler" variant="secondary" (onClick)="closeModal()" />
+          <daf-button [label]="'ADMIN.docs.interviews.cancel' | translate" variant="secondary" (onClick)="closeModal()" />
           <daf-button
-            [label]="saving() ? 'Enregistrement...' : (editTarget() ? 'Enregistrer' : 'Ajouter')"
+            [label]="(saving() ? 'ADMIN.docs.interviews.saving' : (editTarget() ? 'ADMIN.docs.interviews.save' : 'ADMIN.docs.interviews.add')) | translate"
             variant="teal"
             [options]="{ disabled: saving() || !form.name.trim(), loading: saving() }"
             (onClick)="save()" />
@@ -75,9 +77,9 @@ const PAGE_SIZE = 5;
 
       <!-- List -->
       @if (types().length === 0 && !loading()) {
-        <p class="ita-empty">Aucun type d'entretien configuré. Ajoutez-en un ci-dessus.</p>
+        <p class="ita-empty">{{ 'ADMIN.docs.interviews.empty' | translate }}</p>
       } @else {
-        <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
           <ng-template dafCell="name" let-row>
             <div class="ita-row-name">{{ row['name'] }}</div>
             @if (row['description']) {
@@ -86,7 +88,7 @@ const PAGE_SIZE = 5;
           </ng-template>
           <ng-template dafCell="isActive" let-row>
             <daf-badge
-              [label]="row['isActive'] ? 'Actif' : 'Inactif'"
+              [label]="(row['isActive'] ? 'ADMIN.docs.interviews.active' : 'ADMIN.docs.interviews.inactive') | translate"
               [options]="{ variant: row['isActive'] ? 'success' : 'neutral', size: 'sm' }" />
           </ng-template>
           <ng-template dafCell="_actions" let-row>
@@ -95,13 +97,13 @@ const PAGE_SIZE = 5;
                 class="icon-btn-toggle"
                 variant="ghost"
                 [options]="{ iconStart: row['_source'].isActive ? 'toggle_on' : 'toggle_off', size: 'sm' }"
-                [title]="row['_source'].isActive ? 'Désactiver' : 'Activer'"
+                [title]="(row['_source'].isActive ? 'ADMIN.docs.interviews.deactivate' : 'ADMIN.docs.interviews.activate') | translate"
                 (onClick)="toggleActive(row['_source'])" />
               <daf-button
                 class="icon-btn-edit"
                 variant="primary"
                 [options]="{ iconStart: 'edit', size: 'sm' }"
-                title="Modifier"
+                [title]="'ADMIN.docs.interviews.edit' | translate"
                 (onClick)="openEdit(row['_source'])" />
             </div>
           </ng-template>
@@ -110,7 +112,7 @@ const PAGE_SIZE = 5;
         <!-- Count + Pagination -->
         @if (types().length > 0) {
           <div class="ita-footer">
-            <span class="ita-count"><strong>{{ types().length }}</strong> type(s)</span>
+            <span class="ita-count"><strong>{{ types().length }}</strong> {{ 'ADMIN.docs.interviews.typesWord' | translate }}</span>
             @if (totalPages() > 1) {
               <daf-pagination
                 [currentPage]="currentPage()"
@@ -143,6 +145,7 @@ export class InterviewTypesAdminComponent implements OnInit {
   @Input() paysId!: number;
 
   private svc = inject(InterviewService);
+  private translate = inject(TranslateService);
 
   types      = signal<InterviewType[]>([]);
   loading    = signal(false);
@@ -168,17 +171,20 @@ export class InterviewTypesAdminComponent implements OnInit {
     this.currentPage.set(page);
   }
 
-  readonly columns: TableColumn[] = [
-    { key: 'orderIndex', label: 'Ordre', align: 'center', width: '70px' },
-    { key: 'name', label: 'Nom' },
-    { key: 'isActive', label: 'Statut', align: 'center', width: '110px' },
-    { key: '_actions', label: 'Actions', align: 'right', width: '120px' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'orderIndex', label: this.translate.instant('ADMIN.docs.interviews.colOrder'), align: 'center', width: '70px' },
+      { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colName') },
+      { key: 'isActive', label: this.translate.instant('ADMIN.docs.interviews.colStatus'), align: 'center', width: '110px' },
+      { key: '_actions', label: this.translate.instant('ADMIN.docs.interviews.colActions'), align: 'right', width: '120px' },
+    ];
+  });
 
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,
     loading: this.loading(),
-    emptyMessage: 'Aucun type d\'entretien configuré.',
+    emptyMessage: this.translate.instant('ADMIN.docs.interviews.tableEmpty'),
   }));
 
   readonly rows = computed<TableRow[]>(() =>
@@ -198,7 +204,7 @@ export class InterviewTypesAdminComponent implements OnInit {
     this.currentPage.set(0);
     this.svc.getTypes().subscribe({
       next:  t  => { this.types.set(t); this.loading.set(false); },
-      error: () => { this.error.set('Erreur lors du chargement des types.'); this.loading.set(false); },
+      error: () => { this.error.set(this.translate.instant('ADMIN.docs.interviews.loadError')); this.loading.set(false); },
     });
   }
 
@@ -220,7 +226,7 @@ export class InterviewTypesAdminComponent implements OnInit {
   closeModal(): void { this.showModal.set(false); }
 
   save(): void {
-    if (!this.form.name.trim()) { this.modalError.set('Le nom est obligatoire.'); return; }
+    if (!this.form.name.trim()) { this.modalError.set(this.translate.instant('ADMIN.docs.interviews.nameRequired')); return; }
     this.saving.set(true);
     this.modalError.set(null);
 
@@ -239,7 +245,7 @@ export class InterviewTypesAdminComponent implements OnInit {
       next:  () => { this.saving.set(false); this.showModal.set(false); this.load(); },
       error: err => {
         this.saving.set(false);
-        this.modalError.set(err?.error?.detail ?? 'Erreur lors de l\'enregistrement.');
+        this.modalError.set(err?.error?.detail ?? this.translate.instant('ADMIN.docs.interviews.saveError'));
       },
     });
   }
@@ -249,7 +255,7 @@ export class InterviewTypesAdminComponent implements OnInit {
     const obs = t.isActive ? this.svc.deactivateType(t.id) : this.svc.activateType(t.id);
     obs.subscribe({
       next:  updated => this.types.update(list => list.map(x => x.id === updated.id ? updated : x)),
-      error: err     => this.error.set(err?.error?.detail ?? 'Erreur lors du changement de statut.'),
+      error: err     => this.error.set(err?.error?.detail ?? this.translate.instant('ADMIN.docs.interviews.toggleError')),
     });
   }
 }

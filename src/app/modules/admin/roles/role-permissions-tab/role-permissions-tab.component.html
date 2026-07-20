@@ -8,14 +8,14 @@
 
   <div class="rpt-header">
     <div class="rpt-header-left">
-      <span class="rpt-title">Permissions de {{ role().frenchName }}</span>
-      <daf-badge [label]="checkedCount() + ' / ' + totalPermissions() + ' actives'" [options]="{ variant: 'neutral', size: 'sm' }" />
+      <span class="rpt-title">{{ 'ADMIN.roles.permissions.TITLE' | translate:{ name: role().frenchName } }}</span>
+      <daf-badge [label]="'ADMIN.roles.permissions.ACTIVE_BADGE' | translate:{ checked: checkedCount(), total: totalPermissions() }" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
     <div class="rpt-header-actions">
-      <daf-button label="Tout sélectionner" variant="ghost" [options]="{ size: 'sm' }" (onClick)="selectAll()" />
-      <daf-button label="Tout désélectionner" variant="ghost" [options]="{ size: 'sm' }" (onClick)="clearAll()" />
+      <daf-button [label]="'ADMIN.roles.permissions.SELECT_ALL' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="selectAll()" />
+      <daf-button [label]="'ADMIN.roles.permissions.DESELECT_ALL' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="clearAll()" />
       <daf-button
-        [label]="saving() ? 'Enregistrement…' : 'Enregistrer tout'"
+        [label]="saving() ? ('ADMIN.roles.permissions.SAVING' | translate) : ('ADMIN.roles.permissions.SAVE_ALL' | translate)"
         variant="teal"
         [options]="{ size: 'sm', disabled: saving(), loading: saving() }"
         (onClick)="saveAll()" />
@@ -23,7 +23,7 @@
   </div>
 
   @if (loadingCatalog()) {
-    <p class="rpt-loading">Chargement du catalogue…</p>
+    <p class="rpt-loading">{{ 'ADMIN.roles.permissions.LOADING_CATALOG' | translate }}</p>
   } @else {
     <div class="rpt-groups">
       @for (group of catalog(); track group.groupName) {

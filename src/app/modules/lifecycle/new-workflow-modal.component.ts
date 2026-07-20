@@ -8,19 +8,21 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LifecycleService }  from './lifecycle.service';
 import { ProfileService }    from '../profiles/profile.service';
 import {
-  DEPARTURE_REASONS, DEPARTURE_REASON_LABELS, DepartureReason,
+  DEPARTURE_REASONS, DepartureReason,
 } from './models/lifecycle.model';
 import { EmployeeListItem }  from '../profiles/models/profile.model';
 import { ModalComponent }    from '../../shared/modal.component';
 import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { NotificationService } from '../../core/notification.service';
 
 @Component({
   selector: 'app-new-workflow-modal',
   standalone: true,
-  imports: [ModalComponent, ReactiveFormsModule, ButtonComponent, StatusBadgeComponent],
+  imports: [ModalComponent, ReactiveFormsModule, ButtonComponent, StatusBadgeComponent, TranslatePipe],
   template: `
     <app-modal
-      title="Démarrer un offboarding"
+      [title]="'LIFECYCLE.NEW.TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
       (closed)="onClose()"
@@ -29,14 +31,14 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
         <!-- Employee autocomplete -->
         <div class="field-full">
-          <label class="form-label">Employé *</label>
+          <label class="form-label">{{ 'LIFECYCLE.NEW.EMPLOYEE_LABEL' | translate }}</label>
           <div class="ac-wrap">
             <input
               class="form-input"
               type="text"
               [value]="employeeQuery"
               (input)="onEmployeeInput($event)"
-              placeholder="Rechercher par nom ou identifiant…"
+              [placeholder]="'LIFECYCLE.NEW.EMPLOYEE_PH' | translate"
               autocomplete="off"
             />
             @if (searchLoading()) { <span class="ac-spinner">…</span> }
@@ -59,20 +61,20 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
             </div>
           }
           @if (form.get('employeeProfileId')?.touched && form.get('employeeProfileId')?.errors?.['required']) {
-            <span class="field-error">Sélectionner un employé</span>
+            <span class="field-error">{{ 'LIFECYCLE.NEW.EMPLOYEE_REQUIRED' | translate }}</span>
           }
         </div>
 
         <!-- Responsable passation -->
         <div class="field-full">
-          <label class="form-label">Responsable passation (Passation des projets)</label>
+          <label class="form-label">{{ 'LIFECYCLE.NEW.MANAGER_LABEL' | translate }}</label>
           <div class="ac-wrap">
             <input
               class="form-input"
               type="text"
               [value]="managerQuery"
               (input)="onManagerInput($event)"
-              placeholder="Rechercher le manager responsable…"
+              [placeholder]="'LIFECYCLE.NEW.MANAGER_PH' | translate"
               autocomplete="off"
             />
             @if (managerSearchLoading()) { <span class="ac-spinner">…</span> }
@@ -98,37 +100,37 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
         <!-- Motif de départ -->
         <div>
-          <label class="form-label">Motif de départ *</label>
+          <label class="form-label">{{ 'LIFECYCLE.NEW.REASON_LABEL' | translate }}</label>
           <select class="form-input" formControlName="departureReason">
-            <option value="">Sélectionner…</option>
+            <option value="">{{ 'LIFECYCLE.NEW.SELECT' | translate }}</option>
             @for (r of DEPARTURE_REASONS; track r) {
-              <option [value]="r">{{ DEPARTURE_REASON_LABELS[r] }}</option>
+              <option [value]="r">{{ 'LIFECYCLE.REASON.' + r | translate }}</option>
             }
           </select>
           @if (form.get('departureReason')?.touched && form.get('departureReason')?.errors?.['required']) {
-            <span class="field-error">Requis</span>
+            <span class="field-error">{{ 'LIFECYCLE.NEW.REASON_REQUIRED' | translate }}</span>
           }
         </div>
 
         <!-- Date de déclenchement -->
         <div>
-          <label class="form-label">Date de déclenchement *</label>
+          <label class="form-label">{{ 'LIFECYCLE.NEW.TRIGGER_LABEL' | translate }}</label>
           <input class="form-input" type="date" formControlName="triggerDate" />
           @if (form.get('triggerDate')?.touched && form.get('triggerDate')?.errors?.['required']) {
-            <span class="field-error">Requis</span>
+            <span class="field-error">{{ 'LIFECYCLE.NEW.TRIGGER_REQUIRED' | translate }}</span>
           }
         </div>
 
         <!-- Dernier jour de travail -->
         <div>
-          <label class="form-label">Dernier jour de travail</label>
+          <label class="form-label">{{ 'LIFECYCLE.NEW.LAST_DAY_LABEL' | translate }}</label>
           <input class="form-input" type="date" formControlName="lastWorkingDay" />
         </div>
 
         <!-- Notes -->
         <div class="field-full">
-          <label class="form-label">Notes</label>
-          <textarea class="form-input form-textarea" rows="2" formControlName="departureNotes" placeholder="Optionnel…"></textarea>
+          <label class="form-label">{{ 'LIFECYCLE.NEW.NOTES_LABEL' | translate }}</label>
+          <textarea class="form-input form-textarea" rows="2" formControlName="departureNotes" [placeholder]="'LIFECYCLE.NEW.NOTES_PH' | translate"></textarea>
         </div>
 
         @if (errorMsg()) {
@@ -138,9 +140,9 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
       </form>
 
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="onClose()" />
+        <daf-button [label]="'LIFECYCLE.NEW.CANCEL' | translate" variant="secondary" (onClick)="onClose()" />
         <daf-button
-          label="Démarrer"
+          [label]="'LIFECYCLE.NEW.START' | translate"
           variant="teal"
           [options]="{ disabled: form.invalid || saving(), loading: saving() }"
           (onClick)="save()"
@@ -174,6 +176,8 @@ export class NewWorkflowModalComponent {
   private fb          = inject(FormBuilder);
   private svc         = inject(LifecycleService);
   private profileSvc  = inject(ProfileService);
+  private translate   = inject(TranslateService);
+  private notify      = inject(NotificationService);
 
   visible = input(false);
   closed  = output<void>();
@@ -192,7 +196,6 @@ export class NewWorkflowModalComponent {
   managerQuery         = '';
 
   protected readonly DEPARTURE_REASONS = DEPARTURE_REASONS;
-  protected readonly DEPARTURE_REASON_LABELS = DEPARTURE_REASON_LABELS;
 
   form = this.fb.group({
     employeeProfileId:        [null as number | null, Validators.required],
@@ -294,13 +297,16 @@ export class NewWorkflowModalComponent {
       handoverManagerProfileId: v.handoverManagerProfileId  ?? undefined,
     }).pipe(
       catchError(err => {
-        this.errorMsg.set(err?.error?.message ?? err?.error?.detail ?? 'Erreur lors de la création');
+        const msg = err?.error?.message ?? err?.error?.detail ?? this.translate.instant('LIFECYCLE.TOAST.CREATE_ERR');
+        this.errorMsg.set(msg);
+        this.notify.error(msg);
         this.saving.set(false);
         return of(null);
       }),
     ).subscribe(result => {
       if (result) {
         this.saving.set(false);
+        this.notify.success(this.translate.instant('LIFECYCLE.TOAST.CREATED'));
         this.reset();
         this.created.emit(result.id);
       }

@@ -8,24 +8,19 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { BadgeCell, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, PaginationComponent, SelectComponent, SelectConfig, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow, ProgressBarComponent } from '@khalilrebhiitec/daf360';
-
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: 'PENDING',       label: 'En attente' },
-  { value: 'IN_PROGRESS',   label: 'En cours' },
-  { value: 'EMAIL_CREATED', label: 'Email créé' },
-  { value: 'COMPLETED',     label: 'Complété' },
-];
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
 @Component({
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent, TranslatePipe],
   standalone: true,
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
   private service = inject(ItProvisioningService);
   private router  = inject(Router);
+  private translate = inject(TranslateService);
 
   items   = signal<ProvisioningListItem[]>([]);
   loading = signal(true);
@@ -36,8 +31,19 @@ export class ItProvisioningListComponent implements OnInit {
   statusFilter     = signal('');
   viewMode         = signal<'grid' | 'list'>('grid');
 
-  readonly statusSelectOptions = STATUS_OPTIONS;
-  readonly statusSelectConfig: SelectConfig = { placeholder: 'Tous les statuts' };
+  readonly statusSelectOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'PENDING',       label: this.translate.instant('IT_PROVISIONING.STATUS.PENDING') },
+      { value: 'IN_PROGRESS',   label: this.translate.instant('IT_PROVISIONING.STATUS.IN_PROGRESS') },
+      { value: 'EMAIL_CREATED', label: this.translate.instant('IT_PROVISIONING.STATUS.EMAIL_CREATED') },
+      { value: 'COMPLETED',     label: this.translate.instant('IT_PROVISIONING.STATUS.COMPLETED') },
+    ];
+  });
+  readonly statusSelectConfig = computed<SelectConfig>(() => {
+    this.translate.currentLang();
+    return { placeholder: this.translate.instant('IT_PROVISIONING.LIST.FILTER_ALL') };
+  });
 
   protected readonly statusBadge = statusBadge;
 
@@ -94,21 +100,27 @@ export class ItProvisioningListComponent implements OnInit {
     };
   });
 
-  readonly columns: TableColumn[] = [
-    { key: 'candidat', label: 'Candidat', type: 'avatar', sortable: true },
-    { key: 'ms365Email', label: 'Email MS365' },
-    { key: 'status', label: 'Statut', type: 'badge' },
-    { key: 'expectedStartDate', label: 'Début & Urgence' },
-    { key: 'hwLabel', label: 'Matériel' },
-    { key: 'licLabel', label: 'Licences' },
-    { key: '_actions', label: 'Actions' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'candidat', label: this.translate.instant('IT_PROVISIONING.LIST.COL_CANDIDATE'), type: 'avatar', sortable: true },
+      { key: 'ms365Email', label: this.translate.instant('IT_PROVISIONING.LIST.COL_EMAIL') },
+      { key: 'status', label: this.translate.instant('IT_PROVISIONING.LIST.COL_STATUS'), type: 'badge' },
+      { key: 'expectedStartDate', label: this.translate.instant('IT_PROVISIONING.LIST.COL_START') },
+      { key: 'hwLabel', label: this.translate.instant('IT_PROVISIONING.LIST.COL_HARDWARE') },
+      { key: 'licLabel', label: this.translate.instant('IT_PROVISIONING.LIST.COL_LICENSES') },
+      { key: '_actions', label: this.translate.instant('IT_PROVISIONING.LIST.COL_ACTIONS') },
+    ];
+  });
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.loading(),
-    emptyMessage: 'Aucun dossier de provisioning.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.loading(),
+      emptyMessage: this.translate.instant('IT_PROVISIONING.LIST.TABLE_EMPTY'),
+    };
+  });
 
   ngOnInit(): void { this.load(); }
 
@@ -117,7 +129,7 @@ export class ItProvisioningListComponent implements OnInit {
     this.error.set(null);
     this.service.getAllList().subscribe({
       next:  (data) => { this.items.set(data); this.loading.set(false); },
-      error: ()     => { this.error.set('Erreur lors du chargement.'); this.loading.set(false); },
+      error: ()     => { this.error.set(this.translate.instant('IT_PROVISIONING.LIST.LOAD_ERROR')); this.loading.set(false); },
     });
   }
 

@@ -2,22 +2,22 @@
   <daf-card class="rl-card" [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
     <div class="rl-container">
       <div class="rl-header">
-        <span class="rl-title">Rôles ({{ roles().length }})</span>
+        <span class="rl-title">{{ 'ADMIN.roles.list.TITLE' | translate:{ count: roles().length } }}</span>
         <div class="rl-header-actions">
           <div class="rl-search">
             <rh-search-bar
-              placeholder="Rechercher un rôle…"
+              [placeholder]="'ADMIN.roles.list.SEARCH_PLACEHOLDER' | translate"
               [value]="searchQuery()"
               (valueChange)="searchQuery.set($event)" />
           </div>
           <daf-button
-            label="+ Nouveau rôle"
+            [label]="'ADMIN.roles.list.NEW_ROLE' | translate"
             variant="teal"
             (onClick)="createClicked.emit()" />
         </div>
       </div>
       @if (loading()) {
-        <p class="rl-loading">Chargement…</p>
+        <p class="rl-loading">{{ 'ADMIN.roles.list.LOADING' | translate }}</p>
       } @else {
         <ul class="rl-list">
           @for (r of pagedRoles(); track r.id) {
@@ -31,9 +31,9 @@
                   <div class="rl-item-main">
                     <span class="rl-item-name">{{ r.frenchName }}</span>
                     <div class="rl-item-meta">
-                      <span class="rl-badge">{{ r.permissionCount }} permissions</span>
-                      <span class="rl-badge rl-badge-users">{{ r.userCount }} utilisateurs</span>
-                      @if (r.showAll) { <span class="rl-badge rl-badge-showall">Voir tout</span> }
+                      <span class="rl-badge">{{ 'ADMIN.roles.list.PERMISSIONS' | translate:{ count: r.permissionCount } }}</span>
+                      <span class="rl-badge rl-badge-users">{{ 'ADMIN.roles.list.USERS' | translate:{ count: r.userCount } }}</span>
+                      @if (r.showAll) { <span class="rl-badge rl-badge-showall">{{ 'ADMIN.roles.list.SHOW_ALL' | translate }}</span> }
                     </div>
                     @if (r.parentRoleName) {
                       <span class="rl-parent">↳ {{ r.parentRoleName }}</span>
@@ -42,7 +42,7 @@
                   <div class="rl-item-actions" (click)="$event.stopPropagation()">
                     <button class="rl-action-btn" type="button"
                             [disabled]="r.userCount > 0"
-                            [title]="r.userCount > 0 ? r.userCount + ' utilisateurs — réassignez-les d\'abord' : 'Supprimer'"
+                            [title]="r.userCount > 0 ? ('ADMIN.roles.list.DELETE_DISABLED_TOOLTIP' | translate:{ count: r.userCount }) : ('ADMIN.roles.list.DELETE_TOOLTIP' | translate)"
                             (click)="deleteClicked.emit(r)">🗑</button>
                   </div>
                 </div>

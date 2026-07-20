@@ -13,6 +13,7 @@ import {
   CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
 } from '../../../core/lists/configurable-list.model';
 import { UserStore } from '../../../core/user.store';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
@@ -22,7 +23,7 @@ const PAGE_SIZE = 10;
   imports: [
     FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent, StatusBadgeComponent,
-    PaginationComponent,
+    PaginationComponent, TranslatePipe,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -31,6 +32,7 @@ export class ListManagerComponent implements OnInit {
   private listService = inject(ConfigurableListService);
   private fb          = inject(FormBuilder);
   private userStore   = inject(UserStore);
+  private translate   = inject(TranslateService);
 
   listTypes       = signal<ListType[]>([]);
   selectedType    = signal<ListType | null>(null);
@@ -51,14 +53,17 @@ export class ListManagerComponent implements OnInit {
     );
   });
 
-  readonly columns: TableColumn[] = [
-    { key: 'valueCode', label: 'Code' },
-    { key: 'labelFr', label: 'Libellé FR' },
-    { key: 'labelEn', label: 'Libellé EN' },
-    { key: 'isActive', label: 'Actif' },
-    { key: 'isSystem', label: 'Système' },
-    { key: '_actions', label: 'Actions', align: 'right', width: '120px' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'valueCode', label: this.translate.instant('ADMIN.data.lists.COL_CODE') },
+      { key: 'labelFr', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_FR') },
+      { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN') },
+      { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE') },
+      { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM') },
+      { key: '_actions', label: this.translate.instant('ADMIN.data.lists.COL_ACTIONS'), align: 'right', width: '120px' },
+    ];
+  });
 
   currentPage = signal(0);
 
@@ -80,11 +85,14 @@ export class ListManagerComponent implements OnInit {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: false,
-    showHeader: false,
-    emptyMessage: 'Aucune valeur. Cliquez sur "+ Ajouter" pour commencer.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: false,
+      showHeader: false,
+      emptyMessage: this.translate.instant('ADMIN.data.lists.EMPTY_MESSAGE'),
+    };
+  });
 
   readonly paginationConfig: PaginationConfig = {
     showFirstLast: true,
@@ -118,7 +126,7 @@ export class ListManagerComponent implements OnInit {
         this.loadingTypes.set(false);
         if (types.length) this.selectType(types[0]);
       },
-      error: () => { this.error.set('Impossible de charger les types de listes.'); this.loadingTypes.set(false); },
+      error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_TYPES')); this.loadingTypes.set(false); },
     });
   }
 
@@ -139,7 +147,7 @@ export class ListManagerComponent implements OnInit {
     this.currentPage.set(0);
     this.listService.getAllValuesForAdmin(id).subscribe({
       next: vals => { this.values.set(vals); this.loadingValues.set(false); },
-      error: () => { this.error.set('Erreur lors du chargement des valeurs.'); this.loadingValues.set(false); },
+      error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_VALUES')); this.loadingValues.set(false); },
     });
   }
 
@@ -157,8 +165,8 @@ export class ListManagerComponent implements OnInit {
     if (this.editForm.invalid) return;
     const dto: UpdateListValueRequest = this.editForm.value;
     this.listService.updateValue(value.id, dto).subscribe({
-      next: () => { this.editingId.set(null); this.flash('Valeur mise à jour.'); this.loadValues(value.listTypeId); },
-      error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur.'),
+      next: () => { this.editingId.set(null); this.flash(this.translate.instant('ADMIN.data.lists.MSG_UPDATED')); this.loadValues(value.listTypeId); },
+      error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_GENERIC')),
     });
   }
 
@@ -167,10 +175,10 @@ export class ListManagerComponent implements OnInit {
 
   deleteValue(id: number, listTypeId: number): void {
     this.listService.deleteValue(id).subscribe({
-      next: () => { this.confirmDeleteId.set(null); this.flash('Valeur supprimée.'); this.loadValues(listTypeId); },
+      next: () => { this.confirmDeleteId.set(null); this.flash(this.translate.instant('ADMIN.data.lists.MSG_DELETED')); this.loadValues(listTypeId); },
       error: err => {
         this.confirmDeleteId.set(null);
-        this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la suppression.');
+        this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_DELETE'));
       },
     });
   }
@@ -180,8 +188,8 @@ export class ListManagerComponent implements OnInit {
     const type = this.selectedType()!;
     const dto: CreateListValueRequest = { listTypeId: type.id, paysId: null, ...this.addForm.value };
     this.listService.createValue(dto).subscribe({
-      next: () => { this.showAddForm.set(false); this.addForm.reset({ sortOrder: 0 }); this.flash('Valeur ajoutée.'); this.loadValues(type.id); },
-      error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la création.'),
+      next: () => { this.showAddForm.set(false); this.addForm.reset({ sortOrder: 0 }); this.flash(this.translate.instant('ADMIN.data.lists.MSG_ADDED')); this.loadValues(type.id); },
+      error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_CREATE')),
     });
   }
 

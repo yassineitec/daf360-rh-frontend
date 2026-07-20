@@ -2,57 +2,58 @@ import { Component, input, output, signal } from '@angular/core';
 import { ButtonComponent } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../shared/modal.component';
 import { NotificationEventTypeWithRule, TestDispatchResult } from './notification-routing.model';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-test-dispatch-modal',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent],
+  imports: [ModalComponent, ButtonComponent, TranslatePipe],
   template: `
-    <app-modal [title]="'Aperçu — ' + (eventType()?.labelFr ?? '')" [visible]="visible()" (closed)="closed.emit()" [hasFooter]="false">
+    <app-modal [title]="'ADMIN.notifications.previewTitle' | translate:{ name: eventType()?.labelFr ?? '' }" [visible]="visible()" (closed)="closed.emit()" [hasFooter]="false">
       @if (result()) {
         <div class="tdm-tabs">
-          <daf-button label="Notification in-app" variant="toggle" [options]="{ active: activeTab()==='inapp' }" (onClick)="activeTab.set('inapp')" />
+          <daf-button [label]="'ADMIN.notifications.tabInapp' | translate" variant="toggle" [options]="{ active: activeTab()==='inapp' }" (onClick)="activeTab.set('inapp')" />
           @if (eventType()?.supportsEmail) {
-            <daf-button label="Email" variant="toggle" [options]="{ active: activeTab()==='email' }" (onClick)="activeTab.set('email')" />
+            <daf-button [label]="'ADMIN.notifications.tabEmail' | translate" variant="toggle" [options]="{ active: activeTab()==='email' }" (onClick)="activeTab.set('email')" />
           }
         </div>
 
         @if (activeTab() === 'inapp') {
           <div class="tdm-section">
-            <p class="tdm-label">Titre résolu</p>
+            <p class="tdm-label">{{ 'ADMIN.notifications.resolvedTitle' | translate }}</p>
             <p class="tdm-value">{{ result()!.resolvedTitle }}</p>
-            <p class="tdm-label">Message résolu</p>
+            <p class="tdm-label">{{ 'ADMIN.notifications.resolvedMessage' | translate }}</p>
             <p class="tdm-value">{{ result()!.resolvedBody }}</p>
-            <p class="tdm-label">Destinataires ({{ result()!.inappRecipients.length }})</p>
+            <p class="tdm-label">{{ 'ADMIN.notifications.recipientsCount' | translate:{ count: result()!.inappRecipients.length } }}</p>
             @for (u of result()!.inappRecipients; track u.userId) {
               <div class="tdm-recipient">{{ u.fullName }} — {{ u.email }}</div>
             }
             @if (result()!.inappRecipients.length === 0) {
-              <p class="tdm-empty">Aucun destinataire trouvé pour cette entité.</p>
+              <p class="tdm-empty">{{ 'ADMIN.notifications.noRecipient' | translate }}</p>
             }
           </div>
         }
 
         @if (activeTab() === 'email') {
           <div class="tdm-section">
-            <p class="tdm-label">Objet</p>
+            <p class="tdm-label">{{ 'ADMIN.notifications.subject' | translate }}</p>
             <p class="tdm-value">{{ result()!.resolvedSubject }}</p>
-            <p class="tdm-label">À ({{ result()!.emailTo.length }})</p>
+            <p class="tdm-label">{{ 'ADMIN.notifications.toCount' | translate:{ count: result()!.emailTo.length } }}</p>
             @for (e of result()!.emailTo; track e.email) {
               <div class="tdm-recipient">{{ e.email }} ({{ e.roleName }})</div>
             }
             @if (result()!.emailCc.length) {
-              <p class="tdm-label">CC ({{ result()!.emailCc.length }})</p>
+              <p class="tdm-label">{{ 'ADMIN.notifications.ccCount' | translate:{ count: result()!.emailCc.length } }}</p>
               @for (e of result()!.emailCc; track e.email) {
                 <div class="tdm-recipient">{{ e.email }}</div>
               }
             }
-            <p class="tdm-label">Corps de l'email</p>
+            <p class="tdm-label">{{ 'ADMIN.notifications.emailBodyLabel' | translate }}</p>
             <div class="tdm-html-preview" [innerHTML]="result()!.resolvedEmailBody"></div>
           </div>
         }
       } @else {
-        <p class="tdm-loading">Chargement du test…</p>
+        <p class="tdm-loading">{{ 'ADMIN.notifications.loadingTest' | translate }}</p>
       }
     </app-modal>
   `,

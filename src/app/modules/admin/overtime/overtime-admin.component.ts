@@ -14,13 +14,14 @@ import {
   TYPE_CALCUL_OPTIONS, DAYS_OPTIONS, OvertimeCalculationRequest, OvertimeCalculationResult,
 } from './overtime.model';
 import { UserStore } from '../../../core/user.store';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-overtime-admin',
   standalone: true,
   imports: [
     DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent, ModalComponent,
-    StatusBadgeComponent, DataTableComponent, DafCellDirective,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
 <div>
@@ -28,11 +29,11 @@ import { UserStore } from '../../../core/user.store';
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div>
-      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Heures supplémentaires par pays</h2>
-      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Configuration des règles de calcul selon le type de pays</p>
+      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.overtime.title' | translate }}</h2>
+      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.overtime.subtitle' | translate }}</p>
     </div>
     <daf-button
-      label="Nouvelle règle" variant="teal"
+      [label]="'ADMIN.regimes.overtime.newRule' | translate" variant="teal"
       [options]="{ iconStart: 'add' }"
       (onClick)="openNewForm()" />
   </div>
@@ -41,33 +42,33 @@ import { UserStore } from '../../../core/user.store';
   <daf-card style="display:block;margin-bottom:20px;" [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
     <h3 style="font-size:var(--text-body-lg);font-weight:700;color:var(--color-primary);margin:0 0 16px;display:flex;align-items:center;gap:8px;">
       <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-secondary);">calculate</span>
-      Simulateur de calcul HS
+      {{ 'ADMIN.regimes.overtime.simulatorTitle' | translate }}
     </h3>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
       <daf-select
         [selected]="simPaysId ? [String(simPaysId)] : []"
         [options]="paysOptions()"
-        [config]="{ label: 'Pays', placeholder: 'Sélectionner…', fullWidth: true }"
+        [config]="{ label: ('ADMIN.regimes.overtime.country' | translate), placeholder: ('ADMIN.regimes.overtime.selectPlaceholder' | translate), fullWidth: true }"
         (selectedChange)="simPaysId = $event[0] ? Number($event[0]) : 0" />
       <daf-form-field
-        [options]="{ label: 'Date', type: 'date', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.overtime.date' | translate), type: 'date', fullWidth: true }"
         [value]="simDate"
         (valueChange)="simDate = $any($event)" />
       <daf-form-field
-        [options]="{ label: 'Heures brutes', type: 'number', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.overtime.grossHours' | translate), type: 'number', fullWidth: true }"
         [value]="simGrossHours"
         (valueChange)="simGrossHours = Number($event) || 0" />
       <daf-form-field
-        [options]="{ label: 'Heure début', type: 'time', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.overtime.startTime' | translate), type: 'time', fullWidth: true }"
         [value]="simStart"
         (valueChange)="simStart = $any($event)" />
       <daf-form-field
-        [options]="{ label: 'Heure fin', type: 'time', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.overtime.endTime' | translate), type: 'time', fullWidth: true }"
         [value]="simEnd"
         (valueChange)="simEnd = $any($event)" />
       <div style="display:flex;align-items:flex-end;">
         <daf-button
-          [label]="isSimulating() ? 'Calcul…' : 'Simuler'" variant="teal"
+          [label]="(isSimulating() ? 'ADMIN.regimes.overtime.calculating' : 'ADMIN.regimes.overtime.simulate') | translate" variant="teal"
           [options]="{ disabled: isSimulating(), loading: isSimulating(), fullWidth: true }"
           (onClick)="simulate()" />
       </div>
@@ -75,15 +76,15 @@ import { UserStore } from '../../../core/user.store';
     @if (simResult()) {
       <div style="background:var(--color-surface-container-low);border-radius:10px;padding:14px 16px;border:1px solid var(--color-outline-variant);">
         <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:8px;">
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Heures normales</span><br/>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">{{ 'ADMIN.regimes.overtime.normalHours' | translate }}</span><br/>
             <span style="font-size:20px;font-weight:800;color:var(--color-primary);">{{ simResult()!.normalHours | number:'1.2-2' }}h</span></div>
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-danger);text-transform:uppercase;letter-spacing:.4px;">Heures supp.</span><br/>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-danger);text-transform:uppercase;letter-spacing:.4px;">{{ 'ADMIN.regimes.overtime.overtimeHours' | translate }}</span><br/>
             <span style="font-size:20px;font-weight:800;color:var(--color-danger);">{{ simResult()!.overtimeHours | number:'1.2-2' }}h</span></div>
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Règle appliquée</span><br/>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">{{ 'ADMIN.regimes.overtime.ruleApplied' | translate }}</span><br/>
             <span style="font-size:var(--text-body-md);font-weight:700;color:var(--color-secondary);">{{ simResult()!.ruleApplied }}</span></div>
-          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">Jour de repos ?</span><br/>
+          <div><span style="font-size:var(--text-label-sm);color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;">{{ 'ADMIN.regimes.overtime.restDay' | translate }}</span><br/>
             <span style="font-size:var(--text-body-md);font-weight:700;" [style.color]="simResult()!.isWeekendDay ? 'var(--color-danger)' : 'var(--color-success)'">
-              {{ simResult()!.isWeekendDay ? 'Oui' : 'Non' }}
+              {{ (simResult()!.isWeekendDay ? 'ADMIN.regimes.common.yes' : 'ADMIN.regimes.common.no') | translate }}
             </span></div>
         </div>
         <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:0;font-style:italic;">{{ simResult()!.explanation }}</p>
@@ -97,7 +98,7 @@ import { UserStore } from '../../../core/user.store';
   }
 
   @if (!isLoading() && rules().length > 0) {
-    <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
+    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig">
       <ng-template dafCell="paysIsoCode" let-row>
         <daf-badge [label]="row['paysIsoCode']" [options]="{ variant: 'teal' }" />
       </ng-template>
@@ -105,15 +106,15 @@ import { UserStore } from '../../../core/user.store';
         <daf-badge [label]="getTypeLabel(row['_source'].typeCalculHs)" [options]="typeBadgeOptions(row['_source'].typeCalculHs)" />
       </ng-template>
       <ng-template dafCell="actif" let-row>
-        <daf-badge [label]="row['_source'].actif ? 'Actif' : 'Inactif'" [options]="{ variant: row['_source'].actif ? 'success' : 'neutral' }" />
+        <daf-badge [label]="(row['_source'].actif ? 'ADMIN.regimes.overtime.active' : 'ADMIN.regimes.overtime.inactive') | translate" [options]="{ variant: row['_source'].actif ? 'success' : 'neutral' }" />
       </ng-template>
       <ng-template dafCell="_actions" let-row>
         @if (row['_source'].actif) {
           <daf-button
-            label="Modifier" variant="secondary" [options]="{ size: 'sm' }"
+            [label]="'ADMIN.regimes.common.edit' | translate" variant="secondary" [options]="{ size: 'sm' }"
             (onClick)="openEditForm(row['_source'])" />
           <daf-button
-            label="Désactiver" variant="danger" [options]="{ size: 'sm' }"
+            [label]="'ADMIN.regimes.overtime.deactivate' | translate" variant="danger" [options]="{ size: 'sm' }"
             (onClick)="deactivate(row['_source'].idParametrage)" />
         }
       </ng-template>
@@ -124,7 +125,7 @@ import { UserStore } from '../../../core/user.store';
 
 <!-- Create / Edit modal -->
 <app-modal
-  [title]="editingId() ? 'Modifier la règle HS' : 'Nouvelle règle HS'"
+  [title]="(editingId() ? 'ADMIN.regimes.overtime.editRuleTitle' : 'ADMIN.regimes.overtime.newRuleTitle') | translate"
   [visible]="showForm()"
   [hasFooter]="true"
   (closed)="showForm.set(false)"
@@ -136,13 +137,13 @@ import { UserStore } from '../../../core/user.store';
     <daf-select
       [selected]="formPaysId ? [String(formPaysId)] : []"
       [options]="paysOptions()"
-      [config]="{ label: 'Pays *', placeholder: 'Sélectionner un pays…', disabled: !!editingId(), fullWidth: true }"
+      [config]="{ label: ('ADMIN.regimes.overtime.countryRequired' | translate), placeholder: ('ADMIN.regimes.overtime.selectCountryPlaceholder' | translate), disabled: !!editingId(), fullWidth: true }"
       (selectedChange)="formPaysId = $event[0] ? Number($event[0]) : 0" />
     <div>
       <daf-select
         [selected]="[formType]"
-        [options]="typeOptions"
-        [config]="{ label: 'Type de calcul *', fullWidth: true }"
+        [options]="typeOptions()"
+        [config]="{ label: ('ADMIN.regimes.overtime.calcType' | translate), fullWidth: true }"
         (selectedChange)="formType = $event[0] ?? 'WEEKEND_ONLY'" />
       @if (formType) {
         <small style="font-size:var(--text-label-sm);color:var(--color-outline);">{{ getTypeDesc(formType) }}</small>
@@ -151,30 +152,30 @@ import { UserStore } from '../../../core/user.store';
 
     @if (formType === 'AFTER_WORK_HOURS' || formType === 'MIXTE') {
       <daf-form-field
-        [options]="{ label: 'Heure début travail', type: 'time', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.overtime.workStart' | translate), type: 'time', fullWidth: true }"
         [value]="formHeureDebut"
         (valueChange)="formHeureDebut = $any($event)" />
       <daf-form-field
-        [options]="{ label: 'Heure fin travail', type: 'time', fullWidth: true }"
+        [options]="{ label: ('ADMIN.regimes.overtime.workEnd' | translate), type: 'time', fullWidth: true }"
         [value]="formHeureFin"
         (valueChange)="formHeureFin = $any($event)" />
     }
 
     <daf-select
       [selected]="formJourDebut ? [formJourDebut] : []"
-      [options]="daysOptions"
-      [config]="{ label: '1er jour ouvré', placeholder: '— Optionnel —', fullWidth: true }"
+      [options]="daysOptions()"
+      [config]="{ label: ('ADMIN.regimes.overtime.firstWorkDay' | translate), placeholder: ('ADMIN.regimes.overtime.optional' | translate), fullWidth: true }"
       (selectedChange)="formJourDebut = $event[0] ?? ''" />
     <daf-select
       [selected]="formJourFin ? [formJourFin] : []"
-      [options]="daysOptions"
-      [config]="{ label: 'Dernier jour ouvré', placeholder: '— Optionnel —', fullWidth: true }"
+      [options]="daysOptions()"
+      [config]="{ label: ('ADMIN.regimes.overtime.lastWorkDay' | translate), placeholder: ('ADMIN.regimes.overtime.optional' | translate), fullWidth: true }"
       (selectedChange)="formJourFin = $event[0] ?? ''" />
   </div>
   <div slot="footer">
-    <daf-button label="Annuler" variant="secondary" (onClick)="showForm.set(false)" />
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showForm.set(false)" />
     <daf-button
-      [label]="isSaving() ? 'Enregistrement…' : (editingId() ? 'Mettre à jour' : 'Enregistrer')" variant="teal"
+      [label]="(isSaving() ? 'ADMIN.regimes.common.saving' : (editingId() ? 'ADMIN.regimes.common.update' : 'ADMIN.regimes.common.save')) | translate" variant="teal"
       [options]="{ disabled: isSaving(), loading: isSaving() }"
       (onClick)="saveRule()" />
   </div>
@@ -186,6 +187,7 @@ export class OvertimeAdminComponent implements OnChanges {
   private svc = inject(OvertimeService);
   private userStore = inject(UserStore);
   private modal = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
 
@@ -195,8 +197,14 @@ export class OvertimeAdminComponent implements OnChanges {
   isSaving     = signal(false);
   formError    = signal<string | null>(null);
 
-  readonly typeOptions: SelectOption[] = TYPE_CALCUL_OPTIONS;
-  readonly daysOptions: SelectOption[] = DAYS_OPTIONS;
+  readonly typeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return TYPE_CALCUL_OPTIONS.map(o => ({ value: o.value, label: this.getTypeLabel(o.value) }));
+  });
+  readonly daysOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return DAYS_OPTIONS.map(o => ({ value: o.value, label: this.getDayLabel(o.value) }));
+  });
 
   readonly Number = Number;
   readonly String = String;
@@ -225,19 +233,23 @@ export class OvertimeAdminComponent implements OnChanges {
     this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel }))
   );
 
-  readonly columns: TableColumn[] = [
-    { key: 'paysIsoCode', label: 'Pays' },
-    { key: 'typeCalculHs', label: 'Type de calcul' },
-    { key: 'schedule', label: 'Horaires normaux' },
-    { key: 'week', label: 'Semaine de travail' },
-    { key: 'actif', label: 'Statut' },
-    { key: '_actions', label: 'Action', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'paysIsoCode', label: this.translate.instant('ADMIN.regimes.overtime.columns.country') },
+      { key: 'typeCalculHs', label: this.translate.instant('ADMIN.regimes.overtime.columns.calcType') },
+      { key: 'schedule', label: this.translate.instant('ADMIN.regimes.overtime.columns.schedule') },
+      { key: 'week', label: this.translate.instant('ADMIN.regimes.overtime.columns.week') },
+      { key: 'actif', label: this.translate.instant('ADMIN.regimes.overtime.columns.status') },
+      { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
+    ];
+  });
 
   readonly tableConfig: TableConfig = { hoverable: true };
 
-  rows = computed<TableRow[]>(() =>
-    this.rules().map(rule => ({
+  rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return this.rules().map(rule => ({
       paysIsoCode: rule.paysIsoCode,
       typeCalculHs: rule.typeCalculHs,
       schedule: rule.heureDebutTravail && rule.heureFinTravail
@@ -248,8 +260,8 @@ export class OvertimeAdminComponent implements OnChanges {
         : '—',
       actif: rule.actif,
       _source: rule,
-    })),
-  );
+    }));
+  });
 
   typeBadgeOptions(type: string): BadgeOptions {
     if (type === 'WEEKEND_ONLY') return { variant: 'info' };
@@ -301,7 +313,7 @@ export class OvertimeAdminComponent implements OnChanges {
 
   saveRule(): void {
     if (!this.formPaysId || !this.formType) {
-      this.formError.set('Pays et type de calcul sont obligatoires.');
+      this.formError.set(this.translate.instant('ADMIN.regimes.overtime.errorRequired'));
       return;
     }
     this.isSaving.set(true);
@@ -331,18 +343,18 @@ export class OvertimeAdminComponent implements OnChanges {
       },
       error: (err: { error?: { message?: string } }) => {
         this.isSaving.set(false);
-        this.formError.set(err?.error?.message ?? (id ? 'Erreur lors de la modification.' : 'Erreur lors de la création.'));
+        this.formError.set(err?.error?.message ?? this.translate.instant(id ? 'ADMIN.regimes.common.errorUpdate' : 'ADMIN.regimes.common.errorCreate'));
       },
     });
   }
 
   deactivate(id: number): void {
     this.modal.open({
-      title: 'Désactiver la règle',
-      body:  'Désactiver cette règle HS ?',
+      title: this.translate.instant('ADMIN.regimes.overtime.deactivateTitle'),
+      body:  this.translate.instant('ADMIN.regimes.overtime.deactivateBody'),
       buttons: [
-        { label: 'Annuler',    variant: 'secondary', action: r => r.close() },
-        { label: 'Désactiver', variant: 'primary',   action: r => { this.doDeactivate(id); r.close(); } },
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'),    variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.regimes.overtime.deactivate'), variant: 'primary',   action: r => { this.doDeactivate(id); r.close(); } },
       ],
     });
   }
@@ -371,13 +383,16 @@ export class OvertimeAdminComponent implements OnChanges {
   }
 
   getTypeLabel(t: string): string {
-    return TYPE_CALCUL_OPTIONS.find(o => o.value === t)?.label ?? t;
+    if (!TYPE_CALCUL_OPTIONS.some(o => o.value === t)) return t;
+    return this.translate.instant('ADMIN.regimes.overtime.types.' + t);
   }
   getTypeDesc(t: string): string {
-    return TYPE_CALCUL_OPTIONS.find(o => o.value === t)?.desc ?? '';
+    if (!TYPE_CALCUL_OPTIONS.some(o => o.value === t)) return '';
+    return this.translate.instant('ADMIN.regimes.overtime.typeDesc.' + t);
   }
   getDayLabel(d: string): string {
-    return DAYS_OPTIONS.find(o => o.value === d)?.label ?? d;
+    if (!DAYS_OPTIONS.some(o => o.value === d)) return d;
+    return this.translate.instant('ADMIN.regimes.overtime.days.' + d);
   }
 
   private resetForm(): void {

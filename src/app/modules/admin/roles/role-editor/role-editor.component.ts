@@ -3,11 +3,12 @@ import { RoleListItem } from '../role.model';
 import { RoleInfoTabComponent } from '../role-info-tab/role-info-tab.component';
 import { RolePermissionsTabComponent } from '../role-permissions-tab/role-permissions-tab.component';
 import { RoleUsersTabComponent } from '../role-users-tab/role-users-tab.component';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-role-editor',
   standalone: true,
-  imports: [RoleInfoTabComponent, RolePermissionsTabComponent, RoleUsersTabComponent],
+  imports: [RoleInfoTabComponent, RolePermissionsTabComponent, RoleUsersTabComponent, TranslatePipe],
   templateUrl: './role-editor.component.html',
   styleUrl: './role-editor.component.scss',
 })

@@ -1,15 +1,10 @@
-import { Component, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { RegimeCatalogComponent } from './regimes/tabs/regime-catalog.component';
 import { RegimeRoleAssignmentComponent } from './regimes/tabs/regime-role-assignment.component';
 import { RegimeOverviewComponent } from './regimes/tabs/regime-overview.component';
+import { TranslateService } from '@ngx-translate/core';
 
 type RegimeTab = 'catalog' | 'roles' | 'overview';
-
-const TABS: { id: RegimeTab; label: string; icon: string }[] = [
-  { id: 'catalog',  label: 'Catalogue',        icon: 'schedule'        },
-  { id: 'roles',    label: 'Assignation rôles', icon: 'manage_accounts' },
-  { id: 'overview', label: "Vue d'ensemble",    icon: 'dashboard'       },
-];
 
 @Component({
   selector: 'app-regimes-admin',
@@ -19,7 +14,7 @@ const TABS: { id: RegimeTab; label: string; icon: string }[] = [
     <div>
       <!-- Tab bar -->
       <nav class="ra-tab-bar" role="tablist">
-        @for (tab of tabs; track tab.id) {
+        @for (tab of tabs(); track tab.id) {
           <button type="button"
             class="ra-tab-btn"
             [class.active]="activeTab() === tab.id"
@@ -77,7 +72,17 @@ const TABS: { id: RegimeTab; label: string; icon: string }[] = [
   `],
 })
 export class RegimesAdminComponent {
+  private translate = inject(TranslateService);
+
   readonly paysId = input<number>(179);
   activeTab = signal<RegimeTab>('catalog');
-  readonly tabs = TABS;
+
+  readonly tabs = computed<{ id: RegimeTab; label: string; icon: string }[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'catalog',  label: this.translate.instant('ADMIN.regimes.tabs.catalog'),        icon: 'schedule'        },
+      { id: 'roles',    label: this.translate.instant('ADMIN.regimes.tabs.roleAssignment'), icon: 'manage_accounts' },
+      { id: 'overview', label: this.translate.instant('ADMIN.regimes.tabs.overview'),       icon: 'dashboard'       },
+    ];
+  });
 }

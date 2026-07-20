@@ -8,6 +8,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 5;
 
@@ -16,7 +17,7 @@ const PAGE_SIZE = 5;
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-    DataTableComponent, DafCellDirective,
+    DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   templateUrl: './role-users-tab.component.html',
   styleUrl:    './role-users-tab.component.scss',
@@ -28,6 +29,7 @@ export class RoleUsersTabComponent {
   usersChanged = output<number>();
 
   private svc = inject(RoleManagementService);
+  private translate = inject(TranslateService);
 
   // ── State ────────────────────────────────────────────────────────────────
   users         = signal<RoleUserItem[]>([]);
@@ -65,11 +67,14 @@ export class RoleUsersTabComponent {
     return this.filteredUsers().slice(start, start + PAGE_SIZE);
   });
 
-  readonly columns: TableColumn[] = [
-    { key: 'user', label: 'Utilisateur', type: 'avatar' },
-    { key: 'pays', label: 'Pays' },
-    { key: '_actions', label: 'Actions', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'user', label: this.translate.instant('ADMIN.roles.users.COL_USER'), type: 'avatar' },
+      { key: 'pays', label: this.translate.instant('ADMIN.roles.users.COL_PAYS') },
+      { key: '_actions', label: this.translate.instant('ADMIN.roles.users.COL_ACTIONS'), align: 'right' },
+    ];
+  });
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedUsers().map(u => ({
@@ -82,7 +87,7 @@ export class RoleUsersTabComponent {
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,
     loading: this.loading(),
-    emptyMessage: 'Aucun utilisateur assigné à ce rôle.',
+    emptyMessage: this.translate.instant('ADMIN.roles.users.EMPTY'),
   }));
 
   onPageChange(page: number): void {
@@ -124,7 +129,7 @@ export class RoleUsersTabComponent {
     this.currentPage.set(0);
     this.svc.getRoleUsers(roleId).subscribe({
       next:  us => { this.users.set(us); this.loading.set(false); },
-      error: ()  => { this.loading.set(false); this.error.set('Erreur lors du chargement des utilisateurs.'); },
+      error: ()  => { this.loading.set(false); this.error.set(this.translate.instant('ADMIN.roles.users.LOAD_ERROR')); },
     });
   }
 
@@ -146,7 +151,7 @@ export class RoleUsersTabComponent {
       },
       error: () => {
         this.adding.set(null);
-        this.error.set('Erreur lors de l\'assignation.');
+        this.error.set(this.translate.instant('ADMIN.roles.users.ASSIGN_ERROR'));
       },
     });
   }
@@ -157,7 +162,7 @@ export class RoleUsersTabComponent {
         this.users.update(us => us.filter(u => u.userId !== user.userId));
         this.usersChanged.emit(this.users().length);
       },
-      error: () => this.error.set('Erreur lors de la suppression.'),
+      error: () => this.error.set(this.translate.instant('ADMIN.roles.users.REMOVE_ERROR')),
     });
   }
 

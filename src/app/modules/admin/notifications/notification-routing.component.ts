@@ -9,6 +9,7 @@ import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
 import { ModalComponent } from '../../../shared/modal.component';
 import { RhSearchBarComponent } from '../../../shared/search-bar.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
@@ -19,12 +20,14 @@ const PAGE_SIZE = 10;
     FormsModule, RoutingRuleEditorComponent,
     StatusBadgeComponent, PaginationComponent, ModalComponent,
     DataTableComponent, DafCellDirective, RhSearchBarComponent,
+    TranslatePipe,
   ],
   templateUrl: './notification-routing.component.html',
   styleUrl: './notification-routing.component.scss',
 })
 export class NotificationRoutingComponent implements OnInit {
   private svc = inject(NotificationRoutingService);
+  private translate = inject(TranslateService);
 
   eventTypes = signal<NotificationEventTypeWithRule[]>([]);
   selectedType = signal<NotificationEventTypeWithRule | null>(null);
@@ -54,11 +57,14 @@ export class NotificationRoutingComponent implements OnInit {
     return this.filteredTypes().slice(start, start + PAGE_SIZE);
   });
 
-  readonly columns: TableColumn[] = [
-    { key: 'module',  label: 'Module' },
-    { key: 'labelFr', label: 'Événement' },
-    { key: 'badges',  label: 'Canaux' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'module',  label: this.translate.instant('ADMIN.notifications.colModule') },
+      { key: 'labelFr', label: this.translate.instant('ADMIN.notifications.colEvent') },
+      { key: 'badges',  label: this.translate.instant('ADMIN.notifications.colChannels') },
+    ];
+  });
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedTypes().map((t) => ({
@@ -68,11 +74,14 @@ export class NotificationRoutingComponent implements OnInit {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.loadingTypes(),
-    emptyMessage: 'Aucun événement trouvé.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.loadingTypes(),
+      emptyMessage: this.translate.instant('ADMIN.notifications.emptyMessage'),
+    };
+  });
 
   ngOnInit(): void {
     this.svc.getEventTypes().subscribe({
@@ -81,7 +90,7 @@ export class NotificationRoutingComponent implements OnInit {
         this.loadingTypes.set(false);
       },
       error: (err) => {
-        this.error.set(err?.message ?? 'Erreur lors du chargement des événements');
+        this.error.set(err?.message ?? this.translate.instant('ADMIN.notifications.loadError'));
         this.loadingTypes.set(false);
       },
     });

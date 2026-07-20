@@ -7,11 +7,11 @@
   <!-- Header -->
   <div class="rut-header">
     <div class="rut-header-left">
-      <span class="rut-title">Utilisateurs — {{ role().frenchName }}</span>
-      <daf-badge [label]="users().length + ' utilisateur(s)'" [options]="{ variant: 'neutral', size: 'sm' }" />
+      <span class="rut-title">{{ 'ADMIN.roles.users.TITLE' | translate:{ name: role().frenchName } }}</span>
+      <daf-badge [label]="'ADMIN.roles.users.COUNT_BADGE' | translate:{ count: users().length }" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
     <daf-button
-      [label]="showAddPanel() ? 'Fermer' : '+ Ajouter un utilisateur'"
+      [label]="showAddPanel() ? ('ADMIN.roles.users.CLOSE' | translate) : ('ADMIN.roles.users.ADD_USER' | translate)"
       variant="teal"
       [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
       (onClick)="showAddPanel.set(!showAddPanel())" />
@@ -21,13 +21,13 @@
   @if (showAddPanel()) {
     <div class="rut-add-panel">
       <daf-form-field
-        [options]="{ type: 'search', placeholder: 'Rechercher un utilisateur par nom ou email…', prefixIcon: 'search', fullWidth: true }"
+        [options]="{ type: 'search', placeholder: ('ADMIN.roles.users.SEARCH_PLACEHOLDER' | translate), prefixIcon: 'search', fullWidth: true }"
         [value]="addQuery()"
         (valueChange)="onAddQueryChange($any($event) ?? '')" />
 
       @if (addQuery().length >= 2 && !searching()) {
         @if (searchResults().length === 0) {
-          <p class="rut-no-results">Aucun utilisateur trouvé hors de ce rôle.</p>
+          <p class="rut-no-results">{{ 'ADMIN.roles.users.NO_SEARCH_RESULTS' | translate }}</p>
         } @else {
           <ul class="rut-search-results">
             @for (u of searchResults(); track u.userId) {
@@ -40,14 +40,14 @@
                       <daf-badge [label]="u.paysLabel" [options]="{ variant: 'neutral', size: 'sm' }" />
                     }
                     @if (u.currentRoleName) {
-                      <daf-badge [label]="'Rôle actuel : ' + u.currentRoleName" [options]="{ variant: 'info', size: 'sm' }" />
+                      <daf-badge [label]="'ADMIN.roles.users.CURRENT_ROLE' | translate:{ name: u.currentRoleName }" [options]="{ variant: 'info', size: 'sm' }" />
                     } @else {
-                      <daf-badge label="Sans rôle" [options]="{ variant: 'warning', size: 'sm' }" />
+                      <daf-badge [label]="'ADMIN.roles.users.NO_ROLE' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
                     }
                   </div>
                 </div>
                 <daf-button
-                  [label]="adding() === u.userId ? '…' : 'Assigner'"
+                  [label]="adding() === u.userId ? '…' : ('ADMIN.roles.users.ASSIGN' | translate)"
                   variant="secondary"
                   [options]="{ size: 'sm', disabled: adding() === u.userId }"
                   (onClick)="assignUser(u)" />
@@ -62,7 +62,7 @@
   <!-- Local filter -->
   @if (users().length > 5) {
     <daf-form-field
-      [options]="{ type: 'search', placeholder: 'Filtrer la liste…', prefixIcon: 'search', fullWidth: true }"
+      [options]="{ type: 'search', placeholder: ('ADMIN.roles.users.FILTER_PLACEHOLDER' | translate), prefixIcon: 'search', fullWidth: true }"
       [value]="localSearch()"
       (valueChange)="onLocalSearch($any($event) ?? '')" />
   }
@@ -70,26 +70,26 @@
   <!-- Users table -->
   @if (filteredUsers().length === 0 && users().length === 0 && !loading()) {
     <div class="rut-empty">
-      <p>Aucun utilisateur assigné à ce rôle.</p>
-      <p class="rut-empty-hint">Utilisez le bouton "Ajouter" pour assigner des utilisateurs.</p>
+      <p>{{ 'ADMIN.roles.users.EMPTY' | translate }}</p>
+      <p class="rut-empty-hint">{{ 'ADMIN.roles.users.EMPTY_HINT' | translate }}</p>
     </div>
   } @else if (filteredUsers().length === 0 && !loading()) {
-    <p class="rut-no-results">Aucun résultat pour "{{ localSearch() }}"</p>
+    <p class="rut-no-results">{{ 'ADMIN.roles.users.NO_RESULTS' | translate:{ query: localSearch() } }}</p>
   } @else {
-    <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
       <ng-template dafCell="_actions" let-row>
         <daf-button
           label=""
           variant="ghost"
           [options]="{ size: 'sm', iconStart: 'close' }"
-          title="Retirer de ce rôle"
+          [title]="'ADMIN.roles.users.REMOVE_TOOLTIP' | translate"
           (onClick)="removeUser(row['_source'])" />
       </ng-template>
     </daf-data-table>
 
     <!-- Count + Pagination -->
     <div class="rut-footer">
-      <span class="rut-count"><strong>{{ totalElements() }}</strong> utilisateur(s)</span>
+      <span class="rut-count"><strong>{{ totalElements() }}</strong> {{ 'ADMIN.roles.users.USERS_SUFFIX' | translate }}</span>
       @if (totalPages() > 1) {
         <daf-pagination
           [currentPage]="currentPage()"

@@ -2,15 +2,15 @@
   <div class="re-tabs">
     <button class="re-tab" [class.re-tab-active]="activeTab() === 'info'"
             (click)="activeTab.set('info')" type="button">
-      Informations
+      {{ 'ADMIN.roles.editor.TAB_INFO' | translate }}
     </button>
     <button class="re-tab" [class.re-tab-active]="activeTab() === 'permissions'"
             (click)="activeTab.set('permissions')" type="button">
-      Permissions
+      {{ 'ADMIN.roles.editor.TAB_PERMISSIONS' | translate }}
     </button>
     <button class="re-tab" [class.re-tab-active]="activeTab() === 'users'"
             (click)="activeTab.set('users')" type="button">
-      Utilisateurs
+      {{ 'ADMIN.roles.editor.TAB_USERS' | translate }}
       <span class="re-tab-count">{{ role().userCount }}</span>
     </button>
   </div>

@@ -8,11 +8,12 @@ import {
 import { ModalComponent } from '../../../../shared/modal.component';
 import { RoleManagementService } from '../role-management.service';
 import { RoleListItem } from '../role.model';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-create-role-modal',
   standalone: true,
-  imports: [ModalComponent, FormFieldComponent, SelectComponent, ToggleComponent, ButtonComponent],
+  imports: [ModalComponent, FormFieldComponent, SelectComponent, ToggleComponent, ButtonComponent, TranslatePipe],
   templateUrl: './create-role-modal.component.html',
   styleUrl: './create-role-modal.component.scss',
 })
@@ -24,6 +25,7 @@ export class CreateRoleModalComponent {
   roleCreated = output<RoleListItem>();
 
   private svc = inject(RoleManagementService);
+  private translate = inject(TranslateService);
 
   frenchName   = signal('');
   parentRoleId = signal<number | null>(null);
@@ -59,7 +61,7 @@ export class CreateRoleModalComponent {
         },
         error: (err) => {
           this.saving.set(false);
-          this.error.set(err?.error?.message ?? 'Erreur lors de la création.');
+          this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.roles.create.CREATE_ERROR'));
         },
       });
   }

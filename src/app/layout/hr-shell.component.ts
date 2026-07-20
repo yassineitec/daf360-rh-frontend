@@ -53,6 +53,13 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'onboarding',
     permissions: ['HR_ONBOARDING'],
   },
+  {
+    id: 'lifecycle',
+    label: 'Cycle de vie',
+    icon: 'work_history',
+    route: 'lifecycle',
+    permissions: ['RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
+  },
   { id: 'requests', label: 'Demandes', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
   {
     id: 'admin',

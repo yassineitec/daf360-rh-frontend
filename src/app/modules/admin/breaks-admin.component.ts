@@ -14,6 +14,7 @@ import {
 } from './breaks/break.model';
 import { WorkingTimeRegime } from './regimes/regime.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 type BreakTab = 'templates' | 'legal-rules';
 
@@ -23,17 +24,17 @@ type BreakTab = 'templates' | 'legal-rules';
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent,
     LegalRulesAdminComponent, DafHasPermissionDirective, StatusBadgeComponent,
-    DataTableComponent, DafCellDirective,
+    DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
 <div>
   <!-- Sub-tab bar -->
   <nav class="ba-tab-bar" role="tablist">
     <button class="ba-tab-btn" [class.active]="activeTab()==='templates'" (click)="activeTab.set('templates')" type="button">
-      <span class="material-symbols-outlined ba-tab-icon">list_alt</span> Modèles de pause
+      <span class="material-symbols-outlined ba-tab-icon">list_alt</span> {{ 'ADMIN.regimes.tabs.breakTemplates' | translate }}
     </button>
     <button class="ba-tab-btn" [class.active]="activeTab()==='legal-rules'" (click)="activeTab.set('legal-rules')" type="button">
-      <span class="material-symbols-outlined ba-tab-icon">gavel</span> Règles légales
+      <span class="material-symbols-outlined ba-tab-icon">gavel</span> {{ 'ADMIN.regimes.tabs.legalRules' | translate }}
     </button>
   </nav>
 
@@ -43,11 +44,11 @@ type BreakTab = 'templates' | 'legal-rules';
       <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
         <div>
-          <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Modèles de pause</h2>
-          <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Pauses automatiques par régime horaire</p>
+          <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.breaks.title' | translate }}</h2>
+          <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.breaks.subtitle' | translate }}</p>
         </div>
         <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-          [label]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
+          [label]="(showCreateForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.breaks.newTemplate') | translate" variant="teal"
           [options]="{ iconStart: showCreateForm() ? 'close' : 'add' }"
           (onClick)="showCreateForm.set(!showCreateForm())" />
       </div>
@@ -55,56 +56,56 @@ type BreakTab = 'templates' | 'legal-rules';
       <!-- Create form -->
       @if (showCreateForm()) {
         <div style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant);border-radius:14px;padding:20px;margin-bottom:20px;">
-          <p style="font-size:var(--text-body-sm);font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--color-on-surface-variant);margin:0 0 14px;">Nouveau modèle de pause</p>
+          <p style="font-size:var(--text-body-sm);font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--color-on-surface-variant);margin:0 0 14px;">{{ 'ADMIN.regimes.breaks.formTitle' | translate }}</p>
           @if (formError()) { <div style="background:var(--color-error-container);border-radius:8px;padding:10px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:12px;">{{ formError() }}</div> }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div style="grid-column:span 2">
               <daf-select
                 [selected]="formRegimeId ? [String(formRegimeId)] : []"
                 [options]="regimeOptions()"
-                [config]="{ label: 'Régime horaire *', placeholder: 'Sélectionner un régime…', fullWidth: true }"
+                [config]="{ label: ('ADMIN.regimes.breaks.regime' | translate), placeholder: ('ADMIN.regimes.breaks.regimePlaceholder' | translate), fullWidth: true }"
                 (selectedChange)="formRegimeId = $event[0] ? Number($event[0]) : 0" />
             </div>
             <daf-form-field
-              [options]="{ label: 'Libellé FR *', type: 'text', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.breaks.labelFr' | translate), type: 'text', fullWidth: true }"
               [value]="formLabelFr"
               (valueChange)="formLabelFr = $any($event) ?? ''" />
             <daf-form-field
-              [options]="{ label: 'Libellé EN', type: 'text', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.breaks.labelEn' | translate), type: 'text', fullWidth: true }"
               [value]="formLabelEn"
               (valueChange)="formLabelEn = $any($event) ?? ''" />
             <daf-select
               [selected]="[formType]"
-              [options]="typeOptions"
-              [config]="{ label: 'Type *', fullWidth: true }"
+              [options]="typeOptions()"
+              [config]="{ label: ('ADMIN.regimes.breaks.type' | translate), fullWidth: true }"
               (selectedChange)="formType = $event[0] ?? 'AUTO'" />
             <daf-form-field
-              [options]="{ label: 'Durée (minutes) *', type: 'number', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.breaks.duration' | translate), type: 'number', fullWidth: true }"
               [value]="formDurationMin"
               (valueChange)="formDurationMin = Number($event) || 0" />
             <daf-select
               [selected]="[formDays]"
-              [options]="daysOptions"
-              [config]="{ label: 'Jours applicables', fullWidth: true }"
+              [options]="daysOptions()"
+              [config]="{ label: ('ADMIN.regimes.breaks.applicableDays' | translate), fullWidth: true }"
               (selectedChange)="formDays = $event[0] ?? 'ALL'" />
             <daf-form-field
-              [options]="{ label: 'Min heures travaillées (déclencheur)', type: 'number', placeholder: 'ex: 6', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.breaks.minHoursTrigger' | translate), type: 'number', placeholder: ('ADMIN.regimes.breaks.minHoursPlaceholder' | translate), fullWidth: true }"
               [value]="formMinHours"
               (valueChange)="formMinHours = $event === '' || $event === null ? null : Number($event)" />
             <div>
               <daf-form-field
-                [options]="{ label: 'Heure de début (optionnel)', type: 'time', hint: 'Laisser vide = déduction par seuil d\\'heures', fullWidth: true }"
+                [options]="{ label: ('ADMIN.regimes.breaks.timeStart' | translate), type: 'time', hint: ('ADMIN.regimes.breaks.timeStartHint' | translate), fullWidth: true }"
                 [value]="formTimeStart"
                 (valueChange)="formTimeStart = $any($event) ?? ''" />
             </div>
             <daf-form-field
-              [options]="{ label: 'Heure de fin (optionnel)', type: 'time', fullWidth: true }"
+              [options]="{ label: ('ADMIN.regimes.breaks.timeEnd' | translate), type: 'time', fullWidth: true }"
               [value]="formTimeEnd"
               (valueChange)="formTimeEnd = $any($event) ?? ''" />
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <daf-button
-              [label]="isSaving() ? 'Enregistrement…' : 'Enregistrer'" variant="teal"
+              [label]="(isSaving() ? 'ADMIN.regimes.common.saving' : 'ADMIN.regimes.common.save') | translate" variant="teal"
               [options]="{ disabled: isSaving(), loading: isSaving() }"
               (onClick)="saveTemplate()" />
           </div>
@@ -124,8 +125,8 @@ type BreakTab = 'templates' | 'legal-rules';
         @if (groupedTemplates().length === 0) {
           <div style="text-align:center;padding:56px;color:var(--color-outline);">
             <span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:12px;opacity:.4;">list_alt</span>
-            <p style="font-size:var(--text-body-sm);margin:0;">Aucun modèle de pause configuré pour cette entité.</p>
-            <p style="font-size:var(--text-body-sm);margin:6px 0 0;color:var(--color-outline);">Créez le premier modèle en cliquant sur "Nouveau modèle".</p>
+            <p style="font-size:var(--text-body-sm);margin:0;">{{ 'ADMIN.regimes.breaks.emptyTitle' | translate }}</p>
+            <p style="font-size:var(--text-body-sm);margin:6px 0 0;color:var(--color-outline);">{{ 'ADMIN.regimes.breaks.emptyHint' | translate }}</p>
           </div>
         }
 
@@ -135,16 +136,16 @@ type BreakTab = 'templates' | 'legal-rules';
               <span class="material-symbols-outlined" style="font-size:14px;color:var(--color-teal);">schedule</span>
               {{ group.regimeName }}
             </p>
-            <daf-data-table [columns]="columns" [rows]="rowsFor(group.templates)" [config]="tableConfig">
+            <daf-data-table [columns]="columns()" [rows]="rowsFor(group.templates)" [config]="tableConfig">
               <ng-template dafCell="deductionType" let-row>
                 <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
               </ng-template>
               <ng-template dafCell="durationMin" let-row>
-                <daf-badge [label]="row['durationMin'] + ' min'" [options]="{ variant: 'teal' }" />
+                <daf-badge [label]="row['durationMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
               </ng-template>
               <ng-template dafCell="_actions" let-row>
                 <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-                  class="icon-btn-delete" title="Supprimer"
+                  class="icon-btn-delete" [title]="'ADMIN.regimes.common.delete' | translate"
                   label="" variant="danger"
                   [options]="{ iconStart: 'delete', size: 'sm' }"
                   (onClick)="removeTemplate(row['_source'].id)" />
@@ -175,6 +176,7 @@ export class BreaksAdminComponent implements OnChanges {
   private breakSvc  = inject(BreakService);
   private regimeSvc = inject(RegimeService);
   private modal     = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
 
@@ -186,30 +188,40 @@ export class BreaksAdminComponent implements OnChanges {
   isSaving      = signal(false);
   formError     = signal<string | null>(null);
 
-  readonly typeOptions: SelectOption[] = [
-    { value: 'AUTO', label: 'AUTO — Automatique conditionnelle' },
-    { value: 'MANDATORY', label: 'MANDATORY — Obligatoire' },
-    { value: 'OPTIONAL', label: 'OPTIONAL — Facultative' },
-  ];
-  readonly daysOptions: SelectOption[] = [
-    { value: 'ALL', label: 'Tous les jours' },
-    { value: 'WEEKDAYS', label: 'Jours ouvrés' },
-    { value: 'WEEKEND', label: 'Week-end' },
-  ];
+  readonly typeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'AUTO', label: this.translate.instant('ADMIN.regimes.breaks.typeOptions.AUTO') },
+      { value: 'MANDATORY', label: this.translate.instant('ADMIN.regimes.breaks.typeOptions.MANDATORY') },
+      { value: 'OPTIONAL', label: this.translate.instant('ADMIN.regimes.breaks.typeOptions.OPTIONAL') },
+    ];
+  });
+  readonly daysOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'ALL', label: this.translate.instant('ADMIN.regimes.breaks.daysOptions.ALL') },
+      { value: 'WEEKDAYS', label: this.translate.instant('ADMIN.regimes.breaks.daysOptions.WEEKDAYS') },
+      { value: 'WEEKEND', label: this.translate.instant('ADMIN.regimes.breaks.daysOptions.WEEKEND') },
+    ];
+  });
 
-  regimeOptions = computed<SelectOption[]>(() =>
-    this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}h/sem` }))
-  );
+  regimeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
+  });
 
-  readonly columns: TableColumn[] = [
-    { key: 'labelFr', label: 'Libellé' },
-    { key: 'deductionType', label: 'Type' },
-    { key: 'durationMin', label: 'Durée' },
-    { key: 'appliesToDays', label: 'Jours' },
-    { key: 'schedule', label: 'Horaire' },
-    { key: 'trigger', label: 'Déclencheur' },
-    { key: '_actions', label: 'Action', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'labelFr', label: this.translate.instant('ADMIN.regimes.breaks.columns.label') },
+      { key: 'deductionType', label: this.translate.instant('ADMIN.regimes.breaks.columns.type') },
+      { key: 'durationMin', label: this.translate.instant('ADMIN.regimes.breaks.columns.duration') },
+      { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.breaks.columns.days') },
+      { key: 'schedule', label: this.translate.instant('ADMIN.regimes.breaks.columns.schedule') },
+      { key: 'trigger', label: this.translate.instant('ADMIN.regimes.breaks.columns.trigger') },
+      { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
+    ];
+  });
 
   readonly tableConfig: TableConfig = { hoverable: true };
 
@@ -246,10 +258,11 @@ export class BreaksAdminComponent implements OnChanges {
   readonly String = String;
 
   groupedTemplates = computed(() => {
+    this.translate.currentLang();
     const groups = new Map<number, { regimeId: number; regimeName: string; templates: BreakTemplateDto[] }>();
     for (const t of this.templates()) {
       const regime = this.regimes().find(r => r.id === t.regimeId);
-      const name   = regime?.labelFr ?? 'Régime #' + t.regimeId;
+      const name   = regime?.labelFr ?? this.translate.instant('ADMIN.regimes.breaks.regimeFallback', { id: t.regimeId });
       if (!groups.has(t.regimeId)) groups.set(t.regimeId, { regimeId: t.regimeId, regimeName: name, templates: [] });
       groups.get(t.regimeId)!.templates.push(t);
     }
@@ -271,7 +284,7 @@ export class BreaksAdminComponent implements OnChanges {
 
   saveTemplate(): void {
     if (!this.formRegimeId || !this.formLabelFr || !this.formDurationMin) {
-      this.formError.set('Régime, libellé et durée sont obligatoires.');
+      this.formError.set(this.translate.instant('ADMIN.regimes.breaks.errorRequired'));
       return;
     }
     this.isSaving.set(true);
@@ -298,18 +311,18 @@ export class BreaksAdminComponent implements OnChanges {
       },
       error: err => {
         this.isSaving.set(false);
-        this.formError.set(err?.error?.message ?? 'Erreur lors de la création.');
+        this.formError.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate'));
       },
     });
   }
 
   removeTemplate(id: number): void {
     this.modal.open({
-      title: 'Supprimer le modèle',
-      body:  'Supprimer ce modèle de pause ?',
+      title: this.translate.instant('ADMIN.regimes.breaks.deleteTitle'),
+      body:  this.translate.instant('ADMIN.regimes.breaks.deleteBody'),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doRemoveTemplate(id); r.close(); } },
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'),   variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.regimes.common.delete'), variant: 'primary',   action: r => { this.doRemoveTemplate(id); r.close(); } },
       ],
     });
   }
@@ -322,7 +335,11 @@ export class BreaksAdminComponent implements OnChanges {
   }
 
   formatDays(d: string): string {
-    const m: Record<string, string> = { ALL: 'Tous', WEEKDAYS: 'Jours ouvrés', WEEKEND: 'Week-end' };
+    const m: Record<string, string> = {
+      ALL: this.translate.instant('ADMIN.regimes.breaks.daysShort.ALL'),
+      WEEKDAYS: this.translate.instant('ADMIN.regimes.breaks.daysShort.WEEKDAYS'),
+      WEEKEND: this.translate.instant('ADMIN.regimes.breaks.daysShort.WEEKEND'),
+    };
     return m[d] ?? d;
   }
 

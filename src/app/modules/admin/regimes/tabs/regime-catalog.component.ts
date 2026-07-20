@@ -9,6 +9,7 @@ import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-regime-catalog',
@@ -16,6 +17,7 @@ import { ModalComponent } from '../../../../shared/modal.component';
   imports: [
     ReactiveFormsModule, DafHasPermissionDirective,
     ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent, ModalComponent,
+    TranslatePipe,
   ],
   templateUrl: './regime-catalog.component.html',
   styleUrl: './regime-catalog.component.scss',
@@ -24,6 +26,7 @@ export class RegimeCatalogComponent implements OnChanges {
   private svc   = inject(RegimeService);
   private fb    = inject(FormBuilder);
   private modal = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
 
@@ -146,12 +149,12 @@ export class RegimeCatalogComponent implements OnChanges {
       next: updated => {
         this.regimes.update(rs => rs.map(r => r.id === updated.id ? updated : r));
         this.isSaving.set(false);
-        this.successMsg.set('Régime mis à jour avec succès.');
+        this.successMsg.set(this.translate.instant('ADMIN.regimes.catalog.updateSuccess'));
         setTimeout(() => this.successMsg.set(null), 3000);
       },
       error: err => {
         this.isSaving.set(false);
-        this.errorMsg.set(err?.error?.message ?? 'Erreur lors de la sauvegarde.');
+        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.catalog.errorSave'));
       },
     });
   }
@@ -159,11 +162,11 @@ export class RegimeCatalogComponent implements OnChanges {
   deleteRegime(): void {
     if (!this.selectedId()) return;
     this.modal.open({
-      title: 'Supprimer le régime',
-      body:  'Supprimer ce régime ? Cette action est irréversible.',
+      title: this.translate.instant('ADMIN.regimes.catalog.deleteTitle'),
+      body:  this.translate.instant('ADMIN.regimes.catalog.deleteBody'),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doDeleteRegime(); r.close(); } },
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'),   variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.regimes.common.delete'), variant: 'primary',   action: r => { this.doDeleteRegime(); r.close(); } },
       ],
     });
   }
@@ -178,7 +181,7 @@ export class RegimeCatalogComponent implements OnChanges {
       },
       error: err => {
         this.isDeleting.set(false);
-        this.errorMsg.set(err?.error?.message ?? 'Erreur lors de la suppression.');
+        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorDelete'));
       },
     });
   }
@@ -207,7 +210,7 @@ export class RegimeCatalogComponent implements OnChanges {
         this.createForm.reset({ hoursPerWeek: 40, daysPerWeek: 5, isFlexible: false, isDefault: false, breakDurationMin: 0, overtimeAllowed: false });
         this.selectRegime(created);
       },
-      error: err => this.errorMsg.set(err?.error?.message ?? 'Erreur lors de la création.'),
+      error: err => this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate')),
     });
   }
 

@@ -15,6 +15,7 @@ import {
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
 import { RhSearchBarComponent } from '../../../../shared/search-bar.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
@@ -24,7 +25,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   imports: [
     NgClass, DafHasPermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
-    PaginationComponent, RhSearchBarComponent,
+    PaginationComponent, RhSearchBarComponent, TranslatePipe,
   ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
@@ -32,6 +33,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
 export class RegimeOverviewComponent implements OnChanges {
   private svc   = inject(RegimeService);
   private modal = inject(ModalService);
+  private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
 
@@ -74,9 +76,10 @@ export class RegimeOverviewComponent implements OnChanges {
   isSaving          = signal(false);
   panelError        = signal<string | null>(null);
 
-  regimeOptions = computed<SelectOption[]>(() =>
-    this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}h/sem` }))
-  );
+  regimeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
+  });
 
   overrideRegimeSelected(): string[] {
     return this.overrideRegimeId ? [String(this.overrideRegimeId)] : [];
@@ -87,11 +90,11 @@ export class RegimeOverviewComponent implements OnChanges {
   }
 
   sourceFilters: { value: SourceFilter; label: string }[] = [
-    { value: 'ALL',              label: 'Tous'            },
-    { value: 'EMPLOYEE_OVERRIDE', label: 'Override'       },
-    { value: 'ROLE_ASSIGNMENT',  label: 'Par rôle'        },
-    { value: 'DEFAULT',          label: 'Défaut'          },
-    { value: 'UNCONFIGURED',     label: 'Non configuré'   },
+    { value: 'ALL',              label: this.translate.instant('ADMIN.regimes.overview.filters.ALL')          },
+    { value: 'EMPLOYEE_OVERRIDE', label: this.translate.instant('ADMIN.regimes.overview.filters.OVERRIDE')    },
+    { value: 'ROLE_ASSIGNMENT',  label: this.translate.instant('ADMIN.regimes.overview.filters.BY_ROLE')      },
+    { value: 'DEFAULT',          label: this.translate.instant('ADMIN.regimes.overview.filters.DEFAULT')      },
+    { value: 'UNCONFIGURED',     label: this.translate.instant('ADMIN.regimes.overview.filters.UNCONFIGURED') },
   ];
 
   filteredEmployees = computed(() => {
@@ -107,11 +110,11 @@ export class RegimeOverviewComponent implements OnChanges {
   });
 
   readonly columns: TableColumn[] = [
-    { key: 'employe', label: 'Employé', type: 'avatar' },
-    { key: 'role', label: 'Rôle' },
-    { key: 'regime', label: 'Régime appliqué' },
-    { key: 'source', label: 'Source', type: 'badge' },
-    { key: '_actions', label: 'Action', align: 'right' },
+    { key: 'employe', label: this.translate.instant('ADMIN.regimes.overview.columns.employee'), type: 'avatar' },
+    { key: 'role', label: this.translate.instant('ADMIN.regimes.overview.columns.role') },
+    { key: 'regime', label: this.translate.instant('ADMIN.regimes.overview.columns.regime') },
+    { key: 'source', label: this.translate.instant('ADMIN.regimes.overview.columns.source'), type: 'badge' },
+    { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
   ];
 
   readonly totalElements = computed(() => this.filteredEmployees().length);
@@ -122,26 +125,30 @@ export class RegimeOverviewComponent implements OnChanges {
     return this.filteredEmployees().slice(start, start + this.PAGE_SIZE);
   });
 
-  readonly rows = computed<TableRow[]>(() =>
-    this.pagedEmployees().map(e => ({
+  readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return this.pagedEmployees().map(e => ({
       employe: { name: e.fullName, initials: this.getInitials(e.fullName) } as AvatarCell,
       role: e.roleName ?? '—',
       regime: e.resolvedRegimeLabelFr,
       source: { label: this.getSourceLabel(e.assignmentLevel), options: this.sourceBadgeOptions(e.assignmentLevel) } as BadgeCell,
       _source: e,
-    })),
-  );
+    }));
+  });
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
   }
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.isLoadingTable(),
-    skeletonRows: 5,
-    emptyMessage: 'Aucun employé trouvé',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.isLoadingTable(),
+      skeletonRows: 5,
+      emptyMessage: this.translate.instant('ADMIN.regimes.overview.empty'),
+    };
+  });
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['paysId']) { this.loadAll(); }
@@ -191,7 +198,7 @@ export class RegimeOverviewComponent implements OnChanges {
       },
       error: err => {
         this.isSaving.set(false);
-        this.panelError.set(err?.error?.message ?? 'Erreur lors de l\'assignation.');
+        this.panelError.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.overview.errorAssign'));
       },
     });
   }
@@ -200,11 +207,11 @@ export class RegimeOverviewComponent implements OnChanges {
     const emp = this.selectedEmployee();
     if (!emp) return;
     this.modal.open({
-      title: 'Supprimer l\'override',
-      body:  'Supprimer l\'override et revenir au régime du rôle ?',
+      title: this.translate.instant('ADMIN.regimes.overview.removeOverrideTitle'),
+      body:  this.translate.instant('ADMIN.regimes.overview.removeOverrideBody'),
       buttons: [
-        { label: 'Annuler',   variant: 'secondary', action: r => r.close() },
-        { label: 'Supprimer', variant: 'primary',   action: r => { this.doRemoveOverride(emp); r.close(); } },
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'),   variant: 'secondary', action: r => r.close() },
+        { label: this.translate.instant('ADMIN.regimes.common.delete'), variant: 'primary',   action: r => { this.doRemoveOverride(emp); r.close(); } },
       ],
     });
   }
@@ -212,16 +219,17 @@ export class RegimeOverviewComponent implements OnChanges {
   private doRemoveOverride(emp: EmployeeRegimeOverview): void {
     this.svc.removeEmployeeOverride(emp.employeeProfileId).subscribe({
       next: () => { this.showEmployeePanel.set(false); this.loadAll(); },
-      error: err => this.panelError.set(err?.error?.message ?? 'Erreur.'),
+      error: err => this.panelError.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.overview.errorGeneric')),
     });
   }
 
   getSourceLabel(level: string | null | undefined): string {
     const m: Record<string, string> = {
-      EMPLOYEE_OVERRIDE: 'Override', ROLE_ASSIGNMENT: 'Par rôle',
-      DEFAULT: 'Défaut',
+      EMPLOYEE_OVERRIDE: this.translate.instant('ADMIN.regimes.overview.source.OVERRIDE'),
+      ROLE_ASSIGNMENT: this.translate.instant('ADMIN.regimes.overview.source.BY_ROLE'),
+      DEFAULT: this.translate.instant('ADMIN.regimes.overview.source.DEFAULT'),
     };
-    return level ? (m[level] ?? level) : 'Non configuré';
+    return level ? (m[level] ?? level) : this.translate.instant('ADMIN.regimes.overview.source.UNCONFIGURED');
   }
 
   getSourceClass(level: string | null | undefined): object {

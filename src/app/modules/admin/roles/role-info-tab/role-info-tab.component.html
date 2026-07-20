@@ -9,7 +9,7 @@
 
   <!-- Nom du role -->
   <daf-form-field
-    [options]="{ label: 'Nom du role', placeholder: 'Ex. Responsable RH', fullWidth: true }"
+    [options]="{ label: ('ADMIN.roles.info.NAME_LABEL' | translate), placeholder: ('ADMIN.roles.info.NAME_PLACEHOLDER' | translate), fullWidth: true }"
     [value]="frenchName()"
     (valueChange)="frenchName.set($any($event) ?? '')" />
 
@@ -17,25 +17,25 @@
   <daf-select
     [selected]="parentRoleSelected()"
     [options]="parentRoleOptions()"
-    [config]="{ label: 'Role parent', placeholder: 'Aucun', fullWidth: true }"
+    [config]="{ label: ('ADMIN.roles.info.PARENT_LABEL' | translate), placeholder: ('ADMIN.roles.info.PARENT_PLACEHOLDER' | translate), fullWidth: true }"
     (selectedChange)="onParentRoleChange($event)" />
 
   <!-- Voir toutes les entites -->
   <div class="rit-toggle-row">
     <daf-toggle
-      [options]="{ label: 'Voir toutes les entites', labelPosition: 'left' }"
+      [options]="{ label: ('ADMIN.roles.info.SHOW_ALL_LABEL' | translate), labelPosition: 'left' }"
       [checked]="showAll()"
       (checkedChange)="showAll.set($event)" />
   </div>
 
   <!-- Compteur utilisateurs -->
   <div class="rit-user-count">
-    {{ role().userCount }} utilisateur{{ role().userCount !== 1 ? 's' : '' }} actif{{ role().userCount !== 1 ? 's' : '' }} avec ce role
+    {{ 'ADMIN.roles.info.USER_COUNT' | translate:{ count: role().userCount } }}
   </div>
 
   <!-- Bouton sauvegarder -->
   <daf-button
-    [label]="saving() ? 'Enregistrement...' : 'Enregistrer'"
+    [label]="saving() ? ('ADMIN.roles.info.SAVING' | translate) : ('ADMIN.roles.info.SAVE' | translate)"
     variant="teal"
     [options]="{ disabled: saving(), loading: saving() }"
     (onClick)="save()" />
@@ -43,29 +43,28 @@
   <!-- Zone de suppression -->
   <div class="rit-delete-zone">
     <daf-button
-      label="Supprimer ce role"
+      [label]="'ADMIN.roles.info.DELETE' | translate"
       variant="danger"
       [options]="{
         disabled: role().userCount > 0 || deleting(),
         size: 'sm'
       }"
-      [title]="role().userCount > 0 ? 'Impossible de supprimer un role attribue a des utilisateurs actifs' : ''"
+      [title]="role().userCount > 0 ? ('ADMIN.roles.info.DELETE_DISABLED_TOOLTIP' | translate) : ''"
       (onClick)="showDeleteConfirm.set(true)" />
 
     @if (showDeleteConfirm()) {
       <div class="delete-confirm">
         <p class="delete-confirm-text">
-          Confirmer la suppression de <strong>« {{ frenchName() }} »</strong> ?
-          Cette action est irreversible.
+          {{ 'ADMIN.roles.info.DELETE_CONFIRM_PREFIX' | translate }} <strong>« {{ frenchName() }} »</strong> {{ 'ADMIN.roles.info.DELETE_CONFIRM_SUFFIX' | translate }}
         </p>
         <div class="delete-confirm-actions">
           <daf-button
-            label="Annuler"
+            [label]="'ADMIN.roles.info.CANCEL' | translate"
             variant="ghost"
             [options]="{ size: 'sm' }"
             (onClick)="showDeleteConfirm.set(false)" />
           <daf-button
-            [label]="deleting() ? 'Suppression...' : 'Confirmer'"
+            [label]="deleting() ? ('ADMIN.roles.info.DELETING' | translate) : ('ADMIN.roles.info.CONFIRM' | translate)"
             variant="danger"
             [options]="{ disabled: deleting(), size: 'sm' }"
             (onClick)="confirmDelete()" />
