@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
 
 import { UserStore } from '../../core/user.store';
@@ -9,14 +10,13 @@ import { RecruitmentDemandService } from './recruitment-demand.service';
 import {
   RecruitmentDemandDetail,
   RecruitmentDemandStatus,
-  DEMAND_STATUS_LABELS,
   DEMAND_STATUS_BADGE,
 } from './recruitment-demand.model';
 
 @Component({
   selector: 'app-recruitment-demand-detail',
   standalone: true,
-  imports: [RouterLink, DatePipe, FormsModule],
+  imports: [RouterLink, DatePipe, FormsModule, TranslatePipe],
   template: `
     <div class="detail-container">
       <!-- Back link -->
@@ -24,13 +24,13 @@ import {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
-        Retour aux demandes
+        {{ 'RECRUITMENT_DEMANDS.DETAIL.BACK' | translate }}
       </a>
 
       @if (loading()) {
-        <div class="empty-state"><span class="spinner"></span> Chargement…</div>
+        <div class="empty-state"><span class="spinner"></span> {{ 'RECRUITMENT_DEMANDS.DETAIL.LOADING' | translate }}</div>
       } @else if (!demand()) {
-        <div class="empty-state">Demande introuvable.</div>
+        <div class="empty-state">{{ 'RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate }}</div>
       } @else {
         <div class="header-row">
           <div>
@@ -40,50 +40,50 @@ import {
             }
           </div>
           <span [class]="'badge ' + badgeClass(demand()!.statut)">
-            {{ statusLabel(demand()!.statut) }}
+            {{ ('RECRUITMENT_DEMANDS.STATUS.' + demand()!.statut) | translate }}
           </span>
         </div>
 
         <div class="card-grid">
           <!-- Main info -->
           <div class="card span-2">
-            <h3 class="section-title">Détails du poste</h3>
+            <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.JOB_DETAILS' | translate }}</h3>
             <dl class="detail-list">
               @if (demand()!.jobExactTitle) {
-                <dt>Titre exact</dt><dd>{{ demand()!.jobExactTitle }}</dd>
+                <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.EXACT_TITLE' | translate }}</dt><dd>{{ demand()!.jobExactTitle }}</dd>
               }
-              <dt>Motif de recrutement</dt><dd>{{ demand()!.recruitmentReasonLabel ?? '—' }}</dd>
-              <dt>Effectif requis</dt><dd>{{ demand()!.headcount }}</dd>
-              <dt>Niveau d'urgence</dt><dd>{{ demand()!.urgencyLevelLabel ?? '—' }}</dd>
-              <dt>Catégorie CSP</dt><dd>{{ demand()!.cspCategoryLabel ?? '—' }}</dd>
-              <dt>Niveau d'expérience</dt><dd>{{ demand()!.experienceLevelLabel ?? '—' }}</dd>
-              <dt>Niveau d'études</dt><dd>{{ demand()!.educationLevelLabel ?? '—' }}</dd>
-              <dt>Date de début cible</dt><dd>{{ demand()!.targetStartDate ? (demand()!.targetStartDate | date:'dd/MM/yyyy') : '—' }}</dd>
-              <dt>Budget</dt><dd>{{ demand()!.budgetRange ?? '—' }}</dd>
-              <dt>Candidats liés</dt><dd>{{ demand()!.candidateCount }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.RECRUITMENT_REASON' | translate }}</dt><dd>{{ demand()!.recruitmentReasonLabel ?? '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.HEADCOUNT' | translate }}</dt><dd>{{ demand()!.headcount }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.URGENCY' | translate }}</dt><dd>{{ demand()!.urgencyLevelLabel ?? '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.CSP' | translate }}</dt><dd>{{ demand()!.cspCategoryLabel ?? '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.EXPERIENCE' | translate }}</dt><dd>{{ demand()!.experienceLevelLabel ?? '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.EDUCATION' | translate }}</dt><dd>{{ demand()!.educationLevelLabel ?? '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.TARGET_START' | translate }}</dt><dd>{{ demand()!.targetStartDate ? (demand()!.targetStartDate | date:'dd/MM/yyyy') : '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.BUDGET' | translate }}</dt><dd>{{ demand()!.budgetRange ?? '—' }}</dd>
+              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.LINKED_CANDIDATES' | translate }}</dt><dd>{{ demand()!.candidateCount }}</dd>
             </dl>
           </div>
 
           @if (demand()!.needDescription) {
             <div class="card span-2">
-              <h3 class="section-title">Description du besoin</h3>
+              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.NEED_DESC' | translate }}</h3>
               <p class="text-body">{{ demand()!.needDescription }}</p>
             </div>
           }
 
           <div class="card">
-            <h3 class="section-title">Profil requis</h3>
+            <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.REQUIRED_PROFILE' | translate }}</h3>
             <p class="text-body">{{ demand()!.requiredProfile }}</p>
           </div>
 
           <div class="card">
-            <h3 class="section-title">Périmètre de la mission</h3>
+            <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.SCOPE' | translate }}</h3>
             <p class="text-body">{{ demand()!.scopeOfWork }}</p>
           </div>
 
           @if (demand()!.technicalSkills.length) {
             <div class="card">
-              <h3 class="section-title">Compétences techniques</h3>
+              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.TECH_SKILLS' | translate }}</h3>
               <div class="skill-tags">
                 @for (s of demand()!.technicalSkills; track s) {
                   <span class="skill-tag skill-tag--tech">{{ s }}</span>
@@ -94,7 +94,7 @@ import {
 
           @if (demand()!.softSkills.length) {
             <div class="card">
-              <h3 class="section-title">Compétences comportementales</h3>
+              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.SOFT_SKILLS' | translate }}</h3>
               <div class="skill-tags">
                 @for (s of demand()!.softSkills; track s) {
                   <span class="skill-tag skill-tag--soft">{{ s }}</span>
@@ -105,7 +105,7 @@ import {
 
           @if (demand()!.additionalNotes) {
             <div class="card span-2">
-              <h3 class="section-title">Notes complémentaires</h3>
+              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.ADDITIONAL_NOTES' | translate }}</h3>
               <p class="text-body">{{ demand()!.additionalNotes }}</p>
             </div>
           }
@@ -113,8 +113,8 @@ import {
           <!-- Review block -->
           @if (demand()!.reviewedAt) {
             <div class="card span-2 review-card" [class.approved]="demand()!.statut === 'APPROUVEE'" [class.rejected]="demand()!.statut === 'REJETEE'">
-              <h3 class="section-title">Décision</h3>
-              <p class="review-verdict">{{ statusLabel(demand()!.statut) }}</p>
+              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.DECISION' | translate }}</h3>
+              <p class="review-verdict">{{ ('RECRUITMENT_DEMANDS.STATUS.' + demand()!.statut) | translate }}</p>
               @if (demand()!.reviewComment) {
                 <p class="text-body">{{ demand()!.reviewComment }}</p>
               }
@@ -125,17 +125,17 @@ import {
           <!-- Approve / Reject panel -->
           @if (canApprove() && demand()!.statut === 'EN_ATTENTE') {
             <div class="card span-2 action-card">
-              <h3 class="section-title">Traiter la demande</h3>
-              <textarea class="textarea" [(ngModel)]="reviewComment" placeholder="Commentaire (optionnel)" rows="3"></textarea>
+              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.PROCESS' | translate }}</h3>
+              <textarea class="textarea" [(ngModel)]="reviewComment" [placeholder]="'RECRUITMENT_DEMANDS.DETAIL.COMMENT_OPTIONAL' | translate" rows="3"></textarea>
               @if (reviewError()) {
                 <p class="error-msg">{{ reviewError() }}</p>
               }
               <div class="action-row">
                 <button class="btn-success" [disabled]="reviewing()" (click)="doReview(true)" type="button">
-                  ✓ Approuver
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.APPROVE' | translate }}
                 </button>
                 <button class="btn-danger" [disabled]="reviewing()" (click)="doReview(false)" type="button">
-                  ✗ Rejeter
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.REJECT' | translate }}
                 </button>
               </div>
             </div>
@@ -145,7 +145,7 @@ import {
           @if (canCancel()) {
             <div class="card span-2">
               <button class="btn-ghost btn-danger-ghost" [disabled]="reviewing()" (click)="doCancel()" type="button">
-                Annuler cette demande
+                {{ 'RECRUITMENT_DEMANDS.DETAIL.CANCEL_DEMAND' | translate }}
               </button>
             </div>
           }
@@ -207,6 +207,7 @@ export class RecruitmentDemandDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
   private svc       = inject(RecruitmentDemandService);
   private userStore = inject(UserStore);
+  private translate = inject(TranslateService);
 
   demand       = signal<RecruitmentDemandDetail | null>(null);
   loading      = signal(true);
@@ -221,7 +222,6 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     return d?.statut === 'EN_ATTENTE' && d?.createdByUserId === uid;
   };
 
-  statusLabel(s: RecruitmentDemandStatus): string { return DEMAND_STATUS_LABELS[s]; }
   badgeClass(s: RecruitmentDemandStatus): string  { return DEMAND_STATUS_BADGE[s]; }
 
   ngOnInit(): void {
@@ -238,7 +238,7 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     this.reviewing.set(true);
     this.reviewError.set(null);
     this.svc.review(d.id, { approved, comment: this.reviewComment || null })
-      .pipe(catchError(err => { this.reviewError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur'); this.reviewing.set(false); return of(null); }))
+      .pipe(catchError(err => { this.reviewError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('RECRUITMENT_DEMANDS.DETAIL.ERR')); this.reviewing.set(false); return of(null); }))
       .subscribe(updated => {
         if (updated) { this.demand.set(updated); }
         this.reviewing.set(false);

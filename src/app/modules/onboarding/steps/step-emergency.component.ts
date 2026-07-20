@@ -1,11 +1,12 @@
 import { Component, OnInit, input, output, signal } from '@angular/core';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { FormFieldComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-step-emergency',
   standalone: true,
-  imports: [FormFieldComponent],
+  imports: [FormFieldComponent, TranslatePipe],
   templateUrl: './step-emergency.component.html',
   styleUrl: './step-emergency.component.scss',
 })

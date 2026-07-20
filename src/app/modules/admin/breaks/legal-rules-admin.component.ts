@@ -8,13 +8,13 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
-import { PermissionDirective } from '../../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-legal-rules-admin',
   standalone: true,
   imports: [
-    ButtonComponent, FormFieldComponent, SelectComponent, PermissionDirective,
+    ButtonComponent, FormFieldComponent, SelectComponent, DafHasPermissionDirective,
     StatusBadgeComponent, DataTableComponent, DafCellDirective,
   ],
   template: `
@@ -25,7 +25,7 @@ import { PermissionDirective } from '../../../shared/permission.directive';
       <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Règles légales de pause</h2>
       <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Seuils légaux de déduction de pause par entité</p>
     </div>
-    <daf-button *appHasPermission="'ADMIN_BREAKS'"
+    <daf-button *dafHasPermission="'ADMIN_BREAKS'"
       [label]="showForm() ? 'Annuler' : 'Nouvelle règle'" variant="teal"
       [options]="{ iconStart: showForm() ? 'close' : 'add' }"
       (onClick)="showForm.set(!showForm())" />
@@ -84,7 +84,7 @@ import { PermissionDirective } from '../../../shared/permission.directive';
       <daf-badge [label]="row['deductionMin'] + ' min'" [options]="{ variant: 'teal' }" />
     </ng-template>
     <ng-template dafCell="_actions" let-row>
-      <daf-button *appHasPermission="'ADMIN_BREAKS'"
+      <daf-button *dafHasPermission="'ADMIN_BREAKS'"
         class="icon-btn-delete" title="Supprimer"
         label="" variant="danger"
         [options]="{ iconStart: 'delete', size: 'sm' }"

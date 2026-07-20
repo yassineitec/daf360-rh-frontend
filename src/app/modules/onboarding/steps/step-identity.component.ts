@@ -10,12 +10,13 @@ import {
   MultiDatePickerComponent,
   SelectOption,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-step-identity',
   standalone: true,
-  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent],
+  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent, TranslatePipe],
   templateUrl: './step-identity.component.html',
   styleUrl: './step-identity.component.scss',
 })

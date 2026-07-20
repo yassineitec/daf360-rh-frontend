@@ -1,11 +1,12 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { CardComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { genderLabel } from '../../../shared/utils/gender.utils';
 
 @Component({
   selector: 'app-step-summary',
   standalone: true,
-  imports: [CardComponent],
+  imports: [CardComponent, TranslatePipe],
   templateUrl: './step-summary.component.html',
   styleUrl: './step-summary.component.scss',
 })
@@ -14,11 +15,13 @@ export class StepSummaryComponent {
   formInfo = input<any>(null);
   editStep = output<number>();
 
+  private translate = inject(TranslateService);
+
   readonly genderLabel = genderLabel;
 
   val(v: any): string {
     if (v === null || v === undefined || v === '') return '—';
-    if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+    if (typeof v === 'boolean') return this.translate.instant(v ? 'ONBOARDING.STEP_SUMMARY.YES' : 'ONBOARDING.STEP_SUMMARY.NO');
     return String(v);
   }
 

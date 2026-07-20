@@ -15,6 +15,7 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
 import { ModalComponent }        from '../../shared/modal.component';
 import { UserStore }             from '../../core/user.store';
+import { ConfirmService } from '../../core/confirm.service';
 
 const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   ok: 'success', warning: 'warning', critical: 'danger', none: 'neutral',
@@ -129,6 +130,7 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
 })
 export class RequestOfficerInboxComponent implements OnInit {
   private svc       = inject(RequestsService);
+  private confirm = inject(ConfirmService);
   private userStore = inject(UserStore);
 
   loading    = signal(false);
@@ -203,8 +205,12 @@ export class RequestOfficerInboxComponent implements OnInit {
 
   goPage(p: number) { this.page.set(p); this.reload(false); }
 
-  quickApprove(row: EmployeeRequest) {
-    if (!confirm(`Approuver la demande #${row.id} ?`)) return;
+  async quickApprove(row: EmployeeRequest) {
+    if (!(await this.confirm.ask({
+      title: 'Approuver la demande',
+      message: `Approuver la demande #${row.id} ?`,
+      confirmLabel: 'Approuver', icon: 'check',
+    }))) return;
     this.errorMsg.set('');
     this.svc.processRequest(row.id, this.officerId(), 'APPROVED', 'Approuvé via boîte de réception')
       .subscribe({

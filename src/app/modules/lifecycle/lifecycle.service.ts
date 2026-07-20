@@ -3,65 +3,93 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  CreateWorkflowDto, HrNotification,
-  PageResponse, WorkflowFilter, WorkflowInstance, WorkflowTask,
+  CompleteTaskRequest, CreateAssetReturnRequest, ExitInterview, ExitInterviewRequest,
+  HrNotification, OffboardingAssetReturn, OffboardingFilter, OffboardingTask,
+  OffboardingWorkflowInstance, StartOffboardingRequest,
 } from './models/lifecycle.model';
 
 @Injectable({ providedIn: 'root' })
 export class LifecycleService {
-  private http = inject(HttpClient);
-  private base  = `${environment.hrApiUrl}/api/hr`;
+  private http      = inject(HttpClient);
+  private base      = `${environment.hrApiUrl}/api/hr/offboarding`;
+  private notifBase = `${environment.hrApiUrl}/api/hr/notifications`;
 
-  // ── Workflow instances ─────────────────────────────────────────────────────
-  listWorkflows(filter: WorkflowFilter = {}): Observable<PageResponse<WorkflowInstance>> {
+  // ── Workflows ─────────────────────────────────────────────────────────────
+  startOffboarding(dto: StartOffboardingRequest): Observable<OffboardingWorkflowInstance> {
+    return this.http.post<OffboardingWorkflowInstance>(this.base, dto);
+  }
+
+  listOffboarding(filter: OffboardingFilter = {}): Observable<OffboardingWorkflowInstance[]> {
     let params = new HttpParams();
-    if (filter.status)       params = params.set('status',    filter.status);
-    if (filter.eventType)    params = params.set('eventType', filter.eventType);
-    if (filter.paysId)       params = params.set('paysId',    filter.paysId);
-    if (filter.page != null) params = params.set('page',      filter.page);
-    if (filter.size != null) params = params.set('size',      filter.size ?? 20);
-    return this.http.get<PageResponse<WorkflowInstance>>(`${this.base}/lifecycle`, { params });
+    if (filter.status) params = params.set('status', filter.status);
+    if (filter.paysId) params = params.set('paysId', String(filter.paysId));
+    return this.http.get<OffboardingWorkflowInstance[]>(this.base, { params });
   }
 
-  getWorkflow(id: number): Observable<WorkflowInstance> {
-    return this.http.get<WorkflowInstance>(`${this.base}/lifecycle/${id}`);
+  getOffboarding(id: number): Observable<OffboardingWorkflowInstance> {
+    return this.http.get<OffboardingWorkflowInstance>(`${this.base}/${id}`);
   }
 
-  createWorkflow(dto: CreateWorkflowDto): Observable<WorkflowInstance> {
-    return this.http.post<WorkflowInstance>(`${this.base}/lifecycle`, dto);
+  validateOffboarding(id: number): Observable<OffboardingWorkflowInstance> {
+    return this.http.post<OffboardingWorkflowInstance>(`${this.base}/${id}/validate`, {});
   }
 
-  cancelWorkflow(id: number): Observable<WorkflowInstance> {
-    return this.http.patch<WorkflowInstance>(`${this.base}/lifecycle/${id}`, { status: 'CANCELLED' });
+  cancelOffboarding(id: number, reason: string): Observable<OffboardingWorkflowInstance> {
+    return this.http.post<OffboardingWorkflowInstance>(`${this.base}/${id}/cancel`, { reason });
   }
 
   // ── Tasks ──────────────────────────────────────────────────────────────────
-  completeTask(instanceId: number, taskId: number, dto: { notes?: string } = {}): Observable<WorkflowTask> {
-    return this.http.post<WorkflowTask>(
-      `${this.base}/lifecycle/${instanceId}/tasks/${taskId}/complete`, dto
-    );
+  completeTask(taskId: number, dto: CompleteTaskRequest): Observable<OffboardingTask> {
+    return this.http.post<OffboardingTask>(`${this.base}/tasks/${taskId}/complete`, dto);
   }
 
-  updateTask(instanceId: number, taskId: number, dto: Partial<WorkflowTask>): Observable<WorkflowTask> {
-    return this.http.patch<WorkflowTask>(
-      `${this.base}/lifecycle/${instanceId}/tasks/${taskId}`, dto
+  skipTask(taskId: number, reason: string): Observable<OffboardingTask> {
+    return this.http.post<OffboardingTask>(`${this.base}/tasks/${taskId}/skip`, { reason });
+  }
+
+  // ── Exit interview ─────────────────────────────────────────────────────────
+  getExitInterview(instanceId: number): Observable<ExitInterview> {
+    return this.http.get<ExitInterview>(`${this.base}/${instanceId}/exit-interview`);
+  }
+
+  saveExitInterview(instanceId: number, dto: ExitInterviewRequest): Observable<ExitInterview> {
+    return this.http.post<ExitInterview>(`${this.base}/${instanceId}/exit-interview`, dto);
+  }
+
+  // ── Asset returns ──────────────────────────────────────────────────────────
+  getAssets(instanceId: number): Observable<OffboardingAssetReturn[]> {
+    return this.http.get<OffboardingAssetReturn[]>(`${this.base}/${instanceId}/assets`);
+  }
+
+  syncAssetsFromIt(instanceId: number): Observable<OffboardingAssetReturn[]> {
+    return this.http.post<OffboardingAssetReturn[]>(`${this.base}/${instanceId}/assets/sync-from-it`, null);
+  }
+
+  addAsset(instanceId: number, dto: CreateAssetReturnRequest): Observable<OffboardingAssetReturn> {
+    return this.http.post<OffboardingAssetReturn>(`${this.base}/${instanceId}/assets`, dto);
+  }
+
+  confirmAssetReturn(assetId: number, conditionOnReturn: string): Observable<OffboardingAssetReturn> {
+    return this.http.patch<OffboardingAssetReturn>(
+      `${this.base}/assets/${assetId}/confirm-return`,
+      { conditionOnReturn },
     );
   }
 
   // ── Notifications ──────────────────────────────────────────────────────────
   listNotifications(): Observable<HrNotification[]> {
-    return this.http.get<HrNotification[]>(`${this.base}/notifications`);
+    return this.http.get<HrNotification[]>(this.notifBase);
   }
 
   unreadCount(): Observable<{ count: number }> {
-    return this.http.get<{ count: number }>(`${this.base}/notifications/unread-count`);
+    return this.http.get<{ count: number }>(`${this.notifBase}/unread-count`);
   }
 
   markRead(id: number): Observable<HrNotification> {
-    return this.http.patch<HrNotification>(`${this.base}/notifications/${id}/read`, null);
+    return this.http.patch<HrNotification>(`${this.notifBase}/${id}/read`, null);
   }
 
   markAllRead(): Observable<void> {
-    return this.http.post<void>(`${this.base}/notifications/read-all`, null);
+    return this.http.post<void>(`${this.notifBase}/read-all`, null);
   }
 }

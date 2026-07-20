@@ -70,12 +70,13 @@ export interface ProvisioningDetail {
 }
 
 export interface UpdateAssetRequest {
-  id:           number;
-  provided:     boolean;
-  serialNumber: string | null;
-  brandModel:   string | null;
-  assetTag:     string | null;
-  status:       string | null;
+  assetTypeCode: string;
+  id:            number | null;
+  provided:      boolean;
+  serialNumber:  string | null;
+  brandModel:    string | null;
+  assetTag:      string | null;
+  status:        string | null;
 }
 
 export interface UpdateProvisioningRequest {

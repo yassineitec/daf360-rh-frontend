@@ -1,86 +1,156 @@
-export type WorkflowStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'BLOCKED';
-export type TaskStatus     = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED' | 'SKIPPED';
+// ── Status & enum types ───────────────────────────────────────────────────────
 
-export const WORKFLOW_EVENT_TYPES = [
-  'ONBOARDING', 'OFFBOARDING', 'PROMOTION', 'CONTRACT_RENEWAL',
-  'PROBATION_REVIEW', 'RESIGNATION_PROCESS', 'DISCIPLINARY', 'OTHER',
+export type OffboardingStatus = 'PENDING' | 'IN_PROGRESS' | 'BLOCKED' | 'VALIDATED' | 'CANCELLED' | 'ARCHIVED';
+export type TaskStatus        = 'PENDING' | 'IN_PROGRESS' | 'DONE'    | 'BLOCKED'   | 'SKIPPED';
+export type AssetType         = 'IT'      | 'BADGE'       | 'VEHICLE' | 'OTHER';
+
+export const DEPARTURE_REASONS = [
+  'RESIGNATION', 'FIN_CONTRAT', 'LICENCIEMENT', 'RETRAITE', 'FIN_STAGE', 'FIN_MISSION', 'AUTRE',
 ] as const;
+export type DepartureReason = typeof DEPARTURE_REASONS[number];
 
-export const EVENT_TYPE_LABELS: Record<string, string> = {
-  ONBOARDING:          'Onboarding',
-  OFFBOARDING:         'Offboarding',
-  PROMOTION:           'Promotion',
-  CONTRACT_RENEWAL:    'Renouvellement contrat',
-  PROBATION_REVIEW:    'Bilan période d\'essai',
-  RESIGNATION_PROCESS: 'Processus de démission',
-  DISCIPLINARY:        'Procédure disciplinaire',
-  OTHER:               'Autre',
+export const DEPARTURE_REASON_LABELS: Record<DepartureReason, string> = {
+  RESIGNATION:  'Démission',
+  FIN_CONTRAT:  'Fin de contrat',
+  LICENCIEMENT: 'Licenciement',
+  RETRAITE:     'Retraite',
+  FIN_STAGE:    'Fin de stage',
+  FIN_MISSION:  'Fin de mission',
+  AUTRE:        'Autre',
 };
 
-export interface WorkflowInstance {
-  id:                number;
-  eventType:         string;
-  employeeProfileId: number;
-  triggeredBy:       number | null;
-  paysId:            number;
-  status:            WorkflowStatus;
-  startDate:         string | null;
-  endDate:           string | null;
-  dueDate:           string | null;
-  notes:             string | null;
-  createdAt:         string;
-  updatedAt:         string | null;
-  completedAt:       string | null;
-  cancelledAt:       string | null;
-  tasks?:            WorkflowTask[];
-  // Computed on frontend
-  progressPct?:      number;
-  nextDueTask?:      WorkflowTask | null;
+export const OFFBOARDING_STATUS_LABELS: Record<OffboardingStatus, string> = {
+  PENDING:    'En attente',
+  IN_PROGRESS:'En cours',
+  BLOCKED:    'Bloqué',
+  VALIDATED:  'Validé',
+  CANCELLED:  'Annulé',
+  ARCHIVED:   'Archivé',
+};
+
+export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  IT:      'Matériel IT',
+  BADGE:   'Badge / Accès',
+  VEHICLE: 'Véhicule',
+  OTHER:   'Autre',
+};
+
+// ── Core domain interfaces ────────────────────────────────────────────────────
+
+export interface OffboardingWorkflowInstance {
+  id:                       number;
+  paysId:                   number;
+  employeeProfileId:        number;
+  employeeFullName:         string | null;
+  contractId:               number | null;
+  triggerDate:              string;
+  lastWorkingDay:           string | null;
+  departureReason:          DepartureReason;
+  departureNotes:           string | null;
+  status:                   OffboardingStatus;
+  initiatedBy:              number | null;
+  validatedBy:              number | null;
+  validatedAt:              string | null;
+  cancelledBy:              number | null;
+  cancelledAt:              string | null;
+  cancellationReason:       string | null;
+  slaBreachFlag:            boolean;
+  completionDate:           string | null;
+  createdAt:                string;
+  updatedAt:                string | null;
+  handoverManagerProfileId: number | null;
+  handoverManagerName:      string | null;
+  tasks?:                   OffboardingTask[];
 }
 
-export interface WorkflowTask {
+export interface OffboardingTask {
+  id:                  number;
+  workflowInstanceId:  number;
+  taskCode:            string;
+  taskLabel:           string;
+  ownerRole:           string;
+  ownerUserId:         number | null;
+  isMandatory:         boolean;
+  isBlocking:          boolean;
+  dueDate:             string | null;
+  status:              TaskStatus;
+  completedBy:         number | null;
+  completedAt:         string | null;
+  skippedBy:           number | null;
+  skipReason:          string | null;
+  comments:            string | null;
+  attachedDocumentUrl: string | null;
+  slaBreachDate:       string | null;
+  createdAt:           string;
+}
+
+export interface ExitInterview {
   id:                 number;
   workflowInstanceId: number;
-  title:              string;
-  description:        string | null;
-  phase:              string | null;
-  assignedTo:         number | null;
-  completedBy:        number | null;
-  status:             TaskStatus;
-  slaHours:           number | null;
-  dueDate:            string | null;
-  completedAt:        string | null;
-  notes:              string | null;
+  conductedBy:        number | null;
+  conductedDate:      string | null;
+  departureReasons:   string;
+  feedbackText:       string | null;
+  isAnonymised:       boolean;
+  anonymisedAt:       string | null;
+  visibleToRoles:     string | null;
   createdAt:          string;
   updatedAt:          string | null;
 }
 
-export interface PhaseGroup {
-  phase: string;
-  tasks: WorkflowTask[];
+export interface ExitInterviewRequest {
+  conductedDate:    string;
+  departureReasons: string[];
+  feedbackText:     string | null;
 }
 
-export function groupTasksByPhase(tasks: WorkflowTask[]): PhaseGroup[] {
-  const map = new Map<string, WorkflowTask[]>();
-  for (const t of tasks) {
-    const key = t.phase ?? 'Général';
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(t);
-  }
-  return Array.from(map.entries()).map(([phase, phaseTasks]) => ({ phase, tasks: phaseTasks }));
+export interface OffboardingAssetReturn {
+  id:                 number;
+  workflowInstanceId: number;
+  taskId:             number | null;
+  assetDescription:   string;
+  assetType:          AssetType;
+  expectedReturnDate: string | null;
+  actualReturnDate:   string | null;
+  conditionOnReturn:  string | null;
+  confirmedBy:        number | null;
+  confirmedAt:        string | null;
+  isWrittenOff:       boolean;
+  writeOffApprovedBy: number | null;
+  writeOffReason:     string | null;
+  createdAt:          string;
 }
 
-export function computeProgress(tasks: WorkflowTask[]): number {
-  if (!tasks.length) return 0;
-  const done = tasks.filter(t => t.status === 'DONE' || t.status === 'SKIPPED').length;
-  return Math.round((done / tasks.length) * 100);
+// ── Request DTOs ──────────────────────────────────────────────────────────────
+
+export interface StartOffboardingRequest {
+  employeeProfileId:        number;
+  contractId?:              number;
+  triggerDate:              string;
+  lastWorkingDay?:          string;
+  departureReason:          DepartureReason;
+  departureNotes?:          string;
+  handoverManagerProfileId?: number;
 }
 
-export function findNextDueTask(tasks: WorkflowTask[]): WorkflowTask | null {
-  return tasks
-    .filter(t => (t.status === 'PENDING' || t.status === 'IN_PROGRESS') && t.dueDate)
-    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())[0] ?? null;
+export interface CompleteTaskRequest {
+  comments?:            string;
+  attachedDocumentUrl?: string;
 }
+
+export interface CreateAssetReturnRequest {
+  workflowInstanceId: number;
+  assetDescription:   string;
+  assetType:          AssetType;
+  expectedReturnDate: string;
+}
+
+export interface OffboardingFilter {
+  status?: OffboardingStatus;
+  paysId?: number;
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface HrNotification {
   id:        number;
@@ -93,21 +163,7 @@ export interface HrNotification {
   readAt:    string | null;
 }
 
-export interface CreateWorkflowDto {
-  employeeProfileId: number;
-  eventType:         string;
-  startDate?:        string;
-  dueDate?:          string;
-  notes?:            string;
-}
-
-export interface WorkflowFilter {
-  status?:    WorkflowStatus;
-  eventType?: string;
-  paysId?:    number;
-  page?:      number;
-  size?:      number;
-}
+// ── Generic page response ─────────────────────────────────────────────────────
 
 export interface PageResponse<T> {
   content:       T[];
@@ -116,4 +172,22 @@ export interface PageResponse<T> {
   totalElements: number;
   totalPages:    number;
   last:          boolean;
+}
+
+// ── Utility helpers ───────────────────────────────────────────────────────────
+
+export function computeProgress(tasks: OffboardingTask[]): number {
+  if (!tasks.length) return 0;
+  const done = tasks.filter(t => t.status === 'DONE' || t.status === 'SKIPPED').length;
+  return Math.round((done / tasks.length) * 100);
+}
+
+export function findNextDueTask(tasks: OffboardingTask[]): OffboardingTask | null {
+  return tasks
+    .filter(t => (t.status === 'PENDING' || t.status === 'IN_PROGRESS') && t.dueDate)
+    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())[0] ?? null;
+}
+
+export function isTerminal(status: OffboardingStatus): boolean {
+  return status === 'VALIDATED' || status === 'CANCELLED' || status === 'ARCHIVED';
 }

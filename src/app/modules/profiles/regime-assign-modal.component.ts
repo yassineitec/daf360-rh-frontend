@@ -9,14 +9,15 @@ import { WorkingTimeRegime }  from './models/profile.model';
 import { ModalComponent }     from '../../shared/modal.component';
 import { SpinnerComponent }   from '../../shared/spinner.component';
 import { ButtonComponent }    from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-regime-assign-modal',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, ButtonComponent],
+  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, ButtonComponent, TranslatePipe],
   template: `
     <app-modal
-      title="Assigner un régime horaire"
+      [title]="'PROFILES.REGIME_MODAL.TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
       (closed)="closed.emit()"
@@ -25,45 +26,45 @@ import { ButtonComponent }    from '@khalilrebhiitec/daf360';
         @if (loadingRegimes()) {
           <div class="center"><app-spinner /></div>
         } @else if (regimes().length === 0) {
-          <p class="empty">Aucun régime disponible pour ce pays.</p>
+          <p class="empty">{{ 'PROFILES.REGIME_MODAL.NO_REGIMES' | translate }}</p>
         } @else {
           <form [formGroup]="form" class="regime-form">
 
             <div class="field-row">
-              <label class="form-label">Régime horaire *</label>
+              <label class="form-label">{{ 'PROFILES.REGIME_MODAL.REGIME_LABEL' | translate }}</label>
               <select class="form-input" formControlName="regimeId">
-                <option [value]="null">Sélectionner…</option>
+                <option [value]="null">{{ 'PROFILES.COMMON.SELECT_ELLIPSIS' | translate }}</option>
                 @for (r of regimes(); track r.id) {
                   <option [value]="r.id">
-                    {{ r.labelFr }} — {{ r.hoursPerWeek }}h/sem, {{ r.daysPerWeek }}j
-                    @if (r.isDefault) { (défaut) }
+                    {{ r.labelFr }} — {{ 'PROFILES.REGIME_MODAL.OPTION_META' | translate:{ hours: r.hoursPerWeek, days: r.daysPerWeek } }}
+                    @if (r.isDefault) { {{ 'PROFILES.REGIME_MODAL.DEFAULT_SUFFIX' | translate }} }
                   </option>
                 }
               </select>
               @if (form.get('regimeId')?.touched && form.get('regimeId')?.errors?.['required']) {
-                <span class="field-error">Requis</span>
+                <span class="field-error">{{ 'PROFILES.COMMON.REQUIRED' | translate }}</span>
               }
             </div>
 
             <div class="field-row">
-              <label class="form-label">Date de début *</label>
+              <label class="form-label">{{ 'PROFILES.REGIME_MODAL.START_DATE' | translate }}</label>
               <input class="form-input" type="date" formControlName="startDate" />
               @if (form.get('startDate')?.touched && form.get('startDate')?.errors?.['required']) {
-                <span class="field-error">Requis</span>
+                <span class="field-error">{{ 'PROFILES.COMMON.REQUIRED' | translate }}</span>
               }
             </div>
 
             <div class="field-row">
-              <label class="form-label">Date de fin <span class="opt">(optionnelle)</span></label>
+              <label class="form-label">{{ 'PROFILES.REGIME_MODAL.END_DATE' | translate }} <span class="opt">{{ 'PROFILES.REGIME_MODAL.END_OPTIONAL' | translate }}</span></label>
               <input class="form-input" type="date" formControlName="endDate" />
             </div>
 
             <div class="field-row full">
-              <label class="form-label">Motif *</label>
+              <label class="form-label">{{ 'PROFILES.REGIME_MODAL.REASON' | translate }}</label>
               <input class="form-input" type="text" formControlName="reason"
-                     placeholder="Ex: Changement de poste, réorganisation…" />
+                     [placeholder]="'PROFILES.REGIME_MODAL.REASON_PH' | translate" />
               @if (form.get('reason')?.touched && form.get('reason')?.errors?.['required']) {
-                <span class="field-error">Requis</span>
+                <span class="field-error">{{ 'PROFILES.COMMON.REQUIRED' | translate }}</span>
               }
             </div>
 
@@ -76,9 +77,9 @@ import { ButtonComponent }    from '@khalilrebhiitec/daf360';
       </div>
 
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="closed.emit()" />
+        <daf-button [label]="'PROFILES.COMMON.CANCEL' | translate" variant="secondary" (onClick)="closed.emit()" />
         <daf-button
-          label="Assigner"
+          [label]="'PROFILES.REGIME_MODAL.ASSIGN' | translate"
           variant="teal"
           [options]="{ disabled: form.invalid || saving() || loadingRegimes(), loading: saving() }"
           (onClick)="save()"
@@ -106,6 +107,7 @@ import { ButtonComponent }    from '@khalilrebhiitec/daf360';
 export class RegimeAssignModalComponent implements OnChanges {
   private fb  = inject(FormBuilder);
   private svc = inject(ProfileService);
+  private translate = inject(TranslateService);
 
   profileId = input.required<number>();
   paysId    = input.required<number>();
@@ -153,7 +155,7 @@ export class RegimeAssignModalComponent implements OnChanges {
       reason:    v.reason!,
     }).pipe(
       catchError(err => {
-        this.errorMsg.set(err?.error?.message ?? 'Erreur lors de l\'assignation');
+        this.errorMsg.set(err?.error?.message ?? this.translate.instant('PROFILES.REGIME_MODAL.ERR_ASSIGN'));
         this.saving.set(false);
         return of(null);
       })

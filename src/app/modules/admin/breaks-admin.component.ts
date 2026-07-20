@@ -13,7 +13,7 @@ import {
   BreakTemplateDto, CreateBreakTemplateRequest,
 } from './breaks/break.model';
 import { WorkingTimeRegime } from './regimes/regime.model';
-import { PermissionDirective } from '../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 
 type BreakTab = 'templates' | 'legal-rules';
 
@@ -22,7 +22,7 @@ type BreakTab = 'templates' | 'legal-rules';
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent,
-    LegalRulesAdminComponent, PermissionDirective, StatusBadgeComponent,
+    LegalRulesAdminComponent, DafHasPermissionDirective, StatusBadgeComponent,
     DataTableComponent, DafCellDirective,
   ],
   template: `
@@ -46,7 +46,7 @@ type BreakTab = 'templates' | 'legal-rules';
           <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Modèles de pause</h2>
           <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Pauses automatiques par régime horaire</p>
         </div>
-        <daf-button *appHasPermission="'ADMIN_BREAKS'"
+        <daf-button *dafHasPermission="'ADMIN_BREAKS'"
           [label]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
           [options]="{ iconStart: showCreateForm() ? 'close' : 'add' }"
           (onClick)="showCreateForm.set(!showCreateForm())" />
@@ -143,7 +143,7 @@ type BreakTab = 'templates' | 'legal-rules';
                 <daf-badge [label]="row['durationMin'] + ' min'" [options]="{ variant: 'teal' }" />
               </ng-template>
               <ng-template dafCell="_actions" let-row>
-                <daf-button *appHasPermission="'ADMIN_BREAKS'"
+                <daf-button *dafHasPermission="'ADMIN_BREAKS'"
                   class="icon-btn-delete" title="Supprimer"
                   label="" variant="danger"
                   [options]="{ iconStart: 'delete', size: 'sm' }"

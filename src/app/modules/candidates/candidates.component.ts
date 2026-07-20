@@ -20,18 +20,19 @@ import {
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
-import { PermissionDirective } from '../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { avatarUrl } from '../../shared/utils/avatar.utils';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   CandidateListItem,
   CandidateDashboardStats,
   CandidateStatus,
-  CANDIDATE_STATUS_OPTIONS,
   PageResponse,
 } from './candidate.model';
 import { PipelineService, PipelineActivity, PipelineObjective } from '../pipeline/services/pipeline.service';
+import { ConfirmService } from '../../core/confirm.service';
 
 const PAGE_SIZE = 10;
 
@@ -65,6 +66,11 @@ interface KanbanColumn {
   candidates: CandidateListItem[];
 }
 
+/** Static kanban column definition: label is resolved via i18n at render time. */
+interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
+  labelKey: string;
+}
+
 /**
  * Candidates landing page — the single, canonical candidate list.
  *
@@ -84,9 +90,10 @@ interface KanbanColumn {
     MetricCardComponent,
     SelectComponent,
     PaginationComponent,
-    PermissionDirective,
+    DafHasPermissionDirective,
     RejectModalComponent,
     RhSearchBarComponent,
+    TranslatePipe,
   ],
   styles: [`
     /* Thin, subtle scrollbar for the horizontal kanban board. */
@@ -98,9 +105,17 @@ interface KanbanColumn {
 })
 export class CandidatesComponent implements OnInit {
   private svc         = inject(CandidateService);
+  private confirm = inject(ConfirmService);
   private pipelineSvc = inject(PipelineService);
   private router      = inject(Router);
   readonly userStore  = inject(UserStore);
+  private translate   = inject(TranslateService);
+
+  /** Candidate status codes, in workflow order, for the status filter select. */
+  private readonly STATUS_CODES = [
+    'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
+    'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
+  ];
 
   // ── Recent activity + monthly objectives (pipeline data) ────────────────────
   readonly activities = signal<PipelineActivity[]>([]);
@@ -240,12 +255,12 @@ export class CandidatesComponent implements OnInit {
    * Kanban stages mirror the coded candidate workflow (PENDING → … → HIRED / REJECTED).
    * Each column owns a colour used for its dot, left-border and the card status badge.
    */
-  private readonly columnDefs: Omit<KanbanColumn, 'candidates'>[] = [
-    { key: 'pending',  label: 'En attente',      statuses: ['PENDING'],                                            accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)' },
-    { key: 'accepted', label: 'Acceptés',        statuses: ['ACCEPTED', 'OFFER_SENT'],                             accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
-    { key: 'progress', label: 'IT & Onboarding', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], accent: '#1e40af', badgeBg: 'rgba(30,64,175,0.12)' },
-    { key: 'hired',    label: 'Embauchés',       statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)' },
-    { key: 'rejected', label: 'Rejetés',         statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)' },
+  private readonly columnDefs: KanbanColumnDef[] = [
+    { key: 'pending',  labelKey: 'CANDIDATES.KANBAN.COL_PENDING',  statuses: ['PENDING'],                                            accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)' },
+    { key: 'accepted', labelKey: 'CANDIDATES.KANBAN.COL_ACCEPTED', statuses: ['ACCEPTED', 'OFFER_SENT'],                             accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
+    { key: 'progress', labelKey: 'CANDIDATES.KANBAN.COL_PROGRESS', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], accent: '#1e40af', badgeBg: 'rgba(30,64,175,0.12)' },
+    { key: 'hired',    labelKey: 'CANDIDATES.KANBAN.COL_HIRED',    statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)' },
+    { key: 'rejected', labelKey: 'CANDIDATES.KANBAN.COL_REJECTED', statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)' },
   ];
 
   /** Highest fit score first; candidates without a score sink to the bottom. */
@@ -254,9 +269,11 @@ export class CandidatesComponent implements OnInit {
   }
 
   readonly kanbanColumns = computed<KanbanColumn[]>(() => {
+    this.translate.currentLang();
     const all = this.kanbanItems();
     return this.columnDefs.map(def => ({
       ...def,
+      label: this.translate.instant(def.labelKey),
       candidates: all
         .filter(c => def.statuses.includes(c.status))
         .sort((a, b) => this.byFitScoreDesc(a, b)),
@@ -281,24 +298,33 @@ export class CandidatesComponent implements OnInit {
     this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'),
   );
 
-  readonly statusSelectOptions: SelectOption[] = CANDIDATE_STATUS_OPTIONS
-    .filter(o => o.value !== '')
-    .map(o => ({ value: o.value, label: o.label }));
+  readonly statusSelectOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return this.STATUS_CODES.map(code => ({
+      value: code,
+      label: this.translate.instant('CANDIDATES.STATUS.' + code),
+    }));
+  });
 
-  readonly statusSelectConfig: SelectConfig = {
-    placeholder: 'Tous les statuts',
-  };
+  readonly statusSelectConfig = computed<SelectConfig>(() => {
+    this.translate.currentLang();
+    return { placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES') };
+  });
 
   protected readonly statusBadge = statusBadge;
 
   // ── List view data table ─────────────────────────────────────────────────────
-  readonly columns: TableColumn[] = [
-    { key: 'candidat', label: 'Candidat', type: 'avatar' },
-    { key: 'poste', label: 'Poste' },
-    { key: 'status', label: 'Statut', type: 'badge' },
-    { key: 'expectedStartDate', label: 'Début prévu' },
-    { key: '_actions', label: 'Actions', align: 'right', clickable: true },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      { key: 'candidat', label: t('CANDIDATES.LIST.COL_CANDIDATE'), type: 'avatar' },
+      { key: 'poste', label: t('CANDIDATES.LIST.COL_POSITION') },
+      { key: 'status', label: t('CANDIDATES.LIST.COL_STATUS'), type: 'badge' },
+      { key: 'expectedStartDate', label: t('CANDIDATES.LIST.COL_START_DATE') },
+      { key: '_actions', label: t('CANDIDATES.LIST.COL_ACTIONS'), align: 'right', clickable: true },
+    ];
+  });
 
   readonly rows = computed<TableRow[]>(() =>
     this.candidates().map(c => ({
@@ -431,16 +457,20 @@ export class CandidatesComponent implements OnInit {
   }
 
   // ── Accept / Reject workflow (PENDING candidates only) ──────────────────────
-  quickAccept(c: CandidateListItem, event: Event): void {
+  async quickAccept(c: CandidateListItem, event: Event): Promise<void> {
     event.stopPropagation();
-    if (!confirm(`Accepter le candidat ${c.firstName} ${c.lastName} ?`)) return;
+    if (!(await this.confirm.ask({
+      title: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_TITLE'),
+      message: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_MESSAGE', { name: `${c.firstName} ${c.lastName}` }),
+      confirmLabel: this.translate.instant('CANDIDATES.ACTIONS.ACCEPT'), icon: 'check_circle',
+    }))) return;
     this.actioningId.set(c.id);
     this.actionError.set(null);
     this.svc.accept(c.id).subscribe({
       next:  () => { this.actioningId.set(null); this.reload(); },
       error: err => {
         this.actioningId.set(null);
-        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'acceptation.");
+        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.ACCEPT'));
       },
     });
   }
@@ -505,20 +535,20 @@ export class CandidatesComponent implements OnInit {
     switch (target.key) {
       case 'accepted':
         if (status === 'PENDING') { this.dragAccept(candidate); }
-        else this.notice.set('Seuls les candidats « En attente » peuvent être acceptés.');
+        else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_ACCEPT'));
         break;
 
       case 'rejected':
         if (status === 'PENDING') { this.rejectTarget.set(candidate); }
-        else this.notice.set('Seuls les candidats « En attente » peuvent être rejetés.');
+        else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_REJECT'));
         break;
 
       case 'progress':
         if (status === 'ACCEPTED') {
-          this.notice.set('Le provisioning IT (création du compte) se fait sur la page dédiée.');
+          this.notice.set(this.translate.instant('CANDIDATES.NOTICE.IT_DEDICATED'));
           this.router.navigate(['/rh/it-provisioning']);
         } else {
-          this.notice.set('Acceptez d’abord le candidat pour démarrer le provisioning IT.');
+          this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ACCEPT_FIRST'));
         }
         break;
 
@@ -526,12 +556,12 @@ export class CandidatesComponent implements OnInit {
         if (status === 'EMAIL_RECEIVED' || status === 'HR_IN_PROGRESS') {
           this.router.navigate(['/rh/onboarding', candidate.id]);
         } else {
-          this.notice.set('Le candidat doit passer par le provisioning IT puis l’onboarding avant d’être embauché.');
+          this.notice.set(this.translate.instant('CANDIDATES.NOTICE.HIRE_FLOW'));
         }
         break;
 
       default:
-        this.notice.set('Déplacement non autorisé.');
+        this.notice.set(this.translate.instant('CANDIDATES.NOTICE.MOVE_NOT_ALLOWED'));
     }
   }
 
@@ -542,7 +572,7 @@ export class CandidatesComponent implements OnInit {
       next:  () => { this.actioningId.set(null); this.reload(); },
       error: err => {
         this.actioningId.set(null);
-        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'acceptation.");
+        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.ACCEPT'));
         this.loadKanban(); // revert optimistic move
       },
     });
@@ -571,7 +601,7 @@ export class CandidatesComponent implements OnInit {
   }
 
   /** Column definition owning a given status (drives per-status card colour on mobile). */
-  private columnForStatus(status: CandidateStatus): Omit<KanbanColumn, 'candidates'> | undefined {
+  private columnForStatus(status: CandidateStatus): KanbanColumnDef | undefined {
     return this.columnDefs.find(d => d.statuses.includes(status));
   }
 

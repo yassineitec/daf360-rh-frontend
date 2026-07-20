@@ -5,7 +5,7 @@
     <button class="flex items-center gap-1.5 text-[13px] text-outline hover:text-on-surface transition-colors"
       type="button" (click)="goBack()">
       <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-      Retour à la liste
+      {{ 'ONBOARDING.FORM.BACK_TO_LIST' | translate }}
     </button>
   </div>
 
@@ -20,7 +20,7 @@
     @if (!loading() && hasDraft() && draftSavedAt()) {
       <div class="draft-banner">
         <span class="material-symbols-outlined text-[16px]">info</span>
-        Brouillon sauvegardé le {{ draftSavedAt()!.slice(0, 10) }}
+        {{ 'ONBOARDING.FORM.DRAFT_SAVED_ON' | translate:{ date: draftSavedAt()!.slice(0, 10) } }}
       </div>
     }
   </div>
@@ -30,9 +30,9 @@
 
     <!-- Page title -->
     <section class="mb-6 space-y-1">
-      <h1 class="text-[24px] font-extrabold text-on-surface leading-tight">Création d'un nouveau collaborateur</h1>
+      <h1 class="text-[24px] font-extrabold text-on-surface leading-tight">{{ 'ONBOARDING.FORM.TITLE' | translate }}</h1>
       <p class="text-[14px] text-on-surface-variant max-w-[640px]">
-        Cette étape permet au service RH de compléter les informations administratives du collaborateur après le provisionnement IT.
+        {{ 'ONBOARDING.FORM.SUBTITLE' | translate }}
       </p>
     </section>
 
@@ -53,34 +53,34 @@
             <div class="bg-surface-container-high/50 px-5 py-3.5 flex items-center justify-between border-b border-outline-variant/30">
               <h2 class="text-[15px] font-bold text-on-surface flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-[18px]">terminal</span>
-                Informations de pré-provisionnement
-                <span class="text-[13px] font-normal text-outline">(Lecture seule)</span>
+                {{ 'ONBOARDING.FORM.PREPROV_TITLE' | translate }}
+                <span class="text-[13px] font-normal text-outline">{{ 'ONBOARDING.FORM.READ_ONLY' | translate }}</span>
               </h2>
               <span class="bg-success/10 text-success px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 shrink-0">
                 <span class="material-symbols-outlined text-[14px]">verified</span>
-                Vérifié par IT
+                {{ 'ONBOARDING.FORM.VERIFIED_BY_IT' | translate }}
               </span>
             </div>
             <div class="p-5 grid grid-cols-2 lg:grid-cols-3 gap-5">
               <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Matricule</label>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.MATRICULE' | translate }}</label>
                 <p class="text-[14px] font-bold text-on-surface">{{ fd.matricule ?? ('EMP-' + fd.paysId + '-' + fd.candidateId) }}</p>
               </div>
               <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Email Pro</label>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.EMAIL_PRO' | translate }}</label>
                 <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365Email }}</p>
               </div>
               <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">PC attribué</label>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.PC_ASSIGNED' | translate }}</label>
                 <p class="text-[14px] font-bold text-on-surface">{{ fd.itDeviceName ?? '—' }}</p>
               </div>
               <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Licence Microsoft</label>
-                <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365LicenseType ?? 'Affectée' }}</p>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.MS_LICENSE' | translate }}</label>
+                <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365LicenseType ?? ('ONBOARDING.FORM.LICENSE_ASSIGNED' | translate) }}</p>
               </div>
               <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">Statut IT</label>
-                <span class="text-[14px] font-bold text-success">{{ fd.itProvisioningStatus ?? 'Provisionné' }}</span>
+                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.IT_STATUS' | translate }}</label>
+                <span class="text-[14px] font-bold text-success">{{ fd.itProvisioningStatus ?? ('ONBOARDING.FORM.PROVISIONED' | translate) }}</span>
               </div>
             </div>
           </daf-card>
@@ -88,7 +88,7 @@
           <!-- Stepper -->
           <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
             <div class="flex items-center overflow-x-auto px-5 py-3.5" style="scrollbar-width: none">
-              @for (step of STEPS; track step.number; let last = $last) {
+              @for (step of STEPS(); track step.number; let last = $last) {
                 <div class="step-item"
                   [class.step-done]="currentStep() > step.number"
                   [class.step-active]="currentStep() === step.number"
@@ -147,7 +147,7 @@
 
           <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
             <h3 class="text-[16px] font-bold text-on-surface border-b border-outline-variant/30 pb-3 mb-5">
-              Statut d'intégration
+              {{ 'ONBOARDING.FORM.INTEGRATION_STATUS' | translate }}
             </h3>
 
             <div class="space-y-0">
@@ -158,7 +158,7 @@
                   <span class="material-symbols-outlined text-[14px]">check</span>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-bold text-on-surface">Demande validée</p>
+                  <p class="text-[14px] font-bold text-on-surface">{{ 'ONBOARDING.FORM.TRACKER_REQUEST_VALIDATED' | translate }}</p>
                   @if (fd.requestValidatedAt) {
                     <p class="text-[12px] text-outline">{{ formatDate(fd.requestValidatedAt) }}</p>
                   }
@@ -172,7 +172,7 @@
                   <span class="material-symbols-outlined text-[14px]">check</span>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-bold text-on-surface">Compte IT créé</p>
+                  <p class="text-[14px] font-bold text-on-surface">{{ 'ONBOARDING.FORM.TRACKER_IT_ACCOUNT' | translate }}</p>
                   @if (fd.itAccountCreatedAt) {
                     <p class="text-[12px] text-outline">{{ formatDate(fd.itAccountCreatedAt) }}</p>
                   }
@@ -186,7 +186,7 @@
                   <span class="material-symbols-outlined text-[14px]">check</span>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-bold text-on-surface">Matériel affecté</p>
+                  <p class="text-[14px] font-bold text-on-surface">{{ 'ONBOARDING.FORM.TRACKER_EQUIPMENT' | translate }}</p>
                   @if (fd.equipmentAssignedAt) {
                     <p class="text-[12px] text-outline">{{ formatDate(fd.equipmentAssignedAt) }}</p>
                   }
@@ -200,8 +200,8 @@
                   <div class="tracker-dot-inner"></div>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-bold text-primary">Profil RH</p>
-                  <p class="text-[12px] text-success font-semibold">Étape en cours</p>
+                  <p class="text-[14px] font-bold text-primary">{{ 'ONBOARDING.FORM.TRACKER_HR_PROFILE' | translate }}</p>
+                  <p class="text-[12px] text-success font-semibold">{{ 'ONBOARDING.FORM.TRACKER_STEP_IN_PROGRESS' | translate }}</p>
                 </div>
               </div>
 
@@ -212,7 +212,7 @@
                   <span class="material-symbols-outlined text-[14px]">hourglass_empty</span>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-medium text-outline">Validation Manager</p>
+                  <p class="text-[14px] font-medium text-outline">{{ 'ONBOARDING.FORM.TRACKER_MANAGER_VALIDATION' | translate }}</p>
                 </div>
               </div>
 
@@ -223,7 +223,7 @@
                   <span class="material-symbols-outlined text-[14px]">history_edu</span>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-medium text-outline">Signature Contrat</p>
+                  <p class="text-[14px] font-medium text-outline">{{ 'ONBOARDING.FORM.TRACKER_CONTRACT_SIGNATURE' | translate }}</p>
                 </div>
               </div>
 
@@ -233,15 +233,15 @@
                   <span class="material-symbols-outlined text-[14px]">celebration</span>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-medium text-outline">Intégration terminée</p>
+                  <p class="text-[14px] font-medium text-outline">{{ 'ONBOARDING.FORM.TRACKER_INTEGRATION_DONE' | translate }}</p>
                 </div>
               </div>
             </div>
 
             <!-- HR tip -->
             <div class="mt-6 p-3.5 bg-primary/5 border border-primary/15 rounded-xl">
-              <p class="text-[12px] font-semibold text-on-surface mb-1">Conseil RH :</p>
-              <p class="text-[12px] text-on-surface-variant italic">Vérifiez bien la date de fin de période d'essai selon la convention collective.</p>
+              <p class="text-[12px] font-semibold text-on-surface mb-1">{{ 'ONBOARDING.FORM.HR_TIP_LABEL' | translate }}</p>
+              <p class="text-[12px] text-on-surface-variant italic">{{ 'ONBOARDING.FORM.HR_TIP_TEXT' | translate }}</p>
             </div>
           </daf-card>
 
@@ -275,7 +275,7 @@
                         translate-y-full group-hover:translate-y-0
                         transition-transform duration-300 ease-out">
               <p class="text-[10px] font-extrabold tracking-widest uppercase mb-1"
-                 style="color: #79D7BE">Nouvel Arrivant</p>
+                 style="color: #79D7BE">{{ 'ONBOARDING.FORM.NEW_ARRIVAL' | translate }}</p>
               <h4 class="text-[16px] font-bold text-white leading-tight">
                 {{ firstName() }} {{ lastName() }}
               </h4>
@@ -299,28 +299,28 @@
 <!-- Fixed footer -->
 <footer class="form-footer">
   <div class="footer-left">
-    <button class="btn-cancel" type="button" (click)="goBack()">Annuler</button>
+    <button class="btn-cancel" type="button" (click)="goBack()">{{ 'ONBOARDING.FORM.CANCEL' | translate }}</button>
     @if (currentStep() > 1) {
       <button class="btn-prev" type="button" (click)="prevStep()">
         <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-        Précédent
+        {{ 'ONBOARDING.FORM.PREV' | translate }}
       </button>
     }
   </div>
 
   <div class="footer-right">
     <button class="btn-draft" type="button" [disabled]="saving()" (click)="onSaveDraft()">
-      @if (saving()) { Sauvegarde… } @else { Enregistrer Brouillon }
+      @if (saving()) { {{ 'ONBOARDING.FORM.SAVING' | translate }} } @else { {{ 'ONBOARDING.FORM.SAVE_DRAFT' | translate }} }
     </button>
 
     @if (currentStep() < 7) {
       <button class="btn-create-next" type="button" (click)="nextStep()">
-        @if (currentStep() === 1) { Créer et Passer à l'étape suivante } @else { Suivant }
+        @if (currentStep() === 1) { {{ 'ONBOARDING.FORM.CREATE_AND_NEXT' | translate }} } @else { {{ 'ONBOARDING.FORM.NEXT' | translate }} }
         <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
       </button>
     } @else {
       <button class="btn-create-profile" type="button" [disabled]="submitting()" (click)="openConfirmModal()">
-        Soumettre et créer le dossier
+        {{ 'ONBOARDING.FORM.SUBMIT_CREATE' | translate }}
         <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
       </button>
     }

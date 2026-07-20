@@ -14,6 +14,7 @@ import { SpinnerComponent }          from '../../shared/spinner.component';
 import { UserStore }                 from '../../core/user.store';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
+import { ConfirmService } from '../../core/confirm.service';
 
 const STATUS_VARIANTS: Record<string, BadgeOptions['variant']> = {
   SUBMITTED:  'info',
@@ -356,6 +357,7 @@ interface TimelineStep {
 })
 export class RequestDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
+  private confirm = inject(ConfirmService);
   private svc       = inject(RequestsService);
   private userStore = inject(UserStore);
   private pdfSvc    = inject(PdfDownloadService);
@@ -487,8 +489,12 @@ export class RequestDetailComponent implements OnInit {
       .subscribe(docs => this.documents.set(docs));
   }
 
-  cancelRequest() {
-    if (!confirm('Annuler cette demande ?')) return;
+  async cancelRequest() {
+    if (!(await this.confirm.ask({
+      title: 'Annuler la demande',
+      message: 'Annuler cette demande ?',
+      confirmLabel: 'Annuler la demande', cancelLabel: 'Retour',
+    }))) return;
     this.svc.cancelRequest(this.requestId, this.currentProfileId())
       .pipe(catchError(() => of(null)))
       .subscribe(updated => { if (updated) this.req.set(updated); });

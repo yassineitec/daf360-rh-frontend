@@ -1,5 +1,5 @@
 <div class="regime-section">
-  <label class="form-label">Régime de travail <span class="req">*</span></label>
+  <label class="form-label">{{ 'ONBOARDING.STEP_REGIME.LABEL' | translate }} <span class="req">*</span></label>
 
   <div class="regime-list">
     @for (r of formInfo()?.availableRegimes ?? []; track r.id) {
@@ -13,25 +13,25 @@
         >
         <div class="regime-info">
           <span class="regime-label">{{ r.labelFr }}</span>
-          <span class="regime-hours">{{ r.hoursPerWeek }}h / semaine</span>
+          <span class="regime-hours">{{ 'ONBOARDING.STEP_REGIME.HOURS_PER_WEEK' | translate:{ hours: r.hoursPerWeek } }}</span>
           @if (r.isDefault) {
-            <span class="regime-default">Par défaut</span>
+            <span class="regime-default">{{ 'ONBOARDING.STEP_REGIME.DEFAULT' | translate }}</span>
           }
         </div>
       </label>
     }
 
     @if ((formInfo()?.availableRegimes ?? []).length === 0) {
-      <p class="no-regimes">Aucun régime disponible pour ce pays.</p>
+      <p class="no-regimes">{{ 'ONBOARDING.STEP_REGIME.NO_REGIMES' | translate }}</p>
     }
   </div>
 
   <div class="form-group mt-16">
-    <label class="form-label">Date de début du régime <span class="req">*</span></label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_REGIME.START_DATE' | translate }} <span class="req">*</span></label>
     <div style="max-width:220px">
       <daf-multi-date-picker
         [value]="isoToDate(regimeStartDate() || null)"
-        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
         (valueChange)="regimeStartDate.set(dateToIso($event) || ''); emit()" />
     </div>
   </div>

@@ -10,14 +10,14 @@ import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
-import { PermissionDirective } from '../../../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
 
 @Component({
   selector: 'app-regime-role-assignment',
   standalone: true,
   imports: [
-    PermissionDirective, DataTableComponent, DafCellDirective,
+    DafHasPermissionDirective, DataTableComponent, DafCellDirective,
     ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
     PaginationComponent,
   ],

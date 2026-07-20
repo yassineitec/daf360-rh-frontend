@@ -2,12 +2,13 @@ import { Component, OnInit, computed, input, output, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { OnboardingFormData, OnboardingProfileDto } from '../onboarding.model';
 import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe } from '@ngx-translate/core';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-step-regime',
   standalone: true,
-  imports: [FormsModule, MultiDatePickerComponent],
+  imports: [FormsModule, MultiDatePickerComponent, TranslatePipe],
   templateUrl: './step-regime.component.html',
   styleUrl: './step-regime.component.scss',
 })

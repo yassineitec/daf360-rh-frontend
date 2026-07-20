@@ -120,7 +120,9 @@
         </ng-template>
 
         <ng-template dafCell="_actions" let-row>
-          <daf-button label="Compléter" variant="teal"
+          <daf-button
+            [label]="row['isCompleted'] ? 'Voir' : 'Compléter'"
+            [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />
         </ng-template>
@@ -235,7 +237,9 @@
         </div>
 
         <div class="flex items-center justify-end pt-3 border-t border-outline-variant">
-          <daf-button label="Compléter" variant="teal"
+          <daf-button
+            [label]="row['isCompleted'] ? 'Voir' : 'Compléter'"
+            [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />
         </div>

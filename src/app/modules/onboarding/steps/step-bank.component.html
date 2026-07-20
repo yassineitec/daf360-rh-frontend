@@ -3,76 +3,76 @@
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>
-  Ces informations sont confidentielles et accessibles uniquement aux rôles autorisés.
+  {{ 'ONBOARDING.STEP_BANK.CONFIDENTIAL' | translate }}
 </div>
 
 <div class="form-grid">
 
   <!-- Row 1: Banque | RIB -->
   <div class="form-field">
-    <label class="form-label">Nom de la banque <span class="req">*</span></label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.BANK_NAME' | translate }} <span class="req">*</span></label>
     <daf-select
       [selected]="bankId() != null ? [bankId()!.toString()] : []"
       [options]="bankOptions()"
-      [config]="{ placeholder: '— Sélectionner —', fullWidth: true, searchable: true }"
+      [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
       (selectedChange)="bankId.set($event[0] ? +$event[0] : null); emit()" />
   </div>
 
   <div class="form-field">
-    <label class="form-label">RIB <span class="req">*</span></label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.RIB' | translate }} <span class="req">*</span></label>
     <daf-form-field
-      [options]="{ placeholder: 'Ex. 00199999999999999999' }"
+      [options]="{ placeholder: ('ONBOARDING.STEP_BANK.RIB_PH' | translate) }"
       [value]="rib()"
       (valueChange)="rib.set($any($event) ?? ''); emit()" />
   </div>
 
   <!-- Row 2: N° Compte | IBAN -->
   <div class="form-field">
-    <label class="form-label">N° de compte bancaire</label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.ACCOUNT_NUMBER' | translate }}</label>
     <daf-form-field
-      [options]="{ placeholder: 'Ex. 1234567890' }"
+      [options]="{ placeholder: ('ONBOARDING.STEP_BANK.ACCOUNT_NUMBER_PH' | translate) }"
       [value]="bankAccountNumber()"
       (valueChange)="bankAccountNumber.set($any($event) ?? ''); emit()" />
   </div>
 
   <div class="form-field">
-    <label class="form-label">IBAN</label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.IBAN' | translate }}</label>
     <daf-form-field
-      [options]="{ placeholder: 'Ex. TN59 0000 0000 0000 0000 00' }"
+      [options]="{ placeholder: ('ONBOARDING.STEP_BANK.IBAN_PH' | translate) }"
       [value]="iban()"
       (valueChange)="iban.set($any($event) ?? ''); emit()" />
   </div>
 
   <!-- Row 3: N° Sécu | N° Fiscal -->
   <div class="form-field">
-    <label class="form-label">N° d'Assurance Sociale</label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.SOCIAL_INSURANCE' | translate }}</label>
     <daf-form-field
-      [options]="{ placeholder: 'Ex. 1 85 07 75 123 456 78' }"
+      [options]="{ placeholder: ('ONBOARDING.STEP_BANK.SOCIAL_INSURANCE_PH' | translate) }"
       [value]="socialSecurityNumber()"
       (valueChange)="socialSecurityNumber.set($any($event) ?? ''); emit()" />
   </div>
 
   <div class="form-field">
-    <label class="form-label">N° Fiscal</label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.TAX_ID' | translate }}</label>
     <daf-form-field
-      [options]="{ placeholder: 'Ex. 1234567A' }"
+      [options]="{ placeholder: ('ONBOARDING.STEP_BANK.TAX_ID_PH' | translate) }"
       [value]="taxId()"
       (valueChange)="taxId.set($any($event) ?? ''); emit()" />
   </div>
 
   <!-- Row 4: IBAN attestation upload (full-width, disabled) -->
   <div class="form-field form-full">
-    <label class="form-label">Attestation bancaire (RIB / IBAN)</label>
+    <label class="form-label">{{ 'ONBOARDING.STEP_BANK.ATTESTATION' | translate }}</label>
     <div class="upload-slot">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="17 8 12 3 7 8"/>
         <line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
-      <span class="upload-label">Déposer un fichier</span>
+      <span class="upload-label">{{ 'ONBOARDING.STEP_BANK.UPLOAD_LABEL' | translate }}</span>
       <input type="file" accept=".pdf" disabled />
     </div>
-    <p class="upload-hint">PDF uniquement, max 5 Mo (non implémenté)</p>
+    <p class="upload-hint">{{ 'ONBOARDING.STEP_BANK.UPLOAD_HINT' | translate }}</p>
   </div>
 
 </div>

@@ -3,21 +3,21 @@
       <!-- Page header -->
       <div>
         <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-          Onboarding RH
+          {{ 'ONBOARDING.LIST.TITLE' | translate }}
         </h1>
-        <p class="text-[14px] text-outline mt-1">Dossiers en attente de complétion</p>
+        <p class="text-[14px] text-outline mt-1">{{ 'ONBOARDING.LIST.SUBTITLE' | translate }}</p>
       </div>
 
       <!-- KPI Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <rh-kpi-card label="Employés en attente" icon="pending_actions"
+        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_PENDING' | translate" icon="pending_actions"
           [value]="kpiStats()?.pendingCount ?? items().length" variant="blue" />
-        <rh-kpi-card label="Profils créés aujourd'hui" icon="person_add"
+        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate" icon="person_add"
           [value]="kpiStats()?.profilesCreatedToday ?? '—'" variant="green" />
-        <rh-kpi-card label="Profils incomplets" icon="error_outline"
+        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_INCOMPLETE' | translate" icon="error_outline"
           [value]="kpiStats()?.incompleteProfiles ?? '—'" variant="red" />
-        <rh-kpi-card label="Temps moyen création" icon="timer"
-          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' min') : '—'" variant="amber" />
+        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_AVG_TIME' | translate" icon="timer"
+          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—'" variant="amber" />
       </div>
 
       <!-- Filters: search full-width on its own row on mobile; side-by-side on desktop — all inside one card (matches /finance/clients) -->
@@ -25,7 +25,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 sm:p-5">
           <div class="w-full sm:w-[360px] ml-0.5">
             <rh-search-bar
-              placeholder="Rechercher un employé..."
+              [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
               [value]="search()"
               (valueChange)="onSearch($event)" />
           </div>
@@ -33,7 +33,7 @@
           <div class="flex items-center justify-end gap-2">
             <button type="button"
               class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
-              title="Rafraîchir"
+              [title]="'ONBOARDING.LIST.REFRESH' | translate"
               (click)="load()">
               <span class="material-symbols-outlined text-[18px]">cached</span>
             </button>
@@ -43,7 +43,7 @@
                 [class.bg-primary]="viewMode() === 'grid'"
                 [class.text-white]="viewMode() === 'grid'"
                 [class.text-outline]="viewMode() !== 'grid'"
-                title="Vue grille"
+                [title]="'ONBOARDING.LIST.VIEW_GRID' | translate"
                 (click)="viewMode.set('grid')">
                 <span class="material-symbols-outlined text-[18px]">grid_view</span>
               </button>
@@ -52,7 +52,7 @@
                 [class.bg-primary]="viewMode() === 'list'"
                 [class.text-white]="viewMode() === 'list'"
                 [class.text-outline]="viewMode() !== 'list'"
-                title="Vue liste"
+                [title]="'ONBOARDING.LIST.VIEW_LIST' | translate"
                 (click)="viewMode.set('list')">
                 <span class="material-symbols-outlined text-[18px]">view_list</span>
               </button>
@@ -85,8 +85,8 @@
             <span class="material-symbols-outlined text-display text-outline-variant">
               assignment_turned_in
             </span>
-            <p class="text-body-lg font-semibold text-on-surface">Aucun dossier en attente</p>
-            <p class="text-[13px] text-outline">Tous les dossiers ont été traités.</p>
+            <p class="text-body-lg font-semibold text-on-surface">{{ 'ONBOARDING.LIST.EMPTY_TITLE' | translate }}</p>
+            <p class="text-[13px] text-outline">{{ 'ONBOARDING.LIST.EMPTY_SUB' | translate }}</p>
           </div>
         </daf-card>
 
@@ -103,7 +103,7 @@
                   </div>
                   <div class="min-w-0">
                     <p class="font-semibold text-on-surface truncate">{{ row['employe'].name }}</p>
-                    <p class="text-[12px] text-outline truncate">{{ row['employe'].subtitle || 'Poste non spécifié' }}</p>
+                    <p class="text-[12px] text-outline truncate">{{ row['employe'].subtitle || ('ONBOARDING.LIST.POSITION_UNSPECIFIED' | translate) }}</p>
                   </div>
                 </div>
               </div>
@@ -111,31 +111,31 @@
               <div class="flex items-center gap-1.5 flex-wrap mb-3">
                 <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
                 @if (row['hasDraft']) {
-                  <daf-badge label="Brouillon" [options]="{ variant: 'warning', size: 'sm' }" />
+                  <daf-badge [label]="'ONBOARDING.LIST.BADGE_DRAFT' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
                 }
               </div>
 
               <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
                 <div class="min-w-0">
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Email MS365</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_EMAIL' | translate }}</p>
                   <p class="text-on-surface truncate">{{ row['ms365Email'] || '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Entité</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_ENTITY' | translate }}</p>
                   <p class="text-on-surface">{{ row['entite'] }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">Début prévu</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_START' | translate }}</p>
                   <p class="text-on-surface">{{ row['expectedStartDate'] }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">MàJ</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_UPDATED' | translate }}</p>
                   <p class="text-on-surface">{{ row['maj'] }}</p>
                 </div>
               </div>
 
               <div class="flex justify-end pt-3 border-t border-outline-variant">
-                <daf-button label="Compléter" variant="teal"
+                <daf-button [label]="'ONBOARDING.LIST.COMPLETE' | translate" variant="teal"
                   [options]="{ size: 'sm' }"
                   (onClick)="navigate(row['_source'].candidateId)" />
               </div>
@@ -151,7 +151,7 @@
             </div>
           } @else {
             <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+            <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
 
               <ng-template dafCell="ms365Email" let-row>
                 <span class="text-[12px] text-on-surface-variant">{{ row['ms365Email'] || '—' }}</span>
@@ -172,7 +172,7 @@
                     [options]="row['status'].options"
                   />
                   @if (row['hasDraft']) {
-                    <daf-badge label="Brouillon" [options]="{ variant: 'warning', size: 'sm' }" />
+                    <daf-badge [label]="'ONBOARDING.LIST.BADGE_DRAFT' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
                   }
                 </div>
               </ng-template>
@@ -182,7 +182,7 @@
               </ng-template>
 
               <ng-template dafCell="_actions" let-row>
-                <daf-button label="Compléter" variant="teal"
+                <daf-button [label]="'ONBOARDING.LIST.COMPLETE' | translate" variant="teal"
                   [options]="{ size: 'sm' }"
                   (onClick)="navigate(row['_source'].candidateId)" />
               </ng-template>
@@ -199,7 +199,7 @@
 
         <!-- Count + Pagination -->
         <div class="flex items-center justify-between gap-3 flex-wrap">
-          <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> dossier(s)</span>
+          <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> {{ 'ONBOARDING.LIST.FILES_WORD' | translate }}</span>
           @if (totalPages() > 1) {
             <daf-pagination
               [currentPage]="currentPage()"

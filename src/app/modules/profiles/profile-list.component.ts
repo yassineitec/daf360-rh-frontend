@@ -16,10 +16,13 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { ProfileListService, FilterOptions } from './services/profile-list.service';
+import { NotificationService } from '../../core/notification.service';
 import { EmployeeListItem } from './models/profile.model';
 import { ProfileGridCardComponent } from './components/profile-grid-card/profile-grid-card.component';
 import { ProfileListCardComponent } from './components/profile-list-card/profile-list-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { ConfirmService } from '../../core/confirm.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 15;
 
@@ -35,12 +38,16 @@ const PAGE_SIZE = 15;
     ButtonComponent,
     CardComponent,
     RhSearchBarComponent,
+    TranslatePipe,
   ],
   templateUrl: './profile-list.component.html',
 })
 export class ProfileListComponent implements OnInit {
   private svc    = inject(ProfileListService);
+  private confirm = inject(ConfirmService);
   private router = inject(Router);
+  private notify = inject(NotificationService);
+  private translate = inject(TranslateService);
 
   employees      = signal<EmployeeListItem[]>([]);
   loading        = signal(true);
@@ -200,12 +207,15 @@ export class ProfileListComponent implements OnInit {
   }
 
   /* ── Bulk actions ───────────────────────────────────────────────────────── */
-  readonly bulkActions: BulkAction[] = [
-    { id: 'export', label: 'Exporter Excel',   icon: 'download'    },
-    { id: 'email',  label: 'Email Collectif',   icon: 'mail'        },
-    { id: 'status', label: 'Modifier Statut',   icon: 'edit_square' },
-    { id: 'delete', label: 'Supprimer',          icon: 'delete', variant: 'danger' },
-  ];
+  readonly bulkActions = computed<BulkAction[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'export', label: this.translate.instant('PROFILES.BULK.EXPORT'), icon: 'download'    },
+      { id: 'email',  label: this.translate.instant('PROFILES.BULK.EMAIL'),  icon: 'mail'        },
+      { id: 'status', label: this.translate.instant('PROFILES.BULK.STATUS'), icon: 'edit_square' },
+      { id: 'delete', label: this.translate.instant('PROFILES.BULK.DELETE'), icon: 'delete', variant: 'danger' },
+    ];
+  });
 
   readonly paginationConfig: PaginationConfig = {
     showFirstLast: true,
@@ -214,14 +224,20 @@ export class ProfileListComponent implements OnInit {
     size:          'md',
   };
 
-  readonly toolbarActions: ToolbarAction[] = [
-    { id: 'filters', label: 'Filtres avancés', icon: 'tune', position: 'left' },
-  ];
+  readonly toolbarActions = computed<ToolbarAction[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'filters', label: this.translate.instant('PROFILES.LIST.ADVANCED_FILTERS'), icon: 'tune', position: 'left' },
+    ];
+  });
 
-  readonly viewToggleOptions: ToolbarToggleOption[] = [
-    { id: 'grid', icon: 'grid_view', tooltip: 'Grille' },
-    { id: 'list', icon: 'view_list', tooltip: 'Liste' },
-  ];
+  readonly viewToggleOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'grid', icon: 'grid_view', tooltip: this.translate.instant('PROFILES.LIST.GRID_TOOLTIP') },
+      { id: 'list', icon: 'view_list', tooltip: this.translate.instant('PROFILES.LIST.LIST_TOOLTIP') },
+    ];
+  });
 
   onToolbarAction(_actionId: string): void {}
 
@@ -236,7 +252,7 @@ export class ProfileListComponent implements OnInit {
 
   onBulkExport(): void {
     const selected = this.employees().filter(e => this.selectedIds().has(e.userId));
-    const header = 'Nom,Email,Pays,Statut,Date embauche';
+    const header = this.translate.instant('PROFILES.BULK.CSV_HEADER');
     const rows = selected.map(e =>
       [
         `"${e.fullName}"`,
@@ -267,15 +283,17 @@ export class ProfileListComponent implements OnInit {
   }
 
   onBulkStatusChange(): void {
-    alert('Modification de statut en lot — fonctionnalité à venir.');
+    this.notify.info(this.translate.instant('PROFILES.BULK.STATUS_SOON'));
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const count = this.selectedCount();
-    if (!window.confirm(
-      `Supprimer ${count} profil(s) sélectionné(s) ?\nCette action est irréversible.`
-    )) return;
-    alert('Suppression en lot — fonctionnalité backend en cours.');
+    if (!(await this.confirm.ask({
+      title: this.translate.instant('PROFILES.BULK.DELETE_TITLE'),
+      message: this.translate.instant('PROFILES.BULK.DELETE_MESSAGE', { count }),
+      confirmLabel: this.translate.instant('PROFILES.BULK.DELETE'), icon: 'delete',
+    }))) return;
+    this.notify.info(this.translate.instant('PROFILES.BULK.DELETE_SOON'));
     this.clearSelection();
   }
 

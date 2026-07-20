@@ -1,10 +1,11 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-onboarding-success',
   standalone: true,
-  imports: [],
+  imports: [TranslatePipe],
   templateUrl: './onboarding-success.component.html',
   styleUrls: ['./onboarding-success.component.scss'],
 })

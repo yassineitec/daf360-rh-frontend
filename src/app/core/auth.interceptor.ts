@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { UserStore } from './user.store';
+import { NotificationService } from './notification.service';
 
 /**
  * Security baseline:
@@ -14,6 +15,7 @@ import { UserStore } from './user.store';
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const userStore = inject(UserStore);
+  const notify = inject(NotificationService);
 
   const isPortal  = req.url.startsWith(environment.portalUrl);
   const isHrApi   = req.url.startsWith(environment.hrApiUrl);
@@ -37,7 +39,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(authReq).pipe(
     catchError(err => {
       if (err.status === 401 && isPortal) {
+        // Portal session expired → re-auth via Azure OAuth2.
         window.location.href = `${environment.portalUrl}/oauth2/authorization/azure`;
+      } else if (err.status === 403) {
+        notify.error("Vous n'avez pas les droits pour cette action.", 'Accès refusé');
+      } else if (err.status >= 500) {
+        notify.error('Une erreur serveur est survenue. Veuillez réessayer.', 'Erreur serveur');
       }
       return throwError(() => err);
     })

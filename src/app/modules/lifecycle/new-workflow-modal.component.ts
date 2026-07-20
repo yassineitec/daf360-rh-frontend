@@ -1,37 +1,35 @@
 import {
-  Component, computed, inject, input, output, signal,
+  Component, inject, input, output, signal,
 } from '@angular/core';
-import {
-  FormBuilder, ReactiveFormsModule, Validators,
-} from '@angular/forms';
-import {
-  debounceTime, distinctUntilChanged, Subject, switchMap, catchError, of,
-} from 'rxjs';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { debounceTime, distinctUntilChanged, Subject, switchMap, catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { LifecycleService }  from './lifecycle.service';
 import { ProfileService }    from '../profiles/profile.service';
-import { WORKFLOW_EVENT_TYPES, EVENT_TYPE_LABELS } from './models/lifecycle.model';
-import { ProfileSummary }    from '../profiles/models/profile.model';
+import {
+  DEPARTURE_REASONS, DEPARTURE_REASON_LABELS, DepartureReason,
+} from './models/lifecycle.model';
+import { EmployeeListItem }  from '../profiles/models/profile.model';
 import { ModalComponent }    from '../../shared/modal.component';
-import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
+import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-new-workflow-modal',
   standalone: true,
-  imports: [ModalComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent],
+  imports: [ModalComponent, ReactiveFormsModule, ButtonComponent, StatusBadgeComponent],
   template: `
     <app-modal
-      title="Nouveau workflow"
+      title="Démarrer un offboarding"
       [visible]="visible()"
       [hasFooter]="true"
-      (closed)="closed.emit()"
+      (closed)="onClose()"
     >
-      <form [formGroup]="form" class="wf-form">
+      <form [formGroup]="form" class="ob-form">
 
         <!-- Employee autocomplete -->
-        <div class="field-row field-full">
-          <label class="form-label">Employé (profil) *</label>
+        <div class="field-full">
+          <label class="form-label">Employé *</label>
           <div class="ac-wrap">
             <input
               class="form-input"
@@ -43,17 +41,12 @@ import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
             />
             @if (searchLoading()) { <span class="ac-spinner">…</span> }
             @if (suggestions().length > 0) {
-              <ul class="ac-list" role="listbox">
-                @for (s of suggestions(); track s.id) {
-                  <li
-                    class="ac-item" role="option"
-                    (click)="selectEmployee(s)"
-                    (keydown.enter)="selectEmployee(s)"
-                    tabindex="0"
-                  >
-                    <span class="ac-id">Profil #{{ s.id }}</span>
-                    @if (s.fullName) { <span class="ac-name">{{ s.fullName }}</span> }
-                    @if (s.department) { <span class="ac-type">{{ s.department }}</span> }
+              <ul class="ac-list">
+                @for (s of suggestions(); track s.profileId) {
+                  <li class="ac-item" (click)="selectEmployee(s)">
+                    <span class="ac-name">{{ s.fullName }}</span>
+                    @if (s.department) { <span class="ac-dept">{{ s.department }}</span> }
+                    @if (s.email) { <span class="ac-email">{{ s.email }}</span> }
                   </li>
                 }
               </ul>
@@ -61,8 +54,8 @@ import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
           </div>
           @if (selectedEmployee()) {
             <div class="selected-pill">
-              <daf-badge [label]="selectedEmployeeLabel()" [options]="{ variant: 'teal', size: 'sm' }" />
-              <button type="button" (click)="clearEmployee()" aria-label="Retirer">✕</button>
+              <daf-badge [label]="selectedEmployee()!.fullName" [options]="{ variant: 'teal', size: 'sm' }" />
+              <button type="button" class="pill-remove" (click)="clearEmployee()">✕</button>
             </div>
           }
           @if (form.get('employeeProfileId')?.touched && form.get('employeeProfileId')?.errors?.['required']) {
@@ -70,34 +63,72 @@ import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
           }
         </div>
 
-        <!-- Event type -->
-        <div class="field-row">
-          <label class="form-label">Type d'événement *</label>
-          <select class="form-input" formControlName="eventType">
+        <!-- Responsable passation -->
+        <div class="field-full">
+          <label class="form-label">Responsable passation (Passation des projets)</label>
+          <div class="ac-wrap">
+            <input
+              class="form-input"
+              type="text"
+              [value]="managerQuery"
+              (input)="onManagerInput($event)"
+              placeholder="Rechercher le manager responsable…"
+              autocomplete="off"
+            />
+            @if (managerSearchLoading()) { <span class="ac-spinner">…</span> }
+            @if (managerSuggestions().length > 0) {
+              <ul class="ac-list">
+                @for (s of managerSuggestions(); track s.profileId) {
+                  <li class="ac-item" (click)="selectManager(s)">
+                    <span class="ac-name">{{ s.fullName }}</span>
+                    @if (s.department) { <span class="ac-dept">{{ s.department }}</span> }
+                    @if (s.email) { <span class="ac-email">{{ s.email }}</span> }
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+          @if (selectedManager()) {
+            <div class="selected-pill">
+              <daf-badge [label]="selectedManager()!.fullName" [options]="{ variant: 'neutral', size: 'sm' }" />
+              <button type="button" class="pill-remove" (click)="clearManager()">✕</button>
+            </div>
+          }
+        </div>
+
+        <!-- Motif de départ -->
+        <div>
+          <label class="form-label">Motif de départ *</label>
+          <select class="form-input" formControlName="departureReason">
             <option value="">Sélectionner…</option>
-            @for (t of eventTypes; track t) { <option [value]="t">{{ eventLabel(t) }}</option> }
+            @for (r of DEPARTURE_REASONS; track r) {
+              <option [value]="r">{{ DEPARTURE_REASON_LABELS[r] }}</option>
+            }
           </select>
-          @if (form.get('eventType')?.touched && form.get('eventType')?.errors?.['required']) {
+          @if (form.get('departureReason')?.touched && form.get('departureReason')?.errors?.['required']) {
             <span class="field-error">Requis</span>
           }
         </div>
 
-        <!-- Start date -->
-        <div class="field-row">
-          <label class="form-label">Date de démarrage</label>
-          <input class="form-input" type="date" formControlName="startDate" />
+        <!-- Date de déclenchement -->
+        <div>
+          <label class="form-label">Date de déclenchement *</label>
+          <input class="form-input" type="date" formControlName="triggerDate" />
+          @if (form.get('triggerDate')?.touched && form.get('triggerDate')?.errors?.['required']) {
+            <span class="field-error">Requis</span>
+          }
         </div>
 
-        <!-- Due date -->
-        <div class="field-row">
-          <label class="form-label">Échéance cible</label>
-          <input class="form-input" type="date" formControlName="dueDate" />
+        <!-- Dernier jour de travail -->
+        <div>
+          <label class="form-label">Dernier jour de travail</label>
+          <input class="form-input" type="date" formControlName="lastWorkingDay" />
         </div>
 
         <!-- Notes -->
-        <div class="field-row field-full">
+        <div class="field-full">
           <label class="form-label">Notes</label>
-          <textarea class="form-input form-textarea" rows="3" formControlName="notes" placeholder="Optionnel…"></textarea>
+          <textarea class="form-input form-textarea" rows="2" formControlName="departureNotes" placeholder="Optionnel…"></textarea>
         </div>
 
         @if (errorMsg()) {
@@ -107,9 +138,9 @@ import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
       </form>
 
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="closed.emit()" />
+        <daf-button label="Annuler" variant="secondary" (onClick)="onClose()" />
         <daf-button
-          label="Créer"
+          label="Démarrer"
           variant="teal"
           [options]="{ disabled: form.invalid || saving(), loading: saving() }"
           (onClick)="save()"
@@ -118,64 +149,62 @@ import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
     </app-modal>
   `,
   styles: [`
-    .wf-form       { display:grid;grid-template-columns:1fr 1fr;gap:16px }
-    .field-row     { display:flex;flex-direction:column;gap:4px }
-    .field-full    { grid-column:1/-1 }
-    .form-label    { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted,#6B7280) }
-    .form-input    { padding:8px 12px;border:1px solid var(--color-border,#E0E7E9);border-radius:8px;font-size:13px;font-family:inherit;background:var(--color-surface,#fff);color:var(--color-text,#1A1C1E);outline:none;width:100%;transition:border .15s }
+    .ob-form        { display:grid;grid-template-columns:1fr 1fr;gap:16px }
+    .field-full     { grid-column:1/-1 }
+    .form-label     { display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted,#6B7280);margin-bottom:4px }
+    .form-input     { width:100%;padding:8px 12px;border:1px solid var(--color-border,#E0E7E9);border-radius:8px;font-size:13px;font-family:inherit;background:var(--color-surface,#fff);color:var(--color-text,#1A1C1E);outline:none;box-sizing:border-box;transition:border .15s }
     .form-input:focus { border-color:var(--color-primary,#1C4E5C) }
-    .form-textarea { resize:vertical }
-    .field-error   { font-size:11px;color:#DC2626 }
-    .error-banner  { grid-column:1/-1;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px }
-    .ac-wrap       { position:relative }
-    .ac-spinner    { position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--color-text-muted) }
-    .ac-list       { position:absolute;z-index:200;top:calc(100% + 4px);left:0;right:0;background:var(--color-surface,#fff);border:1px solid var(--color-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);list-style:none;padding:4px 0;margin:0;max-height:200px;overflow-y:auto }
-    .ac-item       { display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px }
-    .ac-item:hover { background:var(--color-bg-secondary,#EEF2F5) }
-    .ac-id   { font-family:monospace;font-size:12px;color:var(--color-text-muted) }
-    .ac-name { font-weight:500;flex:1 }
-    .ac-type { font-size:11px;color:var(--color-text-muted);background:var(--color-bg-secondary);padding:1px 6px;border-radius:999px }
-    .selected-pill { display:inline-flex;align-items:center;gap:6px;margin-top:6px }
-    .selected-pill button { background:none;border:none;cursor:pointer;color:var(--color-primary);font-size:14px;padding:0 }
-    .btn-primary { display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--color-primary,#1C4E5C);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer }
-    .btn-primary:disabled { opacity:.5;cursor:not-allowed }
-    .btn-ghost { padding:7px 16px;border:1px solid var(--color-border);border-radius:8px;background:none;font-size:13px;cursor:pointer;color:var(--color-text-muted) }
-    @media(max-width:500px) { .wf-form { grid-template-columns:1fr } }
+    .form-textarea  { resize:vertical }
+    .field-error    { font-size:11px;color:#DC2626;margin-top:2px }
+    .error-banner   { grid-column:1/-1;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px }
+    .ac-wrap        { position:relative }
+    .ac-spinner     { position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--color-text-muted) }
+    .ac-list        { position:absolute;z-index:200;top:calc(100% + 4px);left:0;right:0;background:var(--color-surface,#fff);border:1px solid var(--color-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);list-style:none;padding:4px 0;margin:0;max-height:200px;overflow-y:auto }
+    .ac-item        { display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px }
+    .ac-item:hover  { background:var(--color-bg-secondary,#EEF2F5) }
+    .ac-name        { font-weight:500;flex:1 }
+    .ac-dept        { font-size:11px;color:var(--color-text-muted);background:var(--color-bg-secondary);padding:1px 6px;border-radius:999px }
+    .ac-email       { font-size:11px;color:var(--color-text-muted);margin-left:auto }
+    .selected-pill  { display:inline-flex;align-items:center;gap:6px;margin-top:6px }
+    .pill-remove    { background:none;border:none;cursor:pointer;color:var(--color-primary);font-size:14px;padding:0 }
+    @media(max-width:520px) { .ob-form { grid-template-columns:1fr } }
   `],
 })
 export class NewWorkflowModalComponent {
-  private fb           = inject(FormBuilder);
-  private lifecycleSvc = inject(LifecycleService);
-  private profileSvc   = inject(ProfileService);
+  private fb          = inject(FormBuilder);
+  private svc         = inject(LifecycleService);
+  private profileSvc  = inject(ProfileService);
 
   visible = input(false);
   closed  = output<void>();
-  created = output<void>();
+  created = output<number>();
 
   saving        = signal(false);
   searchLoading = signal(false);
-  suggestions   = signal<ProfileSummary[]>([]);
-  selectedEmployee = signal<ProfileSummary | null>(null);
+  suggestions   = signal<EmployeeListItem[]>([]);
+  selectedEmployee = signal<EmployeeListItem | null>(null);
   errorMsg      = signal<string | null>(null);
   employeeQuery = '';
 
-  readonly eventTypes = [...WORKFLOW_EVENT_TYPES];
+  managerSearchLoading = signal(false);
+  managerSuggestions   = signal<EmployeeListItem[]>([]);
+  selectedManager      = signal<EmployeeListItem | null>(null);
+  managerQuery         = '';
 
-  selectedEmployeeLabel = computed(() => {
-    const s = this.selectedEmployee();
-    if (!s) return '';
-    return s.fullName ? `Profil #${s.id} — ${s.fullName}` : `Profil #${s.id}`;
-  });
+  protected readonly DEPARTURE_REASONS = DEPARTURE_REASONS;
+  protected readonly DEPARTURE_REASON_LABELS = DEPARTURE_REASON_LABELS;
 
   form = this.fb.group({
-    employeeProfileId: [null as number | null, Validators.required],
-    eventType:         ['', Validators.required],
-    startDate:         [null as string | null],
-    dueDate:           [null as string | null],
-    notes:             [''],
+    employeeProfileId:        [null as number | null, Validators.required],
+    handoverManagerProfileId: [null as number | null],
+    departureReason:          ['' as DepartureReason | '', Validators.required],
+    triggerDate:              ['', Validators.required],
+    lastWorkingDay:           [null as string | null],
+    departureNotes:           [''],
   });
 
-  private search$ = new Subject<string>();
+  private search$        = new Subject<string>();
+  private managerSearch$ = new Subject<string>();
 
   constructor() {
     this.search$.pipe(
@@ -185,11 +214,25 @@ export class NewWorkflowModalComponent {
       switchMap(q => {
         if (!q.trim()) { this.searchLoading.set(false); return of(null); }
         this.searchLoading.set(true);
-        return this.profileSvc.list({ search: q, size: 8 }).pipe(catchError(() => of(null)));
-      })
+        return this.profileSvc.listAllEmployees({ search: q }, 0, 8).pipe(catchError(() => of(null)));
+      }),
     ).subscribe(res => {
       this.searchLoading.set(false);
-      this.suggestions.set(res?.content ?? []);
+      this.suggestions.set((res?.content ?? []).filter(e => e.hasProfile && e.profileId !== null));
+    });
+
+    this.managerSearch$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(),
+      switchMap(q => {
+        if (!q.trim()) { this.managerSearchLoading.set(false); return of(null); }
+        this.managerSearchLoading.set(true);
+        return this.profileSvc.listAllEmployees({ search: q }, 0, 8).pipe(catchError(() => of(null)));
+      }),
+    ).subscribe(res => {
+      this.managerSearchLoading.set(false);
+      this.managerSuggestions.set((res?.content ?? []).filter(e => e.hasProfile && e.profileId !== null));
     });
   }
 
@@ -200,9 +243,9 @@ export class NewWorkflowModalComponent {
     this.search$.next(q);
   }
 
-  selectEmployee(s: ProfileSummary) {
+  selectEmployee(s: EmployeeListItem) {
     this.selectedEmployee.set(s);
-    this.form.patchValue({ employeeProfileId: s.id });
+    this.form.patchValue({ employeeProfileId: s.profileId });
     this.suggestions.set([]);
     this.employeeQuery = '';
   }
@@ -214,6 +257,27 @@ export class NewWorkflowModalComponent {
     this.suggestions.set([]);
   }
 
+  onManagerInput(e: Event) {
+    const q = (e.target as HTMLInputElement).value;
+    this.managerQuery = q;
+    if (!q.trim()) { this.managerSuggestions.set([]); return; }
+    this.managerSearch$.next(q);
+  }
+
+  selectManager(s: EmployeeListItem) {
+    this.selectedManager.set(s);
+    this.form.patchValue({ handoverManagerProfileId: s.profileId });
+    this.managerSuggestions.set([]);
+    this.managerQuery = '';
+  }
+
+  clearManager() {
+    this.selectedManager.set(null);
+    this.form.patchValue({ handoverManagerProfileId: null });
+    this.managerQuery = '';
+    this.managerSuggestions.set([]);
+  }
+
   save() {
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
@@ -221,22 +285,38 @@ export class NewWorkflowModalComponent {
     this.saving.set(true);
     this.errorMsg.set(null);
 
-    this.lifecycleSvc.createWorkflow({
-      employeeProfileId: v.employeeProfileId!,
-      eventType:         v.eventType!,
-      startDate:         v.startDate ?? undefined,
-      dueDate:           v.dueDate   ?? undefined,
-      notes:             v.notes     || undefined,
+    this.svc.startOffboarding({
+      employeeProfileId:        v.employeeProfileId!,
+      departureReason:          v.departureReason as DepartureReason,
+      triggerDate:              v.triggerDate!,
+      lastWorkingDay:           v.lastWorkingDay            || undefined,
+      departureNotes:           v.departureNotes            || undefined,
+      handoverManagerProfileId: v.handoverManagerProfileId  ?? undefined,
     }).pipe(
       catchError(err => {
-        this.errorMsg.set(err?.error?.message ?? 'Erreur lors de la création');
+        this.errorMsg.set(err?.error?.message ?? err?.error?.detail ?? 'Erreur lors de la création');
         this.saving.set(false);
         return of(null);
-      })
-    ).subscribe(w => {
-      if (w) { this.saving.set(false); this.form.reset(); this.created.emit(); }
+      }),
+    ).subscribe(result => {
+      if (result) {
+        this.saving.set(false);
+        this.reset();
+        this.created.emit(result.id);
+      }
     });
   }
 
-  eventLabel(t: string) { return EVENT_TYPE_LABELS[t] ?? t; }
+  onClose() { this.reset(); this.closed.emit(); }
+
+  private reset() {
+    this.form.reset();
+    this.selectedEmployee.set(null);
+    this.employeeQuery = '';
+    this.suggestions.set([]);
+    this.selectedManager.set(null);
+    this.managerQuery = '';
+    this.managerSuggestions.set([]);
+    this.errorMsg.set(null);
+  }
 }

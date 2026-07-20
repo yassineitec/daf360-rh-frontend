@@ -8,6 +8,7 @@ import { catchError, of, startWith } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { CardComponent } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ProfileService }  from './profile.service';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { RefDataService }   from '../../core/ref/ref-data.service';
@@ -35,24 +36,29 @@ function cddEndDateRequired(group: AbstractControl): ValidationErrors | null {
   return type === 'CDD' && !end ? { cddEndDateRequired: true } : null;
 }
 
-const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
+const STEP_KEYS = [
+  'PROFILES.NEW.STEP_IDENTITY',
+  'PROFILES.NEW.STEP_EMPLOYMENT',
+  'PROFILES.NEW.STEP_POSITION',
+  'PROFILES.NEW.STEP_REGIME',
+] as const;
 
 @Component({
   selector: 'app-profile-new',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, SpinnerComponent, CardComponent],
+  imports: [RouterLink, ReactiveFormsModule, SpinnerComponent, CardComponent, TranslatePipe],
   template: `
     <!-- ── Breadcrumb ──────────────────────────────────────────────── -->
     <nav class="breadcrumb">
-      <a routerLink="/profiles" class="bc-link">Profils</a>
+      <a routerLink="/profiles" class="bc-link">{{ 'PROFILES.NEW.BREADCRUMB_LIST' | translate }}</a>
       <span class="bc-sep">›</span>
-      <span class="bc-current">Nouveau profil</span>
+      <span class="bc-current">{{ 'PROFILES.NEW.BREADCRUMB_CURRENT' | translate }}</span>
     </nav>
 
     <div class="stepper-page">
       <!-- ── Step indicators ─────────────────────────────────────────── -->
-      <div class="step-indicators" role="list" aria-label="Étapes">
-        @for (label of steps; track label; let i = $index) {
+      <div class="step-indicators" role="list" [attr.aria-label]="'PROFILES.NEW.STEPS_ARIA' | translate">
+        @for (key of steps; track key; let i = $index) {
           <div
             class="step-indicator"
             [class.active]="step() === i"
@@ -60,7 +66,7 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
             role="listitem"
           >
             <span class="step-num">{{ step() > i ? '✓' : i + 1 }}</span>
-            <span class="step-label">{{ label }}</span>
+            <span class="step-label">{{ key | translate }}</span>
           </div>
           @if (i < steps.length - 1) { <div class="step-line" [class.done]="step() > i"></div> }
         }
@@ -72,39 +78,39 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
         <!-- Step 1 — Identité -->
         @if (step() === 0) {
           <section aria-labelledby="step1">
-            <h2 class="step-title" id="step1">Identité</h2>
+            <h2 class="step-title" id="step1">{{ 'PROFILES.NEW.STEP_IDENTITY' | translate }}</h2>
             <form [formGroup]="step1Form" class="form-grid">
 
               <div class="field-row">
-                <label class="form-label">Utilisateur ID (Users.id) *</label>
+                <label class="form-label">{{ 'PROFILES.NEW.USER_ID' | translate }}</label>
                 <input class="form-input" type="number" formControlName="userId"
                        placeholder="Ex: 10215" />
                 @if (err1('userId', 'required')) {
-                  <span class="field-error">Requis</span>
+                  <span class="field-error">{{ 'PROFILES.NEW.ERR_REQUIRED' | translate }}</span>
                 }
               </div>
 
               <div class="field-row">
                 <label class="form-label">
-                  Identifiant employé *
-                  <span class="hint">Format: ENTITE-AA-NNNN (ex: ARX-26-0001)</span>
+                  {{ 'PROFILES.NEW.EMPLOYEE_ID' | translate }}
+                  <span class="hint">{{ 'PROFILES.NEW.EMPLOYEE_ID_HINT' | translate }}</span>
                 </label>
                 <input class="form-input" type="text" formControlName="employeeId"
                        placeholder="ARX-26-0001" style="text-transform:uppercase"
                        (input)="uppercase($event, 'employeeId', step1Form)" />
                 @if (err1('employeeId', 'required')) {
-                  <span class="field-error">Requis</span>
+                  <span class="field-error">{{ 'PROFILES.NEW.ERR_REQUIRED' | translate }}</span>
                 }
                 @if (err1('employeeId', 'employeeIdFormat')) {
-                  <span class="field-error">Format invalide — attendu: ENTITE-AA-NNNN</span>
+                  <span class="field-error">{{ 'PROFILES.NEW.ERR_ID_FORMAT' | translate }}</span>
                 }
               </div>
 
               <div class="field-row">
-                <label class="form-label">Pays (ID) *</label>
+                <label class="form-label">{{ 'PROFILES.NEW.PAYS' | translate }}</label>
                 <input class="form-input" type="number" formControlName="paysId" placeholder="179" />
                 @if (err1('paysId', 'required')) {
-                  <span class="field-error">Requis</span>
+                  <span class="field-error">{{ 'PROFILES.NEW.ERR_REQUIRED' | translate }}</span>
                 }
               </div>
 
@@ -115,37 +121,37 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
         <!-- Step 2 — Emploi -->
         @if (step() === 1) {
           <section aria-labelledby="step2">
-            <h2 class="step-title" id="step2">Emploi</h2>
+            <h2 class="step-title" id="step2">{{ 'PROFILES.NEW.STEP_EMPLOYMENT' | translate }}</h2>
             <form [formGroup]="step2Form" class="form-grid">
 
               <div class="field-row">
-                <label class="form-label">Date d'embauche *</label>
+                <label class="form-label">{{ 'PROFILES.NEW.HIRE_DATE' | translate }}</label>
                 <input class="form-input" type="date" formControlName="hireDate" />
-                @if (err2('hireDate', 'required'))    { <span class="field-error">Requis</span> }
-                @if (err2('hireDate', 'futureDate'))  { <span class="field-error">La date ne peut pas être dans le futur</span> }
+                @if (err2('hireDate', 'required'))    { <span class="field-error">{{ 'PROFILES.NEW.ERR_REQUIRED' | translate }}</span> }
+                @if (err2('hireDate', 'futureDate'))  { <span class="field-error">{{ 'PROFILES.NEW.ERR_FUTURE_DATE' | translate }}</span> }
               </div>
 
               <div class="field-row">
-                <label class="form-label">Type de contrat *</label>
+                <label class="form-label">{{ 'PROFILES.NEW.CONTRACT_TYPE' | translate }}</label>
                 <select class="form-input" formControlName="contractType">
-                  <option value="">Sélectionner…</option>
+                  <option value="">{{ 'PROFILES.COMMON.SELECT_ELLIPSIS' | translate }}</option>
                   @for (t of contractTypes; track t) { <option [value]="t">{{ t }}</option> }
                 </select>
-                @if (err2('contractType', 'required')) { <span class="field-error">Requis</span> }
+                @if (err2('contractType', 'required')) { <span class="field-error">{{ 'PROFILES.NEW.ERR_REQUIRED' | translate }}</span> }
               </div>
 
               @if (step2Form.get('contractType')?.value === 'CDD') {
                 <div class="field-row">
-                  <label class="form-label">Date de fin de contrat *</label>
+                  <label class="form-label">{{ 'PROFILES.NEW.CONTRACT_END' | translate }}</label>
                   <input class="form-input" type="date" formControlName="contractEndDate" />
                   @if (step2Form.errors?.['cddEndDateRequired']) {
-                    <span class="field-error">Obligatoire pour un contrat CDD</span>
+                    <span class="field-error">{{ 'PROFILES.NEW.ERR_CDD_END' | translate }}</span>
                   }
                 </div>
               }
 
               <div class="field-row">
-                <label class="form-label">Fin de période d'essai</label>
+                <label class="form-label">{{ 'PROFILES.NEW.PROBATION_END' | translate }}</label>
                 <input class="form-input" type="date" formControlName="probationEndDate" />
               </div>
 
@@ -156,37 +162,37 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
         <!-- Step 3 — Poste -->
         @if (step() === 2) {
           <section aria-labelledby="step3">
-            <h2 class="step-title" id="step3">Poste</h2>
+            <h2 class="step-title" id="step3">{{ 'PROFILES.NEW.STEP_POSITION' | translate }}</h2>
             <form [formGroup]="step3Form" class="form-grid">
 
               <div class="field-row">
-                <label class="form-label">Département</label>
+                <label class="form-label">{{ 'PROFILES.NEW.DEPARTMENT' | translate }}</label>
                 <select class="form-input" formControlName="departmentId">
-                  <option [ngValue]="null">— Sélectionner —</option>
+                  <option [ngValue]="null">{{ 'PROFILES.COMMON.SELECT_PLACEHOLDER' | translate }}</option>
                   @for (d of departments(); track d.id) { <option [ngValue]="d.id">{{ d.labelFr }}</option> }
                 </select>
               </div>
 
               <div class="field-row">
-                <label class="form-label">Grade</label>
+                <label class="form-label">{{ 'PROFILES.NEW.GRADE' | translate }}</label>
                 <select class="form-input" formControlName="gradeId">
-                  <option [ngValue]="null">— Sélectionner —</option>
+                  <option [ngValue]="null">{{ 'PROFILES.COMMON.SELECT_PLACEHOLDER' | translate }}</option>
                   @for (g of grades(); track g.id) { <option [ngValue]="g.id">{{ g.labelFr }}</option> }
                 </select>
               </div>
 
               <div class="field-row">
-                <label class="form-label">Discipline</label>
+                <label class="form-label">{{ 'PROFILES.NEW.DISCIPLINE' | translate }}</label>
                 <select class="form-input" formControlName="disciplineId">
-                  <option [ngValue]="null">— Sélectionner —</option>
+                  <option [ngValue]="null">{{ 'PROFILES.COMMON.SELECT_PLACEHOLDER' | translate }}</option>
                   @for (d of disciplines(); track d.id) { <option [ngValue]="d.id">{{ d.labelFr }}</option> }
                 </select>
               </div>
 
               <div class="field-row">
-                <label class="form-label">Niveau NOG</label>
+                <label class="form-label">{{ 'PROFILES.NEW.NOG_LEVEL' | translate }}</label>
                 <select class="form-input" formControlName="nogLevelId">
-                  <option [ngValue]="null">— Sélectionner —</option>
+                  <option [ngValue]="null">{{ 'PROFILES.COMMON.SELECT_PLACEHOLDER' | translate }}</option>
                   @for (n of nogLevels(); track n.id) { <option [ngValue]="n.id">{{ n.labelFr }}</option> }
                 </select>
               </div>
@@ -198,25 +204,25 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
         <!-- Step 4 — Régime -->
         @if (step() === 3) {
           <section aria-labelledby="step4">
-            <h2 class="step-title" id="step4">Régime horaire</h2>
-            <p class="step-hint">Optionnel — peut être assigné ultérieurement.</p>
+            <h2 class="step-title" id="step4">{{ 'PROFILES.NEW.STEP_REGIME_TITLE' | translate }}</h2>
+            <p class="step-hint">{{ 'PROFILES.NEW.REGIME_HINT' | translate }}</p>
             <form [formGroup]="step4Form" class="form-grid">
 
               <div class="field-row">
-                <label class="form-label">ID du modèle de régime</label>
+                <label class="form-label">{{ 'PROFILES.NEW.REGIME_TEMPLATE_ID' | translate }}</label>
                 <input class="form-input" type="number" formControlName="regimeTemplateId"
-                       placeholder="Laisser vide pour le régime par défaut" />
+                       [placeholder]="'PROFILES.NEW.REGIME_TEMPLATE_PH' | translate" />
               </div>
 
               <div class="field-row">
-                <label class="form-label">Date de début d'application</label>
+                <label class="form-label">{{ 'PROFILES.NEW.REGIME_START' | translate }}</label>
                 <input class="form-input" type="date" formControlName="regimeStartDate" />
               </div>
 
               <div class="field-row" style="grid-column:1/-1">
-                <label class="form-label">Motif de changement de régime</label>
+                <label class="form-label">{{ 'PROFILES.NEW.REGIME_REASON' | translate }}</label>
                 <input class="form-input" type="text" formControlName="regimeReason"
-                       placeholder="Optionnel" />
+                       [placeholder]="'PROFILES.COMMON.OPTIONAL' | translate" />
               </div>
 
             </form>
@@ -226,21 +232,21 @@ const STEPS = ['Identité', 'Emploi', 'Poste', 'Régime'] as const;
         <!-- ── Navigation ──────────────────────────────────────────────── -->
         <div class="step-nav">
           @if (step() > 0) {
-            <button class="btn-ghost" type="button" (click)="prev()">‹ Précédent</button>
+            <button class="btn-ghost" type="button" (click)="prev()">{{ 'PROFILES.NEW.PREV' | translate }}</button>
           } @else {
-            <a routerLink="/profiles" class="btn-ghost">Annuler</a>
+            <a routerLink="/profiles" class="btn-ghost">{{ 'PROFILES.COMMON.CANCEL' | translate }}</a>
           }
 
           @if (step() < steps.length - 1) {
             <button class="btn-primary" type="button" (click)="next()"
                     [disabled]="!currentStepValid()">
-              Suivant ›
+              {{ 'PROFILES.NEW.NEXT' | translate }}
             </button>
           } @else {
             <button class="btn-primary" type="button" (click)="submit()"
                     [disabled]="!currentStepValid() || saving()">
               @if (saving()) { <app-spinner size="sm" /> }
-              Créer le profil
+              {{ 'PROFILES.NEW.SUBMIT' | translate }}
             </button>
           }
         </div>
@@ -301,13 +307,14 @@ export class ProfileNewComponent implements OnInit {
   private router    = inject(Router);
   private refSvc    = inject(RefDataService);
   private userStore = inject(UserStore);
+  private translate = inject(TranslateService);
 
   grades      = signal<RefDataItem[]>([]);
   disciplines = signal<RefDataItem[]>([]);
   nogLevels   = signal<RefDataItem[]>([]);
   departments = signal<RefDataItem[]>([]);
 
-  readonly steps         = STEPS;
+  readonly steps         = STEP_KEYS;
   readonly contractTypes = ['CDI', 'CDD', 'FREELANCE', 'INTERN'];
 
   step    = signal(0);
@@ -395,7 +402,7 @@ export class ProfileNewComponent implements OnInit {
 
     this.svc.create(dto).pipe(
       catchError(err => {
-        const msg = err?.error?.message ?? err?.error?.detail ?? 'Erreur lors de la création';
+        const msg = err?.error?.message ?? err?.error?.detail ?? this.translate.instant('PROFILES.NEW.ERR_CREATE');
         this.errorMsg.set(msg);
         this.saving.set(false);
         return of(null);

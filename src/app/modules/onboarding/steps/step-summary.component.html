@@ -6,9 +6,9 @@
     <line x1="12" y1="17" x2="12.01" y2="17" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
   </svg>
   <span>
-    Attention&nbsp;: Une fois soumis, un email de bienvenue sera envoyé à
+    {{ 'ONBOARDING.STEP_SUMMARY.WARNING_PRE' | translate }}
     <strong>{{ formInfo()?.ms365Email ?? '' }}</strong>
-    et le dossier employé sera créé officiellement. Cette action est irréversible.
+    {{ 'ONBOARDING.STEP_SUMMARY.WARNING_POST' | translate }}
   </span>
 </div>
 
@@ -17,30 +17,30 @@
   <!-- Card 1 — Identité -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
-      <h4 class="card-title">Identité</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(1)">Modifier</button>
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_IDENTITY' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(1)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
-        <dt>Prénom</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.FIRST_NAME' | translate }}</dt>
         <dd>{{ val(data()?.firstName) }}</dd>
 
-        <dt>Nom</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.LAST_NAME' | translate }}</dt>
         <dd>{{ val(data()?.lastName) }}</dd>
 
-        <dt>Date de naissance</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.DOB' | translate }}</dt>
         <dd>{{ val(data()?.dateOfBirth) }}</dd>
 
-        <dt>Genre</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.GENDER' | translate }}</dt>
         <dd>{{ data()?.gender ? genderLabel(data()?.gender) : '—' }}</dd>
 
-        <dt>Nationalité</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.NATIONALITY' | translate }}</dt>
         <dd>{{ val(data()?.nationality) }}</dd>
 
-        <dt>CIN / ID National</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.NATIONAL_ID' | translate }}</dt>
         <dd>{{ val(data()?.nationalId) }}</dd>
 
-        <dt>Numéro de passeport</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.PASSPORT' | translate }}</dt>
         <dd>{{ val(data()?.passportNumber) }}</dd>
       </dl>
     </div>
@@ -49,30 +49,30 @@
   <!-- Card 2 — Poste -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
-      <h4 class="card-title">Poste & Contrat</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(2)">Modifier</button>
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_POSITION' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(2)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
-        <dt>Date d'embauche</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.HIRE_DATE' | translate }}</dt>
         <dd>{{ val(data()?.hireDate) }}</dd>
 
-        <dt>Type de contrat</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.CONTRACT_TYPE' | translate }}</dt>
         <dd>{{ val(data()?.contractType) }}</dd>
 
-        <dt>Grade</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.GRADE' | translate }}</dt>
         <dd>{{ val(data()?.grade) }}</dd>
 
-        <dt>Discipline</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.DISCIPLINE' | translate }}</dt>
         <dd>{{ val(data()?.discipline) }}</dd>
 
-        <dt>Département</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.DEPARTMENT' | translate }}</dt>
         <dd>{{ val(data()?.department) }}</dd>
 
-        <dt>Niveau NOG</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.NOG_LEVEL' | translate }}</dt>
         <dd>{{ val(data()?.nogLevel) }}</dd>
 
-        <dt>Fin de période d'essai</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.PROBATION_END' | translate }}</dt>
         <dd>{{ val(data()?.probationEndDate) }}</dd>
       </dl>
     </div>
@@ -81,15 +81,15 @@
   <!-- Card 3 — Régime -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
-      <h4 class="card-title">Régime de travail</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(3)">Modifier</button>
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_REGIME' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(3)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
-        <dt>Régime</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.REGIME' | translate }}</dt>
         <dd>{{ regimeLabel() }}</dd>
 
-        <dt>Date de début du régime</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.REGIME_START' | translate }}</dt>
         <dd>{{ val(data()?.regimeStartDate) }}</dd>
       </dl>
     </div>
@@ -98,27 +98,27 @@
   <!-- Card 4 — Informations personnelles -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
-      <h4 class="card-title">Informations personnelles</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(4)">Modifier</button>
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_PERSONAL' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(4)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
-        <dt>N° de Sécurité Sociale</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.SSN' | translate }}</dt>
         <dd>{{ val(data()?.cnssNumber) }}</dd>
 
-        <dt>Date d'affiliation Sécurité Sociale</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.SSN_AFFILIATION' | translate }}</dt>
         <dd>{{ val(data()?.cnssAffiliationDate) }}</dd>
 
-        <dt>Situation familiale</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.MARITAL' | translate }}</dt>
         <dd>{{ val(data()?.maritalStatus) }}</dd>
 
-        <dt>Nombre d'enfants</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.CHILDREN' | translate }}</dt>
         <dd>{{ val(data()?.numberOfChildren) }}</dd>
 
-        <dt>Adresse domicile</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.ADDRESS' | translate }}</dt>
         <dd>{{ val(data()?.personalAddress) }}</dd>
 
-        <dt>Téléphone</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.PHONE' | translate }}</dt>
         <dd>{{ val(data()?.phone) }}</dd>
       </dl>
     </div>
@@ -127,27 +127,27 @@
   <!-- Card 5 — Banque & Fiscalité -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
-      <h4 class="card-title">Banque & Fiscalité</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(5)">Modifier</button>
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_BANK' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(5)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
-        <dt>Banque</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.BANK' | translate }}</dt>
         <dd>{{ val(data()?.bankName) }}</dd>
 
-        <dt>RIB</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.RIB' | translate }}</dt>
         <dd>{{ val(data()?.rib) }}</dd>
 
-        <dt>Numéro de compte</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.ACCOUNT_NUMBER' | translate }}</dt>
         <dd>{{ val(data()?.bankAccountNumber) }}</dd>
 
-        <dt>IBAN</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.IBAN' | translate }}</dt>
         <dd>{{ maskIban(data()?.iban) }}</dd>
 
-        <dt>N° d'Assurance Sociale</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.SOCIAL_INSURANCE' | translate }}</dt>
         <dd>{{ val(data()?.socialSecurityNumber) }}</dd>
 
-        <dt>Identifiant fiscal</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.TAX_ID' | translate }}</dt>
         <dd>{{ val(data()?.taxId) }}</dd>
       </dl>
     </div>
@@ -156,18 +156,18 @@
   <!-- Card 6 — Contact d'urgence -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
-      <h4 class="card-title">Contact d'urgence</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(6)">Modifier</button>
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_EMERGENCY' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(6)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
-        <dt>Nom du contact</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.CONTACT_NAME' | translate }}</dt>
         <dd>{{ val(data()?.emergencyContactName) }}</dd>
 
-        <dt>Lien de parenté</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.CONTACT_RELATION' | translate }}</dt>
         <dd>{{ val(data()?.emergencyContactRelation) }}</dd>
 
-        <dt>Téléphone d'urgence</dt>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.CONTACT_PHONE' | translate }}</dt>
         <dd>{{ val(data()?.emergencyContactPhone) }}</dd>
       </dl>
     </div>

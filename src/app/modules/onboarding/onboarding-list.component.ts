@@ -19,13 +19,14 @@ import {
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent],
+  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, TranslatePipe],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
@@ -33,6 +34,7 @@ export class OnboardingListComponent implements OnInit {
   private service = inject(OnboardingService);
   private router  = inject(Router);
   private route   = inject(ActivatedRoute);
+  private translate = inject(TranslateService);
 
   items    = signal<OnboardingListItem[]>([]);
   loading  = signal(true);
@@ -82,15 +84,19 @@ export class OnboardingListComponent implements OnInit {
     })),
   );
 
-  readonly columns: TableColumn[] = [
-    { key: 'employe', label: 'Employé', type: 'avatar' },
-    { key: 'ms365Email', label: 'Email MS365' },
-    { key: 'entite', label: 'Entité' },
-    { key: 'expectedStartDate', label: 'Début prévu' },
-    { key: 'status', label: 'Statut' },
-    { key: 'maj', label: 'MàJ' },
-    { key: '_actions', label: 'Actions' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      { key: 'employe', label: t('ONBOARDING.LIST.COL_EMPLOYEE'), type: 'avatar' },
+      { key: 'ms365Email', label: t('ONBOARDING.LIST.COL_EMAIL') },
+      { key: 'entite', label: t('ONBOARDING.LIST.COL_ENTITY') },
+      { key: 'expectedStartDate', label: t('ONBOARDING.LIST.COL_START') },
+      { key: 'status', label: t('ONBOARDING.LIST.COL_STATUS') },
+      { key: 'maj', label: t('ONBOARDING.LIST.COL_UPDATED') },
+      { key: '_actions', label: t('ONBOARDING.LIST.COL_ACTIONS') },
+    ];
+  });
 
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,
@@ -108,7 +114,7 @@ export class OnboardingListComponent implements OnInit {
 
     this.service.getPendingList().subscribe({
       next:  (data) => { this.items.set(data); this.loading.set(false); },
-      error: ()     => { this.error.set('Erreur lors du chargement des dossiers.'); this.loading.set(false); },
+      error: ()     => { this.error.set(this.translate.instant('ONBOARDING.LIST.ERROR_LOAD')); this.loading.set(false); },
     });
   }
 

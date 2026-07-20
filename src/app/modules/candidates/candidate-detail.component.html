@@ -12,7 +12,7 @@
     <div class="flex flex-col items-center justify-center h-full gap-4">
       <span class="material-symbols-outlined text-[48px] text-outline">error_outline</span>
       <p class="text-[15px] text-outline">{{ error() }}</p>
-      <daf-button label="Retour aux candidats" variant="ghost"
+      <daf-button [label]="'CANDIDATES.DETAIL.BACK_TO_CANDIDATES' | translate" variant="ghost"
         [options]="{ iconStart: 'arrow_back', size: 'md' }"
         (onClick)="navigateToCandidate()" />
     </div>
@@ -27,7 +27,7 @@
       <!-- Breadcrumb -->
       <nav class="flex items-center gap-1.5 text-[13px] mb-4" style="color:rgba(255,255,255,0.55)">
         <button type="button" class="hover:text-white transition-colors"
-                (click)="navigateToCandidate()">Candidats</button>
+                (click)="navigateToCandidate()">{{ 'CANDIDATES.DETAIL.BREADCRUMB' | translate }}</button>
         <span class="material-symbols-outlined text-[15px]">chevron_right</span>
         <span style="color:rgba(255,255,255,0.9)">{{ c.firstName }} {{ c.lastName }}</span>
       </nav>
@@ -63,30 +63,30 @@
         <!-- Action buttons -->
         <div class="flex items-center gap-2 flex-wrap justify-end">
           @if (canAcceptReject() && c.status === 'PENDING') {
-            <daf-button label="Accepter" variant="teal"
+            <daf-button [label]="'CANDIDATES.ACTIONS.ACCEPT' | translate" variant="teal"
               [options]="{ iconStart: 'check_circle', size: 'md' }"
               (onClick)="onAccept()" />
-            <daf-button label="Rejeter" variant="danger"
+            <daf-button [label]="'CANDIDATES.ACTIONS.REJECT' | translate" variant="danger"
               [options]="{ iconStart: 'cancel', size: 'md' }"
               (onClick)="showReject.set(true)" />
           }
           @if (['ACCEPTED','IT_IN_PROGRESS','EMAIL_CREATED'].includes(c.status) && c.itProvisioning) {
-            <daf-button label="IT Provisioning →" variant="secondary"
+            <daf-button [label]="'CANDIDATES.DETAIL.IT_PROVISIONING_LINK' | translate" variant="secondary"
               [options]="{ size: 'md' }"
               (onClick)="goToProvisioning(c.itProvisioning!.id)" />
           }
           @if (['EMAIL_RECEIVED','HR_IN_PROGRESS'].includes(c.status)) {
-            <daf-button label="Compléter l'onboarding →" variant="teal"
+            <daf-button [label]="'CANDIDATES.DETAIL.COMPLETE_ONBOARDING' | translate" variant="teal"
               [options]="{ size: 'md' }"
               (onClick)="goToOnboarding()" />
           }
           @if (canHireThisCandidate()) {
-            <daf-button label="Recruter" variant="teal"
+            <daf-button [label]="'CANDIDATES.DETAIL.HIRE' | translate" variant="teal"
               [options]="{ iconStart: 'how_to_reg', size: 'md' }"
               (onClick)="openHireModal()" />
           }
           @if (c.status === 'HIRED') {
-            <daf-button label="Voir le profil →" variant="secondary"
+            <daf-button [label]="'CANDIDATES.DETAIL.VIEW_PROFILE_LINK' | translate" variant="secondary"
               [options]="{ size: 'md' }"
               (onClick)="navigateToProfiles()" />
           }
@@ -106,13 +106,13 @@
             <div class="bg-white rounded-xl border border-outline-variant p-5">
               <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">contact_page</span>
-                <h3 class="text-[12px] font-semibold uppercase tracking-wider">Coordonnées</h3>
+                <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.CONTACT' | translate }}</h3>
               </div>
               <div class="space-y-3.5">
                 <div class="flex items-start gap-3">
                   <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">mail</span>
                   <div class="min-w-0">
-                    <p class="text-[11px] text-outline">Email</p>
+                    <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.EMAIL' | translate }}</p>
                     <p class="text-[13px] font-medium text-on-surface break-all">{{ c.emailPersonal }}</p>
                   </div>
                 </div>
@@ -120,7 +120,7 @@
                   <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">phone</span>
                     <div>
-                      <p class="text-[11px] text-outline">Téléphone</p>
+                      <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.PHONE' | translate }}</p>
                       <p class="text-[13px] font-medium text-on-surface">{{ c.phone }}</p>
                     </div>
                   </div>
@@ -129,7 +129,7 @@
                   <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">cake</span>
                     <div>
-                      <p class="text-[11px] text-outline">Date de naissance</p>
+                      <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.DOB' | translate }}</p>
                       <p class="text-[13px] font-medium text-on-surface">{{ c.dateOfBirth }}</p>
                     </div>
                   </div>
@@ -138,7 +138,7 @@
                   <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">wc</span>
                     <div>
-                      <p class="text-[11px] text-outline">Genre</p>
+                      <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.GENDER' | translate }}</p>
                       <p class="text-[13px] font-medium text-on-surface">{{ genderLabel(c.gender) }}</p>
                     </div>
                   </div>
@@ -147,7 +147,7 @@
                   <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">flag</span>
                     <div>
-                      <p class="text-[11px] text-outline">Nationalité</p>
+                      <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.NATIONALITY' | translate }}</p>
                       <p class="text-[13px] font-medium text-on-surface">{{ c.nationality }}</p>
                     </div>
                   </div>
@@ -156,7 +156,7 @@
                   <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-[17px] text-outline mt-0.5">badge</span>
                     <div>
-                      <p class="text-[11px] text-outline">N° CIN / Passeport</p>
+                      <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.NATIONAL_ID' | translate }}</p>
                       <p class="text-[13px] font-medium text-on-surface">{{ c.nationalId }}</p>
                     </div>
                   </div>
@@ -168,22 +168,22 @@
             <div class="bg-white rounded-xl border border-outline-variant p-5">
               <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-                <h3 class="text-[12px] font-semibold uppercase tracking-wider">Dates</h3>
+                <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.DATES' | translate }}</h3>
               </div>
               <div class="space-y-3">
                 <div>
-                  <p class="text-[11px] text-outline">Candidature déposée</p>
+                  <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.APPLICATION_SUBMITTED' | translate }}</p>
                   <p class="text-[13px] font-medium text-on-surface">{{ formatDate(c.createdAt) }}</p>
                 </div>
                 @if (c.expectedStartDate) {
                   <div>
-                    <p class="text-[11px] text-outline">Début prévu</p>
+                    <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.EXPECTED_START' | translate }}</p>
                     <p class="text-[13px] font-medium text-on-surface">{{ formatDate(c.expectedStartDate) }}</p>
                   </div>
                 }
                 @if (c.acceptedAt) {
                   <div>
-                    <p class="text-[11px] text-outline">Accepté le</p>
+                    <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.ACCEPTED_ON' | translate }}</p>
                     <p class="text-[13px] font-medium text-on-surface">{{ formatDate(c.acceptedAt) }}</p>
                   </div>
                 }
@@ -194,7 +194,7 @@
             <div class="bg-white rounded-xl border border-outline-variant p-5">
               <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">linear_scale</span>
-                <h3 class="text-[12px] font-semibold uppercase tracking-wider">Étapes du recrutement</h3>
+                <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.RECRUITMENT_STEPS' | translate }}</h3>
               </div>
               <div class="space-y-1">
                 @for (step of pipelineSteps; track step.status; let last = $last) {
@@ -216,7 +216,7 @@
                           [class.font-semibold]="step.status === c.status"
                           [style.color]="step.status === c.status ? 'var(--color-teal)'
                                        : 'var(--color-on-surface-variant)'">
-                      {{ step.label }}
+                      {{ ('CANDIDATES.STATUS.' + step.status) | translate }}
                     </span>
                   </div>
                   @if (!last) {
@@ -235,27 +235,27 @@
             <div class="bg-white rounded-xl border border-outline-variant p-5">
               <div class="flex items-center gap-2 mb-5" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">work</span>
-                <h3 class="text-[12px] font-semibold uppercase tracking-wider">Poste &amp; Contrat</h3>
+                <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.POSITION_CONTRACT' | translate }}</h3>
               </div>
               <div class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <div>
-                  <p class="text-[11px] text-outline mb-0.5">Poste souhaité</p>
+                  <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.DETAIL.DESIRED_POSITION' | translate }}</p>
                   <p class="text-[14px] font-semibold text-on-surface">{{ c.appliedPosition ?? '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-[11px] text-outline mb-0.5">Type de contrat</p>
+                  <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.DETAIL.CONTRACT_TYPE' | translate }}</p>
                   <p class="text-[14px] font-semibold text-on-surface">{{ contractTypeLabel() ?? '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-[11px] text-outline mb-0.5">Département</p>
+                  <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.DETAIL.DEPARTMENT' | translate }}</p>
                   <p class="text-[14px] font-semibold text-on-surface">{{ c.department ?? '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-[11px] text-outline mb-0.5">Grade</p>
+                  <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.DETAIL.GRADE' | translate }}</p>
                   <p class="text-[14px] font-semibold text-on-surface">{{ c.appliedGrade ?? '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-[11px] text-outline mb-0.5">Discipline</p>
+                  <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.DETAIL.DISCIPLINE' | translate }}</p>
                   <p class="text-[14px] font-semibold text-on-surface">{{ c.appliedDiscipline ?? '—' }}</p>
                 </div>
               </div>
@@ -265,7 +265,7 @@
             <div class="bg-white rounded-xl border border-outline-variant p-5">
               <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
                 <span class="material-symbols-outlined text-[18px]">description</span>
-                <h3 class="text-[12px] font-semibold uppercase tracking-wider">Curriculum Vitae</h3>
+                <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.CV' | translate }}</h3>
               </div>
 
               @if (c.cvOriginalName) {
@@ -280,16 +280,16 @@
                     <div class="min-w-0">
                       <p class="text-[13px] font-medium text-on-surface truncate">{{ c.cvOriginalName }}</p>
                       @if (c.cvUploadedAt) {
-                        <p class="text-[11px] text-outline">Uploadé le {{ c.cvUploadedAt.slice(0,10) }}</p>
+                        <p class="text-[11px] text-outline">{{ 'CANDIDATES.DETAIL.CV_UPLOADED_ON' | translate:{ date: c.cvUploadedAt.slice(0,10) } }}</p>
                       }
                     </div>
                   </div>
                   <div class="flex gap-2 shrink-0">
-                    <daf-button label="Télécharger" variant="ghost"
+                    <daf-button [label]="'CANDIDATES.DETAIL.DOWNLOAD' | translate" variant="ghost"
                       [options]="{ iconStart: 'download', size: 'sm' }"
                       (onClick)="downloadCv()" />
                     <label class="cursor-pointer" [class.opacity-50]="cvUploading()">
-                      <daf-button [label]="cvUploading() ? 'Envoi…' : 'Remplacer'" variant="secondary"
+                      <daf-button [label]="cvUploading() ? ('CANDIDATES.COMMON.SENDING' | translate) : ('CANDIDATES.DETAIL.REPLACE' | translate)" variant="secondary"
                         [options]="{ iconStart: 'upload_file', size: 'sm', disabled: cvUploading() }" />
                       <input type="file" accept=".pdf,.doc,.docx"
                              (change)="onCvFileSelected($event)" [disabled]="cvUploading()" hidden />
@@ -301,10 +301,10 @@
                      style="background:var(--color-surface-container-low)">
                   <div class="flex items-center gap-3">
                     <span class="material-symbols-outlined text-[22px] text-outline">upload_file</span>
-                    <p class="text-[13px] text-outline">Aucun CV — PDF, DOC, DOCX (max 10 Mo)</p>
+                    <p class="text-[13px] text-outline">{{ 'CANDIDATES.DETAIL.NO_CV_HINT' | translate }}</p>
                   </div>
                   <label class="cursor-pointer" [class.opacity-50]="cvUploading()">
-                    <daf-button [label]="cvUploading() ? 'Envoi…' : 'Ajouter un CV'" variant="secondary"
+                    <daf-button [label]="cvUploading() ? ('CANDIDATES.COMMON.SENDING' | translate) : ('CANDIDATES.DETAIL.ADD_CV' | translate)" variant="secondary"
                       [options]="{ iconStart: 'upload', size: 'sm', disabled: cvUploading() }" />
                     <input type="file" accept=".pdf,.doc,.docx"
                            (change)="onCvFileSelected($event)" [disabled]="cvUploading()" hidden />
@@ -325,7 +325,7 @@
               <div class="bg-white rounded-xl border border-outline-variant p-5">
                 <div class="flex items-center gap-2 mb-3" style="color:var(--color-on-surface-variant)">
                   <span class="material-symbols-outlined text-[18px]">edit_note</span>
-                  <h3 class="text-[12px] font-semibold uppercase tracking-wider">Notes</h3>
+                  <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.NOTES' | translate }}</h3>
                 </div>
                 <p class="text-[14px] text-on-surface leading-relaxed">{{ c.notes }}</p>
               </div>
@@ -338,7 +338,7 @@
                 <div class="flex items-center gap-2 mb-2">
                   <span class="material-symbols-outlined text-[18px] text-danger"
                         style="font-variation-settings:'FILL' 1">cancel</span>
-                  <h3 class="text-[12px] font-semibold text-danger uppercase tracking-wider">Motif du rejet</h3>
+                  <h3 class="text-[12px] font-semibold text-danger uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.REJECTION_REASON' | translate }}</h3>
                 </div>
                 <p class="text-[14px] text-on-surface">{{ c.rejectionReason }}</p>
               </div>
@@ -369,7 +369,7 @@
                   <div class="flex items-center justify-between mb-5">
                     <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
                       <span class="material-symbols-outlined text-[18px]">computer</span>
-                      <h3 class="text-[12px] font-semibold uppercase tracking-wider">IT Provisioning</h3>
+                      <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.IT_PROVISIONING' | translate }}</h3>
                     </div>
                     <daf-badge [label]="statusBadge(prov.status).label"
                                [options]="statusBadge(prov.status).options" />
@@ -386,7 +386,7 @@
 
                   <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p class="text-[11px] text-outline uppercase tracking-wide font-semibold mb-1">Équipements</p>
+                      <p class="text-[11px] text-outline uppercase tracking-wide font-semibold mb-1">{{ 'CANDIDATES.DETAIL.EQUIPMENT' | translate }}</p>
                       <p class="text-[15px] font-bold" style="color:var(--color-on-surface-variant)">
                         {{ prov.assetsProvided }}<span class="text-[13px] font-normal text-outline"> / 6</span>
                       </p>
@@ -394,13 +394,13 @@
                     <div>
                       <p class="text-[11px] text-outline uppercase tracking-wide font-semibold mb-1">Active Directory</p>
                       <daf-badge
-                        [label]="prov.adAccountCreated ? 'Compte créé' : 'En attente'"
+                        [label]="prov.adAccountCreated ? ('CANDIDATES.DETAIL.ACCOUNT_CREATED' | translate) : ('CANDIDATES.DETAIL.WAITING' | translate)"
                         [options]="{ variant: prov.adAccountCreated ? 'success' : 'neutral', size: 'sm', dot: true }" />
                     </div>
                   </div>
 
                   <div>
-                    <p class="text-[11px] text-outline uppercase tracking-wide font-semibold mb-2">Licences</p>
+                    <p class="text-[11px] text-outline uppercase tracking-wide font-semibold mb-2">{{ 'CANDIDATES.DETAIL.LICENSES' | translate }}</p>
                     <div class="flex flex-wrap gap-2">
                       @for (lic of [
                         { label: 'Office 365', active: prov.licenseOffice365 },
@@ -415,7 +415,7 @@
 
                   @if (canManageIt()) {
                     <div class="mt-4 pt-4 border-t border-outline-variant">
-                      <daf-button label="Gérer le provisioning →" variant="secondary"
+                      <daf-button [label]="'CANDIDATES.DETAIL.MANAGE_PROVISIONING' | translate" variant="secondary"
                         [options]="{ size: 'sm' }" (onClick)="goToProvisioning(prov.id)" />
                     </div>
                   }
@@ -425,9 +425,9 @@
                 <div class="bg-white rounded-xl border border-outline-variant p-5" style="margin-top:2rem">
                   <div class="flex items-center gap-2 mb-2" style="color:var(--color-on-surface-variant)">
                     <span class="material-symbols-outlined text-[18px]">computer</span>
-                    <h3 class="text-[12px] font-semibold uppercase tracking-wider">IT Provisioning</h3>
+                    <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.DETAIL.IT_PROVISIONING' | translate }}</h3>
                   </div>
-                  <p class="text-[13px] text-outline">Aucune tâche IT créée pour l'instant.</p>
+                  <p class="text-[13px] text-outline">{{ 'CANDIDATES.DETAIL.NO_IT_TASK' | translate }}</p>
                 </div>
               }
             }
@@ -446,7 +446,7 @@
 
     <!-- ── Hire modal ─────────────────────────────────────────────────────── -->
     <app-modal
-      title="Recruter le candidat"
+      [title]="'CANDIDATES.DETAIL.HIRE_MODAL_TITLE' | translate"
       [visible]="showHireModal()"
       [hasFooter]="true"
       (closed)="showHireModal.set(false)"
@@ -463,30 +463,30 @@
       <div class="space-y-4">
         <daf-multi-date-picker
           [value]="getHireDate()"
-          [config]="{ label: 'Date d’embauche', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+          [config]="{ label: ('CANDIDATES.DETAIL.HIRE_DATE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), required: true, selectionMode: 'single' }"
           (valueChange)="setHireDate($event)" />
 
         @if (requiresEndDate()) {
           <daf-multi-date-picker
             [value]="getEndDate()"
-            [config]="{ label: 'Date de fin prévue', placeholder: 'Sélectionner', required: true, selectionMode: 'single' }"
+            [config]="{ label: ('CANDIDATES.DETAIL.END_DATE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), required: true, selectionMode: 'single' }"
             (valueChange)="setEndDate($event)" />
         }
 
         <daf-checkbox
           [(checked)]="hireForm.managerProfile"
-          [options]="{ label: 'Profil manager (période d’essai étendue)' }" />
+          [options]="{ label: ('CANDIDATES.DETAIL.MANAGER_PROFILE' | translate) }" />
 
         <daf-form-field
           [value]="hireForm.notes ?? null"
-          [options]="{ type: 'textarea', label: 'Notes', placeholder: 'Commentaire (optionnel)…', rows: 3, fullWidth: true }"
+          [options]="{ type: 'textarea', label: ('CANDIDATES.DETAIL.NOTES' | translate), placeholder: ('CANDIDATES.DETAIL.COMMENT_OPTIONAL' | translate), rows: 3, fullWidth: true }"
           (valueChange)="setHireNotes($event)" />
       </div>
 
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary"
+        <daf-button [label]="'CANDIDATES.COMMON.CANCEL' | translate" variant="secondary"
           (onClick)="showHireModal.set(false)" />
-        <daf-button label="Confirmer le recrutement" variant="teal"
+        <daf-button [label]="'CANDIDATES.DETAIL.CONFIRM_HIRE' | translate" variant="teal"
           [options]="{ iconStart: 'how_to_reg', loading: hireLoading(), disabled: hireLoading() }"
           (onClick)="confirmHire()" />
       </div>

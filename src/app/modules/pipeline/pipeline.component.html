@@ -13,14 +13,14 @@
   <div class="flex justify-between items-end gap-4">
     <div>
       <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-        Candidats
+        {{ 'PIPELINE.TITLE' | translate }}
       </h1>
       <p class="text-[13px] sm:text-[16px] text-outline mt-1">
-        Suivi en temps réel des processus d'embauche actifs.
+        {{ 'PIPELINE.SUBTITLE' | translate }}
       </p>
     </div>
     <daf-button
-      label="Nouveau Candidat"
+      [label]="'PIPELINE.NEW_CANDIDATE' | translate"
       variant="teal"
       [options]="{ iconStart: 'add', size: 'md' }"
       (onClick)="onNewCandidate()" />
@@ -28,9 +28,9 @@
 
   <!-- ── KPI tiles (daf-metric-card, same design as Pipeline RH) ─── -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-    <daf-metric-card label="Total Candidats"        [value]="totalMetricValue()"  [options]="totalMetricOpts" />
-    <daf-metric-card label="Délai Recrutement Moy." [value]="delayMetricValue()"  [options]="delayMetricOpts" />
-    <daf-metric-card label="Postes Urgents"         [value]="urgentMetricValue()" [options]="urgentMetricOpts" />
+    <daf-metric-card [label]="'PIPELINE.KPI_TOTAL' | translate"     [value]="totalMetricValue()"  [options]="totalMetricOpts" />
+    <daf-metric-card [label]="'PIPELINE.KPI_AVG_DELAY' | translate" [value]="delayMetricValue()"  [options]="delayMetricOpts" />
+    <daf-metric-card [label]="'PIPELINE.KPI_URGENT' | translate"    [value]="urgentMetricValue()" [options]="urgentMetricOpts" />
   </div>
 
   <!-- ── Search + view toggle (same card as the Pipeline RH page) ── -->
@@ -38,7 +38,7 @@
     <div class="flex sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
       <div class="w-full sm:w-56 shrink-0 ml-0.5">
         <rh-search-bar
-          placeholder="Rechercher un candidat..."
+          [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
           [value]="search()"
           (valueChange)="onSearch($event)" />
       </div>
@@ -46,12 +46,12 @@
       <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
         <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
           [class.bg-primary]="viewMode() === 'kanban'" [class.text-white]="viewMode() === 'kanban'" [class.text-outline]="viewMode() !== 'kanban'"
-          title="Vue kanban" (click)="setView('kanban')">
+          [title]="'PIPELINE.VIEW_KANBAN' | translate" (click)="setView('kanban')">
           <span class="material-symbols-outlined text-[18px]">view_kanban</span>
         </button>
         <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
           [class.bg-primary]="viewMode() === 'list'" [class.text-white]="viewMode() === 'list'" [class.text-outline]="viewMode() !== 'list'"
-          title="Vue liste" (click)="setView('list')">
+          [title]="'PIPELINE.VIEW_LIST' | translate" (click)="setView('list')">
           <span class="material-symbols-outlined text-[18px]">view_list</span>
         </button>
       </div>
@@ -67,17 +67,17 @@
 
     <!-- ── List view ────────────────────────────────────────────── -->
     <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-      <daf-data-table [columns]="listColumns" [rows]="listRows()" [config]="listConfig">
+      <daf-data-table [columns]="listColumns()" [rows]="listRows()" [config]="listConfig">
         <ng-template dafCell="_actions" let-row>
           <button type="button"
             class="px-3 py-1.5 text-[12px] font-semibold rounded-lg text-[#50717B] hover:bg-surface-container transition-colors whitespace-nowrap"
-            (click)="onCandidateClick(row['_source'].id)">Voir →</button>
+            (click)="onCandidateClick(row['_source'].id)">{{ 'PIPELINE.VIEW_ARROW' | translate }}</button>
         </ng-template>
       </daf-data-table>
     </div>
     @if (listRows().length === 0) {
       <div class="text-center py-12 text-outline border border-dashed border-outline-variant rounded-xl">
-        Aucun candidat trouvé.
+        {{ 'PIPELINE.NO_CANDIDATES' | translate }}
       </div>
     }
 
@@ -137,11 +137,11 @@
                 <div class="bg-surface-container-low p-2 rounded-lg mb-3 text-xs">
                   <p class="text-on-surface-variant italic">
                     @if (isOfferPending(c)) {
-                      "En attente de signature@if (c.offerExpiry) { — expire le {{ c.offerExpiry }} }."
+                      "{{ 'PIPELINE.CARD.PENDING_SIGNATURE' | translate }}@if (c.offerExpiry) { {{ 'PIPELINE.CARD.EXPIRES' | translate:{ date: c.offerExpiry } }} }."
                     } @else if (c.offerStatus === 'ACCEPTED') {
-                      "Offre acceptée — provisioning en cours."
+                      "{{ 'PIPELINE.CARD.OFFER_ACCEPTED' | translate }}"
                     } @else {
-                      "{{ c.note || 'Offre en préparation.' }}"
+                      "{{ c.note || ('PIPELINE.CARD.OFFER_IN_PREP' | translate) }}"
                     }
                   </p>
                 </div>
@@ -165,7 +165,7 @@
                   @case ('ENTRETIEN') {
                     <span class="flex items-center gap-1 text-[11px] min-w-0">
                       <span class="material-symbols-outlined text-[14px] shrink-0">calendar_month</span>
-                      <span class="truncate">{{ c.nextEvent || 'Entretien à planifier' }}</span>
+                      <span class="truncate">{{ c.nextEvent || ('PIPELINE.CARD.INTERVIEW_TO_SCHEDULE' | translate) }}</span>
                     </span>
                     <div class="flex items-center gap-2 shrink-0 min-w-0">
                       @if (c.interviewLocation) {
@@ -175,7 +175,7 @@
                         </span>
                       }
                       @if (canSendOffer(c)) {
-                        <button type="button" title="Envoyer une offre"
+                        <button type="button" [title]="'PIPELINE.CARD.SEND_OFFER_TITLE' | translate"
                           class="shrink-0 p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors"
                           (click)="openOfferModal(c, 'send', $event)">
                           <span class="material-symbols-outlined text-[18px]">send</span>
@@ -191,24 +191,24 @@
                     </span>
                     @if (isOfferPending(c)) {
                       <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" title="Accepter l'offre" [disabled]="actioningId() === c.id"
+                        <button type="button" [title]="'PIPELINE.CARD.ACCEPT_OFFER_TITLE' | translate" [disabled]="actioningId() === c.id"
                           class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors disabled:opacity-40"
                           (click)="acceptOffer(c, $event)">
                           <span class="material-symbols-outlined text-[18px]">check_circle</span>
                         </button>
-                        <button type="button" title="Renégocier"
+                        <button type="button" [title]="'PIPELINE.CARD.RENEGOTIATE_TITLE' | translate"
                           class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors"
                           (click)="openOfferModal(c, 'renegotiate', $event)">
                           <span class="material-symbols-outlined text-[18px]">sync</span>
                         </button>
-                        <button type="button" title="Refuser l'offre" [disabled]="actioningId() === c.id"
+                        <button type="button" [title]="'PIPELINE.CARD.REFUSE_OFFER_TITLE' | translate" [disabled]="actioningId() === c.id"
                           class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors disabled:opacity-40"
                           (click)="openRejectModal(c, $event)">
                           <span class="material-symbols-outlined text-[18px]">cancel</span>
                         </button>
                       </div>
                     } @else {
-                      <span class="text-[11px] shrink-0 text-outline">{{ c.offerStatus === 'ACCEPTED' ? 'Acceptée' : '' }}</span>
+                      <span class="text-[11px] shrink-0 text-outline">{{ c.offerStatus === 'ACCEPTED' ? ('PIPELINE.CARD.OFFER_ACCEPTED_SHORT' | translate) : '' }}</span>
                     }
                   }
 
@@ -231,7 +231,7 @@
           @if (col.candidates.length === 0) {
             <div class="text-center py-10 text-outline border border-dashed border-outline-variant rounded-xl">
               <span class="material-symbols-outlined text-[32px] block mb-1">inbox</span>
-              <p class="text-[12px]">Aucun candidat</p>
+              <p class="text-[12px]">{{ 'PIPELINE.NO_CANDIDATE_COLUMN' | translate }}</p>
             </div>
           }
         </div>
@@ -267,7 +267,7 @@
 <!-- ── Send / renegotiate offer modal ───────────────────────────── -->
 @if (offerTarget(); as target) {
   <app-modal
-    [title]="offerMode() === 'renegotiate' ? 'Renégocier l\'offre' : 'Envoyer une offre'"
+    [title]="offerMode() === 'renegotiate' ? ('PIPELINE.OFFER.RENEGOTIATE_TITLE' | translate) : ('PIPELINE.OFFER.SEND_TITLE' | translate)"
     [visible]="true"
     (closed)="closeOfferModal()"
     [hasFooter]="true">
@@ -276,36 +276,36 @@
 
     <div class="grid grid-cols-2 gap-3">
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-on-surface">Salaire demandé (net)</label>
+        <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.ASKED_SALARY_NET' | translate }}</label>
         <daf-form-field [value]="offerForm.askedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onAskedChange($event)" />
       </div>
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-on-surface">Salaire proposé (net)</label>
+        <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.PROPOSED_SALARY_NET' | translate }}</label>
         <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
       </div>
     </div>
 
     <!-- Salary simulator (future module) -->
     <div class="mt-2">
-      <daf-button label="Simulateur de salaire" variant="ghost"
+      <daf-button [label]="'PIPELINE.OFFER.SALARY_SIM' | translate" variant="ghost"
         [options]="{ iconStart: 'calculate', size: 'sm', disabled: true }"
-        title="Module à venir" />
-      <span class="text-[11px] text-outline ml-1">(bientôt disponible)</span>
+        [title]="'PIPELINE.OFFER.MODULE_SOON' | translate" />
+      <span class="text-[11px] text-outline ml-1">{{ 'PIPELINE.OFFER.COMING_SOON' | translate }}</span>
     </div>
 
     <div class="flex flex-col gap-1 mt-3">
-      <label class="text-xs font-medium text-on-surface">Note (optionnel)</label>
+      <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.NOTE' | translate }}</label>
       <daf-form-field [value]="offerForm.salaryNote ?? null" [options]="noteFieldOpts" (valueChange)="onNoteChange($event)" />
     </div>
 
     <div class="grid grid-cols-2 gap-3 mt-3">
       <daf-multi-date-picker
         [value]="getHireDate()"
-        [config]="{ label: 'Date d’embauche prévue', placeholder: 'Sélectionner', selectionMode: 'single' }"
+        [config]="{ label: ('PIPELINE.OFFER.EXPECTED_HIRE_DATE' | translate), placeholder: ('PIPELINE.OFFER.SELECT' | translate), selectionMode: 'single' }"
         (valueChange)="setHireDate($event)" />
       <daf-multi-date-picker
         [value]="getExpiryDate()"
-        [config]="{ label: 'Expiration de l’offre', placeholder: 'Sélectionner', selectionMode: 'single' }"
+        [config]="{ label: ('PIPELINE.OFFER.EXPIRY' | translate), placeholder: ('PIPELINE.OFFER.SELECT' | translate), selectionMode: 'single' }"
         (valueChange)="setExpiryDate($event)" />
     </div>
 
@@ -314,9 +314,9 @@
     }
 
     <div slot="footer">
-      <daf-button label="Annuler" variant="secondary" (onClick)="closeOfferModal()" />
+      <daf-button [label]="'PIPELINE.OFFER.CANCEL' | translate" variant="secondary" (onClick)="closeOfferModal()" />
       <daf-button
-        [label]="offerSubmitting() ? 'Envoi…' : (offerMode() === 'renegotiate' ? 'Renégocier' : 'Envoyer l\'offre')"
+        [label]="offerSubmitting() ? ('PIPELINE.OFFER.SENDING' | translate) : (offerMode() === 'renegotiate' ? ('PIPELINE.OFFER.RENEGOTIATE' | translate) : ('PIPELINE.OFFER.SEND_OFFER' | translate))"
         variant="primary"
         [options]="{ iconStart: 'send', disabled: offerSubmitting(), loading: offerSubmitting() }"
         (onClick)="submitOffer()" />
@@ -327,14 +327,14 @@
 <!-- ── Refuse offer modal ───────────────────────────────────────── -->
 @if (rejectTarget(); as target) {
   <app-modal
-    [title]="'Refuser l\'offre'"
+    [title]="'PIPELINE.OFFER.REFUSE_TITLE' | translate"
     [visible]="true"
     (closed)="closeRejectModal()"
     [hasFooter]="true">
 
     <p class="text-[13px] font-semibold text-on-surface mb-3">{{ target.fullName }}</p>
     <div class="flex flex-col gap-1">
-      <label class="text-xs font-medium text-on-surface">Motif du refus <span class="text-danger">*</span></label>
+      <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.REJECTION_REASON' | translate }} <span class="text-danger">*</span></label>
       <daf-form-field [value]="rejectReason" [options]="reasonFieldOpts" (valueChange)="onReasonChange($event)" />
     </div>
     @if (offerError()) {
@@ -342,9 +342,9 @@
     }
 
     <div slot="footer">
-      <daf-button label="Annuler" variant="secondary" (onClick)="closeRejectModal()" />
+      <daf-button [label]="'PIPELINE.OFFER.CANCEL' | translate" variant="secondary" (onClick)="closeRejectModal()" />
       <daf-button
-        [label]="rejectSubmitting() ? 'Refus en cours…' : 'Confirmer le refus'"
+        [label]="rejectSubmitting() ? ('PIPELINE.OFFER.REFUSING' | translate) : ('PIPELINE.OFFER.CONFIRM_REFUSE' | translate)"
         variant="danger"
         [options]="{ iconStart: 'cancel', disabled: rejectSubmitting() || !rejectReason.trim(), loading: rejectSubmitting() }"
         (onClick)="submitReject()" />

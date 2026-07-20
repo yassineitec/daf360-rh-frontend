@@ -1,14 +1,14 @@
 <div class="page-header">
   <div>
-    <h1 class="page-title">Pipeline Recrutement</h1>
-    <p class="page-sub">Vue d'ensemble de tous les candidats par étape</p>
+    <h1 class="page-title">{{ 'RECRUITMENT_PIPELINE.TITLE' | translate }}</h1>
+    <p class="page-sub">{{ 'RECRUITMENT_PIPELINE.SUBTITLE' | translate }}</p>
   </div>
   <button class="btn-refresh" type="button" (click)="load()" [disabled]="loading()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
     </svg>
-    Rafraîchir
+    {{ 'RECRUITMENT_PIPELINE.REFRESH' | translate }}
   </button>
 </div>
 
@@ -29,7 +29,7 @@
         <div class="funnel-card" [style.border-top-color]="s.stage.color">
           <span class="funnel-icon">{{ s.stage.icon }}</span>
           <span class="funnel-count" [style.color]="s.stage.color">{{ s.count }}</span>
-          <span class="funnel-label">{{ s.stage.label }}</span>
+          <span class="funnel-label">{{ s.stage.label | translate }}</span>
         </div>
       }
     }
@@ -41,14 +41,14 @@
       <div class="stage-section">
         <div class="stage-header" [style.border-left-color]="group.stage.color">
           <span class="stage-icon">{{ group.stage.icon }}</span>
-          <h2 class="stage-title">{{ group.stage.label }}</h2>
+          <h2 class="stage-title">{{ group.stage.label | translate }}</h2>
           <span class="stage-count" [style.background]="group.stage.color">
             {{ group.candidates.length }}
           </span>
         </div>
 
         @if (group.candidates.length === 0) {
-          <p class="stage-empty">Aucun candidat à cette étape.</p>
+          <p class="stage-empty">{{ 'RECRUITMENT_PIPELINE.EMPTY_STAGE' | translate }}</p>
         } @else {
           <div class="candidates-grid">
             @for (c of group.candidates; track c.id) {
@@ -74,7 +74,7 @@
                     [style.background]="group.stage.color"
                     (click)="$event.stopPropagation(); navigate(group.stage.nextRoute!(c))"
                   >
-                    {{ group.stage.nextLabel }}
+                    {{ group.stage.nextLabel | translate }}
                   </button>
                 }
               </div>

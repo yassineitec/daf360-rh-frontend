@@ -24,14 +24,14 @@
     <ng-template dafCell="_actions" let-row>
       <div class="rra-actions">
         <daf-button
-          *appHasPermission="'ADMIN_REGIMES'"
+          *dafHasPermission="'ADMIN_REGIMES'"
           [label]="row['_source'].assignment ? 'Modifier' : 'Assigner'"
           variant="secondary"
           [options]="{ size: 'sm', iconStart: row['_source'].assignment ? 'edit' : 'add' }"
           (onClick)="openAssignModal(row['_source'])" />
         @if (row['_source'].assignment) {
           <daf-button
-            *appHasPermission="'ADMIN_REGIMES'"
+            *dafHasPermission="'ADMIN_REGIMES'"
             class="icon-btn-delete"
             title="Supprimer"
             variant="danger"

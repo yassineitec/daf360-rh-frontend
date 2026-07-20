@@ -3,19 +3,19 @@
   <div>
     <h1 class="flex items-center gap-2 text-2xl font-bold text-on-surface">
       <span class="material-symbols-outlined text-[26px] text-primary">group</span>
-      Suivi des Recrutements
+      {{ 'CANDIDATES.LIST.TITLE' | translate }}
       @if (candidates()?.totalElements != null) {
         <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container text-outline">
           {{ candidates()!.totalElements }}
         </span>
       }
     </h1>
-    <p class="text-sm text-outline mt-1">Gestion du recrutement et du suivi des candidatures</p>
+    <p class="text-sm text-outline mt-1">{{ 'CANDIDATES.LIST.SUBTITLE' | translate }}</p>
   </div>
 
-  <ng-container *appHasPermission="'CREATE_CANDIDATE'">
+  <ng-container *dafHasPermission="'CREATE_CANDIDATE'">
     <daf-button
-      label="Nouveau candidat"
+      [label]="'CANDIDATES.ACTIONS.NEW_CANDIDATE' | translate"
       variant="teal"
       [options]="{ iconStart: 'person_add', size: 'md' }"
       (onClick)="router.navigate(['/rh/candidates', 'new'])"
@@ -25,9 +25,9 @@
 
 <!-- ── Stats cards ─────────────────────────────────────────────────────── -->
 <div class="grid grid-cols-3 gap-6 mb-8">
-  <rh-kpi-card label="Total candidats" icon="group" [value]="isLoadingStats() ? '…' : stats().total" variant="blue" />
-  <rh-kpi-card label="En attente" icon="schedule" [value]="isLoadingStats() ? '…' : stats().pending" variant="amber" />
-  <rh-kpi-card label="Embauchés" icon="how_to_reg" [value]="isLoadingStats() ? '…' : stats().hired" variant="green" />
+  <rh-kpi-card [label]="'CANDIDATES.STATS.TOTAL' | translate" icon="group" [value]="isLoadingStats() ? '…' : stats().total" variant="blue" />
+  <rh-kpi-card [label]="'CANDIDATES.STATS.PENDING' | translate" icon="schedule" [value]="isLoadingStats() ? '…' : stats().pending" variant="amber" />
+  <rh-kpi-card [label]="'CANDIDATES.STATS.HIRED' | translate" icon="how_to_reg" [value]="isLoadingStats() ? '…' : stats().hired" variant="green" />
 </div>
 
 <!-- ── Table section ───────────────────────────────────────────────────── -->
@@ -35,9 +35,9 @@
 
   <!-- Toolbar -->
   <div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
-    <span class="text-sm font-semibold text-on-surface">Liste des candidats</span>
+    <span class="text-sm font-semibold text-on-surface">{{ 'CANDIDATES.LIST.TABLE_TITLE' | translate }}</span>
     <daf-button
-      [label]="showFilters() ? 'Masquer filtres' : 'Filtres'"
+      [label]="(showFilters() ? 'CANDIDATES.FILTERS.HIDE' : 'CANDIDATES.FILTERS.SHOW') | translate"
       variant="ghost"
       [options]="{ iconStart: 'tune', size: 'sm' }"
       (onClick)="toggleFilters()"
@@ -49,7 +49,7 @@
     <div class="flex gap-3 flex-wrap items-end px-5 py-4 bg-surface-container-low border-b border-outline-variant">
       <div class="flex-1 min-w-52">
         <rh-search-bar
-          placeholder="Nom, email, poste…"
+          [placeholder]="'CANDIDATES.LIST.SEARCH_PLACEHOLDER' | translate"
           [value]="(searchValue() ?? '').toString()"
           (valueChange)="onSearch($event)"
         />
@@ -57,19 +57,19 @@
 
       <daf-select
         [selected]="selectedStatus()"
-        [options]="statusSelectOptions"
-        [config]="statusSelectConfig"
+        [options]="statusSelectOptions()"
+        [config]="statusSelectConfig()"
         (selectedChange)="onStatusChange($event)"
       />
 
       <daf-button
-        label="Appliquer"
+        [label]="'CANDIDATES.ACTIONS.APPLY' | translate"
         variant="primary"
         [options]="{ iconStart: 'search', size: 'md' }"
         (onClick)="applyFilters()"
       />
       <daf-button
-        label="Réinitialiser"
+        [label]="'CANDIDATES.ACTIONS.RESET' | translate"
         variant="ghost"
         [options]="{ iconStart: 'close', size: 'md' }"
         (onClick)="clearFilters()"
@@ -79,7 +79,7 @@
 
   <!-- Table -->
   <daf-data-table
-    [columns]="columns"
+    [columns]="columns()"
     [rows]="rows()"
     [config]="tableConfig()"
     (rowClick)="onRowClick($event['_source'].id)"
@@ -90,14 +90,14 @@
 
         @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
           <daf-button
-            label="Accepter"
+            [label]="'CANDIDATES.ACTIONS.ACCEPT' | translate"
             variant="ghost"
             [options]="{ iconStart: 'check_circle', size: 'sm' }"
             [class.opacity-50]="isActioning()"
             (onClick)="quickAccept(row['_source'], $event)"
           />
           <daf-button
-            label="Rejeter"
+            [label]="'CANDIDATES.ACTIONS.REJECT' | translate"
             variant="danger"
             [options]="{ iconStart: 'cancel', size: 'sm' }"
             [class.opacity-50]="isActioning()"
@@ -106,7 +106,7 @@
         }
 
         <daf-button
-          label="Voir"
+          [label]="'CANDIDATES.ACTIONS.VIEW' | translate"
           variant="ghost"
           [options]="{ iconStart: 'open_in_new', size: 'sm' }"
           (onClick)="router.navigate(['/rh/candidates', row['_source'].id])"
@@ -120,9 +120,9 @@
   @if (!isLoadingCandidates() && (candidates()?.totalPages ?? 0) > 1) {
     <div class="flex items-center justify-between px-5 py-3 border-t border-outline-variant">
       <span class="text-sm text-outline">
-        Page {{ (candidates()?.number ?? 0) + 1 }} sur {{ candidates()?.totalPages ?? 1 }}
+        {{ 'CANDIDATES.LIST.PAGE_OF' | translate:{ page: (candidates()?.number ?? 0) + 1, total: candidates()?.totalPages ?? 1 } }}
         &nbsp;·&nbsp;
-        {{ candidates()?.totalElements ?? 0 }} résultats
+        {{ 'CANDIDATES.LIST.RESULTS_COUNT' | translate:{ count: candidates()?.totalElements ?? 0 } }}
       </span>
       <daf-pagination
         [currentPage]="currentPage()"
@@ -144,20 +144,20 @@
       <span class="material-symbols-outlined text-xl text-primary">history</span>
       <div>
         <p class="text-sm font-semibold text-on-surface">
-          Historique des décisions
+          {{ 'CANDIDATES.HISTORY.TITLE' | translate }}
           @if (selectedCandidate()) {
             <span class="text-primary"> — {{ selectedCandidate()!.firstName }} {{ selectedCandidate()!.lastName }}</span>
           }
         </p>
-        <p class="text-xs text-outline">Cliquez sur un candidat pour voir son historique</p>
+        <p class="text-xs text-outline">{{ 'CANDIDATES.HISTORY.SUB' | translate }}</p>
       </div>
     </div>
 
     @if (!selectedId()) {
       <div class="flex flex-col items-center justify-center py-12 gap-2 text-outline">
         <span class="material-symbols-outlined text-5xl opacity-40">history</span>
-        <p class="text-sm text-on-surface">Sélectionnez un candidat</p>
-        <p class="text-xs">pour voir l'historique de ses décisions</p>
+        <p class="text-sm text-on-surface">{{ 'CANDIDATES.HISTORY.SELECT_PROMPT' | translate }}</p>
+        <p class="text-xs">{{ 'CANDIDATES.HISTORY.SELECT_HINT' | translate }}</p>
       </div>
     }
 
@@ -178,7 +178,7 @@
       @if (history().length === 0) {
         <div class="flex flex-col items-center justify-center py-8 gap-2 text-outline">
           <span class="material-symbols-outlined text-4xl opacity-35">event_note</span>
-          <span class="text-sm">Aucun historique disponible</span>
+          <span class="text-sm">{{ 'CANDIDATES.HISTORY.EMPTY' | translate }}</span>
         </div>
       } @else {
         <div class="relative flex flex-col gap-4 pl-11">
@@ -230,8 +230,8 @@
         <span class="material-symbols-outlined text-xl">auto_awesome</span>
       </div>
       <div>
-        <p class="text-sm font-semibold text-on-surface">Automatisation du Workflow</p>
-        <p class="text-xs text-outline">Notifications automatiques à l'acceptation</p>
+        <p class="text-sm font-semibold text-on-surface">{{ 'CANDIDATES.WORKFLOW.TITLE' | translate }}</p>
+        <p class="text-xs text-outline">{{ 'CANDIDATES.WORKFLOW.SUB' | translate }}</p>
       </div>
     </div>
 
@@ -240,8 +240,8 @@
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-xl" style="color:#004941">task_alt</span>
         <div>
-          <p class="text-sm font-semibold text-on-surface">Candidat marqué 'Accepté'</p>
-          <p class="text-xs text-outline">Déclencheur manuel HR</p>
+          <p class="text-sm font-semibold text-on-surface">{{ 'CANDIDATES.WORKFLOW.STEP1' | translate }}</p>
+          <p class="text-xs text-outline">{{ 'CANDIDATES.WORKFLOW.TRIGGER' | translate }}</p>
         </div>
       </div>
       <span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
@@ -254,21 +254,21 @@
     <!-- Notification card -->
     <div class="bg-on-surface rounded-xl p-5 rotate-[0.8deg]">
       <div class="flex items-center justify-between mb-3">
-        <span class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">Notification IT automatique</span>
+        <span class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">{{ 'CANDIDATES.WORKFLOW.NOTIF_TITLE' | translate }}</span>
         <span class="material-symbols-outlined text-[18px] text-outline-variant">lan</span>
       </div>
       <div class="font-mono text-[12px] leading-relaxed text-surface opacity-90">
-        <div><span class="text-outline-variant">OBJET : </span>Préparation équipement - Nouveau talent</div>
-        <div><span class="text-outline-variant">NOM : </span>{{ selectedCandidate() ? (selectedCandidate()!.firstName + ' ' + selectedCandidate()!.lastName) : 'Aucun candidat sélectionné' }}</div>
-        <div><span class="text-outline-variant">POSTE : </span>{{ selectedCandidate()?.appliedPosition ?? '—' }}</div>
-        <div><span class="text-outline-variant">START : </span>{{ selectedCandidate()?.expectedStartDate ? formatDateFr(selectedCandidate()!.expectedStartDate!) : '—' }}</div>
-        <div class="mt-2 pt-2 border-t border-surface/15 text-[11px]">Action : Création compte MS365 + Provisioning matériel.</div>
+        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_SUBJECT_LABEL' | translate }}</span>{{ 'CANDIDATES.WORKFLOW.EMAIL_SUBJECT' | translate }}</div>
+        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_NAME_LABEL' | translate }}</span>{{ selectedCandidate() ? (selectedCandidate()!.firstName + ' ' + selectedCandidate()!.lastName) : ('CANDIDATES.WORKFLOW.EMAIL_NO_CANDIDATE' | translate) }}</div>
+        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_POSITION_LABEL' | translate }}</span>{{ selectedCandidate()?.appliedPosition ?? '—' }}</div>
+        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_START_LABEL' | translate }}</span>{{ selectedCandidate()?.expectedStartDate ? formatDateFr(selectedCandidate()!.expectedStartDate!) : '—' }}</div>
+        <div class="mt-2 pt-2 border-t border-surface/15 text-[11px]">{{ 'CANDIDATES.WORKFLOW.EMAIL_ACTION' | translate }}</div>
       </div>
       <div class="mt-3 flex justify-end">
         @if (['ACCEPTED','IT_IN_PROGRESS','EMAIL_RECEIVED','HR_IN_PROGRESS','HIRED'].includes(selectedCandidate()?.status ?? '')) {
-          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-teal-300 bg-teal-900/30">✓ Envoyé avec succès</span>
+          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-teal-300 bg-teal-900/30">{{ 'CANDIDATES.WORKFLOW.SENT' | translate }}</span>
         } @else {
-          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-outline-variant bg-surface-container/20">En attente d'acceptation</span>
+          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-outline-variant bg-surface-container/20">{{ 'CANDIDATES.WORKFLOW.PENDING' | translate }}</span>
         }
       </div>
     </div>
@@ -277,7 +277,7 @@
     <div class="flex gap-2 mt-4 text-outline">
       <span class="material-symbols-outlined text-base shrink-0 mt-0.5">info</span>
       <p class="text-xs leading-relaxed">
-        Chaque validation 'Acceptée' génère automatiquement une notification IT et crée un dossier de provisioning.
+        {{ 'CANDIDATES.WORKFLOW.FOOTER' | translate }}
       </p>
     </div>
   </div>

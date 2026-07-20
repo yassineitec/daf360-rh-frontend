@@ -1,50 +1,50 @@
 <div class="step-personal">
   <div class="section-header">
-    <h3 class="section-title">Informations personnelles &amp; Sociales</h3>
-    <p class="section-sub">Numéro de sécurité sociale, situation familiale, coordonnées personnelles</p>
+    <h3 class="section-title">{{ 'ONBOARDING.STEP_PERSONAL.TITLE' | translate }}</h3>
+    <p class="section-sub">{{ 'ONBOARDING.STEP_PERSONAL.SUBTITLE' | translate }}</p>
   </div>
 
   <div class="form-grid">
     <!-- Row 1: Social Security Number (DB: cnss_number) | Affiliation Date -->
     <div class="form-field">
-      <label class="form-label">N° de Sécurité Sociale <span class="req">*</span></label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.SSN' | translate }} <span class="req">*</span></label>
       <daf-form-field
-        [options]="{ placeholder: 'Ex: 123456789' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_PERSONAL.SSN_PH' | translate) }"
         [value]="cnssNumber()"
         (valueChange)="cnssNumber.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">Date d'affiliation Sécurité Sociale</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.SSN_AFFILIATION_DATE' | translate }}</label>
       <daf-multi-date-picker
         [value]="isoToDate(cnssAffiliationDate() || null)"
-        [config]="{ placeholder: 'Sélectionner', selectionMode: 'single' }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.DATE_PLACEHOLDER' | translate), selectionMode: 'single' }"
         (valueChange)="cnssAffiliationDate.set(dateToIso($event) || ''); emit()" />
     </div>
 
     <!-- Row 2: Marital Status | Number of Children -->
     <div class="form-field">
-      <label class="form-label">Situation familiale</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.MARITAL' | translate }}</label>
       <daf-select
         [selected]="maritalStatus() ? [maritalStatus()] : []"
         [options]="maritalOptions()"
-        [config]="{ placeholder: '— Sélectionner —', fullWidth: true }"
+        [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
         (selectedChange)="maritalStatus.set($event[0] ?? ''); emit()" />
     </div>
 
     <div class="form-field">
-      <label class="form-label">Nombre d'enfants</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.CHILDREN' | translate }}</label>
       <daf-form-field
-        [options]="{ type: 'number', placeholder: '0' }"
+        [options]="{ type: 'number', placeholder: ('ONBOARDING.STEP_PERSONAL.CHILDREN_PH' | translate) }"
         [value]="numberOfChildren()"
         (valueChange)="numberOfChildren.set($event == null || $event === '' ? null : +$event); emit()" />
     </div>
 
     <!-- Row 3: Phone | empty -->
     <div class="form-field">
-      <label class="form-label">Téléphone personnel</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.PHONE' | translate }}</label>
       <daf-form-field
-        [options]="{ placeholder: 'Ex: +216 XX XXX XXX', prefixIcon: 'phone' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_PERSONAL.PHONE_PH' | translate), prefixIcon: 'phone' }"
         [value]="phone()"
         (valueChange)="phone.set($any($event) ?? ''); emit()" />
     </div>
@@ -53,9 +53,9 @@
 
     <!-- Row 4: Home Address (full-width textarea) -->
     <div class="form-field form-full">
-      <label class="form-label">Adresse personnelle</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.ADDRESS' | translate }}</label>
       <daf-form-field
-        [options]="{ type: 'textarea', rows: 3, placeholder: 'Rue, code postal, ville, pays…' }"
+        [options]="{ type: 'textarea', rows: 3, placeholder: ('ONBOARDING.STEP_PERSONAL.ADDRESS_PH' | translate) }"
         [value]="personalAddress()"
         (valueChange)="personalAddress.set($any($event) ?? ''); emit()" />
     </div>

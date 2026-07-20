@@ -1,28 +1,28 @@
 <div class="step-emergency">
-  <p class="step-intro">Personne à contacter en cas d'urgence (optionnel).</p>
+  <p class="step-intro">{{ 'ONBOARDING.STEP_EMERGENCY.INTRO' | translate }}</p>
 
   <div class="form-grid">
 
     <div class="form-field form-full">
-      <label class="form-label">Nom complet</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_EMERGENCY.FULL_NAME' | translate }}</label>
       <daf-form-field
-        [options]="{ placeholder: 'ex : Marie Dupont' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_EMERGENCY.FULL_NAME_PH' | translate) }"
         [value]="emergencyContactName()"
         (valueChange)="emergencyContactName.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field form-full">
-      <label class="form-label">Relation (ex&nbsp;: Conjoint, Parent…)</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_EMERGENCY.RELATION' | translate }}</label>
       <daf-form-field
-        [options]="{ placeholder: 'ex : Conjoint(e)' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_EMERGENCY.RELATION_PH' | translate) }"
         [value]="emergencyContactRelation()"
         (valueChange)="emergencyContactRelation.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field form-full">
-      <label class="form-label">Téléphone</label>
+      <label class="form-label">{{ 'ONBOARDING.STEP_EMERGENCY.PHONE' | translate }}</label>
       <daf-form-field
-        [options]="{ placeholder: 'ex : +216 XX XXX XXX', prefixIcon: 'phone' }"
+        [options]="{ placeholder: ('ONBOARDING.STEP_EMERGENCY.PHONE_PH' | translate), prefixIcon: 'phone' }"
         [value]="emergencyContactPhone()"
         (valueChange)="emergencyContactPhone.set($any($event) ?? ''); emit()" />
     </div>

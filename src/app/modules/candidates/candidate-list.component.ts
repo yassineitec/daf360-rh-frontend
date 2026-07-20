@@ -20,17 +20,18 @@ import {
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
-import { PermissionDirective } from '../../shared/permission.directive';
+import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   CandidateListItem,
   CandidateStats,
   CandidateHistoryItem,
   PageResponse,
-  CANDIDATE_STATUS_OPTIONS,
 } from './candidate.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { ConfirmService } from '../../core/confirm.service';
 
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   PENDING:        'neutral',
@@ -47,7 +48,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   selector: 'app-candidate-list',
   standalone: true,
   imports: [
-    PermissionDirective,
+    DafHasPermissionDirective,
     ButtonComponent,
     SelectComponent,
     KpiCardComponent,
@@ -57,13 +58,22 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
     DafCellDirective,
     RejectModalComponent,
     RhSearchBarComponent,
+    TranslatePipe,
   ],
   templateUrl: './candidate-list.component.html',
 })
 export class CandidateListComponent implements OnInit {
   private svc       = inject(CandidateService);
+  private confirm = inject(ConfirmService);
   protected router  = inject(Router);
   readonly userStore = inject(UserStore);
+  private translate = inject(TranslateService);
+
+  /** Candidate status codes, in workflow order, for the status filter select. */
+  private readonly STATUS_CODES = [
+    'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
+    'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
+  ];
 
   candidates    = signal<PageResponse<CandidateListItem> | null>(null);
   stats         = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
@@ -98,29 +108,39 @@ export class CandidateListComponent implements OnInit {
   );
 
   // ── daf360 options ────────────────────────────────────────────────────────
-  readonly statusSelectConfig: SelectConfig = {
-    placeholder: 'Tous les statuts',
-  };
+  readonly statusSelectConfig = computed<SelectConfig>(() => {
+    this.translate.currentLang();
+    return { placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES') };
+  });
 
-  readonly statusSelectOptions: SelectOption[] = CANDIDATE_STATUS_OPTIONS
-    .filter(o => o.value !== '')
-    .map(o => ({ value: o.value, label: o.label }));
+  readonly statusSelectOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return this.STATUS_CODES.map(code => ({
+      value: code,
+      label: this.translate.instant('CANDIDATES.STATUS.' + code),
+    }));
+  });
 
   readonly skeletonRows = [1, 2, 3, 4, 5];
 
   protected readonly statusBadge = statusBadge;
 
   // ── daf-data-table setup ──────────────────────────────────────────────────
-  readonly columns: TableColumn[] = [
-    { key: 'candidat', label: 'Candidat', type: 'avatar' },
-    { key: 'appliedPosition', label: 'Poste' },
-    { key: 'status', label: 'Statut', type: 'badge' },
-    { key: 'expectedStartDate', label: 'Début prévu' },
-    { key: '_actions', label: 'Actions', align: 'right' },
-  ];
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      { key: 'candidat', label: t('CANDIDATES.LIST.COL_CANDIDATE'), type: 'avatar' },
+      { key: 'appliedPosition', label: t('CANDIDATES.LIST.COL_POSITION') },
+      { key: 'status', label: t('CANDIDATES.LIST.COL_STATUS'), type: 'badge' },
+      { key: 'expectedStartDate', label: t('CANDIDATES.LIST.COL_START_DATE') },
+      { key: '_actions', label: t('CANDIDATES.LIST.COL_ACTIONS'), align: 'right' },
+    ];
+  });
 
-  readonly rows = computed<TableRow[]>(() =>
-    (this.candidates()?.content ?? []).map(c => ({
+  readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return (this.candidates()?.content ?? []).map(c => ({
       candidat: {
         name: `${c.firstName} ${c.lastName}`,
         initials: this.getInitials(c.firstName, c.lastName),
@@ -130,15 +150,18 @@ export class CandidateListComponent implements OnInit {
       status: { label: this.getStatusLabel(c.status), options: this.getStatusBadgeOptions(c.status) } as BadgeCell,
       expectedStartDate: this.formatDateFr(c.expectedStartDate),
       _source: c,
-    })),
-  );
+    }));
+  });
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.isLoadingCandidates(),
-    skeletonRows: this.skeletonRows.length,
-    emptyMessage: 'Aucun candidat trouvé. Modifiez vos filtres ou ajoutez un nouveau candidat.',
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.isLoadingCandidates(),
+      skeletonRows: this.skeletonRows.length,
+      emptyMessage: this.translate.instant('CANDIDATES.LIST.EMPTY'),
+    };
+  });
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {
@@ -215,17 +238,7 @@ export class CandidateListComponent implements OnInit {
   }
 
   getStatusLabel(s: string): string {
-    const m: Record<string, string> = {
-      PENDING:        'En attente',
-      ACCEPTED:       'Accepté(e)',
-      REJECTED:       'Refusé(e)',
-      IT_IN_PROGRESS: 'IT en cours',
-      EMAIL_RECEIVED: 'Email reçu',
-      HR_IN_PROGRESS: 'RH en cours',
-      HIRED:          'Embauché(e)',
-      ARCHIVED:       'Archivé(e)',
-    };
-    return m[s] ?? s;
+    return this.translate.instant('CANDIDATES.STATUS.' + s);
   }
 
   // ── Timeline helpers ──────────────────────────────────────────────────────
@@ -286,13 +299,17 @@ export class CandidateListComponent implements OnInit {
   }
 
   // ── Accept / Reject ───────────────────────────────────────────────────────
-  quickAccept(c: CandidateListItem, event: Event): void {
+  async quickAccept(c: CandidateListItem, event: Event): Promise<void> {
     event.stopPropagation();
-    if (!confirm(`Accepter le candidat ${c.firstName} ${c.lastName} ?`)) return;
+    if (!(await this.confirm.ask({
+      title: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_TITLE'),
+      message: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_MESSAGE', { name: `${c.firstName} ${c.lastName}` }),
+      confirmLabel: this.translate.instant('CANDIDATES.ACTIONS.ACCEPT'), icon: 'check_circle',
+    }))) return;
     this.isActioning.set(true);
     this.svc.accept(c.id).subscribe({
       next:  () => { this.isActioning.set(false); this.loadCandidates(); },
-      error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? 'Erreur.'); },
+      error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.GENERIC')); },
     });
   }
 
