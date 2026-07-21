@@ -90,19 +90,22 @@
         <!-- Step 2 — Poste & Contrat -->
         @if (currentStep() === 2) {
           <div class="space-y-8">
-            <daf-form-field
+            <div class="mb-8">
+                          <daf-form-field
               [options]="{ label: ('CANDIDATES.FORM.POSITION' | translate), required: true,
                            placeholder: ('CANDIDATES.FORM.POSITION_PH' | translate), prefixIcon: 'work_outline',
                            error: getFieldError('position.appliedPosition') }"
               [value]="getTextValue('position.appliedPosition')"
               (valueChange)="setTextValue('position.appliedPosition', $event)" />
-
-            <daf-chip-group
+            </div>
+            <div class="mb-8">
+                          <daf-chip-group
               [options]="employmentTypeChipOptions()"
               [selected]="getSelectNum('position.employmentTypeId')"
               [config]="{ label: ('CANDIDATES.FORM.CONTRACT_TYPE' | translate), required: true,
                           error: getFieldError('position.employmentTypeId') }"
               (selectedChange)="setSelectNum('position.employmentTypeId', $event)" />
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-multi-date-picker
