@@ -2,6 +2,14 @@
 
 .form-page { padding-bottom: 0; }
 
+// The lib's card renders its own p-6 (padding: 'lg') inner padding — too roomy
+// once the card is full-width on a phone, so shrink it back at the same
+// breakpoints used everywhere else in this file.
+.step-content-card ::ng-deep {
+  @media (max-width: 768px) { .p-6 { padding: 1.25rem !important; } }
+  @media (max-width: 480px) { .p-6 { padding: 1rem !important; } }
+}
+
 // ── Alerts ──────────────────────────────────────────────────────────────────
 .alert {
   border-radius: 10px;
@@ -34,6 +42,11 @@
 }
 
 // ── Stepper ──────────────────────────────────────────────────────────────────
+.stepper-track {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
 .step-item {
   display: flex;
   flex-direction: column;
@@ -161,6 +174,9 @@
 }
 
 // ── Fixed footer ──────────────────────────────────────────────────────────────
+// Mirrors the shell's own sidebar breakpoints (hr-shell.component.scss): the
+// nav collapses to off-canvas at ≤768px, so the footer must reclaim that space
+// at the same breakpoint instead of leaving a permanent 220px dead zone.
 .form-footer {
   position: fixed;
   bottom: 0;
@@ -176,18 +192,39 @@
   padding: 0 32px;
   z-index: 100;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+
+  @media (max-width: 768px) {
+    left: 0;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .footer-left {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  @media (max-width: 768px) {
+    justify-content: stretch;
+
+    .btn-cancel, .btn-prev { flex: 1; justify-content: center; }
+  }
 }
 
 .footer-right {
   display: flex;
   align-items: center;
   gap: 10px;
+
+  @media (max-width: 768px) {
+    justify-content: stretch;
+
+    .btn-draft, .btn-create-next, .btn-create-profile { flex: 1; justify-content: center; }
+  }
 }
 
 .btn-prev {
@@ -273,4 +310,21 @@
 
   &:hover { opacity: 0.9; }
   &:active { transform: scale(0.97); }
+}
+
+// Long French labels (e.g. "Créer et Passer à l'étape suivante") can't fit a
+// flex:1 mobile button on one line — let them wrap to two centered lines
+// instead of overflowing or silently clipping.
+@media (max-width: 768px) {
+  .btn-prev, .btn-cancel, .btn-draft, .btn-create-profile, .btn-create-next {
+    min-height: 44px;
+    height: auto;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }

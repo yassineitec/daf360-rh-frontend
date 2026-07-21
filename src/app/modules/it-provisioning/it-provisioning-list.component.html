@@ -2,7 +2,7 @@
 
   <!-- Page header -->
   <div>
-    <h1 class="text-headline-xl sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+    <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
       Provisioning IT
     </h1>
     <div class="flex items-center gap-2 mt-1">
@@ -157,7 +157,7 @@
         <ng-template dafCell="_actions" let-row>
           <daf-button
             [label]="row['isCompleted'] ? 'Voir' : 'Compléter'"
-            [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
+            variant="teal"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />
         </ng-template>
@@ -219,7 +219,7 @@
               {{ row['candidat'].initials }}
             </div>
             <div class="min-w-0">
-              <p class="font-semibold text-on-surface truncate">{{ row['candidat'].name }}</p>
+              <p class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] truncate">{{ row['candidat'].name }}</p>
               <p class="text-[12px] text-outline truncate">{{ row['candidat'].subtitle || 'Poste non spécifié' }}</p>
             </div>
           </div>
@@ -271,7 +271,7 @@
         <div class="flex items-center justify-end pt-3 border-t border-outline-variant">
           <daf-button
             [label]="row['isCompleted'] ? 'Voir' : 'Compléter'"
-            [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
+            variant="teal"
             [options]="{ size: 'sm' }"
             (onClick)="navigate(row['_source'].id)" />
         </div>

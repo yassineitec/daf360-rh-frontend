@@ -56,7 +56,7 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
       <!-- ── Header ─────────────────────────────────────────────────────── -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+          <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
             Mes demandes RH
           </h1>
           <daf-badge [label]="total().toString()" [options]="{ variant: 'teal', pill: true }" />

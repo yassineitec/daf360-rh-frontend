@@ -3,7 +3,7 @@
   <!-- Page header -->
   <div class="flex items-start sm:items-center justify-between gap-3">
     <div>
-      <h1 class="text-headline-xl sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+      <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
         {{ 'CANDIDATES.PIPELINE_RH.TITLE' | translate }}
       </h1>
       <p class="text-[13px] sm:text-[14px] text-outline mt-1">
@@ -33,28 +33,31 @@
   @if (statsLoading()) {
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       @for (i of [1, 2, 3]; track i) {
-        <div class="h-[104px] bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse"></div>
+        <div class="h-32 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse"></div>
       }
     </div>
   } @else {
-    <!-- daf-metric-card grid on desktop/tablet — mobile gets its own compact
-         stat-tile card (same style as the dashboard's résumé hero), reusing
-         the exact same icon colors as the desktop cards -->
+    <!-- rh-kpi-card grid on desktop/tablet — same size/style as the onboarding
+         list page — mobile gets its own compact stat-tile card, reusing the
+         exact same icon colors as the desktop cards -->
     <div class="hidden md:grid grid-cols-3 gap-6">
-      <daf-metric-card
+      <rh-kpi-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate"
+        icon="groups"
         [value]="activeMetricValue()"
-        [options]="activeMetricOpts" />
+        variant="blue" />
 
-      <daf-metric-card
+      <rh-kpi-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_ACCEPTANCE' | translate"
+        icon="thumb_up"
         [value]="acceptanceMetricValue()"
-        [options]="acceptanceMetricOpts" />
+        variant="green" />
 
-      <daf-metric-card
+      <rh-kpi-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate"
+        icon="how_to_reg"
         [value]="hiredMetricValue()"
-        [options]="hiredMetricOpts" />
+        variant="green" />
     </div>
 
     <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
@@ -264,7 +267,7 @@
               (drop)="onDrop($event, col)">
               @for (c of col.candidates; track c.id) {
                 <div
-                  class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant shadow-sm cursor-grab active:cursor-grabbing transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+                  class="aff-shape p-4 cursor-grab active:cursor-grabbing"
                   [class.opacity-40]="draggedId() === c.id"
                   draggable="true"
                   (dragstart)="onDragStart(c)"
@@ -354,7 +357,7 @@
   <!-- ═══ Mobile: stage pills (wrap) + card list ═══ -->
   <div class="sm:hidden">
 
-    <!-- Search: icon-only toggle, expands in place — consistent with the rest of the app -->
+    <!-- Search: icon-only toggle, expands in place — stage filter chips sit in the same row, scrolling horizontally -->
     <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block mb-3">
       <div class="p-3 flex items-center gap-2">
         @if (mobileSearchOpen()) {
@@ -374,6 +377,32 @@
             [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
             [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
             (onClick)="mobileSearchOpen.set(true)" />
+
+          @if (!kanbanLoading()) {
+            <div class="flex items-center gap-2 overflow-x-auto custom-scroll flex-1 min-w-0">
+              <button type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors shrink-0"
+                [class.bg-primary]="mobileStageFilter() === null"
+                [class.border-primary]="mobileStageFilter() === null"
+                [class.text-white]="mobileStageFilter() === null"
+                [class.border-outline-variant]="mobileStageFilter() !== null"
+                [class.text-outline]="mobileStageFilter() !== null"
+                (click)="mobileStageFilter.set(null)">
+                {{ 'CANDIDATES.KANBAN.ALL' | translate }} <span class="opacity-70">{{ kanbanItems().length }}</span>
+              </button>
+              @for (col of kanbanColumns(); track col.key) {
+                <button type="button"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border border-outline-variant transition-colors shrink-0"
+                  [class.bg-surface-container]="mobileStageFilter() === col.key"
+                  [class.text-on-surface]="mobileStageFilter() === col.key"
+                  [class.text-outline]="mobileStageFilter() !== col.key"
+                  (click)="mobileStageFilter.set(col.key)">
+                  <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
+                  {{ col.label }} <span class="opacity-70">{{ col.candidates.length }}</span>
+                </button>
+              }
+            </div>
+          }
         }
       </div>
     </daf-card>
@@ -383,30 +412,6 @@
         <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">progress_activity</span>
       </div>
     } @else {
-      <div class="flex flex-wrap gap-2">
-        <button type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors"
-          [class.bg-primary]="mobileStageFilter() === null"
-          [class.border-primary]="mobileStageFilter() === null"
-          [class.text-white]="mobileStageFilter() === null"
-          [class.border-outline-variant]="mobileStageFilter() !== null"
-          [class.text-outline]="mobileStageFilter() !== null"
-          (click)="mobileStageFilter.set(null)">
-          {{ 'CANDIDATES.KANBAN.ALL' | translate }} <span class="opacity-70">{{ kanbanItems().length }}</span>
-        </button>
-        @for (col of kanbanColumns(); track col.key) {
-          <button type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border border-outline-variant transition-colors"
-            [class.bg-surface-container]="mobileStageFilter() === col.key"
-            [class.text-on-surface]="mobileStageFilter() === col.key"
-            [class.text-outline]="mobileStageFilter() !== col.key"
-            (click)="mobileStageFilter.set(col.key)">
-            <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
-            {{ col.label }} <span class="opacity-70">{{ col.candidates.length }}</span>
-          </button>
-        }
-      </div>
-
       <div class="flex flex-col gap-3 mt-4">
         @for (c of mobileFilteredCandidates(); track c.id) {
           <div
