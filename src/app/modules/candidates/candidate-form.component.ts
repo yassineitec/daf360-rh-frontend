@@ -93,7 +93,7 @@ export class CandidateFormComponent implements OnInit {
   );
 
   // ── Wizard state ─────────────────────────────────────────────────────────
-  currentStep = signal(2);
+  currentStep = signal(1);
 
   private readonly STEP_INFO: { titleKey: string; subKey: string; icon: string }[] = [
     { titleKey: 'CANDIDATES.FORM.STEP1_TITLE', subKey: 'CANDIDATES.FORM.STEP1_SUB', icon: 'person' },

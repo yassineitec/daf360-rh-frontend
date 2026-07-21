@@ -1,89 +1,146 @@
 <div class="px-4 sm:px-8 pb-28 sm:pb-8">
-
   <div class="mb-6 sm:mb-8">
     <nav class="flex items-center gap-2 text-[13px] text-on-surface-variant mb-2">
-      <button type="button"
-              class="hover:text-teal transition-colors font-medium"
-              (click)="navigateToList()">
+      <button
+        type="button"
+        class="hover:text-teal transition-colors font-medium"
+        (click)="navigateToList()"
+      >
         {{ 'CANDIDATES.FORM.BREADCRUMB' | translate }}
       </button>
       <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-      <span class="font-medium" style="color:#50717b">{{ 'CANDIDATES.FORM.BREADCRUMB_CURRENT' | translate }}</span>
+      <span class="font-medium" style="color: #50717b">{{
+        'CANDIDATES.FORM.BREADCRUMB_CURRENT' | translate
+      }}</span>
     </nav>
-    <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight">{{ 'CANDIDATES.FORM.TITLE' | translate }}</h1>
+    <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight">
+      {{ 'CANDIDATES.FORM.TITLE' | translate }}
+    </h1>
   </div>
 
   <!-- ── Wizard layout ──────────────────────────────────────────────────── -->
   <!-- No (ngSubmit): step navigation is driven solely by the buttons' (onClick).
        daf-button renders type="submit", so an ngSubmit handler here would fire
        goNext() a second time on every click (jumping steps / cancelling "Précédent"). -->
-  <form [formGroup]="form" novalidate
-        class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
-
+  <form
+    [formGroup]="form"
+    novalidate
+    class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6"
+  >
     <!-- ══════════════════ Form area ══════════════════ -->
-    <daf-card class="block flex-1 min-w-0" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
-
+    <daf-card
+      class="block flex-1 min-w-0"
+      [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }"
+    >
       <!-- Card head: icon + step title + sub -->
-      <div class="flex items-center gap-3.5 px-5 sm:px-8 py-5 border-b border-outline-variant" style="background:rgba(121,215,190,0.06)">
-        <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(0,193,173,0.12); color:#00c1ad">
+      <div
+        class="flex items-center gap-3.5 px-5 sm:px-8 py-5 border-b border-outline-variant"
+        style="background: rgba(121, 215, 190, 0.06)"
+      >
+        <div
+          class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+          style="background: rgba(0, 193, 173, 0.12); color: #00c1ad"
+        >
           <span class="material-symbols-outlined">{{ cardIcon() }}</span>
         </div>
         <div class="min-w-0">
-          <h2 class="text-[10px] font-semibold uppercase tracking-wider text-outline truncate">{{ cardTitle() }}</h2>
+          <h2 class="text-[10px] font-semibold uppercase tracking-wider text-outline truncate">
+            {{ cardTitle() }}
+          </h2>
           <p class="text-[11px] text-on-surface-variant leading-snug">{{ cardSub() }}</p>
         </div>
       </div>
 
       <!-- Step body -->
       <div class="p-5 sm:p-8">
-
         <!-- Step 1 — Identité -->
         @if (currentStep() === 1) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.FIRST_NAME' | translate), required: true, placeholder: ('CANDIDATES.FORM.FIRST_NAME_PH' | translate),
-                           error: getFieldError('identity.firstName') }"
+              [options]="{
+                label: ('CANDIDATES.FORM.FIRST_NAME' | translate),
+                required: true,
+                placeholder: ('CANDIDATES.FORM.FIRST_NAME_PH' | translate),
+                error: getFieldError('identity.firstName'),
+              }"
               [value]="getTextValue('identity.firstName')"
-              (valueChange)="setTextValue('identity.firstName', $event)" />
+              (valueChange)="setTextValue('identity.firstName', $event)"
+            />
 
             <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.LAST_NAME' | translate), required: true, placeholder: ('CANDIDATES.FORM.LAST_NAME_PH' | translate),
-                           error: getFieldError('identity.lastName') }"
+              [options]="{
+                label: ('CANDIDATES.FORM.LAST_NAME' | translate),
+                required: true,
+                placeholder: ('CANDIDATES.FORM.LAST_NAME_PH' | translate),
+                error: getFieldError('identity.lastName'),
+              }"
               [value]="getTextValue('identity.lastName')"
-              (valueChange)="setTextValue('identity.lastName', $event)" />
+              (valueChange)="setTextValue('identity.lastName', $event)"
+            />
 
             <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.EMAIL' | translate), type: 'email', required: true,
-                           placeholder: ('CANDIDATES.FORM.EMAIL_PH' | translate), prefixIcon: 'mail',
-                           error: getFieldError('identity.emailPersonal') }"
+              [options]="{
+                label: ('CANDIDATES.FORM.EMAIL' | translate),
+                type: 'email',
+                required: true,
+                placeholder: ('CANDIDATES.FORM.EMAIL_PH' | translate),
+                prefixIcon: 'mail',
+                error: getFieldError('identity.emailPersonal'),
+              }"
               [value]="getTextValue('identity.emailPersonal')"
-              (valueChange)="setTextValue('identity.emailPersonal', $event)" />
+              (valueChange)="setTextValue('identity.emailPersonal', $event)"
+            />
 
             <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.PHONE' | translate), placeholder: ('CANDIDATES.FORM.PHONE_PH' | translate), prefixIcon: 'phone' }"
+              [options]="{
+                label: ('CANDIDATES.FORM.PHONE' | translate),
+                placeholder: ('CANDIDATES.FORM.PHONE_PH' | translate),
+                prefixIcon: 'phone',
+              }"
               [value]="getTextValue('identity.phone')"
-              (valueChange)="setTextValue('identity.phone', $event)" />
+              (valueChange)="setTextValue('identity.phone', $event)"
+            />
 
             <daf-multi-date-picker
               [value]="getDateValue('identity.dateOfBirth')"
-              [config]="{ label: ('CANDIDATES.FORM.DOB' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), selectionMode: 'single' }"
-              (valueChange)="setDateValue('identity.dateOfBirth', $event)" />
+              [config]="{
+                label: ('CANDIDATES.FORM.DOB' | translate),
+                placeholder: ('CANDIDATES.COMMON.SELECT' | translate),
+                selectionMode: 'single',
+              }"
+              (valueChange)="setDateValue('identity.dateOfBirth', $event)"
+            />
 
             <daf-select
               [selected]="getSelectStr('identity.gender')"
               [options]="genderOptions"
-              [config]="{ label: ('CANDIDATES.FORM.GENDER' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-              (selectedChange)="setSelectStr('identity.gender', $event)" />
+              [config]="{
+                label: ('CANDIDATES.FORM.GENDER' | translate),
+                placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                fullWidth: true,
+              }"
+              (selectedChange)="setSelectStr('identity.gender', $event)"
+            />
 
             <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.NATIONAL_ID' | translate), placeholder: ('CANDIDATES.FORM.NATIONAL_ID_PH' | translate), prefixIcon: 'badge' }"
+              [options]="{
+                label: ('CANDIDATES.FORM.NATIONAL_ID' | translate),
+                placeholder: ('CANDIDATES.FORM.NATIONAL_ID_PH' | translate),
+                prefixIcon: 'badge',
+              }"
               [value]="getTextValue('identity.nationalId')"
-              (valueChange)="setTextValue('identity.nationalId', $event)" />
+              (valueChange)="setTextValue('identity.nationalId', $event)"
+            />
 
             <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.LOCATION' | translate), placeholder: ('CANDIDATES.FORM.LOCATION_PH' | translate), prefixIcon: 'location_on' }"
+              [options]="{
+                label: ('CANDIDATES.FORM.LOCATION' | translate),
+                placeholder: ('CANDIDATES.FORM.LOCATION_PH' | translate),
+                prefixIcon: 'location_on',
+              }"
               [value]="getTextValue('identity.location')"
-              (valueChange)="setTextValue('identity.location', $event)" />
+              (valueChange)="setTextValue('identity.location', $event)"
+            />
           </div>
         }
 
@@ -91,63 +148,110 @@
         @if (currentStep() === 2) {
           <div class="space-y-8">
             <div class="mb-8">
-                          <daf-form-field
-              [options]="{ label: ('CANDIDATES.FORM.POSITION' | translate), required: true,
-                           placeholder: ('CANDIDATES.FORM.POSITION_PH' | translate), prefixIcon: 'work_outline',
-                           error: getFieldError('position.appliedPosition') }"
-              [value]="getTextValue('position.appliedPosition')"
-              (valueChange)="setTextValue('position.appliedPosition', $event)" />
+              <daf-form-field
+                [options]="{
+                  label: ('CANDIDATES.FORM.POSITION' | translate),
+                  required: true,
+                  placeholder: ('CANDIDATES.FORM.POSITION_PH' | translate),
+                  prefixIcon: 'work_outline',
+                  error: getFieldError('position.appliedPosition'),
+                }"
+                [value]="getTextValue('position.appliedPosition')"
+                (valueChange)="setTextValue('position.appliedPosition', $event)"
+              />
             </div>
-            <div class="mb-8">
-                          <daf-chip-group
-              [options]="employmentTypeChipOptions()"
-              [selected]="getSelectNum('position.employmentTypeId')"
-              [config]="{ label: ('CANDIDATES.FORM.CONTRACT_TYPE' | translate), required: true,
-                          error: getFieldError('position.employmentTypeId') }"
-              (selectedChange)="setSelectNum('position.employmentTypeId', $event)" />
+            <div class="mb-8">s
+              <daf-chip-group
+                [options]="employmentTypeChipOptions()"
+                [selected]="getSelectNum('position.employmentTypeId')"
+                [config]="{
+                  label: ('CANDIDATES.FORM.CONTRACT_TYPE' | translate),
+                  required: true,
+                  error: getFieldError('position.employmentTypeId'),
+                }"
+                (selectedChange)="setSelectNum('position.employmentTypeId', $event)"
+              />
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-multi-date-picker
                 [value]="getDateValue('position.expectedStartDate')"
-                [config]="{ label: ('CANDIDATES.FORM.START_DATE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT' | translate), required: true,
-                            selectionMode: 'single', error: getFieldError('position.expectedStartDate') }"
-                (valueChange)="setDateValue('position.expectedStartDate', $event)" />
+                [config]="{
+                  label: ('CANDIDATES.FORM.START_DATE' | translate),
+                  placeholder: ('CANDIDATES.COMMON.SELECT' | translate),
+                  required: true,
+                  selectionMode: 'single',
+                  error: getFieldError('position.expectedStartDate'),
+                }"
+                (valueChange)="setDateValue('position.expectedStartDate', $event)"
+              />
 
               <daf-select
                 [selected]="getSelectNum('position.departmentId')"
                 [options]="departmentOptions()"
-                [config]="{ label: ('CANDIDATES.FORM.DEPARTMENT' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-                (selectedChange)="setSelectNum('position.departmentId', $event)" />
+                [config]="{
+                  label: ('CANDIDATES.FORM.DEPARTMENT' | translate),
+                  placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                  fullWidth: true,
+                  searchable: true,
+                  error: getFieldError('position.departmentId'),
+                }"
+                (selectedChange)="setSelectNum('position.departmentId', $event)"
+              />
             </div>
 
             <!-- Scope --color-primary to tertiary so the track fill + thumb render green. -->
             <daf-slider
-              style="--color-primary: var(--color-tertiary);"
+              style="--color-primary: var(--color-tertiary)"
               [value]="experienceYears()"
               (valueChange)="experienceYears.set($event)"
-              [config]="{ title: ('CANDIDATES.FORM.EXPERIENCE_LEVEL' | translate), unit: ('CANDIDATES.FORM.YEARS_UNIT' | translate),
-                          min: 0, max: 15, minLabel: ('CANDIDATES.FORM.JUNIOR' | translate), maxLabel: ('CANDIDATES.FORM.EXPERT' | translate) }" />
+              [config]="{
+                title: ('CANDIDATES.FORM.EXPERIENCE_LEVEL' | translate),
+                unit: ('CANDIDATES.FORM.YEARS_UNIT' | translate),
+                min: 0,
+                max: 15,
+                minLabel: ('CANDIDATES.FORM.JUNIOR' | translate),
+                maxLabel: ('CANDIDATES.FORM.EXPERT' | translate),
+              }"
+            />
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-select
                 [selected]="getSelectNum('position.appliedGradeId')"
                 [options]="gradeOptions()"
-                [config]="{ label: ('CANDIDATES.FORM.GRADE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-                (selectedChange)="setSelectNum('position.appliedGradeId', $event)" />
+                [config]="{
+                  label: ('CANDIDATES.FORM.GRADE' | translate),
+                  placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                  fullWidth: true,
+                  searchable: true,
+                }"
+                (selectedChange)="setSelectNum('position.appliedGradeId', $event)"
+              />
 
               <daf-select
                 [selected]="getSelectNum('position.appliedDisciplineId')"
                 [options]="disciplineOptions()"
-                [config]="{ label: ('CANDIDATES.FORM.DISCIPLINE' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-                (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)" />
+                [config]="{
+                  label: ('CANDIDATES.FORM.DISCIPLINE' | translate),
+                  placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                  fullWidth: true,
+                  searchable: true,
+                }"
+                (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)"
+              />
             </div>
 
             <daf-select
               [selected]="getSelectNum('position.nationalityId')"
               [options]="nationalityOptions()"
-              [config]="{ label: ('CANDIDATES.FORM.NATIONALITY' | translate), placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-              (selectedChange)="setSelectNum('position.nationalityId', $event)" />
+              [config]="{
+                label: ('CANDIDATES.FORM.NATIONALITY' | translate),
+                placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                fullWidth: true,
+                searchable: true,
+              }"
+              (selectedChange)="setSelectNum('position.nationalityId', $event)"
+            />
           </div>
         }
 
@@ -156,108 +260,155 @@
           <!-- Scope --color-primary to tertiary so the dropzone accents (icon, "parcourir"
                link, hover/drag border) render green instead of the dark primary. -->
           <daf-file-upload
-            style="--color-primary: var(--color-tertiary);"
+            style="--color-primary: var(--color-tertiary)"
             [(files)]="cvFiles"
-            [config]="{ accept: '.pdf,.doc,.docx', maxSizeMb: 5,
-                        hint: ('CANDIDATES.FORM.CV_HINT' | translate) }" />
+            [config]="{
+              accept: '.pdf,.doc,.docx',
+              maxSizeMb: 5,
+              hint: ('CANDIDATES.FORM.CV_HINT' | translate),
+            }"
+          />
         }
 
         <!-- Step 4 — Notes & Commentaires -->
         @if (currentStep() === 4) {
           <daf-form-field
-            [options]="{ type: 'textarea', rows: 6,
-                         placeholder: ('CANDIDATES.FORM.NOTES_PH' | translate) }"
+            [options]="{
+              type: 'textarea',
+              rows: 6,
+              placeholder: ('CANDIDATES.FORM.NOTES_PH' | translate),
+            }"
             [value]="getTextValue('notes')"
-            (valueChange)="setTextValue('notes', $event)" />
+            (valueChange)="setTextValue('notes', $event)"
+          />
         }
-
-      </div><!-- /step body -->
+      </div>
+      <!-- /step body -->
 
       <!-- Validation hint -->
       @if (!canGoNext()) {
-        <div class="mx-5 sm:mx-8 mb-5 flex items-start gap-2 rounded-xl px-3.5 py-2.5" style="background:rgba(26,107,124,0.06); border:1px solid rgba(26,107,124,0.18)">
-          <span class="material-symbols-outlined text-[15px] mt-0.5" style="color:#1a6b7c">info</span>
-          <span class="text-[12.5px] leading-snug" style="color:#1a6b7c">{{ stepValidationError() }}</span>
+        <div
+          class="mx-5 sm:mx-8 mb-5 flex items-start gap-2 rounded-xl px-3.5 py-2.5"
+          style="background: rgba(26, 107, 124, 0.06); border: 1px solid rgba(26, 107, 124, 0.18)"
+        >
+          <span class="material-symbols-outlined text-[15px] mt-0.5" style="color: #1a6b7c"
+            >info</span
+          >
+          <span class="text-[12.5px] leading-snug" style="color: #1a6b7c">{{
+            stepValidationError()
+          }}</span>
         </div>
       }
 
       <!-- Error banner -->
       @if (error()) {
-        <div class="mx-5 sm:mx-8 mb-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3">
-          <span class="material-symbols-outlined text-[18px] text-error mt-0.5"
-                style="font-variation-settings: 'FILL' 1">error</span>
+        <div
+          class="mx-5 sm:mx-8 mb-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3"
+        >
+          <span
+            class="material-symbols-outlined text-[18px] text-error mt-0.5"
+            style="font-variation-settings: 'FILL' 1"
+            >error</span
+          >
           <span class="text-sm text-error">{{ error() }}</span>
         </div>
-      }
-
-    </daf-card><!-- /form area -->
+      }</daf-card
+    ><!-- /form area -->
 
     <!-- ══════════════════ Sidebar (desktop) ══════════════════ -->
     <aside class="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 gap-4 lg:sticky lg:top-6">
-
       <!-- Nav buttons -->
       <div class="flex items-stretch gap-2">
         <div class="flex-1">
           @if (currentStep() > 1) {
-            <daf-button class="block w-full"
+            <daf-button
+              class="block w-full"
               [label]="'CANDIDATES.FORM.PREV' | translate"
               [options]="{ variant: 'ghost', pill: true, iconStart: 'arrow_back', fullWidth: true }"
-              (onClick)="goPrev()" />
+              (onClick)="goPrev()"
+            />
           } @else {
-            <daf-button class="block w-full"
+            <daf-button
+              class="block w-full"
               [label]="'CANDIDATES.COMMON.CANCEL' | translate"
               [options]="{ variant: 'ghost', pill: true, iconStart: 'close', fullWidth: true }"
-              (onClick)="onCancel()" />
+              (onClick)="onCancel()"
+            />
           }
         </div>
         <div class="flex-1">
-          <daf-button class="block w-full"
-            [label]="currentStep() === 4
-                       ? (saving() ? (cvFiles().length ? ('CANDIDATES.FORM.SAVING_CV' | translate) : ('CANDIDATES.FORM.SAVING' | translate)) : ('CANDIDATES.FORM.SAVE_PROFILE' | translate))
-                       : ('CANDIDATES.FORM.NEXT' | translate)"
-            [options]="{ variant: 'teal', pill: true, fullWidth: true,
-                         iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
-                         iconStart: currentStep() === 4 ? 'save' : undefined,
-                         loading: saving(), disabled: !canGoNext() || saving() }"
-            (onClick)="goNext()" />
+          <daf-button
+            class="block w-full"
+            [label]="
+              currentStep() === 4
+                ? saving()
+                  ? cvFiles().length
+                    ? ('CANDIDATES.FORM.SAVING_CV' | translate)
+                    : ('CANDIDATES.FORM.SAVING' | translate)
+                  : ('CANDIDATES.FORM.SAVE_PROFILE' | translate)
+                : ('CANDIDATES.FORM.NEXT' | translate)
+            "
+            [options]="{
+              variant: 'teal',
+              pill: true,
+              fullWidth: true,
+              iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
+              iconStart: currentStep() === 4 ? 'save' : undefined,
+              loading: saving(),
+              disabled: !canGoNext() || saving(),
+            }"
+            (onClick)="goNext()"
+          />
         </div>
       </div>
 
       <!-- Progression -->
       <daf-card class="block" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
         <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-outline">{{ 'CANDIDATES.FORM.PROGRESS' | translate }}</p>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-outline">
+            {{ 'CANDIDATES.FORM.PROGRESS' | translate }}
+          </p>
         </div>
         <div class="p-5">
           <div class="relative flex flex-col">
             @for (step of wizardSteps(); track $index; let i = $index) {
               <div class="flex items-center gap-3.5 py-2 relative z-10">
-                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold transition-colors"
-                     [class.bg-tertiary]="currentStep() === i + 1 || currentStep() > i + 1"
-                     [class.text-white]="currentStep() === i + 1 || currentStep() > i + 1"
-                     [class.bg-surface-container]="currentStep() < i + 1"
-                     [class.text-outline]="currentStep() < i + 1"
-                     [class.border]="currentStep() < i + 1"
-                     [class.border-outline-variant]="currentStep() < i + 1">
+                <div
+                  class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold transition-colors"
+                  [class.bg-tertiary]="currentStep() === i + 1 || currentStep() > i + 1"
+                  [class.text-white]="currentStep() === i + 1 || currentStep() > i + 1"
+                  [class.bg-surface-container]="currentStep() < i + 1"
+                  [class.text-outline]="currentStep() < i + 1"
+                  [class.border]="currentStep() < i + 1"
+                  [class.border-outline-variant]="currentStep() < i + 1"
+                >
                   @if (currentStep() > i + 1) {
-                    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;font-size:16px">check</span>
+                    <span
+                      class="material-symbols-outlined"
+                      style="font-variation-settings: 'FILL' 1; font-size: 16px"
+                      >check</span
+                    >
                   } @else {
                     {{ i + 1 }}
                   }
                 </div>
-                <span class="text-[13px] leading-tight"
-                      [class.font-bold]="currentStep() === i + 1"
-                      [class.text-teal]="currentStep() === i + 1"
-                      [class.text-outline]="currentStep() > i + 1"
-                      [class.text-on-surface-variant]="currentStep() < i + 1">
+                <span
+                  class="text-[13px] leading-tight"
+                  [class.font-bold]="currentStep() === i + 1"
+                  [class.text-teal]="currentStep() === i + 1"
+                  [class.text-outline]="currentStep() > i + 1"
+                  [class.text-on-surface-variant]="currentStep() < i + 1"
+                >
                   {{ step.title }}
                 </span>
               </div>
               @if (!$last) {
-                <div class="w-0.5 ml-[17px] my-0.5"
-                     [class.bg-tertiary]="currentStep() > i + 1"
-                     [class.bg-outline-variant]="currentStep() <= i + 1"
-                     style="height:14px"></div>
+                <div
+                  class="w-0.5 ml-[17px] my-0.5"
+                  [class.bg-tertiary]="currentStep() > i + 1"
+                  [class.bg-outline-variant]="currentStep() <= i + 1"
+                  style="height: 14px"
+                ></div>
               }
             }
           </div>
@@ -267,19 +418,25 @@
       <!-- Qualité du profil -->
       <section class="bg-surface-container p-5 rounded-xl border border-outline-variant/20">
         <div class="flex items-start gap-4">
-          <div class="p-3 rounded-xl shrink-0" style="background:rgba(121,215,190,0.2)">
-            <span class="material-symbols-outlined text-[32px]"
-                  style="color:#79D7BE"
-                  [style.font-variation-settings]="fillStyle(profileCompleteness() >= 100)">
+          <div class="p-3 rounded-xl shrink-0" style="background: rgba(121, 215, 190, 0.2)">
+            <span
+              class="material-symbols-outlined text-[32px]"
+              style="color: #79d7be"
+              [style.font-variation-settings]="fillStyle(profileCompleteness() >= 100)"
+            >
               verified_user
             </span>
           </div>
 
           <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between gap-2 mb-1">
-              <h4 class="text-[15px] font-semibold text-on-surface">{{ 'CANDIDATES.FORM.PROFILE_QUALITY' | translate }}</h4>
-              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    style="background:rgba(121,215,190,0.15); color:#50717b">
+              <h4 class="text-[15px] font-semibold text-on-surface">
+                {{ 'CANDIDATES.FORM.PROFILE_QUALITY' | translate }}
+              </h4>
+              <span
+                class="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style="background: rgba(121, 215, 190, 0.15); color: #50717b"
+              >
                 {{ completenessLabel() }}
               </span>
             </div>
@@ -289,25 +446,31 @@
             </p>
 
             <div class="w-full bg-white rounded-full h-2.5 overflow-hidden mb-1">
-              <div class="h-full rounded-full transition-all duration-700"
-                   style="background:#79D7BE"
-                   [style.width.%]="profileCompleteness()"></div>
+              <div
+                class="h-full rounded-full transition-all duration-700"
+                style="background: #79d7be"
+                [style.width.%]="profileCompleteness()"
+              ></div>
             </div>
-            <p class="text-[13px] font-semibold mb-4" style="color:#50717b">
+            <p class="text-[13px] font-semibold mb-4" style="color: #50717b">
               {{ profileCompleteness() }}{{ 'CANDIDATES.FORM.PCT_COMPLETED' | translate }}
             </p>
 
             <ul class="space-y-1.5">
               @for (field of requiredFieldsStatus(); track field.label) {
                 <li class="flex items-center gap-2 text-[12px]">
-                  <span class="material-symbols-outlined text-[15px]"
-                        [class.text-success]="field.done"
-                        [class.text-outline]="!field.done"
-                        [style.font-variation-settings]="fillStyle(field.done)">
+                  <span
+                    class="material-symbols-outlined text-[15px]"
+                    [class.text-success]="field.done"
+                    [class.text-outline]="!field.done"
+                    [style.font-variation-settings]="fillStyle(field.done)"
+                  >
                     {{ field.done ? 'check_circle' : 'radio_button_unchecked' }}
                   </span>
-                  <span [class.text-on-surface]="field.done"
-                        [class.text-on-surface-variant]="!field.done">
+                  <span
+                    [class.text-on-surface]="field.done"
+                    [class.text-on-surface-variant]="!field.done"
+                  >
                     {{ field.label }}
                   </span>
                 </li>
@@ -316,36 +479,76 @@
           </div>
         </div>
       </section>
-
-    </aside><!-- /sidebar -->
-
+    </aside>
+    <!-- /sidebar -->
   </form>
 </div>
 
 <!-- Mobile: compact progress strip + sticky bottom Précédent/Suivant bar -->
-<div class="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center gap-1.5 px-4 py-2 bg-white border-b border-outline-variant">
+<div
+  class="lg:hidden fixed top-0 inset-x-0 z-30 flex items-center gap-1.5 px-4 py-2 bg-white border-b border-outline-variant"
+>
   @for (step of wizardSteps(); track $index; let i = $index) {
-    <div class="flex-1 h-1.5 rounded-full transition-colors"
-         [class.bg-tertiary]="currentStep() >= i + 1"
-         [class.bg-outline-variant]="currentStep() < i + 1"></div>
+    <div
+      class="flex-1 h-1.5 rounded-full transition-colors"
+      [class.bg-tertiary]="currentStep() >= i + 1"
+      [class.bg-outline-variant]="currentStep() < i + 1"
+    ></div>
   }
 </div>
 
-<div class="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-2 p-3 bg-white border-t border-outline-variant"
-     style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))">
+<div
+  class="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-2 p-3 bg-white border-t border-outline-variant"
+  style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
+>
   <div class="flex-1">
     @if (currentStep() > 1) {
-      <daf-button class="block w-full" [label]="'CANDIDATES.FORM.PREV' | translate" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'arrow_back', fullWidth: true }" (onClick)="goPrev()" />
+      <daf-button
+        class="block w-full"
+        [label]="'CANDIDATES.FORM.PREV' | translate"
+        [options]="{
+          variant: 'ghost',
+          pill: true,
+          size: 'sm',
+          iconStart: 'arrow_back',
+          fullWidth: true,
+        }"
+        (onClick)="goPrev()"
+      />
     } @else {
-      <daf-button class="block w-full" [label]="'CANDIDATES.COMMON.CANCEL' | translate" [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'close', fullWidth: true }" (onClick)="onCancel()" />
+      <daf-button
+        class="block w-full"
+        [label]="'CANDIDATES.COMMON.CANCEL' | translate"
+        [options]="{
+          variant: 'ghost',
+          pill: true,
+          size: 'sm',
+          iconStart: 'close',
+          fullWidth: true,
+        }"
+        (onClick)="onCancel()"
+      />
     }
   </div>
   <div class="flex-1">
-    <daf-button class="block w-full"
-      [label]="currentStep() === 4
-                 ? (saving() ? ('CANDIDATES.FORM.SAVING' | translate) : ('CANDIDATES.FORM.SAVE' | translate))
-                 : ('CANDIDATES.FORM.NEXT' | translate)"
-      [options]="{ variant: 'teal', pill: true, size: 'md', fullWidth: true, loading: saving(), disabled: !canGoNext() || saving() }"
-      (onClick)="goNext()" />
+    <daf-button
+      class="block w-full"
+      [label]="
+        currentStep() === 4
+          ? saving()
+            ? ('CANDIDATES.FORM.SAVING' | translate)
+            : ('CANDIDATES.FORM.SAVE' | translate)
+          : ('CANDIDATES.FORM.NEXT' | translate)
+      "
+      [options]="{
+        variant: 'teal',
+        pill: true,
+        size: 'md',
+        fullWidth: true,
+        loading: saving(),
+        disabled: !canGoNext() || saving(),
+      }"
+      (onClick)="goNext()"
+    />
   </div>
 </div>
