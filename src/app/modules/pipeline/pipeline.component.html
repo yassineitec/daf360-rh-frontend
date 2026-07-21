@@ -158,9 +158,16 @@
               {{ col.label }}
               <span class="bg-surface-container-highest px-2 py-0.5 rounded text-xs">{{ col.count }}</span>
             </span>
+            <button type="button"
+              class="flex items-center justify-center w-4 h-4 shrink-0 text-outline-variant hover:text-outline transition-colors"
+              [title]="(columnSortDir(col.key) === 'asc' ? 'PIPELINE.SORT_DESC' : 'PIPELINE.SORT_ASC') | translate"
+              (click)="toggleColumnSort(col.key)">
+              <span class="material-symbols-outlined text-[14px]" style="font-variation-settings:'wght' 200">swap_vert</span>
+            </button>
           </div>
 
-          <!-- Cards -->
+          <!-- Cards — shows ~3 at a time, scrolls for the rest -->
+          <div class="flex flex-col gap-4 max-h-[610px] overflow-y-auto overscroll-contain pr-2 custom-scroll-y">
           @for (c of col.candidates; track c.id) {
             <div
               class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col min-h-[252px]"
@@ -288,6 +295,7 @@
               </div>
             </div>
           }
+          </div>
 
           <!-- Empty column -->
           @if (col.candidates.length === 0) {

@@ -69,6 +69,18 @@ interface BoardColumn {
   standalone: true,
   imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, FormFieldComponent, MetricCardComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './pipeline.component.html',
+  styles: [`
+    /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
+    .custom-scroll { scrollbar-width: none; }
+    .custom-scroll::-webkit-scrollbar { display: none; }
+
+    /* Hairline, near-invisible scroll "cursor" for each column's card list (shows ~3 cards, scrolls for the rest). */
+    .custom-scroll-y { scrollbar-width: thin; scrollbar-color: #eeeef2 transparent; }
+    .custom-scroll-y::-webkit-scrollbar { width: 1px; }
+    .custom-scroll-y::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll-y::-webkit-scrollbar-thumb { background: #eeeef2; border-radius: 10px; }
+    .custom-scroll-y::-webkit-scrollbar-thumb:hover { background: #d6d6de; }
+  `],
 })
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
@@ -85,11 +97,34 @@ export class PipelineComponent implements OnInit {
   readonly mobileSearchOpen = signal(false);
   readonly viewMode      = signal<'kanban' | 'list'>('kanban');
 
+  /** Per-column fit-score sort direction, toggled via the small arrow icon in the column header. */
+  readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
+
+  columnSortDir(key: string): 'asc' | 'desc' {
+    return this.columnSortDirs()[key] ?? 'desc';
+  }
+
+  toggleColumnSort(key: string): void {
+    const next: 'asc' | 'desc' = this.columnSortDir(key) === 'asc' ? 'desc' : 'asc';
+    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: next }));
+  }
+
+  /** Highest fit score first; candidates without a score sink to the bottom. */
+  private byFitScoreDesc(a: KanbanCandidate, b: KanbanCandidate): number {
+    return (b.fitScore ?? -1) - (a.fitScore ?? -1);
+  }
+
+  private sortByColumn(key: string, candidates: KanbanCandidate[]): KanbanCandidate[] {
+    const dir = this.columnSortDir(key);
+    return [...candidates].sort((a, b) => dir === 'asc' ? -this.byFitScoreDesc(a, b) : this.byFitScoreDesc(a, b));
+  }
+
   /** The four design columns, populated from the pipeline kanban response. */
   readonly boardColumns = computed<BoardColumn[]>(() => {
     this.translate.currentLang();
     const cols = this.kanbanColumns();
     const term = this.search().trim().toLowerCase();
+    this.columnSortDirs(); // re-run when a column's sort direction is toggled
 
     // Free-text match over the fields shown on a card.
     const matches = (c: KanbanCandidate) =>
@@ -114,7 +149,7 @@ export class PipelineComponent implements OnInit {
         s.key === 'ENTRETIEN' ? entretien :
         stageOf(s.key);
       const { labelKey, ...rest } = s;
-      return { ...rest, label: this.translate.instant(labelKey), count: candidates.length, candidates };
+      return { ...rest, label: this.translate.instant(labelKey), count: candidates.length, candidates: this.sortByColumn(s.key, candidates) };
     });
   });
 

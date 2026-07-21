@@ -96,10 +96,16 @@ interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
     TranslatePipe,
   ],
   styles: [`
-    /* Thin, subtle scrollbar for the horizontal kanban board. */
-    .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
-    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant, #c4c5d5); border-radius: 10px; }
+    /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
+    .custom-scroll { scrollbar-width: none; }
+    .custom-scroll::-webkit-scrollbar { display: none; }
+
+    /* Hairline, near-invisible scroll "cursor" for each column's card list (shows ~3 cards, scrolls for the rest). */
+    .custom-scroll-y { scrollbar-width: thin; scrollbar-color: #eeeef2 transparent; }
+    .custom-scroll-y::-webkit-scrollbar { width: 1px; }
+    .custom-scroll-y::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll-y::-webkit-scrollbar-thumb { background: #eeeef2; border-radius: 10px; }
+    .custom-scroll-y::-webkit-scrollbar-thumb:hover { background: #d6d6de; }
   `],
   templateUrl: './candidates.component.html',
 })
@@ -269,16 +275,32 @@ export class CandidatesComponent implements OnInit {
     return (b.fitScore ?? -1) - (a.fitScore ?? -1);
   }
 
+  /** Per-column fit-score sort direction, toggled via the small arrow icon in the column header. */
+  readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
+
+  columnSortDir(key: string): 'asc' | 'desc' {
+    return this.columnSortDirs()[key] ?? 'desc';
+  }
+
+  toggleColumnSort(key: string): void {
+    const next: 'asc' | 'desc' = this.columnSortDir(key) === 'asc' ? 'desc' : 'asc';
+    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: next }));
+  }
+
   readonly kanbanColumns = computed<KanbanColumn[]>(() => {
     this.translate.currentLang();
     const all = this.kanbanItems();
-    return this.columnDefs.map(def => ({
-      ...def,
-      label: this.translate.instant(def.labelKey),
-      candidates: all
-        .filter(c => def.statuses.includes(c.status))
-        .sort((a, b) => this.byFitScoreDesc(a, b)),
-    }));
+    const dirs = this.columnSortDirs();
+    return this.columnDefs.map(def => {
+      const dir = dirs[def.key] ?? 'desc';
+      return {
+        ...def,
+        label: this.translate.instant(def.labelKey),
+        candidates: all
+          .filter(c => def.statuses.includes(c.status))
+          .sort((a, b) => dir === 'asc' ? -this.byFitScoreDesc(a, b) : this.byFitScoreDesc(a, b)),
+      };
+    });
   });
 
   // ── Mobile kanban: stage pills + card list instead of horizontal columns ────
