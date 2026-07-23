@@ -29,7 +29,8 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
         <h3 class="section-title">Catalogue des tâches d'offboarding</h3>
         <p class="section-sub">Définissez les tâches par type de contrat pour les dossiers d'offboarding.</p>
       </div>
-      <daf-button label="Ajouter une tâche" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button class="desktop-only" label="Ajouter une tâche" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button class="icon-btn-toggle mobile-only" title="Ajouter une tâche" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
     </div>
 
     <!-- Filter bar -->
@@ -259,6 +260,12 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = {
       .col-code, .col-role, .col-flags { display:none }
     }
     @media(max-width:500px) { .form-grid { grid-template-columns:1fr } }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
+    }
   `],
 })
 export class OffboardingCatalogAdminComponent implements OnInit {

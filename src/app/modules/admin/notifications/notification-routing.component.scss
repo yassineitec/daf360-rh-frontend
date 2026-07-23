@@ -46,6 +46,13 @@
   overflow-x: auto;
 }
 
+.mobile-only { display: none; }
+@media (max-width: 640px) {
+  .desktop-only { display: none; }
+  .mobile-only  { display: inline-flex; }
+  .nr-search-open { display: block; flex: 1; min-width: 0; }
+}
+
 /* ── Footer: count + pagination ──────────────────────────────── */
 .nr-footer {
   display: flex;

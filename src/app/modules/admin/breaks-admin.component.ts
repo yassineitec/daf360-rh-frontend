@@ -46,9 +46,13 @@ type BreakTab = 'templates' | 'legal-rules';
           <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Modèles de pause</h2>
           <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Pauses automatiques par régime horaire</p>
         </div>
-        <daf-button *dafHasPermission="'ADMIN_BREAKS'"
+        <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="desktop-only"
           [label]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
           [options]="{ iconStart: showCreateForm() ? 'close' : 'add' }"
+          (onClick)="showCreateForm.set(!showCreateForm())" />
+        <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="icon-btn-toggle mobile-only"
+          [title]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
+          [options]="{ iconStart: showCreateForm() ? 'close' : 'add', size: 'sm' }"
           (onClick)="showCreateForm.set(!showCreateForm())" />
       </div>
 
@@ -179,6 +183,12 @@ type BreakTab = 'templates' | 'legal-rules';
     @media (max-width: 560px) {
       .ba-form-grid { grid-template-columns:1fr }
       .ba-form-span2 { grid-column:span 1 }
+    }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
     }
   `],
 })

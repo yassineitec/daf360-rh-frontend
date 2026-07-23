@@ -47,6 +47,26 @@
   max-width: 100%;
 }
 
+/* Desktop/tablet: full search box + labeled button.
+   Mobile (≤640px): icon-only search toggle (expands in place) + icon-only "+". */
+.rl-mobile-only    { display: none; }
+.rl-search--mobile { display: none; }
+
+@media (max-width: 640px) {
+  .rl-desktop-only,
+  .rl-search--desktop { display: none; }
+
+  .rl-mobile-only { display: inline-flex; }
+
+  .rl-search--mobile {
+    display: block;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rl-header-actions { flex: 1; }
+}
+
 .rl-list {
   list-style: none;
   padding: 12px;

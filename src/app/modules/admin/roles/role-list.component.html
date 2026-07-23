@@ -4,13 +4,46 @@
       <div class="rl-header">
         <span class="rl-title">Rôles ({{ roles().length }})</span>
         <div class="rl-header-actions">
-          <div class="rl-search">
+
+          <!-- Desktop/tablet: full search box -->
+          <div class="rl-search rl-search--desktop">
             <rh-search-bar
               placeholder="Rechercher un rôle…"
               [value]="searchQuery()"
               (valueChange)="searchQuery.set($event)" />
           </div>
+
+          <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
+          @if (mobileSearchOpen()) {
+            <div class="rl-search rl-search--mobile">
+              <rh-search-bar
+                placeholder="Rechercher un rôle…"
+                [value]="searchQuery()"
+                (valueChange)="searchQuery.set($event)" />
+            </div>
+            <daf-button
+              class="icon-btn-toggle rl-mobile-only"
+              [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+              title="Fermer la recherche"
+              (onClick)="mobileSearchOpen.set(false)" />
+          } @else {
+            <daf-button
+              class="icon-btn-toggle rl-mobile-only"
+              [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+              title="Rechercher"
+              (onClick)="mobileSearchOpen.set(true)" />
+
+            <!-- Mobile: icon-only "+" -->
+            <daf-button
+              class="icon-btn-toggle rl-mobile-only"
+              [options]="{ iconStart: 'add', variant: 'teal', size: 'sm' }"
+              title="Nouveau rôle"
+              (onClick)="createClicked.emit()" />
+          }
+
+          <!-- Desktop/tablet: full labeled button -->
           <daf-button
+            class="rl-desktop-only"
             label="+ Nouveau rôle"
             variant="teal"
             (onClick)="createClicked.emit()" />

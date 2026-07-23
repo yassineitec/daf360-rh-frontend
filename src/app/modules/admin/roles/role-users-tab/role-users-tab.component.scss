@@ -26,3 +26,9 @@
 .rut-no-results   { font-size: var(--text-body-md); color: var(--color-on-surface-variant); font-style: italic; text-align: center; padding: 12px; }
 .rut-loading      { font-size: var(--text-body-md); color: var(--color-on-surface-variant); text-align: center; padding: 20px; }
 .rut-error        { background: var(--color-error-container); border-radius: 8px; padding: 10px 14px; color: var(--color-on-error-container); font-size: var(--text-label-sm); }
+
+.mobile-only { display: none; }
+@media (max-width: 640px) {
+  .desktop-only { display: none; }
+  .mobile-only  { display: inline-flex; }
+}

@@ -70,9 +70,16 @@ const TABS: TabConfig[] = [
   <div class="rda-header">
     <h3 class="rda-header-title">{{ activeTab().label }}</h3>
     <daf-button
+      class="desktop-only"
       label="+ Ajouter"
       variant="teal"
       [options]="{ iconStart: 'add' }"
+      (onClick)="showForm.set(true)" />
+    <daf-button
+      class="icon-btn-toggle mobile-only"
+      title="Ajouter"
+      variant="teal"
+      [options]="{ iconStart: 'add', size: 'sm' }"
       (onClick)="showForm.set(true)" />
   </div>
 
@@ -239,6 +246,12 @@ const TABS: TabConfig[] = [
 
     @media (max-width: 480px) {
       .rda-form-grid { grid-template-columns:1fr }
+    }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
     }
 
     /* daf-data-table purges the dynamically-computed text-right Tailwind class from its

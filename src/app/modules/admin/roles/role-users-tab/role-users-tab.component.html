@@ -11,7 +11,14 @@
       <daf-badge [label]="users().length + ' utilisateur(s)'" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
     <daf-button
+      class="desktop-only"
       [label]="showAddPanel() ? 'Fermer' : '+ Ajouter un utilisateur'"
+      variant="teal"
+      [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
+      (onClick)="showAddPanel.set(!showAddPanel())" />
+    <daf-button
+      class="icon-btn-toggle mobile-only"
+      [title]="showAddPanel() ? 'Fermer' : 'Ajouter un utilisateur'"
       variant="teal"
       [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
       (onClick)="showAddPanel.set(!showAddPanel())" />

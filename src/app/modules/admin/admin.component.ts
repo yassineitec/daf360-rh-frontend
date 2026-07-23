@@ -104,8 +104,8 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
       margin: -2rem;
     }
     @media (max-width: 1024px) { :host { margin: -1.5rem } }
-    @media (max-width: 768px)  { :host { margin: -0.75rem -1rem -0.75rem -3.25rem } }
-    @media (max-width: 480px)  { :host { margin: -0.75rem -0.75rem -0.75rem -3.25rem } }
+    @media (max-width: 768px)  { :host { margin: -0.75rem -1rem } }
+    @media (max-width: 480px)  { :host { margin: -0.75rem } }
 
     .access-denied { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 24px;color:var(--color-text-muted);text-align:center }
     .access-denied svg { opacity:.25 }
@@ -133,22 +133,32 @@ const TABS: { key: AdminTab; label: string; permission: string }[] = [
     .side-nav-btn:hover { color:var(--color-text);background:var(--color-surface-container-low) }
     .side-nav-btn.active { color:var(--color-on-tertiary-container);background:var(--color-tertiary-container);font-weight:600;box-shadow:var(--shadow-sm) }
 
-    /* Tablet: sidebar becomes a horizontal, scrollable tab strip above the content. */
+    /* Below 900px the sidebar becomes a horizontal scrollable tab strip above the content —
+       matches the shell's own sidebar collapse point (768px) plus a little headroom so the
+       two never fight for space in between. */
     @media (max-width: 900px) {
       .admin-layout { grid-template-columns:1fr; gap:14px; padding:16px }
       .side-nav {
         position:static;flex-direction:row;gap:6px;overflow-x:auto;
         -webkit-overflow-scrolling:touch;scrollbar-width:none;
+        border:none;background:transparent;padding:2px 0 4px;border-radius:0;
       }
       .side-nav::-webkit-scrollbar { display:none }
-      .side-nav-btn { flex-shrink:0;white-space:nowrap }
+      .side-nav-btn {
+        flex-shrink:0;white-space:nowrap;border-radius:999px;
+        background:var(--color-surface);border:1px solid var(--color-border);
+      }
+      .side-nav-btn.active {
+        background:var(--color-tertiary);color:#fff;border-color:var(--color-tertiary);
+        box-shadow:0 2px 8px rgba(0,0,0,0.12);
+      }
     }
 
     @media (max-width: 640px) {
       .page-header { padding:16px 16px 0 }
-      .admin-layout { padding:12px;gap:12px }
-      .side-nav { padding:6px;border-radius:10px }
-      .side-nav-btn { padding:8px 12px;font-size:13px }
+      .admin-layout { padding:12px;gap:10px }
+      .side-nav { gap:8px }
+      .side-nav-btn { padding:9px 16px;font-size:13px }
     }
   `],
 })

@@ -90,6 +90,12 @@
   gap: 12px;
 }
 
+.table-scroll { overflow-x: auto; }
+
+@media (max-width: 480px) {
+  .rra-form-row-2 { grid-template-columns: 1fr; }
+}
+
 .rra-no-end-checkbox {
   display: block;
   margin-top: 6px;

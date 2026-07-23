@@ -3,12 +3,35 @@
   <!-- Header -->
   <div class="nr-header">
     <h2 class="nr-title">Événements</h2>
-    <div class="nr-search">
+
+    <!-- Desktop/tablet: full search box -->
+    <div class="nr-search desktop-only">
       <rh-search-bar
         placeholder="Rechercher…"
         [value]="searchQuery()"
         (valueChange)="onSearch($event)" />
     </div>
+
+    <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
+    @if (mobileSearchOpen()) {
+      <div class="nr-search mobile-only nr-search-open">
+        <rh-search-bar
+          placeholder="Rechercher…"
+          [value]="searchQuery()"
+          (valueChange)="onSearch($event)" />
+      </div>
+      <daf-button
+        class="icon-btn-toggle mobile-only"
+        title="Fermer la recherche"
+        [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+        (onClick)="mobileSearchOpen.set(false)" />
+    } @else {
+      <daf-button
+        class="icon-btn-toggle mobile-only"
+        title="Rechercher"
+        [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+        (onClick)="mobileSearchOpen.set(true)" />
+    }
   </div>
 
   @if (error()) {

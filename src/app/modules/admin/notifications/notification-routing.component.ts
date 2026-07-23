@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-  StatusBadgeComponent, PaginationComponent,
+  ButtonComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { NotificationEventTypeWithRule } from './notification-routing.model';
@@ -16,7 +16,7 @@ const PAGE_SIZE = 10;
   selector: 'app-notification-routing',
   standalone: true,
   imports: [
-    FormsModule, RoutingRuleEditorComponent,
+    FormsModule, RoutingRuleEditorComponent, ButtonComponent,
     StatusBadgeComponent, PaginationComponent, ModalComponent,
     DataTableComponent, DafCellDirective, RhSearchBarComponent,
   ],
@@ -32,6 +32,7 @@ export class NotificationRoutingComponent implements OnInit {
   loadingTypes = signal(true);
   error = signal<string | null>(null);
   searchQuery = signal('');
+  mobileSearchOpen = signal(false);
 
   readonly PAGE_SIZE = PAGE_SIZE;
   currentPage = signal(0);
