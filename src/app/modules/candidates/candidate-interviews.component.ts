@@ -83,7 +83,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
               <daf-select
                 [selected]="typeSelected()"
                 [options]="typeOptions()"
-                [config]="{ label: ('CANDIDATES.INTERVIEWS.TYPE' | translate), required: true, placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
+                [config]="{ label: ('CANDIDATES.INTERVIEWS.TYPE' | translate), required: true, placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true, searchable: true }"
                 (selectedChange)="onTypeChange($event)" />
 
               <daf-multi-date-picker
@@ -115,7 +115,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                   <daf-select
                     [selected]="interviewerSelected()"
                     [options]="interviewerOptions()"
-                    [config]="{ label: ('CANDIDATES.INTERVIEWS.INTERVIEWER' | translate), placeholder: ('CANDIDATES.COMMON.NONE' | translate), fullWidth: true }"
+                    [config]="{ label: ('CANDIDATES.INTERVIEWS.INTERVIEWER' | translate), placeholder: ('CANDIDATES.COMMON.NONE' | translate), fullWidth: true, searchable: true }"
                     (selectedChange)="onInterviewerChange($event)" />
                 }
               </div>
