@@ -68,6 +68,7 @@
 
 .lm-content-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
@@ -102,7 +103,12 @@
 .td-code { font-family: monospace; font-size: var(--text-label-sm); color: var(--color-on-surface-variant); }
 .td-en { color: var(--color-on-surface-variant); }
 
+.table-scroll { overflow-x: auto; }
 .lm-pagination { display: flex; justify-content: flex-end; padding: 10px 0; }
+
+@media (max-width: 560px) {
+  .lm-add-grid { grid-template-columns: 1fr; }
+}
 
 /* ── Buttons ──────────────────────────────────────────────── */
 .confirm-del { display: flex; align-items: center; gap: 3px; font-size: var(--text-label-sm); color: var(--color-danger); }

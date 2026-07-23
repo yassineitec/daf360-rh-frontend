@@ -26,7 +26,7 @@ import { UserStore } from '../../../core/user.store';
 <div>
 
   <!-- Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <div class="ova-header">
     <div>
       <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Heures supplémentaires par pays</h2>
       <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Configuration des règles de calcul selon le type de pays</p>
@@ -43,7 +43,7 @@ import { UserStore } from '../../../core/user.store';
       <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-secondary);">calculate</span>
       Simulateur de calcul HS
     </h3>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
+    <div class="ova-sim-grid">
       <daf-select
         [selected]="simPaysId ? [String(simPaysId)] : []"
         [options]="paysOptions()"
@@ -97,6 +97,7 @@ import { UserStore } from '../../../core/user.store';
   }
 
   @if (!isLoading() && rules().length > 0) {
+    <div class="table-scroll">
     <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
       <ng-template dafCell="paysIsoCode" let-row>
         <daf-badge [label]="row['paysIsoCode']" [options]="{ variant: 'teal' }" />
@@ -118,6 +119,7 @@ import { UserStore } from '../../../core/user.store';
         }
       </ng-template>
     </daf-data-table>
+    </div>
   }
 
 </div>
@@ -132,7 +134,7 @@ import { UserStore } from '../../../core/user.store';
   @if (formError()) {
     <div style="background:var(--color-error-container);border-radius:8px;padding:10px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:12px;">{{ formError() }}</div>
   }
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+  <div class="ova-form-grid">
     <daf-select
       [selected]="formPaysId ? [String(formPaysId)] : []"
       [options]="paysOptions()"
@@ -180,7 +182,21 @@ import { UserStore } from '../../../core/user.store';
   </div>
 </app-modal>
   `,
-  styles: [`@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }`],
+  styles: [`
+    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .ova-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
+    .ova-sim-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px }
+    .ova-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
+    .table-scroll { overflow-x:auto }
+
+    @media (max-width: 700px) {
+      .ova-sim-grid { grid-template-columns:1fr 1fr }
+    }
+    @media (max-width: 480px) {
+      .ova-sim-grid { grid-template-columns:1fr }
+      .ova-form-grid { grid-template-columns:1fr }
+    }
+  `],
 })
 export class OvertimeAdminComponent implements OnChanges {
   private svc = inject(OvertimeService);

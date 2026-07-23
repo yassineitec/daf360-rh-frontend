@@ -46,6 +46,7 @@ const PAGE_SIZE = 5;
         <daf-button label="Initialiser les 15 types par défaut" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
+      <div class="table-scroll">
       <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig">
         <ng-template dafCell="category" let-row>
           <daf-badge [label]="row['category']" [options]="{ variant: 'neutral', size: 'sm' }" />
@@ -63,6 +64,7 @@ const PAGE_SIZE = 5;
           }
         </ng-template>
       </daf-data-table>
+      </div>
 
       <!-- Count + Pagination -->
       <div class="rta-footer">
@@ -152,11 +154,12 @@ const PAGE_SIZE = 5;
     </app-modal>
   `,
   styles: [`
-    .section-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px }
+    .section-header { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
     .col-title { font-size:13px;font-weight:700;margin:0 }
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
-    .header-actions { display:flex;gap:8px;align-items:center }
+    .header-actions { display:flex;flex-wrap:wrap;gap:8px;align-items:center }
     .center   { display:flex;justify-content:center;padding:24px }
+    .table-scroll { overflow-x:auto }
     .rta-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px }
     .rta-count  { font-size:12px;color:var(--color-text-muted) }
     .empty-state { text-align:center;padding:36px;color:var(--color-text-muted);display:flex;flex-direction:column;align-items:center;gap:12px }
@@ -165,6 +168,10 @@ const PAGE_SIZE = 5;
     .form-row   { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px }
     .field-row  { display:flex;flex-direction:column;gap:4px }
     .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
+
+    @media (max-width: 560px) {
+      .form-row { grid-template-columns:1fr }
+    }
   `],
 })
 export class RequestTypesAdminComponent implements OnChanges {

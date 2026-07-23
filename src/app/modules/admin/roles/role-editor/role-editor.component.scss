@@ -11,6 +11,8 @@
   background: white;
   padding: 0 16px;
   flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .re-tab {
@@ -21,6 +23,8 @@
   font-size: var(--text-body-md);
   cursor: pointer;
   color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color 0.15s, border-bottom-color 0.15s;
 
   &:hover:not(.re-tab-active) {

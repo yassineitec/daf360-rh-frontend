@@ -20,6 +20,7 @@
 
 .rl-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -35,6 +36,7 @@
 
 .rl-header-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-left: auto;
@@ -42,6 +44,7 @@
 
 .rl-search {
   width: 360px;
+  max-width: 100%;
 }
 
 .rl-list {

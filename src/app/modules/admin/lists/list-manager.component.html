@@ -51,6 +51,7 @@
       @if (loadingValues()) {
         <p class="lm-loading">Chargement…</p>
       } @else {
+        <div class="table-scroll">
         <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
 
           <ng-template dafCell="valueCode" let-row>
@@ -124,6 +125,7 @@
           </ng-template>
 
         </daf-data-table>
+        </div>
 
         @if (totalPages() > 1) {
           <div class="lm-pagination">

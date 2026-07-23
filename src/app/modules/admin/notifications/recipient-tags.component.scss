@@ -51,10 +51,13 @@
 
 .rt-add-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
 .rt-select {
   min-width: 220px;
+  max-width: 100%;
+  flex: 1;
 }

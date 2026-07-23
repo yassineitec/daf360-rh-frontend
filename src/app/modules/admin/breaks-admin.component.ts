@@ -41,7 +41,7 @@ type BreakTab = 'templates' | 'legal-rules';
   @if (activeTab() === 'templates') {
     <div>
       <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="ba-header">
         <div>
           <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">Modèles de pause</h2>
           <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">Pauses automatiques par régime horaire</p>
@@ -57,8 +57,8 @@ type BreakTab = 'templates' | 'legal-rules';
         <div style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant);border-radius:14px;padding:20px;margin-bottom:20px;">
           <p style="font-size:var(--text-body-sm);font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--color-on-surface-variant);margin:0 0 14px;">Nouveau modèle de pause</p>
           @if (formError()) { <div style="background:var(--color-error-container);border-radius:8px;padding:10px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:12px;">{{ formError() }}</div> }
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div style="grid-column:span 2">
+          <div class="ba-form-grid">
+            <div class="ba-form-span2">
               <daf-select
                 [selected]="formRegimeId ? [String(formRegimeId)] : []"
                 [options]="regimeOptions()"
@@ -135,6 +135,7 @@ type BreakTab = 'templates' | 'legal-rules';
               <span class="material-symbols-outlined" style="font-size:14px;color:var(--color-teal);">schedule</span>
               {{ group.regimeName }}
             </p>
+            <div class="table-scroll">
             <daf-data-table [columns]="columns" [rows]="rowsFor(group.templates)" [config]="tableConfig">
               <ng-template dafCell="deductionType" let-row>
                 <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
@@ -150,6 +151,7 @@ type BreakTab = 'templates' | 'legal-rules';
                   (onClick)="removeTemplate(row['_source'].id)" />
               </ng-template>
             </daf-data-table>
+            </div>
           </div>
         }
       }
@@ -169,6 +171,15 @@ type BreakTab = 'templates' | 'legal-rules';
     .ba-tab-btn:hover { color:var(--color-on-surface) }
     .ba-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
     .ba-tab-icon { font-size:18px }
+    .ba-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
+    .ba-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
+    .ba-form-span2 { grid-column:span 2 }
+    .table-scroll { overflow-x:auto }
+
+    @media (max-width: 560px) {
+      .ba-form-grid { grid-template-columns:1fr }
+      .ba-form-span2 { grid-column:span 1 }
+    }
   `],
 })
 export class BreaksAdminComponent implements OnChanges {

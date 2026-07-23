@@ -77,6 +77,7 @@ const PAGE_SIZE = 5;
       @if (types().length === 0 && !loading()) {
         <p class="ita-empty">Aucun type d'entretien configuré. Ajoutez-en un ci-dessus.</p>
       } @else {
+        <div class="table-scroll">
         <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
           <ng-template dafCell="name" let-row>
             <div class="ita-row-name">{{ row['name'] }}</div>
@@ -106,6 +107,7 @@ const PAGE_SIZE = 5;
             </div>
           </ng-template>
         </daf-data-table>
+        </div>
 
         <!-- Count + Pagination -->
         @if (types().length > 0) {
@@ -125,7 +127,7 @@ const PAGE_SIZE = 5;
   `,
   styles: [`
     .ita-wrap   { width:100% }
-    .ita-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px }
+    .ita-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
     .ita-title  { font-size:var(--text-headline-md);font-weight:600;color:var(--color-on-surface);margin:0 }
     .ita-sub    { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0 }
     .ita-form-grid  { display:grid;grid-template-columns:1fr 120px;gap:12px }
@@ -137,6 +139,11 @@ const PAGE_SIZE = 5;
     .ita-empty  { font-size:var(--text-body-sm);color:var(--color-outline);text-align:center;padding:24px }
     .ita-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px }
     .ita-count  { font-size:var(--text-body-sm);color:var(--color-on-surface-variant) }
+    .table-scroll { overflow-x:auto }
+
+    @media (max-width: 480px) {
+      .ita-form-grid { grid-template-columns:1fr }
+    }
   `],
 })
 export class InterviewTypesAdminComponent implements OnInit {
