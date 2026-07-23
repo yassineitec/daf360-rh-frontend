@@ -22,7 +22,8 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
         <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
         <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
       </div>
-      <daf-button [label]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button class="desktop-only" [label]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button class="icon-btn-toggle mobile-only" [title]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
     </div>
 
     <!-- Filter bar -->
@@ -252,6 +253,12 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
       .col-code, .col-role, .col-flags { display:none }
     }
     @media(max-width:500px) { .form-grid { grid-template-columns:1fr } }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
+    }
   `],
 })
 export class OffboardingCatalogAdminComponent implements OnInit {

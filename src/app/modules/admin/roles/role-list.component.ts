@@ -27,6 +27,7 @@ export class RoleListComponent {
   // State
   searchQuery = signal('');
   currentPage = signal(0);
+  mobileSearchOpen = signal(false);
 
   readonly paginationConfig: PaginationConfig = {
     showFirstLast: true,

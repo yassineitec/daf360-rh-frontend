@@ -110,6 +110,12 @@
   .lm-add-grid { grid-template-columns: 1fr; }
 }
 
+.mobile-only { display: none; }
+@media (max-width: 640px) {
+  .desktop-only { display: none; }
+  .mobile-only  { display: inline-flex; }
+}
+
 /* ── Buttons ──────────────────────────────────────────────── */
 .confirm-del { display: flex; align-items: center; gap: 3px; font-size: var(--text-label-sm); color: var(--color-danger); }
 

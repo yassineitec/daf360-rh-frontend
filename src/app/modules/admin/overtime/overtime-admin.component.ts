@@ -32,9 +32,13 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
       <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.overtime.title' | translate }}</h2>
       <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.overtime.subtitle' | translate }}</p>
     </div>
-    <daf-button
+    <daf-button class="desktop-only"
       [label]="'ADMIN.regimes.overtime.newRule' | translate" variant="teal"
       [options]="{ iconStart: 'add' }"
+      (onClick)="openNewForm()" />
+    <daf-button class="icon-btn-toggle mobile-only"
+      [title]="'ADMIN.regimes.overtime.newRule' | translate" variant="teal"
+      [options]="{ iconStart: 'add', size: 'sm' }"
       (onClick)="openNewForm()" />
   </div>
 
@@ -196,6 +200,12 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     @media (max-width: 480px) {
       .ova-sim-grid { grid-template-columns:1fr }
       .ova-form-grid { grid-template-columns:1fr }
+    }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
     }
   `],
 })

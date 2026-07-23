@@ -11,7 +11,14 @@
       <daf-badge [label]="'ADMIN.roles.users.COUNT_BADGE' | translate:{ count: users().length }" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
     <daf-button
+      class="desktop-only"
       [label]="showAddPanel() ? ('ADMIN.roles.users.CLOSE' | translate) : ('ADMIN.roles.users.ADD_USER' | translate)"
+      variant="teal"
+      [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
+      (onClick)="showAddPanel.set(!showAddPanel())" />
+    <daf-button
+      class="icon-btn-toggle mobile-only"
+      [title]="showAddPanel() ? 'Fermer' : 'Ajouter un utilisateur'"
       variant="teal"
       [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
       (onClick)="showAddPanel.set(!showAddPanel())" />

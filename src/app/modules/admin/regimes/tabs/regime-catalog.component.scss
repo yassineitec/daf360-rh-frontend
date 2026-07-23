@@ -210,3 +210,16 @@ daf-card.rc-card-active {
   padding-top: 16px;
   border-top: 1px solid var(--color-outline-variant);
 }
+
+@media (max-width: 900px) {
+  .rc-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .rc-form-row-4 { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .rc-form-row-2,
+  .rc-form-row-4 { grid-template-columns: 1fr; }
+}

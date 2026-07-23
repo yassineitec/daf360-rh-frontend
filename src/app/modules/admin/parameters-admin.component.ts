@@ -27,13 +27,31 @@ const PAGE_SIZE = 10;
         <p class="col-sub">{{ 'ADMIN.data.parameters.SUBTITLE' | translate }}</p>
       </div>
       <div class="header-actions">
+        <!-- Desktop/tablet: full labeled buttons -->
         <daf-button
           [label]="'ADMIN.data.parameters.INIT_DEFAULT' | translate"
+          class="desktop-only"
           variant="ghost"
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button [label]="'ADMIN.data.parameters.ADD' | translate" variant="primary" (onClick)="startAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.data.parameters.ADD' | translate" variant="primary" (onClick)="startAdd()" />
+
+        <!-- Mobile: icon-only -->
+        <daf-button
+          class="icon-btn-toggle mobile-only"
+          title="Initialiser par défaut"
+          variant="ghost"
+          [options]="{ iconStart: 'restart_alt', size: 'sm', disabled: seeding(), loading: seeding() }"
+          (onClick)="seed()"
+        />
+        <daf-button
+          class="icon-btn-toggle mobile-only"
+          title="Ajouter"
+          variant="primary"
+          [options]="{ iconStart: 'add', size: 'sm' }"
+          (onClick)="startAdd()"
+        />
       </div>
     </div>
 
@@ -135,6 +153,12 @@ const PAGE_SIZE = 10;
     .header-actions  { display:flex;flex-wrap:wrap;gap:8px }
     .center          { display:flex;justify-content:center;padding:24px }
     .table-scroll    { overflow-x:auto }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
+    }
     .key-cell        { font-family:monospace;font-size:12px;font-weight:600;color:var(--color-primary);white-space:nowrap }
     .valeur-cell     { font-family:monospace;font-size:12px;color:var(--color-text-muted) }
     .desc-cell       { font-size:12px;color:var(--color-text-muted) }

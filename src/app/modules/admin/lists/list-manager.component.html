@@ -42,7 +42,13 @@
             <p class="lm-content-desc">{{ selectedType()!.description }}</p>
           }
         </div>
-        <daf-button [label]="'ADMIN.data.lists.ADD_VALUE' | translate" variant="teal" (onClick)="openAddForm()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.data.lists.ADD_VALUE' | translate" (onClick)="openAddForm()" />
+        <daf-button
+          class="icon-btn-toggle mobile-only"
+          title="Ajouter une valeur"
+          variant="teal"
+          [options]="{ iconStart: 'add', size: 'sm' }"
+          (onClick)="openAddForm()" />
       </div>
 
       @if (error())      { <div class="lm-alert lm-alert-error">{{ error() }}</div> }

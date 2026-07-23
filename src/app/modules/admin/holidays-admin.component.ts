@@ -35,14 +35,43 @@ const PAGE_SIZE = 10;
         <p class="col-sub">{{ 'ADMIN.catalog.holidays.subtitle' | translate }}</p>
       </div>
       <div class="header-actions">
-        <div class="search-field">
+
+        <!-- Desktop/tablet: full search box + labeled button -->
+        <div class="search-field desktop-only">
           <rh-search-bar
             [placeholder]="'ADMIN.catalog.holidays.searchPlaceholder' | translate"
             [value]="searchQuery()"
             (valueChange)="searchQuery.set($event)"
           />
         </div>
-        <daf-button [label]="'ADMIN.catalog.holidays.add' | translate" variant="primary" (onClick)="openAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.catalog.holidays.add' | translate" variant="primary" (onClick)="openAdd()" />
+
+        <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
+        @if (mobileSearchOpen()) {
+          <div class="search-field mobile-only mobile-search-open">
+            <rh-search-bar
+              placeholder="Rechercher par nom (fr/en)…"
+              [value]="searchQuery()"
+              (valueChange)="searchQuery.set($event)"
+            />
+          </div>
+          <daf-button
+            class="icon-btn-toggle mobile-only"
+            title="Fermer la recherche"
+            [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
+            (onClick)="mobileSearchOpen.set(false)" />
+        } @else {
+          <daf-button
+            class="icon-btn-toggle mobile-only"
+            title="Rechercher"
+            [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
+            (onClick)="mobileSearchOpen.set(true)" />
+          <daf-button
+            class="icon-btn-toggle mobile-only"
+            title="Ajouter"
+            [options]="{ iconStart: 'add', variant: 'primary', size: 'sm' }"
+            (onClick)="openAdd()" />
+        }
       </div>
     </div>
 
@@ -141,6 +170,14 @@ const PAGE_SIZE = 10;
     .search-field   { width:360px;max-width:100% }
     .center         { display:flex;justify-content:center;padding:24px }
     .table-scroll   { overflow-x:auto }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
+      .mobile-search-open { display:block;flex:1;min-width:0 }
+      .header-actions { flex:1 }
+    }
     .date-td   { font-weight:600;color:var(--color-primary);white-space:nowrap }
     .cell-muted{ color:var(--color-text-muted) }
     .recur-badge { padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;background:var(--color-bg-secondary);color:var(--color-text-muted) }
@@ -176,6 +213,7 @@ export class HolidaysAdminComponent implements OnChanges {
   editTarget = signal<Holiday | null>(null);
   modalError = signal<string | null>(null);
   searchQuery = signal('');
+  mobileSearchOpen = signal(false);
   selectedYear = new Date().getFullYear();
 
   readonly columns = computed<TableColumn[]>(() => {

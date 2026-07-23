@@ -63,6 +63,7 @@
 </div>
 
 <!-- Table -->
+<div class="table-scroll">
 <daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
 
   <ng-template dafCell="regime" let-row>
@@ -84,6 +85,7 @@
   </ng-template>
 
 </daf-data-table>
+</div>
 
 <!-- Count + Pagination -->
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3">

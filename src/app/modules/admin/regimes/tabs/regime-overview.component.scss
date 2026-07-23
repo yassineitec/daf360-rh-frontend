@@ -78,7 +78,17 @@
   margin-bottom: 16px;
 }
 
-.ro-search { width: 360px; }
+.ro-search { width: 360px; max-width: 100%; }
+
+.table-scroll { overflow-x: auto; }
+
+@media (max-width: 700px) {
+  .ro-stats { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .ro-form-row-2 { grid-template-columns: 1fr; }
+}
 
 .ro-regime-label {
   font-size: var(--text-body-sm);

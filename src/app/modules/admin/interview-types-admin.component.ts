@@ -30,7 +30,14 @@ const PAGE_SIZE = 5;
         <daf-button
           [label]="'ADMIN.docs.interviews.newType' | translate"
           variant="teal"
+          class="desktop-only"
           [options]="{ iconStart: 'add' }"
+          (onClick)="openAdd()" />
+        <daf-button
+          class="icon-btn-toggle mobile-only"
+          title="Nouveau type"
+          variant="teal"
+          [options]="{ iconStart: 'add', size: 'sm' }"
           (onClick)="openAdd()" />
       </div>
 
@@ -145,6 +152,12 @@ const PAGE_SIZE = 5;
 
     @media (max-width: 480px) {
       .ita-form-grid { grid-template-columns:1fr }
+    }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
     }
   `],
 })

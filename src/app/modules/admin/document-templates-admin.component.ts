@@ -60,7 +60,8 @@ const DEFAULT_HTML = `<!DOCTYPE html>
         <h3 class="section-title">{{ 'ADMIN.docs.templates.title' | translate }}</h3>
         <p class="section-sub">{{ 'ADMIN.docs.templates.subtitle' | translate }} ({{'{{'}}variable.clé{{'}}'}}).</p>
       </div>
-      <daf-button [label]="'ADMIN.docs.templates.newTemplate' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button class="desktop-only" [label]="'ADMIN.docs.templates.newTemplate' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
+      <daf-button class="icon-btn-toggle mobile-only" title="Nouvelle maquette" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
     </div>
 
     <!-- Filter bar -->
@@ -324,6 +325,12 @@ const DEFAULT_HTML = `<!DOCTYPE html>
       .col-vars        { display:none }
     }
     @media(max-width:500px) { .meta-grid { grid-template-columns:1fr } }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
+    }
   `],
 })
 export class DocumentTemplatesAdminComponent implements OnInit {

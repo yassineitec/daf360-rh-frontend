@@ -32,12 +32,28 @@ const PAGE_SIZE = 5;
       </div>
       <div class="header-actions">
         <daf-button
+          class="desktop-only"
           [label]="'ADMIN.catalog.requestTypes.initDefault' | translate"
           variant="ghost"
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="primary" (onClick)="openAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="primary" (onClick)="openAdd()" />
+
+        <daf-button
+          class="icon-btn-toggle mobile-only"
+          [label]="'ADMIN.catalog.requestTypes.initDefault' | translate"
+          variant="ghost"
+          [options]="{ iconStart: 'restart_alt', size: 'sm', disabled: seeding(), loading: seeding() }"
+          (onClick)="seed()"
+        />
+        <daf-button
+          class="icon-btn-toggle mobile-only"
+          title="Ajouter"
+          variant="primary"
+          [options]="{ iconStart: 'add', size: 'sm' }"
+          (onClick)="openAdd()"
+        />
       </div>
     </div>
 
@@ -173,6 +189,12 @@ const PAGE_SIZE = 5;
 
     @media (max-width: 560px) {
       .form-row { grid-template-columns:1fr }
+    }
+
+    .mobile-only { display:none }
+    @media (max-width: 640px) {
+      .desktop-only { display:none }
+      .mobile-only  { display:inline-flex }
     }
   `],
 })
