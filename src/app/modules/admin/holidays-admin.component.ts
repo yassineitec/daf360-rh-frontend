@@ -52,6 +52,7 @@ const PAGE_SIZE = 10;
       @if (holidays().length === 0) {
         <div class="empty-state"><p>{{ 'ADMIN.catalog.holidays.empty' | translate:{ year: selectedYear } }}</p></div>
       } @else {
+        <div class="table-scroll">
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
           <ng-template dafCell="dateHoliday" let-row>
             <span class="date-td">{{ fmtDate(row['_source'].dateHoliday) }}</span>
@@ -70,6 +71,7 @@ const PAGE_SIZE = 10;
             </div>
           </ng-template>
         </daf-data-table>
+        </div>
 
         @if (totalPages() > 1) {
           <div class="pagination-row">
@@ -132,12 +134,13 @@ const PAGE_SIZE = 10;
     </app-modal>
   `,
   styles: [`
-    .section-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px }
+    .section-header { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
     .col-title { font-size:13px;font-weight:700;margin:0 }
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
-    .header-actions { display:flex;gap:8px;align-items:center }
-    .search-field   { width:360px }
+    .header-actions { display:flex;flex-wrap:wrap;gap:8px;align-items:center }
+    .search-field   { width:360px;max-width:100% }
     .center         { display:flex;justify-content:center;padding:24px }
+    .table-scroll   { overflow-x:auto }
     .date-td   { font-weight:600;color:var(--color-primary);white-space:nowrap }
     .cell-muted{ color:var(--color-text-muted) }
     .recur-badge { padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;background:var(--color-bg-secondary);color:var(--color-text-muted) }

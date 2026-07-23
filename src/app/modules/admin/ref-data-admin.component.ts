@@ -82,6 +82,7 @@ const TABS: TabConfig[] = [
     @if (loading()) {
       <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
+      <div class="table-scroll">
       <daf-data-table [columns]="itemColumns()" [rows]="itemRows()" [config]="itemTableConfig()">
         <ng-template dafCell="isActive" let-row>
           @if (row['_source'].isActive) {
@@ -99,6 +100,7 @@ const TABS: TabConfig[] = [
             (onClick)="deleteItem(row['_source'])" />
         </ng-template>
       </daf-data-table>
+      </div>
 
       @if (totalPages() > 1) {
         <div class="rda-pagination">
@@ -118,6 +120,7 @@ const TABS: TabConfig[] = [
     @if (loading()) {
       <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
+      <div class="table-scroll">
       <daf-data-table [columns]="tcColumns()" [rows]="tcRows()" [config]="itemTableConfig()">
         <ng-template dafCell="isActive" let-row>
           @if (row['_source'].isActive) {
@@ -135,6 +138,7 @@ const TABS: TabConfig[] = [
             (onClick)="deleteTypeContrat(row['_source'])" />
         </ng-template>
       </daf-data-table>
+      </div>
 
       @if (totalPages() > 1) {
         <div class="rda-pagination">
@@ -158,7 +162,7 @@ const TABS: TabConfig[] = [
     [hasFooter]="true"
     (closed)="showForm.set(false)"
   >
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="rda-form-grid">
       <daf-form-field
         [options]="{ label: ('ADMIN.data.refData.FIELD_LABEL_FR' | translate), placeholder: ('ADMIN.data.refData.PH_LABEL_FR' | translate), required: true, fullWidth: true }"
         [value]="createForm.labelFr"
@@ -195,7 +199,7 @@ const TABS: TabConfig[] = [
     [hasFooter]="true"
     (closed)="showForm.set(false)"
   >
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div class="rda-form-grid">
       <daf-form-field
         [options]="{ label: ('ADMIN.data.refData.TC_FIELD_CODE' | translate), placeholder: ('ADMIN.data.refData.TC_PH_CODE' | translate), required: true, fullWidth: true }"
         [value]="tcCreateCode"
@@ -225,12 +229,18 @@ const TABS: TabConfig[] = [
     .rda-tab-btn { padding:10px 16px;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font-sans);font-size:var(--text-label-sm);font-weight:500;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color var(--duration-normal) var(--ease-smooth),border-color var(--duration-normal) var(--ease-smooth) }
     .rda-tab-btn:hover { color:var(--color-on-surface) }
     .rda-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
-    .rda-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px }
+    .rda-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px }
     .rda-header-title { font-size:var(--text-body-lg);font-weight:700;color:var(--color-on-surface);margin:0 }
     .rda-badge { font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700 }
     .rda-badge-yes { background:var(--color-tertiary-container);color:var(--color-on-tertiary-container) }
     .rda-badge-no  { background:var(--color-surface-container);color:var(--color-on-surface-variant) }
     .rda-pagination { display:flex;justify-content:flex-end;padding:10px 0 }
+    .rda-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
+    .table-scroll  { overflow-x:auto }
+
+    @media (max-width: 480px) {
+      .rda-form-grid { grid-template-columns:1fr }
+    }
 
     /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
        own build — force the right-aligned Actions column ourselves. */

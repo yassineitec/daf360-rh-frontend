@@ -42,6 +42,10 @@
   flex-wrap: wrap;
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
 /* ── Footer: count + pagination ──────────────────────────────── */
 .nr-footer {
   display: flex;

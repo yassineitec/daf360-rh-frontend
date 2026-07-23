@@ -44,6 +44,7 @@ const PAGE_SIZE = 10;
         <daf-button [label]="'ADMIN.data.parameters.INIT_DEFAULT_VALUES' | translate" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
+      <div class="table-scroll">
       <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
         <ng-template dafCell="cle" let-row>
           <span class="key-cell">{{ row['_source'].cle }}</span>
@@ -81,6 +82,7 @@ const PAGE_SIZE = 10;
           }
         </ng-template>
       </daf-data-table>
+      </div>
 
       @if (totalPages() > 1) {
         <div class="pagination-row">
@@ -127,11 +129,12 @@ const PAGE_SIZE = 10;
     </app-modal>
   `,
   styles: [`
-    .section-header  { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px }
+    .section-header  { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
     .col-title       { font-size:13px;font-weight:700;margin:0 }
     .col-sub         { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
-    .header-actions  { display:flex;gap:8px }
+    .header-actions  { display:flex;flex-wrap:wrap;gap:8px }
     .center          { display:flex;justify-content:center;padding:24px }
+    .table-scroll    { overflow-x:auto }
     .key-cell        { font-family:monospace;font-size:12px;font-weight:600;color:var(--color-primary);white-space:nowrap }
     .valeur-cell     { font-family:monospace;font-size:12px;color:var(--color-text-muted) }
     .desc-cell       { font-size:12px;color:var(--color-text-muted) }
