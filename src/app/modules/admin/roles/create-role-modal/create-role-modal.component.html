@@ -23,7 +23,7 @@
         [selected]="parentSelected()"
         [options]="parentOptions()"
         [config]="{ label: ('ADMIN.roles.create.PARENT_LABEL' | translate), placeholder: ('ADMIN.roles.create.PARENT_PLACEHOLDER' | translate), disabled: saving(), fullWidth: true }"
-        (selectedChange)="onParentChange($event[0] ?? '')" />
+        (selectedChange)="onParentChange($event[0])" />
     </div>
 
     <!-- Voir toutes les entités -->

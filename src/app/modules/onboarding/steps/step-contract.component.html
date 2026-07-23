@@ -21,7 +21,7 @@
         [selected]="contractType() ? [contractType()] : []"
         [options]="contractOptions()"
         [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-        (selectedChange)="contractType.set($event[0] ?? ''); emit()" />
+        (selectedChange)="contractType.set($event[0]); emit()" />
     </div>
 
     <!-- Row 2: grade | discipline -->

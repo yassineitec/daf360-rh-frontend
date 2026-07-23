@@ -4,7 +4,6 @@ import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
 import { input } from '@angular/core';
 import {
-  FormFieldComponent,
   SelectComponent,
   MultiDatePickerComponent,
   SelectOption,
@@ -22,7 +21,7 @@ const CONTRACT_LABEL_KEY: Record<string, string> = {
 @Component({
   selector: 'app-step-contract',
   standalone: true,
-  imports: [FormFieldComponent, SelectComponent, MultiDatePickerComponent, TranslatePipe],
+  imports: [ SelectComponent, MultiDatePickerComponent, TranslatePipe],
   templateUrl: './step-contract.component.html',
   styleUrl: './step-contract.component.scss',
 })

@@ -21,7 +21,7 @@
           [selected]="selectedRoleValue()"
           [options]="roleOptions()"
           [config]="{ placeholder: ('ADMIN.notifications.selectRolePlaceholder' | translate) }"
-          (selectedChange)="onSelectRole($event[0] ?? '')" />
+          (selectedChange)="onSelectRole($event[0])" />
         <daf-button [label]="'ADMIN.notifications.add' | translate" variant="teal" [options]="{ size: 'sm', disabled: !selectedRoleId() }" (onClick)="onAdd()" />
         <daf-button label="✕" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(false)" />
       </div>

@@ -14,6 +14,7 @@ import {
 import {
   StatusBadgeComponent, ButtonComponent, CardComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  FormFieldComponent, SelectComponent, CheckboxComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
@@ -37,7 +38,7 @@ const STEP_CARD_INFO = [
   standalone: true,
   imports: [
     SlicePipe, FormsModule, StatusBadgeComponent, ButtonComponent, CardComponent,
-    DataTableComponent, DafCellDirective,
+    DataTableComponent, DafCellDirective, FormFieldComponent, SelectComponent, CheckboxComponent,
     SpinnerComponent, ModalComponent, ConfirmEmailModalComponent, PdfDownloadButtonComponent,
     TranslatePipe,
   ],
@@ -149,6 +150,10 @@ export class ItProvisioningFormComponent implements OnInit {
     }));
   });
 
+  readonly hwStatusSelectOptions = computed<SelectOption[]>(() =>
+    this.hwStatuses().map(({ value, label }) => ({ value, label })),
+  );
+
   // ── Hardware table (daf-data-table) ─────────────────────────────────────────
   readonly assetColumns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -178,6 +183,10 @@ export class ItProvisioningFormComponent implements OnInit {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   private provId = 0;
   protected readonly statusBadge = statusBadge;
+
+  protected toTextValue(value: string | number | null | undefined): string {
+    return value == null ? '' : String(value);
+  }
 
   ngOnInit(): void {
     this.provId = Number(this.route.snapshot.paramMap.get('id'));

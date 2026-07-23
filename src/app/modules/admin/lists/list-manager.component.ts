@@ -1,4 +1,3 @@
-import { AsyncPipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -21,7 +20,7 @@ const PAGE_SIZE = 10;
   selector: 'app-list-manager',
   standalone: true,
   imports: [
-    FormsModule, ReactiveFormsModule, AsyncPipe, DataTableComponent, DafCellDirective,
+    FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent, StatusBadgeComponent,
     PaginationComponent, TranslatePipe,
   ],

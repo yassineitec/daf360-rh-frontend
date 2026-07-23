@@ -150,7 +150,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
         [selected]="[formType]"
         [options]="typeOptions()"
         [config]="{ label: ('ADMIN.regimes.overtime.calcType' | translate), fullWidth: true }"
-        (selectedChange)="formType = $event[0] ?? 'WEEKEND_ONLY'" />
+        (selectedChange)="formType = $event[0]" />
       @if (formType) {
         <small style="font-size:var(--text-label-sm);color:var(--color-outline);">{{ getTypeDesc(formType) }}</small>
       }
@@ -171,12 +171,12 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
       [selected]="formJourDebut ? [formJourDebut] : []"
       [options]="daysOptions()"
       [config]="{ label: ('ADMIN.regimes.overtime.firstWorkDay' | translate), placeholder: ('ADMIN.regimes.overtime.optional' | translate), fullWidth: true }"
-      (selectedChange)="formJourDebut = $event[0] ?? ''" />
+      (selectedChange)="formJourDebut = $event[0]" />
     <daf-select
       [selected]="formJourFin ? [formJourFin] : []"
       [options]="daysOptions()"
       [config]="{ label: ('ADMIN.regimes.overtime.lastWorkDay' | translate), placeholder: ('ADMIN.regimes.overtime.optional' | translate), fullWidth: true }"
-      (selectedChange)="formJourFin = $event[0] ?? ''" />
+      (selectedChange)="formJourFin = $event[0]" />
   </div>
   <div slot="footer">
     <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showForm.set(false)" />

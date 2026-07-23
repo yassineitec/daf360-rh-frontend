@@ -29,7 +29,7 @@
         [selected]="maritalStatus() ? [maritalStatus()] : []"
         [options]="maritalOptions()"
         [config]="{ placeholder: ('ONBOARDING.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
-        (selectedChange)="maritalStatus.set($event[0] ?? ''); emit()" />
+        (selectedChange)="maritalStatus.set($event[0]); emit()" />
     </div>
 
     <div class="form-field">

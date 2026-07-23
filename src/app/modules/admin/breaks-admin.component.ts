@@ -82,7 +82,7 @@ type BreakTab = 'templates' | 'legal-rules';
               [selected]="[formType]"
               [options]="typeOptions()"
               [config]="{ label: ('ADMIN.regimes.breaks.type' | translate), fullWidth: true }"
-              (selectedChange)="formType = $event[0] ?? 'AUTO'" />
+              (selectedChange)="formType = $event[0]" />
             <daf-form-field
               [options]="{ label: ('ADMIN.regimes.breaks.duration' | translate), type: 'number', fullWidth: true }"
               [value]="formDurationMin"
@@ -91,7 +91,7 @@ type BreakTab = 'templates' | 'legal-rules';
               [selected]="[formDays]"
               [options]="daysOptions()"
               [config]="{ label: ('ADMIN.regimes.breaks.applicableDays' | translate), fullWidth: true }"
-              (selectedChange)="formDays = $event[0] ?? 'ALL'" />
+              (selectedChange)="formDays = $event[0]" />
             <daf-form-field
               [options]="{ label: ('ADMIN.regimes.breaks.minHoursTrigger' | translate), type: 'number', placeholder: ('ADMIN.regimes.breaks.minHoursPlaceholder' | translate), fullWidth: true }"
               [value]="formMinHours"

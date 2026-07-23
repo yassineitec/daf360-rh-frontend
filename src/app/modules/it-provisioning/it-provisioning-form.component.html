@@ -113,18 +113,18 @@
               } @else {
                 <div class="flex gap-3 items-end">
                   <div class="flex flex-col gap-1.5 flex-1">
-                    <label class="text-[12px] font-semibold text-outline uppercase tracking-wide" for="ms365Email">
-                      {{ 'IT_PROVISIONING.form.emailFieldLabel' | translate }} <span class="text-danger">*</span>
-                    </label>
-                    <input
-                      id="ms365Email"
-                      class="h-9 border border-outline-variant rounded-lg px-3 text-[13px] text-on-surface outline-none focus:border-tertiary focus:ring-2 focus:ring-tertiary/20"
-                      type="email"
-                      [placeholder]="'IT_PROVISIONING.form.emailPlaceholder' | translate"
-                      [ngModel]="emailInput()"
-                      (ngModelChange)="emailInput.set($event)"
-                      [disabled]="submittingEmail()"
-                      autocomplete="off" />
+                    <daf-form-field
+                      [value]="emailInput()"
+                      [options]="{
+                        label: ('IT_PROVISIONING.form.emailFieldLabel' | translate),
+                        type: 'email',
+                        placeholder: ('IT_PROVISIONING.form.emailPlaceholder' | translate),
+                        required: true,
+                        fullWidth: true,
+                        disabled: submittingEmail(),
+                        error: (!emailIsValid() && emailInput().length > 0) ? ('IT_PROVISIONING.form.emailInvalid' | translate) : null
+                      }"
+                      (valueChange)="emailInput.set(toTextValue($event))" />
                   </div>
                   <daf-button
                     [options]="{ variant: 'teal', label: (submittingEmail() ? 'IT_PROVISIONING.form.submitting' : 'IT_PROVISIONING.form.submitEmail') | translate, size: 'md', disabled: !emailIsValid() || submittingEmail(), loading: submittingEmail() }"
@@ -142,117 +142,87 @@
               <daf-data-table [columns]="assetColumns()" [rows]="assetRows()" [config]="assetTableConfig()">
 
                 <ng-template dafCell="provided" let-row>
-                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer"
-                    [ngModel]="row['provided']"
-                    (ngModelChange)="toggleAssetProvided(assetIndex(row['assetTypeCode']), $event)"
-                     />
+                  <daf-checkbox
+                    [checked]="row['provided']"
+                    (checkedChange)="toggleAssetProvided(assetIndex(row['assetTypeCode']), $event)" />
                 </ng-template>
 
                 <ng-template dafCell="serialNumber" let-row>
-                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="SN-…"
-                    [ngModel]="row['serialNumber']"
-                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'serialNumber', $event)"
-                    [disabled]="!row['provided']" />
+                  <daf-form-field
+                    [value]="row['serialNumber'] ?? null"
+                    [options]="{ placeholder: 'SN-…', required: true, fullWidth: true, disabled: !row['provided'] }"
+                    (valueChange)="setAssetField(assetIndex(row['assetTypeCode']), 'serialNumber', $event)" />
                 </ng-template>
 
                 <ng-template dafCell="brandModel" let-row>
-                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" [placeholder]="'IT_PROVISIONING.form.assetCol.brandModel' | translate"
-                    [ngModel]="row['brandModel']"
-                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'brandModel', $event)"
-                    [disabled]="!row['provided']" />
+                  <daf-form-field
+                    [value]="row['brandModel'] ?? null"
+                    [options]="{ placeholder: ('IT_PROVISIONING.form.assetCol.brandModel' | translate), required: true, fullWidth: true, disabled: !row['provided'] }"
+                    (valueChange)="setAssetField(assetIndex(row['assetTypeCode']), 'brandModel', $event)" />
                 </ng-template>
 
                 <ng-template dafCell="assetTag" let-row>
-                  <input class="w-full h-8 border border-outline-variant rounded-md px-2 text-[12px] outline-none focus:border-tertiary" type="text" placeholder="AT-…"
-                    [ngModel]="row['assetTag']"
-                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'assetTag', $event)"
-                    [disabled]="!row['provided']" />
+                  <daf-form-field
+                    [value]="row['assetTag'] ?? null"
+                    [options]="{ placeholder: 'AT-…', required: true, fullWidth: true, disabled: !row['provided'] }"
+                    (valueChange)="setAssetField(assetIndex(row['assetTypeCode']), 'assetTag', $event)" />
                 </ng-template>
 
                 <ng-template dafCell="status" let-row>
-                  <select class="w-full h-8 border border-outline-variant rounded-md px-1.5 text-[12px] outline-none bg-surface cursor-pointer focus:border-tertiary"
-                    [ngModel]="row['status']"
-                    (ngModelChange)="setAssetField(assetIndex(row['assetTypeCode']), 'status', $event)"
-                    [disabled]="!row['provided']">
-                    <option value="">—</option>
-                    @for (s of hwStatuses(); track s.value) {
-                      <option [value]="s.value">{{ s.label }}</option>
-                    }
-                  </select>
+                  <daf-select
+                    [selected]="row['status'] ? [row['status']] : []"
+                    [options]="hwStatusSelectOptions()"
+                    [config]="{ placeholder: '—', required: true, fullWidth: true, disabled: !row['provided'] }"
+                    (selectedChange)="setAssetField(assetIndex(row['assetTypeCode']), 'status', $event[0] || '')" />
                 </ng-template>
 
               </daf-data-table>
               </div>
 
               <div class="flex flex-col gap-1.5 mt-3.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.hardwareNotes' | translate }}</label>
-                <textarea
-                  class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-[13px] outline-none resize-y focus:border-tertiary"
-                  rows="3"
-                  [placeholder]="'IT_PROVISIONING.form.hardwareNotesPlaceholder' | translate"
-                  [ngModel]="hardwareNotes()"
-                  (ngModelChange)="hardwareNotes.set($event)"></textarea>
+                <daf-form-field
+                  [value]="hardwareNotes()"
+                  [options]="{ label: ('IT_PROVISIONING.form.hardwareNotes' | translate), type: 'textarea', rows: 3, placeholder: ('IT_PROVISIONING.form.hardwareNotesPlaceholder' | translate), fullWidth: true }"
+                  (valueChange)="hardwareNotes.set(toTextValue($event))" />
               </div>
             }
 
             <!-- ── STEP 4 : Licences ────────────────────────────────── -->
             @if (currentStep() === 4) {
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label class="flex items-center gap-2 text-[13px] text-on-surface cursor-pointer">
-                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="licenseOffice365()" (ngModelChange)="licenseOffice365.set($event)"> Office 365
-                </label>
-                <label class="flex items-center gap-2 text-[13px] text-on-surface cursor-pointer">
-                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="licenseAutocad()" (ngModelChange)="licenseAutocad.set($event)"> AutoCAD
-                </label>
-                <label class="flex items-center gap-2 text-[13px] text-on-surface cursor-pointer">
-                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="licenseRevit()" (ngModelChange)="licenseRevit.set($event)"> Revit
-                </label>
-                <label class="flex items-center gap-2 text-[13px] text-on-surface cursor-pointer">
-                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="licenseAutodesk()" (ngModelChange)="licenseAutodesk.set($event)"> Autodesk
-                </label>
-                <label class="flex items-center gap-2 text-[13px] text-on-surface cursor-pointer">
-                  <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="licenseKaspersky()" (ngModelChange)="licenseKaspersky.set($event)"> Kaspersky
-                </label>
+                <daf-checkbox [checked]="licenseOffice365()" (checkedChange)="licenseOffice365.set($event)" [options]="{ label: 'Office 365' }" />
+                <daf-checkbox [checked]="licenseAutocad()" (checkedChange)="licenseAutocad.set($event)" [options]="{ label: 'AutoCAD' }" />
+                <daf-checkbox [checked]="licenseRevit()" (checkedChange)="licenseRevit.set($event)" [options]="{ label: 'Revit' }" />
+                <daf-checkbox [checked]="licenseAutodesk()" (checkedChange)="licenseAutodesk.set($event)" [options]="{ label: 'Autodesk' }" />
+                <daf-checkbox [checked]="licenseKaspersky()" (checkedChange)="licenseKaspersky.set($event)" [options]="{ label: 'Kaspersky' }" />
               </div>
               <div class="flex flex-col gap-1.5 mt-3.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.otherLicenses' | translate }}</label>
-                <input
-                  class="h-9 border border-outline-variant rounded-lg px-3 text-[13px] outline-none focus:border-tertiary"
-                  type="text"
-                  [placeholder]="'IT_PROVISIONING.form.otherLicensesPlaceholder' | translate"
-                  [ngModel]="licenseOther()"
-                  (ngModelChange)="licenseOther.set($event)" />
+                <daf-form-field
+                  [value]="licenseOther()"
+                  [options]="{ label: ('IT_PROVISIONING.form.otherLicenses' | translate), placeholder: ('IT_PROVISIONING.form.otherLicensesPlaceholder' | translate), required: true, fullWidth: true }"
+                  (valueChange)="licenseOther.set(toTextValue($event))" />
               </div>
             }
 
             <!-- ── STEP 5 : Active Directory ─────────────────────────── -->
             @if (currentStep() === 5) {
-              <label class="flex items-center gap-2 text-[14px] font-semibold text-on-surface cursor-pointer">
-                <input type="checkbox" class="w-4 h-4 accent-tertiary cursor-pointer" [ngModel]="adAccountCreated()" (ngModelChange)="adAccountCreated.set($event)">
-                {{ 'IT_PROVISIONING.form.adAccountCreated' | translate }}
-              </label>
+              <daf-checkbox [checked]="adAccountCreated()" (checkedChange)="adAccountCreated.set($event)" [options]="{ label: ('IT_PROVISIONING.form.adAccountCreated' | translate) }" />
               <div class="flex flex-col gap-1.5 mt-3.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.adProfileType' | translate }}</label>
-                <select class="h-9 border border-outline-variant rounded-lg px-3 text-[13px] outline-none bg-surface cursor-pointer focus:border-tertiary"
-                  [ngModel]="adProfileType()" (ngModelChange)="adProfileType.set($event)">
-                  @for (opt of adOptions(); track opt.valueCode) {
-                    <option [value]="opt.valueCode">{{ opt.labelFr }}</option>
-                  }
-                </select>
+                <daf-select
+                  [selected]="adProfileType() ? [adProfileType()] : []"
+                  [options]="adOptions().map(opt => ({ value: opt.valueCode, label: opt.labelFr }))"
+                  [config]="{ label: ('IT_PROVISIONING.form.adProfileType' | translate), required: true, fullWidth: true }"
+                  (selectedChange)="adProfileType.set($event[0] || '')" />
               </div>
             }
 
             <!-- ── STEP 6 : Notes & finalisation ─────────────────────── -->
             @if (currentStep() === 6) {
               <div class="flex flex-col gap-1.5">
-                <label class="text-[12px] font-semibold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.generalNotes' | translate }}</label>
-                <textarea
-                  class="w-full border border-outline-variant rounded-lg px-3 py-2.5 text-[13px] outline-none resize-y focus:border-tertiary"
-                  rows="4"
-                  [placeholder]="'IT_PROVISIONING.form.generalNotesPlaceholder' | translate"
-                  [ngModel]="notes()"
-                  (ngModelChange)="notes.set($event)"
-                  ></textarea>
+                <daf-form-field
+                  [value]="notes()"
+                  [options]="{ label: ('IT_PROVISIONING.form.generalNotes' | translate), type: 'textarea', rows: 4, placeholder: ('IT_PROVISIONING.form.generalNotesPlaceholder' | translate), fullWidth: true }"
+                  (valueChange)="notes.set(toTextValue($event))" />
               </div>
 
               @if (isCompleted()) {

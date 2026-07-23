@@ -60,7 +60,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
           [selected]="[formDays]"
           [options]="daysOptions()"
           [config]="{ label: ('ADMIN.regimes.legal.applicableDays' | translate), fullWidth: true }"
-          (selectedChange)="formDays = $event[0] ?? 'ALL'" />
+          (selectedChange)="formDays = $event[0]" />
         <daf-form-field
           [options]="{ label: ('ADMIN.regimes.legal.effFrom' | translate), type: 'date', fullWidth: true }"
           [value]="formEffFrom"
