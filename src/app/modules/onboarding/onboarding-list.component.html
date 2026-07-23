@@ -177,8 +177,8 @@
                   <p class="text-on-surface truncate">{{ row['ms365Email'] || '—' }}</p>
                 </div>
                 <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_ENTITY' | translate }}</p>
-                  <p class="text-on-surface">{{ row['entite'] }}</p>
+                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_IT_STATUS' | translate }}</p>
+                  <daf-badge [label]="row['itStatus'].label" [options]="row['itStatus'].options" />
                 </div>
                 <div>
                   <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_START' | translate }}</p>
@@ -213,8 +213,8 @@
                 <span class="text-[12px] text-on-surface-variant">{{ row['ms365Email'] || '—' }}</span>
               </ng-template>
 
-              <ng-template dafCell="entite" let-row>
-                <span class="text-[12px] text-outline">{{ row['entite'] }}</span>
+              <ng-template dafCell="itStatus" let-row>
+                <daf-badge [label]="row['itStatus'].label" [options]="row['itStatus'].options" />
               </ng-template>
 
               <ng-template dafCell="expectedStartDate" let-row>

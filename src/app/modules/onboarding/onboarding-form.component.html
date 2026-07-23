@@ -200,7 +200,7 @@
                   <div class="tracker-dot-inner"></div>
                 </div>
                 <div class="pt-0.5">
-                  <p class="text-[14px] font-bold text-primary">{{ 'ONBOARDING.FORM.TRACKER_HR_PROFILE' | translate }}</p>
+                  <p class="text-[14px] font-bold text-tertiary">{{ 'ONBOARDING.FORM.TRACKER_HR_PROFILE' | translate }}</p>
                   <p class="text-[12px] text-success font-semibold">{{ 'ONBOARDING.FORM.TRACKER_STEP_IN_PROGRESS' | translate }}</p>
                 </div>
               </div>
@@ -301,30 +301,29 @@
 <!-- Fixed footer -->
 <footer class="form-footer">
   <div class="footer-left">
-    <button class="btn-cancel" type="button" (click)="goBack()">{{ 'ONBOARDING.FORM.CANCEL' | translate }}</button>
+    <daf-button
+      [options]="{ variant: 'ghost', label: ('ONBOARDING.FORM.CANCEL' | translate) }"
+      (onClick)="goBack()" />
     @if (currentStep() > 1) {
-      <button class="btn-prev" type="button" (click)="prevStep()">
-        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-        {{ 'ONBOARDING.FORM.PREV' | translate }}
-      </button>
+      <daf-button
+        [options]="{ variant: 'ghost', label: ('ONBOARDING.FORM.PREV' | translate), iconStart: 'arrow_back' }"
+        (onClick)="prevStep()" />
     }
   </div>
 
   <div class="footer-right">
-    <button class="btn-draft" type="button" [disabled]="saving()" (click)="onSaveDraft()">
-      @if (saving()) { {{ 'ONBOARDING.FORM.SAVING' | translate }} } @else { {{ 'ONBOARDING.FORM.SAVE_DRAFT' | translate }} }
-    </button>
+    <daf-button
+      [options]="{ variant: 'secondary', label: ((saving() ? 'ONBOARDING.FORM.SAVING' : 'ONBOARDING.FORM.SAVE_DRAFT') | translate), iconStart: 'save', disabled: saving(), loading: saving() }"
+      (onClick)="onSaveDraft()" />
 
     @if (currentStep() < 7) {
-      <button class="btn-create-next" type="button" (click)="nextStep()">
-        @if (currentStep() === 1) { {{ 'ONBOARDING.FORM.CREATE_AND_NEXT' | translate }} } @else { {{ 'ONBOARDING.FORM.NEXT' | translate }} }
-        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-      </button>
+      <daf-button
+        [options]="{ variant: 'teal', label: ((currentStep() === 1 ? 'ONBOARDING.FORM.CREATE_AND_NEXT' : 'ONBOARDING.FORM.NEXT') | translate), iconEnd: 'arrow_forward' }"
+        (onClick)="nextStep()" />
     } @else {
-      <button class="btn-create-profile" type="button" [disabled]="submitting()" (click)="openConfirmModal()">
-        {{ 'ONBOARDING.FORM.SUBMIT_CREATE' | translate }}
-        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-      </button>
+      <daf-button
+        [options]="{ variant: 'teal', label: ('ONBOARDING.FORM.SUBMIT_CREATE' | translate), iconEnd: 'arrow_forward', disabled: submitting(), loading: submitting() }"
+        (onClick)="openConfirmModal()" />
     }
   </div>
 </footer>

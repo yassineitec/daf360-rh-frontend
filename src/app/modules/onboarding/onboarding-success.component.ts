@@ -29,7 +29,9 @@ export class OnboardingSuccessComponent implements OnInit {
   }
 
   goToProfile(): void {
-    this.router.navigate(['/rh/profiles']);
+    // Navigate to the newly-created employee's profile detail, not the full list.
+    const id = this.profileId();
+    this.router.navigate(id ? ['/rh/profiles', id] : ['/rh/profiles']);
   }
 
   goToList(): void {

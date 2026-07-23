@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
-import { CardComponent } from '@khalilrebhiitec/daf360';
+import { CardComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OnboardingService } from './onboarding.service';
 import {
@@ -26,6 +26,7 @@ import { isFemale } from '../../shared/utils/avatar.utils';
   standalone: true,
   imports: [
     CardComponent,
+    ButtonComponent,
     FormsModule,
     StepIdentityComponent,
     StepContractComponent,

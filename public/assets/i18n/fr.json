@@ -670,7 +670,8 @@
       "COL_UPDATED": "MàJ",
       "COL_ACTIONS": "Actions",
       "COMPLETE": "Compléter",
-      "FILES_WORD": "dossier(s)"
+      "FILES_WORD": "dossier(s)",
+      "COL_IT_STATUS": "Statut IT"
     },
     "STEPS": {
       "IDENTITY": "Identité",

@@ -19,10 +19,26 @@ export class StepSummaryComponent {
 
   readonly genderLabel = genderLabel;
 
+  /** Contract-type code → i18n key (kept in sync with step-contract's CONTRACT_LABEL_KEY). */
+  private static readonly CONTRACT_LABEL_KEY: Record<string, string> = {
+    PERMANENT:  'ONBOARDING.STEP_CONTRACT.CONTRACT_PERMANENT',
+    FIXED_TERM: 'ONBOARDING.STEP_CONTRACT.CONTRACT_FIXED_TERM',
+    INTERN:     'ONBOARDING.STEP_CONTRACT.CONTRACT_INTERN',
+    CONSULTANT: 'ONBOARDING.STEP_CONTRACT.CONTRACT_CONSULTANT',
+  };
+
   val(v: any): string {
     if (v === null || v === undefined || v === '') return '—';
     if (typeof v === 'boolean') return this.translate.instant(v ? 'ONBOARDING.STEP_SUMMARY.YES' : 'ONBOARDING.STEP_SUMMARY.NO');
     return String(v);
+  }
+
+  /** Humanized contract type — resolves the stored code to its translated label. */
+  contractTypeLabel(): string {
+    const code = this.data()?.contractType;
+    if (!code) return '—';
+    const key = StepSummaryComponent.CONTRACT_LABEL_KEY[code];
+    return key ? this.translate.instant(key) : String(code);
   }
 
   maskIban(iban: any): string {

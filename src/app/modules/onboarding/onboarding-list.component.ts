@@ -72,7 +72,7 @@ export class OnboardingListComponent implements OnInit {
     this.pagedItems().map(r => ({
       employe:           { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
       ms365Email:        r.ms365Email,
-      entite:            r.paysLabel ?? '#' + r.paysId,
+      itStatus:          { label: this.statusBadge(r.itProvisioningStatus).label, options: this.statusBadge(r.itProvisioningStatus).options } as BadgeCell,
       expectedStartDate: this.formatDate(r.expectedStartDate),
       status:            { label: this.statusBadge(r.candidateStatus).label, options: this.statusBadge(r.candidateStatus).options } as BadgeCell,
       hasDraft:          r.hasDraft,
@@ -91,7 +91,7 @@ export class OnboardingListComponent implements OnInit {
     return [
       { key: 'employe', label: t('ONBOARDING.LIST.COL_EMPLOYEE'), type: 'avatar' },
       { key: 'ms365Email', label: t('ONBOARDING.LIST.COL_EMAIL') },
-      { key: 'entite', label: t('ONBOARDING.LIST.COL_ENTITY') },
+      { key: 'itStatus', label: t('ONBOARDING.LIST.COL_IT_STATUS') },
       { key: 'expectedStartDate', label: t('ONBOARDING.LIST.COL_START') },
       { key: 'status', label: t('ONBOARDING.LIST.COL_STATUS') },
       { key: 'maj', label: t('ONBOARDING.LIST.COL_UPDATED') },

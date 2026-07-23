@@ -670,7 +670,8 @@
       "COL_UPDATED": "Updated",
       "COL_ACTIONS": "Actions",
       "COMPLETE": "Complete",
-      "FILES_WORD": "file(s)"
+      "FILES_WORD": "file(s)",
+      "COL_IT_STATUS": "IT status"
     },
     "STEPS": {
       "IDENTITY": "Identity",

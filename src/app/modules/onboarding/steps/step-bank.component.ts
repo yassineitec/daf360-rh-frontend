@@ -49,6 +49,7 @@ export class StepBankComponent implements OnInit {
   emit(): void {
     this.changed.emit({
       bankId:               this.bankId(),
+      bankName:             this.banks().find(b => b.id === this.bankId())?.labelFr ?? undefined,
       rib:                  this.rib(),
       bankAccountNumber:    this.bankAccountNumber(),
       iban:                 this.iban(),

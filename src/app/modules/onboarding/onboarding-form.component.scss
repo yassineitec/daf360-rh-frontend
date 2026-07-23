@@ -134,7 +134,7 @@
   height: calc(100% - 8px);
   z-index: 0;
 
-  &.tracker-line-done    { background: var(--color-primary); }
+  &.tracker-line-done    { background: var(--color-tertiary); }
   &.tracker-line-pending { background: var(--color-outline-variant); }
 }
 
@@ -150,7 +150,7 @@
   z-index: 1;
 
   &.tracker-dot-done {
-    background: var(--color-primary);
+    background: var(--color-tertiary);
     color: #ffffff;
   }
 
@@ -170,7 +170,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: var(--color-tertiary);
 }
 
 // ── Fixed footer ──────────────────────────────────────────────────────────────
