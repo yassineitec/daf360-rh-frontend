@@ -66,6 +66,10 @@
     "NEW_EMPLOYEES": {
       "TITLE": "New employees",
       "EMPTY": "No new employees recently"
+    },
+    "MOBILE_TABS": {
+      "DIRECTORY": "Directory",
+      "ACTIVITY": "Activity"
     }
   },
   "CANDIDATES": {
@@ -180,7 +184,9 @@
       "LOCATION_TBD": "Location TBD",
       "NO_INTERVIEW": "Interview not scheduled",
       "NO_CANDIDATE": "No candidate",
-      "NO_CANDIDATE_SHORT": "No candidate."
+      "NO_CANDIDATE_SHORT": "No candidate.",
+      "SORT_ASC": "Sort by Fit ascending",
+      "SORT_DESC": "Sort by Fit descending"
     },
     "NOTICE": {
       "ONLY_PENDING_ACCEPT": "Only « Pending » candidates can be accepted.",
@@ -432,6 +438,8 @@
     "VIEW_ARROW": "View →",
     "NO_CANDIDATES": "No candidates found.",
     "NO_CANDIDATE_COLUMN": "No candidate",
+    "SORT_ASC": "Sort by Fit ascending",
+    "SORT_DESC": "Sort by Fit descending",
     "DAYS": "{{count}} days",
     "URGENT_OPEN": "{{count}} Open",
     "COL_CANDIDATE": "Candidate",

@@ -17,8 +17,8 @@
   box-sizing:  border-box;
 
   @media (max-width: 1024px) { padding: 1.5rem; }
-  @media (max-width: 768px)  { margin-left: 0; padding: 0.75rem 1rem 0.75rem 3.25rem; }
-  @media (max-width: 480px)  { padding: 0.75rem 0.75rem 0.75rem 3.25rem; }
+  @media (max-width: 768px)  { margin-left: 0; padding: 0.75rem 1rem; height: calc(100vh - var(--shell-header-h) - 40px); }
+  @media (max-width: 480px)  { padding: 0.75rem; }
 }
 
 // ── Sidebar mobile collapse ───────────────────────────────────────────────────
@@ -54,26 +54,30 @@ daf-side-nav {
   }
 }
 
-// ── Hamburger toggle button ───────────────────────────────────────────────────
-.mob-hamburger {
-  display:       none;
-  position:      fixed;
-  top:           calc(var(--shell-header-h) + 10px);
-  left:          12px;
-  z-index:       50;
-  width:         36px;
-  height:        36px;
-  border-radius: 10px;
-  border:        1px solid rgba(0, 0, 0, 0.08);
-  background:    #fff;
-  box-shadow:    0 2px 8px rgba(0, 0, 0, 0.10);
-  cursor:        pointer;
-  align-items:   center;
-  justify-content: center;
-  transition:    background 0.2s;
-
-  .material-symbols-outlined { font-size: 20px; color: #1e293b; }
-  &:hover { background: #f1f5f9; }
+// ── Mobile top bar — holds the sidebar-open control in normal flow ───────────
+.mob-topbar {
+  display:    none;
+  align-items: center;
+  height:     40px;
+  padding:    0 0.5rem;
+  background: #f8f9fb;
 
   @media (max-width: 768px) { display: flex; }
+}
+
+.mob-hamburger {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  width:           30px;
+  height:          30px;
+  border-radius:   8px;
+  border:          none;
+  background:      transparent;
+  cursor:          pointer;
+  transition:      background 0.15s;
+
+  // Smaller than before — was 20px in a 36px button.
+  .material-symbols-outlined { font-size: 16px; color: #3e4945; }
+  &:hover, &:active { background: rgba(0, 0, 0, 0.06); }
 }

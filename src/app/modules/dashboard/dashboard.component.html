@@ -3,115 +3,256 @@
     <app-spinner />
   </div>
 } @else {
-  <div class="space-y-6">
 
-    <!-- ── Welcome Header ─────────────────────────────────────────────────── -->
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-              {{ 'DASHBOARD.TITLE' | translate }}
-            </h1>
-            <p class="text-[14px] text-outline mt-1">
-              {{ 'DASHBOARD.SUBTITLE' | translate:{ name: userName() } }}
-            </p>
-          </div>
+  <!-- ── Welcome Header ─────────────────────────────────────────────────────── -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-[22px] md:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+        {{ 'DASHBOARD.TITLE' | translate }}
+      </h1>
+      <p class="text-[13px] md:text-[14px] text-outline mt-1">
+        {{ 'DASHBOARD.SUBTITLE' | translate:{ name: userName() } }}
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Desktop/tablet — unchanged sequential layout
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div class="hidden md:block space-y-6">
+
+    <!-- ── Actions Rapides ──────────────────────────────────────────────────── -->
+    <section>
+      <h2 class="text-[16px] font-bold text-on-surface mb-4">
+        {{ 'DASHBOARD.QUICK_ACTIONS.SECTION' | translate }}
+      </h2>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @for (action of quickActions(); track action.label) {
+          <rh-quick-action-card
+            [icon]="action.icon"
+            [label]="action.label"
+            [sublabel]="action.sublabel"
+            [route]="action.route"
+            [color]="action.color"
+            (clicked)="onQuickAction($event)"
+          />
+        }
+      </div>
+    </section>
+
+    <!-- ── Stats Row: watchlist (½) + 2 KPI cards (½) ──────────────────────── -->
+    <div class="flex gap-6">
+      <div class="w-full flex-1">
+        <rh-alert-card
+          [probationAlerts]="probation()"
+          [probationTotal]="probationTotal()"
+          [missingDocsAlerts]="missingDocAlerts()"
+          [missingDocsTotal]="missingDocsTotal()" />
+      </div>
+      <div class="w-full flex-1 flex gap-6">
+        <div class="flex-1 min-w-0">
+          <rh-workforce-stats
+            [totalActifs]="workforce()?.totalActifs ?? 0"
+            [pctFemmes]="workforce()?.pctFemmes"
+            [pctHommes]="workforce()?.pctHommes"
+          />
         </div>
+        <div class="flex-1 min-w-0">
+          <rh-profile-completion
+            [tauxGlobalPct]="completion()?.tauxGlobalPct ?? 0"
+            [dossiersIncomplets]="completion()?.dossiersIncomplets ?? 0"
+          />
+        </div>
+      </div>
+    </div>
 
-        <!-- ── Actions Rapides ────────────────────────────────────────────────── -->
-        <section>
-          <h2 class="text-[16px] font-bold text-on-surface mb-4">
-            {{ 'DASHBOARD.QUICK_ACTIONS.SECTION' | translate }}
-          </h2>
-          <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            @for (action of quickActions(); track action.label) {
-              <rh-quick-action-card
-                [icon]="action.icon"
-                [label]="action.label"
-                [sublabel]="action.sublabel"
-                [route]="action.route"
-                [color]="action.color"
-                (clicked)="onQuickAction($event)"
-              />
+    <!-- ── Employee Directory ───────────────────────────────────────────────── -->
+    <section class="border-t border-outline-variant pt-8">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <h2 class="text-[16px] font-bold text-on-surface">
+          {{ 'DASHBOARD.DIRECTORY.TITLE' | translate }}
+        </h2>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            [routerLink]="['../profiles']"
+            class="px-4 py-2 border border-teal text-teal font-semibold rounded-lg text-[14px] shadow-sm hover:bg-surface-container transition-all"
+          >
+            {{ 'DASHBOARD.DIRECTORY.VIEW_ALL' | translate }}
+          </button>
+          <div class="w-full md:w-[360px]">
+            <rh-search-bar
+              [placeholder]="'DASHBOARD.DIRECTORY.SEARCH_PLACEHOLDER' | translate"
+              [value]="directorySearch()"
+              (valueChange)="directorySearch.set($event)"
+            />
+          </div>
+          <button
+            type="button"
+            class="flex items-center gap-2 px-4 py-2 bg-teal text-white font-semibold rounded-lg text-[14px] shadow-sm hover:opacity-90 transition-all"
+          >
+            <span class="material-symbols-outlined text-[20px]">tune</span>
+            {{ 'DASHBOARD.DIRECTORY.FILTERS' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div class="lg:col-span-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            @for (emp of filteredEmployeeCards(); track emp.profileId) {
+              <rh-employee-card [employee]="emp" (viewProfile)="onViewProfile($event)" />
+            } @empty {
+              <p class="text-[13px] text-outline col-span-2 py-8 text-center">
+                {{ directorySearch() ? ('DASHBOARD.DIRECTORY.NO_MATCH' | translate) : ('DASHBOARD.DIRECTORY.EMPTY' | translate) }}
+              </p>
             }
           </div>
-        </section>
-
-        <!-- ── Stats Row: watchlist (½) + 2 KPI cards (½) ────────────────────── -->
-        <div class="flex gap-6">
-          <div class="w-full flex-1">
-            <rh-alert-card
-              [probationAlerts]="probation()"
-              [probationTotal]="probationTotal()"
-              [missingDocsAlerts]="missingDocAlerts()"
-              [missingDocsTotal]="missingDocsTotal()" />
-          </div>
-          <div class="w-full flex-1 flex gap-6">
-            <div class="flex-1 min-w-0">
-              <rh-workforce-stats
-                [totalActifs]="workforce()?.totalActifs ?? 0"
-                [pctFemmes]="workforce()?.pctFemmes"
-                [pctHommes]="workforce()?.pctHommes"
-              />
-            </div>
-            <div class="flex-1 min-w-0">
-              <rh-profile-completion
-                [tauxGlobalPct]="completion()?.tauxGlobalPct ?? 0"
-                [dossiersIncomplets]="completion()?.dossiersIncomplets ?? 0"
-              />
-            </div>
-          </div>
         </div>
 
-        <!-- ── Employee Directory ─────────────────────────────────────────────── -->
-        <section class="border-t border-outline-variant pt-8">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <h2 class="text-[16px] font-bold text-on-surface">
-              {{ 'DASHBOARD.DIRECTORY.TITLE' | translate }}
-            </h2>
-            <div class="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                [routerLink]="['../profiles']"
-                class="px-4 py-2 border border-teal text-teal font-semibold rounded-lg text-[14px] shadow-sm hover:bg-surface-container transition-all"
-              >
-                {{ 'DASHBOARD.DIRECTORY.VIEW_ALL' | translate }}
-              </button>
-              <div class="w-full md:w-[360px]">
-                <rh-search-bar
-                  [placeholder]="'DASHBOARD.DIRECTORY.SEARCH_PLACEHOLDER' | translate"
-                  [value]="directorySearch()"
-                  (valueChange)="directorySearch.set($event)"
-                />
-              </div>
-              <button
-                type="button"
-                class="flex items-center gap-2 px-4 py-2 bg-teal text-white font-semibold rounded-lg text-[14px] shadow-sm hover:opacity-90 transition-all"
-              >
-                <span class="material-symbols-outlined text-[20px]">tune</span>
-                {{ 'DASHBOARD.DIRECTORY.FILTERS' | translate }}
-              </button>
-            </div>
+        <aside class="hidden lg:flex lg:flex-col lg:space-y-6">
+          <rh-anniversary-widget [items]="anniversaires()" />
+          <rh-new-employees-widget [items]="nouveaux()" />
+        </aside>
+      </div>
+
+      <!-- Tablet (below lg): widgets stacked full-width under the directory -->
+      <div class="lg:hidden mt-6 flex flex-col space-y-6">
+        <rh-anniversary-widget [items]="anniversaires()" />
+        <rh-new-employees-widget [items]="nouveaux()" />
+      </div>
+    </section>
+
+  </div><!-- /desktop layout -->
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       Mobile — combines both approaches: a glossy "résumé" hero (quick
+       actions + KPI grid) that stays visible at all times so the page's
+       summary is always in view, plus a segmented tab switcher below it
+       for the two heavier browsable sections (Annuaire / Activité).
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div class="md:hidden space-y-5">
+
+    <!-- ── KPI card — its own card, stat tiles instead of icon-left rows ──── -->
+    <div class="rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden">
+      <div class="p-4">
+        <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
+          <div class="shrink-0 snap-start w-[104px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+              <span class="material-symbols-outlined text-[18px]">event_busy</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ probationTotal() }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'DASHBOARD.ALERT_CARD.PROBATION_TITLE' | translate }}</p>
           </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div class="lg:col-span-3">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @for (emp of filteredEmployeeCards(); track emp.profileId) {
-                  <rh-employee-card [employee]="emp" (viewProfile)="onViewProfile($event)" />
-                } @empty {
-                  <p class="text-[13px] text-outline col-span-2 py-8 text-center">
-                    {{ directorySearch() ? ('DASHBOARD.DIRECTORY.NO_MATCH' | translate) : ('DASHBOARD.DIRECTORY.EMPTY' | translate) }}
-                  </p>
-                }
-              </div>
-            </div>
-
-            <aside class="flex flex-col space-y-6">
-              <rh-anniversary-widget [items]="anniversaires()" />
-              <rh-new-employees-widget [items]="nouveaux()" />
-            </aside>
+          <div class="shrink-0 snap-start w-[104px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+              <span class="material-symbols-outlined text-[18px]">description</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ missingDocsTotal() }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'DASHBOARD.ALERT_CARD.MISSING_DOCS_TITLE' | translate }}</p>
           </div>
-        </section>
+          <div class="shrink-0 snap-start w-[104px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+              <span class="material-symbols-outlined text-[18px]">groups</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ workforce()?.totalActifs ?? 0 }}</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'DASHBOARD.WORKFORCE_STATS.ACTIVE_EMPLOYEES' | translate }}</p>
+          </div>
+          <div class="shrink-0 snap-start w-[104px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
+            <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
+              <span class="material-symbols-outlined text-[18px]">task_alt</span>
+            </span>
+            <span class="text-[20px] font-bold text-on-surface leading-none">{{ completion()?.tauxGlobalPct ?? 0 }}%</span>
+            <p class="text-[10.5px] text-outline leading-tight">{{ 'DASHBOARD.PROFILE_COMPLETION.LABEL' | translate }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  </div>
+    <!-- ── Actions Rapides card — its own separate card ─────────────────── -->
+    <div class="rounded-2xl bg-white border border-outline-variant/50 shadow-sm p-4">
+      <h2 class="text-[11px] font-semibold uppercase tracking-wider text-outline mb-3">
+        {{ 'DASHBOARD.QUICK_ACTIONS.SECTION' | translate }}
+      </h2>
+      <div class="flex items-center justify-between gap-2">
+        @for (action of quickActions(); track action.label) {
+          @let c = mobileQuickActionClasses(action.color);
+          <button type="button"
+            class="w-16 h-16 rounded-full flex items-center justify-center shrink-0 shadow-[0_4px_14px_rgba(0,0,0,0.10)] active:scale-95 transition-transform"
+            [class]="c.bg + ' ' + c.color"
+            [attr.aria-label]="action.label"
+            [title]="action.label"
+            (click)="onQuickAction(action.route)">
+            <span class="material-symbols-outlined text-[28px]">{{ action.icon }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- ── Segmented switcher — Annuaire / Activité (+ search toggle) ───── -->
+    <!-- Search opens in-place in the same row as the icon, not a new row below,
+         so it stays exactly where the icon was instead of shifting alignment. -->
+    <div class="sticky top-0 z-10 -mx-4 px-4 py-2 bg-background/95 backdrop-blur flex items-center gap-2">
+      @if (mobileTab() === 'directory' && mobileSearchOpen()) {
+        <div class="flex-1">
+          <rh-search-bar
+            [placeholder]="'DASHBOARD.DIRECTORY.SEARCH_PLACEHOLDER' | translate"
+            [value]="directorySearch()"
+            (valueChange)="directorySearch.set($event)"
+          />
+        </div>
+      } @else {
+        <div class="flex-1 flex items-center gap-1 p-1 rounded-full bg-surface-container-lowest border border-outline-variant">
+          <button type="button"
+            class="flex-1 h-9 rounded-full text-[13px] font-semibold transition-colors"
+            [class.bg-tertiary]="mobileTab() === 'directory'"
+            [class.text-white]="mobileTab() === 'directory'"
+            [class.text-outline]="mobileTab() !== 'directory'"
+            (click)="setMobileTab('directory')">
+            {{ 'DASHBOARD.MOBILE_TABS.DIRECTORY' | translate }}
+          </button>
+          <button type="button"
+            class="flex-1 h-9 rounded-full text-[13px] font-semibold transition-colors"
+            [class.bg-tertiary]="mobileTab() === 'activity'"
+            [class.text-white]="mobileTab() === 'activity'"
+            [class.text-outline]="mobileTab() !== 'activity'"
+            (click)="setMobileTab('activity')">
+            {{ 'DASHBOARD.MOBILE_TABS.ACTIVITY' | translate }}
+          </button>
+        </div>
+      }
+      @if (mobileTab() === 'directory') {
+        <daf-button
+          class="icon-btn-toggle shrink-0"
+          [options]="{ iconStart: mobileSearchOpen() ? 'close' : 'search', variant: mobileSearchOpen() ? 'teal' : 'ghost', size: 'sm' }"
+          [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
+          (onClick)="mobileSearchOpen.set(!mobileSearchOpen())" />
+      }
+    </div>
+
+    <!-- ── Annuaire ──────────────────────────────────────────────────────── -->
+    @if (mobileTab() === 'directory') {
+      <div class="space-y-4">
+        <div class="flex flex-col gap-4">
+          @for (emp of filteredEmployeeCards(); track emp.profileId) {
+            <rh-employee-card [employee]="emp" (viewProfile)="onViewProfile($event)" />
+          } @empty {
+            <p class="text-[13px] text-outline py-8 text-center">
+              {{ directorySearch() ? ('DASHBOARD.DIRECTORY.NO_MATCH' | translate) : ('DASHBOARD.DIRECTORY.EMPTY' | translate) }}
+            </p>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── Activité ──────────────────────────────────────────────────────── -->
+    @if (mobileTab() === 'activity') {
+      <div class="flex flex-col space-y-6">
+        <rh-anniversary-widget [items]="anniversaires()" />
+        <rh-new-employees-widget [items]="nouveaux()" />
+      </div>
+    }
+
+  </div><!-- /mobile layout -->
+
 }

@@ -9,10 +9,12 @@
   [activeRoute]="activeRoute()"
   (itemClick)="onNavClick($event)" />
 
-<!-- Mobile hamburger (visible only on small screens) -->
-<button class="mob-hamburger" (click)="toggleSidebar()" aria-label="Menu">
-  <span class="material-symbols-outlined">menu</span>
-</button>
+<!-- Mobile top bar: hamburger sits in normal flow instead of floating over content -->
+<div class="mob-topbar">
+  <button class="mob-hamburger" (click)="toggleSidebar()" aria-label="Menu">
+    <span class="material-symbols-outlined">menu</span>
+  </button>
+</div>
 
 <main class="shell-content">
   <router-outlet />

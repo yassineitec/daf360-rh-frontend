@@ -10,8 +10,6 @@ import {
   DataTableComponent,
   FormFieldComponent,
   FormFieldOptions,
-  MetricCardComponent,
-  MetricCardOptions,
   MultiDatePickerComponent,
   StatusBadgeComponent,
   TableColumn,
@@ -20,6 +18,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../shared/modal.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import {
   PipelineService,
@@ -67,8 +66,44 @@ interface BoardColumn {
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, FormFieldComponent, MetricCardComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, FormFieldComponent, KpiCardComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './pipeline.component.html',
+  styles: [`
+    /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
+    .custom-scroll { scrollbar-width: none; }
+    .custom-scroll::-webkit-scrollbar { display: none; }
+
+    /* Hairline, near-invisible scroll "cursor" for each column's card list (shows ~3 cards, scrolls for the rest). */
+    .custom-scroll-y { scrollbar-width: thin; scrollbar-color: #eeeef2 transparent; }
+    .custom-scroll-y::-webkit-scrollbar { width: 1px; }
+    .custom-scroll-y::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll-y::-webkit-scrollbar-thumb { background: #eeeef2; border-radius: 10px; }
+    .custom-scroll-y::-webkit-scrollbar-thumb:hover { background: #d6d6de; }
+
+    /* Card shape + hover from the /finance/affaires card grid — data placement/size unchanged. */
+    .aff-shape {
+      background: var(--color-surface-container-lowest, #fff);
+      border: 1px solid var(--color-outline-variant, #e5e7eb);
+      border-radius: 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      cursor: pointer;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+    }
+    .aff-shape:hover {
+      transform: scale(1.03) translateY(-4px);
+      box-shadow: 0 16px 32px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.07);
+      z-index: 2;
+    }
+
+    /* Global card wrapping every column of the board (like /finance/affaires' table container). */
+    .board-card {
+      background: #ffffff;
+      border: 1px solid var(--color-outline-variant, #e5e7eb);
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      padding: 20px;
+    }
+  `],
 })
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
@@ -82,13 +117,37 @@ export class PipelineComponent implements OnInit {
   readonly avatarFailed  = signal(new Set<number>());
   readonly notice        = signal<string | null>(null);
   readonly search        = signal('');
+  readonly mobileSearchOpen = signal(false);
   readonly viewMode      = signal<'kanban' | 'list'>('kanban');
+
+  /** Per-column fit-score sort direction, toggled via the small arrow icon in the column header. */
+  readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
+
+  columnSortDir(key: string): 'asc' | 'desc' {
+    return this.columnSortDirs()[key] ?? 'desc';
+  }
+
+  toggleColumnSort(key: string): void {
+    const next: 'asc' | 'desc' = this.columnSortDir(key) === 'asc' ? 'desc' : 'asc';
+    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: next }));
+  }
+
+  /** Highest fit score first; candidates without a score sink to the bottom. */
+  private byFitScoreDesc(a: KanbanCandidate, b: KanbanCandidate): number {
+    return (b.fitScore ?? -1) - (a.fitScore ?? -1);
+  }
+
+  private sortByColumn(key: string, candidates: KanbanCandidate[]): KanbanCandidate[] {
+    const dir = this.columnSortDir(key);
+    return [...candidates].sort((a, b) => dir === 'asc' ? -this.byFitScoreDesc(a, b) : this.byFitScoreDesc(a, b));
+  }
 
   /** The four design columns, populated from the pipeline kanban response. */
   readonly boardColumns = computed<BoardColumn[]>(() => {
     this.translate.currentLang();
     const cols = this.kanbanColumns();
     const term = this.search().trim().toLowerCase();
+    this.columnSortDirs(); // re-run when a column's sort direction is toggled
 
     // Free-text match over the fields shown on a card.
     const matches = (c: KanbanCandidate) =>
@@ -113,7 +172,7 @@ export class PipelineComponent implements OnInit {
         s.key === 'ENTRETIEN' ? entretien :
         stageOf(s.key);
       const { labelKey, ...rest } = s;
-      return { ...rest, label: this.translate.instant(labelKey), count: candidates.length, candidates };
+      return { ...rest, label: this.translate.instant(labelKey), count: candidates.length, candidates: this.sortByColumn(s.key, candidates) };
     });
   });
 
@@ -367,14 +426,10 @@ export class PipelineComponent implements OnInit {
     return name.split(' ').slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
   }
 
-  // ── KPI tiles (same daf-metric-card design as the Pipeline RH page) ─────────
+  // ── KPI tiles (rh-kpi-card — same sizing/design as the onboarding list page) ──
   readonly kpiTotal  = computed(() => this.stats()?.totalCandidats ?? 0);
   readonly kpiDelay  = computed(() => this.stats()?.delaiMoyenJours ?? null);
   readonly kpiUrgent = computed(() => this.stats()?.urgents ?? 0);
-
-  readonly totalMetricOpts:  MetricCardOptions = { icon: 'group',         iconColor: 'text-primary', iconBg: 'bg-primary/10' };
-  readonly delayMetricOpts:  MetricCardOptions = { icon: 'timer',         iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
-  readonly urgentMetricOpts: MetricCardOptions = { icon: 'priority_high', iconColor: 'text-danger',  iconBg: 'bg-danger/10' };
 
   readonly totalMetricValue  = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
   readonly delayMetricValue  = computed(() => {

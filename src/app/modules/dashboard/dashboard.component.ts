@@ -12,6 +12,7 @@ import {
   NouveauEmployeDto,
 } from './services/dashboard.service';
 import { UserStore } from '../../core/user.store';
+import { ButtonComponent } from '@khalilrebhiitec/daf360';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { QuickActionCardComponent, QuickActionColor } from './components/quick-action-card/quick-action-card.component';
@@ -30,6 +31,15 @@ interface QuickActionDef {
   color:    QuickActionColor;
 }
 
+// Same per-action palette as the desktop QuickActionCardComponent's
+// COLOR_CLASSES, so the mobile icon-only circles match the desktop site.
+const MOBILE_QUICK_ACTION_CLASSES: Record<QuickActionColor, { bg: string; color: string }> = {
+  secondary: { bg: 'bg-secondary/10', color: 'text-secondary' },
+  tertiary:  { bg: 'bg-tertiary/10',  color: 'text-tertiary' },
+  teal:      { bg: 'bg-teal/10',      color: 'text-teal' },
+  amber:     { bg: 'bg-[rgba(255,221,184,0.30)]', color: 'text-[#4c2e00]' },
+};
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -38,6 +48,7 @@ interface QuickActionDef {
     TranslatePipe,
     SpinnerComponent,
     RhSearchBarComponent,
+    ButtonComponent,
     QuickActionCardComponent,
     AlertCardComponent,
     WorkforceStatsComponent,
@@ -68,6 +79,8 @@ export class DashboardComponent implements OnInit {
   private readonly anniversairesRaw = signal<AnniversaireDto[]>([]);
   readonly nouveauxEmployes         = signal<NouveauEmployeDto[]>([]);
   readonly directorySearch          = signal('');
+  readonly mobileTab                = signal<'directory' | 'activity'>('directory');
+  readonly mobileSearchOpen         = signal(false);
 
   readonly currentUser = this.userStore.currentUser;
 
@@ -181,6 +194,14 @@ export class DashboardComponent implements OnInit {
 
   onViewProfile(id: number | null): void {
     if (id != null) this.router.navigate(['../profiles', id], { relativeTo: this.activatedRoute });
+  }
+
+  setMobileTab(tab: 'directory' | 'activity'): void {
+    this.mobileTab.set(tab);
+  }
+
+  mobileQuickActionClasses(color: QuickActionColor): { bg: string; color: string } {
+    return MOBILE_QUICK_ACTION_CLASSES[color];
   }
 
   onQuickAction(route?: string): void {

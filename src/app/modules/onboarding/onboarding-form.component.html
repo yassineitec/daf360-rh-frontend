@@ -1,7 +1,7 @@
 <div class="form-page" style="font-family: 'Manrope', sans-serif;">
 
   <!-- Back -->
-  <div class="px-6 pt-5">
+  <div class="px-4 sm:px-6 pt-4 sm:pt-5">
     <button class="flex items-center gap-1.5 text-[13px] text-outline hover:text-on-surface transition-colors"
       type="button" (click)="goBack()">
       <span class="material-symbols-outlined text-[18px]">arrow_back</span>
@@ -10,7 +10,7 @@
   </div>
 
   <!-- Alerts -->
-  <div class="px-6 pt-3 flex flex-col gap-2">
+  <div class="px-4 sm:px-6 pt-3 flex flex-col gap-2">
     @if (error()) {
       <div class="alert alert-error" role="alert">{{ error() }}</div>
     }
@@ -26,12 +26,12 @@
   </div>
 
   <!-- Main content -->
-  <div class="px-6 pt-5 pb-28">
+  <div class="px-4 sm:px-6 pt-5 pb-40 sm:pb-28">
 
     <!-- Page title -->
     <section class="mb-6 space-y-1">
-      <h1 class="text-[24px] font-extrabold text-on-surface leading-tight">{{ 'ONBOARDING.FORM.TITLE' | translate }}</h1>
-      <p class="text-[14px] text-on-surface-variant max-w-[640px]">
+      <h1 class="text-[20px] sm:text-[24px] font-extrabold text-on-surface leading-tight">{{ 'ONBOARDING.FORM.TITLE' | translate }}</h1>
+      <p class="text-[13px] sm:text-[14px] text-on-surface-variant max-w-[640px]">
         {{ 'ONBOARDING.FORM.SUBTITLE' | translate }}
       </p>
     </section>
@@ -43,15 +43,15 @@
     }
 
     @if (!loading() && formData(); as fd) {
-      <div class="flex gap-6 items-start">
+      <div class="flex flex-col lg:flex-row gap-6 items-start">
 
         <!-- ── Left: form content ── -->
-        <div class="flex-1 min-w-0 flex flex-col gap-5">
+        <div class="flex-1 min-w-0 w-full flex flex-col gap-5">
 
           <!-- IT Pre-provisioning (read-only) -->
           <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-            <div class="bg-surface-container-high/50 px-5 py-3.5 flex items-center justify-between border-b border-outline-variant/30">
-              <h2 class="text-[15px] font-bold text-on-surface flex items-center gap-2">
+            <div class="bg-surface-container-high/50 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30">
+              <h2 class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] flex flex-wrap items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-[18px]">terminal</span>
                 {{ 'ONBOARDING.FORM.PREPROV_TITLE' | translate }}
                 <span class="text-[13px] font-normal text-outline">{{ 'ONBOARDING.FORM.READ_ONLY' | translate }}</span>
@@ -61,7 +61,7 @@
                 {{ 'ONBOARDING.FORM.VERIFIED_BY_IT' | translate }}
               </span>
             </div>
-            <div class="p-5 grid grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
               <div>
                 <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.MATRICULE' | translate }}</label>
                 <p class="text-[14px] font-bold text-on-surface">{{ fd.matricule ?? ('EMP-' + fd.paysId + '-' + fd.candidateId) }}</p>
@@ -87,7 +87,7 @@
 
           <!-- Stepper -->
           <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-            <div class="flex items-center overflow-x-auto px-5 py-3.5" style="scrollbar-width: none">
+            <div class="stepper-track flex items-center overflow-x-auto px-3 sm:px-5 py-3 sm:py-3.5" style="scrollbar-width: none">
               @for (step of STEPS(); track step.number; let last = $last) {
                 <div class="step-item"
                   [class.step-done]="currentStep() > step.number"
@@ -114,7 +114,7 @@
                block, throwing the panel far from the trigger. A non-blur card keeps the
                panel viewport-anchored. --color-primary is scoped to tertiary so all daf360
                lib controls (form-field / select / date-picker) render green borders & lines. -->
-          <daf-card [options]="{ variant: 'default', padding: 'lg', radius: 'xl' }">
+          <daf-card class="step-content-card" [options]="{ variant: 'default', padding: 'lg', radius: 'xl' }">
             <div class="min-h-64" style="--color-primary: var(--color-tertiary);">
               @if (currentStep() === 1) {
                 <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
@@ -142,11 +142,11 @@
 
         </div>
 
-        <!-- ── Right: Process tracker sidebar ── -->
-        <aside class="w-72 shrink-0 flex flex-col gap-4 sticky top-6">
+        <!-- ── Right: Process tracker sidebar — full width & non-sticky on mobile/tablet, docked on desktop ── -->
+        <aside class="w-full lg:w-72 shrink-0 flex flex-col gap-4 lg:sticky lg:top-6">
 
           <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-            <h3 class="text-[16px] font-bold text-on-surface border-b border-outline-variant/30 pb-3 mb-5">
+            <h3 class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] border-b border-outline-variant/30 pb-3 mb-5">
               {{ 'ONBOARDING.FORM.INTEGRATION_STATUS' | translate }}
             </h3>
 
@@ -245,9 +245,11 @@
             </div>
           </daf-card>
 
-          <!-- Candidate profile card (hover-reveal) -->
-          <div class="relative overflow-hidden rounded-2xl group cursor-pointer"
-               style="height: 240px; background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 24px rgba(0,0,0,0.07);">
+          <!-- Candidate profile card — info panel is always visible on mobile/tablet
+               (no hover on touch) and becomes a hover-reveal on desktop, where the
+               sidebar is a narrow 288px column and the photo needs room to breathe. -->
+          <div class="relative overflow-hidden rounded-2xl group cursor-pointer h-44 sm:h-56 lg:h-60"
+               style="background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 24px rgba(0,0,0,0.07);">
 
             <!-- Photo -->
             <div class="absolute inset-0">
@@ -266,13 +268,13 @@
               }
             </div>
 
-            <!-- Persistent bottom gradient -->
-            <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent
-                        transition-all duration-300 group-hover:h-full group-hover:from-black/60"></div>
+            <!-- Persistent bottom gradient — full-height below lg (info panel always shown), hover-grows on desktop -->
+            <div class="absolute inset-x-0 bottom-0 h-full from-black/60 lg:h-20 lg:from-black/50 bg-gradient-to-t to-transparent
+                        transition-all duration-300 lg:group-hover:h-full lg:group-hover:from-black/60"></div>
 
-            <!-- Info panel — slides up from below on hover -->
+            <!-- Info panel — always docked below lg; slides up from below on hover at lg+ -->
             <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-3
-                        translate-y-full group-hover:translate-y-0
+                        translate-y-0 lg:translate-y-full lg:group-hover:translate-y-0
                         transition-transform duration-300 ease-out">
               <p class="text-[10px] font-extrabold tracking-widest uppercase mb-1"
                  style="color: #79D7BE">{{ 'ONBOARDING.FORM.NEW_ARRIVAL' | translate }}</p>

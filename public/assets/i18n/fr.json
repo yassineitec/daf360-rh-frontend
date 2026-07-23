@@ -66,6 +66,10 @@
     "NEW_EMPLOYEES": {
       "TITLE": "Nouveaux employés",
       "EMPTY": "Aucun nouvel employé récemment"
+    },
+    "MOBILE_TABS": {
+      "DIRECTORY": "Annuaire",
+      "ACTIVITY": "Activité"
     }
   },
   "CANDIDATES": {
@@ -180,7 +184,9 @@
       "LOCATION_TBD": "Lieu à définir",
       "NO_INTERVIEW": "Entretien non planifié",
       "NO_CANDIDATE": "Aucun candidat",
-      "NO_CANDIDATE_SHORT": "Aucun candidat."
+      "NO_CANDIDATE_SHORT": "Aucun candidat.",
+      "SORT_ASC": "Trier par Fit croissant",
+      "SORT_DESC": "Trier par Fit décroissant"
     },
     "NOTICE": {
       "ONLY_PENDING_ACCEPT": "Seuls les candidats « En attente » peuvent être acceptés.",
@@ -432,6 +438,8 @@
     "VIEW_ARROW": "Voir →",
     "NO_CANDIDATES": "Aucun candidat trouvé.",
     "NO_CANDIDATE_COLUMN": "Aucun candidat",
+    "SORT_ASC": "Trier par Fit croissant",
+    "SORT_DESC": "Trier par Fit décroissant",
     "DAYS": "{{count}} jours",
     "URGENT_OPEN": "{{count}} Ouverts",
     "COL_CANDIDATE": "Candidat",

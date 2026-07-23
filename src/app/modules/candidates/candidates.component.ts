@@ -6,9 +6,6 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
-  MetricCardComponent,
-  MetricCardOptions,
-  MetricDelta,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -24,6 +21,7 @@ import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { avatarUrl } from '../../shared/utils/avatar.utils';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   CandidateListItem,
@@ -87,7 +85,7 @@ interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
     CardComponent,
     DafCellDirective,
     DataTableComponent,
-    MetricCardComponent,
+    KpiCardComponent,
     SelectComponent,
     PaginationComponent,
     DafHasPermissionDirective,
@@ -96,10 +94,31 @@ interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
     TranslatePipe,
   ],
   styles: [`
-    /* Thin, subtle scrollbar for the horizontal kanban board. */
-    .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
-    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant, #c4c5d5); border-radius: 10px; }
+    /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
+    .custom-scroll { scrollbar-width: none; }
+    .custom-scroll::-webkit-scrollbar { display: none; }
+
+    /* Hairline, near-invisible scroll "cursor" for each column's card list (shows ~3 cards, scrolls for the rest). */
+    .custom-scroll-y { scrollbar-width: thin; scrollbar-color: #eeeef2 transparent; }
+    .custom-scroll-y::-webkit-scrollbar { width: 1px; }
+    .custom-scroll-y::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll-y::-webkit-scrollbar-thumb { background: #eeeef2; border-radius: 10px; }
+    .custom-scroll-y::-webkit-scrollbar-thumb:hover { background: #d6d6de; }
+
+    /* Card shape + hover from the /finance/affaires card grid — data placement/size unchanged. */
+    .aff-shape {
+      background: var(--color-surface-container-lowest, #fff);
+      border: 1px solid var(--color-outline-variant, #e5e7eb);
+      border-radius: 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      cursor: pointer;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+    }
+    .aff-shape:hover {
+      transform: scale(1.03) translateY(-4px);
+      box-shadow: 0 16px 32px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.07);
+      z-index: 2;
+    }
   `],
   templateUrl: './candidates.component.html',
 })
@@ -147,6 +166,7 @@ export class CandidatesComponent implements OnInit {
   readonly loading       = signal(false);
   readonly statsLoading  = signal(false);
   readonly search        = signal('');
+  readonly mobileSearchOpen = signal(false);
   readonly statusFilter  = signal('');
   readonly currentPage   = signal(0);
 
@@ -154,40 +174,10 @@ export class CandidatesComponent implements OnInit {
   readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
   readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
 
-  // ── KPI tiles (design: Total Candidats · Délai Recrutement Moyen · Postes Urgents) ──
-  readonly kpiTotal = computed(() => this.dashStats().totalCandidates);
-  readonly kpiGrowthText = computed(() => {
-    const g = this.dashStats().monthGrowthPct;
-    if (g == null) return null;
-    const r = Math.round(g);
-    return `${r >= 0 ? '+' : ''}${r}% ce mois`;
-  });
-  readonly kpiGrowthPositive = computed(() => (this.dashStats().monthGrowthPct ?? 0) >= 0);
-
-  readonly kpiAvgDaysText = computed(() => {
-    const a = this.dashStats().avgRecruitmentDays;
-    return a == null ? '—' : `${Math.round(a)} jours`;
-  });
-  readonly kpiAvgDeltaText = computed(() => {
-    const d = this.dashStats().avgRecruitmentDaysDelta;
-    if (d == null) return null;
-    const r = Math.round(d);
-    if (r === 0) return 'stable';
-    return `${r > 0 ? '+' : ''}${r}j vs période préc.`;
-  });
-  /** Fewer days = improvement → render the delta in a positive colour. */
-  readonly kpiAvgDeltaPositive = computed(() => (this.dashStats().avgRecruitmentDaysDelta ?? 0) <= 0);
-
-  readonly kpiUrgent = computed(() => this.dashStats().urgentPositions);
-
-  // ── Funnel-health KPIs (Pipeline RH page: distinct from the Candidats page) ──
+  // ── Funnel-health KPIs (rh-kpi-card — same sizing/design as the onboarding list page) ──
   readonly kpiActive     = computed(() => this.dashStats().activeCandidates);
   readonly kpiHired      = computed(() => this.dashStats().hiredTotal);
   readonly kpiAcceptance = computed(() => this.dashStats().offerAcceptanceRate);
-
-  readonly activeMetricOpts:     MetricCardOptions = { icon: 'groups',      iconColor: 'text-primary', iconBg: 'bg-primary/10' };
-  readonly acceptanceMetricOpts: MetricCardOptions = { icon: 'thumb_up',    iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
-  readonly hiredMetricOpts:      MetricCardOptions = { icon: 'how_to_reg',  iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
 
   readonly activeMetricValue     = computed(() => this.kpiActive().toLocaleString('fr-FR'));
   readonly hiredMetricValue      = computed(() => this.kpiHired().toLocaleString('fr-FR'));
@@ -195,25 +185,6 @@ export class CandidatesComponent implements OnInit {
     const r = this.kpiAcceptance();
     return r == null ? '—' : `${Math.round(r)}%`;
   });
-
-  // ── daf-metric-card bindings (value / delta / options) ──────────────────────
-  readonly totalMetricOpts:  MetricCardOptions = { icon: 'group',         iconColor: 'text-primary', iconBg: 'bg-primary/10' };
-  readonly delayMetricOpts:  MetricCardOptions = { icon: 'timer',         iconColor: 'text-teal',    iconBg: 'bg-surface-container-low' };
-  readonly urgentMetricOpts: MetricCardOptions = { icon: 'priority_high', iconColor: 'text-danger',  iconBg: 'bg-danger/10' };
-
-  readonly totalMetricValue = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
-  readonly totalMetricDelta = computed<MetricDelta | null>(() => {
-    const t = this.kpiGrowthText();
-    return t ? { value: t, direction: this.kpiGrowthPositive() ? 'up' : 'down' } : null;
-  });
-  readonly delayMetricDelta = computed<MetricDelta | null>(() => {
-    const t = this.kpiAvgDeltaText();
-    return t ? { value: t, direction: this.kpiAvgDeltaPositive() ? 'up' : 'down' } : null;
-  });
-  readonly urgentMetricDelta = computed<MetricDelta | null>(() =>
-    this.kpiUrgent() > 0
-      ? { value: 'Action requise', direction: 'down' }
-      : { value: 'À jour', direction: 'neutral' });
 
   // ── Kanban board horizontal navigation map (bottom-right) ───────────────────
   readonly boardScroll = signal({ left: 0, client: 0, scroll: 0 });
@@ -268,16 +239,32 @@ export class CandidatesComponent implements OnInit {
     return (b.fitScore ?? -1) - (a.fitScore ?? -1);
   }
 
+  /** Per-column fit-score sort direction, toggled via the small arrow icon in the column header. */
+  readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
+
+  columnSortDir(key: string): 'asc' | 'desc' {
+    return this.columnSortDirs()[key] ?? 'desc';
+  }
+
+  toggleColumnSort(key: string): void {
+    const next: 'asc' | 'desc' = this.columnSortDir(key) === 'asc' ? 'desc' : 'asc';
+    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: next }));
+  }
+
   readonly kanbanColumns = computed<KanbanColumn[]>(() => {
     this.translate.currentLang();
     const all = this.kanbanItems();
-    return this.columnDefs.map(def => ({
-      ...def,
-      label: this.translate.instant(def.labelKey),
-      candidates: all
-        .filter(c => def.statuses.includes(c.status))
-        .sort((a, b) => this.byFitScoreDesc(a, b)),
-    }));
+    const dirs = this.columnSortDirs();
+    return this.columnDefs.map(def => {
+      const dir = dirs[def.key] ?? 'desc';
+      return {
+        ...def,
+        label: this.translate.instant(def.labelKey),
+        candidates: all
+          .filter(c => def.statuses.includes(c.status))
+          .sort((a, b) => dir === 'asc' ? -this.byFitScoreDesc(a, b) : this.byFitScoreDesc(a, b)),
+      };
+    });
   });
 
   // ── Mobile kanban: stage pills + card list instead of horizontal columns ────
