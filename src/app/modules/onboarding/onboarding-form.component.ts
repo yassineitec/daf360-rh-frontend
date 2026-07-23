@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Observable, forkJoin, of, catchError } from 'rxjs';
 
 import { CardComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -20,6 +21,7 @@ import { StepSummaryComponent } from './steps/step-summary.component';
 import { ConfirmSubmitModalComponent } from './confirm-submit-modal.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { isFemale } from '../../shared/utils/avatar.utils';
+import { NotificationService } from '../../core/notification.service';
 
 @Component({
   selector: 'app-onboarding-form',
@@ -47,6 +49,12 @@ export class OnboardingFormComponent implements OnInit {
   private router  = inject(Router);
   private service = inject(OnboardingService);
   private translate = inject(TranslateService);
+  private notify  = inject(NotificationService);
+
+  /** Photo picked in step 1, held in memory; uploaded after the profile is created. */
+  readonly selectedPhoto = signal<File | null>(null);
+  /** RIB/bank attestation picked in the bank step; uploaded after the profile is created. */
+  readonly selectedCertification = signal<File | null>(null);
 
   // State
   candidateId      = signal(0);
@@ -79,11 +87,33 @@ export class OnboardingFormComponent implements OnInit {
 
   // Profile photo card
   readonly photoFailed = signal(false);
+  /** Data-URL preview of a picked photo — overrides the placeholder avatar in the card. */
+  readonly photoPreview = signal<string | null>(null);
 
   resolvePhoto(fd: OnboardingFormData): string {
     return isFemale(fd.gender)
       ? '/images/avatars/female.png'
       : '/images/avatars/male.png';
+  }
+
+  /**
+   * Photo picked via the candidate card. Validated client-side (same rules as the
+   * profile page), previewed in-memory, and held in `selectedPhoto` for upload after
+   * the profile is created. Warns that it's only persisted once onboarding completes.
+   */
+  onPhotoChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) { this.notify.error(this.translate.instant('PROFILES.PHOTO.ERR_FORMAT')); input.value = ''; return; }
+    if (file.size > 3 * 1024 * 1024)  { this.notify.error(this.translate.instant('PROFILES.PHOTO.ERR_SIZE'));   input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => this.photoPreview.set(reader.result as string);
+    reader.readAsDataURL(file);
+    this.selectedPhoto.set(file);
+    this.photoFailed.set(false);
+    this.notify.warning(this.translate.instant('ONBOARDING.FORM.PHOTO_WARNING'));
   }
 
   candidateInitials(fd: OnboardingFormData): string {
@@ -211,6 +241,11 @@ export class OnboardingFormComponent implements OnInit {
       this.currentStep.set(5);
       return;
     }
+    if (!this.selectedCertification()) {
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_CERT_REQUIRED'));
+      this.currentStep.set(5);
+      return;
+    }
     this.error.set(null);
     this.showConfirmModal.set(true);
   }
@@ -219,16 +254,27 @@ export class OnboardingFormComponent implements OnInit {
     this.submitting.set(true);
     this.service.completeProfile(this.candidateId(), this.draftData()).subscribe({
       next: (result) => {
-        this.submitting.set(false);
         this.showConfirmModal.set(false);
-        this.router.navigate(['../success'], {
-          relativeTo: this.route,
-          queryParams: {
-            profileId:  result.employeeProfileId,
-            userId:     result.userId,
-            ms365Email: result.ms365Email,
-            fullName:   this.firstName() + ' ' + this.lastName(),
-          },
+        // Profile now exists — upload the in-memory attachments (photo + RIB attestation)
+        // if picked, then navigate. Upload failures are non-blocking: the profile was
+        // created either way; the HR can re-attach from the profile page.
+        const pid = result.employeeProfileId;
+        const photo = this.selectedPhoto();
+        const cert  = this.selectedCertification();
+        let failed = false;
+        const uploads: Observable<unknown>[] = [];
+        if (photo && pid) uploads.push(this.service.uploadPhoto(pid, photo).pipe(catchError(() => { failed = true; return of(null); })));
+        if (cert && pid)  uploads.push(this.service.uploadDocument(pid, cert, 'RIB').pipe(catchError(() => { failed = true; return of(null); })));
+
+        if (!uploads.length) {
+          this.submitting.set(false);
+          this.goToSuccess(result);
+          return;
+        }
+        forkJoin(uploads).subscribe(() => {
+          this.submitting.set(false);
+          if (failed) this.notify.warning(this.translate.instant('ONBOARDING.FORM.UPLOAD_PARTIAL_FAILED'));
+          this.goToSuccess(result);
         });
       },
       error: (err) => {
@@ -236,6 +282,18 @@ export class OnboardingFormComponent implements OnInit {
         this.showConfirmModal.set(false);
         const msg = err?.error?.detail ?? err?.error?.title ?? this.translate.instant('ONBOARDING.FORM.ERR_CREATE');
         this.error.set(msg);
+      },
+    });
+  }
+
+  private goToSuccess(result: { employeeProfileId: number; userId: number; ms365Email: string }): void {
+    this.router.navigate(['../success'], {
+      relativeTo: this.route,
+      queryParams: {
+        profileId:  result.employeeProfileId,
+        userId:     result.userId,
+        ms365Email: result.ms365Email,
+        fullName:   this.firstName() + ' ' + this.lastName(),
       },
     });
   }

@@ -242,7 +242,7 @@ export class NewRequestComponent implements OnChanges {
   errorMsg     = signal<string | null>(null);
   types        = signal<RequestType[]>([]);
   selectedType = signal<RequestType | null>(null);
-  fileNames    = signal<Record<string, string>>({});
+  fileNames    = signal<Record<string, string | undefined>>({});
   fileMap      = new Map<string, File>();
 
   dynamicForm  = this.fb.group({});

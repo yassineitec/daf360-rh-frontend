@@ -724,7 +724,12 @@
       "ERR_REGIME_REQUIRED": "Le régime de travail est obligatoire (étape 3).",
       "ERR_CNSS_REQUIRED": "Le numéro de sécurité sociale est obligatoire (étape 4).",
       "ERR_RIB_REQUIRED": "Le RIB est obligatoire (étape 5).",
-      "ERR_CREATE": "Erreur lors de la création du dossier."
+      "ERR_CREATE": "Erreur lors de la création du dossier.",
+      "PHOTO_UPLOAD_FAILED": "Profil créé, mais la photo n’a pas pu être téléchargée.",
+      "PHOTO_WARNING": "La photo ne sera enregistrée qu’une fois l’intégration finalisée.",
+      "PHOTO_CHANGE": "Changer la photo",
+      "ERR_CERT_REQUIRED": "Veuillez joindre l’attestation bancaire/RIB avant de finaliser.",
+      "UPLOAD_PARTIAL_FAILED": "Profil créé, mais certaines pièces jointes n’ont pas pu être téléchargées. Vous pouvez les ajouter depuis la page du profil."
     },
     "SUCCESS": {
       "TITLE": "Dossier créé avec succès !",
@@ -811,7 +816,12 @@
       "TAX_ID_PH": "Ex. 1234567A",
       "ATTESTATION": "Attestation bancaire (RIB / IBAN)",
       "UPLOAD_LABEL": "Déposer un fichier",
-      "UPLOAD_HINT": "PDF uniquement, max 5 Mo (non implémenté)"
+      "UPLOAD_HINT": "PDF uniquement, max 5 Mo (non implémenté)",
+      "CERT_ERR_FORMAT": "Format non supporté. Utilisez PDF, JPEG ou PNG.",
+      "CERT_ERR_SIZE": "Fichier trop volumineux (max 10 Mo).",
+      "CERT_WARNING": "L’attestation ne sera enregistrée qu’une fois l’intégration finalisée.",
+      "CERT_STORAGE_NOTE": "Une fois l’intégration finalisée, l’attestation est rattachée au profil de l’employé en tant que document RIB. Les RH peuvent ensuite la consulter et la vérifier depuis la section Documents du profil.",
+      "UPLOAD_CHANGE": "Changer le fichier"
     },
     "STEP_EMERGENCY": {
       "INTRO": "Personne à contacter en cas d'urgence (optionnel).",

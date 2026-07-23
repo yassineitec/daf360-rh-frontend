@@ -129,7 +129,7 @@
                 <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
               }
               @if (currentStep() === 5) {
-                <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+                <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" (certificationSelected)="selectedCertification.set($event)" />
               }
               @if (currentStep() === 6) {
                 <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
@@ -249,12 +249,22 @@
                (no hover on touch) and becomes a hover-reveal on desktop, where the
                sidebar is a narrow 288px column and the photo needs room to breathe. -->
           <div class="relative overflow-hidden rounded-2xl group cursor-pointer h-44 sm:h-56 lg:h-60"
-               style="background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 24px rgba(0,0,0,0.07);">
+               style="background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 24px rgba(0,0,0,0.07);"
+               (click)="photoInput.click()">
+
+            <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhotoChange($event)" />
+
+            <!-- Upload affordance -->
+            <div class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full flex items-center justify-center shadow-md"
+                 style="background: rgba(255,255,255,0.92); color: var(--color-tertiary);"
+                 [title]="'ONBOARDING.FORM.PHOTO_CHANGE' | translate">
+              <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+            </div>
 
             <!-- Photo -->
             <div class="absolute inset-0">
-              @if (!photoFailed()) {
-                <img [src]="resolvePhoto(fd)"
+              @if (photoPreview() || !photoFailed()) {
+                <img [src]="photoPreview() ?? resolvePhoto(fd)"
                      [alt]="firstName() + ' ' + lastName()"
                      class="w-full h-full object-cover object-top"
                      (error)="photoFailed.set(true)" />

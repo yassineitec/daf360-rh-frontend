@@ -724,7 +724,12 @@
       "ERR_REGIME_REQUIRED": "The work regime is required (step 3).",
       "ERR_CNSS_REQUIRED": "The social security number is required (step 4).",
       "ERR_RIB_REQUIRED": "The RIB is required (step 5).",
-      "ERR_CREATE": "Error while creating the file."
+      "ERR_CREATE": "Error while creating the file.",
+      "PHOTO_UPLOAD_FAILED": "Profile created, but the photo could not be uploaded.",
+      "PHOTO_WARNING": "The photo is only saved once onboarding is completed.",
+      "PHOTO_CHANGE": "Change photo",
+      "ERR_CERT_REQUIRED": "Please attach the bank/RIB attestation before finalizing.",
+      "UPLOAD_PARTIAL_FAILED": "Profile created, but some attachments could not be uploaded. You can add them from the profile page."
     },
     "SUCCESS": {
       "TITLE": "File created successfully!",
@@ -811,7 +816,12 @@
       "TAX_ID_PH": "E.g. 1234567A",
       "ATTESTATION": "Bank certificate (RIB / IBAN)",
       "UPLOAD_LABEL": "Drop a file",
-      "UPLOAD_HINT": "PDF only, max 5 MB (not implemented)"
+      "UPLOAD_HINT": "PDF only, max 5 MB (not implemented)",
+      "CERT_ERR_FORMAT": "Unsupported format. Use PDF, JPEG or PNG.",
+      "CERT_ERR_SIZE": "File too large (max 10 MB).",
+      "CERT_WARNING": "The attestation is only saved once onboarding is completed.",
+      "CERT_STORAGE_NOTE": "Once onboarding is finalized, the attestation is attached to the employee’s profile as a RIB document. HR can then view and verify it from the profile’s Documents section.",
+      "UPLOAD_CHANGE": "Change the file"
     },
     "STEP_EMERGENCY": {
       "INTRO": "Person to contact in case of emergency (optional).",

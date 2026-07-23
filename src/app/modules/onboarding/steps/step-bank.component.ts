@@ -2,13 +2,14 @@ import { Component, OnInit, input, output, signal, inject, computed } from '@ang
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
-import { FormFieldComponent, SelectComponent, SelectOption } from '@khalilrebhiitec/daf360';
-import { TranslatePipe } from '@ngx-translate/core';
+import { FormFieldComponent, SelectComponent, SelectOption, FileUploadComponent, type UploadedFile } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { NotificationService } from '../../../core/notification.service';
 
 @Component({
   selector: 'app-step-bank',
   standalone: true,
-  imports: [FormFieldComponent, SelectComponent, TranslatePipe],
+  imports: [FormFieldComponent, SelectComponent, FileUploadComponent, TranslatePipe],
   templateUrl: './step-bank.component.html',
   styleUrl: './step-bank.component.scss',
 })
@@ -17,8 +18,24 @@ export class StepBankComponent implements OnInit {
   formInfo = input<OnboardingFormData | null>(null);
 
   changed = output<Partial<OnboardingProfileDto>>();
+  /** Emits the picked RIB/bank attestation File (or null) — uploaded after completion. */
+  certificationSelected = output<File | null>();
 
   private refSvc = inject(RefDataService);
+  private notify = inject(NotificationService);
+  private translate = inject(TranslateService);
+
+  // ── Bank attestation (RIB) — held in memory; uploaded once the profile exists.
+  //    daf-file-upload handles accept/size validation + filename/error UI. ──
+  readonly certFiles = signal<UploadedFile[]>([]);
+
+  onCertFiles(files: UploadedFile[]): void {
+    this.certFiles.set(files);
+    const valid = files.find(f => !f.error);
+    if (!valid) { this.certificationSelected.emit(null); return; }
+    this.certificationSelected.emit(valid.file);
+    this.notify.warning(this.translate.instant('ONBOARDING.STEP_BANK.CERT_WARNING'));
+  }
 
   bankId               = signal<number | null>(null);
   banks                = signal<RefDataItem[]>([]);

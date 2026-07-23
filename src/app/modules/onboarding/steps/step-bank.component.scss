@@ -65,43 +65,5 @@
   }
 }
 
-/* Upload slot */
-.upload-slot {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 36px;
-  border: 1px dashed var(--color-border);
-  border-radius: 8px;
-  padding: 0 12px;
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  font-size: 13px;
-  cursor: not-allowed;
-  opacity: 0.7;
-
-  svg {
-    flex-shrink: 0;
-  }
-
-  input[type='file'] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: not-allowed;
-    width: 100%;
-  }
-}
-
-.upload-label {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-.upload-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin: 2px 0 0;
-  font-style: italic;
-}
+/* (Bank attestation now uses the lib daf-file-upload component — old .upload-slot
+   styles removed.) */
