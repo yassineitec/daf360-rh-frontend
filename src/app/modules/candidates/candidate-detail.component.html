@@ -362,6 +362,11 @@
                 (changed)="onOfferChanged()" />
             }
 
+            <!-- Simulation de coût salarial -->
+            @if (canHire()) {
+              <app-candidate-cost-simulation [candidate]="c" />
+            }
+
             <!-- IT Provisioning -->
             @if (showItSection()) {
               @if (c.itProvisioning; as prov) {

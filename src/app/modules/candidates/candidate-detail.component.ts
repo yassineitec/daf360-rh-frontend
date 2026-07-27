@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CandidateService } from './candidate.service';
 import { CandidateDetail, HireCandidateRequest } from './candidate.model';
 import { CandidateInterviewsComponent } from './candidate-interviews.component';
+import { CandidateCostSimulationComponent } from './candidate-cost-simulation.component';
 import { OfferSectionComponent } from './offer-section.component';
 import { RejectModalComponent } from './reject-modal.component';
 import { ModalComponent } from '../../shared/modal.component';
@@ -35,6 +36,7 @@ const NEEDS_END_DATE = ['CDD', 'CIVP', 'STAGE', 'DETACHEMENT'];
     CheckboxComponent,
     RejectModalComponent,
     CandidateInterviewsComponent,
+    CandidateCostSimulationComponent,
     OfferSectionComponent,
     ModalComponent,
   ],

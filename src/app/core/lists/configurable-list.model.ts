@@ -18,6 +18,7 @@ export interface ListValue {
   sortOrder: number;
   isActive: boolean;
   isSystem: boolean;
+  payrollContractCode: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -37,4 +38,5 @@ export interface UpdateListValueRequest {
   sortOrder?: number;
   isActive?: boolean;
   forceDeactivate?: boolean;
+  payrollContractCode?: string | null;
 }
