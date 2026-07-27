@@ -8,12 +8,12 @@ import {
   PayrollSimulationResult,
 } from './payroll-simulation.service';
 import { UserStore } from '../../core/user.store';
-import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { ButtonComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-hiring-approval-inbox',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent, StatusBadgeComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent],
   template: `
     <div class="px-4 sm:px-8 pb-8">
       <!-- Header -->
@@ -136,7 +136,7 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
               <div class="flex gap-2 shrink-0">
                 <daf-button
                   label="Rejeter"
-                  [options]="{ variant: 'outlined', pill: true, size: 'sm', iconStart: 'close',
+                  [options]="{ variant: 'ghost', pill: true, size: 'sm', iconStart: 'close',
                                loading: processing()[item.id] === 'reject',
                                disabled: !!processing()[item.id] }"
                   (onClick)="reject(item)" />

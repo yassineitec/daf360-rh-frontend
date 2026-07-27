@@ -9,12 +9,12 @@ import {
 } from './payroll-simulation.service';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { UserStore } from '../../core/user.store';
-import { ButtonComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
+import { ButtonComponent } from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-candidate-cost-simulation',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent, FormFieldComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent],
   template: `
     <div class="border border-outline-variant/40 rounded-2xl overflow-hidden">
       <!-- Header -->
@@ -111,7 +111,7 @@ import { ButtonComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
               <p class="text-[12px] text-on-surface-variant flex-1">Soumettre cette simulation pour validation par le Directeur Pays.</p>
               <daf-button
                 label="Soumettre à approbation"
-                [options]="{ variant: 'outlined', pill: true, iconStart: 'send',
+                [options]="{ variant: 'ghost', pill: true, iconStart: 'send',
                              loading: submitting(), disabled: submitting() }"
                 (onClick)="submitForApproval()" />
             }
