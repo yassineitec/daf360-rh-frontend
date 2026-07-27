@@ -20,7 +20,7 @@ import {
   template: `
     <div class="detail-container">
       <!-- Back link -->
-      <a routerLink=".." class="back-link">
+      <a routerLink="/requests" class="back-link">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <polyline points="15 18 9 12 15 6"/>
         </svg>

@@ -1,5 +1,5 @@
 import {
-  Component, inject, input, output, signal,
+  Component, inject, input, output, signal, computed,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject, switchMap, catchError, of } from 'rxjs';
@@ -12,14 +12,18 @@ import {
 } from './models/lifecycle.model';
 import { EmployeeListItem }  from '../profiles/models/profile.model';
 import { ModalComponent }    from '../../shared/modal.component';
-import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, SelectOption,
+  MultiDatePickerComponent,
+} from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { NotificationService } from '../../core/notification.service';
+import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 
 @Component({
   selector: 'app-new-workflow-modal',
   standalone: true,
-  imports: [ModalComponent, ReactiveFormsModule, ButtonComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [ModalComponent, ReactiveFormsModule, ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, MultiDatePickerComponent, TranslatePipe],
   template: `
     <app-modal
       [title]="'LIFECYCLE.NEW.TITLE' | translate"
@@ -31,15 +35,11 @@ import { NotificationService } from '../../core/notification.service';
 
         <!-- Employee autocomplete -->
         <div class="field-full">
-          <label class="form-label">{{ 'LIFECYCLE.NEW.EMPLOYEE_LABEL' | translate }}</label>
           <div class="ac-wrap">
-            <input
-              class="form-input"
-              type="text"
+            <daf-form-field
+              [options]="{ label: 'LIFECYCLE.NEW.EMPLOYEE_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.NEW.EMPLOYEE_PH' | translate, required: true, fullWidth: true }"
               [value]="employeeQuery"
-              (input)="onEmployeeInput($event)"
-              [placeholder]="'LIFECYCLE.NEW.EMPLOYEE_PH' | translate"
-              autocomplete="off"
+              (valueChange)="onEmployeeQuery($any($event) ?? '')"
             />
             @if (searchLoading()) { <span class="ac-spinner">…</span> }
             @if (suggestions().length > 0) {
@@ -67,15 +67,11 @@ import { NotificationService } from '../../core/notification.service';
 
         <!-- Responsable passation -->
         <div class="field-full">
-          <label class="form-label">{{ 'LIFECYCLE.NEW.MANAGER_LABEL' | translate }}</label>
           <div class="ac-wrap">
-            <input
-              class="form-input"
-              type="text"
+            <daf-form-field
+              [options]="{ label: 'LIFECYCLE.NEW.MANAGER_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.NEW.MANAGER_PH' | translate, fullWidth: true }"
               [value]="managerQuery"
-              (input)="onManagerInput($event)"
-              [placeholder]="'LIFECYCLE.NEW.MANAGER_PH' | translate"
-              autocomplete="off"
+              (valueChange)="onManagerQuery($any($event) ?? '')"
             />
             @if (managerSearchLoading()) { <span class="ac-spinner">…</span> }
             @if (managerSuggestions().length > 0) {
@@ -99,38 +95,46 @@ import { NotificationService } from '../../core/notification.service';
         </div>
 
         <!-- Motif de départ -->
-        <div>
-          <label class="form-label">{{ 'LIFECYCLE.NEW.REASON_LABEL' | translate }}</label>
-          <select class="form-input" formControlName="departureReason">
-            <option value="">{{ 'LIFECYCLE.NEW.SELECT' | translate }}</option>
-            @for (r of DEPARTURE_REASONS; track r) {
-              <option [value]="r">{{ 'LIFECYCLE.REASON.' + r | translate }}</option>
-            }
-          </select>
-          @if (form.get('departureReason')?.touched && form.get('departureReason')?.errors?.['required']) {
-            <span class="field-error">{{ 'LIFECYCLE.NEW.REASON_REQUIRED' | translate }}</span>
-          }
-        </div>
+        <daf-select
+          [options]="reasonOptions()"
+          [config]="{
+            label: 'LIFECYCLE.NEW.REASON_LABEL' | translate,
+            placeholder: 'LIFECYCLE.NEW.SELECT' | translate,
+            required: true,
+            error: (form.get('departureReason')?.touched && form.get('departureReason')?.errors?.['required']) ? ('LIFECYCLE.NEW.REASON_REQUIRED' | translate) : ''
+          }"
+          [selected]="reasonSelected()"
+          (selectedChange)="setControl('departureReason', $event[0])"
+        />
 
         <!-- Date de déclenchement -->
-        <div>
-          <label class="form-label">{{ 'LIFECYCLE.NEW.TRIGGER_LABEL' | translate }}</label>
-          <input class="form-input" type="date" formControlName="triggerDate" />
-          @if (form.get('triggerDate')?.touched && form.get('triggerDate')?.errors?.['required']) {
-            <span class="field-error">{{ 'LIFECYCLE.NEW.TRIGGER_REQUIRED' | translate }}</span>
-          }
-        </div>
+        <daf-multi-date-picker
+          [value]="getDate('triggerDate')"
+          [config]="{
+            label: 'LIFECYCLE.NEW.TRIGGER_LABEL' | translate,
+            placeholder: 'LIFECYCLE.NEW.SELECT' | translate,
+            selectionMode: 'single',
+            required: true,
+            fullWidth: true,
+            error: (form.get('triggerDate')?.touched && form.get('triggerDate')?.errors?.['required']) ? ('LIFECYCLE.NEW.TRIGGER_REQUIRED' | translate) : ''
+          }"
+          (valueChange)="setDate('triggerDate', $event)"
+        />
 
         <!-- Dernier jour de travail -->
-        <div>
-          <label class="form-label">{{ 'LIFECYCLE.NEW.LAST_DAY_LABEL' | translate }}</label>
-          <input class="form-input" type="date" formControlName="lastWorkingDay" />
-        </div>
+        <daf-multi-date-picker
+          [value]="getDate('lastWorkingDay')"
+          [config]="{ label: 'LIFECYCLE.NEW.LAST_DAY_LABEL' | translate, placeholder: 'LIFECYCLE.NEW.SELECT' | translate, selectionMode: 'single', fullWidth: true }"
+          (valueChange)="setDate('lastWorkingDay', $event)"
+        />
 
         <!-- Notes -->
         <div class="field-full">
-          <label class="form-label">{{ 'LIFECYCLE.NEW.NOTES_LABEL' | translate }}</label>
-          <textarea class="form-input form-textarea" rows="2" formControlName="departureNotes" [placeholder]="'LIFECYCLE.NEW.NOTES_PH' | translate"></textarea>
+          <daf-form-field
+            [options]="{ label: 'LIFECYCLE.NEW.NOTES_LABEL' | translate, type: 'textarea', rows: 2, placeholder: 'LIFECYCLE.NEW.NOTES_PH' | translate, fullWidth: true }"
+            [value]="form.get('departureNotes')?.value ?? ''"
+            (valueChange)="setControl('departureNotes', $any($event) ?? '')"
+          />
         </div>
 
         @if (errorMsg()) {
@@ -195,7 +199,10 @@ export class NewWorkflowModalComponent {
   selectedManager      = signal<EmployeeListItem | null>(null);
   managerQuery         = '';
 
-  protected readonly DEPARTURE_REASONS = DEPARTURE_REASONS;
+  /** Departure-reason options for daf-select, labels normalised via i18n. */
+  readonly reasonOptions = computed<SelectOption[]>(() =>
+    DEPARTURE_REASONS.map(r => ({ value: r, label: this.translate.instant('LIFECYCLE.REASON.' + r) })),
+  );
 
   form = this.fb.group({
     employeeProfileId:        [null as number | null, Validators.required],
@@ -239,8 +246,24 @@ export class NewWorkflowModalComponent {
     });
   }
 
-  onEmployeeInput(e: Event) {
-    const q = (e.target as HTMLInputElement).value;
+  /** Current departure-reason as a single-item array for daf-select. */
+  reasonSelected(): string[] {
+    const v = this.form.get('departureReason')?.value;
+    return v ? [v] : [];
+  }
+
+  /** Write a lib-component value back to the reactive control and flag it touched. */
+  setControl(name: string, value: unknown) {
+    const ctrl = this.form.get(name);
+    ctrl?.setValue((value ?? null) as never);
+    ctrl?.markAsTouched();
+  }
+
+  /** Bridge the ISO-string date controls to daf-multi-date-picker's Date model. */
+  getDate(name: string): Date | null { return isoToDate(this.form.get(name)?.value as string | null); }
+  setDate(name: string, v: Date | Date[] | null) { this.setControl(name, dateToIso(v) || null); }
+
+  onEmployeeQuery(q: string) {
     this.employeeQuery = q;
     if (!q.trim()) { this.suggestions.set([]); return; }
     this.search$.next(q);
@@ -260,8 +283,7 @@ export class NewWorkflowModalComponent {
     this.suggestions.set([]);
   }
 
-  onManagerInput(e: Event) {
-    const q = (e.target as HTMLInputElement).value;
+  onManagerQuery(q: string) {
     this.managerQuery = q;
     if (!q.trim()) { this.managerSuggestions.set([]); return; }
     this.managerSearch$.next(q);

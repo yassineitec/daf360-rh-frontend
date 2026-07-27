@@ -1280,6 +1280,13 @@
       "VEHICLE": "Vehicle",
       "OTHER": "Other"
     },
+    "OWNER_ROLE": {
+      "IT_OFFICER": "IT officer",
+      "FACILITIES_OFFICER": "Facilities officer",
+      "HOME_BASE_MANAGER": "Home-base manager",
+      "HR_OFFICER": "HR officer",
+      "FINANCE_OFFICER": "Finance officer"
+    },
     "DETAIL": {
       "BREADCRUMB": "Offboarding",
       "FILE": "Case #{{id}}",

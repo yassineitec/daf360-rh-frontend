@@ -1,17 +1,17 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 
 import { LifecycleService } from './lifecycle.service';
 import {
   OffboardingWorkflowInstance, OffboardingStatus,
-  OFFBOARDING_STATUS_LABELS,
+  OFFBOARDING_STATUSES,
   computeProgress, findNextDueTask,
 } from './models/lifecycle.model';
 import {
   StatusBadgeComponent, BadgeOptions, ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { NewWorkflowModalComponent } from './new-workflow-modal.component';
@@ -32,7 +32,7 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
   selector: 'app-lifecycle-dashboard',
   standalone: true,
   imports: [
-    FormsModule, StatusBadgeComponent, ButtonComponent,
+    StatusBadgeComponent, ButtonComponent, SelectComponent,
     NewWorkflowModalComponent, DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
@@ -47,13 +47,14 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
     </div>
 
     <div class="filters-bar">
-      <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()">
-        <option value="">{{ 'LIFECYCLE.DASHBOARD.ALL_STATUSES' | translate }}</option>
-        @for (s of statusOptions(); track s.value) {
-          <option [value]="s.value">{{ s.label }}</option>
-        }
-      </select>
-      @if (filterStatus) {
+      <daf-select
+        class="filter-select"
+        [options]="statusOptions()"
+        [config]="{ placeholder: 'LIFECYCLE.DASHBOARD.ALL_STATUSES' | translate }"
+        [selected]="filterSelected()"
+        (selectedChange)="onFilterChange($event)"
+      />
+      @if (filterStatus()) {
         <daf-button [label]="'LIFECYCLE.DASHBOARD.RESET' | translate" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="clearFilter()" />
       }
     </div>
@@ -66,7 +67,7 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
       } @else if (filtered().length === 0) {
         <div class="empty-state">
           <span class="material-symbols-outlined" style="font-size:48px;color:var(--color-outline)">inbox</span>
-          <p>{{ (filterStatus ? 'LIFECYCLE.DASHBOARD.EMPTY_FILTERED' : 'LIFECYCLE.DASHBOARD.EMPTY') | translate }}</p>
+          <p>{{ (filterStatus() ? 'LIFECYCLE.DASHBOARD.EMPTY_FILTERED' : 'LIFECYCLE.DASHBOARD.EMPTY') | translate }}</p>
         </div>
       } @else {
         <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig" (rowClick)="open($event)">
@@ -116,7 +117,7 @@ const STATUS_VARIANTS: Record<OffboardingStatus, BadgeVariant> = {
     .page-title     { font-size:22px;font-weight:700;color:var(--color-text,#1A1C1E);margin:0 }
     .page-sub       { font-size:13px;color:var(--color-text-muted,#6B7280);margin:2px 0 0 }
     .filters-bar    { display:flex;align-items:center;gap:10px;margin-bottom:16px }
-    .filter-select  { padding:7px 12px;border:1px solid var(--color-border,#E0E7E9);border-radius:8px;font-size:13px;background:var(--color-surface,#fff);color:var(--color-text,#1A1C1E);min-width:180px }
+    .filter-select  { min-width:200px }
     .card           { background:var(--color-surface,#fff);border:1px solid var(--color-border,#E0E7E9);border-radius:12px;overflow:hidden }
     .table-card     { padding:0 }
     .loading-rows   { padding:16px;display:flex;flex-direction:column;gap:10px }
@@ -140,20 +141,22 @@ export class LifecycleDashboardComponent implements OnInit {
   private translate = inject(TranslateService);
   private userStore = inject(UserStore);
 
-  protected readonly OFFBOARDING_STATUS_LABELS = OFFBOARDING_STATUS_LABELS;
-
   /** Only RH_MANAGE_LIFECYCLE holders may start an offboarding. */
   readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_LIFECYCLE'));
 
   loading      = signal(false);
   rows         = signal<OffboardingWorkflowInstance[]>([]);
   showModal    = signal(false);
-  filterStatus = '';
+  filterStatus = signal<string>('');
+
+  /** daf-select binds a string[]; mirror the single-select value for its model. */
+  readonly filterSelected = computed(() => this.filterStatus() ? [this.filterStatus()] : []);
 
   readonly filtered = computed(() => {
     const all = this.rows();
-    if (!this.filterStatus) return all;
-    return all.filter(r => r.status === (this.filterStatus as OffboardingStatus));
+    const status = this.filterStatus();
+    if (!status) return all;
+    return all.filter(r => r.status === (status as OffboardingStatus));
   });
 
   readonly columns = computed<TableColumn[]>(() => [
@@ -191,8 +194,8 @@ export class LifecycleDashboardComponent implements OnInit {
     }),
   );
 
-  readonly statusOptions = computed(() =>
-    (Object.keys(OFFBOARDING_STATUS_LABELS) as OffboardingStatus[]).map(v => ({
+  readonly statusOptions = computed<SelectOption[]>(() =>
+    OFFBOARDING_STATUSES.map(v => ({
       value: v, label: this.translate.instant('LIFECYCLE.STATUS.' + v),
     })),
   );
@@ -210,8 +213,8 @@ export class LifecycleDashboardComponent implements OnInit {
     });
   }
 
-  onFilterChange() { /* filtered() is reactive */ }
-  clearFilter()    { this.filterStatus = ''; }
+  onFilterChange(selected: string[]) { this.filterStatus.set(selected[0] ?? ''); }
+  clearFilter()                      { this.filterStatus.set(''); }
   onCreated(id: number) { this.showModal.set(false); this.router.navigate([id], { relativeTo: this.route }); }
 
   open(row: TableRow) {

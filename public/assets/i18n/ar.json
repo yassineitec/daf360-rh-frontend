@@ -121,6 +121,13 @@
       "VEHICLE": "مركبة",
       "OTHER": "أخرى"
     },
+    "OWNER_ROLE": {
+      "IT_OFFICER": "مسؤول تقنية المعلومات",
+      "FACILITIES_OFFICER": "مسؤول المرافق",
+      "HOME_BASE_MANAGER": "المدير المباشر",
+      "HR_OFFICER": "مسؤول الموارد البشرية",
+      "FINANCE_OFFICER": "المسؤول المالي"
+    },
     "DETAIL": {
       "BREADCRUMB": "إنهاء الخدمة",
       "FILE": "ملف #{{id}}",

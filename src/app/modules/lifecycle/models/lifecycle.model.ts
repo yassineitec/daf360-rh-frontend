@@ -9,31 +9,14 @@ export const DEPARTURE_REASONS = [
 ] as const;
 export type DepartureReason = typeof DEPARTURE_REASONS[number];
 
-export const DEPARTURE_REASON_LABELS: Record<DepartureReason, string> = {
-  RESIGNATION:  'Démission',
-  FIN_CONTRAT:  'Fin de contrat',
-  LICENCIEMENT: 'Licenciement',
-  RETRAITE:     'Retraite',
-  FIN_STAGE:    'Fin de stage',
-  FIN_MISSION:  'Fin de mission',
-  AUTRE:        'Autre',
-};
+// Enum value lists — human-readable labels live in i18n under LIFECYCLE.* and are
+// resolved at render time (e.g. 'LIFECYCLE.STATUS.' + value | translate). Keep raw
+// enum strings out of the UI: always normalise through these translation keys.
+export const OFFBOARDING_STATUSES: readonly OffboardingStatus[] = [
+  'PENDING', 'IN_PROGRESS', 'BLOCKED', 'VALIDATED', 'CANCELLED', 'ARCHIVED',
+];
 
-export const OFFBOARDING_STATUS_LABELS: Record<OffboardingStatus, string> = {
-  PENDING:    'En attente',
-  IN_PROGRESS:'En cours',
-  BLOCKED:    'Bloqué',
-  VALIDATED:  'Validé',
-  CANCELLED:  'Annulé',
-  ARCHIVED:   'Archivé',
-};
-
-export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
-  IT:      'Matériel IT',
-  BADGE:   'Badge / Accès',
-  VEHICLE: 'Véhicule',
-  OTHER:   'Autre',
-};
+export const ASSET_TYPES: readonly AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
 
 // ── Core domain interfaces ────────────────────────────────────────────────────
 

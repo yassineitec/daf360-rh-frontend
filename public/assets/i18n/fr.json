@@ -1280,6 +1280,13 @@
       "VEHICLE": "Véhicule",
       "OTHER": "Autre"
     },
+    "OWNER_ROLE": {
+      "IT_OFFICER": "Responsable IT",
+      "FACILITIES_OFFICER": "Responsable des locaux",
+      "HOME_BASE_MANAGER": "Manager de rattachement",
+      "HR_OFFICER": "Responsable RH",
+      "FINANCE_OFFICER": "Responsable financier"
+    },
     "DETAIL": {
       "BREADCRUMB": "Offboarding",
       "FILE": "Dossier #{{id}}",

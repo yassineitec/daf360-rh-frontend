@@ -105,7 +105,6 @@ export class HrShellComponent implements OnInit {
   }
 
   onboardingCount = signal(0);
-  sidebarOpen     = signal(false);
 
   private readonly rawUrl = toSignal(
     this.router.events.pipe(
@@ -168,15 +167,6 @@ export class HrShellComponent implements OnInit {
     if (item.route) {
       this.router.navigate([item.route], { relativeTo: this.activatedRoute });
     }
-    this.sidebarOpen.set(false);
-  }
-
-  toggleSidebar(): void {
-    this.sidebarOpen.update(v => !v);
-  }
-
-  closeSidebar(): void {
-    this.sidebarOpen.set(false);
   }
 
   logout(): void {

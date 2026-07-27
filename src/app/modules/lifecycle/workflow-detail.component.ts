@@ -1,7 +1,6 @@
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
@@ -9,16 +8,19 @@ import { LifecycleService } from './lifecycle.service';
 import {
   OffboardingWorkflowInstance, OffboardingTask, ExitInterview,
   OffboardingAssetReturn, AssetType,
-  DEPARTURE_REASONS, DepartureReason,
+  DEPARTURE_REASONS, DepartureReason, ASSET_TYPES,
   computeProgress, isTerminal,
 } from './models/lifecycle.model';
 import {
   StatusBadgeComponent, BadgeOptions, ButtonComponent,
   CardComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  FormFieldComponent, SelectComponent, SelectOption, CheckboxComponent,
+  MultiDatePickerComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { ModalComponent }   from '../../shared/modal.component';
+import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
 
@@ -31,15 +33,15 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   BLOCKED:    'danger',
   SKIPPED:    'neutral',
 };
-const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
 
 @Component({
   selector: 'app-workflow-detail',
   standalone: true,
   imports: [
-    FormsModule, RouterLink,
+    RouterLink,
     StatusBadgeComponent, ButtonComponent, CardComponent,
     DataTableComponent, DafCellDirective,
+    FormFieldComponent, SelectComponent, CheckboxComponent, MultiDatePickerComponent,
     SpinnerComponent, ModalComponent, TranslatePipe,
   ],
   template: `
@@ -233,24 +235,25 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
         @if (showInterviewForm() && canManage()) {
           <div class="inline-form">
             <div class="form-grid-2">
-              <div>
-                <label class="form-label">{{ 'LIFECYCLE.DETAIL.IV_DATE_LABEL' | translate }}</label>
-                <input class="form-input" type="date" [(ngModel)]="ivDate" />
-              </div>
+              <daf-multi-date-picker
+                [value]="asDate(ivDate)"
+                [config]="{ label: 'LIFECYCLE.DETAIL.IV_DATE_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
+                (valueChange)="ivDate = toIso($event)" />
               <div class="field-full">
                 <label class="form-label">{{ 'LIFECYCLE.DETAIL.IV_REASONS_LABEL' | translate }}</label>
                 <div class="reasons-checkboxes">
                   @for (r of DEPARTURE_REASONS; track r) {
-                    <label class="cb-label">
-                      <input type="checkbox" [checked]="ivReasons.includes(r)" (change)="toggleReason(r, $event)" />
-                      {{ 'LIFECYCLE.REASON.' + r | translate }}
-                    </label>
+                    <daf-checkbox
+                      [options]="{ label: 'LIFECYCLE.REASON.' + r | translate }"
+                      [checked]="ivReasons.includes(r)"
+                      (checkedChange)="setReason(r, $event)" />
                   }
                 </div>
               </div>
               <div class="field-full">
-                <label class="form-label">{{ 'LIFECYCLE.DETAIL.IV_FEEDBACK_LABEL' | translate }}</label>
-                <textarea class="form-input form-textarea" rows="3" [(ngModel)]="ivFeedback" [placeholder]="'LIFECYCLE.DETAIL.IV_FEEDBACK_PH' | translate"></textarea>
+                <daf-form-field
+                  [options]="{ label: 'LIFECYCLE.DETAIL.IV_FEEDBACK_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.DETAIL.IV_FEEDBACK_PH' | translate }"
+                  [value]="ivFeedback" (valueChange)="ivFeedback = $any($event) ?? ''" />
               </div>
             </div>
             <div class="inline-form-actions">
@@ -289,7 +292,7 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
             @for (a of assets(); track a.id) {
               <div class="asset-row" [class.returned]="!!a.actualReturnDate">
                 <div class="asset-info">
-                  <span class="asset-type-badge">{{ 'LIFECYCLE.ASSET_TYPE.' + a.assetType | translate }}</span>
+                  <daf-badge [label]="'LIFECYCLE.ASSET_TYPE.' + a.assetType | translate" [options]="{ variant: 'teal', size: 'sm' }" />
                   <span class="asset-desc">{{ a.assetDescription }}</span>
                 </div>
                 <div class="asset-dates">
@@ -316,21 +319,19 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
           <div class="inline-form">
             <div class="form-grid-2">
               <div class="field-full">
-                <label class="form-label">{{ 'LIFECYCLE.DETAIL.ASSET_DESC_LABEL' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="assetDesc" [placeholder]="'LIFECYCLE.DETAIL.ASSET_DESC_PH' | translate" />
+                <daf-form-field
+                  [options]="{ label: 'LIFECYCLE.DETAIL.ASSET_DESC_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.DETAIL.ASSET_DESC_PH' | translate }"
+                  [value]="assetDesc" (valueChange)="assetDesc = $any($event) ?? ''" />
               </div>
-              <div>
-                <label class="form-label">{{ 'LIFECYCLE.DETAIL.ASSET_TYPE_LABEL' | translate }}</label>
-                <select class="form-input" [(ngModel)]="assetType">
-                  @for (t of ASSET_TYPES; track t) {
-                    <option [value]="t">{{ 'LIFECYCLE.ASSET_TYPE.' + t | translate }}</option>
-                  }
-                </select>
-              </div>
-              <div>
-                <label class="form-label">{{ 'LIFECYCLE.DETAIL.ASSET_EXPECTED_LABEL' | translate }}</label>
-                <input class="form-input" type="date" [(ngModel)]="assetExpectedDate" />
-              </div>
+              <daf-select
+                [options]="assetTypeOptions()"
+                [config]="{ label: 'LIFECYCLE.DETAIL.ASSET_TYPE_LABEL' | translate }"
+                [selected]="[assetType]"
+                (selectedChange)="assetType = $any($event[0])" />
+              <daf-multi-date-picker
+                [value]="asDate(assetExpectedDate)"
+                [config]="{ label: 'LIFECYCLE.DETAIL.ASSET_EXPECTED_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
+                (valueChange)="assetExpectedDate = toIso($event)" />
             </div>
             <div class="inline-form-actions">
               <daf-button [label]="'LIFECYCLE.DETAIL.ADD' | translate" variant="teal" [options]="{ loading: savingAsset() }" (onClick)="saveAsset()" />
@@ -349,8 +350,9 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
         <p class="modal-task-name">{{ activeTask()!.taskLabel }}</p>
       }
       <div class="modal-field">
-        <label class="form-label">{{ 'LIFECYCLE.MODAL.COMMENT_LABEL' | translate }}</label>
-        <textarea class="form-input form-textarea" rows="3" [(ngModel)]="taskComment" [placeholder]="'LIFECYCLE.MODAL.COMMENT_PH' | translate"></textarea>
+        <daf-form-field
+          [options]="{ label: 'LIFECYCLE.MODAL.COMMENT_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.MODAL.COMMENT_PH' | translate }"
+          [value]="taskComment" (valueChange)="taskComment = $any($event) ?? ''" />
       </div>
       <div slot="footer">
         <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showCompleteModal.set(false)" />
@@ -364,8 +366,9 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
         <p class="modal-task-name">{{ activeTask()!.taskLabel }}</p>
       }
       <div class="modal-field">
-        <label class="form-label">{{ 'LIFECYCLE.MODAL.SKIP_REASON_LABEL' | translate }}</label>
-        <textarea class="form-input form-textarea" rows="3" [(ngModel)]="skipReason" [placeholder]="'LIFECYCLE.MODAL.SKIP_REASON_PH' | translate"></textarea>
+        <daf-form-field
+          [options]="{ label: 'LIFECYCLE.MODAL.SKIP_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.MODAL.SKIP_REASON_PH' | translate }"
+          [value]="skipReason" (valueChange)="skipReason = $any($event) ?? ''" />
       </div>
       <div slot="footer">
         <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showSkipModal.set(false)" />
@@ -386,8 +389,9 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
     <app-modal [title]="'LIFECYCLE.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()" [hasFooter]="true" (closed)="showCancelModal.set(false)">
       <p class="modal-body-text">{{ 'LIFECYCLE.MODAL.CANCEL_BODY' | translate }}</p>
       <div class="modal-field">
-        <label class="form-label">{{ 'LIFECYCLE.MODAL.CANCEL_REASON_LABEL' | translate }}</label>
-        <textarea class="form-input form-textarea" rows="3" [(ngModel)]="cancelReason" [placeholder]="'LIFECYCLE.MODAL.CANCEL_REASON_PH' | translate"></textarea>
+        <daf-form-field
+          [options]="{ label: 'LIFECYCLE.MODAL.CANCEL_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.MODAL.CANCEL_REASON_PH' | translate }"
+          [value]="cancelReason" (valueChange)="cancelReason = $any($event) ?? ''" />
       </div>
       <div slot="footer">
         <daf-button [label]="'LIFECYCLE.MODAL.CANCEL_KEEP' | translate" variant="secondary" (onClick)="showCancelModal.set(false)" />
@@ -401,8 +405,9 @@ const ASSET_TYPES: AssetType[] = ['IT', 'BADGE', 'VEHICLE', 'OTHER'];
         <p class="modal-task-name">{{ activeAsset()!.assetDescription }}</p>
       }
       <div class="modal-field">
-        <label class="form-label">{{ 'LIFECYCLE.MODAL.ASSET_CONDITION_LABEL' | translate }}</label>
-        <input class="form-input" type="text" [(ngModel)]="assetCondition" [placeholder]="'LIFECYCLE.MODAL.ASSET_CONDITION_PH' | translate" />
+        <daf-form-field
+          [options]="{ label: 'LIFECYCLE.MODAL.ASSET_CONDITION_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.MODAL.ASSET_CONDITION_PH' | translate }"
+          [value]="assetCondition" (valueChange)="assetCondition = $any($event) ?? ''" />
       </div>
       <div slot="footer">
         <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showConfirmAssetModal.set(false)" />
@@ -565,7 +570,7 @@ export class WorkflowDetailComponent implements OnInit {
   readonly taskRows = computed<TableRow[]>(() =>
     this.tasks().map(t => ({
       taskLabel: t.taskLabel,
-      ownerRole: t.ownerRole,
+      ownerRole: this.ownerRoleLabel(t.ownerRole),
       status:    '',
       sla:       '',
       blocking:  '',
@@ -580,7 +585,11 @@ export class WorkflowDetailComponent implements OnInit {
 
   // ── Constants for template ─────────────────────────────────────────────────
   protected readonly DEPARTURE_REASONS = DEPARTURE_REASONS;
-  protected readonly ASSET_TYPES       = ASSET_TYPES;
+
+  /** Asset-type options for daf-select, labels normalised via i18n. */
+  readonly assetTypeOptions = computed<SelectOption[]>(() =>
+    ASSET_TYPES.map(t => ({ value: t, label: this.translate.instant('LIFECYCLE.ASSET_TYPE.' + t) })),
+  );
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   ngOnInit(): void {
@@ -725,8 +734,7 @@ export class WorkflowDetailComponent implements OnInit {
   }
 
   // ── Exit interview ─────────────────────────────────────────────────────────
-  toggleReason(r: DepartureReason, e: Event): void {
-    const checked = (e.target as HTMLInputElement).checked;
+  setReason(r: DepartureReason, checked: boolean): void {
     this.ivReasons = checked
       ? [...this.ivReasons, r]
       : this.ivReasons.filter(x => x !== r);
@@ -826,6 +834,12 @@ export class WorkflowDetailComponent implements OnInit {
     return map[s] ?? 'neutral';
   }
   reasonLabel(r: string): string       { return this.translate.instant('LIFECYCLE.REASON.' + r); }
+  /** Normalise the backend owner-role enum; fall back to the raw code if unmapped. */
+  ownerRoleLabel(role: string): string {
+    const key = 'LIFECYCLE.OWNER_ROLE.' + role;
+    const label = this.translate.instant(key);
+    return label === key ? role : label;
+  }
   taskStatusLabel(s: string): string   { return this.translate.instant('LIFECYCLE.TASK_STATUS.' + s); }
   taskStatusVariant(s: string): BadgeVariant { return TASK_STATUS_VARIANTS[s] ?? 'neutral'; }
   parseReasons(json: string): string {
@@ -836,4 +850,7 @@ export class WorkflowDetailComponent implements OnInit {
     if (!iso) return '—';
     try { return new Date(iso).toLocaleDateString('fr-FR'); } catch { return iso; }
   }
+  // Bridge the plain ISO-string date fields to daf-multi-date-picker's Date model.
+  asDate(iso: string): Date | null           { return isoToDate(iso); }
+  toIso(v: Date | Date[] | null): string     { return dateToIso(v); }
 }

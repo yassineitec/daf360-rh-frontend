@@ -17,67 +17,8 @@
   box-sizing:  border-box;
 
   @media (max-width: 1024px) { padding: 1.5rem; }
-  @media (max-width: 768px)  { margin-left: 0; padding: 0.75rem 1rem; height: calc(100vh - var(--shell-header-h) - 40px); }
-  @media (max-width: 480px)  { padding: 0.75rem; }
-}
-
-// ── Sidebar mobile collapse ───────────────────────────────────────────────────
-// daf-side-nav renders itself as `fixed left-0 top-16 w-64` with no responsive
-// behavior of its own, so below 768px it must be slid off-canvas here and
-// brought back in via the sidebarOpen state (bound as .sidebar--open on the host).
-daf-side-nav {
-  transition: transform 0.28s ease;
-
-  @media (max-width: 768px) { transform: translateX(-100%); }
-
-  &.sidebar--open {
-    @media (max-width: 768px) { transform: translateX(0); }
-  }
-}
-
-// ── Mobile overlay backdrop ───────────────────────────────────────────────────
-.mob-overlay {
-  display:        none;
-  position:       fixed;
-  inset:          0;
-  z-index:        39;
-  background:     rgba(0, 0, 0, 0.45);
-  opacity:        0;
-  pointer-events: none;
-  transition:     opacity 0.28s ease;
-
-  @media (max-width: 768px) { display: block; }
-
-  &--open {
-    opacity:        1;
-    pointer-events: all;
-  }
-}
-
-// ── Mobile top bar — holds the sidebar-open control in normal flow ───────────
-.mob-topbar {
-  display:    none;
-  align-items: center;
-  height:     40px;
-  padding:    0 0.5rem;
-  background: #f8f9fb;
-
-  @media (max-width: 768px) { display: flex; }
-}
-
-.mob-hamburger {
-  display:         flex;
-  align-items:     center;
-  justify-content: center;
-  width:           30px;
-  height:          30px;
-  border-radius:   8px;
-  border:          none;
-  background:      transparent;
-  cursor:          pointer;
-  transition:      background 0.15s;
-
-  // Smaller than before — was 20px in a 36px button.
-  .material-symbols-outlined { font-size: 16px; color: #3e4945; }
-  &:hover, &:active { background: rgba(0, 0, 0, 0.06); }
+  // daf-side-nav switches from a fixed left rail to a fixed bottom bar below its
+  // own `sm` breakpoint (640px): drop the sidebar gutter and clear the bottom bar.
+  @media (max-width: 640px)  { margin-left: 0; padding: 0.75rem 1rem; padding-bottom: 4.5rem; }
+  @media (max-width: 480px)  { padding: 0.75rem; padding-bottom: 4.5rem; }
 }
