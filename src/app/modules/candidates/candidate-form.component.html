@@ -146,6 +146,24 @@
               [config]="{ label: 'Nationalité', placeholder: '— Sélectionner —', fullWidth: true }"
               (selectedChange)="setSelectNum('position.nationalityId', $event)" />
           </div>
+
+          <!-- Salary benchmarking (optional — used for cost simulation) -->
+          <div class="border-t border-outline-variant/40 pt-6">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-outline mb-3">Informations salariales (optionnel)</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <daf-form-field
+                [options]="{ label: 'Prétention salariale candidat (net)', type: 'number',
+                             placeholder: 'ex: 2800', prefixIcon: 'person' }"
+                [value]="getTextValue('position.salaireNetCandidat')"
+                (valueChange)="setTextValue('position.salaireNetCandidat', $event ? +$event : null)" />
+
+              <daf-form-field
+                [options]="{ label: 'Budget RH (net)', type: 'number',
+                             placeholder: 'ex: 3000', prefixIcon: 'currency_exchange' }"
+                [value]="getTextValue('position.salaireNetRh')"
+                (valueChange)="setTextValue('position.salaireNetRh', $event ? +$event : null)" />
+            </div>
+          </div>
         }
 
         <!-- Step 3 — Curriculum Vitae -->
