@@ -20,7 +20,7 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
       <div class="mb-6">
         <nav class="flex items-center gap-2 text-[13px] text-on-surface-variant mb-2">
           <button type="button" class="hover:text-teal transition-colors font-medium"
-                  (click)="router.navigate(['/candidates'])">
+                  (click)="router.navigate(['/rh/candidates'])">
             Recrutement
           </button>
           <span class="material-symbols-outlined text-[16px]">chevron_right</span>
@@ -89,7 +89,7 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
                 </div>
               </div>
               <button class="text-[12px] text-teal hover:underline shrink-0"
-                      (click)="router.navigate(['/candidates', item.candidateId])">
+                      (click)="router.navigate(['/rh/candidates', item.candidateId])">
                 Voir candidat
               </button>
             </div>

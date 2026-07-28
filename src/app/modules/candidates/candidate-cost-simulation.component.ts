@@ -6,6 +6,7 @@ import {
   PayrollSimulationService,
   PayrollSimulationResult,
   SubmitCostApprovalRequest,
+  CandidateCostApprovalDto,
 } from './payroll-simulation.service';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { UserStore } from '../../core/user.store';
@@ -70,6 +71,24 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
           </div>
         }
 
+        <!-- Approval status banner – always shown when a prior record exists -->
+        @if (latestApproval()) {
+          <div class="flex items-start gap-2.5 rounded-xl px-4 py-3 text-[12.5px]"
+               [ngStyle]="approvalBannerStyle(latestApproval()!.status)">
+            <span class="material-symbols-outlined text-[17px] mt-0.5 shrink-0"
+                  style="font-variation-settings:'FILL' 1">
+              {{ approvalIcon(latestApproval()!.status) }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <span class="font-semibold">{{ approvalStatusLabel(latestApproval()!.status) }}</span>
+              <span class="ml-2 text-[11px] opacity-60">{{ formatDate(latestApproval()!.submittedAt) }}</span>
+              @if (latestApproval()!.approvalNotes) {
+                <p class="mt-0.5 text-[11px] opacity-80">{{ latestApproval()!.approvalNotes }}</p>
+              }
+            </div>
+          </div>
+        }
+
         <!-- Results grid -->
         @if (result()) {
           <div class="rounded-xl border border-outline-variant/50 overflow-hidden">
@@ -102,19 +121,20 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
 
           <!-- Submit section -->
           <div class="border-t border-outline-variant/40 pt-4 flex items-center justify-between gap-3 flex-wrap">
-            @if (submitted()) {
-              <div class="flex items-center gap-2 text-[13px] text-teal">
-                <span class="material-symbols-outlined text-[17px]" style="font-variation-settings:'FILL' 1">check_circle</span>
-                Soumis au Directeur Pays pour approbation
-              </div>
+            @if (latestApproval()?.status === 'PENDING') {
+              <p class="text-[12px] text-on-surface-variant flex-1">
+                En attente d'approbation — vous pouvez soumettre une nouvelle simulation si nécessaire.
+              </p>
             } @else {
-              <p class="text-[12px] text-on-surface-variant flex-1">Soumettre cette simulation pour validation par le Directeur Pays.</p>
-              <daf-button
-                label="Soumettre à approbation"
-                [options]="{ variant: 'ghost', pill: true, iconStart: 'send',
-                             loading: submitting(), disabled: submitting() }"
-                (onClick)="submitForApproval()" />
+              <p class="text-[12px] text-on-surface-variant flex-1">
+                Soumettre cette simulation pour validation par le Directeur Pays.
+              </p>
             }
+            <daf-button
+              label="Soumettre à approbation"
+              [options]="{ variant: 'ghost', pill: true, iconStart: 'send',
+                           loading: submitting(), disabled: submitting() }"
+              (onClick)="submitForApproval()" />
           </div>
 
           @if (submitError()) {
@@ -143,6 +163,11 @@ export class CandidateCostSimulationComponent implements OnInit {
   submitError   = signal<string | null>(null);
   submitted     = signal(false);
 
+  approvals     = signal<CandidateCostApprovalDto[]>([]);
+  readonly latestApproval = computed(() =>
+    this.approvals().length ? this.approvals()[0] : null
+  );
+
   private contractCode = signal<string>('CDI');
   private fxRateEur    = signal<number | null>(null);
 
@@ -170,6 +195,14 @@ export class CandidateCostSimulationComponent implements OnInit {
         this.contractCode.set(match.payrollContractCode);
       }
     });
+
+    this.loadApprovals();
+  }
+
+  private loadApprovals(): void {
+    this.simulationSvc.getByCandidate(this.candidate.id).subscribe({
+      next: list => this.approvals.set(list),
+    });
   }
 
   calculate(): void {
@@ -188,9 +221,51 @@ export class CandidateCostSimulationComponent implements OnInit {
       next:  res  => { this.result.set(res); this.calculating.set(false); },
       error: err  => {
         this.calculating.set(false);
-        this.calcError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur de simulation.');
+        const status = err?.status as number;
+        const detail = err?.error?.detail as string | undefined;
+        if (status === 500 || !detail) {
+          this.calcError.set('Erreur lors du calcul. Vérifiez que les paramètres de paie sont configurés pour ce pays.');
+        } else {
+          this.calcError.set(detail);
+        }
       },
     });
+  }
+
+  approvalStatusLabel(status: string): string {
+    switch (status) {
+      case 'PENDING':  return "En attente d'approbation";
+      case 'APPROVED': return 'Approuvé';
+      case 'REJECTED': return 'Refusé';
+      default: return status;
+    }
+  }
+
+  approvalIcon(status: string): string {
+    switch (status) {
+      case 'PENDING':  return 'hourglass_empty';
+      case 'APPROVED': return 'check_circle';
+      case 'REJECTED': return 'cancel';
+      default: return 'info';
+    }
+  }
+
+  approvalBannerStyle(status: string): Record<string, string> {
+    switch (status) {
+      case 'PENDING':
+        return { background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', color: '#b45309' };
+      case 'APPROVED':
+        return { background: 'rgba(0,193,173,0.08)', border: '1px solid rgba(0,193,173,0.3)', color: '#00877a' };
+      case 'REJECTED':
+        return { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', color: '#dc2626' };
+      default:
+        return {};
+    }
+  }
+
+  formatDate(dateStr: string | undefined): string {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
   submitForApproval(): void {
@@ -212,10 +287,16 @@ export class CandidateCostSimulationComponent implements OnInit {
     };
 
     this.simulationSvc.submitForApproval(req).subscribe({
-      next:  () => { this.submitting.set(false); this.submitted.set(true); },
+      next:  () => { this.submitting.set(false); this.submitted.set(true); this.loadApprovals(); },
       error: err => {
         this.submitting.set(false);
-        this.submitError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la soumission.');
+        const status = err?.status as number;
+        const detail = err?.error?.detail as string | undefined;
+        this.submitError.set(
+          (status === 500 || !detail)
+            ? 'Erreur lors de la soumission. Veuillez réessayer.'
+            : detail
+        );
       },
     });
   }

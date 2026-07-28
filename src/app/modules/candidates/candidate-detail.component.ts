@@ -83,6 +83,34 @@ export class CandidateDetailComponent implements OnInit {
     return c !== null && HIREABLE_STATUSES.includes(c.status) && this.canHire();
   });
 
+  // ── Salary inline-edit state ──────────────────────────────────────────────
+  salaryNetRh        = signal<number | null>(null);
+  salaryNetCandidat  = signal<number | null>(null);
+  salarySaving       = signal(false);
+  salaryError        = signal<string | null>(null);
+  salarySuccess      = signal<string | null>(null);
+
+  saveSalary(): void {
+    this.salarySaving.set(true);
+    this.salaryError.set(null);
+    this.salarySuccess.set(null);
+    this.candidateService.update(this.candidateId, {
+      salaireNetRh:       this.salaryNetRh(),
+      salaireNetCandidat: this.salaryNetCandidat(),
+    }).subscribe({
+      next: (updated) => {
+        this.candidate.set(updated);
+        this.salarySaving.set(false);
+        this.salarySuccess.set('Informations salariales enregistrées.');
+        setTimeout(() => this.salarySuccess.set(null), 3500);
+      },
+      error: (err) => {
+        this.salarySaving.set(false);
+        this.salaryError.set(err?.error?.detail ?? err?.error?.message ?? 'Erreur lors de la sauvegarde.');
+      },
+    });
+  }
+
   // ── CV upload state ───────────────────────────────────────────────────────
   cvUploading = signal(false);
   cvError = signal<string | null>(null);
@@ -191,6 +219,8 @@ export class CandidateDetailComponent implements OnInit {
     this.candidateService.getById(this.candidateId).subscribe({
       next: (data) => {
         this.candidate.set(data);
+        this.salaryNetRh.set(data.salaireNetRh ?? null);
+        this.salaryNetCandidat.set(data.salaireNetCandidat ?? null);
         this.loading.set(false);
       },
       error: (err) => {
