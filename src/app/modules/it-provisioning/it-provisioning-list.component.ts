@@ -5,15 +5,14 @@ import { Router } from '@angular/router';
 import { ItProvisioningService } from './it-provisioning.service';
 import { ProvisioningListItem } from './it-provisioning.model';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { BadgeCell, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, PaginationComponent, SelectComponent, SelectConfig, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow, ProgressBarComponent } from '@khalilrebhiitec/daf360';
+import { BadgeCell, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, MetricCardComponent, MetricDelta, PaginationComponent, SelectComponent, SelectConfig, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow, ProgressBarComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
 
 @Component({
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, KpiCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent, TranslatePipe],
+  imports: [DataTableComponent, DafCellDirective, SelectComponent, MetricCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent, TranslatePipe],
   standalone: true,
   templateUrl: './it-provisioning-list.component.html',
 })
@@ -97,6 +96,49 @@ export class ItProvisioningListComponent implements OnInit {
       overdue:      openList.filter(r => this.isOverdue(r)).length,
       hwIncomplete: openList.filter(r => this.hwProgress(r) !== '6/6').length,
       licIncomplete: openList.filter(r => this.licProgress(r) !== '5/5').length,
+    };
+  });
+
+  // ── Delta indicators ──
+  readonly pendingDelta = computed<MetricDelta | null>(() => {
+    const s = this.stats();
+    const completionRate = this.items().length > 0
+      ? Math.round(((this.items().length - s.pending) / this.items().length) * 100)
+      : 0;
+    return {
+      value: `${completionRate}% complete`,
+      direction: completionRate >= 70 ? 'up' : completionRate >= 40 ? 'neutral' : 'down',
+    };
+  });
+
+  readonly overdueDelta = computed<MetricDelta | null>(() => {
+    const s = this.stats();
+    if (s.overdue === 0) return null;
+    return {
+      value: `${s.overdue} tasks past deadline`,
+      direction: 'down',
+    };
+  });
+
+  readonly hwDelta = computed<MetricDelta | null>(() => {
+    const s = this.stats();
+    const completionRate = this.items().length > 0
+      ? Math.round(((this.items().length - s.hwIncomplete) / this.items().length) * 100)
+      : 0;
+    return {
+      value: `${completionRate}% hardware ready`,
+      direction: completionRate >= 70 ? 'up' : 'neutral',
+    };
+  });
+
+  readonly licDelta = computed<MetricDelta | null>(() => {
+    const s = this.stats();
+    const completionRate = this.items().length > 0
+      ? Math.round(((this.items().length - s.licIncomplete) / this.items().length) * 100)
+      : 0;
+    return {
+      value: `${completionRate}% licenses ready`,
+      direction: completionRate >= 70 ? 'up' : 'neutral',
     };
   });
 

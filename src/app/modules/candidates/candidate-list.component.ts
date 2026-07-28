@@ -6,6 +6,7 @@ import {
   ButtonComponent,
   DafCellDirective,
   DataTableComponent,
+  MetricCardComponent,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -29,7 +30,6 @@ import {
   PageResponse,
 } from './candidate.model';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { ConfirmService } from '../../core/confirm.service';
 
@@ -51,7 +51,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
     DafHasPermissionDirective,
     ButtonComponent,
     SelectComponent,
-    KpiCardComponent,
+    MetricCardComponent,
     PaginationComponent,
     StatusBadgeComponent,
     DataTableComponent,

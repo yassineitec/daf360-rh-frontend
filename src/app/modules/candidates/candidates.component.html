@@ -37,27 +37,24 @@
       }
     </div>
   } @else {
-    <!-- rh-kpi-card grid on desktop/tablet — same size/style as the onboarding
-         list page — mobile gets its own compact stat-tile card, reusing the
-         exact same icon colors as the desktop cards -->
+    <!-- Metric card grid on desktop/tablet -->
     <div class="hidden md:grid grid-cols-3 gap-6">
-      <rh-kpi-card
+      <daf-metric-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate"
-        icon="groups"
         [value]="activeMetricValue()"
-        variant="blue" />
+        [delta]="activeDelta()"
+        [options]="{ icon: 'groups', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
 
-      <rh-kpi-card
+      <daf-metric-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_ACCEPTANCE' | translate"
-        icon="thumb_up"
         [value]="acceptanceMetricValue()"
-        variant="green" />
+        [options]="{ icon: 'thumb_up', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
 
-      <rh-kpi-card
+      <daf-metric-card
         [label]="'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate"
-        icon="how_to_reg"
         [value]="hiredMetricValue()"
-        variant="green" />
+        [delta]="hiredDelta()"
+        [options]="{ icon: 'how_to_reg', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
     </div>
 
     <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">

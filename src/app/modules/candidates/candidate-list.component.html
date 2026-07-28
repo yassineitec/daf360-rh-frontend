@@ -17,11 +17,20 @@
   </ng-container>
 </div>
 
-<!-- ── Stats cards ─────────────────────────────────────────────────────── -->
+<!-- ── Stats metric cards ─────────────────────────────────────────────────────── -->
 <div class="grid grid-cols-3 gap-6 mb-8">
-  <rh-kpi-card [label]="'CANDIDATES.STATS.TOTAL' | translate" icon="group" [value]="isLoadingStats() ? '…' : stats().total" variant="blue" />
-  <rh-kpi-card [label]="'CANDIDATES.STATS.PENDING' | translate" icon="schedule" [value]="isLoadingStats() ? '…' : stats().pending" variant="amber" />
-  <rh-kpi-card [label]="'CANDIDATES.STATS.HIRED' | translate" icon="how_to_reg" [value]="isLoadingStats() ? '…' : stats().hired" variant="green" />
+  <daf-metric-card
+    [label]="'CANDIDATES.STATS.TOTAL' | translate"
+    [value]="isLoadingStats() ? '…' : stats().total"
+    [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+  <daf-metric-card
+    [label]="'CANDIDATES.STATS.PENDING' | translate"
+    [value]="isLoadingStats() ? '…' : stats().pending"
+    [options]="{ icon: 'schedule', iconColor: 'text-amber', iconBg: 'bg-amber/10' }" />
+  <daf-metric-card
+    [label]="'CANDIDATES.STATS.HIRED' | translate"
+    [value]="isLoadingStats() ? '…' : stats().hired"
+    [options]="{ icon: 'how_to_reg', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
 </div>
 
 <!-- ── Table section ───────────────────────────────────────────────────── -->

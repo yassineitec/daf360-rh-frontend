@@ -10,6 +10,8 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
+  MetricCardComponent,
+  MetricDelta,
   PaginationComponent,
   StatusBadgeComponent,
   TableColumn,
@@ -17,7 +19,6 @@ import {
   TableRow,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -26,7 +27,7 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, KpiCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, TranslatePipe],
+  imports: [CardComponent, MetricCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, TranslatePipe],
   templateUrl: './onboarding-list.component.html',
   styleUrl:    './onboarding-list.component.scss',
 })
@@ -102,6 +103,52 @@ export class OnboardingListComponent implements OnInit {
   readonly tableConfig = computed<TableConfig>(() => ({
     hoverable: true,
   }));
+
+  // ── Delta indicators ──
+  readonly pendingDelta = computed<MetricDelta | null>(() => {
+    const stats = this.kpiStats();
+    if (!stats) return null;
+    const incomplete = stats.incompleteProfiles ?? 0;
+    if (incomplete === 0) {
+      return { value: 'All on track', direction: 'up' };
+    }
+    return {
+      value: `${incomplete} incomplete requiring attention`,
+      direction: 'down',
+    };
+  });
+
+  readonly createdTodayDelta = computed<MetricDelta | null>(() => {
+    const stats = this.kpiStats();
+    if (!stats) return null;
+    const created = stats.profilesCreatedToday ?? 0;
+    return {
+      value: created > 0 ? 'Profiles created today' : 'None created yet',
+      direction: created > 0 ? 'up' : 'neutral',
+    };
+  });
+
+  readonly incompleteDelta = computed<MetricDelta | null>(() => {
+    const stats = this.kpiStats();
+    if (!stats) return null;
+    const incomplete = stats.incompleteProfiles ?? 0;
+    if (incomplete === 0) return null;
+    return {
+      value: `${incomplete} awaiting completion`,
+      direction: 'down',
+    };
+  });
+
+  readonly avgTimeDelta = computed<MetricDelta | null>(() => {
+    const stats = this.kpiStats();
+    if (!stats || stats.avgCreationMinutes == null) return null;
+    const minutes = stats.avgCreationMinutes;
+    const direction: 'up' | 'down' | 'neutral' = minutes < 30 ? 'up' : minutes < 60 ? 'neutral' : 'down';
+    return {
+      value: minutes < 30 ? 'Fast pace' : minutes < 60 ? 'Normal pace' : 'Needs optimization',
+      direction,
+    };
+  });
 
   ngOnInit(): void { this.load(); }
 

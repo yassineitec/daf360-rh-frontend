@@ -8,18 +8,28 @@
         <p class="text-[14px] text-outline mt-1">{{ 'ONBOARDING.LIST.SUBTITLE' | translate }}</p>
       </div>
 
-      <!-- KPI Cards: rh-kpi-card grid on desktop/tablet — mobile gets its own
-           compact stat-tile card (same style as the dashboard's résumé hero),
-           reusing the exact same icon colors as the desktop cards -->
+      <!-- KPI Metric cards on desktop/tablet -->
       <div class="hidden md:grid grid-cols-4 gap-4">
-        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_PENDING' | translate" icon="pending_actions"
-          [value]="kpiStats()?.pendingCount ?? items().length" variant="blue" />
-        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate" icon="person_add"
-          [value]="kpiStats()?.profilesCreatedToday ?? '—'" variant="green" />
-        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_INCOMPLETE' | translate" icon="error_outline"
-          [value]="kpiStats()?.incompleteProfiles ?? '—'" variant="red" />
-        <rh-kpi-card [label]="'ONBOARDING.LIST.KPI_AVG_TIME' | translate" icon="timer"
-          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—'" variant="amber" />
+        <daf-metric-card
+          [label]="'ONBOARDING.LIST.KPI_PENDING' | translate"
+          [value]="kpiStats()?.pendingCount ?? items().length"
+          [delta]="pendingDelta()"
+          [options]="{ icon: 'pending_actions', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+        <daf-metric-card
+          [label]="'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate"
+          [value]="kpiStats()?.profilesCreatedToday ?? '—'"
+          [delta]="createdTodayDelta()"
+          [options]="{ icon: 'person_add', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+        <daf-metric-card
+          [label]="'ONBOARDING.LIST.KPI_INCOMPLETE' | translate"
+          [value]="kpiStats()?.incompleteProfiles ?? '—'"
+          [delta]="incompleteDelta()"
+          [options]="{ icon: 'error_outline', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+        <daf-metric-card
+          [label]="'ONBOARDING.LIST.KPI_AVG_TIME' | translate"
+          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—'"
+          [delta]="avgTimeDelta()"
+          [options]="{ icon: 'timer', iconColor: 'text-amber', iconBg: 'bg-amber/10' }" />
       </div>
 
       <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">

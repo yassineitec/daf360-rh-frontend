@@ -11,6 +11,8 @@ import {
   DataTableComponent,
   FormFieldComponent,
   FormFieldOptions,
+  MetricCardComponent,
+  MetricDelta,
   MultiDatePickerComponent,
   StatusBadgeComponent,
   TableColumn,
@@ -19,7 +21,6 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../shared/modal.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { KanbanCardShellComponent } from '../../shared/kanban-card-shell.component';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import {
@@ -71,7 +72,7 @@ interface BoardColumn {
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DafHasPermissionDirective, DataTableComponent, FormFieldComponent, KpiCardComponent, KanbanCardShellComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DafHasPermissionDirective, DataTableComponent, FormFieldComponent, MetricCardComponent, KanbanCardShellComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './pipeline.component.html',
   styles: [`
     /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
@@ -439,7 +440,7 @@ export class PipelineComponent implements OnInit {
     return name.split(' ').slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
   }
 
-  // ── KPI tiles (rh-kpi-card — same sizing/design as the onboarding list page) ──
+  // ── KPI tiles (daf-metric-card from lib) ──
   readonly kpiTotal  = computed(() => this.stats()?.totalCandidats ?? 0);
   readonly kpiDelay  = computed(() => this.stats()?.delaiMoyenJours ?? null);
   readonly kpiUrgent = computed(() => this.stats()?.urgents ?? 0);
@@ -452,5 +453,35 @@ export class PipelineComponent implements OnInit {
   readonly urgentMetricValue = computed(() => {
     this.translate.currentLang();
     return this.translate.instant('PIPELINE.URGENT_OPEN', { count: this.kpiUrgent() });
+  });
+
+  // ── Delta indicators ──
+  readonly totalDelta = computed<MetricDelta | null>(() => {
+    const s = this.stats();
+    if (!s) return null;
+    const closureRate = s.totalCandidats > 0 ? Math.round((s.recrutementsClos / s.totalCandidats) * 100) : 0;
+    return {
+      value: `${closureRate}% closure rate`,
+      direction: closureRate >= 50 ? 'up' : closureRate >= 30 ? 'neutral' : 'down',
+    };
+  });
+
+  readonly delayDelta = computed<MetricDelta | null>(() => {
+    const delay = this.kpiDelay();
+    if (delay == null) return null;
+    const direction: 'up' | 'down' | 'neutral' = delay > 30 ? 'down' : delay > 15 ? 'neutral' : 'up';
+    return {
+      value: delay > 30 ? 'Exceeds target' : delay > 15 ? 'Within range' : 'Excellent pace',
+      direction,
+    };
+  });
+
+  readonly urgentDelta = computed<MetricDelta | null>(() => {
+    const urgent = this.kpiUrgent();
+    if (urgent === 0) return null;
+    return {
+      value: `${urgent} requiring immediate action`,
+      direction: 'down',
+    };
   });
 }

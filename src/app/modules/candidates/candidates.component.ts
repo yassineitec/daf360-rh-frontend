@@ -6,6 +6,8 @@ import {
   CardComponent,
   DafCellDirective,
   DataTableComponent,
+  MetricCardComponent,
+  MetricDelta,
   PaginationComponent,
   SelectComponent,
   SelectConfig,
@@ -21,7 +23,6 @@ import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { avatarUrl } from '../../shared/utils/avatar.utils';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { KpiCardComponent } from '../../shared/kpi-card.component';
 import { KanbanCardShellComponent } from '../../shared/kanban-card-shell.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -86,7 +87,7 @@ interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
     CardComponent,
     DafCellDirective,
     DataTableComponent,
-    KpiCardComponent,
+    MetricCardComponent,
     KanbanCardShellComponent,
     SelectComponent,
     PaginationComponent,
@@ -173,7 +174,7 @@ export class CandidatesComponent implements OnInit {
   readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
   readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
 
-  // ── Funnel-health KPIs (rh-kpi-card — same sizing/design as the onboarding list page) ──
+  // ── Funnel-health KPIs (daf-metric-card from lib) ──
   readonly kpiActive     = computed(() => this.dashStats().activeCandidates);
   readonly kpiHired      = computed(() => this.dashStats().hiredTotal);
   readonly kpiAcceptance = computed(() => this.dashStats().offerAcceptanceRate);
@@ -183,6 +184,27 @@ export class CandidatesComponent implements OnInit {
   readonly acceptanceMetricValue = computed(() => {
     const r = this.kpiAcceptance();
     return r == null ? '—' : `${Math.round(r)}%`;
+  });
+
+  // ── Delta indicators (month-over-month trends) ──
+  readonly activeDelta = computed<MetricDelta | null>(() => {
+    const growth = this.dashStats().monthGrowthPct;
+    if (growth == null) return null;
+    const direction: 'up' | 'down' | 'neutral' = growth > 0 ? 'up' : growth < 0 ? 'down' : 'neutral';
+    return {
+      value: `${growth > 0 ? '+' : ''}${Math.round(growth)}% vs mois dernier`,
+      direction,
+    };
+  });
+
+  readonly hiredDelta = computed<MetricDelta | null>(() => {
+    const growth = this.dashStats().monthGrowthPct;
+    if (growth == null) return null;
+    const direction: 'up' | 'down' | 'neutral' = growth > 0 ? 'up' : growth < 0 ? 'down' : 'neutral';
+    return {
+      value: `${growth > 0 ? '+' : ''}${Math.round(growth)}% vs mois dernier`,
+      direction,
+    };
   });
 
   // ── Kanban board horizontal navigation map (bottom-right) ───────────────────

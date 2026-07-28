@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
-import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import { StatusBadgeComponent, MetricCardComponent } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SpinnerComponent }     from '../../shared/spinner.component';
 
@@ -45,7 +45,7 @@ const STAGES: Stage[] = [
 @Component({
   selector: 'app-recruitment-pipeline',
   standalone: true,
-  imports: [StatusBadgeComponent, SpinnerComponent, TranslatePipe],
+  imports: [StatusBadgeComponent, SpinnerComponent, TranslatePipe, MetricCardComponent],
   templateUrl: './recruitment-pipeline.component.html',
   styleUrl:    './recruitment-pipeline.component.scss',
 })

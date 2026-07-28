@@ -35,12 +35,23 @@
       (onClick)="onNewCandidate()" />
   </div>
 
-  <!-- ── KPI tiles: rh-kpi-card on desktop/tablet — same size/style as the
-       onboarding list page — mobile gets its own compact stat-tile card ── -->
+  <!-- ── KPI tiles: metric cards on desktop/tablet ── -->
   <div class="hidden md:grid grid-cols-3 gap-6">
-    <rh-kpi-card [label]="'PIPELINE.KPI_TOTAL' | translate"     icon="group"         [value]="totalMetricValue()"  variant="blue" />
-    <rh-kpi-card [label]="'PIPELINE.KPI_AVG_DELAY' | translate" icon="timer"         [value]="delayMetricValue()"  variant="green" />
-    <rh-kpi-card [label]="'PIPELINE.KPI_URGENT' | translate"    icon="priority_high" [value]="urgentMetricValue()" variant="red" />
+    <daf-metric-card
+      [label]="'PIPELINE.KPI_TOTAL' | translate"
+      [value]="totalMetricValue()"
+      [delta]="totalDelta()"
+      [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+    <daf-metric-card
+      [label]="'PIPELINE.KPI_AVG_DELAY' | translate"
+      [value]="delayMetricValue()"
+      [delta]="delayDelta()"
+      [options]="{ icon: 'timer', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+    <daf-metric-card
+      [label]="'PIPELINE.KPI_URGENT' | translate"
+      [value]="urgentMetricValue()"
+      [delta]="urgentDelta()"
+      [options]="{ icon: 'priority_high', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
   </div>
 
   <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">

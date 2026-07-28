@@ -22,15 +22,18 @@
 
 @if (!loading()) {
 
-  <!-- Funnel summary cards (exclude rejected) -->
-  <div class="funnel-row">
+  <!-- Funnel summary metrics (exclude rejected) -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
     @for (s of counts(); track s.stage.key) {
       @if (s.stage.key !== 'rejected') {
-        <div class="funnel-card" [style.border-top-color]="s.stage.color">
-          <span class="funnel-icon">{{ s.stage.icon }}</span>
-          <span class="funnel-count" [style.color]="s.stage.color">{{ s.count }}</span>
-          <span class="funnel-label">{{ s.stage.label | translate }}</span>
-        </div>
+        <daf-metric-card
+          [label]="s.stage.label | translate"
+          [value]="s.count"
+          [options]="{
+            icon: 'person',
+            iconColor: 'text-on-surface',
+            iconBg: 'bg-primary/10'
+          }" />
       }
     }
   </div>
