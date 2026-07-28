@@ -1,16 +1,13 @@
-<div class="space-y-6">
+<div class="space-y-8">
 
   <!-- Page header -->
   <div>
-    <h1 class="text-headline-xl sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
+    <h1 class="text-2xl font-bold text-on-surface">
       {{ 'IT_PROVISIONING.LIST.TITLE' | translate }}
     </h1>
-    <div class="flex items-center gap-2 mt-1">
-      <div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
-      <p class="text-[13px] sm:text-[14px] text-outline">
-        {{ 'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending } }}
-      </p>
-    </div>
+    <p class="text-sm text-outline mt-1">
+      {{ 'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending } }}
+    </p>
   </div>
 
   @if (error()) {

@@ -452,6 +452,11 @@
       "OFFRE": "Offer",
       "RECRUTE": "Recruited"
     },
+    "OFFBOARDING": {
+      "COLUMN": "Offboarding",
+      "SLA": "SLA breached",
+      "EMPTY": "No active offboarding"
+    },
     "CARD": {
       "PENDING_SIGNATURE": "Awaiting signature",
       "EXPIRES": "— expires on {{date}}",

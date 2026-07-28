@@ -7,6 +7,7 @@ import {
   ButtonComponent,
   CardComponent,
   DafCellDirective,
+  DafHasPermissionDirective,
   DataTableComponent,
   FormFieldComponent,
   FormFieldOptions,
@@ -19,6 +20,7 @@ import {
 import { ModalComponent } from '../../shared/modal.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
+import { KanbanCardShellComponent } from '../../shared/kanban-card-shell.component';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import {
   PipelineService,
@@ -28,6 +30,9 @@ import {
 } from './services/pipeline.service';
 import { OfferService, CreateOfferRequest } from './services/offer.service';
 import { getAvatarUrl } from '../../shared/utils/avatar.utils';
+import { LifecycleService } from '../lifecycle/lifecycle.service';
+import { OffboardingWorkflowInstance, isTerminal } from '../lifecycle/models/lifecycle.model';
+import { UserStore } from '../../core/user.store';
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'secondary' | 'neutral' | 'teal';
 
@@ -66,50 +71,57 @@ interface BoardColumn {
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, FormFieldComponent, KpiCardComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DafHasPermissionDirective, DataTableComponent, FormFieldComponent, KpiCardComponent, KanbanCardShellComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
   templateUrl: './pipeline.component.html',
   styles: [`
     /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
     .custom-scroll { scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar { display: none; }
 
-    /* Hairline, near-invisible scroll "cursor" for each column's card list (shows ~3 cards, scrolls for the rest). */
-    .custom-scroll-y { scrollbar-width: thin; scrollbar-color: #eeeef2 transparent; }
-    .custom-scroll-y::-webkit-scrollbar { width: 1px; }
-    .custom-scroll-y::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll-y::-webkit-scrollbar-thumb { background: #eeeef2; border-radius: 10px; }
-    .custom-scroll-y::-webkit-scrollbar-thumb:hover { background: #d6d6de; }
+    /* Column card list scrolls but its scrollbar is fully hidden (invisible, scroll preserved). */
+    .custom-scroll-y { scrollbar-width: none; }
+    .custom-scroll-y::-webkit-scrollbar { display: none; }
 
-    /* Card shape + hover from the /finance/affaires card grid — data placement/size unchanged. */
-    .aff-shape {
-      background: var(--color-surface-container-lowest, #fff);
-      border: 1px solid var(--color-outline-variant, #e5e7eb);
-      border-radius: 1rem;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-      cursor: pointer;
-      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
-    }
-    .aff-shape:hover {
-      transform: scale(1.03) translateY(-4px);
-      box-shadow: 0 16px 32px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.07);
-      z-index: 2;
-    }
-
-    /* Global card wrapping every column of the board (like /finance/affaires' table container). */
+    /* The board sits directly on the app background — no card chrome. */
     .board-card {
-      background: #ffffff;
-      border: 1px solid var(--color-outline-variant, #e5e7eb);
-      border-radius: 1rem;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-      padding: 20px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
     }
   `],
 })
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
   private offerService    = inject(OfferService);
+  private lifecycleSvc    = inject(LifecycleService);
+  private userStore       = inject(UserStore);
   private router          = inject(Router);
   private translate       = inject(TranslateService);
+
+  // ── Offboarding column (display-only) ───────────────────────────────────────
+  // The recrutement board ends with a read-only "Offboarding" column that surfaces
+  // employees currently being offboarded (a separate HR workflow, not a candidate
+  // status). Gated by RH_MANAGE_OFFBOARDING; clicking a card opens the employee's
+  // offboarding file at /rh/lifecycle/:id.
+  readonly canViewOffboarding = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+  private readonly offboardingItems = signal<OffboardingWorkflowInstance[]>([]);
+  /** Active (non-terminal) offboarding files only. */
+  readonly offboardingActive = computed(() =>
+    this.offboardingItems().filter(o => !isTerminal(o.status)),
+  );
+
+  onViewOffboarding(id: number): void {
+    this.router.navigate(['/rh/lifecycle', id]);
+  }
+
+  private loadOffboarding(): void {
+    if (!this.canViewOffboarding()) return;
+    this.lifecycleSvc.listOffboarding().subscribe({
+      next: items => this.offboardingItems.set(items ?? []),
+      error: () => this.offboardingItems.set([]),
+    });
+  }
 
   readonly kanbanColumns = signal<KanbanColumn[]>([]);
   readonly stats         = signal<PipelineStats | null>(null);
@@ -215,6 +227,7 @@ export class PipelineComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadOffboarding();
   }
 
   private load(): void {

@@ -22,6 +22,7 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import { avatarUrl } from '../../shared/utils/avatar.utils';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { KpiCardComponent } from '../../shared/kpi-card.component';
+import { KanbanCardShellComponent } from '../../shared/kanban-card-shell.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   CandidateListItem,
@@ -86,6 +87,7 @@ interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
     DafCellDirective,
     DataTableComponent,
     KpiCardComponent,
+    KanbanCardShellComponent,
     SelectComponent,
     PaginationComponent,
     DafHasPermissionDirective,
@@ -98,12 +100,9 @@ interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
     .custom-scroll { scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar { display: none; }
 
-    /* Hairline, near-invisible scroll "cursor" for each column's card list (shows ~3 cards, scrolls for the rest). */
-    .custom-scroll-y { scrollbar-width: thin; scrollbar-color: #eeeef2 transparent; }
-    .custom-scroll-y::-webkit-scrollbar { width: 1px; }
-    .custom-scroll-y::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll-y::-webkit-scrollbar-thumb { background: #eeeef2; border-radius: 10px; }
-    .custom-scroll-y::-webkit-scrollbar-thumb:hover { background: #d6d6de; }
+    /* Column card list scrolls but its scrollbar is fully hidden (invisible, scroll preserved). */
+    .custom-scroll-y { scrollbar-width: none; }
+    .custom-scroll-y::-webkit-scrollbar { display: none; }
 
     /* Card shape + hover from the /finance/affaires card grid — data placement/size unchanged. */
     .aff-shape {

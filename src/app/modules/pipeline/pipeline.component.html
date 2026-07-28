@@ -150,7 +150,7 @@
     <div #kanbanBoard class="flex gap-6 overflow-x-auto pb-2 items-start custom-scroll" (scroll)="onBoardScroll()">
 
       @for (col of boardColumns(); track col.key) {
-        <div class="shrink-0 w-[85vw] max-w-[320px] sm:w-[360px] sm:max-w-none space-y-4">
+        <div class="shrink-0 w-[85vw] max-w-[320px] sm:w-80 sm:max-w-none space-y-4">
 
           <!-- Column header -->
           <div class="flex justify-between items-center px-2 py-1">
@@ -168,10 +168,11 @@
           </div>
 
           <!-- Cards — shows ~3 at a time, scrolls for the rest -->
-          <div class="flex flex-col gap-4 max-h-[610px] overflow-y-auto overscroll-contain pr-2 custom-scroll-y">
+          <div class="flex flex-col gap-4 max-h-[610px] overflow-y-auto overscroll-contain pr-2 py-4 custom-scroll-y">
           @for (c of col.candidates; track c.id) {
-            <div
-              class="aff-shape p-5 flex flex-col min-h-[252px]"
+            <rh-kanban-card-shell
+              class="min-h-64"
+              [surface]="'white'"
               (click)="onCandidateClick(c.id)">
 
               <div class="flex justify-between mb-3">
@@ -294,7 +295,7 @@
                   }
                 }
               </div>
-            </div>
+            </rh-kanban-card-shell>
           }
           </div>
 
@@ -307,6 +308,75 @@
           }
         </div>
       }
+
+      <!-- ── Offboarding column (display-only; employees in an active offboarding workflow) ── -->
+      <div *dafHasPermission="'RH_MANAGE_OFFBOARDING'"
+           class="shrink-0 w-[85vw] max-w-[320px] sm:w-80 sm:max-w-none space-y-4">
+
+        <!-- Column header -->
+        <div class="flex justify-between items-center px-2 py-1">
+          <span class="font-bold text-on-surface flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" style="background-color:#64748b"></span>
+            {{ 'PIPELINE.OFFBOARDING.COLUMN' | translate }}
+            <span class="bg-surface-container-highest px-2 py-0.5 rounded text-xs">{{ offboardingActive().length }}</span>
+          </span>
+        </div>
+
+        <!-- Cards -->
+        <div class="flex flex-col gap-4 max-h-[610px] overflow-y-auto overscroll-contain pr-2 pt-4 custom-scroll-y">
+          @for (o of offboardingActive(); track o.id) {
+            <rh-kanban-card-shell
+              class="min-h-[180px]"
+              [surface]="'white'"
+              (click)="onViewOffboarding(o.id)">
+
+              <!-- Employee -->
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-12 h-12 rounded-lg flex items-center justify-center text-[14px] font-bold text-white shrink-0" style="background:#64748b">
+                  {{ initials(o.employeeFullName || '') }}
+                </div>
+                <div class="min-w-0">
+                  <h4 class="font-bold text-on-surface truncate">{{ o.employeeFullName || '—' }}</h4>
+                  <p class="text-xs text-outline truncate">{{ 'LIFECYCLE.REASON.' + o.departureReason | translate }}</p>
+                </div>
+              </div>
+
+              <!-- Status + SLA -->
+              <div class="flex items-center gap-2 mb-3">
+                <daf-badge [label]="'LIFECYCLE.STATUS.' + o.status | translate" [options]="{ variant: 'neutral', size: 'sm' }" />
+                @if (o.slaBreachFlag) {
+                  <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-danger bg-danger/10 px-2 py-0.5 rounded-full">
+                    <span class="material-symbols-outlined text-[13px]">warning</span>
+                    {{ 'PIPELINE.OFFBOARDING.SLA' | translate }}
+                  </span>
+                }
+              </div>
+
+              <!-- Footer: last working day + handover manager -->
+              <div class="mt-auto pt-3 border-t border-outline-variant flex items-center justify-between gap-2 text-on-surface-variant text-[11px]">
+                <span class="flex items-center gap-1 min-w-0">
+                  <span class="material-symbols-outlined text-[14px] shrink-0">event</span>
+                  <span class="truncate">{{ o.lastWorkingDay || '—' }}</span>
+                </span>
+                @if (o.handoverManagerName) {
+                  <span class="flex items-center gap-1 min-w-0 shrink-0">
+                    <span class="material-symbols-outlined text-[14px] shrink-0">handshake</span>
+                    <span class="truncate max-w-[120px]">{{ o.handoverManagerName }}</span>
+                  </span>
+                }
+              </div>
+            </rh-kanban-card-shell>
+          }
+        </div>
+
+        <!-- Empty column -->
+        @if (offboardingActive().length === 0) {
+          <div class="text-center py-10 text-outline border border-dashed border-outline-variant rounded-xl">
+            <span class="material-symbols-outlined text-[32px] block mb-1">logout</span>
+            <p class="text-[12px]">{{ 'PIPELINE.OFFBOARDING.EMPTY' | translate }}</p>
+          </div>
+        }
+      </div>
     </div>
     </div>
   }

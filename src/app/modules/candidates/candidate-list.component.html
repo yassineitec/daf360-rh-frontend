@@ -2,13 +2,7 @@
 <div class="flex items-center justify-between mb-8">
   <div>
     <h1 class="flex items-center gap-2 text-2xl font-bold text-on-surface">
-      <span class="material-symbols-outlined text-[26px] text-primary">group</span>
       {{ 'CANDIDATES.LIST.TITLE' | translate }}
-      @if (candidates()?.totalElements != null) {
-        <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-surface-container text-outline">
-          {{ candidates()!.totalElements }}
-        </span>
-      }
     </h1>
     <p class="text-sm text-outline mt-1">{{ 'CANDIDATES.LIST.SUBTITLE' | translate }}</p>
   </div>

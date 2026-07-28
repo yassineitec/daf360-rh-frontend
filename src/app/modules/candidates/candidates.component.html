@@ -259,15 +259,16 @@
 
             <!-- Cards (native HTML5 drop target) — shows ~3 at a time, scrolls for the rest -->
             <div
-              class="flex flex-col gap-3 min-h-[120px] max-h-[610px] overflow-y-auto overscroll-contain rounded-xl transition-all p-1 pr-2 custom-scroll-y"
+              class="flex flex-col gap-3 min-h-[120px] max-h-[610px] overflow-y-auto overscroll-contain rounded-xl transition-all p-1 pr-2 pt-4 custom-scroll-y"
               [style.box-shadow]="dragOverKey() === col.key ? '0 0 0 2px ' + col.accent : null"
-              [style.background]="dragOverKey() === col.key ? col.badgeBg : null"
               (dragover)="onDragOver($event, col)"
               (dragleave)="onDragLeave(col)"
               (drop)="onDrop($event, col)">
               @for (c of col.candidates; track c.id) {
-                <div
-                  class="aff-shape p-4 cursor-grab active:cursor-grabbing"
+                <rh-kanban-card-shell
+                  class="cursor-grab active:cursor-grabbing"
+                  [surface]="'white'"
+                  [dragging]="draggedId() === c.id"
                   [class.opacity-40]="draggedId() === c.id"
                   draggable="true"
                   (dragstart)="onDragStart(c)"
@@ -336,7 +337,7 @@
                       </span>
                     }
                   </div>
-                </div>
+                </rh-kanban-card-shell>
               }
 
               @if (col.candidates.length === 0) {
@@ -414,9 +415,7 @@
     } @else {
       <div class="flex flex-col gap-3 mt-4">
         @for (c of mobileFilteredCandidates(); track c.id) {
-          <div
-            class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant shadow-sm"
-            (click)="onView(c.id)">
+          <rh-kanban-card-shell [surface]="'white'" (click)="onView(c.id)">
 
             <div class="flex items-center justify-between gap-2 mb-3">
               <span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider"
@@ -496,7 +495,7 @@
                   (onClick)="openRejectModal(c, $event)" />
               </div>
             }
-          </div>
+          </rh-kanban-card-shell>
         } @empty {
           <div class="flex flex-col items-center gap-2 py-16 text-center text-outline">
             <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
