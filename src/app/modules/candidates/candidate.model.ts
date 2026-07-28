@@ -96,6 +96,8 @@ export interface CandidateDetail {
   recruitmentDemandJobTitle: string | null;
   experienceYears: number | null;
   location: string | null;
+  salaireNetCandidat: number | null;
+  salaireNetRh: number | null;
 }
 
 export interface CreateCandidateRequest {
@@ -119,6 +121,8 @@ export interface CreateCandidateRequest {
   employmentTypeId?: number | null;
   experienceYears?: number | null;
   location?: string | null;
+  salaireNetCandidat?: number | null;
+  salaireNetRh?: number | null;
 }
 
 export interface UpdateCandidateRequest {
@@ -138,6 +142,8 @@ export interface UpdateCandidateRequest {
   notes?: string | null;
   experienceYears?: number | null;
   location?: string | null;
+  salaireNetCandidat?: number | null;
+  salaireNetRh?: number | null;
 }
 
 export interface CandidateFilter {

@@ -20,6 +20,11 @@ export const candidatesRoutes: Routes = [
       import('./candidate-form.component').then(m => m.CandidateFormComponent),
   },
   {
+    path: 'hiring-approvals',
+    loadComponent: () =>
+      import('./hiring-approval-inbox.component').then(m => m.HiringApprovalInboxComponent),
+  },
+  {
     path: ':id',
     loadComponent: () =>
       import('./candidate-detail.component').then(m => m.CandidateDetailComponent),

@@ -8,4 +8,6 @@ export const environment = {
   shellUrl: 'http://localhost:4200',
   /** Generic API base — dev HR service */
   apiUrl: 'http://localhost:8891',
+  /** Payroll service — cost simulation engine */
+  payrollApiUrl: 'http://localhost:8893',
 };

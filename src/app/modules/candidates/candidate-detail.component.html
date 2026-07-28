@@ -261,6 +261,69 @@
               </div>
             </div>
 
+            <!-- Informations salariales -->
+            @if (canHire() || userStore.isAdmin()) {
+              <div class="bg-white rounded-xl border border-outline-variant p-5">
+                <div class="flex items-center gap-2 mb-5" style="color:var(--color-on-surface-variant)">
+                  <span class="material-symbols-outlined text-[18px]">payments</span>
+                  <h3 class="text-[12px] font-semibold uppercase tracking-wider">Informations salariales</h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <!-- Salaire net RH -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-outline uppercase tracking-wide mb-1.5">
+                      Salaire net RH (budget)
+                    </label>
+                    <input type="number" min="0" step="100"
+                           placeholder="—"
+                           class="w-full rounded-xl border border-outline-variant px-3.5 py-2.5 text-[14px]
+                                  focus:outline-none focus:ring-2 focus:border-teal transition-colors"
+                           style="color:var(--color-on-surface)"
+                           [value]="salaryNetRh() ?? ''"
+                           (input)="salaryNetRh.set(+$any($event.target).value || null)" />
+                  </div>
+
+                  <!-- Prétention candidat -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-outline uppercase tracking-wide mb-1.5">
+                      Prétention candidat (net)
+                    </label>
+                    <input type="number" min="0" step="100"
+                           placeholder="—"
+                           class="w-full rounded-xl border border-outline-variant px-3.5 py-2.5 text-[14px]
+                                  focus:outline-none focus:ring-2 focus:border-teal transition-colors"
+                           style="color:var(--color-on-surface)"
+                           [value]="salaryNetCandidat() ?? ''"
+                           (input)="salaryNetCandidat.set(+$any($event.target).value || null)" />
+                  </div>
+                </div>
+
+                <!-- Actions row -->
+                <div class="flex items-center gap-3 flex-wrap">
+                  <daf-button
+                    label="Sauvegarder"
+                    [options]="{ variant: 'teal', pill: true, iconStart: 'save',
+                                 loading: salarySaving(), disabled: salarySaving() }"
+                    (onClick)="saveSalary()" />
+
+                  @if (salarySuccess()) {
+                    <span class="flex items-center gap-1.5 text-[12.5px]" style="color:var(--color-teal)">
+                      <span class="material-symbols-outlined text-[15px]"
+                            style="font-variation-settings:'FILL' 1">check_circle</span>
+                      {{ salarySuccess() }}
+                    </span>
+                  }
+                  @if (salaryError()) {
+                    <span class="flex items-center gap-1.5 text-[12.5px] text-danger">
+                      <span class="material-symbols-outlined text-[15px]">error</span>
+                      {{ salaryError() }}
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+
             <!-- CV -->
             <div class="bg-white rounded-xl border border-outline-variant p-5">
               <div class="flex items-center gap-2 mb-4" style="color:var(--color-on-surface-variant)">
@@ -360,6 +423,11 @@
                 [status]="c.status"
                 [candidateName]="c.firstName + ' ' + c.lastName"
                 (changed)="onOfferChanged()" />
+            }
+
+            <!-- Simulation de coût salarial -->
+            @if (canHire() || userStore.isAdmin()) {
+              <app-candidate-cost-simulation [candidate]="c" />
             }
 
             <!-- IT Provisioning -->

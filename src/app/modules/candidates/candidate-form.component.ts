@@ -155,6 +155,8 @@ export class CandidateFormComponent implements OnInit {
       appliedDisciplineId: [null as number | null],
       nationalityId:       [null as number | null],
       expectedStartDate:   ['', Validators.required],
+      salaireNetCandidat:  [null as number | null],
+      salaireNetRh:        [null as number | null],
     }),
     notes: [null as string | null],
   });
@@ -333,6 +335,8 @@ export class CandidateFormComponent implements OnInit {
       notes:               this.form.get('notes')?.value ?? null,
       experienceYears:     this.experienceYears() || null,
       location:            identity.location            || null,
+      salaireNetCandidat:  position.salaireNetCandidat  ?? null,
+      salaireNetRh:        position.salaireNetRh        ?? null,
     };
 
     this.candidateService.create(dto).subscribe({
