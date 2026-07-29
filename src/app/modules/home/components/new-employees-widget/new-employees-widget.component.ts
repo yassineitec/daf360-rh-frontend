@@ -22,7 +22,7 @@ export interface NouveauItem {
     <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
       <h3 class="flex items-center gap-2 text-[14px] font-bold text-on-surface mb-4">
         <span class="material-symbols-outlined text-[20px]" style="color: #79D7BE;">person_add</span>
-        {{ 'DASHBOARD.NEW_EMPLOYEES.TITLE' | translate }}
+        {{ 'HOME.NEW_EMPLOYEES.TITLE' | translate }}
       </h3>
       <div class="space-y-3">
         @for (item of items(); track item.fullName) {
@@ -47,7 +47,7 @@ export interface NouveauItem {
           </div>
         } @empty {
           <p class="text-[13px] text-outline text-center py-2">
-            {{ 'DASHBOARD.NEW_EMPLOYEES.EMPTY' | translate }}
+            {{ 'HOME.NEW_EMPLOYEES.EMPTY' | translate }}
           </p>
         }
       </div>

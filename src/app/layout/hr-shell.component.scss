@@ -5,10 +5,14 @@
 }
 
 // ── Main content area ─────────────────────────────────────────────────────────
+// NOTE: no `height` + `overflow-y: auto` here. This used to be a scroll container
+// (`height: calc(100vh - header)`), which nested a second scrollbar inside the
+// federated shell's own scrolling document — two scrollbars on every RH page.
+// The outer shell owns the scroll; this area only needs a minimum height so short
+// pages still fill the viewport.
 .shell-content {
   margin-left: var(--shell-sidebar-w);
-  height:      calc(100vh - var(--shell-header-h));
-  overflow-y:  auto;
+  min-height:  calc(100vh - var(--shell-header-h));
   overflow-x:  hidden;
   padding:     2rem;
   /* Matches the Finance shell's page background (hardcoded #f8f9fb there too)

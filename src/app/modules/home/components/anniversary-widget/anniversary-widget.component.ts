@@ -17,7 +17,7 @@ export interface AnniversaireItem {
     <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
       <h3 class="flex items-center gap-2 text-[14px] font-bold text-on-surface mb-4">
         <span class="material-symbols-outlined text-[20px]" style="color: #79D7BE;">cake</span>
-        {{ 'DASHBOARD.ANNIVERSARY.TITLE' | translate }}
+        {{ 'HOME.ANNIVERSARY.TITLE' | translate }}
       </h3>
       <ul class="space-y-3">
         @for (item of items(); track item.fullName) {
@@ -29,7 +29,7 @@ export interface AnniversaireItem {
           </li>
         } @empty {
           <li class="text-[13px] text-outline text-center py-2">
-            {{ 'DASHBOARD.ANNIVERSARY.EMPTY' | translate }}
+            {{ 'HOME.ANNIVERSARY.EMPTY' | translate }}
           </li>
         }
       </ul>

@@ -152,7 +152,7 @@
             <daf-progress-bar
               [label]="row['hwLabel']"
               [value]="row['hwCount']"
-              [options]="{ max: 6, size: 'xs', variant: row['hwDone'] ? 'teal' : 'primary', showPercent: false }" />
+              [options]="{ max: 6, size: 'xs', variant: row['hwDone'] ? 'tertiary' : 'primary', showPercent: false }" />
           </div>
         </ng-template>
 
@@ -161,7 +161,7 @@
             <daf-progress-bar
               [label]="row['licLabel']"
               [value]="row['licCount']"
-              [options]="{ max: 5, size: 'xs', variant: row['licDone'] ? 'teal' : 'secondary', showPercent: false }" />
+              [options]="{ max: 5, size: 'xs', variant: row['licDone'] ? 'tertiary' : 'secondary', showPercent: false }" />
           </div>
         </ng-template>
 

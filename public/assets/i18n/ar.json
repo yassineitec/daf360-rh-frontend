@@ -1,13 +1,8 @@
 {
-  "DASHBOARD": {
+  "HOME": {
     "TITLE": "بوابة الموارد البشرية",
     "SUBTITLE": "مرحباً {{name}}، إليك حالة موظفيك اليوم.",
     "NEW_EMPLOYEE": "موظف جديد",
-    "SENIORITY": {
-      "LESS_THAN_MONTH": "أقل من شهر",
-      "MONTHS": "{{count}} شهر",
-      "YEARS": "{{count}} سنة"
-    },
     "QUICK_ACTIONS": {
       "SECTION": "إجراءات سريعة",
       "REQUESTS_LABEL": "الطلبات",
@@ -20,12 +15,8 @@
       "RECRUITMENT_SUBLABEL": "عرض خط الأنابيب"
     },
     "DIRECTORY": {
-      "TITLE": "دليل الموظفين",
-      "VIEW_ALL": "عرض جميع الملفات",
-      "SEARCH_PLACEHOLDER": "بحث...",
-      "FILTERS": "تصفية",
-      "EMPTY": "لا يوجد موظفون للعرض.",
-      "NO_MATCH": "لا يوجد موظفون مطابقون لهذا البحث."
+      "TITLE": "أحدث المنتدبين",
+      "EMPTY": "لا توجد التدابات حديثة."
     },
     "ALERT_CARD": {
       "TITLE": "قائمة المراقبة",
@@ -33,24 +24,45 @@
       "PROBATION_EMPTY": "لا توجد مواعيد نهائية قريبة.",
       "PROBATION_DAYS": "ي-{{days}}",
       "MISSING_DOCS_TITLE": "وثائق مفقودة",
+      "MISSING_DOCS_EMPTY": "لا توجد وثائق مفقودة",
       "URGENT": "عاجل",
       "REMINDER_SENT": "تم إرسال التذكير"
     },
     "EMPLOYEE_CARD": {
-      "PRESENT": "حاضر",
-      "REMOTE": "عمل عن بُعد",
-      "ON_LEAVE": "في إجازة",
-      "SENIORITY": "الأقدمية:",
       "VIEW_PROFILE": "عرض الملف",
-      "COMPLETION_PERSO": "شخصي",
-      "COMPLETION_DOCS": "وثائق",
-      "COMPLETION_SKILLS": "مهارات"
+      "START_DATE": "تاريخ المباشرة",
+      "ONBOARDING_PROGRESS": "ملف الاندماج",
+      "CONTRACT": {
+        "PERMANENT": "عقد غير محدد المدة",
+        "FIXED_TERM": "عقد محدد المدة",
+        "CONSULTANT": "مستشار",
+        "INTERN": "تدريب",
+        "CDI": "عقد غير محدد المدة",
+        "CDD": "عقد محدد المدة",
+        "FREELANCE": "عمل مستقل",
+        "STAGE": "تدريب",
+        "CIVP": "عقد الإدماج (CIVP)",
+        "DETACHEMENT": "إلحاق",
+        "PORTAGE": "التأجير الوظيفي"
+      },
+      "ROLE": "الوظيفة",
+      "SECTION": {
+        "IDENTITY": "الهوية",
+        "CONTRACT": "الوظيفة",
+        "REGIME": "نظام العمل",
+        "PERSONAL": "معطيات شخصية",
+        "BANK": "البنك",
+        "EMERGENCY": "حالة طارئة",
+        "DOCUMENTS": "الوثائق"
+      }
     },
     "WORKFORCE_STATS": {
       "LABEL": "إجمالي القوى العاملة",
       "ACTIVE_EMPLOYEES": "موظفون نشطون",
       "FEMALE": "إناث",
-      "MALE": "ذكور"
+      "MALE": "ذكور",
+      "BY_COUNTRY": "التوزيع حسب البلد",
+      "COUNTRY_UNKNOWN": "غير محدد"
     },
     "PROFILE_COMPLETION": {
       "LABEL": "اكتمال الملفات",
@@ -64,7 +76,9 @@
     "NEW_EMPLOYEES": {
       "TITLE": "موظفون جدد",
       "EMPTY": "لا يوجد موظفون جدد مؤخراً"
-    }
+    },
+    "PARTIAL_LOAD_ERROR": "تعذر تحميل بعض البيانات ({{count}}). المعلومات المعروضة غير كاملة.",
+    "LOAD_ERROR": "فشل تحميل لوحة المعلومات."
   },
   "LIFECYCLE": {
     "DASHBOARD": {
@@ -750,5 +764,17 @@
         }
       }
     }
+  },
+  "NAV": {
+    "SECTION_LABEL": "تنقل الموارد البشرية",
+    "ACCUEIL": "الرئيسية",
+    "PROFILES": "الملفات",
+    "PIPELINE": "مسار التوظيف",
+    "CANDIDATES": "المترشحون",
+    "IT_PROVISIONING": "تجهيز المعلوماتية",
+    "ONBOARDING": "الاندماج",
+    "LIFECYCLE": "دورة الحياة",
+    "REQUESTS": "المطالب",
+    "ADMIN": "الإدارة"
   }
 }

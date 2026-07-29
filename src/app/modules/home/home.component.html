@@ -1,0 +1,47 @@
+<!-- `daf-page` owns the vertical rhythm (32px between its direct children) and the
+     first-load skeleton, so this page carries no wrapper gap and no spinner of its
+     own. Per UI-PLAYBOOK §1 the page template is only `daf-page` + `daf-page-header`
+     + section components — each section owns its own desktop and mobile rendering.
+
+     `order-*` handles the one place the two layouts disagree: mobile leads with the
+     KPI strip, desktop leads with the shortcut cards. daf-page's child wrapper is a
+     flex column, so `order` applies directly. -->
+<daf-page [loading]="loading()">
+
+  <daf-page-header
+    [title]="'HOME.TITLE' | translate"
+    [subtitle]="'HOME.SUBTITLE' | translate:{ name: userName() }" />
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
+    </div>
+  }
+
+  <rh-quick-actions-section
+    class="order-2 md:order-1"
+    [pendingRequests]="stats()?.pendingRequests ?? 0"
+    (navigate)="onQuickAction($event)" />
+
+  <rh-overview-section
+    class="order-1 md:order-2"
+    [probationAlerts]="probation()"
+    [probationTotal]="probationTotal()"
+    [missingDocsAlerts]="missingDocAlerts()"
+    [missingDocsTotal]="missingDocsTotal()"
+    [totalActifs]="workforce()?.totalActifs ?? 0"
+    [pctFemmes]="workforce()?.pctFemmes"
+    [pctHommes]="workforce()?.pctHommes"
+    [byCountry]="workforce()?.byCountry ?? []"
+    [tauxGlobalPct]="completion()?.tauxGlobalPct ?? 0"
+    [dossiersIncomplets]="completion()?.dossiersIncomplets ?? 0" />
+
+  <rh-joiners-section
+    class="order-3"
+    [employees]="employeeCards()"
+    [anniversaires]="anniversaires()"
+    [nouveaux]="nouveaux()"
+    (viewProfile)="onViewProfile($event)" />
+
+</daf-page>

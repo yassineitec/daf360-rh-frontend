@@ -19,6 +19,22 @@
 @source inline("{bg-primary,bg-secondary,bg-teal,bg-surface,bg-surface-container,bg-surface-container-lowest,bg-surface-container-high,bg-background,bg-error,bg-danger}");
 @source inline("{border-primary,border-secondary,border-outline,border-outline-variant,border-error}");
 
+/* Colour names the LIB doesn't declare must be registered here, in @theme — not in
+   :root below. Tailwind v4 generates `bg-x`/`text-x`/`border-x` only for colours in
+   the theme namespace; a :root declaration merely sets the value of an already-
+   registered token. Overriding a lib token (--color-background, --color-on-surface …)
+   in :root works for exactly that reason, and is why those overrides below are fine.
+
+   The lib ships --color-error-container and --color-on-error-container but NO
+   --color-error, so `bg-error` / `text-error` / `border-error` resolved to nothing and
+   silently rendered uncoloured across 23 usages — including the "Urgent" badge in
+   rh-alert-card, which paired an absent background with text-white and so was
+   invisible. Listing them in @source inline() cannot help: that forces class
+   DETECTION, it can't invent a utility whose colour the theme never registered. */
+@theme {
+  --color-error: var(--color-danger);
+}
+
 :root {
   /* Matches the Finance module's heading/body text color (hardcoded as
      $on-surface: #0b1c30 in its component SCSS) so RH pages use the same
@@ -39,7 +55,6 @@
   --color-border:                    var(--color-outline-variant);
   --color-bg:                        var(--color-background);
   --color-bg-secondary:              var(--color-surface-container-low);
-  --color-error:                     var(--color-danger);
   --color-primary-hover:             var(--color-primary);
   --color-primary-dark:              var(--color-primary);
   --color-primary-light:             var(--color-teal-light);

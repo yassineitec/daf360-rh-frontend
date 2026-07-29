@@ -15,7 +15,8 @@ import ar from '@public/assets/i18n/ar.json';
 
 interface AppNavDef {
   id: string;
-  label: string;
+  /** i18n key under NAV.*, resolved in `navItems` — never a literal label. */
+  labelKey: string;
   icon: string;
   route: string;
   /** Any-of gate; empty = visible to every authenticated user. */
@@ -23,47 +24,47 @@ interface AppNavDef {
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', route: 'dashboard', permissions: [] },
-  { id: 'profiles', label: 'Profiles', icon: 'account_circle', route: 'profiles', permissions: [] },
+  { id: 'accueil', labelKey: 'NAV.ACCUEIL', icon: 'home', route: 'accueil', permissions: [] },
+  { id: 'profiles', labelKey: 'NAV.PROFILES', icon: 'account_circle', route: 'profiles', permissions: [] },
   {
     id: 'recrutement',
-    label: 'Pipeline RH',
+    labelKey: 'NAV.PIPELINE',
     icon: 'analytics',
     route: 'recrutement',
     permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE'],
   },
   {
     id: 'candidates',
-    label: 'Candidats',
+    labelKey: 'NAV.CANDIDATES',
     icon: 'group_add',
     route: 'candidates',
     permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'],
   },
   {
     id: 'it-provisioning',
-    label: 'Provisioning IT',
+    labelKey: 'NAV.IT_PROVISIONING',
     icon: 'devices',
     route: 'it-provisioning',
     permissions: ['IT_PROVISIONING'],
   },
   {
     id: 'onboarding',
-    label: 'Onboarding',
+    labelKey: 'NAV.ONBOARDING',
     icon: 'person_add',
     route: 'onboarding',
     permissions: ['HR_ONBOARDING'],
   },
   {
     id: 'lifecycle',
-    label: 'Cycle de vie',
+    labelKey: 'NAV.LIFECYCLE',
     icon: 'work_history',
     route: 'lifecycle',
     permissions: ['RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
   },
-  { id: 'requests', label: 'Demandes', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
+  { id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
   {
     id: 'admin',
-    label: 'Admin',
+    labelKey: 'NAV.ADMIN',
     icon: 'admin_panel_settings',
     route: 'admin',
     permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS'],
@@ -115,7 +116,7 @@ export class HrShellComponent implements OnInit {
   );
 
   // daf-side-nav highlights on an exact `activeRoute === item.route` match, but nav
-  // routes are single segments ('dashboard', 'admin', …) while the URL is absolute
+  // routes are single segments ('accueil', 'admin', …) while the URL is absolute
   // (e.g. /rh/admin/roles). Map the live URL to the matching nav segment (longest
   // match first) so nested/child routes still light up their top-level item.
   readonly activeRoute = computed(() => {
@@ -126,24 +127,33 @@ export class HrShellComponent implements OnInit {
     return match ? match.route : '';
   });
 
-  readonly navItems = computed<NavItem[]>(() =>
-    APP_NAV_DEFS.filter(
+  // `translate.instant` is a plain call, not reactive — reading `currentLang()` (a
+  // Signal in ngx-translate v18) is what makes these recompute on a language switch.
+  // Without it the sidebar keeps the labels of whatever language was active at first
+  // render. daf-side-nav takes NavItem/SideNavConfig objects, not templates, so the
+  // translate PIPE isn't an option here.
+  readonly navItems = computed<NavItem[]>(() => {
+    this.translate.currentLang();
+    return APP_NAV_DEFS.filter(
       (def) => def.permissions.length === 0 || this.perm.hasAny(def.permissions),
     ).map((def) => ({
       id: def.id,
-      label: def.label,
+      label: this.translate.instant(def.labelKey),
       icon: def.icon,
       route: def.route,
       ...(def.id === 'onboarding' && this.onboardingCount() > 0
         ? { badge: this.onboardingCount() }
         : {}),
-    })),
-  );
+    }));
+  });
 
-  readonly sideNavConfig: SideNavConfig = {
-    sectionLabel: 'NAVIGATION RH',
-    collapsible: true,
-  };
+  readonly sideNavConfig = computed<SideNavConfig>(() => {
+    this.translate.currentLang();
+    return {
+      sectionLabel: this.translate.instant('NAV.SECTION_LABEL'),
+      collapsible: true,
+    };
+  });
 
   ngOnInit(): void {
     // NOTE: the remote's styles.css is injected + awaited by the shell

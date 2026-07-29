@@ -1,13 +1,8 @@
 {
-  "DASHBOARD": {
+  "HOME": {
     "TITLE": "HR Portal",
     "SUBTITLE": "Hello {{name}}, here is the status of your workforce today.",
     "NEW_EMPLOYEE": "New Employee",
-    "SENIORITY": {
-      "LESS_THAN_MONTH": "Less than a month",
-      "MONTHS": "{{count}} month(s)",
-      "YEARS": "{{count}} year(s)"
-    },
     "QUICK_ACTIONS": {
       "SECTION": "Quick Actions",
       "REQUESTS_LABEL": "Requests",
@@ -20,12 +15,8 @@
       "RECRUITMENT_SUBLABEL": "View pipeline"
     },
     "DIRECTORY": {
-      "TITLE": "Employee Directory",
-      "VIEW_ALL": "View all profiles",
-      "SEARCH_PLACEHOLDER": "Search...",
-      "FILTERS": "Filters",
-      "EMPTY": "No employees to display.",
-      "NO_MATCH": "No employees match this search."
+      "TITLE": "Latest joiners",
+      "EMPTY": "No recent joiners."
     },
     "ALERT_CARD": {
       "TITLE": "Watchlist",
@@ -33,26 +24,45 @@
       "PROBATION_EMPTY": "No upcoming deadlines.",
       "PROBATION_DAYS": "D-{{days}}",
       "MISSING_DOCS_TITLE": "Missing documents",
+      "MISSING_DOCS_EMPTY": "No missing documents",
       "URGENT": "Urgent",
       "REMINDER_SENT": "Reminder sent"
     },
     "EMPLOYEE_CARD": {
-      "PRESENT": "Present",
-      "REMOTE": "Remote",
-      "ON_LEAVE": "On Leave",
       "ROLE": "Role",
-      "COUNTRY": "Country",
-      "SENIORITY": "Seniority:",
       "VIEW_PROFILE": "View profile",
-      "COMPLETION_PERSO": "Info",
-      "COMPLETION_DOCS": "Docs",
-      "COMPLETION_SKILLS": "Skills"
+      "START_DATE": "Start date",
+      "ONBOARDING_PROGRESS": "Onboarding file",
+      "CONTRACT": {
+        "PERMANENT": "Permanent contract",
+        "FIXED_TERM": "Fixed-term contract",
+        "CONSULTANT": "Consultant",
+        "INTERN": "Internship",
+        "CDI": "Permanent contract",
+        "CDD": "Fixed-term contract",
+        "FREELANCE": "Freelance",
+        "STAGE": "Internship",
+        "CIVP": "Integration contract (CIVP)",
+        "DETACHEMENT": "Secondment",
+        "PORTAGE": "Umbrella employment"
+      },
+      "SECTION": {
+        "IDENTITY": "Identity",
+        "CONTRACT": "Position",
+        "REGIME": "Schedule",
+        "PERSONAL": "Personal",
+        "BANK": "Bank",
+        "EMERGENCY": "Emergency",
+        "DOCUMENTS": "Documents"
+      }
     },
     "WORKFORCE_STATS": {
       "LABEL": "Total Workforce",
       "ACTIVE_EMPLOYEES": "Active Employees",
       "FEMALE": "Female",
-      "MALE": "Male"
+      "MALE": "Male",
+      "BY_COUNTRY": "Headcount by country",
+      "COUNTRY_UNKNOWN": "Not set"
     },
     "PROFILE_COMPLETION": {
       "LABEL": "Profile Completion",
@@ -70,7 +80,9 @@
     "MOBILE_TABS": {
       "DIRECTORY": "Directory",
       "ACTIVITY": "Activity"
-    }
+    },
+    "PARTIAL_LOAD_ERROR": "Some data could not be loaded ({{count}}). The information shown is incomplete.",
+    "LOAD_ERROR": "Failed to load the dashboard."
   },
   "CANDIDATES": {
     "COMMON": {
@@ -2631,5 +2643,17 @@
       "SUBTITLE": "Absences, remote work, authorizations",
       "PLACEHOLDER": "Leave module — implementation coming soon."
     }
+  },
+  "NAV": {
+    "SECTION_LABEL": "HR NAVIGATION",
+    "ACCUEIL": "Home",
+    "PROFILES": "Profiles",
+    "PIPELINE": "HR Pipeline",
+    "CANDIDATES": "Candidates",
+    "IT_PROVISIONING": "IT Provisioning",
+    "ONBOARDING": "Onboarding",
+    "LIFECYCLE": "Lifecycle",
+    "REQUESTS": "Requests",
+    "ADMIN": "Admin"
   }
 }

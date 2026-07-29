@@ -33,7 +33,7 @@ const VISIBLE_LIMIT = 2;
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-[14px] font-bold text-on-surface">
-          {{ 'DASHBOARD.ALERT_CARD.TITLE' | translate }}
+          {{ 'HOME.ALERT_CARD.TITLE' | translate }}
         </h3>
         <span class="material-symbols-outlined text-red-500 text-[20px]">report</span>
       </div>
@@ -42,7 +42,7 @@ const VISIBLE_LIMIT = 2;
       <div class="bg-red-50 rounded-lg p-3 mb-3">
         <div class="flex items-center justify-between mb-2">
           <p class="text-[12px] font-bold text-red-700 uppercase">
-            {{ 'DASHBOARD.ALERT_CARD.PROBATION_TITLE' | translate }}
+            {{ 'HOME.ALERT_CARD.PROBATION_TITLE' | translate }}
           </p>
           @if (probationExtra() > 0) {
             <span class="text-[11px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-full leading-none">
@@ -53,7 +53,7 @@ const VISIBLE_LIMIT = 2;
 
         @if (probationAlerts().length === 0) {
           <p class="text-[13px] text-red-400">
-            {{ 'DASHBOARD.ALERT_CARD.PROBATION_EMPTY' | translate }}
+            {{ 'HOME.ALERT_CARD.PROBATION_EMPTY' | translate }}
           </p>
         }
 
@@ -94,7 +94,7 @@ const VISIBLE_LIMIT = 2;
       <div class="bg-surface-container rounded-lg p-3">
         <div class="flex items-center justify-between mb-2">
           <p class="text-[12px] font-bold text-on-surface">
-            {{ 'DASHBOARD.ALERT_CARD.MISSING_DOCS_TITLE' | translate }}
+            {{ 'HOME.ALERT_CARD.MISSING_DOCS_TITLE' | translate }}
           </p>
           @if (missingDocsExtra() > 0) {
             <span class="text-[11px] font-bold bg-on-surface text-surface px-2 py-0.5 rounded-full leading-none">
@@ -105,7 +105,7 @@ const VISIBLE_LIMIT = 2;
 
         @if (missingDocsAlerts().length === 0) {
           <p class="text-[13px] text-outline">
-            {{ 'DASHBOARD.ALERT_CARD.MISSING_DOCS_EMPTY' | translate }}
+            {{ 'HOME.ALERT_CARD.MISSING_DOCS_EMPTY' | translate }}
           </p>
         }
 
@@ -163,10 +163,12 @@ export class AlertCardComponent {
     return types.map(t => map[t] ?? t).join(', ');
   }
 
+  // `bg-danger` / `bg-warning` are declared in the lib's own @theme, so these can't
+  // silently lose their background the way `bg-error` did (see src/styles.css).
   urgencyClass(urgency: string): string {
     const map: Record<string, string> = {
-      HIGH:   'bg-error text-white',
-      MEDIUM: 'bg-orange-400 text-white',
+      HIGH:   'bg-danger text-white',
+      MEDIUM: 'bg-warning text-white',
       LOW:    'bg-surface-container-high text-outline',
     };
     return map[urgency] ?? 'bg-surface-container-high text-outline';

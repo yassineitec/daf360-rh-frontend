@@ -1,13 +1,8 @@
 {
-  "DASHBOARD": {
+  "HOME": {
     "TITLE": "Portail-RH",
     "SUBTITLE": "Bonjour {{name}}, voici l'état de vos effectifs aujourd'hui.",
     "NEW_EMPLOYEE": "Nouvel Employé",
-    "SENIORITY": {
-      "LESS_THAN_MONTH": "Moins d'un mois",
-      "MONTHS": "{{count}} mois",
-      "YEARS": "{{count}} an(s)"
-    },
     "QUICK_ACTIONS": {
       "SECTION": "Actions Rapides",
       "REQUESTS_LABEL": "Demandes",
@@ -20,12 +15,8 @@
       "RECRUITMENT_SUBLABEL": "Voir le pipeline"
     },
     "DIRECTORY": {
-      "TITLE": "Annuaire des profils",
-      "VIEW_ALL": "Voir tous les profils",
-      "SEARCH_PLACEHOLDER": "Rechercher...",
-      "FILTERS": "Filtres",
-      "EMPTY": "Aucun employé à afficher.",
-      "NO_MATCH": "Aucun employé ne correspond à cette recherche."
+      "TITLE": "Derniers arrivés",
+      "EMPTY": "Aucune arrivée récente."
     },
     "ALERT_CARD": {
       "TITLE": "À surveiller",
@@ -33,26 +24,45 @@
       "PROBATION_EMPTY": "Aucune échéance proche.",
       "PROBATION_DAYS": "J-{{days}}",
       "MISSING_DOCS_TITLE": "Documents manquants",
+      "MISSING_DOCS_EMPTY": "Aucun document manquant",
       "URGENT": "Urgent",
       "REMINDER_SENT": "Relance envoyée"
     },
     "EMPLOYEE_CARD": {
-      "PRESENT": "Présent",
-      "REMOTE": "Télétravail",
-      "ON_LEAVE": "En Congé",
       "ROLE": "Poste",
-      "COUNTRY": "Pays",
-      "SENIORITY": "Ancienneté :",
       "VIEW_PROFILE": "Voir profil",
-      "COMPLETION_PERSO": "Perso",
-      "COMPLETION_DOCS": "Docs",
-      "COMPLETION_SKILLS": "Skills"
+      "START_DATE": "Date d'entrée",
+      "ONBOARDING_PROGRESS": "Dossier d'intégration",
+      "CONTRACT": {
+        "PERMANENT": "Contrat à durée indéterminée",
+        "FIXED_TERM": "Contrat à durée déterminée",
+        "CONSULTANT": "Consultant",
+        "INTERN": "Stage",
+        "CDI": "Contrat à durée indéterminée",
+        "CDD": "Contrat à durée déterminée",
+        "FREELANCE": "Freelance",
+        "STAGE": "Stage",
+        "CIVP": "Contrat d'insertion (CIVP)",
+        "DETACHEMENT": "Détachement",
+        "PORTAGE": "Portage salarial"
+      },
+      "SECTION": {
+        "IDENTITY": "Identité",
+        "CONTRACT": "Poste",
+        "REGIME": "Régime",
+        "PERSONAL": "Personnel",
+        "BANK": "Banque",
+        "EMERGENCY": "Urgence",
+        "DOCUMENTS": "Documents"
+      }
     },
     "WORKFORCE_STATS": {
       "LABEL": "Total Effectifs",
       "ACTIVE_EMPLOYEES": "Employés Actifs",
       "FEMALE": "Féminin",
-      "MALE": "Masculin"
+      "MALE": "Masculin",
+      "BY_COUNTRY": "Effectif par pays",
+      "COUNTRY_UNKNOWN": "Non défini"
     },
     "PROFILE_COMPLETION": {
       "LABEL": "Complétion des profils",
@@ -70,7 +80,9 @@
     "MOBILE_TABS": {
       "DIRECTORY": "Annuaire",
       "ACTIVITY": "Activité"
-    }
+    },
+    "PARTIAL_LOAD_ERROR": "Certaines données n'ont pas pu être chargées ({{count}}). Les informations affichées sont incomplètes.",
+    "LOAD_ERROR": "Erreur lors du chargement du tableau de bord."
   },
   "CANDIDATES": {
     "COMMON": {
@@ -2631,5 +2643,17 @@
       "SUBTITLE": "Absences, télétravail, autorisations",
       "PLACEHOLDER": "Module Congés — implémentation à venir."
     }
+  },
+  "NAV": {
+    "SECTION_LABEL": "NAVIGATION RH",
+    "ACCUEIL": "Accueil",
+    "PROFILES": "Profils",
+    "PIPELINE": "Pipeline RH",
+    "CANDIDATES": "Candidats",
+    "IT_PROVISIONING": "Provisioning IT",
+    "ONBOARDING": "Onboarding",
+    "LIFECYCLE": "Cycle de vie",
+    "REQUESTS": "Demandes",
+    "ADMIN": "Admin"
   }
 }

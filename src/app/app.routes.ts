@@ -27,7 +27,7 @@ function registerTranslations(): void {
 }
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  { path: '', redirectTo: 'accueil', pathMatch: 'full' },
 
   // Portal redirects here after successful OAuth2 login.
   // This component re-loads /api/me and then navigates into the app.
@@ -62,11 +62,11 @@ export const routes: Routes = [
       }),
     ],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: '', redirectTo: 'accueil', pathMatch: 'full' },
       {
-        path: 'dashboard',
+        path: 'accueil',
         loadChildren: () =>
-          import('./modules/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES),
+          import('./modules/home/home.routes').then(m => m.HOME_ROUTES),
       },
       {
         path: 'profiles',
@@ -139,5 +139,5 @@ export const routes: Routes = [
     ],
   },
 
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: 'accueil' },
 ];
