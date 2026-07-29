@@ -1,224 +1,89 @@
-<div class="space-y-6">
+<!-- `daf-page` owns the vertical rhythm (32px between its direct children) and the
+     first-load skeleton, so this template carries no wrapper gap, no `space-y-*`
+     between sections and no spinner of its own (UI-PLAYBOOK §1, §5).
 
-  <!-- ── Header ──────────────────────────────────────────────────────── -->
-  <div class="flex items-center justify-between">
-      <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">{{ 'PROFILES.LIST.TITLE' | translate }}</h1>
-      @if (!loading()) {
-        <p class="text-[13px] text-outline mt-0.5">
-          {{ 'PROFILES.LIST.EMPLOYEES_COUNT' | translate:{ count: totalElements() } }}
-        </p>
-      }
-  </div>
+     Per §8b the page is only `daf-page` + `daf-page-header` + the toolbar + one
+     section component per view + pagination. Both sections are stateless shells:
+     search text, filters, selection and paging all live in the component, which
+     is why switching view keeps every one of them.
 
-  <!-- ── Search + controls: search on the left, filters + toggle on the right, all inside one card (matches /finance/clients) ── -->
-  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
-    <div class="p-4 sm:p-5">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
+     `kpis="0"` because this page has no KPI row — the default of 4 would draw
+     tiles that never resolve into anything, shifting the layout on load. -->
+<daf-page [loading]="firstLoad()" [kpis]="0">
 
-        <!-- Desktop/tablet: full search box -->
-        <div class="hidden sm:block w-[360px] ml-0.5">
-          <rh-search-bar
-            [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
-            [value]="searchQuery()"
-            (valueChange)="onSearch($event)" />
-        </div>
+  <!-- No `icon` — page headers carry no icon (UI-PLAYBOOK §1). -->
+  <daf-page-header
+    [title]="'PROFILES.LIST.TITLE' | translate"
+    [subtitle]="'PROFILES.LIST.SUBTITLE' | translate" />
 
-        <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
-        @if (mobileSearchOpen()) {
-          <div class="sm:hidden flex-1 flex items-center gap-2">
-            <rh-search-bar
-              class="flex-1"
-              [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
-              [value]="searchQuery()"
-              (valueChange)="onSearch($event)" />
-            <daf-button
-              class="icon-btn-toggle shrink-0"
-              [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
-              [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-              (onClick)="mobileSearchOpen.set(false)" />
-          </div>
-        } @else {
-          <!-- Mobile, search closed: icon-only toggle, consistent with the rest of the app -->
-          <daf-button
-            class="sm:hidden icon-btn-toggle shrink-0"
-            [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
-            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-            (onClick)="mobileSearchOpen.set(true)" />
+  <daf-search-toolbar
+    [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="searchText()"
+    [debounce]="300"
+    (valueChange)="onSearchChange($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="viewMode.set($any($event))" />
 
-          <div class="flex items-center gap-3">
-            <button type="button"
-              class="flex items-center gap-2 h-11 px-4 rounded-lg border border-outline-variant text-on-surface text-sm font-bold hover:bg-surface-container transition-colors"
-              (click)="onToolbarAction('filters')">
-              <span class="material-symbols-outlined text-[18px]">tune</span>
-              {{ 'PROFILES.LIST.ADVANCED_FILTERS' | translate }}
-            </button>
-
-            <!-- Grid/list toggle — desktop/tablet only; mobile always shows cards -->
-            <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-              @for (opt of viewToggleOptions(); track opt.id) {
-                <button type="button"
-                  class="flex items-center justify-center w-11 h-11 transition-colors"
-                  [class.bg-primary]="viewMode() === opt.id"
-                  [class.text-white]="viewMode() === opt.id"
-                  [class.text-outline]="viewMode() !== opt.id"
-                  [title]="opt.tooltip ?? ''"
-                  (click)="viewMode.set($any(opt.id))">
-                  <span class="material-symbols-outlined text-[18px]">{{ opt.icon }}</span>
-                </button>
-              }
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-  </daf-card>
-
-  <!-- ── Active filter tags ────────────────────────────────────────────── -->
-  @if (activeFilterTags().length > 0) {
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="text-[13px] text-outline">{{ 'PROFILES.LIST.ACTIVE_FILTERS' | translate }}</span>
-      @for (tag of activeFilterTags(); track tag.key) {
-        <span class="flex items-center gap-1 px-3 py-1 bg-surface-container
-                     rounded-full text-[13px] font-medium text-on-surface">
-          {{ tag.value }}
-          <button type="button" (click)="removeFilter(tag.key)">
-            <span class="material-symbols-outlined text-[12px] text-outline">close</span>
-          </button>
-        </span>
-      }
-      <daf-button
-        [label]="'PROFILES.LIST.CLEAR_ALL' | translate"
-        variant="ghost"
-        (onClick)="clearFilters()" />
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
     </div>
   }
 
-  <!-- ── Loading ───────────────────────────────────────────────────────── -->
-  @if (loading()) {
-    <div class="flex justify-center items-center h-64">
-      <span class="material-symbols-outlined text-display text-outline animate-spin">
-        progress_activity
-      </span>
-    </div>
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1) -->
+  @if (viewMode() === 'grid') {
+    <rh-profiles-cards-section
+      [employees]="employees()"
+      [selectedIds]="selectedIds()"
+      [loading]="loading()"
+      [skeletonCount]="pageSize()"
+      (viewProfile)="onViewProfile($event)"
+      (toggleSelect)="toggleSelect($event)"
+      (edit)="onEdit($event)"
+      (remove)="onDelete($event)" />
+  } @else {
+    <rh-profiles-table-section
+      [employees]="employees()"
+      [selectedIds]="selectedIds()"
+      [loading]="loading()"
+      [skeletonCount]="pageSize()"
+      (viewProfile)="onViewProfile($event)"
+      (toggleSelect)="toggleSelect($event)"
+      (edit)="onEdit($event)"
+      (remove)="onDelete($event)" />
   }
 
-  <!-- ── Error ─────────────────────────────────────────────────────────── -->
-  @else if (error()) {
-    <div class="flex flex-col items-center justify-center h-64 text-outline">
-      <span class="material-symbols-outlined text-display mb-3 text-error">error_outline</span>
-      <p class="text-body-lg font-medium">{{ 'PROFILES.LIST.LOAD_ERROR' | translate }}</p>
-      <daf-button
-        class="mt-3"
-        [label]="'PROFILES.LIST.RETRY' | translate"
-        variant="teal"
-        (onClick)="loadEmployees()" />
-    </div>
-  }
+  <daf-pagination
+    [currentPage]="currentPage()"
+    [totalPages]="totalPages()"
+    [totalElements]="totalElements()"
+    [pageSize]="pageSize()"
+    [pageSizeOptions]="pageSizeOptions"
+    [perPageLabel]="'PROFILES.LIST.PER_PAGE' | translate"
+    [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)" />
 
-  <!-- ── Grid view ─────────────────────────────────────────────────────── -->
-  @else if (viewMode() === 'grid') {
-    @if (employees().length === 0) {
-      <div class="flex flex-col items-center justify-center h-64 text-outline">
-        <span class="material-symbols-outlined text-display mb-3">person_search</span>
-        <p class="text-body-lg font-medium">{{ 'PROFILES.LIST.NO_EMPLOYEES' | translate }}</p>
-        <p class="text-[13px] mt-1">{{ 'PROFILES.LIST.ADJUST_FILTERS' | translate }}</p>
-      </div>
-    } @else {
-      @let selIds = selectedIds();
+</daf-page>
 
-      <!-- Select all row -->
-      <div class="flex items-center gap-3 mb-2">
-        <daf-checkbox
-          [checked]="isAllSelected()"
-          [indeterminate]="selectedCount() > 0 && !isAllSelected()"
-          (checkedChange)="$event ? selectAll() : clearSelection()"
-          [options]="{ label: isAllSelected() ? ('PROFILES.LIST.DESELECT_ALL' | translate) : ('PROFILES.LIST.SELECT_ALL' | translate:{ count: employees().length }) }" />
-        @if (selectedCount() > 0) {
-          <span class="text-[13px] font-medium text-[#50717B]">
-            {{ 'PROFILES.LIST.SELECTED_COUNT' | translate:{ count: selectedCount() } }}
-          </span>
-        }
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        @for (emp of employees(); track emp.userId ?? emp.userId) {
-          <rh-profile-grid-card
-            [employee]="emp"
-            [selected]="selIds.has(emp.userId!)"
-            (viewProfile)="onViewProfile($event)"
-            (moreActions)="onViewProfile($event)"
-            (onSelect)="toggleSelect($event.userId, $event.checked)"
-            (onEdit)="onEdit($event)"
-            (onDelete)="onDelete($event)" />
-        }
-      </div>
-    }
-  }
-
-  <!-- ── List view ─────────────────────────────────────────────────────── -->
-  @else {
-    @if (employees().length === 0) {
-      <div class="flex flex-col items-center justify-center h-64 text-outline">
-        <span class="material-symbols-outlined text-display mb-3">person_search</span>
-        <p class="text-body-lg font-medium">{{ 'PROFILES.LIST.NO_EMPLOYEES' | translate }}</p>
-        <p class="text-[13px] mt-1">{{ 'PROFILES.LIST.ADJUST_FILTERS' | translate }}</p>
-      </div>
-    } @else {
-      @let selIds = selectedIds();
-
-      <!-- Select all row -->
-      <div class="flex items-center gap-3 mb-1">
-        <daf-checkbox
-          [checked]="isAllSelected()"
-          [indeterminate]="selectedCount() > 0 && !isAllSelected()"
-          (checkedChange)="$event ? selectAll() : clearSelection()"
-          [options]="{ label: isAllSelected() ? ('PROFILES.LIST.DESELECT_ALL' | translate) : ('PROFILES.LIST.SELECT_ALL' | translate:{ count: employees().length }) }" />
-        @if (selectedCount() > 0) {
-          <span class="text-[13px] font-medium text-[#50717B]">
-            {{ 'PROFILES.LIST.SELECTED_COUNT' | translate:{ count: selectedCount() } }}
-          </span>
-        }
-      </div>
-
-      <div class="flex flex-col gap-3">
-        @for (emp of employees(); track emp.userId) {
-          <rh-profile-list-card
-            [employee]="emp"
-            [selected]="selIds.has(emp.userId!)"
-            (viewProfile)="onViewProfile($event)"
-            (moreActions)="onViewProfile($event)"
-            (onSelect)="toggleSelect($event.userId, $event.checked)"
-            (onEdit)="onEdit($event)"
-            (onDelete)="onDelete($event)" />
-        }
-      </div>
-    }
-  }
-
-  <!-- ── Pagination ─────────────────────────────────────────────────────── -->
-  @if (!loading() && totalPages() > 1) {
-    <div class="flex items-center justify-between pt-4
-                border-t border-outline-variant">
-      <span class="text-[13px] text-outline">
-        {{ 'PROFILES.LIST.EMPLOYEES_COUNT' | translate:{ count: totalElements() } }}
-      </span>
-      <daf-pagination
-        [currentPage]="currentPage()"
-        [totalPages]="totalPages()"
-        [totalElements]="totalElements()"
-        [config]="paginationConfig"
-        (pageChange)="onPageChange($event)" />
-    </div>
-  }
-
-</div>
-
-<!-- Bulk bar: @if guard ensures it unmounts (not just hides) when count reaches 0 -->
+<!-- Bulk bar: the @if unmounts it (rather than hiding it) once the count hits 0.
+     `totalCount` is the loaded page length, so "Tout sélectionner (N)" can only
+     ever select rows the page actually holds (§7b). -->
 @if (selectedCount() > 0) {
   <daf-bulk-action-bar
     [count]="selectedCount()"
+    [totalCount]="employees().length"
     [actions]="bulkActions()"
     [countLabel]="'PROFILES.BULK.COUNT_LABEL' | translate"
-    (actionClick)="onBulkActionClick($event)"
+    [selectAllLabel]="'PROFILES.BULK.SELECT_ALL' | translate"
+    [allSelectedLabel]="'PROFILES.BULK.ALL_SELECTED' | translate"
+    [cancelLabel]="'PROFILES.BULK.CANCEL' | translate"
+    (selectAll)="selectAll()"
+    (actionClick)="onBulkAction($event)"
     (cancel)="clearSelection()" />
 }

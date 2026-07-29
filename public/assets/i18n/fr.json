@@ -914,21 +914,43 @@
     },
     "LIST": {
       "TITLE": "Profils",
-      "EMPLOYEES_COUNT": "{{count}} employé(s)",
       "SEARCH_PLACEHOLDER": "Rechercher par nom, email…",
       "SEARCH_ARIA": "Rechercher",
       "ADVANCED_FILTERS": "Filtres avancés",
       "GRID_TOOLTIP": "Grille",
       "LIST_TOOLTIP": "Liste",
-      "ACTIVE_FILTERS": "Filtres actifs :",
-      "CLEAR_ALL": "Tout effacer",
       "LOAD_ERROR": "Erreur lors du chargement",
       "RETRY": "Réessayer",
       "NO_EMPLOYEES": "Aucun employé trouvé",
       "ADJUST_FILTERS": "Modifiez vos filtres de recherche",
-      "SELECT_ALL": "Tout sélectionner ({{count}})",
-      "DESELECT_ALL": "Tout désélectionner",
-      "SELECTED_COUNT": "{{count}} sélectionné(s)"
+      "SUBTITLE": "Annuaire des collaborateurs",
+      "PER_PAGE": "par page",
+      "RANGE_SUMMARY": "{start}–{end} sur {total}"
+    },
+    "FILTERS": {
+      "TITLE": "Filtrer les profils",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "RESET": "Réinitialiser",
+      "ALL": "Tous",
+      "PAYS": "Pays",
+      "DEPARTMENT": "Département",
+      "GRADE": "Grade",
+      "STATUS": "Statut",
+      "CONTRACT": "Type de contrat",
+      "HIRE_DATE": "Date d'embauche",
+      "HIRE_DATE_HINT": "Sélectionnez un début et une fin de période"
+    },
+    "TABLE": {
+      "EMPLOYEE": "Employé",
+      "GRADE": "Grade",
+      "DEPARTMENT": "Département",
+      "PAYS": "Pays",
+      "CONTRACT": "Contrat",
+      "STATUS": "Statut",
+      "HIRE_DATE": "Date d'embauche",
+      "EDIT": "Modifier",
+      "SELECT_ROW": "Sélectionner {{name}}"
     },
     "BULK": {
       "EXPORT": "Exporter Excel",
@@ -940,7 +962,10 @@
       "STATUS_SOON": "Modification de statut en lot — fonctionnalité à venir.",
       "DELETE_TITLE": "Supprimer les profils",
       "DELETE_MESSAGE": "Supprimer {{count}} profil(s) sélectionné(s) ? Cette action est irréversible.",
-      "DELETE_SOON": "Suppression en lot — fonctionnalité backend en cours."
+      "DELETE_SOON": "Suppression en lot — fonctionnalité backend en cours.",
+      "SELECT_ALL": "Tout sélectionner",
+      "ALL_SELECTED": "Tous sélectionnés",
+      "CANCEL": "Annuler la sélection"
     },
     "CARD": {
       "PAYS": "PAYS",

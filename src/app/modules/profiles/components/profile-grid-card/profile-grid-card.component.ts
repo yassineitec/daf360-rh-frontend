@@ -3,6 +3,9 @@ import { CardComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EmployeeListItem } from '../../models/profile.model';
 import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
+import {
+  contractLabel, lifecycleDotColor, lifecycleDotGlow, lifecycleLabel,
+} from '../../profile-labels';
 
 @Component({
   selector: 'rh-profile-grid-card',
@@ -20,7 +23,7 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
       [style.box-shadow]="selected() ? '0 0 0 2px #3a6567' : null"
       (mouseenter)="hovered.set(true)"
       (mouseleave)="hovered.set(false)"
-      (cardClick)="viewProfile.emit(employee().profileId)"
+      (cardClick)="toggleSelected()"
     >
       <div
         class="relative p-5 h-80 flex flex-col overflow-hidden"
@@ -79,8 +82,10 @@ import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
           <div
             class="w-[44%] shrink-0 flex flex-col items-center justify-center text-center overflow-hidden"
           >
+            <!-- Circular: shape only — the size, border and fallback behaviour
+                 below are unchanged. -->
             <div
-              class="w-28 h-28 rounded-xl overflow-hidden border border-outline-variant bg-surface-container shrink-0"
+              class="w-28 h-28 rounded-full overflow-hidden border border-outline-variant bg-surface-container shrink-0"
             >
               @if (photoSrc() !== null) {
                 <img
@@ -177,7 +182,6 @@ export class ProfileGridCardComponent {
   readonly employee = input.required<EmployeeListItem>();
   readonly selected = input<boolean>(false);
   readonly viewProfile = output<number | null>();
-  readonly moreActions = output<number | null>();
   readonly onSelect = output<{ userId: number; checked: boolean }>();
   readonly onEdit = output<number>();
   readonly onDelete = output<number>();
@@ -186,19 +190,9 @@ export class ProfileGridCardComponent {
 
   private translate = inject(TranslateService);
 
-  /** Contract-type codes that have a translated label (profile enum + lifecycle codes). */
-  private static readonly CONTRACT_CODES = new Set([
-    'PERMANENT', 'FIXED_TERM', 'INTERN', 'CONSULTANT',
-    'CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEMENT', 'PORTAGE', 'FREELANCE',
-  ]);
-
   readonly contractLabel = computed((): string => {
     this.translate.currentLang();
-    const c = this.employee().contractType;
-    if (!c) return '-';
-    return ProfileGridCardComponent.CONTRACT_CODES.has(c)
-      ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + c)
-      : c;
+    return contractLabel(this.employee().contractType, this.translate);
   });
 
   // 0 = try real photo, 1 = try gender avatar, 2 = show initials
@@ -227,29 +221,11 @@ export class ProfileGridCardComponent {
     return palette[code % palette.length];
   });
 
-  private readonly STATUS_MAP: Record<string, { color: string; glow?: string }> = {
-    ACTIVE: { color: '#10b981', glow: '0 0 8px rgba(16,185,129,0.5)' },
-    ON_LEAVE: { color: '#f59e0b' },
-    ON_MISSION: { color: '#3b82f6' },
-    OFFBOARDING: { color: '#f97316' },
-    TERMINATED: { color: '#ef4444' },
-    PRE_ONBOARDING: { color: '#8b5cf6' },
-    ARCHIVED: { color: '#6b7280' },
-  };
-
-  readonly statusColor = computed(() => {
-    const s = this.employee().lifecycleStatus;
-    return s ? (this.STATUS_MAP[s]?.color ?? '#6b7280') : '#6b7280';
-  });
+  readonly statusColor = computed(() => lifecycleDotColor(this.employee().lifecycleStatus));
+  readonly statusGlow  = computed(() => lifecycleDotGlow(this.employee().lifecycleStatus));
   readonly statusLabel = computed(() => {
     this.translate.currentLang();
-    const s = this.employee().lifecycleStatus;
-    if (!s) return '-';
-    return this.STATUS_MAP[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
-  });
-  readonly statusGlow = computed(() => {
-    const s = this.employee().lifecycleStatus;
-    return s ? (this.STATUS_MAP[s]?.glow ?? null) : null;
+    return lifecycleLabel(this.employee().lifecycleStatus, this.translate);
   });
 
   onImgError(): void {
@@ -261,6 +237,15 @@ export class ProfileGridCardComponent {
   handleSelect(checked: boolean): void {
     const id = this.employee().userId;
     if (id != null) this.onSelect.emit({ userId: id, checked });
+  }
+
+  /**
+   * Clicking anywhere on the card toggles selection — it does NOT open the profile.
+   * The profile is reached through the hover `visibility` button, which stops
+   * propagation so it can't do both.
+   */
+  toggleSelected(): void {
+    this.handleSelect(!this.selected());
   }
 
   emitEdit(): void {

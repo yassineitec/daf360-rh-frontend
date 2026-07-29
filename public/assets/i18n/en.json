@@ -914,21 +914,43 @@
     },
     "LIST": {
       "TITLE": "Profiles",
-      "EMPLOYEES_COUNT": "{{count}} employee(s)",
       "SEARCH_PLACEHOLDER": "Search by name, email…",
       "SEARCH_ARIA": "Search",
       "ADVANCED_FILTERS": "Advanced filters",
       "GRID_TOOLTIP": "Grid",
       "LIST_TOOLTIP": "List",
-      "ACTIVE_FILTERS": "Active filters:",
-      "CLEAR_ALL": "Clear all",
       "LOAD_ERROR": "Error while loading",
       "RETRY": "Retry",
       "NO_EMPLOYEES": "No employees found",
       "ADJUST_FILTERS": "Adjust your search filters",
-      "SELECT_ALL": "Select all ({{count}})",
-      "DESELECT_ALL": "Deselect all",
-      "SELECTED_COUNT": "{{count}} selected"
+      "SUBTITLE": "Employee directory",
+      "PER_PAGE": "per page",
+      "RANGE_SUMMARY": "{start}–{end} of {total}"
+    },
+    "FILTERS": {
+      "TITLE": "Filter profiles",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "RESET": "Reset",
+      "ALL": "All",
+      "PAYS": "Country",
+      "DEPARTMENT": "Department",
+      "GRADE": "Grade",
+      "STATUS": "Status",
+      "CONTRACT": "Contract type",
+      "HIRE_DATE": "Hire date",
+      "HIRE_DATE_HINT": "Pick a start and an end date"
+    },
+    "TABLE": {
+      "EMPLOYEE": "Employee",
+      "GRADE": "Grade",
+      "DEPARTMENT": "Department",
+      "PAYS": "Country",
+      "CONTRACT": "Contract",
+      "STATUS": "Status",
+      "HIRE_DATE": "Hire date",
+      "EDIT": "Edit",
+      "SELECT_ROW": "Select {{name}}"
     },
     "BULK": {
       "EXPORT": "Export Excel",
@@ -940,7 +962,10 @@
       "STATUS_SOON": "Bulk status change — feature coming soon.",
       "DELETE_TITLE": "Delete profiles",
       "DELETE_MESSAGE": "Delete {{count}} selected profile(s)? This action is irreversible.",
-      "DELETE_SOON": "Bulk delete — backend feature in progress."
+      "DELETE_SOON": "Bulk delete — backend feature in progress.",
+      "SELECT_ALL": "Select all",
+      "ALL_SELECTED": "All selected",
+      "CANCEL": "Clear selection"
     },
     "CARD": {
       "PAYS": "COUNTRY",
