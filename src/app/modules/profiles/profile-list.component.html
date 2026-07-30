@@ -44,8 +44,7 @@
       [skeletonCount]="pageSize()"
       (viewProfile)="onViewProfile($event)"
       (toggleSelect)="toggleSelect($event)"
-      (edit)="onEdit($event)"
-      (remove)="onDelete($event)" />
+      (edit)="onEdit($event)" />
   } @else {
     <rh-profiles-table-section
       [employees]="employees()"
@@ -54,8 +53,7 @@
       [skeletonCount]="pageSize()"
       (viewProfile)="onViewProfile($event)"
       (toggleSelect)="toggleSelect($event)"
-      (edit)="onEdit($event)"
-      (remove)="onDelete($event)" />
+      (edit)="onEdit($event)" />
   }
 
   <daf-pagination

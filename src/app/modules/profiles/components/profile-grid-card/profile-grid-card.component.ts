@@ -66,14 +66,6 @@ import {
           >
             <span class="material-symbols-outlined text-[18px]">edit</span>
           </button>
-          <button
-            type="button"
-            class="p-1.5 text-outline rounded hover:text-error
-               hover:bg-error-container transition-colors"
-            (click)="$event.stopPropagation(); emitDelete()"
-          >
-            <span class="material-symbols-outlined text-[18px]">delete</span>
-          </button>
         </div>
 
         <!-- Body row -->
@@ -88,10 +80,15 @@ import {
               class="w-28 h-28 rounded-full overflow-hidden border border-outline-variant bg-surface-container shrink-0"
             >
               @if (photoSrc() !== null) {
+                <!-- object-contain, not object-cover: "cover" fills the circle by
+                     cropping whatever doesn't fit the square, which cut off the
+                     edges of the photo. "contain" fits the whole image inside the
+                     circle instead — nothing is cropped. The shape is unchanged;
+                     the container still clips to a circle. -->
                 <img
                   [src]="photoSrc()!"
                   [alt]="employee().fullName"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-contain"
                   (error)="onImgError()"
                 />
               } @else {
@@ -184,7 +181,6 @@ export class ProfileGridCardComponent {
   readonly viewProfile = output<number | null>();
   readonly onSelect = output<{ userId: number; checked: boolean }>();
   readonly onEdit = output<number>();
-  readonly onDelete = output<number>();
 
   hovered = signal(false);
 
@@ -251,10 +247,5 @@ export class ProfileGridCardComponent {
   emitEdit(): void {
     const id = this.employee().profileId;
     if (id != null) this.onEdit.emit(id);
-  }
-
-  emitDelete(): void {
-    const id = this.employee().profileId;
-    if (id != null) this.onDelete.emit(id);
   }
 }

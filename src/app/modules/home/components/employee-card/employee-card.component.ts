@@ -118,11 +118,11 @@ export interface EmployeeCardSection {
                         stroke="var(--color-surface-container-high)" stroke-width="4" />
                 <circle cx="22" cy="22" [attr.r]="RING_RADIUS" fill="none"
                         stroke-width="4" stroke-linecap="round"
-                        [style.stroke]="ringColor()"
+                        [style.stroke]="RING_COLOR"
                         [attr.stroke-dasharray]="ringCircumference"
                         [attr.stroke-dashoffset]="ringOffset()" />
               </svg>
-              <span class="emp-card__ring-value" [style.color]="ringColor()">
+              <span class="emp-card__ring-value" [style.color]="RING_COLOR">
                 {{ completionPct() }}%
               </span>
             </div>
@@ -164,6 +164,17 @@ export interface EmployeeCardSection {
     </daf-card>
   `,
   styles: [`
+    /* The "section complete" progress bars use daf-progress-bar's 'tertiary'
+       variant, which resolves to background-color: var(--color-tertiary).
+       ProgressBarOptions has no custom-colour input, so retint the token scoped to
+       this host instead — the documented override mechanism (UI-PLAYBOOK §4:
+       overriding an existing lib token works because the utility reads the var at
+       runtime). Safe to scope here because 'tertiary' is used for nothing else
+       inside this card; the partial/empty bars are warning/danger. */
+    :host {
+      --color-tertiary: #9BCEC1;
+    }
+
     .emp-card {
       position: relative;
       overflow: hidden;
@@ -279,6 +290,10 @@ export interface EmployeeCardSection {
       font-weight: 700;
       line-height: 1;
       letter-spacing: -0.02em;
+      /* Fallback only — the template sets the colour inline from RING_COLOR so the
+         label always matches the arc. Kept so the label is never unstyled if that
+         binding is ever removed. */
+      color: var(--color-on-surface);
     }
 
     .emp-card__progress-title {
@@ -332,14 +347,18 @@ export class EmployeeCardComponent {
   );
 
   /**
-   * Continuous hue ramp: red at 0% → amber at 50% → green at 100%, so the ring's
-   * colour tracks the percentage itself rather than snapping between three states.
-   * Saturation and lightness are fixed so the same value stays legible as the
-   * centred label's text colour at every hue.
+   * Fixed ring colour, applied to BOTH the arc and the centred percentage label.
+   * Replaced a continuous hue ramp (`hsl(pct × 1.2, 68%, 40%)`, red → amber →
+   * green), so the ring no longer encodes completion in its colour — only in its
+   * arc length.
+   *
+   * Note the label is intentionally this same light sage: it's a deliberate design
+   * choice, not an oversight. The old ramp pinned lightness to 40% so one value
+   * could serve as both stroke and readable text; this value trades that legibility
+   * for the matching look. If the 11px label ever needs to read more strongly,
+   * darken it here rather than reintroducing a separate token.
    */
-  protected readonly ringColor = computed(() =>
-    `hsl(${Math.round(this.completionPct() * 1.2)} 68% 40%)`,
-  );
+  protected readonly RING_COLOR = '#A5CF83';
 
   /** Red at zero, amber while partial, tertiary once the section is fully filled. */
   sectionOptions(section: EmployeeCardSection): ProgressBarOptions {

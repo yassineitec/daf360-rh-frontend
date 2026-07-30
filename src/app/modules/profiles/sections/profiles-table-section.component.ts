@@ -57,7 +57,6 @@ export class ProfilesTableSectionComponent {
   readonly viewProfile  = output<number | null>();
   readonly toggleSelect = output<{ userId: number; checked: boolean }>();
   readonly edit         = output<number>();
-  readonly remove       = output<number>();
 
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -98,14 +97,6 @@ export class ProfilesTableSectionComponent {
           tooltip: this.translate.instant('PROFILES.TABLE.EDIT'),
           onClick: (row: TableRow) => {
             if (row['profileId'] != null) this.edit.emit(row['profileId']);
-          },
-        },
-        {
-          id: 'delete',
-          variant: 'danger' as const,
-          tooltip: this.translate.instant('PROFILES.BULK.DELETE'),
-          onClick: (row: TableRow) => {
-            if (row['profileId'] != null) this.remove.emit(row['profileId']);
           },
         },
       ],

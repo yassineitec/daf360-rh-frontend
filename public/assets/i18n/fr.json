@@ -955,14 +955,8 @@
     "BULK": {
       "EXPORT": "Exporter Excel",
       "EMAIL": "Email Collectif",
-      "STATUS": "Modifier Statut",
-      "DELETE": "Supprimer",
       "COUNT_LABEL": "sélectionné(s)",
       "CSV_HEADER": "Nom,Email,Pays,Statut,Date embauche",
-      "STATUS_SOON": "Modification de statut en lot — fonctionnalité à venir.",
-      "DELETE_TITLE": "Supprimer les profils",
-      "DELETE_MESSAGE": "Supprimer {{count}} profil(s) sélectionné(s) ? Cette action est irréversible.",
-      "DELETE_SOON": "Suppression en lot — fonctionnalité backend en cours.",
       "SELECT_ALL": "Tout sélectionner",
       "ALL_SELECTED": "Tous sélectionnés",
       "CANCEL": "Annuler la sélection"

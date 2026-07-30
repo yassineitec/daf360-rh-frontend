@@ -38,8 +38,7 @@ import { ProfileGridCardComponent } from '../components/profile-grid-card/profil
             [selected]="selIds.has(emp.userId)"
             (viewProfile)="viewProfile.emit($event)"
             (onSelect)="toggleSelect.emit($event)"
-            (onEdit)="edit.emit($event)"
-            (onDelete)="remove.emit($event)" />
+            (onEdit)="edit.emit($event)" />
         }
       </div>
     }
@@ -56,7 +55,6 @@ export class ProfilesCardsSectionComponent {
   readonly viewProfile  = output<number | null>();
   readonly toggleSelect = output<{ userId: number; checked: boolean }>();
   readonly edit         = output<number>();
-  readonly remove       = output<number>();
 
   protected readonly skeletons = computed(() =>
     Array.from({ length: Math.min(this.skeletonCount(), 12) }, (_, i) => i),

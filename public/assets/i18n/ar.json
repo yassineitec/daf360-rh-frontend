@@ -80,6 +80,86 @@
     "PARTIAL_LOAD_ERROR": "تعذر تحميل بعض البيانات ({{count}}). المعلومات المعروضة غير كاملة.",
     "LOAD_ERROR": "فشل تحميل لوحة المعلومات."
   },
+  "PROFILES": {
+    "LIST": {
+      "TITLE": "الملفات",
+      "SEARCH_PLACEHOLDER": "البحث بالاسم أو البريد الإلكتروني…",
+      "SEARCH_ARIA": "بحث",
+      "ADVANCED_FILTERS": "تصفية متقدمة",
+      "GRID_TOOLTIP": "شبكة",
+      "LIST_TOOLTIP": "قائمة",
+      "LOAD_ERROR": "خطأ أثناء التحميل",
+      "RETRY": "إعادة المحاولة",
+      "NO_EMPLOYEES": "لا يوجد أي موظف",
+      "ADJUST_FILTERS": "عدّل معايير البحث",
+      "SUBTITLE": "دليل الموظفين",
+      "PER_PAGE": "لكل صفحة",
+      "RANGE_SUMMARY": "{start}–{end} من {total}"
+    },
+    "FILTERS": {
+      "TITLE": "تصفية الملفات",
+      "APPLY": "تطبيق",
+      "CANCEL": "إلغاء",
+      "RESET": "إعادة تعيين",
+      "ALL": "الكل",
+      "PAYS": "البلد",
+      "DEPARTMENT": "القسم",
+      "GRADE": "الدرجة",
+      "STATUS": "الحالة",
+      "CONTRACT": "نوع العقد",
+      "HIRE_DATE": "تاريخ التعيين",
+      "HIRE_DATE_HINT": "اختر تاريخ البداية والنهاية"
+    },
+    "TABLE": {
+      "EMPLOYEE": "الموظف",
+      "GRADE": "الدرجة",
+      "DEPARTMENT": "القسم",
+      "PAYS": "البلد",
+      "CONTRACT": "العقد",
+      "STATUS": "الحالة",
+      "HIRE_DATE": "تاريخ التعيين",
+      "EDIT": "تعديل",
+      "SELECT_ROW": "تحديد {{name}}"
+    },
+    "BULK": {
+      "EXPORT": "تصدير Excel",
+      "EMAIL": "بريد جماعي",
+      "COUNT_LABEL": "محدد",
+      "CSV_HEADER": "الاسم,البريد الإلكتروني,البلد,الحالة,تاريخ التعيين",
+      "SELECT_ALL": "تحديد الكل",
+      "ALL_SELECTED": "تم تحديد الكل",
+      "CANCEL": "إلغاء التحديد"
+    },
+    "CARD": {
+      "PAYS": "البلد",
+      "CONTRACT_TYPE": "نوع العقد",
+      "STATUS": "الحالة",
+      "HIRE_DATE": "تاريخ التعيين",
+      "VIEW_PROFILE": "عرض الملف"
+    },
+    "LIFECYCLE": {
+      "PRE_ONBOARDING": "ما قبل الإدماج",
+      "ACTIVE": "نشط",
+      "ON_LEAVE": "في إجازة",
+      "ON_MISSION": "في مهمة",
+      "OFFBOARDING": "إنهاء الخدمة",
+      "TERMINATED": "منتهي",
+      "ARCHIVED": "مؤرشف"
+    },
+    "CONTRACT_TYPE": {
+      "PERMANENT": "عقد غير محدد المدة",
+      "FIXED_TERM": "عقد محدد المدة",
+      "INTERN": "تدريب",
+      "CONSULTANT": "مستشار",
+      "CDI": "عقد غير محدد المدة",
+      "CDD": "عقد محدد المدة",
+      "CIVP": "عقد تأهيل مهني",
+      "STAGE": "تدريب",
+      "DETACHEMENT": "إلحاق",
+      "PORTAGE": "حمل أجري",
+      "FREELANCE": "عمل حر"
+    }
+  },
   "LIFECYCLE": {
     "DASHBOARD": {
       "TITLE": "إنهاء الخدمة",

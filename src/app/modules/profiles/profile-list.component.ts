@@ -12,8 +12,6 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { ProfileListService, FilterOptions } from './services/profile-list.service';
-import { NotificationService } from '../../core/notification.service';
-import { ConfirmService } from '../../core/confirm.service';
 import { EmployeeListItem } from './models/profile.model';
 import { ProfilesCardsSectionComponent } from './sections/profiles-cards-section.component';
 import { ProfilesTableSectionComponent } from './sections/profiles-table-section.component';
@@ -60,9 +58,7 @@ const EMPTY_OPTIONS: FilterOptions = {
 })
 export class ProfileListComponent implements OnInit {
   private svc       = inject(ProfileListService);
-  private confirm   = inject(ConfirmService);
   private router    = inject(Router);
-  private notify    = inject(NotificationService);
   private translate = inject(TranslateService);
 
   // ── Data ───────────────────────────────────────────────────────────────────
@@ -181,10 +177,8 @@ export class ProfileListComponent implements OnInit {
   readonly bulkActions = computed<BulkAction[]>(() => {
     this.translate.currentLang();
     return [
-      { id: 'export', label: this.translate.instant('PROFILES.BULK.EXPORT'), icon: 'download'    },
-      { id: 'email',  label: this.translate.instant('PROFILES.BULK.EMAIL'),  icon: 'mail'        },
-      { id: 'status', label: this.translate.instant('PROFILES.BULK.STATUS'), icon: 'edit_square' },
-      { id: 'delete', label: this.translate.instant('PROFILES.BULK.DELETE'), icon: 'delete', variant: 'danger' },
+      { id: 'export', label: this.translate.instant('PROFILES.BULK.EXPORT'), icon: 'download' },
+      { id: 'email',  label: this.translate.instant('PROFILES.BULK.EMAIL'),  icon: 'mail'     },
     ];
   });
 
@@ -304,10 +298,8 @@ export class ProfileListComponent implements OnInit {
   // ── Bulk actions ───────────────────────────────────────────────────────────
   onBulkAction(actionId: string): void {
     switch (actionId) {
-      case 'export': this.onBulkExport();       break;
-      case 'email':  this.onBulkEmail();        break;
-      case 'status': this.onBulkStatusChange(); break;
-      case 'delete': this.onBulkDelete();       break;
+      case 'export': this.onBulkExport(); break;
+      case 'email':  this.onBulkEmail();  break;
     }
   }
 
@@ -344,22 +336,6 @@ export class ProfileListComponent implements OnInit {
     this.clearSelection();
   }
 
-  private onBulkStatusChange(): void {
-    this.notify.info(this.translate.instant('PROFILES.BULK.STATUS_SOON'));
-  }
-
-  private async onBulkDelete(): Promise<void> {
-    const count = this.selectedCount();
-    if (!(await this.confirm.ask({
-      title:        this.translate.instant('PROFILES.BULK.DELETE_TITLE'),
-      message:      this.translate.instant('PROFILES.BULK.DELETE_MESSAGE', { count }),
-      confirmLabel: this.translate.instant('PROFILES.BULK.DELETE'),
-      icon:         'delete',
-    }))) return;
-    this.notify.info(this.translate.instant('PROFILES.BULK.DELETE_SOON'));
-    this.clearSelection();
-  }
-
   // ── Navigation ─────────────────────────────────────────────────────────────
   onViewProfile(profileId: number | null): void {
     if (profileId != null) this.router.navigate(['/rh/profiles', profileId]);
@@ -367,10 +343,6 @@ export class ProfileListComponent implements OnInit {
 
   onEdit(profileId: number): void {
     this.router.navigate(['/rh/profiles', profileId], { queryParams: { edit: 'true' } });
-  }
-
-  onDelete(profileId: number): void {
-    this.notify.info(this.translate.instant('PROFILES.BULK.DELETE_SOON'));
   }
 
   // ── FilterResult coercion ──────────────────────────────────────────────────

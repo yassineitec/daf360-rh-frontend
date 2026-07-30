@@ -955,14 +955,8 @@
     "BULK": {
       "EXPORT": "Export Excel",
       "EMAIL": "Bulk Email",
-      "STATUS": "Change Status",
-      "DELETE": "Delete",
       "COUNT_LABEL": "selected",
       "CSV_HEADER": "Name,Email,Country,Status,Hire date",
-      "STATUS_SOON": "Bulk status change — feature coming soon.",
-      "DELETE_TITLE": "Delete profiles",
-      "DELETE_MESSAGE": "Delete {{count}} selected profile(s)? This action is irreversible.",
-      "DELETE_SOON": "Bulk delete — backend feature in progress.",
       "SELECT_ALL": "Select all",
       "ALL_SELECTED": "All selected",
       "CANCEL": "Clear selection"
