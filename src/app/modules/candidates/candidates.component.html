@@ -1,97 +1,62 @@
-<div class="space-y-6">
+<!-- /rh/recrutement — canonical page shape (UI-PLAYBOOK §1).
+     `daf-page` owns the 32px vertical rhythm, so there is no wrapper gap, no
+     `space-y-*` between sections and no full-page spinner. `kpis="3"` matches
+     the three funnel tiles, so the first-load skeleton doesn't draw a fourth
+     that never resolves. No `icon` on the header — page titles carry none. -->
+<daf-page [loading]="firstLoad()" [kpis]="3">
 
-  <!-- Page header -->
-  <div class="flex items-start sm:items-center justify-between gap-3">
-    <div>
-      <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-        {{ 'CANDIDATES.PIPELINE_RH.TITLE' | translate }}
-      </h1>
-      <p class="text-[13px] sm:text-[14px] text-outline mt-1">
-        {{ 'CANDIDATES.PIPELINE_RH.SUBTITLE' | translate }}
-      </p>
-    </div>
-    <ng-container *dafHasPermission="'CREATE_CANDIDATE'">
-      <!-- Mobile: icon-only FAB -->
-      <button type="button"
-        class="sm:hidden shrink-0 w-10 h-10 rounded-full bg-teal text-white flex items-center justify-center shadow-md active:scale-95 transition-all"
-        aria-label="Nouveau candidat"
-        (click)="onNewCandidate()">
-        <span class="material-symbols-outlined text-[22px]">add</span>
-      </button>
-      <!-- Desktop: full labeled button -->
-      <daf-button
-        class="hidden sm:block"
-        [label]="'CANDIDATES.ACTIONS.NEW_CANDIDATE' | translate"
-        variant="teal"
-        [options]="{ iconStart: 'add', size: 'md' }"
-        (onClick)="onNewCandidate()"
-      />
+  <daf-page-header
+    [title]="'CANDIDATES.PIPELINE_RH.TITLE' | translate"
+    [subtitle]="'CANDIDATES.PIPELINE_RH.SUBTITLE' | translate">
+    <ng-container pageActions>
+      <daf-button *dafHasPermission="'CREATE_CANDIDATE'"
+        [options]="{ variant: 'teal', label: ('CANDIDATES.ACTIONS.NEW_CANDIDATE' | translate), iconStart: 'add' }"
+        (onClick)="onNewCandidate()" />
     </ng-container>
-  </div>
+  </daf-page-header>
 
-  <!-- ═══ Funnel-health KPIs (Candidats actifs · Taux d'acceptation · Recrutés) ═══ -->
-  @if (statsLoading()) {
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      @for (i of [1, 2, 3]; track i) {
-        <div class="h-32 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant animate-pulse"></div>
-      }
-    </div>
-  } @else {
-    <!-- Metric card grid on desktop/tablet -->
-    <div class="hidden md:grid grid-cols-3 gap-6">
-      <daf-metric-card
-        [label]="'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate"
-        [value]="activeMetricValue()"
-        [delta]="activeDelta()"
-        [options]="{ icon: 'groups', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+  <!-- KPIs — one row at every width, never wraps -->
+  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate"
+      [value]="activeMetricValue()"
+      [delta]="activeDelta()"
+      [options]="{ icon: 'groups', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
 
-      <daf-metric-card
-        [label]="'CANDIDATES.PIPELINE_RH.KPI_ACCEPTANCE' | translate"
-        [value]="acceptanceMetricValue()"
-        [options]="{ icon: 'thumb_up', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+    <daf-metric-card
+      [label]="'CANDIDATES.PIPELINE_RH.KPI_ACCEPTANCE' | translate"
+      [value]="acceptanceMetricValue()"
+      [options]="{ icon: 'thumb_up', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
 
-      <daf-metric-card
-        [label]="'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate"
-        [value]="hiredMetricValue()"
-        [delta]="hiredDelta()"
-        [options]="{ icon: 'how_to_reg', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
-    </div>
+    <daf-metric-card
+      [label]="'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate"
+      [value]="hiredMetricValue()"
+      [options]="{ icon: 'how_to_reg', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+  </section>
 
-    <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-      <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
-        <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-          <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
-            <span class="material-symbols-outlined text-[18px]">groups</span>
-          </span>
-          <span class="text-[20px] font-bold text-on-surface leading-none">{{ activeMetricValue() }}</span>
-          <p class="text-[10.5px] text-outline leading-tight">{{ 'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate }}</p>
-        </div>
-        <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-          <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
-            <span class="material-symbols-outlined text-[18px]">thumb_up</span>
-          </span>
-          <span class="text-[20px] font-bold text-on-surface leading-none">{{ acceptanceMetricValue() }}</span>
-          <p class="text-[10.5px] text-outline leading-tight">{{ 'CANDIDATES.PIPELINE_RH.KPI_ACCEPTANCE' | translate }}</p>
-        </div>
-        <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-          <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
-            <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
-          </span>
-          <span class="text-[20px] font-bold text-on-surface leading-none">{{ hiredMetricValue() }}</span>
-          <p class="text-[10.5px] text-outline leading-tight">{{ 'CANDIDATES.PIPELINE_RH.KPI_HIRED' | translate }}</p>
-        </div>
-      </div>
-    </div>
-  }
+  <!-- Search + filters + view toggle: one lib toolbar, one card. The status
+       dropdown lives inside the filter panel, not loose beside the search. -->
+  <daf-search-toolbar
+    [placeholder]="'CANDIDATES.PIPELINE_RH.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
 
-  <!-- Action error banner -->
   @if (actionError()) {
-    <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ actionError() }}</div>
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ actionError() }}
+    </div>
   }
 
-  <!-- Drag guidance banner -->
   @if (notice()) {
-    <div class="flex items-center gap-2 bg-primary/10 text-primary text-sm rounded-xl px-4 py-3">
+    <div class="flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">
       <span class="material-symbols-outlined text-[18px]">info</span>
       <span class="flex-1">{{ notice() }}</span>
       <button type="button" class="text-primary/70 hover:text-primary" (click)="notice.set(null)">
@@ -100,498 +65,81 @@
     </div>
   }
 
-  <!-- Filters: desktop/tablet — search on the left, select + view toggle on the right, all inside one card (matches /finance/clients) -->
-  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="hidden sm:block">
-    <div class="flex sm:items-center sm:justify-between gap-3 p-4 sm:p-5">
-      <div class="w-56 shrink-0 ml-0.5">
-        <rh-search-bar
-          [placeholder]="'CANDIDATES.PIPELINE_RH.SEARCH_PLACEHOLDER' | translate"
-          [value]="search()"
-          (valueChange)="onSearch($event)" />
-      </div>
-
-      <div class="flex items-center gap-3">
-        @if (viewMode() === 'list') {
-          <daf-select
-            [selected]="statusFilter() ? [statusFilter()] : []"
-            [options]="statusSelectOptions()"
-            [config]="statusSelectConfig()"
-            (selectedChange)="onStatusChange($event)"
-          />
-        }
-        <!-- View toggle: list ⇄ kanban -->
-        <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-          <button
-            type="button"
-            class="flex items-center justify-center w-11 h-11 transition-colors"
-            [class.bg-primary]="viewMode() === 'list'"
-            [class.text-white]="viewMode() === 'list'"
-            [class.text-outline]="viewMode() !== 'list'"
-            [title]="'CANDIDATES.PIPELINE_RH.VIEW_LIST' | translate"
-            (click)="setView('list')">
-            <span class="material-symbols-outlined text-[18px]">view_list</span>
-          </button>
-          <button
-            type="button"
-            class="flex items-center justify-center w-11 h-11 transition-colors"
-            [class.bg-primary]="viewMode() === 'kanban'"
-            [class.text-white]="viewMode() === 'kanban'"
-            [class.text-outline]="viewMode() !== 'kanban'"
-            [title]="'CANDIDATES.PIPELINE_RH.VIEW_KANBAN' | translate"
-            (click)="setView('kanban')">
-            <span class="material-symbols-outlined text-[18px]">view_kanban</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </daf-card>
-
-  <!-- ═══ Desktop / tablet: list ⇄ kanban ═══ -->
-  <div class="hidden sm:block">
-  @if (viewMode() === 'list') {
-
-    <!-- Loading -->
-    @if (loading()) {
-      <div class="flex justify-center items-center h-48">
-        <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">progress_activity</span>
-      </div>
-
-    <!-- Empty state -->
-    } @else if (candidates().length === 0) {
-      <daf-card [options]="{ variant: 'glass', padding: 'lg' }">
-        <div class="flex flex-col items-center justify-center py-10 gap-4">
-          <span class="material-symbols-outlined text-6xl text-outline">inbox</span>
-          <div class="text-center">
-            <p class="text-body-md font-medium text-on-surface-variant">{{ 'CANDIDATES.PIPELINE_RH.NO_CANDIDATES_FOUND' | translate }}</p>
-            <p class="text-label-sm text-outline mt-1">
-              {{ 'CANDIDATES.PIPELINE_RH.TRY_ADJUST' | translate }}
-            </p>
-          </div>
-          <ng-container *dafHasPermission="'CREATE_CANDIDATE'">
-            <daf-button
-              [label]="'CANDIDATES.ACTIONS.ADD_CANDIDATE' | translate"
-              variant="secondary"
-              [options]="{ iconStart: 'person_add', size: 'sm' }"
-              (onClick)="onNewCandidate()" />
-          </ng-container>
-        </div>
-      </daf-card>
-
-    <!-- List table -->
-    } @else {
-      <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <daf-data-table
-          [columns]="columns()"
-          [rows]="rows()"
-          [config]="tableConfig()"
-          (rowClick)="onView($event['_source'].id)">
-
-          <ng-template dafCell="_actions" let-row>
-            <div class="inline-flex items-center gap-1 flex-wrap justify-end">
-              @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
-                <daf-button
-                  [label]="'CANDIDATES.ACTIONS.ACCEPT' | translate"
-                  variant="ghost"
-                  [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === row['_source'].id }"
-                  (onClick)="quickAccept(row['_source'], $event)" />
-                <daf-button
-                  [label]="'CANDIDATES.ACTIONS.REJECT' | translate"
-                  variant="danger"
-                  [options]="{ iconStart: 'cancel', size: 'sm' }"
-                  (onClick)="openRejectModal(row['_source'], $event)" />
-              }
-              <daf-button
-                [label]="'CANDIDATES.ACTIONS.VIEW' | translate"
-                variant="ghost"
-                [options]="{ iconStart: 'open_in_new', size: 'sm' }"
-                (onClick)="onView(row['_source'].id)" />
-            </div>
-          </ng-template>
-
-        </daf-data-table>
-      </div>
-
-      <!-- Count + Pagination -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4">
-        <span class="text-label-sm text-outline">
-          <span class="font-semibold text-on-surface">{{ totalElements() }}</span> {{ 'CANDIDATES.PIPELINE_RH.CANDIDATES_WORD' | translate }}
-        </span>
-        @if (totalPages() > 1) {
-          <daf-pagination
-            [currentPage]="currentPage()"
-            [totalPages]="totalPages()"
-            [totalElements]="totalElements()"
-            (pageChange)="onPageChange($event)" />
-        }
-      </div>
-    }
-
-  <!-- ═══════════════════ KANBAN VIEW ═══════════════════ -->
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
+       Each section renders only at its own breakpoint (host class), so there is
+       no duplicated desktop/mobile tree here (§8b). -->
+  @if (viewMode() === 'kanban') {
+    <rh-candidates-board-section
+      [columns]="kanbanColumns()"
+      [loading]="kanbanLoading()"
+      [draggedId]="draggedId()"
+      [dragOverKey]="dragOverKey()"
+      [statusLabel]="statusLabel()"
+      (open)="onView($event)"
+      (toggleSort)="toggleColumnSort($event)"
+      (dragStart)="onDragStart($event)"
+      (dragEnd)="onDragEnd()"
+      (dragOver)="onDragOver($event)"
+      (dragLeave)="onDragLeave($event)"
+      (cardDrop)="onDrop($event)" />
   } @else {
-
-    @if (kanbanLoading()) {
-      <div class="flex justify-center items-center h-48">
-        <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">progress_activity</span>
-      </div>
-    } @else {
-
-      <div #kanbanBoard class="flex gap-6 overflow-x-auto pb-4 items-start custom-scroll scroll-smooth"
-           (scroll)="onBoardScroll()">
-        @for (col of kanbanColumns(); track col.key) {
-          <div class="w-80 shrink-0 flex flex-col">
-            <!-- Column header (count sits right next to the label, per the design) -->
-            <div class="flex items-center gap-2 px-1 mb-3">
-              <span class="w-2.5 h-2.5 rounded-full" [style.background]="col.accent"></span>
-              <span class="text-sm font-bold text-on-surface">{{ col.label }}</span>
-              <span class="text-xs font-semibold text-on-surface-variant bg-surface-container-high rounded px-2 py-0.5">
-                {{ col.candidates.length }}
-              </span>
-              <button type="button"
-                class="flex items-center justify-center w-4 h-4 ml-auto shrink-0 text-outline-variant hover:text-outline transition-colors"
-                [title]="(columnSortDir(col.key) === 'asc' ? 'CANDIDATES.KANBAN.SORT_DESC' : 'CANDIDATES.KANBAN.SORT_ASC') | translate"
-                (click)="toggleColumnSort(col.key)">
-                <span class="material-symbols-outlined text-[14px]" style="font-variation-settings:'wght' 200">swap_vert</span>
-              </button>
-            </div>
-
-            <!-- Cards (native HTML5 drop target) — shows ~3 at a time, scrolls for the rest -->
-            <div
-              class="flex flex-col gap-3 min-h-[120px] max-h-[610px] overflow-y-auto overscroll-contain rounded-xl transition-all p-1 pr-2 pt-4 custom-scroll-y"
-              [style.box-shadow]="dragOverKey() === col.key ? '0 0 0 2px ' + col.accent : null"
-              (dragover)="onDragOver($event, col)"
-              (dragleave)="onDragLeave(col)"
-              (drop)="onDrop($event, col)">
-              @for (c of col.candidates; track c.id) {
-                <rh-kanban-card-shell
-                  class="cursor-grab active:cursor-grabbing"
-                  [surface]="'white'"
-                  [dragging]="draggedId() === c.id"
-                  [class.opacity-40]="draggedId() === c.id"
-                  draggable="true"
-                  (dragstart)="onDragStart(c)"
-                  (dragend)="onDragEnd()"
-                  (click)="onView(c.id)">
-
-                  <!-- Top row: status badge (column colour) + fit score -->
-                  <div class="flex items-center justify-between gap-2 mb-3">
-                    <span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider"
-                          [style.background]="col.badgeBg" [style.color]="col.accent">
-                      {{ statusBadge(c.status).label }}
-                    </span>
-                    @if (c.fitScore != null) {
-                      <span class="text-sm font-bold shrink-0" [class]="fitScoreClass(c.fitScore)">{{ c.fitScore }}% Fit</span>
-                    }
-                  </div>
-
-                  <!-- Identity: gender avatar (rounded) or initials -->
-                  <div class="flex items-center gap-3 mb-3">
-                    @if (avatarSrc(c.gender); as src) {
-                      <img [src]="src" [alt]="c.firstName + ' ' + c.lastName"
-                           class="w-12 h-12 rounded-lg object-cover border border-outline-variant shrink-0" />
-                    } @else {
-                      <div class="w-12 h-12 rounded-lg flex items-center justify-center text-sm font-bold text-white shrink-0"
-                           [style.background]="col.accent">
-                        {{ initials(c.firstName, c.lastName) }}
-                      </div>
-                    }
-                    <div class="min-w-0">
-                      <h4 class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</h4>
-                      <p class="text-xs text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
-                    </div>
-                  </div>
-
-                  <!-- Tags -->
-                  @if (c.experienceYears != null || c.contractType || c.appliedGrade) {
-                    <div class="flex flex-wrap gap-1.5 mb-1">
-                      @if (c.experienceYears != null) {
-                        <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ 'CANDIDATES.KANBAN.YEARS_EXP' | translate:{ years: c.experienceYears } }}</span>
-                      }
-                      @if (c.contractType) {
-                        <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ c.contractType }}</span>
-                      }
-                      @if (c.appliedGrade) {
-                        <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ c.appliedGrade }}</span>
-                      }
-                    </div>
-                  }
-
-                  <!-- Footer: next interview date + location (or not-set) -->
-                  <div class="flex items-center gap-2 pt-3 mt-3 border-t border-outline-variant text-outline text-[11px]">
-                    @if (c.nextInterviewAt) {
-                      <span class="flex items-center gap-1 shrink-0">
-                        <span class="material-symbols-outlined text-[14px]">event</span>
-                        {{ interviewDateText(c.nextInterviewAt) }}
-                      </span>
-                      <span class="flex items-center gap-1 ml-auto shrink-0 min-w-0"
-                            [class.italic]="!c.nextInterviewLocation" [class.opacity-70]="!c.nextInterviewLocation">
-                        <span class="material-symbols-outlined text-[14px]">location_on</span>
-                        <span class="truncate">{{ c.nextInterviewLocation || ('CANDIDATES.KANBAN.LOCATION_TBD' | translate) }}</span>
-                      </span>
-                    } @else {
-                      <span class="flex items-center gap-1 italic opacity-70">
-                        <span class="material-symbols-outlined text-[14px]">event_busy</span>
-                        {{ 'CANDIDATES.KANBAN.NO_INTERVIEW' | translate }}
-                      </span>
-                    }
-                  </div>
-                </rh-kanban-card-shell>
-              }
-
-              @if (col.candidates.length === 0) {
-                <div class="text-center text-xs text-outline py-6 border border-dashed border-outline-variant rounded-xl">
-                  {{ 'CANDIDATES.KANBAN.NO_CANDIDATE' | translate }}
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
-
-    }
-
-  }
-  </div>
-
-  <!-- ═══ Mobile: stage pills (wrap) + card list ═══ -->
-  <div class="sm:hidden">
-
-    <!-- Search: icon-only toggle, expands in place — stage filter chips sit in the same row, scrolling horizontally -->
-    <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block mb-3">
-      <div class="p-3 flex items-center gap-2">
-        @if (mobileSearchOpen()) {
-          <rh-search-bar
-            class="flex-1"
-            [placeholder]="'CANDIDATES.PIPELINE_RH.SEARCH_PLACEHOLDER' | translate"
-            [value]="search()"
-            (valueChange)="onSearch($event)" />
-          <daf-button
-            class="icon-btn-toggle shrink-0"
-            [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
-            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-            (onClick)="mobileSearchOpen.set(false)" />
-        } @else {
-          <daf-button
-            class="icon-btn-toggle shrink-0"
-            [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
-            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-            (onClick)="mobileSearchOpen.set(true)" />
-
-          @if (!kanbanLoading()) {
-            <div class="flex items-center gap-2 overflow-x-auto custom-scroll flex-1 min-w-0">
-              <button type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors shrink-0"
-                [class.bg-primary]="mobileStageFilter() === null"
-                [class.border-primary]="mobileStageFilter() === null"
-                [class.text-white]="mobileStageFilter() === null"
-                [class.border-outline-variant]="mobileStageFilter() !== null"
-                [class.text-outline]="mobileStageFilter() !== null"
-                (click)="mobileStageFilter.set(null)">
-                {{ 'CANDIDATES.KANBAN.ALL' | translate }} <span class="opacity-70">{{ kanbanItems().length }}</span>
-              </button>
-              @for (col of kanbanColumns(); track col.key) {
-                <button type="button"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border border-outline-variant transition-colors shrink-0"
-                  [class.bg-surface-container]="mobileStageFilter() === col.key"
-                  [class.text-on-surface]="mobileStageFilter() === col.key"
-                  [class.text-outline]="mobileStageFilter() !== col.key"
-                  (click)="mobileStageFilter.set(col.key)">
-                  <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
-                  {{ col.label }} <span class="opacity-70">{{ col.candidates.length }}</span>
-                </button>
-              }
-            </div>
-          }
-        }
-      </div>
-    </daf-card>
-
-    @if (kanbanLoading()) {
-      <div class="flex justify-center items-center h-48">
-        <span class="material-symbols-outlined text-5xl text-tertiary animate-spin">progress_activity</span>
-      </div>
-    } @else {
-      <div class="flex flex-col gap-3 mt-4">
-        @for (c of mobileFilteredCandidates(); track c.id) {
-          <rh-kanban-card-shell [surface]="'white'" (click)="onView(c.id)">
-
-            <div class="flex items-center justify-between gap-2 mb-3">
-              <span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider"
-                    [style.background]="badgeBgForStatus(c.status)" [style.color]="colorForStatus(c.status)">
-                {{ statusBadge(c.status).label }}
-              </span>
-              @if (c.fitScore != null) {
-                <span class="text-sm font-bold shrink-0" [class]="fitScoreClass(c.fitScore)">{{ c.fitScore }}% Fit</span>
-              }
-            </div>
-
-            <div class="flex items-start justify-between gap-3 mb-3">
-              <div class="flex items-center gap-3 min-w-0">
-                @if (avatarSrc(c.gender); as src) {
-                  <img [src]="src" [alt]="c.firstName + ' ' + c.lastName"
-                       class="w-12 h-12 rounded-lg object-cover border border-outline-variant shrink-0" />
-                } @else {
-                  <div class="w-12 h-12 rounded-lg flex items-center justify-center text-[12px] font-bold text-white shrink-0"
-                       [style.background]="colorForStatus(c.status)">
-                    {{ initials(c.firstName, c.lastName) }}
-                  </div>
-                }
-                <div class="min-w-0">
-                  <p class="font-bold text-on-surface truncate">{{ c.firstName }} {{ c.lastName }}</p>
-                  <p class="text-[12px] text-outline truncate">{{ c.appliedPosition ?? '—' }}</p>
-                </div>
-              </div>
-              @if (!(c.status === 'PENDING' && canAcceptReject())) {
-                <span class="material-symbols-outlined text-outline shrink-0">chevron_right</span>
-              }
-            </div>
-
-            @if (c.experienceYears != null || c.contractType) {
-              <div class="flex flex-wrap items-center gap-1.5 mb-1">
-                @if (c.experienceYears != null) {
-                  <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ c.experienceYears }} ans exp.</span>
-                }
-                @if (c.contractType) {
-                  <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ c.contractType }}</span>
-                }
-              </div>
-            }
-
-            <!-- Footer: next interview -->
-            <div class="flex items-center gap-2 pt-3 mt-3 border-t border-outline-variant text-outline text-[11px]">
-              @if (c.nextInterviewAt) {
-                <span class="flex items-center gap-1 shrink-0">
-                  <span class="material-symbols-outlined text-[14px]">event</span>
-                  {{ interviewDateText(c.nextInterviewAt) }}
-                </span>
-                <span class="flex items-center gap-1 ml-auto shrink-0 min-w-0"
-                      [class.italic]="!c.nextInterviewLocation" [class.opacity-70]="!c.nextInterviewLocation">
-                  <span class="material-symbols-outlined text-[14px]">location_on</span>
-                  <span class="truncate">{{ c.nextInterviewLocation || 'Lieu à définir' }}</span>
-                </span>
-              } @else {
-                <span class="flex items-center gap-1 italic opacity-70">
-                  <span class="material-symbols-outlined text-[14px]">event_busy</span>
-                  {{ 'CANDIDATES.KANBAN.NO_INTERVIEW' | translate }}
-                </span>
-              }
-            </div>
-
-            @if (c.status === 'PENDING' && canAcceptReject()) {
-              <div class="flex items-center gap-2 mt-3 pt-3 border-t border-outline-variant" (click)="$event.stopPropagation()">
-                <daf-button
-                  class="flex-1"
-                  [label]="'CANDIDATES.ACTIONS.ACCEPT' | translate"
-                  variant="ghost"
-                  [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === c.id }"
-                  (onClick)="quickAccept(c, $event)" />
-                <daf-button
-                  class="flex-1"
-                  [label]="'CANDIDATES.ACTIONS.REJECT' | translate"
-                  variant="danger"
-                  [options]="{ iconStart: 'cancel', size: 'sm' }"
-                  (onClick)="openRejectModal(c, $event)" />
-              </div>
-            }
-          </rh-kanban-card-shell>
-        } @empty {
-          <div class="flex flex-col items-center gap-2 py-16 text-center text-outline">
-            <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
-            <p class="text-[13px]">{{ 'CANDIDATES.KANBAN.NO_CANDIDATE_SHORT' | translate }}</p>
-          </div>
-        }
-      </div>
-    }
-  </div>
-
-  <!-- ═══ Recent activity + monthly objectives ═══ -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-
-    <!-- Activités Récentes (2/3) -->
-    <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }" class="lg:col-span-2 block">
-      <div class="flex items-center gap-2 mb-4">
-        <span class="material-symbols-outlined text-[18px] text-primary" style="font-variation-settings:'FILL' 1">bolt</span>
-        <h3 class="text-[15px] font-bold text-on-surface">{{ 'CANDIDATES.PIPELINE_RH.RECENT_ACTIVITY' | translate }}</h3>
-      </div>
-      <div class="space-y-3">
-        @for (activity of recentActivities(); track activity.id) {
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                 [class]="activityMeta(activity.action).bg">
-              <span class="material-symbols-outlined text-[18px]"
-                    [class]="activityMeta(activity.action).color">{{ activityMeta(activity.action).icon }}</span>
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-[13px] text-on-surface truncate">
-                {{ activity.actionLabel }}
-                @if (activity.candidateName) { — <b>{{ activity.candidateName }}</b> }
-              </p>
-              <p class="text-[11px] text-outline">{{ activity.timestamp }}</p>
-            </div>
-          </div>
-        }
-        @if (activities().length === 0) {
-          <p class="text-[13px] text-outline text-center py-6">{{ 'CANDIDATES.PIPELINE_RH.NO_RECENT_ACTIVITY' | translate }}</p>
-        }
-      </div>
-    </daf-card>
-
-    <!-- Objectifs du Mois (1/3) — dark card -->
-    <div class="rounded-xl p-6 text-white flex flex-col gap-5" style="background-color:#50717B">
-      <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-[18px]" style="color:#79D7BE;font-variation-settings:'FILL' 1">flag</span>
-        <h3 class="text-[15px] font-bold">{{ 'CANDIDATES.PIPELINE_RH.MONTHLY_GOALS' | translate }}</h3>
-      </div>
-      @if (currentObjective(); as obj) {
-        <div>
-          <div class="flex justify-between items-baseline text-[13px] mb-2">
-            <span style="color:rgba(255,255,255,0.85)">{{ 'CANDIDATES.PIPELINE_RH.RECRUITMENTS_MONTH' | translate:{ month: obj.monthLabel } }}</span>
-            <span class="text-[20px] font-bold">{{ obj.actual }}<span class="text-[13px] font-normal" style="color:rgba(255,255,255,0.6)">/{{ obj.target }}</span></span>
-          </div>
-          <div class="w-full bg-white/20 h-2.5 rounded-full overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-500"
-                 style="background-color:#79D7BE" [style.width.%]="objectiveProgress()"></div>
-          </div>
-          <p class="text-[11px] mt-2" style="color:rgba(255,255,255,0.7)">
-            {{ 'CANDIDATES.PIPELINE_RH.GOAL_PROGRESS' | translate:{ pct: objectiveProgress() } }}
-          </p>
-        </div>
-      } @else {
-        <p class="text-[13px]" style="color:rgba(255,255,255,0.7)">{{ 'CANDIDATES.PIPELINE_RH.NO_GOAL' | translate }}</p>
-      }
-    </div>
-  </div>
-
-  <!-- ═══ Kanban navigation map (fixed bottom-right, always visible) ═══ -->
-  @if (viewMode() === 'kanban' && boardHasOverflow()) {
-    <div class="hidden sm:block fixed bottom-6 right-6 z-40">
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-2
-                  opacity-30 shadow-md origin-bottom-right transition-all duration-200
-                  hover:opacity-100 hover:scale-150 hover:shadow-2xl">
-        <div class="relative flex gap-1" style="width: 172px;">
-          @for (col of kanbanColumns(); track col.key; let i = $index) {
-            <button type="button"
-              class="flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105"
-              [style.background]="col.badgeBg"
-              [title]="col.label + ' (' + col.candidates.length + ')'"
-              (click)="scrollToColumn(i)">
-              <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
-              <span class="text-[10px] font-bold leading-none" [style.color]="col.accent">{{ col.candidates.length }}</span>
-            </button>
-          }
-          <!-- viewport indicator -->
-          <div class="absolute top-0 bottom-0 rounded-md border-2 border-primary pointer-events-none transition-all duration-150"
-               [style.left]="viewportStyle().left" [style.width]="viewportStyle().width"></div>
-        </div>
-      </div>
-    </div>
+    <rh-candidates-table-section
+      [candidates]="candidates()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      [canAcceptReject]="canAcceptReject()"
+      [actioningId]="actioningId()"
+      [statusBadge]="statusBadgeCell()"
+      (open)="onView($event)"
+      (create)="onNewCandidate()"
+      (accept)="quickAccept($event)"
+      (reject)="openRejectModal($event)" />
   }
 
-</div>
+  <!-- Mobile is always the card list: a horizontal kanban and a data table are
+       both unusable at that width. -->
+  <rh-candidates-mobile-section
+    [columns]="kanbanColumns()"
+    [candidates]="mobileCandidates()"
+    [totalCount]="visibleKanbanCount()"
+    [stageFilter]="mobileStageFilter()"
+    [loading]="kanbanLoading()"
+    [canAcceptReject]="canAcceptReject()"
+    [actioningId]="actioningId()"
+    [statusLabel]="statusLabel()"
+    [accentFor]="accentFor()"
+    [badgeBgFor]="badgeBgFor()"
+    (stageFilterChange)="mobileStageFilter.set($event)"
+    (open)="onView($event)"
+    (accept)="quickAccept($event)"
+    (reject)="openRejectModal($event)" />
+
+  <!-- List view only — the board holds the whole tenant set in one fetch. -->
+  @if (viewMode() === 'list' && totalPages() > 0) {
+    <daf-pagination
+      class="hidden sm:block"
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
+
+</daf-page>
+
+<!-- Insights drawer: fixed layers, so it sits OUTSIDE daf-page — as a flex child
+     it would be a zero-height item that still consumed a 32px gap. -->
+<rh-recruitment-insights-panel
+  [activities]="recentActivities()"
+  [objective]="currentObjective()"
+  [progress]="objectiveProgress()"
+  [loading]="extrasLoading()" />
 
 <!-- Reject modal -->
 <app-reject-modal
   [visible]="rejectTarget() !== null"
   [target]="rejectTarget()"
   (closed)="rejectTarget.set(null)"
-  (rejected)="onRejected()"
-/>
+  (rejected)="onRejected()" />

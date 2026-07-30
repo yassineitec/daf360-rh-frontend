@@ -1,146 +1,162 @@
-import { Component, ElementRef, HostListener, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { forkJoin, catchError, of } from 'rxjs';
 import {
   BadgeCell,
+  BadgeOptions,
   ButtonComponent,
-  CardComponent,
-  DafCellDirective,
-  DataTableComponent,
+  DafHasPermissionDirective,
+  FilterField,
+  FilterResult,
   MetricCardComponent,
   MetricDelta,
+  PageComponent,
+  PageHeaderComponent,
   PaginationComponent,
-  SelectComponent,
-  SelectConfig,
-  SelectOption,
-  TableColumn,
-  TableConfig,
-  TableRow,
+  SearchToolbarComponent,
+  SearchToolbarFilterConfig,
+  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
 import { UserStore } from '../../core/user.store';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
+import { ConfirmService } from '../../core/confirm.service';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { avatarUrl } from '../../shared/utils/avatar.utils';
-import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { KanbanCardShellComponent } from '../../shared/kanban-card-shell.component';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   CandidateListItem,
   CandidateDashboardStats,
   CandidateStatus,
   PageResponse,
 } from './candidate.model';
+import { KANBAN_COLUMN_DEFS, KanbanColumn, KanbanColumnDef, byFitScoreDesc } from './kanban.model';
 import { PipelineService, PipelineActivity, PipelineObjective } from '../pipeline/services/pipeline.service';
-import { ConfirmService } from '../../core/confirm.service';
+import { CandidatesBoardSectionComponent } from './sections/candidates-board-section.component';
+import { CandidatesTableSectionComponent } from './sections/candidates-table-section.component';
+import { CandidatesMobileSectionComponent } from './sections/candidates-mobile-section.component';
+import { RecruitmentInsightsPanelComponent } from './sections/recruitment-insights-panel.component';
 
 const PAGE_SIZE = 10;
-
-/** Icon/colour per audit action, for the "Activités Récentes" feed. */
-const ACTIVITY_META: Record<string, { icon: string; bg: string; color: string }> = {
-  ACCEPT:                   { icon: 'verified',      bg: 'bg-teal-100',   color: 'text-teal-700'   },
-  HIRE_CANDIDATE:           { icon: 'check_circle',  bg: 'bg-green-100',  color: 'text-green-600'  },
-  REJECT:                   { icon: 'person_remove', bg: 'bg-red-100',    color: 'text-red-500'    },
-  SEND_OFFER:               { icon: 'send',          bg: 'bg-amber-100',  color: 'text-amber-600'  },
-  ACCEPT_OFFER:             { icon: 'handshake',     bg: 'bg-teal-100',   color: 'text-teal-700'   },
-  REJECT_OFFER:             { icon: 'thumb_down',    bg: 'bg-red-100',    color: 'text-red-500'    },
-  RENEGOTIATE_OFFER:        { icon: 'sync',          bg: 'bg-amber-100',  color: 'text-amber-600'  },
-  CREATE:                   { icon: 'person_add',    bg: 'bg-blue-100',   color: 'text-blue-600'   },
-  UPLOAD_CV:                { icon: 'upload_file',   bg: 'bg-teal-100',   color: 'text-teal-600'   },
-  COMPLETE_IT_PROVISIONING: { icon: 'terminal',      bg: 'bg-teal-100',   color: 'text-teal-600'   },
-  UPDATE:                   { icon: 'mail_outline',  bg: 'bg-orange-100', color: 'text-orange-600' },
-};
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 /** Kanban pulls the whole (tenant-scoped) candidate set in one page and groups it client-side. */
 const KANBAN_FETCH_SIZE = 500;
 
-/** A kanban column groups one or more candidate statuses into a workflow stage. */
-interface KanbanColumn {
-  key: string;
-  label: string;
-  statuses: CandidateStatus[];
-  /** Solid accent (dot, column left-border, pill text). */
-  accent: string;
-  /** Tinted background for the card status badge. */
-  badgeBg: string;
-  candidates: CandidateListItem[];
-}
+/** Candidate status codes, in workflow order, for the status filter. */
+const STATUS_CODES: CandidateStatus[] = [
+  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
+  'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
+];
 
-/** Static kanban column definition: label is resolved via i18n at render time. */
-interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label'> {
-  labelKey: string;
-}
+type ViewMode = 'list' | 'kanban';
 
 /**
- * Candidates landing page — the single, canonical candidate list.
+ * /rh/recrutement — the single, canonical candidate board.
  *
  * Backed entirely by the candidate backend (`/api/hr/candidates`,
- * CandidateController). It intentionally does NOT use the recruitment
- * pipeline endpoints (`/api/hr/pipeline/*`); statuses come straight from
- * CandidateStatus so the list, filters and KPIs all reflect the same source.
+ * CandidateController); statuses come straight from `CandidateStatus` so the
+ * board, the list and the KPIs all reflect the same source. The two pipeline
+ * endpoints it does call (`/pipeline/activity`, `/pipeline/objectives`) only
+ * feed the insights drawer.
+ *
+ * Architecture follows UI-PLAYBOOK §8b: this template is `daf-page` +
+ * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section
+ * component per view, and every section is a stateless input/output shell.
+ * **All view state lives here** — `searchText`, `statusFilter`, `viewMode`,
+ * paging, drag state — which is what makes flipping between board and list
+ * lossless.
  */
 @Component({
   selector: 'rh-candidates',
   standalone: true,
   imports: [
     ButtonComponent,
-    CardComponent,
-    DafCellDirective,
-    DataTableComponent,
-    MetricCardComponent,
-    KanbanCardShellComponent,
-    SelectComponent,
-    PaginationComponent,
     DafHasPermissionDirective,
+    MetricCardComponent,
+    PageComponent,
+    PageHeaderComponent,
+    PaginationComponent,
+    SearchToolbarComponent,
     RejectModalComponent,
-    RhSearchBarComponent,
+    CandidatesBoardSectionComponent,
+    CandidatesTableSectionComponent,
+    CandidatesMobileSectionComponent,
+    RecruitmentInsightsPanelComponent,
     TranslatePipe,
   ],
-  styles: [`
-    /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
-    .custom-scroll { scrollbar-width: none; }
-    .custom-scroll::-webkit-scrollbar { display: none; }
-
-    /* Column card list scrolls but its scrollbar is fully hidden (invisible, scroll preserved). */
-    .custom-scroll-y { scrollbar-width: none; }
-    .custom-scroll-y::-webkit-scrollbar { display: none; }
-
-    /* Card shape + hover from the /finance/affaires card grid — data placement/size unchanged. */
-    .aff-shape {
-      background: var(--color-surface-container-lowest, #fff);
-      border: 1px solid var(--color-outline-variant, #e5e7eb);
-      border-radius: 1rem;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-      cursor: pointer;
-      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
-    }
-    .aff-shape:hover {
-      transform: scale(1.03) translateY(-4px);
-      box-shadow: 0 16px 32px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.07);
-      z-index: 2;
-    }
-  `],
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
   private svc         = inject(CandidateService);
-  private confirm = inject(ConfirmService);
+  private confirm     = inject(ConfirmService);
   private pipelineSvc = inject(PipelineService);
   private router      = inject(Router);
   readonly userStore  = inject(UserStore);
   private translate   = inject(TranslateService);
 
-  /** Candidate status codes, in workflow order, for the status filter select. */
-  private readonly STATUS_CODES = [
-    'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
-    'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
-  ];
+  // ── Data ───────────────────────────────────────────────────────────────────
+  readonly page      = signal<PageResponse<CandidateListItem> | null>(null);
+  readonly dashStats = signal<CandidateDashboardStats>({
+    totalCandidates: 0, monthGrowthPct: null,
+    avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,
+    activeCandidates: 0, hiredTotal: 0, offerAcceptanceRate: null,
+  });
+  readonly kanbanItems = signal<CandidateListItem[]>([]);
+  readonly activities  = signal<PipelineActivity[]>([]);
+  readonly objectives  = signal<PipelineObjective[]>([]);
 
-  // ── Recent activity + monthly objectives (pipeline data) ────────────────────
-  readonly activities = signal<PipelineActivity[]>([]);
-  readonly objectives = signal<PipelineObjective[]>([]);
+  /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
+  readonly firstLoad     = signal(true);
+  /** Every subsequent fetch — skeletons inside the affected section only. */
+  readonly loading       = signal(false);
+  readonly kanbanLoading = signal(false);
+  readonly kanbanLoaded  = signal(false);
+  readonly extrasLoading = signal(true);
 
-  readonly recentActivities = computed(() => this.activities().slice(0, 5));
+  // ── View state (survives a view-mode switch) ───────────────────────────────
+  readonly viewMode     = signal<ViewMode>('kanban');
+  readonly search       = signal('');
+  readonly statusFilter = signal('');
+  readonly currentPage  = signal(0);
+  readonly pageSize     = signal(PAGE_SIZE);
+  readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
+  readonly candidates    = computed(() => this.page()?.content ?? []);
+  readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
+  readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
+
+  // ── Funnel-health KPIs ─────────────────────────────────────────────────────
+  readonly kpiActive     = computed(() => this.dashStats().activeCandidates);
+  readonly kpiHired      = computed(() => this.dashStats().hiredTotal);
+  readonly kpiAcceptance = computed(() => this.dashStats().offerAcceptanceRate);
+
+  readonly activeMetricValue = computed(() => this.kpiActive().toLocaleString('fr-FR'));
+  readonly hiredMetricValue  = computed(() => this.kpiHired().toLocaleString('fr-FR'));
+  readonly acceptanceMetricValue = computed(() => {
+    const r = this.kpiAcceptance();
+    return r == null ? '—' : `${Math.round(r)}%`;
+  });
+
+  /**
+   * 30-day growth in *new candidatures*. It belongs to the "Candidats actifs"
+   * tile only — the "Recrutés" tile used to show the very same number, which
+   * read as a hiring trend the backend never computes.
+   */
+  readonly activeDelta = computed<MetricDelta | null>(() => {
+    this.translate.currentLang();
+    const growth = this.dashStats().monthGrowthPct;
+    if (growth == null) return null;
+    return {
+      value: this.translate.instant('CANDIDATES.PIPELINE_RH.DELTA_VS_LAST_MONTH', {
+        pct: `${growth > 0 ? '+' : ''}${Math.round(growth)}`,
+      }),
+      direction: growth > 0 ? 'up' : growth < 0 ? 'down' : 'neutral',
+    };
+  });
+
+  // ── Insights drawer ────────────────────────────────────────────────────────
+  readonly recentActivities = computed(() => this.activities().slice(0, 8));
 
   readonly currentObjective = computed<PipelineObjective | null>(() => {
     const o = this.objectives();
@@ -153,225 +169,167 @@ export class CandidatesComponent implements OnInit {
     return Math.min(100, Math.round((o.actual / o.target) * 100));
   });
 
-  activityMeta(action: string): { icon: string; bg: string; color: string } {
-    return ACTIVITY_META[action] ?? { icon: 'info', bg: 'bg-surface-container', color: 'text-outline' };
-  }
-
-  readonly page          = signal<PageResponse<CandidateListItem> | null>(null);
-  readonly dashStats     = signal<CandidateDashboardStats>({
-    totalCandidates: 0, monthGrowthPct: null,
-    avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,
-    activeCandidates: 0, hiredTotal: 0, offerAcceptanceRate: null,
-  });
-  readonly loading       = signal(false);
-  readonly statsLoading  = signal(false);
-  readonly search        = signal('');
-  readonly mobileSearchOpen = signal(false);
-  readonly statusFilter  = signal('');
-  readonly currentPage   = signal(0);
-
-  readonly candidates    = computed(() => this.page()?.content ?? []);
-  readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
-  readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
-
-  // ── Funnel-health KPIs (daf-metric-card from lib) ──
-  readonly kpiActive     = computed(() => this.dashStats().activeCandidates);
-  readonly kpiHired      = computed(() => this.dashStats().hiredTotal);
-  readonly kpiAcceptance = computed(() => this.dashStats().offerAcceptanceRate);
-
-  readonly activeMetricValue     = computed(() => this.kpiActive().toLocaleString('fr-FR'));
-  readonly hiredMetricValue      = computed(() => this.kpiHired().toLocaleString('fr-FR'));
-  readonly acceptanceMetricValue = computed(() => {
-    const r = this.kpiAcceptance();
-    return r == null ? '—' : `${Math.round(r)}%`;
-  });
-
-  // ── Delta indicators (month-over-month trends) ──
-  readonly activeDelta = computed<MetricDelta | null>(() => {
-    const growth = this.dashStats().monthGrowthPct;
-    if (growth == null) return null;
-    const direction: 'up' | 'down' | 'neutral' = growth > 0 ? 'up' : growth < 0 ? 'down' : 'neutral';
-    return {
-      value: `${growth > 0 ? '+' : ''}${Math.round(growth)}% vs mois dernier`,
-      direction,
-    };
-  });
-
-  readonly hiredDelta = computed<MetricDelta | null>(() => {
-    const growth = this.dashStats().monthGrowthPct;
-    if (growth == null) return null;
-    const direction: 'up' | 'down' | 'neutral' = growth > 0 ? 'up' : growth < 0 ? 'down' : 'neutral';
-    return {
-      value: `${growth > 0 ? '+' : ''}${Math.round(growth)}% vs mois dernier`,
-      direction,
-    };
-  });
-
-  // ── Kanban board horizontal navigation map (bottom-right) ───────────────────
-  readonly boardScroll = signal({ left: 0, client: 0, scroll: 0 });
-
-  /** True when the board content overflows horizontally (the nav map is only useful then). */
-  readonly boardHasOverflow = computed(() => {
-    const b = this.boardScroll();
-    return b.scroll > b.client + 4;
-  });
-
-  /** Position/size of the viewport indicator inside the nav map, as % of the board width. */
-  readonly viewportStyle = computed(() => {
-    const b = this.boardScroll();
-    if (b.scroll <= 0) return { left: '0%', width: '100%' };
-    return {
-      left:  Math.max(0, (b.left / b.scroll) * 100) + '%',
-      width: Math.min(100, (b.client / b.scroll) * 100) + '%',
-    };
-  });
-
-  /** The horizontally-scrolling kanban board, for the left/right scroll buttons. */
-  private readonly kanbanBoard = viewChild<ElementRef<HTMLDivElement>>('kanbanBoard');
-
-  // ── View toggle (kanban is the default; list on demand) ─────────────────────
-  readonly viewMode      = signal<'list' | 'kanban'>('kanban');
-  readonly kanbanItems   = signal<CandidateListItem[]>([]);
-  readonly kanbanLoading = signal(false);
-  readonly kanbanLoaded  = signal(false);
-
-  /** Transient info banner for guided/blocked drag moves. */
-  readonly notice = signal<string | null>(null);
-
-  // ── Native HTML5 drag & drop state (no CDK — avoids Native Federation secondary-entry issues) ──
-  readonly draggedId   = signal<number | null>(null);
-  readonly dragOverKey = signal<string | null>(null);
-  private draggedCandidate: CandidateListItem | null = null;
-
-  /**
-   * Kanban stages mirror the coded candidate workflow (PENDING → … → HIRED / REJECTED).
-   * Each column owns a colour used for its dot, left-border and the card status badge.
-   */
-  private readonly columnDefs: KanbanColumnDef[] = [
-    { key: 'pending',  labelKey: 'CANDIDATES.KANBAN.COL_PENDING',  statuses: ['PENDING'],                                            accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)' },
-    { key: 'accepted', labelKey: 'CANDIDATES.KANBAN.COL_ACCEPTED', statuses: ['ACCEPTED', 'OFFER_SENT'],                             accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
-    { key: 'progress', labelKey: 'CANDIDATES.KANBAN.COL_PROGRESS', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], accent: '#1e40af', badgeBg: 'rgba(30,64,175,0.12)' },
-    { key: 'hired',    labelKey: 'CANDIDATES.KANBAN.COL_HIRED',    statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)' },
-    { key: 'rejected', labelKey: 'CANDIDATES.KANBAN.COL_REJECTED', statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)' },
-  ];
-
-  /** Highest fit score first; candidates without a score sink to the bottom. */
-  private byFitScoreDesc(a: CandidateListItem, b: CandidateListItem): number {
-    return (b.fitScore ?? -1) - (a.fitScore ?? -1);
-  }
-
-  /** Per-column fit-score sort direction, toggled via the small arrow icon in the column header. */
+  // ── Kanban ─────────────────────────────────────────────────────────────────
+  private readonly columnDefs = KANBAN_COLUMN_DEFS;
   readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
 
-  columnSortDir(key: string): 'asc' | 'desc' {
-    return this.columnSortDirs()[key] ?? 'desc';
-  }
-
   toggleColumnSort(key: string): void {
-    const next: 'asc' | 'desc' = this.columnSortDir(key) === 'asc' ? 'desc' : 'asc';
-    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: next }));
+    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: dirs[key] === 'asc' ? 'desc' : 'asc' }));
   }
 
+  /**
+   * The status filter is applied here as well as in the list query, so picking a
+   * status narrows the board too. Before, it silently only affected the list.
+   */
   readonly kanbanColumns = computed<KanbanColumn[]>(() => {
     this.translate.currentLang();
-    const all = this.kanbanItems();
+    const status = this.statusFilter();
+    const all  = status ? this.kanbanItems().filter(c => c.status === status) : this.kanbanItems();
     const dirs = this.columnSortDirs();
     return this.columnDefs.map(def => {
       const dir = dirs[def.key] ?? 'desc';
       return {
         ...def,
-        label: this.translate.instant(def.labelKey),
+        label:   this.translate.instant(def.labelKey),
+        sortDir: dir,
         candidates: all
           .filter(c => def.statuses.includes(c.status))
-          .sort((a, b) => dir === 'asc' ? -this.byFitScoreDesc(a, b) : this.byFitScoreDesc(a, b)),
+          .sort((a, b) => (dir === 'asc' ? -byFitScoreDesc(a, b) : byFitScoreDesc(a, b))),
       };
     });
   });
 
-  // ── Mobile kanban: stage pills + card list instead of horizontal columns ────
+  readonly visibleKanbanCount = computed(() =>
+    this.kanbanColumns().reduce((sum, col) => sum + col.candidates.length, 0),
+  );
+
+  // ── Mobile ─────────────────────────────────────────────────────────────────
   readonly mobileStageFilter = signal<string | null>(null);
 
-  readonly mobileFilteredCandidates = computed(() => {
-    const filter = this.mobileStageFilter();
-    if (!filter) return [...this.kanbanItems()].sort((a, b) => this.byFitScoreDesc(a, b));
-    return this.kanbanColumns().find(c => c.key === filter)?.candidates ?? [];
+  readonly mobileCandidates = computed(() => {
+    const key = this.mobileStageFilter();
+    const cols = this.kanbanColumns();
+    if (key) return cols.find(c => c.key === key)?.candidates ?? [];
+    return cols.flatMap(c => c.candidates).sort(byFitScoreDesc);
   });
 
-  // ── Reject modal state ─────────────────────────────────────────────────────
+  // ── Drag & drop (native HTML5 — no CDK, avoids Native Federation issues) ────
+  readonly draggedId   = signal<number | null>(null);
+  readonly dragOverKey = signal<string | null>(null);
+  private draggedCandidate: CandidateListItem | null = null;
+
+  // ── Actions ────────────────────────────────────────────────────────────────
   readonly rejectTarget = signal<CandidateListItem | null>(null);
   readonly actioningId  = signal<number | null>(null);
   readonly actionError  = signal<string | null>(null);
+  readonly notice       = signal<string | null>(null);
 
-  readonly canAcceptReject = computed(() =>
-    this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'),
-  );
+  readonly canAcceptReject = computed(() => this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'));
 
-  readonly statusSelectOptions = computed<SelectOption[]>(() => {
+  // ── Toolbar ────────────────────────────────────────────────────────────────
+  /**
+   * The status dropdown belongs *inside* the filter panel — `daf-search-toolbar`
+   * renders no free-standing selects next to the search box.
+   */
+  readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return this.STATUS_CODES.map(code => ({
-      value: code,
-      label: this.translate.instant('CANDIDATES.STATUS.' + code),
-    }));
+    return [{
+      name: 'status',
+      label: this.translate.instant('CANDIDATES.LIST.COL_STATUS'),
+      type: 'select',
+      placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES'),
+      options: STATUS_CODES.map(code => ({
+        value: code,
+        label: this.translate.instant('CANDIDATES.STATUS.' + code),
+      })),
+    }];
   });
 
-  readonly statusSelectConfig = computed<SelectConfig>(() => {
-    this.translate.currentLang();
-    return { placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES') };
-  });
-
-  protected readonly statusBadge = statusBadge;
-
-  // ── List view data table ─────────────────────────────────────────────────────
-  readonly columns = computed<TableColumn[]>(() => {
+  /**
+   * `initialValues` is a seed read once on first open, and a `select` needs the
+   * panel's internal shape — a `string[]`, not a bare string (§10b).
+   */
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    return {
+      title:        t('CANDIDATES.FILTERS.TITLE'),
+      applyLabel:   t('CANDIDATES.FILTERS.APPLY'),
+      cancelLabel:  t('CANDIDATES.FILTERS.CANCEL'),
+      resetLabel:   t('CANDIDATES.FILTERS.RESET'),
+      triggerLabel: t('CANDIDATES.FILTERS.TRIGGER'),
+      align:        'right',
+      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+    };
+  });
+
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
     return [
-      { key: 'candidat', label: t('CANDIDATES.LIST.COL_CANDIDATE'), type: 'avatar' },
-      { key: 'poste', label: t('CANDIDATES.LIST.COL_POSITION') },
-      { key: 'status', label: t('CANDIDATES.LIST.COL_STATUS'), type: 'badge' },
-      { key: 'expectedStartDate', label: t('CANDIDATES.LIST.COL_START_DATE') },
-      { key: '_actions', label: t('CANDIDATES.LIST.COL_ACTIONS'), align: 'right', clickable: true },
+      { id: 'kanban', icon: 'view_kanban', tooltip: this.translate.instant('CANDIDATES.PIPELINE_RH.VIEW_KANBAN') },
+      { id: 'list',   icon: 'view_list',   tooltip: this.translate.instant('CANDIDATES.PIPELINE_RH.VIEW_LIST')   },
     ];
   });
 
-  readonly rows = computed<TableRow[]>(() =>
-    this.candidates().map(c => ({
-      candidat: {
-        name: `${c.firstName} ${c.lastName}`,
-        initials: this.initials(c.firstName, c.lastName),
-        avatar: this.avatarSrc(c.gender),
-        subtitle: c.emailPersonal,
-      },
-      poste: c.appliedPosition ?? '—',
-      status: { label: this.statusBadge(c.status).label, options: this.statusBadge(c.status).options } as BadgeCell,
-      expectedStartDate: this.formatDate(c.expectedStartDate),
-      _source: c,
-    })),
-  );
+  // ── Presentation callbacks handed to the sections ──────────────────────────
+  /** Translated status label; the hardcoded-French `statusBadge` map is display-only. */
+  readonly statusLabel = computed(() => {
+    this.translate.currentLang();
+    return (status: string) => this.translate.instant('CANDIDATES.STATUS.' + status);
+  });
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.loading(),
-  }));
+  /** Translated label + the shared badge variant, for the table's badge column. */
+  readonly statusBadgeCell = computed(() => {
+    this.translate.currentLang();
+    return (status: string): BadgeCell => ({
+      label:   this.translate.instant('CANDIDATES.STATUS.' + status),
+      options: statusBadge(status).options as BadgeOptions,
+    });
+  });
 
-  ngOnInit(): void {
-    this.loadStats();
-    this.loadKanban(); // kanban is the default view
-    this.loadPipelineExtras();
+  readonly accentFor  = computed(() => (status: string) => this.columnForStatus(status)?.accent ?? '#64748b');
+  readonly badgeBgFor = computed(() => (status: string) => this.columnForStatus(status)?.badgeBg ?? 'rgba(100,116,139,0.12)');
+
+  private columnForStatus(status: string): KanbanColumnDef | undefined {
+    return this.columnDefs.find(d => d.statuses.includes(status as CandidateStatus));
   }
 
-  /** Recent activity + monthly objectives, from the pipeline endpoints. */
-  private loadPipelineExtras(): void {
-    this.pipelineSvc.getActivity().subscribe({ next: a => this.activities.set(a), error: () => {} });
-    this.pipelineSvc.getObjectives().subscribe({ next: o => this.objectives.set(o), error: () => {} });
+  // ── Load ───────────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    forkJoin({
+      stats:  this.svc.getDashboardStats().pipe(catchError(() => of(null))),
+      kanban: this.svc.getCandidates(this.kanbanQuery()).pipe(catchError(() => of(null))),
+    }).subscribe(({ stats, kanban }) => {
+      if (stats) this.dashStats.set(stats);
+      if (kanban) {
+        this.kanbanItems.set(kanban.content);
+        this.kanbanLoaded.set(true);
+      }
+      this.firstLoad.set(false);
+    });
+
+    // The drawer's two feeds are independent — they must never hold up the board.
+    forkJoin({
+      activity:   this.pipelineSvc.getActivity().pipe(catchError(() => of([] as PipelineActivity[]))),
+      objectives: this.pipelineSvc.getObjectives().pipe(catchError(() => of([] as PipelineObjective[]))),
+    }).subscribe(({ activity, objectives }) => {
+      this.activities.set(activity);
+      this.objectives.set(objectives);
+      this.extrasLoading.set(false);
+    });
   }
 
   private loadStats(): void {
-    this.statsLoading.set(true);
-    this.svc.getDashboardStats().subscribe({
-      next:  s  => { this.dashStats.set(s); this.statsLoading.set(false); },
-      error: () => this.statsLoading.set(false),
-    });
+    this.svc.getDashboardStats().subscribe({ next: s => this.dashStats.set(s), error: () => {} });
+  }
+
+  private kanbanQuery() {
+    return {
+      paysId: this.userStore.currentUser()?.paysId,
+      search: this.search() || undefined,
+      page:   0,
+      size:   KANBAN_FETCH_SIZE,
+    };
   }
 
   private loadCandidates(): void {
@@ -381,7 +339,7 @@ export class CandidatesComponent implements OnInit {
       status: this.statusFilter() || undefined,
       search: this.search()       || undefined,
       page:   this.currentPage(),
-      size:   PAGE_SIZE,
+      size:   this.pageSize(),
     }).subscribe({
       next:  r  => { this.page.set(r); this.loading.set(false); },
       error: () => this.loading.set(false),
@@ -390,65 +348,46 @@ export class CandidatesComponent implements OnInit {
 
   private loadKanban(): void {
     this.kanbanLoading.set(true);
-    this.svc.getCandidates({
-      paysId: this.userStore.currentUser()?.paysId,
-      search: this.search() || undefined,
-      page:   0,
-      size:   KANBAN_FETCH_SIZE,
-    }).subscribe({
-      next:  r  => {
+    this.svc.getCandidates(this.kanbanQuery()).subscribe({
+      next: r => {
         this.kanbanItems.set(r.content);
         this.kanbanLoaded.set(true);
         this.kanbanLoading.set(false);
-        setTimeout(() => this.syncBoardMetrics()); // board is now in the DOM
       },
       error: () => this.kanbanLoading.set(false),
     });
   }
 
-  /** Scroll a given column into view (nav-map click). */
-  scrollToColumn(index: number): void {
-    const el = this.kanbanBoard()?.nativeElement;
-    if (!el) return;
-    el.scrollTo({ left: index * 344, behavior: 'smooth' }); // 320px column + 24px gap
+  private reload(): void {
+    this.loadStats();
+    if (this.page())        this.loadCandidates();
+    if (this.kanbanLoaded()) this.loadKanban();
   }
 
-  onBoardScroll(): void { this.syncBoardMetrics(); }
-
-  @HostListener('window:resize')
-  syncBoardMetrics(): void {
-    const el = this.kanbanBoard()?.nativeElement;
-    if (!el) return;
-    this.boardScroll.set({ left: el.scrollLeft, client: el.clientWidth, scroll: el.scrollWidth });
-  }
-
-  setView(mode: 'list' | 'kanban'): void {
-    if (this.viewMode() === mode) return;
-    this.viewMode.set(mode);
+  // ── Toolbar handlers ───────────────────────────────────────────────────────
+  setView(mode: string): void {
+    const next = mode as ViewMode;
+    if (this.viewMode() === next) return;
+    this.viewMode.set(next);
     this.notice.set(null);
-    if (mode === 'kanban' && !this.kanbanLoaded()) {
-      this.loadKanban();
-    } else if (mode === 'kanban') {
-      setTimeout(() => this.syncBoardMetrics()); // re-measure when returning to an already-loaded board
-    } else if (mode === 'list' && !this.page()) {
-      this.loadCandidates();
-    }
+    if (next === 'kanban' && !this.kanbanLoaded()) this.loadKanban();
+    if (next === 'list'   && !this.page())         this.loadCandidates();
   }
 
-  onSearch(value: string | number | null): void {
-    this.search.set((value as string) ?? '');
+  onSearch(value: string): void {
+    if (value === this.search()) return; // daf-search-toolbar re-emits on blur
+    this.search.set(value ?? '');
     this.currentPage.set(0);
-    if (this.viewMode() === 'kanban') {
-      this.loadKanban();
-    } else {
-      this.loadCandidates();
-    }
+    this.loadKanban();
+    if (this.page()) this.loadCandidates();
   }
 
-  onStatusChange(values: string[]): void {
-    this.statusFilter.set(values[0] ?? '');
+  applyFilters(result: FilterResult): void {
+    const status = typeof result['status'] === 'string' ? result['status'] : '';
+    this.statusFilter.set(status);
     this.currentPage.set(0);
-    this.loadCandidates();
+    // The board filters `kanbanItems` client-side, so only the list needs a re-fetch.
+    if (this.page() || this.viewMode() === 'list') this.loadCandidates();
   }
 
   onPageChange(page: number): void {
@@ -456,22 +395,40 @@ export class CandidatesComponent implements OnInit {
     this.loadCandidates();
   }
 
-  onNewCandidate(): void {
-    this.router.navigate(['/rh/candidates', 'new']);
+  /** `pageSizeChange` fires alone — the page decides to go back to page 0 (§7). */
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.currentPage.set(0);
+    this.loadCandidates();
   }
 
-  onView(id: number): void {
-    this.router.navigate(['/rh/candidates', id]);
-  }
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
+  onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
 
-  // ── Accept / Reject workflow (PENDING candidates only) ──────────────────────
-  async quickAccept(c: CandidateListItem, event: Event): Promise<void> {
+  // ── Accept / reject (PENDING candidates only) ──────────────────────────────
+  async quickAccept({ candidate, event }: { candidate: CandidateListItem; event: Event }): Promise<void> {
     event.stopPropagation();
     if (!(await this.confirm.ask({
-      title: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_TITLE'),
-      message: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_MESSAGE', { name: `${c.firstName} ${c.lastName}` }),
+      title:   this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_TITLE'),
+      message: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_MESSAGE', { name: `${candidate.firstName} ${candidate.lastName}` }),
       confirmLabel: this.translate.instant('CANDIDATES.ACTIONS.ACCEPT'), icon: 'check_circle',
     }))) return;
+    this.accept(candidate);
+  }
+
+  openRejectModal({ candidate, event }: { candidate: CandidateListItem; event: Event }): void {
+    event.stopPropagation();
+    this.actionError.set(null);
+    this.rejectTarget.set(candidate);
+  }
+
+  onRejected(): void {
+    this.rejectTarget.set(null);
+    this.reload();
+  }
+
+  private accept(c: CandidateListItem): void {
     this.actioningId.set(c.id);
     this.actionError.set(null);
     this.svc.accept(c.id).subscribe({
@@ -483,24 +440,7 @@ export class CandidatesComponent implements OnInit {
     });
   }
 
-  openRejectModal(c: CandidateListItem, event: Event): void {
-    event.stopPropagation();
-    this.actionError.set(null);
-    this.rejectTarget.set(c);
-  }
-
-  onRejected(): void {
-    this.rejectTarget.set(null);
-    this.reload();
-  }
-
-  private reload(): void {
-    this.loadStats();
-    if (this.page()) this.loadCandidates();
-    if (this.kanbanLoaded()) this.loadKanban();
-  }
-
-  // ── Drag & drop workflow ────────────────────────────────────────────────────
+  // ── Drag & drop workflow ───────────────────────────────────────────────────
   onDragStart(c: CandidateListItem): void {
     this.draggedCandidate = c;
     this.draggedId.set(c.id);
@@ -512,42 +452,38 @@ export class CandidatesComponent implements OnInit {
     this.dragOverKey.set(null);
   }
 
-  onDragOver(event: DragEvent, col: KanbanColumn): void {
-    event.preventDefault(); // required so the column becomes a valid drop target
-    if (this.dragOverKey() !== col.key) this.dragOverKey.set(col.key);
+  onDragOver(key: string): void { this.dragOverKey.set(key); }
+
+  onDragLeave(key: string): void {
+    if (this.dragOverKey() === key) this.dragOverKey.set(null);
   }
 
-  onDragLeave(col: KanbanColumn): void {
-    if (this.dragOverKey() === col.key) this.dragOverKey.set(null);
-  }
-
-  onDrop(event: DragEvent, col: KanbanColumn): void {
-    event.preventDefault();
+  onDrop(col: KanbanColumn): void {
     const candidate = this.draggedCandidate;
     this.onDragEnd();
     if (candidate) this.applyStageMove(candidate, col);
   }
 
   /**
-   * Applies a card dropped onto another column. Each move maps to the REAL
-   * coded transition — no blind status flips (which would skip provisioning /
-   * contract creation). Immediate transitions call the guarded endpoints;
-   * multi-step transitions route the user to the dedicated flow.
+   * Applies a card dropped onto another column. Each move maps to the REAL coded
+   * transition — no blind status flips (which would skip provisioning / contract
+   * creation). Immediate transitions call the guarded endpoints; multi-step ones
+   * route the user to the dedicated flow.
    */
   private applyStageMove(candidate: CandidateListItem, target: KanbanColumn): void {
     const status = candidate.status;
-    if (target.statuses.includes(status)) return; // dropped in its own column, ignore
+    if (target.statuses.includes(status)) return; // dropped in its own column
     this.notice.set(null);
     this.actionError.set(null);
 
     switch (target.key) {
       case 'accepted':
-        if (status === 'PENDING') { this.dragAccept(candidate); }
+        if (status === 'PENDING') this.dragAccept(candidate);
         else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_ACCEPT'));
         break;
 
       case 'rejected':
-        if (status === 'PENDING') { this.rejectTarget.set(candidate); }
+        if (status === 'PENDING') this.rejectTarget.set(candidate);
         else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_REJECT'));
         break;
 
@@ -575,99 +511,18 @@ export class CandidatesComponent implements OnInit {
 
   private dragAccept(c: CandidateListItem): void {
     this.actioningId.set(c.id);
-    this.patchLocalStatus(c.id, 'ACCEPTED'); // optimistic — card jumps to Acceptés
+    this.patchLocalStatus(c.id, 'ACCEPTED'); // optimistic — the card jumps to Acceptés
     this.svc.accept(c.id).subscribe({
       next:  () => { this.actioningId.set(null); this.reload(); },
       error: err => {
         this.actioningId.set(null);
         this.actionError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.ACCEPT'));
-        this.loadKanban(); // revert optimistic move
+        this.loadKanban(); // revert the optimistic move
       },
     });
   }
 
-  /** Optimistically patch a candidate's status in the kanban set so the card regroups instantly. */
   private patchLocalStatus(id: number, status: CandidateStatus): void {
-    this.kanbanItems.update(items =>
-      items.map(c => (c.id === id ? { ...c, status } : c)),
-    );
-  }
-
-  // ── Display helpers ─────────────────────────────────────────────────────────
-  initials(fn: string, ln: string): string {
-    return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
-  }
-
-  /**
-   * Gender-based avatar image URL, or null when gender is unknown so the card/row
-   * falls back to initials. Keys off FEMALE via the shared avatar util.
-   */
-  avatarSrc(gender: string | null | undefined): string | undefined {
-    const g = gender?.trim().toUpperCase();
-    if (!g || g === 'UNSPECIFIED') return undefined;
-    return avatarUrl(gender);
-  }
-
-  /** Column definition owning a given status (drives per-status card colour on mobile). */
-  private columnForStatus(status: CandidateStatus): KanbanColumnDef | undefined {
-    return this.columnDefs.find(d => d.statuses.includes(status));
-  }
-
-  colorForStatus(status: CandidateStatus): string {
-    return this.columnForStatus(status)?.accent ?? '#64748b';
-  }
-
-  badgeBgForStatus(status: CandidateStatus): string {
-    return this.columnForStatus(status)?.badgeBg ?? 'rgba(100,116,139,0.12)';
-  }
-
-  /** Compact "12 juil. · 14:00" label for a scheduled interview. */
-  interviewDateText(iso: string | null | undefined): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    const date = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${date} · ${time}`;
-  }
-
-  formatDate(d: string | null | undefined): string {
-    if (!d) return '—';
-    const dt = new Date(d);
-    if (isNaN(dt.getTime())) return '—';
-    return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
-
-  /** Colour class for the fit-score chip (teal ≥85, blue ≥65, muted below). */
-  fitScoreClass(score: number | null | undefined): string {
-    if (score == null) return 'text-outline';
-    if (score >= 85) return 'text-teal';
-    if (score >= 65) return 'text-primary';
-    return 'text-error';
-  }
-
-  /** Whole days the candidate has been in the pipeline (since createdAt). */
-  daysInPipeline(createdAt: string | null | undefined): number | null {
-    if (!createdAt) return null;
-    const dt = new Date(createdAt);
-    if (isNaN(dt.getTime())) return null;
-    return Math.max(0, Math.floor((Date.now() - dt.getTime()) / 86_400_000));
-  }
-
-  /** Phase-aware primary footer metric, driven by the candidate's status. */
-  phaseMeta(c: CandidateListItem): { icon: string; text: string } {
-    switch (c.status) {
-      case 'HIRED':
-        return { icon: 'login', text: c.expectedStartDate ? 'Début ' + this.formatDate(c.expectedStartDate) : 'Embauché' };
-      case 'EMAIL_RECEIVED':
-        return { icon: 'event', text: c.expectedStartDate ? 'Début ' + this.formatDate(c.expectedStartDate) : 'Offre envoyée' };
-      case 'REJECTED':
-      case 'ARCHIVED':
-        return { icon: 'history', text: 'Clôturé' };
-      default: {
-        const d = this.daysInPipeline(c.createdAt);
-        return { icon: 'schedule', text: d != null ? 'Depuis ' + d + ' j' : 'Nouveau' };
-      }
-    }
+    this.kanbanItems.update(items => items.map(c => (c.id === id ? { ...c, status } : c)));
   }
 }

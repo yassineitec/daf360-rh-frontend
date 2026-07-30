@@ -1,6 +1,6 @@
 {
   "HOME": {
-    "TITLE": "HR Portal",
+    "TITLE": "HR Home",
     "SUBTITLE": "Hello {{name}}, here is the status of your workforce today.",
     "NEW_EMPLOYEE": "New Employee",
     "QUICK_ACTIONS": {
@@ -108,7 +108,12 @@
     "FILTERS": {
       "SHOW": "Filters",
       "HIDE": "Hide filters",
-      "ALL_STATUSES": "All statuses"
+      "ALL_STATUSES": "All statuses",
+      "TITLE": "Filter candidates",
+      "TRIGGER": "Filters",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "RESET": "Reset"
     },
     "ACTIONS": {
       "NEW_CANDIDATE": "New candidate",
@@ -183,7 +188,14 @@
       "MONTHLY_GOALS": "Monthly Goals",
       "RECRUITMENTS_MONTH": "Recruitments — {{month}}",
       "GOAL_PROGRESS": "{{pct}}% of the goal reached",
-      "NO_GOAL": "No goal set this month."
+      "NO_GOAL": "No goal set this month.",
+      "NO_TARGET_SET": "No recruitment demand planned for this month.",
+      "DELTA_VS_LAST_MONTH": "{{pct}}% applications vs previous 30 days"
+    },
+    "INSIGHTS": {
+      "TITLE": "Recruitment insights",
+      "SHOW": "Show recruitment insights",
+      "HIDE": "Hide recruitment insights"
     },
     "KANBAN": {
       "COL_PENDING": "Pending",
@@ -193,6 +205,7 @@
       "COL_REJECTED": "Rejected",
       "ALL": "All",
       "YEARS_EXP": "{{years}} yrs exp.",
+      "FIT_SUFFIX": "% Fit",
       "LOCATION_TBD": "Location TBD",
       "NO_INTERVIEW": "Interview not scheduled",
       "NO_CANDIDATE": "No candidate",

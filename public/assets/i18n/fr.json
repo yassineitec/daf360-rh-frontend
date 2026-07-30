@@ -1,6 +1,6 @@
 {
   "HOME": {
-    "TITLE": "Portail-RH",
+    "TITLE": "Accueil-RH",
     "SUBTITLE": "Bonjour {{name}}, voici l'état de vos effectifs aujourd'hui.",
     "NEW_EMPLOYEE": "Nouvel Employé",
     "QUICK_ACTIONS": {
@@ -108,7 +108,12 @@
     "FILTERS": {
       "SHOW": "Filtres",
       "HIDE": "Masquer filtres",
-      "ALL_STATUSES": "Tous les statuts"
+      "ALL_STATUSES": "Tous les statuts",
+      "TITLE": "Filtrer les candidats",
+      "TRIGGER": "Filtres",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "RESET": "Réinitialiser"
     },
     "ACTIONS": {
       "NEW_CANDIDATE": "Nouveau candidat",
@@ -183,7 +188,14 @@
       "MONTHLY_GOALS": "Objectifs du Mois",
       "RECRUITMENTS_MONTH": "Recrutements — {{month}}",
       "GOAL_PROGRESS": "{{pct}}% de l'objectif atteint",
-      "NO_GOAL": "Aucun objectif défini ce mois."
+      "NO_GOAL": "Aucun objectif défini ce mois.",
+      "NO_TARGET_SET": "Aucune demande de recrutement planifiée sur ce mois.",
+      "DELTA_VS_LAST_MONTH": "{{pct}}% de candidatures vs 30 j précédents"
+    },
+    "INSIGHTS": {
+      "TITLE": "Suivi recrutement",
+      "SHOW": "Afficher le suivi recrutement",
+      "HIDE": "Masquer le suivi recrutement"
     },
     "KANBAN": {
       "COL_PENDING": "En attente",
@@ -193,6 +205,7 @@
       "COL_REJECTED": "Rejetés",
       "ALL": "Tous",
       "YEARS_EXP": "{{years}} ans exp.",
+      "FIT_SUFFIX": "% Fit",
       "LOCATION_TBD": "Lieu à définir",
       "NO_INTERVIEW": "Entretien non planifié",
       "NO_CANDIDATE": "Aucun candidat",
