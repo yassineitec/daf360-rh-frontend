@@ -7,7 +7,7 @@ import {
   ContractListDto, ContractTransitionHistoryDto,
   STATUS_CONFIG, CONTRACT_TYPE_CONFIG,
 } from '../lifecycle/contract-lifecycle.model';
-import { SectionCardComponent } from './section-card.component';
+import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 import { fmtDate } from './field-bridges';
 
 /**
@@ -30,12 +30,18 @@ import { fmtDate } from './field-bridges';
   host: { class: 'block' },
   template: `
     <rh-section-card [title]="'PROFILES.SECTIONS.LIFECYCLE' | translate" icon="event_repeat">
-      @if (canEdit()) {
-        <daf-button sectionAction
-          [options]="{ variant: 'primary', size: 'sm', iconStart: 'add',
-                       label: ('PROFILES.LC.NEW_CONTRACT' | translate) }"
-          (onClick)="newContract.emit()" />
-      }
+      <!-- The sectionAction host must be a STATIC root node of the projected
+           content: an element nested inside an @if block lives in an embedded
+           view, so ng-content's selector never matches it and the button falls
+           into the card body instead of the header row. -->
+      <div sectionAction>
+        @if (canEdit()) {
+          <daf-button
+            [options]="{ variant: 'primary', size: 'sm', iconStart: 'add',
+                         label: ('PROFILES.LC.NEW_CONTRACT' | translate) }"
+            (onClick)="newContract.emit()" />
+        }
+      </div>
 
     <div class="flex flex-col gap-5">
 

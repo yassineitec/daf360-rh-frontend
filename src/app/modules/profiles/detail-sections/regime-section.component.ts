@@ -4,8 +4,8 @@ import { ButtonComponent, SkeletonComponent, StatusBadgeComponent } from '@khali
 
 import { EmployeeProfile } from '../models/profile.model';
 import { ResolvedRegimeDto } from '../../admin/regimes/regime.model';
-import { ProfileFieldComponent } from './profile-field.component';
-import { SectionCardComponent } from './section-card.component';
+import { ProfileFieldComponent } from '../../../shared/detail/profile-field.component';
+import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 import { fmtDate } from './field-bridges';
 
 type BadgeVariant = 'teal' | 'secondary' | 'neutral';

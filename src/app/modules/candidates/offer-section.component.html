@@ -1,9 +1,10 @@
-<div class="bg-white rounded-xl border border-outline-variant p-5">
-  <div class="flex items-center justify-between mb-4">
-    <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
-      <span class="material-symbols-outlined text-[18px]">handshake</span>
-      <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.OFFER.TITLE' | translate }}</h3>
-    </div>
+<!-- rh-section-card, not a hand-rolled `bg-white rounded-xl border`: one section
+     shell across /rh/candidates/:id and /rh/profiles/:id (UI-PLAYBOOK §10f). -->
+<rh-section-card [title]="'CANDIDATES.OFFER.TITLE' | translate" icon="handshake">
+  <!-- The `sectionAction` host must be a STATIC root node of the projected
+       content: an element nested inside `@if` lives in an embedded view, so
+       `ng-content select` never matches it and it falls into the default slot. -->
+  <div sectionAction>
     @if (offer(); as o) {
       <daf-badge
         [label]="(o.status === 'ACCEPTED' ? 'CANDIDATES.OFFER.STATUS_ACCEPTED' : (o.status === 'REJECTED' ? 'CANDIDATES.OFFER.STATUS_REJECTED' : (o.status === 'EXPIRED' ? 'CANDIDATES.OFFER.STATUS_EXPIRED' : 'CANDIDATES.OFFER.STATUS_SENT'))) | translate"
@@ -90,7 +91,7 @@
       {{ 'CANDIDATES.OFFER.NOT_YET' | translate }}
     </p>
   }
-</div>
+</rh-section-card>
 
 <!-- ── Send / renegotiate modal ─────────────────────────────────────────────── -->
 <app-modal

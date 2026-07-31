@@ -67,7 +67,7 @@ import { badgeVariant, candidateAvatar, candidateInitials, fitScoreClass } from 
       </div>
 
       <!-- Préqualification: skill chips -->
-      @if (stage() === 'SCREENING' && candidate().skills?.length) {
+      @if (stage() === 'SCREENING' && candidate().skills.length) {
         <div class="flex flex-wrap gap-1.5 mb-3">
           @for (skill of candidate().skills.slice(0, 3); track skill) {
             <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">

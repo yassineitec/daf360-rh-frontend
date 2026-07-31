@@ -10,12 +10,17 @@ export type ProfileFieldVariant =
   | 'tile';
 
 /**
- * Read-only label + value pair — the display half of every field on the profile
+ * Read-only label + value pair — the display half of every field on a detail
  * page. Was `app-field`, declared inline in `profile-detail.component.ts`.
  *
- * Stays app-local: the lib has no read-only field display, and every usage is on
- * this page. Three variants rather than three components because they differ only
- * in chrome, and one place to change means the tabs can't drift apart.
+ * Shared by `/rh/profiles/:id` and `/rh/candidates/:id`, which is why it lives in
+ * `shared/detail/` rather than in the profiles module. The selector keeps its
+ * original `rh-profile-field` name — it is used 40+ times and renaming it buys
+ * nothing; read it as "detail field".
+ *
+ * Stays app-local: the lib has no read-only field display. Three variants rather
+ * than three components because they differ only in chrome, and one place to
+ * change means the tabs can't drift apart.
  */
 @Component({
   selector: 'rh-profile-field',

@@ -11,27 +11,17 @@ import {
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { UserStore } from '../../core/user.store';
 import { ButtonComponent } from '@khalilrebhiitec/daf360';
+import { SectionCardComponent } from '../../shared/detail/section-card.component';
 
 @Component({
   selector: 'app-candidate-cost-simulation',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, SectionCardComponent],
   template: `
-    <div class="border border-outline-variant/40 rounded-2xl overflow-hidden">
-      <!-- Header -->
-      <div class="flex items-center gap-3 px-5 py-4 border-b border-outline-variant/40"
-           style="background:rgba(0,193,173,0.05)">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-             style="background:rgba(0,193,173,0.12); color:#00c1ad">
-          <span class="material-symbols-outlined text-[18px]">calculate</span>
-        </div>
-        <div>
-          <h3 class="text-[13px] font-semibold text-on-surface">Simulation de coût salarial</h3>
-          <p class="text-[11px] text-on-surface-variant">Calculer le coût chargé à partir du salaire net</p>
-        </div>
-      </div>
-
-      <div class="p-5 space-y-5">
+    <!-- rh-section-card, not a bespoke bordered box with an rgba(0,193,173) header
+         tint: one section shell on /rh/candidates/:id (UI-PLAYBOOK §10f). -->
+    <rh-section-card title="Simulation de coût salarial" icon="calculate" accent="tertiary">
+      <div class="space-y-5">
         <!-- Input row -->
         <div class="flex items-end gap-3">
           <div class="flex-1">
@@ -65,7 +55,7 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
 
         <!-- Error -->
         @if (calcError()) {
-          <div class="flex items-center gap-2 rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-[13px] text-error">
+          <div class="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-[13px] text-danger">
             <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1">error</span>
             {{ calcError() }}
           </div>
@@ -113,7 +103,7 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
 
           <!-- Convergence warning -->
           @if (!result()!.convergenceOk) {
-            <div class="flex items-start gap-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+            <div class="flex items-start gap-2 text-[12px] text-warning bg-warning/10 border border-warning/30 rounded-xl px-3.5 py-2.5">
               <span class="material-symbols-outlined text-[15px] mt-0.5">warning</span>
               La simulation n'a pas convergé ({{ result()!.iterationsUsed }} itérations). Résultat approximatif.
             </div>
@@ -138,14 +128,14 @@ import { ButtonComponent } from '@khalilrebhiitec/daf360';
           </div>
 
           @if (submitError()) {
-            <div class="flex items-center gap-2 rounded-xl border border-error/30 bg-error/5 px-4 py-3 text-[13px] text-error">
+            <div class="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-[13px] text-danger">
               <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1">error</span>
               {{ submitError() }}
             </div>
           }
         }
       </div>
-    </div>
+    </rh-section-card>
   `,
 })
 export class CandidateCostSimulationComponent implements OnInit {

@@ -2,7 +2,6 @@ import { Component, Input, OnInit, computed, inject, signal } from '@angular/cor
 import {
   BadgeOptions,
   ButtonComponent,
-  CardComponent,
   FormFieldComponent,
   MultiDatePickerComponent,
   SelectComponent,
@@ -12,6 +11,7 @@ import {
 import { UserStore } from '../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { dateToIso } from '../../shared/date-picker.utils';
+import { SectionCardComponent } from '../../shared/detail/section-card.component';
 import { InterviewService } from './interview.service';
 import {
   CandidateInterview,
@@ -28,7 +28,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
   standalone: true,
   imports: [
     ButtonComponent,
-    CardComponent,
+    SectionCardComponent,
     SelectComponent,
     FormFieldComponent,
     MultiDatePickerComponent,
@@ -36,17 +36,17 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
     TranslatePipe,
   ],
   template: `
-    <daf-card class="block" [options]="{ variant: 'outlined', padding: 'lg', radius: 'xl' }">
+    <!-- rh-section-card, not a bespoke daf-card: /rh/candidates/:id and
+         /rh/profiles/:id share one section shell, so no panel can drift on
+         padding, heading size or icon placement (UI-PLAYBOOK §10f). -->
+    <rh-section-card
+      [title]="'CANDIDATES.INTERVIEWS.TITLE' | translate"
+      icon="record_voice_over">
 
-      <!-- Section header -->
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2" style="color:var(--color-on-surface-variant)">
-          <span class="material-symbols-outlined text-[18px]">record_voice_over</span>
-          <h3 class="text-[12px] font-semibold uppercase tracking-wider">{{ 'CANDIDATES.INTERVIEWS.TITLE' | translate }}</h3>
-          @if (interviews().length) {
-            <daf-badge [label]="interviews().length + ''" [options]="{ variant: 'teal', size: 'sm' }" />
-          }
-        </div>
+      <div sectionAction class="flex items-center gap-2">
+        @if (interviews().length) {
+          <daf-badge [label]="interviews().length + ''" [options]="{ variant: 'teal', size: 'sm' }" />
+        }
         @if (canManage() && !showForm()) {
           <daf-button [label]="'CANDIDATES.INTERVIEWS.SCHEDULE' | translate" variant="teal"
             [options]="{ iconStart: 'add', size: 'sm' }"

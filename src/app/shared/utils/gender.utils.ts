@@ -10,9 +10,7 @@ export interface GenderOption {
 
 export const GENDER_OPTIONS: readonly GenderOption[] = [
   { value: 'MALE', label: 'Homme' },
-  { value: 'FEMALE', label: 'Femme' },
-  { value: 'OTHER', label: 'Autre' },
-  { value: 'UNSPECIFIED', label: 'Non précisé' },
+  { value: 'FEMALE', label: 'Femme' }
 ];
 
 const GENDER_LABELS: Record<string, string> = GENDER_OPTIONS.reduce(

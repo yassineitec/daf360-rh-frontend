@@ -6,7 +6,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { EmployeeDocument } from '../models/profile.model';
-import { SectionCardComponent } from './section-card.component';
+import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 import { statusBadge } from '../../../shared/status-badge.utils';
 
 /**

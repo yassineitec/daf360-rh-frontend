@@ -5,8 +5,10 @@ import { CardAccent, CardComponent } from '@khalilrebhiitec/daf360';
  * The shell every tab panel sits in: a glass `daf-card` with the design's
  * micro-label heading and an optional left accent stripe.
  *
- * One component so the nine tabs cannot drift apart on padding, heading size or
- * icon placement — and so "restyle the sections" stays a one-file change.
+ * Shared by `/rh/profiles/:id` and `/rh/candidates/:id`, which is why it lives in
+ * `shared/detail/` rather than in the profiles module: one component so no tab on
+ * either page can drift apart on padding, heading size or icon placement — and so
+ * "restyle the sections" stays a one-file change.
  * `accent` takes whole literal classes: a runtime-built `border-${colour}` would
  * never survive the consuming app's Tailwind scan (UI-PLAYBOOK §3).
  */

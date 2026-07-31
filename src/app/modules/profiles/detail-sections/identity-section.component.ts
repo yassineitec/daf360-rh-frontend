@@ -5,7 +5,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { EmployeeProfile, ProfileUpdateDto } from '../models/profile.model';
-import { ProfileFieldComponent } from './profile-field.component';
+import { ProfileFieldComponent } from '../../../shared/detail/profile-field.component';
 import { asNumber, asText, fmtDate, fromDate, fromSelected, toDate, toSelected } from './field-bridges';
 import { genderLabel } from '../../../shared/utils/gender.utils';
 
