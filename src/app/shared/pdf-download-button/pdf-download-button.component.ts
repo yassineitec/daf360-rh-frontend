@@ -6,6 +6,7 @@ import {
   PdfBusinessError,
   PdfServiceUnavailableError,
 } from '../../core/pdf/pdf-download.service';
+import { NotificationService } from '../../core/notification.service';
 
 type ButtonState = 'idle' | 'loading' | 'success' | 'error';
 type Variant = 'primary' | 'outline' | 'icon';
@@ -97,6 +98,7 @@ type Variant = 'primary' | 'outline' | 'icon';
 })
 export class PdfDownloadButtonComponent {
   private pdfSvc = inject(PdfDownloadService);
+  private notify = inject(NotificationService);
 
   // Signal inputs
   label           = input<string>('Telecharger');
@@ -132,14 +134,11 @@ export class PdfDownloadButtonComponent {
       next: (doc) => this.download(doc.id),
       error: (err) => {
         this.state.set('idle');
-        if (err instanceof PdfBusinessError) {
-          this.errorMsg.set(err.serverMessage);
-        } else if (err instanceof PdfServiceUnavailableError) {
-          this.errorMsg.set('Service PDF indisponible. Reessayez plus tard.');
-        } else {
-          this.errorMsg.set('Erreur inattendue lors de la generation du document.');
-        }
-        setTimeout(() => this.errorMsg.set(null), 7000);
+        const message =
+          err instanceof PdfBusinessError            ? err.serverMessage
+          : err instanceof PdfServiceUnavailableError ? 'Service PDF indisponible. Réessayez plus tard.'
+          :                                             'Erreur inattendue lors de la génération du document.';
+        this.fail(message);
       },
     });
   }
@@ -148,17 +147,28 @@ export class PdfDownloadButtonComponent {
     this.pdfSvc.downloadById(id, this.filename()).subscribe({
       next: () => {
         this.state.set('success');
+        this.notify.success(`${this.filename()} — document généré.`);
         setTimeout(() => this.state.set('idle'), 2500);
       },
       error: (err) => {
         this.state.set('idle');
-        this.errorMsg.set(
+        this.fail(
           err?.status === 503
             ? "Le document n'a pas encore été généré. Générez-le d'abord."
-            : 'Erreur lors du telechargement du fichier.',
+            : 'Erreur lors du téléchargement du fichier.',
         );
-        setTimeout(() => this.errorMsg.set(null), 7000);
       },
     });
+  }
+
+  /**
+   * One failure path: a toast, plus the inline message the button has always
+   * shown. The toast is what gets noticed when the button is inside a drawer or
+   * below the fold; the inline text keeps the reason next to the action.
+   */
+  private fail(message: string): void {
+    this.errorMsg.set(message);
+    this.notify.error(message);
+    setTimeout(() => this.errorMsg.set(null), 7000);
   }
 }

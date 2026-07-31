@@ -194,8 +194,7 @@
     },
     "INSIGHTS": {
       "TITLE": "Suivi recrutement",
-      "SHOW": "Afficher le suivi recrutement",
-      "HIDE": "Masquer le suivi recrutement"
+      "CLOSE": "Fermer le suivi recrutement"
     },
     "KANBAN": {
       "COL_PENDING": "En attente",
@@ -1032,7 +1031,10 @@
       "LIFECYCLE": "Contrats & Cycle de vie",
       "CONTRACT_HISTORY": "Historique des contrats",
       "DOCUMENTS": "Documents",
-      "HR_DOCUMENTS": "Documents RH"
+      "HR_DOCUMENTS": "Documents RH",
+      "COMPENSATION": "Prétentions & rémunération",
+      "EMPLOYMENT_POSITION": "Emploi & poste",
+      "SOCIAL_IDS": "Identifiants sociaux & fiscaux"
     },
     "FIELDS": {
       "DOB": "Date de naissance",
@@ -1068,7 +1070,16 @@
       "SOCIAL_INSURANCE": "N° d'Assurance Sociale",
       "NIF": "NIF",
       "CNSS": "N° de Sécurité Sociale",
-      "CNSS_AFFILIATION": "Date d'affiliation Sécurité Sociale"
+      "CNSS_AFFILIATION": "Date d'affiliation Sécurité Sociale",
+      "CURRENCY": "Devise",
+      "PAY_FREQUENCY": "Fréquence",
+      "PAYS": "Pays / entité",
+      "ONBOARDING": "Onboarding",
+      "CREATED_AT": "Créé le",
+      "UPDATED_AT": "Modifié le",
+      "REGIME_START": "Début du régime",
+      "REGIME_END": "Fin du régime",
+      "REGIME_REASON": "Motif du régime"
     },
     "PLACEHOLDERS": {
       "SALARY_CANDIDATE": "ex: 2500",
@@ -1086,7 +1097,8 @@
       "PHOTO_ALT": "Photo",
       "PHOTO_UPLOADING": "Téléversement…",
       "PHOTO_CHANGE": "Changer la photo",
-      "CHANGE_STATUS": "Changer le statut"
+      "CHANGE_STATUS": "Changer le statut",
+      "TABS_ARIA": "Sections du dossier"
     },
     "REGIME": {
       "HOURS_DAYS": "{{hours}}h/semaine · {{days}} jours",
@@ -1096,7 +1108,13 @@
       "ROLE_ASSIGNMENT": "Assignation par rôle",
       "ENTITY_DEFAULT": "Défaut entité",
       "REMOVE_OVERRIDE": "Supprimer l'override (revenir au régime du rôle)",
-      "NONE_CONFIGURED": "Aucun régime configuré pour cet employé"
+      "NONE_CONFIGURED": "Aucun régime configuré pour cet employé",
+      "SCHEDULE_TYPE": "Type d'horaire",
+      "WORKING_DAYS": "Jours travaillés",
+      "LUNCH_BREAK": "Pause déjeuner",
+      "DAYS_COUNT": "{{days}} j/sem.",
+      "MINUTES": "{{min}} min",
+      "HOURS_PER_WEEK": "{{hours}} h/sem."
     },
     "REGIME_OVERRIDE": {
       "CONFIRM_TITLE": "Supprimer l'override",
@@ -1122,7 +1140,8 @@
     "PHOTO": {
       "ERR_FORMAT": "Format non supporté. Utilisez JPEG, PNG ou WebP.",
       "ERR_SIZE": "Photo trop volumineuse (max 3 Mo).",
-      "ERR_UPLOAD": "Erreur lors du téléversement."
+      "ERR_UPLOAD": "Erreur lors du téléversement.",
+      "UPLOAD_SUCCESS": "Photo mise à jour."
     },
     "TRANSITION": {
       "MODAL_TITLE": "Changer le statut du profil",
@@ -1130,7 +1149,8 @@
       "NEW_STATUS": "Nouveau statut *",
       "REASON": "Raison *",
       "ERR_SELECT": "Sélectionnez un statut et indiquez une raison.",
-      "ERR_CHANGE": "Erreur lors du changement de statut."
+      "ERR_CHANGE": "Erreur lors du changement de statut.",
+      "SUCCESS": "Statut changé en « {{status}} »."
     },
     "TRIAL": {
       "MODAL_TITLE": "Valider la période d'essai",
@@ -1153,7 +1173,9 @@
       "REASON_LABEL": "Raison de la modification *",
       "SAVE": "Enregistrer les modifications",
       "ERR_REASON_REQUIRED": "La raison de modification est obligatoire.",
-      "ERR_SAVE": "Erreur lors de la sauvegarde."
+      "ERR_SAVE": "Erreur lors de la sauvegarde.",
+      "SAVE_SUCCESS": "Profil mis à jour.",
+      "SAVE_ERROR_TITLE": "Échec de l'enregistrement"
     },
     "DOCUMENTS": {
       "TYPE_LABEL": "Type de document",
@@ -1177,7 +1199,10 @@
       "ATT_TENURE_DISABLED": "Reservee aux employes en CDI",
       "ATT_DOMICIL_TITLE": "Attestation de domiciliation de salaire",
       "ATT_DOMICIL_DESC": "Certifie la domiciliation bancaire du salaire — nécessite les coordonnées bancaires",
-      "ATT_DOMICIL_DISABLED": "Completez les coordonnees bancaires"
+      "ATT_DOMICIL_DISABLED": "Completez les coordonnees bancaires",
+      "GENERATED": "Documents générés",
+      "GENERATE_TITLE": "Générer un document",
+      "DRAWER_CLOSE": "Fermer la génération de documents"
     },
     "HISTORY": {
       "TITLE": "Historique des contrats",
@@ -1272,6 +1297,13 @@
       "ERR_FUTURE_DATE": "La date ne peut pas être dans le futur",
       "ERR_CDD_END": "Obligatoire pour un contrat CDD",
       "ERR_CREATE": "Erreur lors de la création"
+    },
+    "PAY_FREQUENCY": {
+      "MONTHLY": "Mensuel"
+    },
+    "ONBOARDING": {
+      "DONE": "Terminé",
+      "PENDING": "En cours"
     }
   },
   "LIFECYCLE": {

@@ -134,6 +134,13 @@ export class ProfileService {
     );
   }
 
+  /**
+   * @deprecated Use `profilePhotoUrl(profileId, photoUrl)` from
+   * `shared/utils/avatar.utils`. Prefixing the stored path with
+   * `environment.hrApiUrl` makes the `<img>` cross-origin in dev, so it carries
+   * no Authorization header and 401s — the profile detail page showed the gender
+   * avatar instead of the real photo for exactly this reason. Currently unused.
+   */
   photoUrl(photoPath: string | null): string | null {
     if (!photoPath) return null;
     // photo_url is stored as "/api/hr/profiles/{id}/photo" — prefix with API base

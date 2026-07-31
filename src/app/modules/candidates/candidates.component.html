@@ -129,8 +129,10 @@
 
 </daf-page>
 
-<!-- Insights drawer: fixed layers, so it sits OUTSIDE daf-page — as a flex child
-     it would be a zero-height item that still consumed a 32px gap. -->
+<!-- Insights drawer (daf-drawer, 4.11.0). Kept at the page root: the panel is
+     `position: fixed`, and any ancestor carrying transform / filter /
+     backdrop-filter — daf-card's glass variant, for one — would become its
+     containing block and position it against the card instead of the viewport. -->
 <rh-recruitment-insights-panel
   [activities]="recentActivities()"
   [objective]="currentObjective()"

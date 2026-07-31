@@ -1,7 +1,25 @@
-import { Component, computed, inject, input, OnInit, signal, TemplateRef, viewChild } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, of } from 'rxjs';
+import { Component, OnInit, computed, effect, inject, signal, TemplateRef, viewChild } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, forkJoin, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+
+import {
+  BreadcrumbItem,
+  ButtonComponent,
+  FormFieldComponent,
+  ModalService,
+  MultiDatePickerComponent,
+  PageComponent,
+  PageHeaderBadge,
+  PageHeaderComponent,
+  RadioGroupComponent,
+  StatusBadgeComponent,
+  TabItem,
+  TabsComponent,
+  type ModalRef,
+  type SelectOption,
+  type UploadedFile,
+} from '@khalilrebhiitec/daf360';
 
 import { ProfileService } from './profile.service';
 import {
@@ -12,28 +30,11 @@ import {
   LIFECYCLE_LABELS,
   ProfileUpdateDto,
 } from './models/profile.model';
-import {
-  StatusBadgeComponent,
-  ButtonComponent,
-  CardComponent,
-  SelectComponent,
-  FormFieldComponent,
-  MultiDatePickerComponent,
-  ToggleComponent,
-  RadioGroupComponent,
-  AmountFieldComponent,
-  FileUploadComponent,
-  ModalService,
-  type ModalRef,
-  type SelectOption,
-  type UploadedFile,
-} from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { GENDER_OPTIONS, genderLabel } from '../../shared/utils/gender.utils';
-import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
-import { SpinnerComponent } from '../../shared/spinner.component';
+import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
+import { profilePhotoUrl } from '../../shared/utils/avatar.utils';
 import { UserStore } from '../../core/user.store';
-import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
+import { NotificationService } from '../../core/notification.service';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
 import { RegimeService } from '../admin/regimes/regime.service';
 import { ResolvedRegimeDto } from '../admin/regimes/regime.model';
@@ -42,175 +43,310 @@ import { RefDataItem } from '../../core/ref/ref-data.model';
 import { ContractHistoryComponent } from './contract-history/contract-history.component';
 import { ContractLifecycleService } from './lifecycle/contract-lifecycle.service';
 import {
-  ContractListDto,
-  ContractDetailDto,
-  ContractTransitionHistoryDto,
-  STATUS_CONFIG,
-  CONTRACT_TYPE_CONFIG,
+  ContractListDto, ContractDetailDto, ContractTransitionHistoryDto, CONTRACT_TYPE_CONFIG,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
 import { ConfirmService } from '../../core/confirm.service';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reusable field display — defined here for colocation, imported below.
-// No lib equivalent exists for a plain label+value display, so this stays local.
-// ─────────────────────────────────────────────────────────────────────────────
-@Component({
-  selector: 'app-field',
-  standalone: true,
-  template: `
-    <div class="field" [class.field-wide]="wide()">
-      <span class="field-label">{{ label() }}</span>
-      <span class="field-value">{{ value() ?? '—' }}</span>
-    </div>
-  `,
-  styles: [
-    `
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .field-wide {
-        grid-column: span 2;
-      }
-      .field-label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--color-text-muted, #6b7280);
-      }
-      .field-value {
-        font-size: 13px;
-        color: var(--color-text, #1a1c1e);
-      }
-    `,
-  ],
-})
-export class FieldComponent {
-  label = input.required<string>();
-  value = input<string | null | undefined>(null);
-  wide = input(false);
-}
+import { IdentityCardComponent, IdentityPill } from './detail-sections/identity-card.component';
+import { EmploymentSectionComponent } from './detail-sections/employment-section.component';
+import { PositionSectionComponent } from './detail-sections/position-section.component';
+import { RegimeSectionComponent } from './detail-sections/regime-section.component';
+import { ContactSectionComponent } from './detail-sections/contact-section.component';
+import { EmergencySectionComponent } from './detail-sections/emergency-section.component';
+import { BankingSectionComponent } from './detail-sections/banking-section.component';
+import { LifecycleSectionComponent } from './detail-sections/lifecycle-section.component';
+import { DocumentsSectionComponent } from './detail-sections/documents-section.component';
+import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
+import { fromDate, toDate } from './detail-sections/field-bridges';
 
-type SectionKey =
-  | 'identite'
-  | 'emploi'
-  | 'poste'
-  | 'regime'
-  | 'contact'
-  | 'urgence'
-  | 'bancaire'
-  | 'lifecycle'
-  | 'contrats'
-  | 'documents';
+/**
+ * One per section of the original page, minus Identité — the design keeps that
+ * one permanently on screen in the left card rather than behind a tab.
+ */
+type TabId =
+  | 'emploi' | 'contact' | 'bancaire'
+  | 'contrats' | 'historique' | 'documents';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Profile Detail
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Which `ProfileUpdateDto` keys belong to which tab. Drives the per-tab dirty
+ * marker: with only one tab on screen at a time, a pending change three tabs
+ * away is otherwise invisible until you save. Identité needs no entry — it is
+ * never hidden.
+ */
+const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
+  // Emploi & poste is one tab, so its marker covers the contract, the pay and
+  // the affectation blocks together.
+  emploi:   ['hireDate', 'contractType', 'contractEndDate', 'probationEndDate', 'isOnProbation',
+             'salaireNetCandidat', 'salaireNetRh', 'departmentId', 'gradeId', 'disciplineId', 'nogLevelId'],
+  // Contact holds both the employee's own details and the emergency contact.
+  contact:  ['personalEmail', 'phone', 'personalAddress',
+             'emergencyContactName', 'emergencyContactRelation', 'emergencyContactPhone'],
+  bancaire: ['bankId', 'iban', 'bankAccountNumber', 'rib', 'socialSecurityNumber', 'taxId', 'cnssNumber', 'cnssAffiliationDate'],
+};
+
+const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB', 'RESIGNATION', 'OTHER'];
+
+/**
+ * /rh/profiles/:id — the employee dossier.
+ *
+ * Shape follows UI-PLAYBOOK §1/§8b, the same as `/rh/recrutement`: `daf-page` +
+ * `daf-page-header` (breadcrumbs + status badges) + an identity strip + a
+ * `daf-tabs` strip, with one section component per tab and the Documents dossier
+ * in a `daf-drawer`. It replaces ten copy-pasted collapsible `daf-card`s, a
+ * hand-rolled breadcrumb and heading, and 150 lines of SCSS.
+ *
+ * **Edit is global, not per-tab.** The save endpoint takes one audited `reason`
+ * per `ProfileUpdateDto`, and `/rh/profiles` deep-links here with `?edit=true`
+ * meaning "open this dossier for editing". So the header button flips the whole
+ * page and one sticky bar closes it — and because `editForm` lives here, moving
+ * between tabs mid-edit keeps every pending change.
+ */
 @Component({
   selector: 'app-profile-detail',
   standalone: true,
   imports: [
-    RouterLink,
-    StatusBadgeComponent,
-    ButtonComponent,
-    CardComponent,
-    SelectComponent,
-    FormFieldComponent,
-    MultiDatePickerComponent,
-    ToggleComponent,
-    RadioGroupComponent,
-    AmountFieldComponent,
-    FileUploadComponent,
-    SpinnerComponent,
-    FieldComponent,
-    PdfDownloadButtonComponent,
-    ContractHistoryComponent,
+    PageComponent, PageHeaderComponent, TabsComponent, ButtonComponent,
+    FormFieldComponent, MultiDatePickerComponent, RadioGroupComponent, StatusBadgeComponent,
+    IdentityCardComponent, EmploymentSectionComponent,
+    PositionSectionComponent, RegimeSectionComponent, ContactSectionComponent,
+    EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
+    ContractHistoryComponent, DocumentsSectionComponent, DocumentsDrawerComponent,
     NewContractFormComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
-  styleUrl: './profile-detail.component.scss',
 })
 export class ProfileDetailComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private confirm = inject(ConfirmService);
-  private router = inject(Router);
-  private svc = inject(ProfileService);
-  private userStore = inject(UserStore);
-  private pdfSvc = inject(PdfDownloadService);
-  private regimeSvc = inject(RegimeService);
-  private refSvc = inject(RefDataService);
-  private lcSvc = inject(ContractLifecycleService);
+  private route        = inject(ActivatedRoute);
+  private router       = inject(Router);
+  private confirm      = inject(ConfirmService);
+  private svc          = inject(ProfileService);
+  private userStore    = inject(UserStore);
+  private pdfSvc       = inject(PdfDownloadService);
+  private regimeSvc    = inject(RegimeService);
+  private refSvc       = inject(RefDataService);
+  private lcSvc        = inject(ContractLifecycleService);
   private modalService = inject(ModalService);
-  private translate = inject(TranslateService);
-
-  readonly statusCfg = STATUS_CONFIG;
-  readonly typeCfg = CONTRACT_TYPE_CONFIG;
-
-  lcStatusCfg(code: string) {
-    const cfg = this.statusCfg[code as keyof typeof STATUS_CONFIG];
-    return {
-      label: cfg ? this.translate.instant('PROFILES.CONTRACT_STATUS.' + code) : code,
-      variant: cfg?.variant ?? ('neutral' as const),
-    };
-  }
-  lcTypeCfg(code: string) {
-    const cfg = this.typeCfg[code as keyof typeof CONTRACT_TYPE_CONFIG];
-    return {
-      label: cfg ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + code) : code,
-      needsEndDate: cfg?.needsEndDate ?? false,
-      hasTrial: cfg?.hasTrial ?? false,
-    };
-  }
-  protected readonly statusBadge = statusBadge;
+  private translate    = inject(TranslateService);
+  private notify       = inject(NotificationService);
 
   profileId = 0;
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  loading = signal(true);
-  saving = signal(false);
-  docsLoading = signal(false);
-  profile = signal<EmployeeProfile | null>(null);
-  documents = signal<EmployeeDocument[]>([]);
-  generatedDocs = signal<GeneratedDocumentResponse[]>([]);
-  editMode = signal(false);
-  editForm: ProfileUpdateDto = { reason: '' };
-  editSaveError = signal<string | null>(null);
+  // ── Data ───────────────────────────────────────────────────────────────────
+  readonly profile       = signal<EmployeeProfile | null>(null);
+  readonly documents     = signal<EmployeeDocument[]>([]);
+  readonly generatedDocs = signal<GeneratedDocumentResponse[]>([]);
+  readonly resolvedRegime = signal<ResolvedRegimeDto | null>(null);
 
-  // ── Ref data lists for edit dropdowns ─────────────────────────────────────
-  grades = signal<RefDataItem[]>([]);
-  disciplines = signal<RefDataItem[]>([]);
-  nogLevels = signal<RefDataItem[]>([]);
-  departments = signal<RefDataItem[]>([]);
-  banks = signal<RefDataItem[]>([]);
-  nationalities = signal<RefDataItem[]>([]);
+  /** Whole-page skeleton — first load only (§5). */
+  readonly firstLoad     = signal(true);
+  readonly loadFailed    = signal(false);
+  readonly saving        = signal(false);
+  readonly docsLoading   = signal(true);
+  readonly regimeLoading = signal(true);
+
+  // ── Edit ───────────────────────────────────────────────────────────────────
+  readonly editMode      = signal(false);
+  readonly editForm      = signal<ProfileUpdateDto>({ reason: '' });
+  readonly editSaveError = signal<string | null>(null);
+
+  /** Sections emit partials; the page is the only writer. */
+  patch(part: Partial<ProfileUpdateDto>): void {
+    this.editForm.update(f => ({ ...f, ...part }));
+  }
+
+  setReason(value: string | number | null): void {
+    this.patch({ reason: value == null ? '' : String(value) });
+  }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  readonly activeTab = signal<TabId>('emploi');
+
+  readonly tabs = computed<TabItem[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const dirty = this.dirtyTabs();
+    const items: TabItem[] = [
+      { id: 'emploi',  label: t('PROFILES.SECTIONS.EMPLOYMENT_POSITION'), marker: dirty.has('emploi')  },
+      { id: 'contact', label: t('PROFILES.SECTIONS.CONTACT'),             marker: dirty.has('contact') },
+    ];
+    // Filtered out entirely rather than disabled — a greyed tab still advertises
+    // that confidential data exists.
+    if (this.canViewSensitive()) {
+      items.push({ id: 'bancaire', label: t('PROFILES.SECTIONS.BANK'), marker: dirty.has('bancaire') });
+    }
+    items.push(
+      { id: 'contrats',   label: t('PROFILES.SECTIONS.LIFECYCLE'), count: this.lcContracts().length || null },
+      { id: 'historique', label: t('PROFILES.SECTIONS.CONTRACT_HISTORY') },
+      { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documents().length || null },
+    );
+    return items;
+  });
+
+  /** Tabs whose fields differ from the loaded profile. Empty outside edit mode. */
+  private readonly dirtyTabs = computed<Set<TabId>>(() => {
+    const out = new Set<TabId>();
+    if (!this.editMode()) return out;
+    const p = this.profile();
+    const f = this.editForm();
+    if (!p) return out;
+    // The DTO and the profile share these field names but not their types (and the
+    // DTO has no index signature), so the profile side is read through an indexable
+    // view. `normalise` then treats '' / null / undefined alike: the form seeds ''
+    // where the profile holds null, and that is not a user edit.
+    const profileFields = p as unknown as Record<string, unknown>;
+    for (const [tab, keys] of Object.entries(TAB_FIELDS) as [TabId, (keyof ProfileUpdateDto)[]][]) {
+      if (keys.some(k => normalise(f[k]) !== normalise(profileFields[k]))) {
+        out.add(tab);
+      }
+    }
+    return out;
+  });
+
+  onTabChange(id: string): void {
+    const tab = id as TabId;
+    this.activeTab.set(tab);
+    // Shareable + survives a refresh or a back navigation. `merge` keeps ?edit=true.
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    this.translate.currentLang();
+    const p = this.profile();
+    return [
+      { label: this.translate.instant('PROFILES.LIST.TITLE'), link: '/rh/profiles' },
+      { label: p?.fullName ?? this.translate.instant('PROFILES.DETAIL.PROFILE_NUM', { id: this.profileId }) },
+    ];
+  });
+
+  readonly headerTitle = computed(() => {
+    this.translate.currentLang();
+    const p = this.profile();
+    return p?.fullName ?? this.translate.instant('PROFILES.DETAIL.PROFILE_NUM', { id: this.profileId });
+  });
+
+  /** Grade · département — the contract type moved up into a badge. */
+  readonly headerSubtitle = computed(() => {
+    const p = this.profile();
+    if (!p) return '';
+    return [p.grade, p.department].filter(Boolean).join(' · ');
+  });
+
+  readonly headerBadges = computed<PageHeaderBadge[]>(() => {
+    this.translate.currentLang();
+    const p = this.profile();
+    if (!p) return [];
+    const badges: PageHeaderBadge[] = [{
+      label:   this.lifecycleLabel(p.lifecycleStatus),
+      variant: statusBadge(p.lifecycleStatus).options.variant,
+      size:    'sm',
+    }];
+    if (p.contractType) {
+      badges.push({ label: this.contractTypeLabel(p.contractType), variant: 'neutral', size: 'sm' });
+    }
+    if (p.matricule) {
+      badges.push({ label: p.matricule, variant: 'secondary', size: 'sm', icon: 'badge' });
+    }
+    if (p.paysLabel) {
+      badges.push({ label: p.paysLabel, variant: 'neutral', size: 'sm', icon: 'public' });
+    }
+    if (this.canViewSensitive()) {
+      badges.push({ label: this.translate.instant('PROFILES.SECTIONS.CONFIDENTIAL'), variant: 'warning', size: 'sm', pill: true });
+    }
+    return badges;
+  });
+
+  /** Lifecycle + contract type, the two pills under the name in the design. */
+  readonly identityPills = computed<IdentityPill[]>(() => {
+    this.translate.currentLang();
+    const p = this.profile();
+    if (!p) return [];
+    const pills: IdentityPill[] = [{
+      label:   this.lifecycleLabel(p.lifecycleStatus),
+      variant: statusBadge(p.lifecycleStatus).options.variant ?? 'neutral',
+    }];
+    if (p.contractType) {
+      pills.push({ label: this.contractTypeLabel(p.contractType), variant: 'secondary' });
+    }
+    if (p.paysLabel) {
+      pills.push({ label: p.paysLabel, variant: 'neutral' });
+    }
+    return pills;
+  });
+
+  /** Same relative endpoint the list uses — see `profilePhotoUrl`. */
+  readonly photoSrc = computed(() => {
+    const p = this.profile();
+    return profilePhotoUrl(p?.id, p?.photoUrl);
+  });
+
+  // ── Permissions ────────────────────────────────────────────────────────────
+  readonly canEdit          = signal(true);
+  readonly canViewSensitive = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
+  readonly canTransition    = computed(() =>
+    this.profile() !== null && this.allowedTransitions().length > 0 && this.userStore.isHrManager(),
+  );
+
+  readonly allowedTransitions = computed((): LifecycleStatus[] => {
+    const p = this.profile();
+    return p ? (LIFECYCLE_TRANSITIONS[p.lifecycleStatus] ?? []) : [];
+  });
+
+  lifecycleLabel(s: LifecycleStatus): string {
+    return LIFECYCLE_LABELS[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
+  }
+
+  private contractTypeLabel(code: string): string {
+    return CONTRACT_TYPE_CONFIG[code as keyof typeof CONTRACT_TYPE_CONFIG]
+      ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + code)
+      : code;
+  }
+
+  protected readonly statusBadge = statusBadge;
+  /**
+   * The lifecycle modals hold their dates as plain ISO strings, so they need the
+   * same picker bridges the sections use. `fromDate` (not `toISOString()`) is
+   * load-bearing: the picker hands back local midnight, and in any positive-offset
+   * zone `toISOString()` rolls that back to the previous day.
+   */
+  protected readonly toDate   = toDate;
+  protected readonly fromDate = fromDate;
+
+  // ── Ref data for the edit dropdowns ────────────────────────────────────────
+  private readonly grades        = signal<RefDataItem[]>([]);
+  private readonly disciplines   = signal<RefDataItem[]>([]);
+  private readonly nogLevels     = signal<RefDataItem[]>([]);
+  private readonly departments   = signal<RefDataItem[]>([]);
+  private readonly banks         = signal<RefDataItem[]>([]);
+  private readonly nationalities = signal<RefDataItem[]>([]);
 
   private blankOption(): SelectOption {
     return { value: '', label: this.translate.instant('PROFILES.COMMON.SELECT_PLACEHOLDER') };
   }
+  private refOptions(items: RefDataItem[]): SelectOption[] {
+    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: i.labelFr }))];
+  }
 
   readonly genderOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return [
-      this.blankOption(),
-      ...GENDER_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
-    ];
+    return [this.blankOption(), ...GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }))];
   });
-
-  // Read-mode display helper: code (MALE/FEMALE/…) -> French label.
-  readonly genderLabel = genderLabel;
 
   readonly maritalStatusOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
     return [
       this.blankOption(),
-      { value: 'Célibataire', label: this.translate.instant('PROFILES.MARITAL.SINGLE') },
-      { value: 'Marié(e)', label: this.translate.instant('PROFILES.MARITAL.MARRIED') },
-      { value: 'Divorcé(e)', label: this.translate.instant('PROFILES.MARITAL.DIVORCED') },
-      { value: 'Veuf(ve)', label: this.translate.instant('PROFILES.MARITAL.WIDOWED') },
+      { value: 'Célibataire', label: this.translate.instant('PROFILES.MARITAL.SINGLE')   },
+      { value: 'Marié(e)',    label: this.translate.instant('PROFILES.MARITAL.MARRIED')  },
+      { value: 'Divorcé(e)',  label: this.translate.instant('PROFILES.MARITAL.DIVORCED') },
+      { value: 'Veuf(ve)',    label: this.translate.instant('PROFILES.MARITAL.WIDOWED')  },
     ];
   });
 
@@ -218,60 +354,108 @@ export class ProfileDetailComponent implements OnInit {
     this.translate.currentLang();
     return [
       this.blankOption(),
-      { value: 'PERMANENT', label: this.translate.instant('PROFILES.CONTRACT_TYPE.PERMANENT') },
+      { value: 'PERMANENT',  label: this.translate.instant('PROFILES.CONTRACT_TYPE.PERMANENT')  },
       { value: 'FIXED_TERM', label: this.translate.instant('PROFILES.CONTRACT_TYPE.FIXED_TERM') },
-      { value: 'INTERN', label: this.translate.instant('PROFILES.CONTRACT_TYPE.INTERN') },
+      { value: 'INTERN',     label: this.translate.instant('PROFILES.CONTRACT_TYPE.INTERN')     },
       { value: 'CONSULTANT', label: this.translate.instant('PROFILES.CONTRACT_TYPE.CONSULTANT') },
     ];
   });
 
-  nationalityOptions = computed<SelectOption[]>(() => [
-    this.blankOption(),
-    ...this.nationalities().map((n) => ({ value: String(n.id), label: n.labelFr })),
-  ]);
-  departmentOptions = computed<SelectOption[]>(() => [
-    this.blankOption(),
-    ...this.departments().map((d) => ({ value: String(d.id), label: d.labelFr })),
-  ]);
-  gradeOptions = computed<SelectOption[]>(() => [
-    this.blankOption(),
-    ...this.grades().map((g) => ({ value: String(g.id), label: g.labelFr })),
-  ]);
-  disciplineOptions = computed<SelectOption[]>(() => [
-    this.blankOption(),
-    ...this.disciplines().map((d) => ({ value: String(d.id), label: d.labelFr })),
-  ]);
-  nogLevelOptions = computed<SelectOption[]>(() => [
-    this.blankOption(),
-    ...this.nogLevels().map((n) => ({ value: String(n.id), label: n.labelFr })),
-  ]);
-  bankOptions = computed<SelectOption[]>(() => [
-    this.blankOption(),
-    ...this.banks().map((b) => ({ value: String(b.id), label: b.labelFr })),
-  ]);
+  readonly nationalityOptions = computed(() => this.refOptions(this.nationalities()));
+  readonly departmentOptions  = computed(() => this.refOptions(this.departments()));
+  readonly gradeOptions       = computed(() => this.refOptions(this.grades()));
+  readonly disciplineOptions  = computed(() => this.refOptions(this.disciplines()));
+  readonly nogLevelOptions    = computed(() => this.refOptions(this.nogLevels()));
+  readonly bankOptions        = computed(() => this.refOptions(this.banks()));
 
-  // Bridges nullable FK ids used by editForm to the string[] selection model of daf-select.
-  toSelected(id: number | null | undefined): string[] {
-    return id != null ? [String(id)] : [];
-  }
-  fromSelected(values: string[]): number | null {
-    return values[0] ? Number(values[0]) : null;
+  readonly docTypeOptions: SelectOption[] = DOC_TYPES.map(t => ({ value: t, label: t }));
+
+  // ── Photo / documents upload ───────────────────────────────────────────────
+  readonly photoUploading = signal(false);
+  readonly uploadType     = signal('CONTRACT');
+  readonly uploadFiles    = signal<UploadedFile[]>([]);
+
+  // ── Lifecycle transition modal ─────────────────────────────────────────────
+  readonly transitionTarget = signal<LifecycleStatus | null>(null);
+  readonly transitionError  = signal<string | null>(null);
+  transitionReason = '';
+
+  // ── Contract lifecycle ─────────────────────────────────────────────────────
+  readonly lcContracts = signal<ContractListDto[]>([]);
+  readonly lcHistory   = signal<ContractTransitionHistoryDto[]>([]);
+  readonly lcLoading   = signal(false);
+  readonly lcSaving    = signal(false);
+  readonly lcError     = signal<string | null>(null);
+  readonly showNewContractModal = signal(false);
+  private lcLoaded = false;
+
+  private selectedContractId: number | null = null;
+  trialApproved = true;
+  trialComment  = '';
+  renewDateFin  = '';
+  renewComment  = '';
+  cdiStartDate  = '';
+  cdiComment    = '';
+
+  // ── Modal bodies, opened imperatively via ModalService ─────────────────────
+  transitionTpl    = viewChild<TemplateRef<unknown>>('transitionTpl');
+  validateTrialTpl = viewChild<TemplateRef<unknown>>('validateTrialTpl');
+  renewCDDTpl      = viewChild<TemplateRef<unknown>>('renewCDDTpl');
+  convertCDITpl    = viewChild<TemplateRef<unknown>>('convertCDITpl');
+
+  constructor() {
+    // Contracts are fetched the first time their tab is opened, not on page load.
+    effect(() => {
+      if (this.activeTab() === 'contrats') this.loadContracts();
+    });
   }
 
-  // Bridges daf-form-field's `string | number | null` value model to plain text/number fields.
-  asText(v: string | number | null): string {
-    return v == null ? '' : String(v);
-  }
-  asNumber(v: string | number | null): number | null {
-    return v == null || v === '' ? null : Number(v);
+  // ── Init ───────────────────────────────────────────────────────────────────
+  private openInEditMode = false;
+
+  ngOnInit(): void {
+    this.profileId = Number(this.route.snapshot.paramMap.get('id'));
+    const qp = this.route.snapshot.queryParamMap;
+    this.openInEditMode = qp.get('edit') === 'true';
+    const tab = qp.get('tab') as TabId | null;
+    if (tab) this.activeTab.set(tab); // daf-tabs falls back to the first tab if it isn't one
+
+    // The documents call feeds both the drawer and the identity strip's n/3
+    // tile, so it runs up front rather than on drawer open.
+    forkJoin({
+      profile: this.svc.getById(this.profileId).pipe(catchError(() => of(null))),
+      docs:    this.svc.listDocuments(this.profileId).pipe(catchError(() => of([] as EmployeeDocument[]))),
+    }).subscribe(({ profile, docs }) => {
+      this.documents.set(docs);
+      this.docsLoading.set(false);
+      this.profile.set(profile);
+      this.loadFailed.set(!profile);
+      this.firstLoad.set(false);
+
+      if (profile) {
+        this.loadResolvedRegime(profile.id);
+        this.pdfSvc.generateDocument('/api/hr/documents/by-profile/' + profile.id, null)
+          .subscribe({ next: (d: any) => this.generatedDocs.set(d), error: () => {} });
+        if (this.openInEditMode) {
+          this.openInEditMode = false;
+          this.startEdit();
+        }
+      }
+    });
   }
 
-  // Bridges plain ISO date strings to daf-multi-date-picker's Date-based value model.
-  protected readonly toDate = isoToDate;
-  protected readonly fromDate = dateToIso;
+  private reloadDocuments(): void {
+    this.svc.listDocuments(this.profileId)
+      .pipe(catchError(() => of([] as EmployeeDocument[])))
+      .subscribe(docs => this.documents.set(docs));
+  }
 
-  // Backend errors are Spring ProblemDetail bodies — the message is under `detail`
-  // (and, for validation failures, a per-field `errors` map), never `message`.
+  // ── Errors ─────────────────────────────────────────────────────────────────
+  /**
+   * Backend errors are Spring ProblemDetail bodies — the message is under
+   * `detail` (and, for validation failures, a per-field `errors` map), never
+   * `message`.
+   */
   private extractErrorMessage(err: unknown, fallback: string): string {
     const body = (err as { error?: { detail?: string; errors?: Record<string, string> } })?.error;
     if (body?.errors && typeof body.errors === 'object') {
@@ -281,147 +465,90 @@ export class ProfileDetailComponent implements OnInit {
     return body?.detail ?? fallback;
   }
 
-  resolvedRegime = signal<ResolvedRegimeDto | null>(null);
-  isLoadingRegime = signal(true);
-
-  photoUploading = signal(false);
-  photoError = signal<string | null>(null);
-
-  transitionTarget = signal<LifecycleStatus | null>(null);
-  transitionReason = '';
-  transitionError = signal<string | null>(null);
-
-  uploadType = 'CONTRACT';
-  uploadFiles = signal<UploadedFile[]>([]);
-
-  // ── Contract Lifecycle Engine ───────────────────────────────────────────────
-  lcContracts = signal<ContractListDto[]>([]);
-  lcLoading = signal(false);
-  lcLoaded = false;
-  lcHistory = signal<ContractTransitionHistoryDto[]>([]);
-  lcSaving = signal(false);
-  lcError = signal<string | null>(null);
-
-  showNewContractModal = signal(false);
-
-  selectedContractId: number | null = null;
-
-  // trial validation form
-  trialApproved = true;
-  trialComment = '';
-  // CDD renewal form
-  renewDateFin = '';
-  renewComment = '';
-  // CDI conversion form
-  cdiStartDate = '';
-  cdiComment = '';
-
-  readonly docTypes = [
-    'CONTRACT',
-    'ID_CARD',
-    'DIPLOMA',
-    'MEDICAL_CERTIFICATE',
-    'RIB',
-    'RESIGNATION',
-    'OTHER',
-  ];
-  readonly docTypeOptions: SelectOption[] = this.docTypes.map((t) => ({ value: t, label: t }));
-
-  // ── Modal templates (opened imperatively via ModalService) ──────────────────
-  transitionTpl = viewChild<TemplateRef<unknown>>('transitionTpl');
-  validateTrialTpl = viewChild<TemplateRef<unknown>>('validateTrialTpl');
-  renewCDDTpl = viewChild<TemplateRef<unknown>>('renewCDDTpl');
-  convertCDITpl = viewChild<TemplateRef<unknown>>('convertCDITpl');
-
-  private openSections = signal<Set<SectionKey>>(
-    new Set<SectionKey>(['identite', 'emploi', 'poste', 'contact']),
-  );
-
-  open(k: SectionKey) {
-    return this.openSections().has(k);
-  }
-  toggle(k: SectionKey) {
-    this.openSections.update((s) => {
-      const n = new Set(s);
-      n.has(k) ? n.delete(k) : n.add(k);
-      return n;
-    });
-  }
-
-  // ── Permissions ────────────────────────────────────────────────────────────
-  canEdit = signal(true);
-  canViewSensitive = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
-  canTransition = computed(
-    () =>
-      this.profile() !== null &&
-      this.allowedTransitions().length > 0 &&
-      this.userStore.isHrManager(),
-  );
-
-  allowedTransitions = computed((): LifecycleStatus[] => {
-    const p = this.profile();
-    return p ? (LIFECYCLE_TRANSITIONS[p.lifecycleStatus] ?? []) : [];
-  });
-
-  lifecycleLabel(s: LifecycleStatus) {
-    return LIFECYCLE_LABELS[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
-  }
-
-  // ── Date helper ────────────────────────────────────────────────────────────
-  fmt(iso: string | null | undefined): string | null {
-    if (!iso) return null;
-    try {
-      return new Date(iso).toLocaleDateString('fr-FR');
-    } catch {
-      return iso;
+  // ── Edit ───────────────────────────────────────────────────────────────────
+  toggleEdit(): void {
+    if (this.editMode()) {
+      this.editMode.set(false);
+      this.editSaveError.set(null);
+    } else {
+      this.startEdit();
     }
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
-  private openInEditMode = false;
+  startEdit(): void {
+    const p = this.profile();
+    if (!p) return;
+    this.editForm.set({
+      reason: '',
+      dateOfBirth: p.dateOfBirth ?? '', gender: p.gender ?? '',
+      nationalityId: p.nationalityId ?? null, nationalId: p.nationalId ?? '',
+      passportNumber: p.passportNumber ?? '', maritalStatus: p.maritalStatus ?? '',
+      numberOfChildren: p.numberOfChildren ?? null,
+      hireDate: p.hireDate ?? '', contractType: p.contractType ?? '',
+      contractEndDate: p.contractEndDate ?? '', probationEndDate: p.probationEndDate ?? '',
+      isOnProbation: p.isOnProbation ?? false,
+      departmentId: p.departmentId ?? null, gradeId: p.gradeId ?? null,
+      disciplineId: p.disciplineId ?? null, nogLevelId: p.nogLevelId ?? null,
+      personalEmail: p.personalEmail ?? '', phone: p.phone ?? '', personalAddress: p.personalAddress ?? '',
+      emergencyContactName: p.emergencyContactName ?? '',
+      emergencyContactRelation: p.emergencyContactRelation ?? '',
+      emergencyContactPhone: p.emergencyContactPhone ?? '',
+      bankId: p.bankId ?? null, iban: p.iban ?? '', bankAccountNumber: p.bankAccountNumber ?? '',
+      rib: p.rib ?? '', socialSecurityNumber: p.socialSecurityNumber ?? '', taxId: p.taxId ?? '',
+      cnssNumber: p.cnssNumber ?? '', cnssAffiliationDate: p.cnssAffiliationDate ?? '',
+      salaireNetCandidat: p.salaireNetCandidat ?? null, salaireNetRh: p.salaireNetRh ?? null,
+    });
+    this.editMode.set(true);
+    this.editSaveError.set(null);
 
-  ngOnInit() {
-    this.profileId = Number(this.route.snapshot.paramMap.get('id'));
-    this.openInEditMode = this.route.snapshot.queryParamMap.get('edit') === 'true';
-
-    this.loadProfile();
+    const paysId = p.paysId;
+    this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
+    this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
+    this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));
+    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+    this.refSvc.getBanks(paysId).subscribe(r => this.banks.set(r));
+    this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
   }
 
-  loadProfile() {
-    this.svc
-      .getById(this.profileId)
-      .pipe(catchError(() => of(null)))
-      .subscribe((p) => {
-        this.loading.set(false);
-        this.profile.set(p);
+  saveProfile(): void {
+    const form = this.editForm();
+    if (!form.reason?.trim()) {
+      this.editSaveError.set(this.translate.instant('PROFILES.EDIT.ERR_REASON_REQUIRED'));
+      return;
+    }
+    this.saving.set(true);
+    this.editSaveError.set(null);
 
-        if (p) {
-          this.loadResolvedRegime(p.id);
-          this.pdfSvc
-            .generateDocument('/api/hr/documents/by-profile/' + p.id, null)
-            .subscribe({ next: (docs: any) => this.generatedDocs.set(docs), error: () => {} });
-          if (this.openInEditMode) {
-            this.openInEditMode = false;
-            this.startEdit();
-          }
+    // Empty strings mean "not provided", not "clear it" — the backend treats
+    // undefined as no-change.
+    const dto: ProfileUpdateDto = { ...form };
+    Object.keys(dto).forEach(k => {
+      if (k !== 'reason' && (dto as any)[k] === '') (dto as any)[k] = undefined;
+    });
+
+    this.svc.update(this.profileId, dto)
+      .pipe(catchError(err => {
+        this.saving.set(false);
+        const message = this.extractErrorMessage(err, this.translate.instant('PROFILES.EDIT.ERR_SAVE'));
+        // Both surfaces on purpose: the toast is what the user notices, the
+        // inline error stays next to the field they have to fix.
+        this.editSaveError.set(message);
+        this.notify.error(message, this.translate.instant('PROFILES.EDIT.SAVE_ERROR_TITLE'));
+        return of(null);
+      }))
+      .subscribe(updated => {
+        if (updated) {
+          this.profile.set(updated);
+          this.editMode.set(false);
+          this.saving.set(false);
+          this.editSaveError.set(null);
+          this.notify.success(this.translate.instant('PROFILES.EDIT.SAVE_SUCCESS'));
         }
       });
   }
 
-  loadDocuments() {
-    if (this.documents().length > 0) return;
-    this.docsLoading.set(true);
-    this.svc
-      .listDocuments(this.profileId)
-      .pipe(catchError(() => of([])))
-      .subscribe((docs) => {
-        this.docsLoading.set(false);
-        this.documents.set(docs);
-      });
-  }
-
-  // ── Lifecycle transition ────────────────────────────────────────────────────
-  openTransitionModal() {
+  // ── Lifecycle transition ───────────────────────────────────────────────────
+  openTransitionModal(): void {
     this.transitionTarget.set(null);
     this.transitionReason = '';
     this.transitionError.set(null);
@@ -431,13 +558,13 @@ export class ProfileDetailComponent implements OnInit {
       title: this.translate.instant('PROFILES.TRANSITION.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
-        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary', action: (ref) => this.confirmTransition(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'),  variant: 'secondary', action: ref => ref.close() },
+        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary',   action: ref => this.confirmTransition(ref) },
       ],
     });
   }
 
-  confirmTransition(ref: ModalRef) {
+  confirmTransition(ref: ModalRef): void {
     const target = this.transitionTarget();
     if (!target || !this.transitionReason.trim()) {
       this.transitionError.set(this.translate.instant('PROFILES.TRANSITION.ERR_SELECT'));
@@ -446,71 +573,67 @@ export class ProfileDetailComponent implements OnInit {
     if (this.saving()) return;
     this.transitionError.set(null);
     this.saving.set(true);
-    this.svc
-      .transition(this.profileId, { newStatus: target, reason: this.transitionReason })
-      .pipe(
-        catchError((err) => {
-          this.saving.set(false);
-          this.transitionError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.TRANSITION.ERR_CHANGE')));
-          return of(null);
-        }),
-      )
-      .subscribe((updated) => {
+    this.svc.transition(this.profileId, { newStatus: target, reason: this.transitionReason })
+      .pipe(catchError(err => {
+        this.saving.set(false);
+        this.transitionError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.TRANSITION.ERR_CHANGE')));
+        return of(null);
+      }))
+      .subscribe(updated => {
         if (updated) {
           this.saving.set(false);
           this.profile.set(updated);
           ref.close();
+          this.notify.success(this.translate.instant('PROFILES.TRANSITION.SUCCESS', {
+            status: this.lifecycleLabel(updated.lifecycleStatus),
+          }));
         }
       });
   }
 
-  // ── Document upload ─────────────────────────────────────────────────────────
-  onDocumentFilesChange(files: UploadedFile[]): void {
-    this.uploadFiles.set(files);
+  onTransitionReason(v: string | number | null): void {
+    this.transitionReason = v == null ? '' : String(v);
   }
 
-  // ── Photo upload ────────────────────────────────────────────────────────────
+  // ── Uploads ────────────────────────────────────────────────────────────────
+  onDocumentFilesChange(files: UploadedFile[]): void {
+    this.uploadFiles.set(files);
+    if (files.length) this.reloadDocuments();
+  }
+
   onPhotoChange(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    // Validate client-side
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type)) {
-      this.photoError.set(this.translate.instant('PROFILES.PHOTO.ERR_FORMAT'));
+    // Upload problems are toasts now, not an inline red box under the avatar —
+    // a *missing* photo is never an error, it just falls back to the avatar.
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.notify.error(this.translate.instant('PROFILES.PHOTO.ERR_FORMAT'));
       return;
     }
     if (file.size > 3 * 1024 * 1024) {
-      this.photoError.set(this.translate.instant('PROFILES.PHOTO.ERR_SIZE'));
+      this.notify.error(this.translate.instant('PROFILES.PHOTO.ERR_SIZE'));
       return;
     }
     this.photoUploading.set(true);
-    this.photoError.set(null);
     this.svc.uploadPhoto(this.profileId, file).subscribe({
-      next: (updated) => {
+      next: updated => {
         this.profile.set(updated);
         this.photoUploading.set(false);
+        this.notify.success(this.translate.instant('PROFILES.PHOTO.UPLOAD_SUCCESS'));
       },
-      error: (err) => {
+      error: err => {
         this.photoUploading.set(false);
-        this.photoError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.PHOTO.ERR_UPLOAD')));
+        this.notify.error(this.extractErrorMessage(err, this.translate.instant('PROFILES.PHOTO.ERR_UPLOAD')));
       },
     });
   }
 
-  // ── Template helper (avoids private access issues) ─────────────────────────
-  photoUrl(path: string | null): string | null {
-    return this.svc.photoUrl(path);
-  }
-
-  // ── Regime ─────────────────────────────────────────────────────────────────
-  loadResolvedRegime(profileId: number): void {
-    this.isLoadingRegime.set(true);
+  // ── Régime ─────────────────────────────────────────────────────────────────
+  private loadResolvedRegime(profileId: number): void {
+    this.regimeLoading.set(true);
     this.regimeSvc.resolveForEmployee(profileId).subscribe({
-      next: (r) => {
-        this.resolvedRegime.set(r);
-        this.isLoadingRegime.set(false);
-      },
-      error: () => this.isLoadingRegime.set(false),
+      next: r  => { this.resolvedRegime.set(r); this.regimeLoading.set(false); },
+      error: () => this.regimeLoading.set(false),
     });
   }
 
@@ -518,131 +641,35 @@ export class ProfileDetailComponent implements OnInit {
     const p = this.profile();
     if (!p) return;
     if (!(await this.confirm.ask({
-      title: this.translate.instant('PROFILES.REGIME_OVERRIDE.CONFIRM_TITLE'),
+      title:   this.translate.instant('PROFILES.REGIME_OVERRIDE.CONFIRM_TITLE'),
       message: this.translate.instant('PROFILES.REGIME_OVERRIDE.CONFIRM_MESSAGE'),
       confirmLabel: this.translate.instant('PROFILES.COMMON.DELETE'), icon: 'delete',
     }))) return;
     this.regimeSvc.removeEmployeeOverride(p.id).subscribe({
-      next: () => this.loadResolvedRegime(p.id),
+      next:  () => this.loadResolvedRegime(p.id),
       error: () => {},
     });
   }
 
-  // ── Inline edit ────────────────────────────────────────────────────────────
-  startEdit(): void {
-    this.initEditForm();
-    this.editMode.set(true);
-    this.editSaveError.set(null);
-    // Load ref data lists for dropdowns
-    const paysId = this.profile()!.paysId;
-    this.refSvc.getGrades(paysId).subscribe((r) => this.grades.set(r));
-    this.refSvc.getDisciplines(paysId).subscribe((r) => this.disciplines.set(r));
-    this.refSvc.getNogLevels(paysId).subscribe((r) => this.nogLevels.set(r));
-    this.refSvc.getDepartments(paysId).subscribe((r) => this.departments.set(r));
-    this.refSvc.getBanks(paysId).subscribe((r) => this.banks.set(r));
-    this.refSvc.getNationalities().subscribe((r) => this.nationalities.set(r));
-  }
-
-  initEditForm(): void {
-    const p = this.profile();
-    if (!p) return;
-    this.editForm = {
-      reason: '',
-      dateOfBirth: p.dateOfBirth ?? '',
-      gender: p.gender ?? '',
-      nationalityId: p.nationalityId ?? null,
-      nationalId: p.nationalId ?? '',
-      passportNumber: p.passportNumber ?? '',
-      maritalStatus: p.maritalStatus ?? '',
-      numberOfChildren: p.numberOfChildren ?? null,
-      hireDate: p.hireDate ?? '',
-      contractType: p.contractType ?? '',
-      contractEndDate: p.contractEndDate ?? '',
-      probationEndDate: p.probationEndDate ?? '',
-      isOnProbation: p.isOnProbation ?? false,
-      departmentId: p.departmentId ?? null,
-      gradeId: p.gradeId ?? null,
-      disciplineId: p.disciplineId ?? null,
-      nogLevelId: p.nogLevelId ?? null,
-      personalEmail: p.personalEmail ?? '',
-      phone: p.phone ?? '',
-      personalAddress: p.personalAddress ?? '',
-      emergencyContactName: p.emergencyContactName ?? '',
-      emergencyContactRelation: p.emergencyContactRelation ?? '',
-      emergencyContactPhone: p.emergencyContactPhone ?? '',
-      bankId: p.bankId ?? null,
-      iban: p.iban ?? '',
-      bankAccountNumber: p.bankAccountNumber ?? '',
-      rib: p.rib ?? '',
-      socialSecurityNumber: p.socialSecurityNumber ?? '',
-      taxId: p.taxId ?? '',
-      cnssNumber: p.cnssNumber ?? '',
-      cnssAffiliationDate: p.cnssAffiliationDate ?? '',
-      salaireNetCandidat: p.salaireNetCandidat ?? null,
-      salaireNetRh: p.salaireNetRh ?? null,
-    };
-  }
-
-  saveProfile(): void {
-    if (!this.editForm.reason?.trim()) {
-      this.editSaveError.set(this.translate.instant('PROFILES.EDIT.ERR_REASON_REQUIRED'));
-      return;
-    }
-    this.saving.set(true);
-    this.editSaveError.set(null);
-    const dto: ProfileUpdateDto = { ...this.editForm };
-    // Convert empty strings to undefined for optional fields
-    Object.keys(dto).forEach((k) => {
-      if (k !== 'reason' && (dto as any)[k] === '') (dto as any)[k] = undefined;
-    });
-    this.svc
-      .update(this.profileId, dto)
-      .pipe(
-        catchError((err) => {
-          this.saving.set(false);
-          this.editSaveError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.EDIT.ERR_SAVE')));
-          return of(null);
-        }),
-      )
-      .subscribe((updated) => {
-        if (updated) {
-          this.profile.set(updated);
-          this.editMode.set(false);
-          this.saving.set(false);
-          this.editSaveError.set(null);
-        }
-      });
-  }
-
-  // ── Contract Lifecycle Engine ───────────────────────────────────────────────
-
+  // ── Contract lifecycle ─────────────────────────────────────────────────────
   loadContracts(): void {
     if (this.lcLoaded) return;
     this.lcLoaded = true;
     this.lcLoading.set(true);
-    this.lcSvc
-      .getContracts(this.profileId)
-      .pipe(catchError(() => of([])))
-      .subscribe((cs) => {
-        this.lcContracts.set(cs);
-        this.lcLoading.set(false);
-      });
-    this.lcSvc
-      .getLifecycleHistory(this.profileId)
-      .pipe(catchError(() => of([])))
-      .subscribe((h) => this.lcHistory.set(h));
+    this.lcSvc.getContracts(this.profileId).pipe(catchError(() => of([])))
+      .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); });
+    this.lcSvc.getLifecycleHistory(this.profileId).pipe(catchError(() => of([])))
+      .subscribe(h => this.lcHistory.set(h));
   }
 
-  onContractCreated(contract: ContractDetailDto): void {
-    this.showNewContractModal.set(false);
+  private refreshContracts(): void {
     this.lcLoaded = false;
     this.loadContracts();
   }
 
-  daysUntil(dateStr: string | null): number | null {
-    if (!dateStr) return null;
-    const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000);
-    return diff;
+  onContractCreated(_contract: ContractDetailDto): void {
+    this.showNewContractModal.set(false);
+    this.refreshContracts();
   }
 
   openValidateTrialModal(contractId: number): void {
@@ -656,8 +683,8 @@ export class ProfileDetailComponent implements OnInit {
       title: this.translate.instant('PROFILES.TRIAL.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
-        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary', action: (ref) => this.confirmValidateTrial(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'),  variant: 'secondary', action: ref => ref.close() },
+        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary',   action: ref => this.confirmValidateTrial(ref) },
       ],
     });
   }
@@ -665,26 +692,15 @@ export class ProfileDetailComponent implements OnInit {
   confirmValidateTrial(ref: ModalRef): void {
     if (this.selectedContractId === null || this.lcSaving()) return;
     this.lcSaving.set(true);
-    this.lcSvc
-      .validateTrial(this.selectedContractId, {
-        approved: this.trialApproved,
-        commentaire: this.trialComment || null,
-      })
-      .pipe(
-        catchError((err) => {
-          this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
-          this.lcSaving.set(false);
-          return of(null);
-        }),
-      )
-      .subscribe((r) => {
-        if (r) {
-          this.lcSaving.set(false);
-          this.lcLoaded = false;
-          this.loadContracts();
-          ref.close();
-        }
-      });
+    this.lcSvc.validateTrial(this.selectedContractId, {
+      approved: this.trialApproved, commentaire: this.trialComment || null,
+    }).pipe(catchError(err => {
+      this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
+      this.lcSaving.set(false);
+      return of(null);
+    })).subscribe(r => {
+      if (r) { this.lcSaving.set(false); this.refreshContracts(); ref.close(); }
+    });
   }
 
   openRenewCDDModal(contractId: number): void {
@@ -698,8 +714,8 @@ export class ProfileDetailComponent implements OnInit {
       title: this.translate.instant('PROFILES.RENEW.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
-        { label: this.translate.instant('PROFILES.RENEW.CONFIRM'), variant: 'primary', action: (ref) => this.confirmRenewCDD(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: ref => ref.close() },
+        { label: this.translate.instant('PROFILES.RENEW.CONFIRM'), variant: 'primary',   action: ref => this.confirmRenewCDD(ref) },
       ],
     });
   }
@@ -711,26 +727,15 @@ export class ProfileDetailComponent implements OnInit {
     }
     if (this.lcSaving()) return;
     this.lcSaving.set(true);
-    this.lcSvc
-      .renewCDD(this.selectedContractId, {
-        newDateFin: this.renewDateFin,
-        commentaire: this.renewComment || null,
-      })
-      .pipe(
-        catchError((err) => {
-          this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
-          this.lcSaving.set(false);
-          return of(null);
-        }),
-      )
-      .subscribe((r) => {
-        if (r) {
-          this.lcSaving.set(false);
-          this.lcLoaded = false;
-          this.loadContracts();
-          ref.close();
-        }
-      });
+    this.lcSvc.renewCDD(this.selectedContractId, {
+      newDateFin: this.renewDateFin, commentaire: this.renewComment || null,
+    }).pipe(catchError(err => {
+      this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
+      this.lcSaving.set(false);
+      return of(null);
+    })).subscribe(r => {
+      if (r) { this.lcSaving.set(false); this.refreshContracts(); ref.close(); }
+    });
   }
 
   openConvertCDIModal(contractId: number): void {
@@ -744,8 +749,8 @@ export class ProfileDetailComponent implements OnInit {
       title: this.translate.instant('PROFILES.CONVERT.MODAL_TITLE'),
       body: tpl,
       buttons: [
-        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: (ref) => ref.close() },
-        { label: this.translate.instant('PROFILES.CONVERT.CONFIRM'), variant: 'primary', action: (ref) => this.confirmConvertCDI(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'),   variant: 'secondary', action: ref => ref.close() },
+        { label: this.translate.instant('PROFILES.CONVERT.CONFIRM'), variant: 'primary',   action: ref => this.confirmConvertCDI(ref) },
       ],
     });
   }
@@ -757,25 +762,24 @@ export class ProfileDetailComponent implements OnInit {
     }
     if (this.lcSaving()) return;
     this.lcSaving.set(true);
-    this.lcSvc
-      .convertToCDI(this.selectedContractId, {
-        cdiStartDate: this.cdiStartDate,
-        commentaire: this.cdiComment || null,
-      })
-      .pipe(
-        catchError((err) => {
-          this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
-          this.lcSaving.set(false);
-          return of(null);
-        }),
-      )
-      .subscribe((r) => {
-        if (r) {
-          this.lcSaving.set(false);
-          this.lcLoaded = false;
-          this.loadContracts();
-          ref.close();
-        }
-      });
+    this.lcSvc.convertToCDI(this.selectedContractId, {
+      cdiStartDate: this.cdiStartDate, commentaire: this.cdiComment || null,
+    }).pipe(catchError(err => {
+      this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
+      this.lcSaving.set(false);
+      return of(null);
+    })).subscribe(r => {
+      if (r) { this.lcSaving.set(false); this.refreshContracts(); ref.close(); }
+    });
   }
+
+  // ── Modal-body field bridges ───────────────────────────────────────────────
+  onTrialComment(v: string | number | null): void { this.trialComment = v == null ? '' : String(v); }
+  onRenewComment(v: string | number | null): void { this.renewComment = v == null ? '' : String(v); }
+  onCdiComment(v: string | number | null): void   { this.cdiComment   = v == null ? '' : String(v); }
+}
+
+/** `''`, `null` and `undefined` all mean "no value" when diffing form vs profile. */
+function normalise(v: unknown): unknown {
+  return v === '' || v === undefined ? null : v;
 }

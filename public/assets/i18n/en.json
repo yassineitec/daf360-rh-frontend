@@ -194,8 +194,7 @@
     },
     "INSIGHTS": {
       "TITLE": "Recruitment insights",
-      "SHOW": "Show recruitment insights",
-      "HIDE": "Hide recruitment insights"
+      "CLOSE": "Close recruitment insights"
     },
     "KANBAN": {
       "COL_PENDING": "Pending",
@@ -1032,7 +1031,10 @@
       "LIFECYCLE": "Contracts & Lifecycle",
       "CONTRACT_HISTORY": "Contract history",
       "DOCUMENTS": "Documents",
-      "HR_DOCUMENTS": "HR Documents"
+      "HR_DOCUMENTS": "HR Documents",
+      "COMPENSATION": "Expectations & pay",
+      "EMPLOYMENT_POSITION": "Employment & role",
+      "SOCIAL_IDS": "Social & tax identifiers"
     },
     "FIELDS": {
       "DOB": "Date of birth",
@@ -1068,7 +1070,16 @@
       "SOCIAL_INSURANCE": "Social Insurance No.",
       "NIF": "Tax ID (NIF)",
       "CNSS": "Social Security No.",
-      "CNSS_AFFILIATION": "Social Security affiliation date"
+      "CNSS_AFFILIATION": "Social Security affiliation date",
+      "CURRENCY": "Currency",
+      "PAY_FREQUENCY": "Frequency",
+      "PAYS": "Country / entity",
+      "ONBOARDING": "Onboarding",
+      "CREATED_AT": "Created",
+      "UPDATED_AT": "Updated",
+      "REGIME_START": "Schedule start",
+      "REGIME_END": "Schedule end",
+      "REGIME_REASON": "Schedule reason"
     },
     "PLACEHOLDERS": {
       "SALARY_CANDIDATE": "e.g.: 2500",
@@ -1086,7 +1097,8 @@
       "PHOTO_ALT": "Photo",
       "PHOTO_UPLOADING": "Uploading…",
       "PHOTO_CHANGE": "Change photo",
-      "CHANGE_STATUS": "Change status"
+      "CHANGE_STATUS": "Change status",
+      "TABS_ARIA": "Employee record sections"
     },
     "REGIME": {
       "HOURS_DAYS": "{{hours}}h/week · {{days}} days",
@@ -1096,7 +1108,13 @@
       "ROLE_ASSIGNMENT": "Role assignment",
       "ENTITY_DEFAULT": "Entity default",
       "REMOVE_OVERRIDE": "Remove override (revert to role schedule)",
-      "NONE_CONFIGURED": "No schedule configured for this employee"
+      "NONE_CONFIGURED": "No schedule configured for this employee",
+      "SCHEDULE_TYPE": "Schedule type",
+      "WORKING_DAYS": "Working days",
+      "LUNCH_BREAK": "Lunch break",
+      "DAYS_COUNT": "{{days}} d/week",
+      "MINUTES": "{{min}} min",
+      "HOURS_PER_WEEK": "{{hours}} h/week"
     },
     "REGIME_OVERRIDE": {
       "CONFIRM_TITLE": "Remove override",
@@ -1122,7 +1140,8 @@
     "PHOTO": {
       "ERR_FORMAT": "Unsupported format. Use JPEG, PNG or WebP.",
       "ERR_SIZE": "Photo too large (max 3 MB).",
-      "ERR_UPLOAD": "Error while uploading."
+      "ERR_UPLOAD": "Error while uploading.",
+      "UPLOAD_SUCCESS": "Photo updated."
     },
     "TRANSITION": {
       "MODAL_TITLE": "Change profile status",
@@ -1130,7 +1149,8 @@
       "NEW_STATUS": "New status *",
       "REASON": "Reason *",
       "ERR_SELECT": "Select a status and provide a reason.",
-      "ERR_CHANGE": "Error while changing status."
+      "ERR_CHANGE": "Error while changing status.",
+      "SUCCESS": "Status changed to \"{{status}}\"."
     },
     "TRIAL": {
       "MODAL_TITLE": "Validate the probation period",
@@ -1153,7 +1173,9 @@
       "REASON_LABEL": "Reason for the change *",
       "SAVE": "Save changes",
       "ERR_REASON_REQUIRED": "The modification reason is required.",
-      "ERR_SAVE": "Error while saving."
+      "ERR_SAVE": "Error while saving.",
+      "SAVE_SUCCESS": "Profile updated.",
+      "SAVE_ERROR_TITLE": "Save failed"
     },
     "DOCUMENTS": {
       "TYPE_LABEL": "Document type",
@@ -1177,7 +1199,10 @@
       "ATT_TENURE_DISABLED": "Reserved for permanent employees",
       "ATT_DOMICIL_TITLE": "Salary domiciliation certificate",
       "ATT_DOMICIL_DESC": "Certifies the bank domiciliation of the salary — requires bank details",
-      "ATT_DOMICIL_DISABLED": "Complete the bank details"
+      "ATT_DOMICIL_DISABLED": "Complete the bank details",
+      "GENERATED": "Generated documents",
+      "GENERATE_TITLE": "Generate a document",
+      "DRAWER_CLOSE": "Close document generation"
     },
     "HISTORY": {
       "TITLE": "Contract history",
@@ -1272,6 +1297,13 @@
       "ERR_FUTURE_DATE": "The date cannot be in the future",
       "ERR_CDD_END": "Required for a CDD contract",
       "ERR_CREATE": "Error while creating"
+    },
+    "PAY_FREQUENCY": {
+      "MONTHLY": "Monthly"
+    },
+    "ONBOARDING": {
+      "DONE": "Completed",
+      "PENDING": "In progress"
     }
   },
   "LIFECYCLE": {
