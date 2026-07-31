@@ -109,12 +109,18 @@ export const routes: Routes = [
           import('./modules/leave/leave.routes').then(m => m.LEAVE_ROUTES),
       },
       {
-        path: 'lifecycle',
+        // `RH_MANAGE_OFFBOARDING` is what `OffboardingController` actually enforces
+        // on every endpoint; `RH_MANAGE_LIFECYCLE` stays accepted so nobody who
+        // could reach this page yesterday is locked out today.
+        path: 'offboarding',
         canActivate: [permissionGuard],
-        data: { permissions: ['RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'] },
+        data: { permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'] },
         loadChildren: () =>
-          import('./modules/lifecycle/lifecycle.routes').then(m => m.LIFECYCLE_ROUTES),
+          import('./modules/offboarding/offboarding.routes').then(m => m.OFFBOARDING_ROUTES),
       },
+      // Old path — kept so bookmarks and the notification deep links still land.
+      { path: 'lifecycle', redirectTo: 'offboarding' },
+      { path: 'lifecycle/:id', redirectTo: 'offboarding/:id' },
       {
         path: 'requests',
         canActivate: [permissionGuard],

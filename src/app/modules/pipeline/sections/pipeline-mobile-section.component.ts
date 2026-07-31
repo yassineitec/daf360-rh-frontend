@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 
-import { OffboardingWorkflowInstance } from '../../lifecycle/models/lifecycle.model';
+import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
 import { KanbanCandidate } from '../services/pipeline.service';
 import { BoardColumn, BoardStageKey, OFFBOARDING_ACCENT, OFFBOARDING_KEY } from '../board.model';
 import { PipelineKanbanCardComponent } from '../components/pipeline-kanban-card.component';

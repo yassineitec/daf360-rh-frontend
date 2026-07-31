@@ -17,8 +17,8 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../core/user.store';
-import { LifecycleService } from '../lifecycle/lifecycle.service';
-import { OffboardingWorkflowInstance, isTerminal } from '../lifecycle/models/lifecycle.model';
+import { OffboardingService } from '../offboarding/offboarding.service';
+import { OffboardingWorkflowInstance, isTerminal } from '../offboarding/models/offboarding.model';
 import {
   BOARD_STAGES,
   BoardColumn,
@@ -75,7 +75,7 @@ type ViewMode = 'kanban' | 'list';
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
   private offerService    = inject(OfferService);
-  private lifecycleSvc    = inject(LifecycleService);
+  private offboardingSvc    = inject(OffboardingService);
   private userStore       = inject(UserStore);
   private router          = inject(Router);
   private translate       = inject(TranslateService);
@@ -288,7 +288,7 @@ export class PipelineComponent implements OnInit {
       kanban:      this.pipelineService.getKanban().pipe(catchError(() => of(null))),
       stats:       this.pipelineService.getStats().pipe(catchError(() => of(null))),
       offboarding: this.canViewOffboarding()
-        ? this.lifecycleSvc.listOffboarding().pipe(catchError(() => of([] as OffboardingWorkflowInstance[])))
+        ? this.offboardingSvc.listOffboarding().pipe(catchError(() => of([] as OffboardingWorkflowInstance[])))
         : of([] as OffboardingWorkflowInstance[]),
     }).subscribe(({ kanban, stats, offboarding }) => {
       if (kanban) this.rawColumns.set(kanban);
@@ -314,7 +314,7 @@ export class PipelineComponent implements OnInit {
   // ── Navigation ─────────────────────────────────────────────────────────────
   onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
   onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
-  onViewOffboarding(id: number): void { this.router.navigate(['/rh/lifecycle', id]); }
+  onViewOffboarding(id: number): void { this.router.navigate(['/rh/offboarding', id]); }
 
   // ── Offer modal ────────────────────────────────────────────────────────────
   readonly offerTarget     = signal<KanbanCandidate | null>(null);

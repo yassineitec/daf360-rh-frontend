@@ -5,11 +5,11 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject, switchMap, catchError, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { LifecycleService }  from './lifecycle.service';
+import { OffboardingService }  from './offboarding.service';
 import { ProfileService }    from '../profiles/profile.service';
 import {
   DEPARTURE_REASONS, DepartureReason,
-} from './models/lifecycle.model';
+} from './models/offboarding.model';
 import { EmployeeListItem }  from '../profiles/models/profile.model';
 import { ModalComponent }    from '../../shared/modal.component';
 import {
@@ -21,12 +21,12 @@ import { NotificationService } from '../../core/notification.service';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 
 @Component({
-  selector: 'app-new-workflow-modal',
+  selector: 'rh-start-offboarding-modal',
   standalone: true,
   imports: [ModalComponent, ReactiveFormsModule, ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, MultiDatePickerComponent, TranslatePipe],
   template: `
     <app-modal
-      [title]="'LIFECYCLE.NEW.TITLE' | translate"
+      [title]="'OFFBOARDING.NEW.TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
       (closed)="onClose()"
@@ -37,7 +37,7 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
         <div class="field-full">
           <div class="ac-wrap">
             <daf-form-field
-              [options]="{ label: 'LIFECYCLE.NEW.EMPLOYEE_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.NEW.EMPLOYEE_PH' | translate, required: true, fullWidth: true }"
+              [options]="{ label: 'OFFBOARDING.NEW.EMPLOYEE_LABEL' | translate, type: 'text', placeholder: 'OFFBOARDING.NEW.EMPLOYEE_PH' | translate, required: true, fullWidth: true }"
               [value]="employeeQuery"
               (valueChange)="onEmployeeQuery($any($event) ?? '')"
             />
@@ -61,7 +61,7 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
             </div>
           }
           @if (form.get('employeeProfileId')?.touched && form.get('employeeProfileId')?.errors?.['required']) {
-            <span class="field-error">{{ 'LIFECYCLE.NEW.EMPLOYEE_REQUIRED' | translate }}</span>
+            <span class="field-error">{{ 'OFFBOARDING.NEW.EMPLOYEE_REQUIRED' | translate }}</span>
           }
         </div>
 
@@ -69,7 +69,7 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
         <div class="field-full">
           <div class="ac-wrap">
             <daf-form-field
-              [options]="{ label: 'LIFECYCLE.NEW.MANAGER_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.NEW.MANAGER_PH' | translate, fullWidth: true }"
+              [options]="{ label: 'OFFBOARDING.NEW.MANAGER_LABEL' | translate, type: 'text', placeholder: 'OFFBOARDING.NEW.MANAGER_PH' | translate, fullWidth: true }"
               [value]="managerQuery"
               (valueChange)="onManagerQuery($any($event) ?? '')"
             />
@@ -98,10 +98,10 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
         <daf-select
           [options]="reasonOptions()"
           [config]="{
-            label: 'LIFECYCLE.NEW.REASON_LABEL' | translate,
-            placeholder: 'LIFECYCLE.NEW.SELECT' | translate,
+            label: 'OFFBOARDING.NEW.REASON_LABEL' | translate,
+            placeholder: 'OFFBOARDING.NEW.SELECT' | translate,
             required: true,
-            error: (form.get('departureReason')?.touched && form.get('departureReason')?.errors?.['required']) ? ('LIFECYCLE.NEW.REASON_REQUIRED' | translate) : ''
+            error: (form.get('departureReason')?.touched && form.get('departureReason')?.errors?.['required']) ? ('OFFBOARDING.NEW.REASON_REQUIRED' | translate) : ''
           }"
           [selected]="reasonSelected()"
           (selectedChange)="setControl('departureReason', $event[0])"
@@ -111,12 +111,12 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
         <daf-multi-date-picker
           [value]="getDate('triggerDate')"
           [config]="{
-            label: 'LIFECYCLE.NEW.TRIGGER_LABEL' | translate,
-            placeholder: 'LIFECYCLE.NEW.SELECT' | translate,
+            label: 'OFFBOARDING.NEW.TRIGGER_LABEL' | translate,
+            placeholder: 'OFFBOARDING.NEW.SELECT' | translate,
             selectionMode: 'single',
             required: true,
             fullWidth: true,
-            error: (form.get('triggerDate')?.touched && form.get('triggerDate')?.errors?.['required']) ? ('LIFECYCLE.NEW.TRIGGER_REQUIRED' | translate) : ''
+            error: (form.get('triggerDate')?.touched && form.get('triggerDate')?.errors?.['required']) ? ('OFFBOARDING.NEW.TRIGGER_REQUIRED' | translate) : ''
           }"
           (valueChange)="setDate('triggerDate', $event)"
         />
@@ -124,14 +124,14 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
         <!-- Dernier jour de travail -->
         <daf-multi-date-picker
           [value]="getDate('lastWorkingDay')"
-          [config]="{ label: 'LIFECYCLE.NEW.LAST_DAY_LABEL' | translate, placeholder: 'LIFECYCLE.NEW.SELECT' | translate, selectionMode: 'single', fullWidth: true }"
+          [config]="{ label: 'OFFBOARDING.NEW.LAST_DAY_LABEL' | translate, placeholder: 'OFFBOARDING.NEW.SELECT' | translate, selectionMode: 'single', fullWidth: true }"
           (valueChange)="setDate('lastWorkingDay', $event)"
         />
 
         <!-- Notes -->
         <div class="field-full">
           <daf-form-field
-            [options]="{ label: 'LIFECYCLE.NEW.NOTES_LABEL' | translate, type: 'textarea', rows: 2, placeholder: 'LIFECYCLE.NEW.NOTES_PH' | translate, fullWidth: true }"
+            [options]="{ label: 'OFFBOARDING.NEW.NOTES_LABEL' | translate, type: 'textarea', rows: 2, placeholder: 'OFFBOARDING.NEW.NOTES_PH' | translate, fullWidth: true }"
             [value]="form.get('departureNotes')?.value ?? ''"
             (valueChange)="setControl('departureNotes', $any($event) ?? '')"
           />
@@ -144,9 +144,9 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
       </form>
 
       <div slot="footer">
-        <daf-button [label]="'LIFECYCLE.NEW.CANCEL' | translate" variant="secondary" (onClick)="onClose()" />
+        <daf-button [label]="'OFFBOARDING.NEW.CANCEL' | translate" variant="secondary" (onClick)="onClose()" />
         <daf-button
-          [label]="'LIFECYCLE.NEW.START' | translate"
+          [label]="'OFFBOARDING.NEW.START' | translate"
           variant="teal"
           [options]="{ disabled: form.invalid || saving(), loading: saving() }"
           (onClick)="save()"
@@ -176,9 +176,9 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
     @media(max-width:520px) { .ob-form { grid-template-columns:1fr } }
   `],
 })
-export class NewWorkflowModalComponent {
+export class StartOffboardingModalComponent {
   private fb          = inject(FormBuilder);
-  private svc         = inject(LifecycleService);
+  private svc         = inject(OffboardingService);
   private profileSvc  = inject(ProfileService);
   private translate   = inject(TranslateService);
   private notify      = inject(NotificationService);
@@ -201,7 +201,7 @@ export class NewWorkflowModalComponent {
 
   /** Departure-reason options for daf-select, labels normalised via i18n. */
   readonly reasonOptions = computed<SelectOption[]>(() =>
-    DEPARTURE_REASONS.map(r => ({ value: r, label: this.translate.instant('LIFECYCLE.REASON.' + r) })),
+    DEPARTURE_REASONS.map(r => ({ value: r, label: this.translate.instant('OFFBOARDING.REASON.' + r) })),
   );
 
   form = this.fb.group({
@@ -319,7 +319,7 @@ export class NewWorkflowModalComponent {
       handoverManagerProfileId: v.handoverManagerProfileId  ?? undefined,
     }).pipe(
       catchError(err => {
-        const msg = err?.error?.message ?? err?.error?.detail ?? this.translate.instant('LIFECYCLE.TOAST.CREATE_ERR');
+        const msg = err?.error?.message ?? err?.error?.detail ?? this.translate.instant('OFFBOARDING.TOAST.CREATE_ERR');
         this.errorMsg.set(msg);
         this.notify.error(msg);
         this.saving.set(false);
@@ -328,7 +328,7 @@ export class NewWorkflowModalComponent {
     ).subscribe(result => {
       if (result) {
         this.saving.set(false);
-        this.notify.success(this.translate.instant('LIFECYCLE.TOAST.CREATED'));
+        this.notify.success(this.translate.instant('OFFBOARDING.TOAST.CREATED'));
         this.reset();
         this.created.emit(result.id);
       }

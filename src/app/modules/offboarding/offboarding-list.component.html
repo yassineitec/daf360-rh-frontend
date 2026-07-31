@@ -1,0 +1,97 @@
+<!-- /rh/offboarding — canonical page shape (UI-PLAYBOOK §1). Was /rh/lifecycle:
+     a hand-rolled `.page-header` + `.filters-bar` + a `.card` wrapping the table,
+     all styled by 20 lines of component CSS and a `--color-*` SCSS file that
+     predate the design system. `kpis="4"` matches the four tiles. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
+
+  <daf-page-header
+    [title]="'OFFBOARDING.LIST.TITLE' | translate"
+    [subtitle]="'OFFBOARDING.LIST.SUBTITLE' | translate">
+    <ng-container pageActions>
+      @if (canManage()) {
+        <daf-button
+          [options]="{ variant: 'teal', iconStart: 'logout',
+                       label: ('OFFBOARDING.LIST.START_BUTTON' | translate) }"
+          (onClick)="showModal.set(true)" />
+      }
+    </ng-container>
+  </daf-page-header>
+
+  <!-- KPIs — one row at every width. The page had none; these read off the same
+       list, so no extra request. -->
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'OFFBOARDING.LIST.KPI_ACTIVE' | translate"
+      [value]="stats().active"
+      [delta]="activeDelta()"
+      [options]="{ icon: 'logout', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
+    <daf-metric-card
+      [label]="'OFFBOARDING.LIST.KPI_BLOCKED' | translate"
+      [value]="stats().blocked"
+      [delta]="blockedDelta()"
+      [options]="{ icon: 'block', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+
+    <daf-metric-card
+      [label]="'OFFBOARDING.LIST.KPI_SLA' | translate"
+      [value]="stats().slaBreach"
+      [delta]="slaDelta()"
+      [options]="{ icon: 'alarm', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+
+    <daf-metric-card
+      [label]="'OFFBOARDING.LIST.KPI_VALIDATED' | translate"
+      [value]="stats().validated"
+      [delta]="validatedDelta()"
+      [options]="{ icon: 'task_alt', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+  </section>
+
+  <!-- Search + status filter + view toggle: one lib toolbar. Replaces the
+       `.filters-bar` with its loose `daf-select` and its "Réinitialiser" button —
+       the filter panel applies and resets itself (§10c). -->
+  <daf-search-toolbar
+    [placeholder]="'OFFBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
+
+  <!-- Content sits free in the page — never wrapped in an outer card (§1). -->
+  @if (viewMode() === 'grid') {
+    <rh-offboarding-cards-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [emptyMessage]="emptyMessage()"
+      (open)="open($event)" />
+  } @else {
+    <rh-offboarding-table-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      [emptyMessage]="emptyMessage()"
+      (open)="open($event)" />
+  }
+
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
+
+</daf-page>
+
+<!-- At the page root: the modal overlay is `position: fixed` and must not inherit
+     a transformed ancestor (daf-card's glass variant would be one). -->
+<rh-start-offboarding-modal
+  [visible]="showModal()"
+  (closed)="showModal.set(false)"
+  (created)="onCreated($event)" />

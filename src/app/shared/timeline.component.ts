@@ -1,7 +1,7 @@
 import {
   Component, inject, input, output,
 } from '@angular/core';
-import { TaskStatus } from '../modules/lifecycle/models/lifecycle.model';
+import { TaskStatus } from '../modules/offboarding/models/offboarding.model';
 
 export interface WorkflowTask {
   id:          number;

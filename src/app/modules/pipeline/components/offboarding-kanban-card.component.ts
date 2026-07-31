@@ -3,14 +3,14 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 import { KanbanCardShellComponent } from '../../../shared/kanban-card-shell.component';
-import { OffboardingWorkflowInstance } from '../../lifecycle/models/lifecycle.model';
+import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
 import { OFFBOARDING_ACCENT } from '../board.model';
 import { candidateInitials } from '../pipeline-display';
 
 /**
  * One offboarding file, as shown in the board's read-only Offboarding column and
  * in the mobile list. Offboarding is a separate HR workflow — clicking through
- * opens `/rh/lifecycle/:id`, not a candidate — so it gets its own card rather
+ * opens `/rh/offboarding/:id`, not a candidate — so it gets its own card rather
  * than being squeezed into the candidate one.
  */
 @Component({
@@ -32,13 +32,13 @@ import { candidateInitials } from '../pipeline-display';
         </div>
         <div class="min-w-0">
           <h4 class="font-bold text-on-surface truncate">{{ item().employeeFullName || '—' }}</h4>
-          <p class="text-xs text-outline truncate">{{ 'LIFECYCLE.REASON.' + item().departureReason | translate }}</p>
+          <p class="text-xs text-outline truncate">{{ 'OFFBOARDING.REASON.' + item().departureReason | translate }}</p>
         </div>
       </div>
 
       <!-- Status + SLA -->
       <div class="flex items-center gap-2 mb-3">
-        <daf-badge [label]="'LIFECYCLE.STATUS.' + item().status | translate" [options]="{ variant: 'neutral', size: 'sm' }" />
+        <daf-badge [label]="'OFFBOARDING.STATUS.' + item().status | translate" [options]="{ variant: 'neutral', size: 'sm' }" />
         @if (item().slaBreachFlag) {
           <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider
                        text-danger bg-danger/10 px-2 py-0.5 rounded-full">

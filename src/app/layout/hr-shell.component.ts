@@ -55,11 +55,11 @@ const APP_NAV_DEFS: AppNavDef[] = [
     permissions: ['HR_ONBOARDING'],
   },
   {
-    id: 'lifecycle',
-    labelKey: 'NAV.LIFECYCLE',
-    icon: 'work_history',
-    route: 'lifecycle',
-    permissions: ['RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
+    id: 'offboarding',
+    labelKey: 'NAV.OFFBOARDING',
+    icon: 'logout',
+    route: 'offboarding',
+    permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
   },
   { id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
   {

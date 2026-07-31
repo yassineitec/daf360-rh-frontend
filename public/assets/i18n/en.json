@@ -1362,8 +1362,8 @@
       "PENDING": "In progress"
     }
   },
-  "LIFECYCLE": {
-    "DASHBOARD": {
+  "OFFBOARDING": {
+    "LIST": {
       "TITLE": "Offboarding",
       "COUNT": "{{count}} case(s)",
       "START_BUTTON": "Start an offboarding",
@@ -1378,7 +1378,28 @@
       "COL_STATUS": "Status",
       "COL_SLA": "SLA",
       "COL_PROGRESS": "Tasks",
-      "PROFILE_PREFIX": "Profile #{{id}}"
+      "PROFILE_PREFIX": "Profile #{{id}}",
+      "SUBTITLE": "Departures in progress and closed files",
+      "KPI_ACTIVE": "Active files",
+      "KPI_BLOCKED": "Blocked",
+      "KPI_SLA": "SLA breached",
+      "KPI_VALIDATED": "Validated",
+      "SEARCH_PLACEHOLDER": "Search an employee, a reason, a manager…",
+      "VIEW_GRID": "Grid view",
+      "VIEW_LIST": "List view",
+      "OPEN": "Open the file",
+      "FILTERS": {
+        "TITLE": "Filter files",
+        "TRIGGER": "Filters",
+        "APPLY": "Apply",
+        "CANCEL": "Cancel",
+        "RESET": "Reset"
+      },
+      "DELTA_ON_TRACK": "No overdue task",
+      "DELTA_OVERDUE_TASKS": "{{count}} overdue task(s)",
+      "DELTA_BLOCKING": "{{count}} blocked by a task",
+      "DELTA_SLA": "{{count}} past deadline",
+      "DELTA_VALIDATED": "{{pct}}% of files closed"
     },
     "BADGE": {
       "SLA_BREACHED": "SLA breached",
@@ -2785,7 +2806,7 @@
     "CANDIDATES": "Candidates",
     "IT_PROVISIONING": "IT Provisioning",
     "ONBOARDING": "Onboarding",
-    "LIFECYCLE": "Lifecycle",
+    "OFFBOARDING": "Offboarding",
     "REQUESTS": "Requests",
     "ADMIN": "Admin"
   }

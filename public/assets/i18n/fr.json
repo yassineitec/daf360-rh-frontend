@@ -1362,8 +1362,8 @@
       "PENDING": "En cours"
     }
   },
-  "LIFECYCLE": {
-    "DASHBOARD": {
+  "OFFBOARDING": {
+    "LIST": {
       "TITLE": "Offboarding",
       "COUNT": "{{count}} dossier(s)",
       "START_BUTTON": "Démarrer un offboarding",
@@ -1378,7 +1378,28 @@
       "COL_STATUS": "Statut",
       "COL_SLA": "SLA",
       "COL_PROGRESS": "Tâches",
-      "PROFILE_PREFIX": "Profil #{{id}}"
+      "PROFILE_PREFIX": "Profil #{{id}}",
+      "SUBTITLE": "Départs en cours et dossiers clôturés",
+      "KPI_ACTIVE": "Dossiers actifs",
+      "KPI_BLOCKED": "Bloqués",
+      "KPI_SLA": "SLA dépassé",
+      "KPI_VALIDATED": "Validés",
+      "SEARCH_PLACEHOLDER": "Rechercher un employé, un motif, un manager…",
+      "VIEW_GRID": "Vue grille",
+      "VIEW_LIST": "Vue liste",
+      "OPEN": "Ouvrir le dossier",
+      "FILTERS": {
+        "TITLE": "Filtrer les dossiers",
+        "TRIGGER": "Filtres",
+        "APPLY": "Appliquer",
+        "CANCEL": "Annuler",
+        "RESET": "Réinitialiser"
+      },
+      "DELTA_ON_TRACK": "Aucune tâche en retard",
+      "DELTA_OVERDUE_TASKS": "{{count}} tâche(s) en retard",
+      "DELTA_BLOCKING": "{{count}} bloqué(s) par une tâche",
+      "DELTA_SLA": "{{count}} hors délai",
+      "DELTA_VALIDATED": "{{pct}}% des dossiers clôturés"
     },
     "BADGE": {
       "SLA_BREACHED": "SLA dépassé",
@@ -2785,7 +2806,7 @@
     "CANDIDATES": "Candidats",
     "IT_PROVISIONING": "Provisioning IT",
     "ONBOARDING": "Onboarding",
-    "LIFECYCLE": "Cycle de vie",
+    "OFFBOARDING": "Offboarding",
     "REQUESTS": "Demandes",
     "ADMIN": "Admin"
   }

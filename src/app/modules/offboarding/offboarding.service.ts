@@ -6,10 +6,10 @@ import {
   CompleteTaskRequest, CreateAssetReturnRequest, ExitInterview, ExitInterviewRequest,
   HrNotification, OffboardingAssetReturn, OffboardingFilter, OffboardingTask,
   OffboardingWorkflowInstance, StartOffboardingRequest,
-} from './models/lifecycle.model';
+} from './models/offboarding.model';
 
 @Injectable({ providedIn: 'root' })
-export class LifecycleService {
+export class OffboardingService {
   private http      = inject(HttpClient);
   private base      = `${environment.hrApiUrl}/api/hr/offboarding`;
   private notifBase = `${environment.hrApiUrl}/api/hr/notifications`;

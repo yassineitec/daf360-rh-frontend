@@ -2,8 +2,8 @@ import {
   Component, inject, input, OnChanges, output, signal, SimpleChanges,
 } from '@angular/core';
 import { catchError, of } from 'rxjs';
-import { LifecycleService } from '../modules/lifecycle/lifecycle.service';
-import { HrNotification }   from '../modules/lifecycle/models/lifecycle.model';
+import { OffboardingService } from '../modules/offboarding/offboarding.service';
+import { HrNotification }   from '../modules/offboarding/models/offboarding.model';
 
 @Component({
   selector: 'app-notification-panel',
@@ -121,7 +121,7 @@ import { HrNotification }   from '../modules/lifecycle/models/lifecycle.model';
   `],
 })
 export class NotificationPanelComponent implements OnChanges {
-  private svc = inject(LifecycleService);
+  private svc = inject(OffboardingService);
 
   visible        = input(false);
   unreadCountOut = output<number>();

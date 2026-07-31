@@ -4,13 +4,13 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
-import { LifecycleService } from './lifecycle.service';
+import { OffboardingService } from './offboarding.service';
 import {
   OffboardingWorkflowInstance, OffboardingTask, ExitInterview,
   OffboardingAssetReturn, AssetType,
   DEPARTURE_REASONS, DepartureReason, ASSET_TYPES,
   computeProgress, isTerminal,
-} from './models/lifecycle.model';
+} from './models/offboarding.model';
 import {
   StatusBadgeComponent, BadgeOptions, ButtonComponent,
   CardComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
@@ -35,7 +35,7 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 };
 
 @Component({
-  selector: 'app-workflow-detail',
+  selector: 'rh-offboarding-detail',
   standalone: true,
   imports: [
     RouterLink,
@@ -47,23 +47,23 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   template: `
     <!-- Breadcrumb -->
     <nav class="breadcrumb">
-      <a routerLink="/rh/lifecycle" class="bc-link">{{ 'LIFECYCLE.DETAIL.BREADCRUMB' | translate }}</a>
+      <a routerLink="/rh/offboarding" class="bc-link">{{ 'OFFBOARDING.DETAIL.BREADCRUMB' | translate }}</a>
       <span class="bc-sep">›</span>
-      <span class="bc-current">{{ 'LIFECYCLE.DETAIL.FILE' | translate:{ id: workflowId } }}</span>
+      <span class="bc-current">{{ 'OFFBOARDING.DETAIL.FILE' | translate:{ id: workflowId } }}</span>
     </nav>
 
     @if (loading()) {
       <div class="center-spin"><app-spinner size="lg" /></div>
     } @else if (!wf()) {
-      <div class="error-state"><p>{{ 'LIFECYCLE.DETAIL.NOT_FOUND' | translate }}</p><a routerLink="/rh/lifecycle" class="btn-back">{{ 'LIFECYCLE.DETAIL.BACK' | translate }}</a></div>
+      <div class="error-state"><p>{{ 'OFFBOARDING.DETAIL.NOT_FOUND' | translate }}</p><a routerLink="/rh/offboarding" class="btn-back">{{ 'OFFBOARDING.DETAIL.BACK' | translate }}</a></div>
     } @else {
 
       <!-- SLA / blocked banner -->
       @if (wf()!.slaBreachFlag || wf()!.status === 'BLOCKED') {
         <div class="alert-banner alert-danger">
           <span class="material-symbols-outlined">warning</span>
-          @if (wf()!.slaBreachFlag) { <span>{{ 'LIFECYCLE.DETAIL.ALERT_SLA' | translate }}</span> }
-          @else { <span>{{ 'LIFECYCLE.DETAIL.ALERT_BLOCKED' | translate }}</span> }
+          @if (wf()!.slaBreachFlag) { <span>{{ 'OFFBOARDING.DETAIL.ALERT_SLA' | translate }}</span> }
+          @else { <span>{{ 'OFFBOARDING.DETAIL.ALERT_BLOCKED' | translate }}</span> }
         </div>
       }
 
@@ -71,22 +71,22 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
       <daf-card [options]="{ padding: 'lg', radius: 'xl' }" class="block wf-header">
         <div class="header-row">
           <div class="header-meta">
-            <h1 class="wf-title">{{ 'LIFECYCLE.DETAIL.TITLE' | translate:{ name: employeeName() } }}</h1>
+            <h1 class="wf-title">{{ 'OFFBOARDING.DETAIL.TITLE' | translate:{ name: employeeName() } }}</h1>
             <div class="header-chips">
               <daf-badge [label]="statusLabel(wf()!.status)" [options]="{ variant: statusVariant(wf()!.status), size: 'sm' }" />
               <daf-badge [label]="reasonLabel(wf()!.departureReason)" [options]="{ variant: 'neutral', size: 'sm' }" />
               @if (wf()!.slaBreachFlag) {
-                <daf-badge [label]="'LIFECYCLE.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
+                <daf-badge [label]="'OFFBOARDING.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
               }
             </div>
           </div>
-          <!-- Action buttons (mutations gated on RH_MANAGE_LIFECYCLE) -->
+          <!-- Action buttons (mutations gated on RH_MANAGE_OFFBOARDING) -->
           @if (!isTerminal() && canManage()) {
             <div class="header-actions">
               @if (canValidate()) {
-                <daf-button [label]="'LIFECYCLE.DETAIL.VALIDATE' | translate" variant="teal" [options]="{ iconStart: 'check_circle', loading: validating() }" (onClick)="showValidateModal.set(true)" />
+                <daf-button [label]="'OFFBOARDING.DETAIL.VALIDATE' | translate" variant="teal" [options]="{ iconStart: 'check_circle', loading: validating() }" (onClick)="showValidateModal.set(true)" />
               }
-              <daf-button [label]="'LIFECYCLE.DETAIL.CANCEL' | translate" variant="danger" [options]="{ iconStart: 'cancel', loading: cancelling() }" (onClick)="showCancelModal.set(true)" />
+              <daf-button [label]="'OFFBOARDING.DETAIL.CANCEL' | translate" variant="danger" [options]="{ iconStart: 'cancel', loading: cancelling() }" (onClick)="showCancelModal.set(true)" />
             </div>
           }
         </div>
@@ -94,47 +94,47 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
         <!-- Key dates -->
         <div class="dates-row">
           <div class="date-item">
-            <span class="date-label">{{ 'LIFECYCLE.DETAIL.DATE_TRIGGER' | translate }}</span>
+            <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_TRIGGER' | translate }}</span>
             <span class="date-val">{{ fmt(wf()!.triggerDate) }}</span>
           </div>
           @if (wf()!.lastWorkingDay) {
             <div class="date-item">
-              <span class="date-label">{{ 'LIFECYCLE.DETAIL.DATE_LAST_DAY' | translate }}</span>
+              <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_LAST_DAY' | translate }}</span>
               <span class="date-val">{{ fmt(wf()!.lastWorkingDay) }}</span>
             </div>
           }
           @if (wf()!.validatedAt) {
             <div class="date-item">
-              <span class="date-label">{{ 'LIFECYCLE.DETAIL.DATE_VALIDATED' | translate }}</span>
+              <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_VALIDATED' | translate }}</span>
               <span class="date-val">{{ fmt(wf()!.validatedAt) }}</span>
             </div>
           }
           @if (wf()!.cancelledAt) {
             <div class="date-item">
-              <span class="date-label">{{ 'LIFECYCLE.DETAIL.DATE_CANCELLED' | translate }}</span>
+              <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_CANCELLED' | translate }}</span>
               <span class="date-val">{{ fmt(wf()!.cancelledAt) }}</span>
             </div>
           }
           @if (wf()!.handoverManagerName) {
             <div class="date-item">
-              <span class="date-label">{{ 'LIFECYCLE.DETAIL.HANDOVER_MANAGER' | translate }}</span>
+              <span class="date-label">{{ 'OFFBOARDING.DETAIL.HANDOVER_MANAGER' | translate }}</span>
               <span class="date-val">{{ wf()!.handoverManagerName }}</span>
             </div>
           }
         </div>
 
         @if (wf()!.cancellationReason) {
-          <p class="cancel-reason"><strong>{{ 'LIFECYCLE.DETAIL.CANCEL_REASON_LABEL' | translate }}</strong> {{ wf()!.cancellationReason }}</p>
+          <p class="cancel-reason"><strong>{{ 'OFFBOARDING.DETAIL.CANCEL_REASON_LABEL' | translate }}</strong> {{ wf()!.cancellationReason }}</p>
         }
         @if (wf()!.departureNotes) {
-          <p class="notes-text"><strong>{{ 'LIFECYCLE.DETAIL.NOTES_LABEL' | translate }}</strong> {{ wf()!.departureNotes }}</p>
+          <p class="notes-text"><strong>{{ 'OFFBOARDING.DETAIL.NOTES_LABEL' | translate }}</strong> {{ wf()!.departureNotes }}</p>
         }
 
         <!-- Progress bar -->
         @if (tasks().length > 0) {
           <div class="progress-section">
             <div class="progress-label">
-              <span>{{ 'LIFECYCLE.DETAIL.PROGRESS_TITLE' | translate }}</span>
+              <span>{{ 'OFFBOARDING.DETAIL.PROGRESS_TITLE' | translate }}</span>
               <span class="progress-pct-val">{{ progressPct() }}% — {{ doneTasks() }}/{{ tasks().length }}</span>
             </div>
             <div class="progress-bar-lg">
@@ -146,9 +146,9 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 
       <!-- ── Tasks ──────────────────────────────────────────────────────────── -->
       <section class="detail-section">
-        <h2 class="section-title">{{ 'LIFECYCLE.DETAIL.TASKS_TITLE' | translate }}</h2>
+        <h2 class="section-title">{{ 'OFFBOARDING.DETAIL.TASKS_TITLE' | translate }}</h2>
         @if (tasks().length === 0) {
-          <p class="section-empty">{{ 'LIFECYCLE.DETAIL.TASKS_EMPTY' | translate }}</p>
+          <p class="section-empty">{{ 'OFFBOARDING.DETAIL.TASKS_EMPTY' | translate }}</p>
         } @else {
           <daf-data-table [columns]="taskColumns()" [rows]="taskRows()" [config]="taskTableConfig">
 
@@ -161,7 +161,7 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 
             <ng-template dafCell="sla" let-row>
               @if (row['_slaBreached']) {
-                <daf-badge [label]="'LIFECYCLE.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
+                <daf-badge [label]="'OFFBOARDING.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
               } @else if (row['_dueDate']) {
                 <span class="date-muted">{{ row['_dueDate'] }}</span>
               } @else {
@@ -171,7 +171,7 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 
             <ng-template dafCell="blocking" let-row>
               @if (row['_blocking']) {
-                <daf-badge [label]="'LIFECYCLE.BADGE.BLOCKING' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
+                <daf-badge [label]="'OFFBOARDING.BADGE.BLOCKING' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
               } @else {
                 <span class="cell-muted">—</span>
               }
@@ -180,9 +180,9 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
             <ng-template dafCell="actions" let-row>
               @if (row['_status'] !== 'DONE' && row['_status'] !== 'SKIPPED' && !isTerminal() && canManage()) {
                 <div class="row-actions">
-                  <daf-button [label]="'LIFECYCLE.DETAIL.COMPLETE' | translate" variant="teal" [options]="{ size: 'sm' }" (onClick)="openCompleteModal(row['_task'])" />
+                  <daf-button [label]="'OFFBOARDING.DETAIL.COMPLETE' | translate" variant="teal" [options]="{ size: 'sm' }" (onClick)="openCompleteModal(row['_task'])" />
                   @if (!row['_blocking']) {
-                    <daf-button [label]="'LIFECYCLE.DETAIL.SKIP' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openSkipModal(row['_task'])" />
+                    <daf-button [label]="'OFFBOARDING.DETAIL.SKIP' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openSkipModal(row['_task'])" />
                   }
                 </div>
               }
@@ -195,9 +195,9 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
       <!-- ── Exit interview ─────────────────────────────────────────────────── -->
       <section class="detail-section">
         <div class="section-header-row">
-          <h2 class="section-title">{{ 'LIFECYCLE.DETAIL.INTERVIEW_TITLE' | translate }}</h2>
+          <h2 class="section-title">{{ 'OFFBOARDING.DETAIL.INTERVIEW_TITLE' | translate }}</h2>
           @if (!interview() && !isTerminal() && canManage()) {
-            <daf-button [label]="'LIFECYCLE.DETAIL.INTERVIEW_ADD' | translate" variant="secondary" [options]="{ size: 'sm', iconStart: 'add' }" (onClick)="showInterviewForm.set(true)" />
+            <daf-button [label]="'OFFBOARDING.DETAIL.INTERVIEW_ADD' | translate" variant="secondary" [options]="{ size: 'sm', iconStart: 'add' }" (onClick)="showInterviewForm.set(true)" />
           }
         </div>
 
@@ -206,30 +206,30 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
         } @else if (interview()) {
           <div class="interview-card">
             @if (interview()!.isAnonymised) {
-              <p class="anon-notice">{{ 'LIFECYCLE.DETAIL.INTERVIEW_ANON' | translate }}</p>
+              <p class="anon-notice">{{ 'OFFBOARDING.DETAIL.INTERVIEW_ANON' | translate }}</p>
             } @else {
               <div class="interview-grid">
                 <div>
-                  <span class="meta-label">{{ 'LIFECYCLE.DETAIL.INTERVIEW_DATE' | translate }}</span>
+                  <span class="meta-label">{{ 'OFFBOARDING.DETAIL.INTERVIEW_DATE' | translate }}</span>
                   <span class="meta-val">{{ fmt(interview()!.conductedDate) }}</span>
                 </div>
                 @if (interview()!.departureReasons) {
                   <div>
-                    <span class="meta-label">{{ 'LIFECYCLE.DETAIL.INTERVIEW_REASONS' | translate }}</span>
+                    <span class="meta-label">{{ 'OFFBOARDING.DETAIL.INTERVIEW_REASONS' | translate }}</span>
                     <span class="meta-val">{{ parseReasons(interview()!.departureReasons) }}</span>
                   </div>
                 }
               </div>
               @if (interview()!.feedbackText) {
                 <div class="feedback-text">
-                  <span class="meta-label">{{ 'LIFECYCLE.DETAIL.INTERVIEW_FEEDBACK' | translate }}</span>
+                  <span class="meta-label">{{ 'OFFBOARDING.DETAIL.INTERVIEW_FEEDBACK' | translate }}</span>
                   <p>{{ interview()!.feedbackText }}</p>
                 </div>
               }
             }
           </div>
         } @else if (!showInterviewForm()) {
-          <p class="section-empty">{{ 'LIFECYCLE.DETAIL.INTERVIEW_EMPTY' | translate }}</p>
+          <p class="section-empty">{{ 'OFFBOARDING.DETAIL.INTERVIEW_EMPTY' | translate }}</p>
         }
 
         @if (showInterviewForm() && canManage()) {
@@ -237,14 +237,14 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
             <div class="form-grid-2">
               <daf-multi-date-picker
                 [value]="asDate(ivDate)"
-                [config]="{ label: 'LIFECYCLE.DETAIL.IV_DATE_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
+                [config]="{ label: 'OFFBOARDING.DETAIL.IV_DATE_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
                 (valueChange)="ivDate = toIso($event)" />
               <div class="field-full">
-                <label class="form-label">{{ 'LIFECYCLE.DETAIL.IV_REASONS_LABEL' | translate }}</label>
+                <label class="form-label">{{ 'OFFBOARDING.DETAIL.IV_REASONS_LABEL' | translate }}</label>
                 <div class="reasons-checkboxes">
                   @for (r of DEPARTURE_REASONS; track r) {
                     <daf-checkbox
-                      [options]="{ label: 'LIFECYCLE.REASON.' + r | translate }"
+                      [options]="{ label: 'OFFBOARDING.REASON.' + r | translate }"
                       [checked]="ivReasons.includes(r)"
                       (checkedChange)="setReason(r, $event)" />
                   }
@@ -252,13 +252,13 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
               </div>
               <div class="field-full">
                 <daf-form-field
-                  [options]="{ label: 'LIFECYCLE.DETAIL.IV_FEEDBACK_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.DETAIL.IV_FEEDBACK_PH' | translate }"
+                  [options]="{ label: 'OFFBOARDING.DETAIL.IV_FEEDBACK_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.DETAIL.IV_FEEDBACK_PH' | translate }"
                   [value]="ivFeedback" (valueChange)="ivFeedback = $any($event) ?? ''" />
               </div>
             </div>
             <div class="inline-form-actions">
-              <daf-button [label]="'LIFECYCLE.DETAIL.SAVE' | translate" variant="teal" [options]="{ loading: savingInterview() }" (onClick)="saveInterview()" />
-              <daf-button [label]="'LIFECYCLE.DETAIL.CANCEL' | translate" variant="ghost" (onClick)="showInterviewForm.set(false)" />
+              <daf-button [label]="'OFFBOARDING.DETAIL.SAVE' | translate" variant="teal" [options]="{ loading: savingInterview() }" (onClick)="saveInterview()" />
+              <daf-button [label]="'OFFBOARDING.DETAIL.CANCEL' | translate" variant="ghost" (onClick)="showInterviewForm.set(false)" />
             </div>
             @if (interviewError()) { <p class="inline-error">{{ interviewError() }}</p> }
           </div>
@@ -268,13 +268,13 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
       <!-- ── Asset returns ──────────────────────────────────────────────────── -->
       <section class="detail-section">
         <div class="section-header-row">
-          <h2 class="section-title">{{ 'LIFECYCLE.DETAIL.ASSETS_TITLE' | translate }}</h2>
+          <h2 class="section-title">{{ 'OFFBOARDING.DETAIL.ASSETS_TITLE' | translate }}</h2>
           <div class="section-actions">
             @if (!isTerminal() && canManage()) {
-              <daf-button [label]="'LIFECYCLE.DETAIL.ASSETS_SYNC' | translate" variant="ghost"
+              <daf-button [label]="'OFFBOARDING.DETAIL.ASSETS_SYNC' | translate" variant="ghost"
                 [options]="{ size: 'sm', iconStart: 'sync', loading: syncingAssets() }"
                 (onClick)="syncAssetsFromIt()" />
-              <daf-button [label]="'LIFECYCLE.DETAIL.ASSETS_ADD' | translate" variant="secondary"
+              <daf-button [label]="'OFFBOARDING.DETAIL.ASSETS_ADD' | translate" variant="secondary"
                 [options]="{ size: 'sm', iconStart: 'add' }"
                 (onClick)="showAssetForm.set(true)" />
             }
@@ -284,7 +284,7 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
         @if (assetsLoading()) {
           <app-spinner size="sm" />
         } @else if (assets().length === 0 && !showAssetForm()) {
-          <p class="section-empty">{{ 'LIFECYCLE.DETAIL.ASSETS_EMPTY' | translate }}</p>
+          <p class="section-empty">{{ 'OFFBOARDING.DETAIL.ASSETS_EMPTY' | translate }}</p>
         }
 
         @if (assets().length > 0) {
@@ -292,23 +292,23 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
             @for (a of assets(); track a.id) {
               <div class="asset-row" [class.returned]="!!a.actualReturnDate">
                 <div class="asset-info">
-                  <daf-badge [label]="'LIFECYCLE.ASSET_TYPE.' + a.assetType | translate" [options]="{ variant: 'teal', size: 'sm' }" />
+                  <daf-badge [label]="'OFFBOARDING.ASSET_TYPE.' + a.assetType | translate" [options]="{ variant: 'teal', size: 'sm' }" />
                   <span class="asset-desc">{{ a.assetDescription }}</span>
                 </div>
                 <div class="asset-dates">
-                  <span class="meta-label">{{ 'LIFECYCLE.DETAIL.ASSET_EXPECTED' | translate }}</span>
+                  <span class="meta-label">{{ 'OFFBOARDING.DETAIL.ASSET_EXPECTED' | translate }}</span>
                   <span>{{ fmt(a.expectedReturnDate) }}</span>
                 </div>
                 @if (a.actualReturnDate) {
                   <div class="asset-dates">
-                    <span class="meta-label">{{ 'LIFECYCLE.DETAIL.ASSET_RETURNED_ON' | translate }}</span>
+                    <span class="meta-label">{{ 'OFFBOARDING.DETAIL.ASSET_RETURNED_ON' | translate }}</span>
                     <span>{{ fmt(a.actualReturnDate) }}</span>
                   </div>
-                  <daf-badge [label]="'LIFECYCLE.BADGE.RETURNED' | translate" [options]="{ variant: 'success', size: 'sm' }" />
+                  <daf-badge [label]="'OFFBOARDING.BADGE.RETURNED' | translate" [options]="{ variant: 'success', size: 'sm' }" />
                 } @else if (!isTerminal() && canManage()) {
-                  <daf-button [label]="'LIFECYCLE.DETAIL.CONFIRM_RETURN' | translate" variant="secondary" [options]="{ size: 'sm' }" (onClick)="openConfirmAsset(a)" />
+                  <daf-button [label]="'OFFBOARDING.DETAIL.CONFIRM_RETURN' | translate" variant="secondary" [options]="{ size: 'sm' }" (onClick)="openConfirmAsset(a)" />
                 } @else {
-                  <daf-badge [label]="'LIFECYCLE.BADGE.NOT_RETURNED' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
+                  <daf-badge [label]="'OFFBOARDING.BADGE.NOT_RETURNED' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
                 }
               </div>
             }
@@ -320,22 +320,22 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
             <div class="form-grid-2">
               <div class="field-full">
                 <daf-form-field
-                  [options]="{ label: 'LIFECYCLE.DETAIL.ASSET_DESC_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.DETAIL.ASSET_DESC_PH' | translate }"
+                  [options]="{ label: 'OFFBOARDING.DETAIL.ASSET_DESC_LABEL' | translate, type: 'text', placeholder: 'OFFBOARDING.DETAIL.ASSET_DESC_PH' | translate }"
                   [value]="assetDesc" (valueChange)="assetDesc = $any($event) ?? ''" />
               </div>
               <daf-select
                 [options]="assetTypeOptions()"
-                [config]="{ label: 'LIFECYCLE.DETAIL.ASSET_TYPE_LABEL' | translate }"
+                [config]="{ label: 'OFFBOARDING.DETAIL.ASSET_TYPE_LABEL' | translate }"
                 [selected]="[assetType]"
                 (selectedChange)="assetType = $any($event[0])" />
               <daf-multi-date-picker
                 [value]="asDate(assetExpectedDate)"
-                [config]="{ label: 'LIFECYCLE.DETAIL.ASSET_EXPECTED_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
+                [config]="{ label: 'OFFBOARDING.DETAIL.ASSET_EXPECTED_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
                 (valueChange)="assetExpectedDate = toIso($event)" />
             </div>
             <div class="inline-form-actions">
-              <daf-button [label]="'LIFECYCLE.DETAIL.ADD' | translate" variant="teal" [options]="{ loading: savingAsset() }" (onClick)="saveAsset()" />
-              <daf-button [label]="'LIFECYCLE.DETAIL.CANCEL' | translate" variant="ghost" (onClick)="showAssetForm.set(false)" />
+              <daf-button [label]="'OFFBOARDING.DETAIL.ADD' | translate" variant="teal" [options]="{ loading: savingAsset() }" (onClick)="saveAsset()" />
+              <daf-button [label]="'OFFBOARDING.DETAIL.CANCEL' | translate" variant="ghost" (onClick)="showAssetForm.set(false)" />
             </div>
             @if (assetError()) { <p class="inline-error">{{ assetError() }}</p> }
           </div>
@@ -345,77 +345,77 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
     }
 
     <!-- ── Complete task modal ─────────────────────────────────────────────── -->
-    <app-modal [title]="'LIFECYCLE.MODAL.COMPLETE_TITLE' | translate" [visible]="showCompleteModal()" [hasFooter]="true" (closed)="showCompleteModal.set(false)">
+    <app-modal [title]="'OFFBOARDING.MODAL.COMPLETE_TITLE' | translate" [visible]="showCompleteModal()" [hasFooter]="true" (closed)="showCompleteModal.set(false)">
       @if (activeTask()) {
         <p class="modal-task-name">{{ activeTask()!.taskLabel }}</p>
       }
       <div class="modal-field">
         <daf-form-field
-          [options]="{ label: 'LIFECYCLE.MODAL.COMMENT_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.MODAL.COMMENT_PH' | translate }"
+          [options]="{ label: 'OFFBOARDING.MODAL.COMMENT_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.MODAL.COMMENT_PH' | translate }"
           [value]="taskComment" (valueChange)="taskComment = $any($event) ?? ''" />
       </div>
       <div slot="footer">
-        <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showCompleteModal.set(false)" />
-        <daf-button [label]="'LIFECYCLE.MODAL.MARK_DONE' | translate" variant="teal" [options]="{ loading: actioning() }" (onClick)="confirmComplete()" />
+        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showCompleteModal.set(false)" />
+        <daf-button [label]="'OFFBOARDING.MODAL.MARK_DONE' | translate" variant="teal" [options]="{ loading: actioning() }" (onClick)="confirmComplete()" />
       </div>
     </app-modal>
 
     <!-- ── Skip task modal ────────────────────────────────────────────────── -->
-    <app-modal [title]="'LIFECYCLE.MODAL.SKIP_TITLE' | translate" [visible]="showSkipModal()" [hasFooter]="true" (closed)="showSkipModal.set(false)">
+    <app-modal [title]="'OFFBOARDING.MODAL.SKIP_TITLE' | translate" [visible]="showSkipModal()" [hasFooter]="true" (closed)="showSkipModal.set(false)">
       @if (activeTask()) {
         <p class="modal-task-name">{{ activeTask()!.taskLabel }}</p>
       }
       <div class="modal-field">
         <daf-form-field
-          [options]="{ label: 'LIFECYCLE.MODAL.SKIP_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.MODAL.SKIP_REASON_PH' | translate }"
+          [options]="{ label: 'OFFBOARDING.MODAL.SKIP_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.MODAL.SKIP_REASON_PH' | translate }"
           [value]="skipReason" (valueChange)="skipReason = $any($event) ?? ''" />
       </div>
       <div slot="footer">
-        <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showSkipModal.set(false)" />
-        <daf-button [label]="'LIFECYCLE.MODAL.SKIP_CONFIRM' | translate" variant="danger" [options]="{ loading: actioning(), disabled: !skipReason.trim() }" (onClick)="confirmSkip()" />
+        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showSkipModal.set(false)" />
+        <daf-button [label]="'OFFBOARDING.MODAL.SKIP_CONFIRM' | translate" variant="danger" [options]="{ loading: actioning(), disabled: !skipReason.trim() }" (onClick)="confirmSkip()" />
       </div>
     </app-modal>
 
     <!-- ── Validate modal ─────────────────────────────────────────────────── -->
-    <app-modal [title]="'LIFECYCLE.MODAL.VALIDATE_TITLE' | translate" [visible]="showValidateModal()" [hasFooter]="true" (closed)="showValidateModal.set(false)">
-      <p class="modal-body-text">{{ 'LIFECYCLE.MODAL.VALIDATE_BODY' | translate }}</p>
+    <app-modal [title]="'OFFBOARDING.MODAL.VALIDATE_TITLE' | translate" [visible]="showValidateModal()" [hasFooter]="true" (closed)="showValidateModal.set(false)">
+      <p class="modal-body-text">{{ 'OFFBOARDING.MODAL.VALIDATE_BODY' | translate }}</p>
       <div slot="footer">
-        <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showValidateModal.set(false)" />
-        <daf-button [label]="'LIFECYCLE.MODAL.VALIDATE_CONFIRM' | translate" variant="teal" [options]="{ loading: validating() }" (onClick)="confirmValidate()" />
+        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showValidateModal.set(false)" />
+        <daf-button [label]="'OFFBOARDING.MODAL.VALIDATE_CONFIRM' | translate" variant="teal" [options]="{ loading: validating() }" (onClick)="confirmValidate()" />
       </div>
     </app-modal>
 
     <!-- ── Cancel modal ───────────────────────────────────────────────────── -->
-    <app-modal [title]="'LIFECYCLE.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()" [hasFooter]="true" (closed)="showCancelModal.set(false)">
-      <p class="modal-body-text">{{ 'LIFECYCLE.MODAL.CANCEL_BODY' | translate }}</p>
+    <app-modal [title]="'OFFBOARDING.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()" [hasFooter]="true" (closed)="showCancelModal.set(false)">
+      <p class="modal-body-text">{{ 'OFFBOARDING.MODAL.CANCEL_BODY' | translate }}</p>
       <div class="modal-field">
         <daf-form-field
-          [options]="{ label: 'LIFECYCLE.MODAL.CANCEL_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'LIFECYCLE.MODAL.CANCEL_REASON_PH' | translate }"
+          [options]="{ label: 'OFFBOARDING.MODAL.CANCEL_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.MODAL.CANCEL_REASON_PH' | translate }"
           [value]="cancelReason" (valueChange)="cancelReason = $any($event) ?? ''" />
       </div>
       <div slot="footer">
-        <daf-button [label]="'LIFECYCLE.MODAL.CANCEL_KEEP' | translate" variant="secondary" (onClick)="showCancelModal.set(false)" />
-        <daf-button [label]="'LIFECYCLE.MODAL.CANCEL_CONFIRM' | translate" variant="danger" [options]="{ loading: cancelling() }" (onClick)="confirmCancel()" />
+        <daf-button [label]="'OFFBOARDING.MODAL.CANCEL_KEEP' | translate" variant="secondary" (onClick)="showCancelModal.set(false)" />
+        <daf-button [label]="'OFFBOARDING.MODAL.CANCEL_CONFIRM' | translate" variant="danger" [options]="{ loading: cancelling() }" (onClick)="confirmCancel()" />
       </div>
     </app-modal>
 
     <!-- ── Confirm asset return modal ─────────────────────────────────────── -->
-    <app-modal [title]="'LIFECYCLE.MODAL.ASSET_TITLE' | translate" [visible]="showConfirmAssetModal()" [hasFooter]="true" (closed)="showConfirmAssetModal.set(false)">
+    <app-modal [title]="'OFFBOARDING.MODAL.ASSET_TITLE' | translate" [visible]="showConfirmAssetModal()" [hasFooter]="true" (closed)="showConfirmAssetModal.set(false)">
       @if (activeAsset()) {
         <p class="modal-task-name">{{ activeAsset()!.assetDescription }}</p>
       }
       <div class="modal-field">
         <daf-form-field
-          [options]="{ label: 'LIFECYCLE.MODAL.ASSET_CONDITION_LABEL' | translate, type: 'text', placeholder: 'LIFECYCLE.MODAL.ASSET_CONDITION_PH' | translate }"
+          [options]="{ label: 'OFFBOARDING.MODAL.ASSET_CONDITION_LABEL' | translate, type: 'text', placeholder: 'OFFBOARDING.MODAL.ASSET_CONDITION_PH' | translate }"
           [value]="assetCondition" (valueChange)="assetCondition = $any($event) ?? ''" />
       </div>
       <div slot="footer">
-        <daf-button [label]="'LIFECYCLE.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showConfirmAssetModal.set(false)" />
-        <daf-button [label]="'LIFECYCLE.MODAL.ASSET_CONFIRM' | translate" variant="teal" [options]="{ loading: confirmingAsset() }" (onClick)="confirmAssetReturn()" />
+        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showConfirmAssetModal.set(false)" />
+        <daf-button [label]="'OFFBOARDING.MODAL.ASSET_CONFIRM' | translate" variant="teal" [options]="{ loading: confirmingAsset() }" (onClick)="confirmAssetReturn()" />
       </div>
     </app-modal>
   `,
-  styleUrl: './workflow-detail.component.scss',
+  styleUrl: './offboarding-detail.component.scss',
   styles: [`
     .breadcrumb      { display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:20px }
     .bc-link         { color:var(--color-primary,#1C4E5C);text-decoration:none }
@@ -483,17 +483,17 @@ const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
     @media(max-width:600px) { .form-grid-2 { grid-template-columns:1fr } .interview-grid { grid-template-columns:1fr } }
   `],
 })
-export class WorkflowDetailComponent implements OnInit {
+export class OffboardingDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
-  private svc       = inject(LifecycleService);
+  private svc       = inject(OffboardingService);
   private translate = inject(TranslateService);
   private userStore = inject(UserStore);
   private notify    = inject(NotificationService);
 
   workflowId = 0;
 
-  /** Only RH_MANAGE_LIFECYCLE holders may run mutating actions. */
-  readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_LIFECYCLE'));
+  /** Only RH_MANAGE_OFFBOARDING holders may run mutating actions. */
+  readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
 
   // ── State ──────────────────────────────────────────────────────────────────
   loading           = signal(true);
@@ -553,16 +553,16 @@ export class WorkflowDetailComponent implements OnInit {
   readonly employeeName = computed(() => {
     const w = this.wf();
     return w?.employeeFullName
-      ?? this.translate.instant('LIFECYCLE.DASHBOARD.PROFILE_PREFIX', { id: w?.employeeProfileId });
+      ?? this.translate.instant('OFFBOARDING.LIST.PROFILE_PREFIX', { id: w?.employeeProfileId });
   });
 
   // ── Table config ───────────────────────────────────────────────────────────
   readonly taskColumns = computed<TableColumn[]>(() => [
-    { key: 'taskLabel',  label: this.translate.instant('LIFECYCLE.DETAIL.COL_TASK') },
-    { key: 'ownerRole',  label: this.translate.instant('LIFECYCLE.DETAIL.COL_OWNER'),  width: '160px' },
-    { key: 'status',     label: this.translate.instant('LIFECYCLE.DETAIL.COL_STATUS'), width: '130px' },
-    { key: 'sla',        label: this.translate.instant('LIFECYCLE.DETAIL.COL_SLA'),    width: '130px' },
-    { key: 'blocking',   label: this.translate.instant('LIFECYCLE.DETAIL.COL_TYPE'),   width: '110px' },
+    { key: 'taskLabel',  label: this.translate.instant('OFFBOARDING.DETAIL.COL_TASK') },
+    { key: 'ownerRole',  label: this.translate.instant('OFFBOARDING.DETAIL.COL_OWNER'),  width: '160px' },
+    { key: 'status',     label: this.translate.instant('OFFBOARDING.DETAIL.COL_STATUS'), width: '130px' },
+    { key: 'sla',        label: this.translate.instant('OFFBOARDING.DETAIL.COL_SLA'),    width: '130px' },
+    { key: 'blocking',   label: this.translate.instant('OFFBOARDING.DETAIL.COL_TYPE'),   width: '110px' },
     { key: 'actions',    label: '',                                                    width: '160px' },
   ]);
   readonly taskTableConfig: TableConfig = {};
@@ -588,7 +588,7 @@ export class WorkflowDetailComponent implements OnInit {
 
   /** Asset-type options for daf-select, labels normalised via i18n. */
   readonly assetTypeOptions = computed<SelectOption[]>(() =>
-    ASSET_TYPES.map(t => ({ value: t, label: this.translate.instant('LIFECYCLE.ASSET_TYPE.' + t) })),
+    ASSET_TYPES.map(t => ({ value: t, label: this.translate.instant('OFFBOARDING.ASSET_TYPE.' + t) })),
   );
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -630,14 +630,14 @@ export class WorkflowDetailComponent implements OnInit {
     this.syncingAssets.set(true);
     this.svc.syncAssetsFromIt(this.workflowId).pipe(
       catchError(() => {
-        this.notify.error(this.translate.instant('LIFECYCLE.TOAST.ASSET_SYNC_ERR'));
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.ASSET_SYNC_ERR'));
         this.syncingAssets.set(false);
         return of(null);
       }),
     ).subscribe(list => {
       if (list) {
         this.assets.set(list);
-        this.notify.success(this.translate.instant('LIFECYCLE.TOAST.ASSET_SYNCED'));
+        this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_SYNCED'));
       }
       this.syncingAssets.set(false);
     });
@@ -662,7 +662,7 @@ export class WorkflowDetailComponent implements OnInit {
     this.actioning.set(true);
     this.svc.completeTask(task.id, { comments: this.taskComment || undefined })
       .pipe(catchError(() => {
-        this.notify.error(this.translate.instant('LIFECYCLE.TOAST.TASK_DONE_ERR'));
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.TASK_DONE_ERR'));
         this.actioning.set(false);
         return of(null);
       }))
@@ -671,7 +671,7 @@ export class WorkflowDetailComponent implements OnInit {
         this.showCompleteModal.set(false);
         if (updated) {
           this.tasks.update(list => list.map(t => t.id === updated.id ? updated : t));
-          this.notify.success(this.translate.instant('LIFECYCLE.TOAST.TASK_DONE'));
+          this.notify.success(this.translate.instant('OFFBOARDING.TOAST.TASK_DONE'));
         }
       });
   }
@@ -682,7 +682,7 @@ export class WorkflowDetailComponent implements OnInit {
     this.actioning.set(true);
     this.svc.skipTask(task.id, this.skipReason)
       .pipe(catchError(() => {
-        this.notify.error(this.translate.instant('LIFECYCLE.TOAST.TASK_SKIP_ERR'));
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.TASK_SKIP_ERR'));
         this.actioning.set(false);
         return of(null);
       }))
@@ -691,7 +691,7 @@ export class WorkflowDetailComponent implements OnInit {
         this.showSkipModal.set(false);
         if (updated) {
           this.tasks.update(list => list.map(t => t.id === updated.id ? updated : t));
-          this.notify.success(this.translate.instant('LIFECYCLE.TOAST.TASK_SKIPPED'));
+          this.notify.success(this.translate.instant('OFFBOARDING.TOAST.TASK_SKIPPED'));
         }
       });
   }
@@ -701,7 +701,7 @@ export class WorkflowDetailComponent implements OnInit {
     this.validating.set(true);
     this.svc.validateOffboarding(this.workflowId)
       .pipe(catchError(() => {
-        this.notify.error(this.translate.instant('LIFECYCLE.TOAST.VALIDATE_ERR'));
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.VALIDATE_ERR'));
         this.validating.set(false);
         return of(null);
       }))
@@ -710,7 +710,7 @@ export class WorkflowDetailComponent implements OnInit {
         this.showValidateModal.set(false);
         if (updated) {
           this.wf.set(updated);
-          this.notify.success(this.translate.instant('LIFECYCLE.TOAST.VALIDATED'));
+          this.notify.success(this.translate.instant('OFFBOARDING.TOAST.VALIDATED'));
         }
       });
   }
@@ -719,7 +719,7 @@ export class WorkflowDetailComponent implements OnInit {
     this.cancelling.set(true);
     this.svc.cancelOffboarding(this.workflowId, this.cancelReason)
       .pipe(catchError(() => {
-        this.notify.error(this.translate.instant('LIFECYCLE.TOAST.CANCEL_ERR'));
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.CANCEL_ERR'));
         this.cancelling.set(false);
         return of(null);
       }))
@@ -728,7 +728,7 @@ export class WorkflowDetailComponent implements OnInit {
         this.showCancelModal.set(false);
         if (updated) {
           this.wf.set(updated);
-          this.notify.success(this.translate.instant('LIFECYCLE.TOAST.CANCELLED'));
+          this.notify.success(this.translate.instant('OFFBOARDING.TOAST.CANCELLED'));
         }
       });
   }
@@ -750,7 +750,7 @@ export class WorkflowDetailComponent implements OnInit {
       feedbackText:     this.ivFeedback || null,
     }).pipe(
       catchError(err => {
-        const msg = err?.error?.message ?? this.translate.instant('LIFECYCLE.TOAST.INTERVIEW_ERR');
+        const msg = err?.error?.message ?? this.translate.instant('OFFBOARDING.TOAST.INTERVIEW_ERR');
         this.interviewError.set(msg);
         this.notify.error(msg);
         this.savingInterview.set(false);
@@ -761,7 +761,7 @@ export class WorkflowDetailComponent implements OnInit {
       if (iv) {
         this.interview.set(iv);
         this.showInterviewForm.set(false);
-        this.notify.success(this.translate.instant('LIFECYCLE.TOAST.INTERVIEW_SAVED'));
+        this.notify.success(this.translate.instant('OFFBOARDING.TOAST.INTERVIEW_SAVED'));
         // also refresh tasks (EXIT_INTERVIEW task may have been auto-completed)
         this.loadWorkflow();
       }
@@ -780,7 +780,7 @@ export class WorkflowDetailComponent implements OnInit {
       expectedReturnDate: this.assetExpectedDate,
     }).pipe(
       catchError(err => {
-        const msg = err?.error?.message ?? this.translate.instant('LIFECYCLE.TOAST.ASSET_ERR');
+        const msg = err?.error?.message ?? this.translate.instant('OFFBOARDING.TOAST.ASSET_ERR');
         this.assetError.set(msg);
         this.notify.error(msg);
         this.savingAsset.set(false);
@@ -791,7 +791,7 @@ export class WorkflowDetailComponent implements OnInit {
       if (asset) {
         this.assets.update(list => [...list, asset]);
         this.showAssetForm.set(false);
-        this.notify.success(this.translate.instant('LIFECYCLE.TOAST.ASSET_ADDED'));
+        this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_ADDED'));
         this.assetDesc = '';
         this.assetExpectedDate = '';
         this.assetType = 'IT';
@@ -811,7 +811,7 @@ export class WorkflowDetailComponent implements OnInit {
     this.confirmingAsset.set(true);
     this.svc.confirmAssetReturn(asset.id, this.assetCondition)
       .pipe(catchError(() => {
-        this.notify.error(this.translate.instant('LIFECYCLE.TOAST.ASSET_CONFIRM_ERR'));
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.ASSET_CONFIRM_ERR'));
         this.confirmingAsset.set(false);
         return of(null);
       }))
@@ -820,30 +820,30 @@ export class WorkflowDetailComponent implements OnInit {
         this.showConfirmAssetModal.set(false);
         if (updated) {
           this.assets.update(list => list.map(a => a.id === updated.id ? updated : a));
-          this.notify.success(this.translate.instant('LIFECYCLE.TOAST.ASSET_CONFIRMED'));
+          this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_CONFIRMED'));
         }
       });
   }
 
   // ── Badge helpers ──────────────────────────────────────────────────────────
-  statusLabel(s: string): string       { return this.translate.instant('LIFECYCLE.STATUS.' + s); }
+  statusLabel(s: string): string       { return this.translate.instant('OFFBOARDING.STATUS.' + s); }
   statusVariant(s: string): BadgeVariant {
     const map: Record<string, BadgeVariant> = {
       PENDING:'neutral', IN_PROGRESS:'teal', BLOCKED:'danger', VALIDATED:'success', CANCELLED:'neutral', ARCHIVED:'neutral',
     };
     return map[s] ?? 'neutral';
   }
-  reasonLabel(r: string): string       { return this.translate.instant('LIFECYCLE.REASON.' + r); }
+  reasonLabel(r: string): string       { return this.translate.instant('OFFBOARDING.REASON.' + r); }
   /** Normalise the backend owner-role enum; fall back to the raw code if unmapped. */
   ownerRoleLabel(role: string): string {
-    const key = 'LIFECYCLE.OWNER_ROLE.' + role;
+    const key = 'OFFBOARDING.OWNER_ROLE.' + role;
     const label = this.translate.instant(key);
     return label === key ? role : label;
   }
-  taskStatusLabel(s: string): string   { return this.translate.instant('LIFECYCLE.TASK_STATUS.' + s); }
+  taskStatusLabel(s: string): string   { return this.translate.instant('OFFBOARDING.TASK_STATUS.' + s); }
   taskStatusVariant(s: string): BadgeVariant { return TASK_STATUS_VARIANTS[s] ?? 'neutral'; }
   parseReasons(json: string): string {
-    try { return (JSON.parse(json) as string[]).map(r => this.translate.instant('LIFECYCLE.REASON.' + r)).join(', '); }
+    try { return (JSON.parse(json) as string[]).map(r => this.translate.instant('OFFBOARDING.REASON.' + r)).join(', '); }
     catch { return json; }
   }
   fmt(iso: string | null | undefined): string {

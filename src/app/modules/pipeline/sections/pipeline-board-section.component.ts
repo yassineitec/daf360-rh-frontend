@@ -5,7 +5,7 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 
-import { OffboardingWorkflowInstance } from '../../lifecycle/models/lifecycle.model';
+import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
 import { KanbanCandidate } from '../services/pipeline.service';
 import { BoardColumn, OFFBOARDING_ACCENT } from '../board.model';
 import { PipelineKanbanCardComponent } from '../components/pipeline-kanban-card.component';

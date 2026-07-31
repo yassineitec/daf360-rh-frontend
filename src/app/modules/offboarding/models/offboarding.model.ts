@@ -9,8 +9,8 @@ export const DEPARTURE_REASONS = [
 ] as const;
 export type DepartureReason = typeof DEPARTURE_REASONS[number];
 
-// Enum value lists — human-readable labels live in i18n under LIFECYCLE.* and are
-// resolved at render time (e.g. 'LIFECYCLE.STATUS.' + value | translate). Keep raw
+// Enum value lists — human-readable labels live in i18n under OFFBOARDING.* and are
+// resolved at render time (e.g. 'OFFBOARDING.STATUS.' + value | translate). Keep raw
 // enum strings out of the UI: always normalise through these translation keys.
 export const OFFBOARDING_STATUSES: readonly OffboardingStatus[] = [
   'PENDING', 'IN_PROGRESS', 'BLOCKED', 'VALIDATED', 'CANCELLED', 'ARCHIVED',

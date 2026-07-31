@@ -160,8 +160,8 @@
       "FREELANCE": "عمل حر"
     }
   },
-  "LIFECYCLE": {
-    "DASHBOARD": {
+  "OFFBOARDING": {
+    "LIST": {
       "TITLE": "إنهاء الخدمة",
       "COUNT": "{{count}} ملف",
       "START_BUTTON": "بدء إنهاء الخدمة",
@@ -176,7 +176,28 @@
       "COL_STATUS": "الحالة",
       "COL_SLA": "اتفاقية مستوى الخدمة",
       "COL_PROGRESS": "المهام",
-      "PROFILE_PREFIX": "ملف #{{id}}"
+      "PROFILE_PREFIX": "ملف #{{id}}",
+      "SUBTITLE": "المغادرات الجارية والملفات المغلقة",
+      "KPI_ACTIVE": "الملفات النشطة",
+      "KPI_BLOCKED": "محجوبة",
+      "KPI_SLA": "تجاوز المدة",
+      "KPI_VALIDATED": "مُصادق عليها",
+      "SEARCH_PLACEHOLDER": "ابحث عن موظف أو سبب أو مدير…",
+      "VIEW_GRID": "عرض شبكي",
+      "VIEW_LIST": "عرض قائمة",
+      "OPEN": "فتح الملف",
+      "FILTERS": {
+        "TITLE": "تصفية الملفات",
+        "TRIGGER": "تصفية",
+        "APPLY": "تطبيق",
+        "CANCEL": "إلغاء",
+        "RESET": "إعادة تعيين"
+      },
+      "DELTA_ON_TRACK": "لا مهام متأخرة",
+      "DELTA_OVERDUE_TASKS": "{{count}} مهمة متأخرة",
+      "DELTA_BLOCKING": "{{count}} محجوب بمهمة",
+      "DELTA_SLA": "{{count}} خارج المدة",
+      "DELTA_VALIDATED": "{{pct}}% من الملفات مغلقة"
     },
     "BADGE": {
       "SLA_BREACHED": "تجاوز مستوى الخدمة",
@@ -853,7 +874,7 @@
     "CANDIDATES": "المترشحون",
     "IT_PROVISIONING": "تجهيز المعلوماتية",
     "ONBOARDING": "الاندماج",
-    "LIFECYCLE": "دورة الحياة",
+    "OFFBOARDING": "إنهاء الخدمة",
     "REQUESTS": "المطالب",
     "ADMIN": "الإدارة"
   }
