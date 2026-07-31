@@ -1,96 +1,76 @@
-import { Component, ElementRef, HostListener, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import {
-  BadgeCell,
   ButtonComponent,
-  CardComponent,
-  DafCellDirective,
   DafHasPermissionDirective,
-  DataTableComponent,
-  FormFieldComponent,
-  FormFieldOptions,
+  FilterField,
+  FilterResult,
   MetricCardComponent,
   MetricDelta,
-  MultiDatePickerComponent,
-  StatusBadgeComponent,
-  TableColumn,
-  TableConfig,
-  TableRow,
+  PageComponent,
+  PageHeaderComponent,
+  SearchToolbarComponent,
+  SearchToolbarFilterConfig,
+  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../shared/modal.component';
-import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { KanbanCardShellComponent } from '../../shared/kanban-card-shell.component';
-import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
-import {
-  PipelineService,
-  KanbanColumn,
-  KanbanCandidate,
-  PipelineStats,
-} from './services/pipeline.service';
-import { OfferService, CreateOfferRequest } from './services/offer.service';
-import { getAvatarUrl } from '../../shared/utils/avatar.utils';
+
+import { UserStore } from '../../core/user.store';
 import { LifecycleService } from '../lifecycle/lifecycle.service';
 import { OffboardingWorkflowInstance, isTerminal } from '../lifecycle/models/lifecycle.model';
-import { UserStore } from '../../core/user.store';
+import {
+  BOARD_STAGES,
+  BoardColumn,
+  BoardStageKey,
+  OFFBOARDING_KEY,
+  byFitScoreDesc,
+} from './board.model';
+import { OfferModalComponent, OfferMode } from './components/offer-modal.component';
+import { RefuseOfferModalComponent } from './components/refuse-offer-modal.component';
+import { PipelineBoardSectionComponent } from './sections/pipeline-board-section.component';
+import { PipelineMobileSectionComponent, MobilePipelineItem } from './sections/pipeline-mobile-section.component';
+import { PipelineTableSectionComponent } from './sections/pipeline-table-section.component';
+import { CreateOfferRequest, OfferService } from './services/offer.service';
+import { KanbanCandidate, KanbanColumn, PipelineService, PipelineStats } from './services/pipeline.service';
 
-type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'secondary' | 'neutral' | 'teal';
-
-const BADGE_VARIANT: Record<string, BadgeVariant> = {
-  urgent:      'danger',
-  new:         'info',
-  in_progress: 'teal',
-  offer:       'warning',
-  hired:       'success',
-  rejected:    'neutral',
-  top:         'success',
-};
-
-/** The four columns of the design board, in order. REJETE is intentionally omitted. */
-const BOARD_STAGES: Array<{ key: string; labelKey: string; accent: string; badgeBg: string }> = [
-  { key: 'SCREENING', labelKey: 'PIPELINE.STAGE.SCREENING', accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'  },
-  { key: 'ENTRETIEN', labelKey: 'PIPELINE.STAGE.ENTRETIEN', accent: '#79D7BE', badgeBg: 'rgba(121,215,190,0.18)' },
-  { key: 'OFFRE',     labelKey: 'PIPELINE.STAGE.OFFRE',      accent: '#F59E0B', badgeBg: 'rgba(245,158,11,0.14)' },
-  { key: 'RECRUTE',   labelKey: 'PIPELINE.STAGE.RECRUTE',    accent: '#10B981', badgeBg: 'rgba(16,185,129,0.14)' },
-];
-
-interface BoardColumn {
-  key: string;
-  label: string;
-  accent: string;
-  badgeBg: string;
-  count: number;
-  candidates: KanbanCandidate[];
-}
+/** Board or flat list. The choice survives search, filtering and a re-fetch. */
+type ViewMode = 'kanban' | 'list';
 
 /**
- * Candidates landing page — the design Kanban board (Screening / Entretien /
- * Offre / Recruté), fed by /api/hr/pipeline/kanban. Cards render per-stage data
- * and the Offre stage drives the offer/negotiation actions.
+ * /rh/candidates — the recruitment board (Préqualification / Entretien / Offre /
+ * Recruté), fed by `/api/hr/pipeline/kanban`, plus a read-only Offboarding
+ * column for employees in an active offboarding workflow.
+ *
+ * Architecture follows UI-PLAYBOOK §1 + §8b: the template is `daf-page` +
+ * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section component
+ * per view, and every section is a stateless input/output shell. **All view state
+ * lives here** — `search`, `stageFilter`, `viewMode`, the per-column sort, the
+ * modal targets — which is what makes flipping between board and list lossless.
+ *
+ * The kanban endpoint returns the whole tenant-scoped set in one call, so search
+ * and the stage filter are applied client-side and the list view is a flattened
+ * projection of the same columns. That is also why there is no `daf-pagination`
+ * here: there is no second page to fetch.
  */
 @Component({
   selector: 'rh-pipeline',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, CardComponent, DafCellDirective, DafHasPermissionDirective, DataTableComponent, FormFieldComponent, MetricCardComponent, KanbanCardShellComponent, MultiDatePickerComponent, RhSearchBarComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [
+    ButtonComponent,
+    DafHasPermissionDirective,
+    MetricCardComponent,
+    PageComponent,
+    PageHeaderComponent,
+    SearchToolbarComponent,
+    PipelineBoardSectionComponent,
+    PipelineTableSectionComponent,
+    PipelineMobileSectionComponent,
+    OfferModalComponent,
+    RefuseOfferModalComponent,
+    TranslatePipe,
+  ],
   templateUrl: './pipeline.component.html',
-  styles: [`
-    /* Horizontal kanban board scrolls (drag/wheel/nav-map) but hides its scrollbar — the bottom-right nav map already shows position. */
-    .custom-scroll { scrollbar-width: none; }
-    .custom-scroll::-webkit-scrollbar { display: none; }
-
-    /* Column card list scrolls but its scrollbar is fully hidden (invisible, scroll preserved). */
-    .custom-scroll-y { scrollbar-width: none; }
-    .custom-scroll-y::-webkit-scrollbar { display: none; }
-
-    /* The board sits directly on the app background — no card chrome. */
-    .board-card {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      padding: 0;
-    }
-  `],
 })
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
@@ -100,69 +80,52 @@ export class PipelineComponent implements OnInit {
   private router          = inject(Router);
   private translate       = inject(TranslateService);
 
-  // ── Offboarding column (display-only) ───────────────────────────────────────
-  // The recrutement board ends with a read-only "Offboarding" column that surfaces
-  // employees currently being offboarded (a separate HR workflow, not a candidate
-  // status). Gated by RH_MANAGE_OFFBOARDING; clicking a card opens the employee's
-  // offboarding file at /rh/lifecycle/:id.
-  readonly canViewOffboarding = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+  // ── Data ───────────────────────────────────────────────────────────────────
+  private readonly rawColumns = signal<KanbanColumn[]>([]);
+  readonly stats              = signal<PipelineStats | null>(null);
   private readonly offboardingItems = signal<OffboardingWorkflowInstance[]>([]);
+
+  /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
+  readonly firstLoad = signal(true);
+  /** Every subsequent fetch — skeletons inside the affected section only. */
+  readonly loading   = signal(false);
+
+  // ── View state (survives a view-mode switch) ───────────────────────────────
+  readonly viewMode          = signal<ViewMode>('kanban');
+  readonly search            = signal('');
+  readonly stageFilter       = signal('');
+  readonly mobileStageFilter = signal<string | null>(null);
+  readonly columnSortDirs    = signal<Record<string, 'asc' | 'desc'>>({});
+
+  // ── Feedback ───────────────────────────────────────────────────────────────
+  readonly notice      = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
+  readonly actioningId = signal<number | null>(null);
+
+  // ── Offboarding (display-only, separate HR workflow) ───────────────────────
+  readonly canViewOffboarding = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+
   /** Active (non-terminal) offboarding files only. */
   readonly offboardingActive = computed(() =>
     this.offboardingItems().filter(o => !isTerminal(o.status)),
   );
 
-  onViewOffboarding(id: number): void {
-    this.router.navigate(['/rh/lifecycle', id]);
-  }
-
-  private loadOffboarding(): void {
-    if (!this.canViewOffboarding()) return;
-    this.lifecycleSvc.listOffboarding().subscribe({
-      next: items => this.offboardingItems.set(items ?? []),
-      error: () => this.offboardingItems.set([]),
-    });
-  }
-
-  readonly kanbanColumns = signal<KanbanColumn[]>([]);
-  readonly stats         = signal<PipelineStats | null>(null);
-  readonly loading       = signal(true);
-  readonly avatarFailed  = signal(new Set<number>());
-  readonly notice        = signal<string | null>(null);
-  readonly search        = signal('');
-  readonly mobileSearchOpen = signal(false);
-  readonly viewMode      = signal<'kanban' | 'list'>('kanban');
-
-  /** Per-column fit-score sort direction, toggled via the small arrow icon in the column header. */
-  readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
-
-  columnSortDir(key: string): 'asc' | 'desc' {
-    return this.columnSortDirs()[key] ?? 'desc';
-  }
-
-  toggleColumnSort(key: string): void {
-    const next: 'asc' | 'desc' = this.columnSortDir(key) === 'asc' ? 'desc' : 'asc';
-    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: next }));
-  }
-
-  /** Highest fit score first; candidates without a score sink to the bottom. */
-  private byFitScoreDesc(a: KanbanCandidate, b: KanbanCandidate): number {
-    return (b.fitScore ?? -1) - (a.fitScore ?? -1);
-  }
-
-  private sortByColumn(key: string, candidates: KanbanCandidate[]): KanbanCandidate[] {
-    const dir = this.columnSortDir(key);
-    return [...candidates].sort((a, b) => dir === 'asc' ? -this.byFitScoreDesc(a, b) : this.byFitScoreDesc(a, b));
-  }
-
-  /** The four design columns, populated from the pipeline kanban response. */
+  // ── Board ──────────────────────────────────────────────────────────────────
+  /**
+   * The four design columns, populated from the kanban response.
+   *
+   * Entretien is interview-driven: it holds every interview-phase candidate PLUS
+   * any still-pending candidate who already has a planned interview waiting.
+   * Those pending-with-interview cards leave Préqualification.
+   */
   readonly boardColumns = computed<BoardColumn[]>(() => {
     this.translate.currentLang();
-    const cols = this.kanbanColumns();
-    const term = this.search().trim().toLowerCase();
-    this.columnSortDirs(); // re-run when a column's sort direction is toggled
+    const cols  = this.rawColumns();
+    const term  = this.search().trim().toLowerCase();
+    const stage = this.stageFilter();
+    const dirs  = this.columnSortDirs();
 
-    // Free-text match over the fields shown on a card.
+    // Free-text match over the fields a card actually shows.
     const matches = (c: KanbanCandidate) =>
       !term ||
       [c.fullName, c.poste, c.email, c.location, ...(c.skills ?? [])]
@@ -171,193 +134,236 @@ export class PipelineComponent implements OnInit {
     const stageOf = (key: string) =>
       (cols.find(c => (c.stage ?? '').toUpperCase() === key)?.candidates ?? []).filter(matches);
 
-    // Entretien is interview-driven: it holds every interview-phase candidate
-    // (ACCEPTED/HR) PLUS any still-pending candidate who already has a planned
-    // interview waiting. Those pending-with-interview cards leave Préqualification.
-    const screening      = stageOf('SCREENING');
-    const entretienStage = stageOf('ENTRETIEN');
+    const screening        = stageOf('SCREENING');
+    const entretienStage   = stageOf('ENTRETIEN');
     const prequalification = screening.filter(c => !c.nextEvent);
     const entretien        = [...entretienStage, ...screening.filter(c => !!c.nextEvent)];
 
     return BOARD_STAGES.map(s => {
+      const dir = dirs[s.key] ?? 'desc';
       const candidates =
-        s.key === 'SCREENING' ? prequalification :
-        s.key === 'ENTRETIEN' ? entretien :
+        stage && stage !== s.key ? [] :
+        s.key === 'SCREENING'    ? prequalification :
+        s.key === 'ENTRETIEN'    ? entretien :
         stageOf(s.key);
       const { labelKey, ...rest } = s;
-      return { ...rest, label: this.translate.instant(labelKey), count: candidates.length, candidates: this.sortByColumn(s.key, candidates) };
+      return {
+        ...rest,
+        label:   this.translate.instant(labelKey),
+        sortDir: dir,
+        candidates: [...candidates].sort((a, b) => (dir === 'asc' ? -byFitScoreDesc(a, b) : byFitScoreDesc(a, b))),
+      };
     });
   });
 
-  // ── Horizontal board navigation minimap (bottom-right) ──────────────────────
-  private readonly kanbanBoard = viewChild<ElementRef<HTMLDivElement>>('kanbanBoard');
-  readonly boardScroll = signal({ left: 0, client: 0, scroll: 0 });
+  readonly visibleCount = computed(() =>
+    this.boardColumns().reduce((sum, col) => sum + col.candidates.length, 0),
+  );
 
-  readonly boardHasOverflow = computed(() => {
-    const b = this.boardScroll();
-    return b.scroll > b.client + 4;
+  toggleColumnSort(key: string): void {
+    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: dirs[key] === 'asc' ? 'desc' : 'asc' }));
+  }
+
+  // ── Mobile list ────────────────────────────────────────────────────────────
+  /**
+   * The mobile list carries the stage each candidate was grouped into, because
+   * the card footer is stage-driven and the board's grouping (not the raw
+   * status) is what the user is looking at.
+   */
+  readonly mobileItems = computed<MobilePipelineItem[]>(() => {
+    const key  = this.mobileStageFilter();
+    const cols = this.boardColumns();
+    if (key === OFFBOARDING_KEY) return [];
+    const picked = key ? cols.filter(c => c.key === key) : cols;
+    const items = picked.flatMap(col =>
+      col.candidates.map(candidate => ({ candidate, stage: col.key as BoardStageKey })),
+    );
+    return key ? items : items.sort((a, b) => byFitScoreDesc(a.candidate, b.candidate));
   });
 
-  readonly viewportStyle = computed(() => {
-    const b = this.boardScroll();
-    if (b.scroll <= 0) return { left: '0%', width: '100%' };
+  // ── Toolbar ────────────────────────────────────────────────────────────────
+  /** The stage dropdown belongs *inside* the filter panel, not loose beside the search. */
+  readonly filterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    return [{
+      name: 'stage',
+      label: this.translate.instant('PIPELINE.COL_STAGE'),
+      type: 'select',
+      placeholder: this.translate.instant('PIPELINE.FILTERS.ALL_STAGES'),
+      options: BOARD_STAGES.map(s => ({ value: s.key, label: this.translate.instant(s.labelKey) })),
+    }];
+  });
+
+  /**
+   * `initialValues` is a seed read once on first open, and a `select` needs the
+   * panel's internal shape — a `string[]`, not a bare string (§10b).
+   */
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
-      left:  Math.max(0, (b.left / b.scroll) * 100) + '%',
-      width: Math.min(100, (b.client / b.scroll) * 100) + '%',
+      title:        t('PIPELINE.FILTERS.TITLE'),
+      applyLabel:   t('PIPELINE.FILTERS.APPLY'),
+      cancelLabel:  t('PIPELINE.FILTERS.CANCEL'),
+      resetLabel:   t('PIPELINE.FILTERS.RESET'),
+      triggerLabel: t('PIPELINE.FILTERS.TRIGGER'),
+      align:        'right',
+      initialValues: { stage: this.stageFilter() ? [this.stageFilter()] : [] },
     };
   });
 
-  // ── Offer modal state ───────────────────────────────────────────────────
-  readonly offerTarget     = signal<KanbanCandidate | null>(null);
-  readonly offerMode       = signal<'send' | 'renegotiate'>('send');
-  readonly offerSubmitting = signal(false);
-  readonly offerError      = signal<string | null>(null);
-  offerForm: CreateOfferRequest = {};
-
-  // ── Reject-offer modal state ─────────────────────────────────────────────
-  readonly rejectTarget    = signal<KanbanCandidate | null>(null);
-  readonly rejectSubmitting = signal(false);
-  rejectReason = '';
-
-  readonly actioningId = signal<number | null>(null);
-
-  // ── Lib form-field option presets ────────────────────────────────────────
-  readonly salaryFieldOpts:  FormFieldOptions = { type: 'number', placeholder: '0', fullWidth: true };
-  readonly noteFieldOpts:    FormFieldOptions = { type: 'text',   placeholder: this.translate.instant('PIPELINE.OFFER.NOTE_PLACEHOLDER'), fullWidth: true };
-  readonly reasonFieldOpts:  FormFieldOptions = { type: 'textarea', placeholder: this.translate.instant('PIPELINE.OFFER.REASON_PLACEHOLDER'), rows: 3, fullWidth: true };
-
-  ngOnInit(): void {
-    this.load();
-    this.loadOffboarding();
-  }
-
-  private load(): void {
-    this.loading.set(true);
-    forkJoin({
-      kanban: this.pipelineService.getKanban(),
-      stats:  this.pipelineService.getStats(),
-    }).subscribe({
-      next: ({ kanban, stats }) => {
-        this.kanbanColumns.set(kanban);
-        this.stats.set(stats);
-        this.loading.set(false);
-        setTimeout(() => this.syncBoardMetrics()); // board now in DOM
-      },
-      error: () => this.loading.set(false),
-    });
-  }
-
-  onNewCandidate(): void {
-    this.router.navigate(['/rh/candidates', 'new']);
-  }
-
-  onCandidateClick(id: number): void {
-    this.router.navigate(['/rh/candidates', id]);
-  }
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'kanban', icon: 'view_kanban', tooltip: this.translate.instant('PIPELINE.VIEW_KANBAN') },
+      { id: 'list',   icon: 'view_list',   tooltip: this.translate.instant('PIPELINE.VIEW_LIST')   },
+    ];
+  });
 
   onSearch(value: string): void {
+    if (value === this.search()) return; // daf-search-toolbar re-emits on blur
     this.search.set(value ?? '');
   }
 
-  setView(mode: 'kanban' | 'list'): void {
-    this.viewMode.set(mode);
-    if (mode === 'kanban') setTimeout(() => this.syncBoardMetrics());
+  applyFilters(result: FilterResult): void {
+    this.stageFilter.set(typeof result['stage'] === 'string' ? result['stage'] : '');
   }
 
-  // ── List view (flattens the filtered board into a table) ────────────────────
-  readonly listColumns = computed<TableColumn[]>(() => {
+  setView(mode: string): void {
+    if (this.viewMode() === mode) return;
+    this.viewMode.set(mode as ViewMode);
+    this.notice.set(null);
+  }
+
+  // ── KPI tiles ──────────────────────────────────────────────────────────────
+  readonly kpiTotal  = computed(() => this.stats()?.totalCandidats ?? 0);
+  readonly kpiDelay  = computed(() => this.stats()?.delaiMoyenJours ?? null);
+  readonly kpiUrgent = computed(() => this.stats()?.urgents ?? 0);
+
+  readonly totalMetricValue = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
+  readonly delayMetricValue = computed(() => {
     this.translate.currentLang();
-    return [
-      { key: 'candidat', label: this.translate.instant('PIPELINE.COL_CANDIDATE'), type: 'avatar' },
-      { key: 'poste',    label: this.translate.instant('PIPELINE.COL_POSITION') },
-      { key: 'stage',    label: this.translate.instant('PIPELINE.COL_STAGE'), type: 'badge' },
-      { key: 'fit',      label: this.translate.instant('PIPELINE.COL_FIT'), align: 'right' },
-      { key: '_actions', label: '', align: 'right', clickable: true },
-    ];
+    const d = this.kpiDelay();
+    return d != null ? this.translate.instant('PIPELINE.DAYS', { count: d }) : '—';
   });
-  readonly listConfig: TableConfig = { hoverable: true };
-  readonly listRows = computed<TableRow[]>(() =>
-    this.boardColumns().flatMap(col => col.candidates).map(c => ({
-      candidat: { name: c.fullName, initials: c.initials ?? this.initials(c.fullName), avatar: this.resolveAvatar(c), subtitle: c.poste },
-      poste:    c.poste ?? '—',
-      stage:    { label: c.stageLabel ?? c.stage, options: { variant: this.stageVariant(c.stage), size: 'sm' } } as BadgeCell,
-      fit:      (c.fitScore ?? 0) + '%',
-      _source:  c,
-    })),
-  );
+  readonly urgentMetricValue = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant('PIPELINE.URGENT_OPEN', { count: this.kpiUrgent() });
+  });
 
-  private stageVariant(stage: string | undefined): BadgeVariant {
-    const s = (stage ?? '').toUpperCase();
-    if (s === 'RECRUTE')   return 'success';
-    if (s === 'OFFRE')     return 'warning';
-    if (s === 'ENTRETIEN') return 'teal';
-    return 'info';
+  /** Deltas are translated — they used to be hardcoded English on a French page. */
+  readonly totalDelta = computed<MetricDelta | null>(() => {
+    this.translate.currentLang();
+    const s = this.stats();
+    if (!s) return null;
+    const rate = s.totalCandidats > 0 ? Math.round((s.recrutementsClos / s.totalCandidats) * 100) : 0;
+    return {
+      value: this.translate.instant('PIPELINE.DELTA.CLOSURE_RATE', { pct: rate }),
+      direction: rate >= 50 ? 'up' : rate >= 30 ? 'neutral' : 'down',
+    };
+  });
+
+  readonly delayDelta = computed<MetricDelta | null>(() => {
+    this.translate.currentLang();
+    const d = this.kpiDelay();
+    if (d == null) return null;
+    return d > 30 ? { value: this.translate.instant('PIPELINE.DELTA.DELAY_OVER'),  direction: 'down'    }
+         : d > 15 ? { value: this.translate.instant('PIPELINE.DELTA.DELAY_OK'),    direction: 'neutral' }
+                  : { value: this.translate.instant('PIPELINE.DELTA.DELAY_GOOD'),  direction: 'up'      };
+  });
+
+  readonly urgentDelta = computed<MetricDelta | null>(() => {
+    this.translate.currentLang();
+    const urgent = this.kpiUrgent();
+    if (urgent === 0) return null;
+    return {
+      value: this.translate.instant('PIPELINE.DELTA.URGENT', { count: urgent }),
+      direction: 'down',
+    };
+  });
+
+  // ── Load ───────────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    forkJoin({
+      kanban:      this.pipelineService.getKanban().pipe(catchError(() => of(null))),
+      stats:       this.pipelineService.getStats().pipe(catchError(() => of(null))),
+      offboarding: this.canViewOffboarding()
+        ? this.lifecycleSvc.listOffboarding().pipe(catchError(() => of([] as OffboardingWorkflowInstance[])))
+        : of([] as OffboardingWorkflowInstance[]),
+    }).subscribe(({ kanban, stats, offboarding }) => {
+      if (kanban) this.rawColumns.set(kanban);
+      if (stats)  this.stats.set(stats);
+      this.offboardingItems.set(offboarding ?? []);
+      this.firstLoad.set(false);
+    });
   }
 
-  // ── Board scroll / minimap ───────────────────────────────────────────────
-  onBoardScroll(): void { this.syncBoardMetrics(); }
-
-  @HostListener('window:resize')
-  syncBoardMetrics(): void {
-    const el = this.kanbanBoard()?.nativeElement;
-    if (!el) return;
-    this.boardScroll.set({ left: el.scrollLeft, client: el.clientWidth, scroll: el.scrollWidth });
+  /** Re-fetch after an action — section-level skeletons, header and KPIs stay put. */
+  private reload(): void {
+    this.loading.set(true);
+    forkJoin({
+      kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
+      stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),
+    }).subscribe(({ kanban, stats }) => {
+      if (kanban) this.rawColumns.set(kanban);
+      if (stats)  this.stats.set(stats);
+      this.loading.set(false);
+    });
   }
 
-  scrollToColumn(index: number): void {
-    const el = this.kanbanBoard()?.nativeElement;
-    if (!el) return;
-    el.scrollTo({ left: index * 384, behavior: 'smooth' }); // 360px column + 24px gap
-  }
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
+  onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
+  onViewOffboarding(id: number): void { this.router.navigate(['/rh/lifecycle', id]); }
 
-  isOfferPending(c: KanbanCandidate): boolean {
-    return c.status === 'OFFER_SENT' || (c.offerStatus ?? '') === 'SENT';
-  }
+  // ── Offer modal ────────────────────────────────────────────────────────────
+  readonly offerTarget     = signal<KanbanCandidate | null>(null);
+  readonly offerMode       = signal<OfferMode>('send');
+  readonly offerInitial    = signal<CreateOfferRequest | null>(null);
+  readonly offerSubmitting = signal(false);
+  readonly offerError      = signal<string | null>(null);
 
-  canSendOffer(c: KanbanCandidate): boolean {
-    return c.status === 'ACCEPTED';
-  }
-
-  // ── Offer actions ─────────────────────────────────────────────────────────
-  openOfferModal(c: KanbanCandidate, mode: 'send' | 'renegotiate', event: Event): void {
+  openOfferModal({ candidate, event }: { candidate: KanbanCandidate; event: Event }, mode: OfferMode): void {
     event.stopPropagation();
     this.offerError.set(null);
     this.offerMode.set(mode);
-    this.offerForm = { askedSalary: null, proposedSalary: null, salaryNote: null, expectedHireDate: null, expiryDate: null };
-    this.offerTarget.set(c);
-    // Renegotiation: prefill the form with the current offer's values.
+    this.offerInitial.set(null);
+    this.offerTarget.set(candidate);
+    // Renegotiation: seed the form with the current offer once it lands.
     if (mode === 'renegotiate') {
-      this.offerService.getOffer(c.id).subscribe({
-        next: o => {
-          this.offerForm = {
-            askedSalary: o.askedSalary, proposedSalary: o.proposedSalary, salaryNote: o.salaryNote,
-            expectedHireDate: o.expectedHireDate, expiryDate: o.expiryDate,
-          };
-        },
-        error: () => { /* keep blank form if the offer can't be loaded */ },
+      this.offerService.getOffer(candidate.id).subscribe({
+        next: o => this.offerInitial.set({
+          askedSalary: o.askedSalary, proposedSalary: o.proposedSalary, salaryNote: o.salaryNote,
+          expectedHireDate: o.expectedHireDate, expiryDate: o.expiryDate,
+        }),
+        error: () => { /* keep the blank form if the offer can't be loaded */ },
       });
     }
   }
 
   closeOfferModal(): void {
     this.offerTarget.set(null);
+    this.offerInitial.set(null);
   }
 
-  submitOffer(): void {
+  submitOffer(body: CreateOfferRequest): void {
     const target = this.offerTarget();
     if (!target) return;
+    const renegotiate = this.offerMode() === 'renegotiate';
     this.offerSubmitting.set(true);
     this.offerError.set(null);
-    const renegotiate = this.offerMode() === 'renegotiate';
     const call = renegotiate
-      ? this.offerService.renegotiateOffer(target.id, this.offerForm)
-      : this.offerService.sendOffer(target.id, this.offerForm);
+      ? this.offerService.renegotiateOffer(target.id, body)
+      : this.offerService.sendOffer(target.id, body);
     call.subscribe({
       next: () => {
         this.offerSubmitting.set(false);
-        this.offerTarget.set(null);
-        this.notice.set(this.translate.instant(renegotiate ? 'PIPELINE.NOTICE.RENEGOTIATED' : 'PIPELINE.NOTICE.SENT', { name: target.fullName }));
-        this.load();
+        this.closeOfferModal();
+        this.notice.set(this.translate.instant(
+          renegotiate ? 'PIPELINE.NOTICE.RENEGOTIATED' : 'PIPELINE.NOTICE.SENT',
+          { name: target.fullName },
+        ));
+        this.reload();
       },
       error: err => {
         this.offerSubmitting.set(false);
@@ -366,122 +372,56 @@ export class PipelineComponent implements OnInit {
     });
   }
 
-  acceptOffer(c: KanbanCandidate, event: Event): void {
+  // ── Accept ─────────────────────────────────────────────────────────────────
+  acceptOffer({ candidate, event }: { candidate: KanbanCandidate; event: Event }): void {
     event.stopPropagation();
-    this.actioningId.set(c.id);
+    this.actioningId.set(candidate.id);
     this.notice.set(null);
-    this.offerService.acceptOffer(c.id).subscribe({
-      next: () => { this.actioningId.set(null); this.notice.set(this.translate.instant('PIPELINE.NOTICE.ACCEPTED', { name: c.fullName })); this.load(); },
-      error: err => { this.actioningId.set(null); this.notice.set(err?.error?.detail ?? this.translate.instant('PIPELINE.ERRORS.ACCEPT')); },
+    this.actionError.set(null);
+    this.offerService.acceptOffer(candidate.id).subscribe({
+      next: () => {
+        this.actioningId.set(null);
+        this.notice.set(this.translate.instant('PIPELINE.NOTICE.ACCEPTED', { name: candidate.fullName }));
+        this.reload();
+      },
+      error: err => {
+        this.actioningId.set(null);
+        this.actionError.set(err?.error?.detail ?? this.translate.instant('PIPELINE.ERRORS.ACCEPT'));
+      },
     });
   }
 
-  openRejectModal(c: KanbanCandidate, event: Event): void {
+  // ── Refuse modal ───────────────────────────────────────────────────────────
+  readonly refuseTarget     = signal<KanbanCandidate | null>(null);
+  readonly refuseSubmitting = signal(false);
+  readonly refuseError      = signal<string | null>(null);
+
+  openRefuseModal({ candidate, event }: { candidate: KanbanCandidate; event: Event }): void {
     event.stopPropagation();
-    this.offerError.set(null);
-    this.rejectReason = '';
-    this.rejectTarget.set(c);
+    this.refuseError.set(null);
+    this.refuseTarget.set(candidate);
   }
 
-  closeRejectModal(): void {
-    this.rejectTarget.set(null);
+  closeRefuseModal(): void {
+    this.refuseTarget.set(null);
   }
 
-  submitReject(): void {
-    const target = this.rejectTarget();
-    if (!target || !this.rejectReason.trim()) return;
-    this.rejectSubmitting.set(true);
-    this.offerService.rejectOffer(target.id, this.rejectReason.trim()).subscribe({
-      next: () => { this.rejectSubmitting.set(false); this.rejectTarget.set(null); this.notice.set(this.translate.instant('PIPELINE.NOTICE.REFUSED', { name: target.fullName })); this.load(); },
-      error: err => { this.rejectSubmitting.set(false); this.offerError.set(err?.error?.detail ?? this.translate.instant('PIPELINE.ERRORS.REFUSE')); },
+  submitRefuse(reason: string): void {
+    const target = this.refuseTarget();
+    if (!target || !reason) return;
+    this.refuseSubmitting.set(true);
+    this.refuseError.set(null);
+    this.offerService.rejectOffer(target.id, reason).subscribe({
+      next: () => {
+        this.refuseSubmitting.set(false);
+        this.refuseTarget.set(null);
+        this.notice.set(this.translate.instant('PIPELINE.NOTICE.REFUSED', { name: target.fullName }));
+        this.reload();
+      },
+      error: err => {
+        this.refuseSubmitting.set(false);
+        this.refuseError.set(err?.error?.detail ?? this.translate.instant('PIPELINE.ERRORS.REFUSE'));
+      },
     });
   }
-
-  // ── Form-field value handlers (daf-form-field emits valueChange) ─────────
-  private asNum(v: string | number | null): number | null {
-    if (v === null || v === '') return null;
-    const n = typeof v === 'number' ? v : Number(v);
-    return isNaN(n) ? null : n;
-  }
-  private asStr(v: string | number | null): string | null {
-    return v === null || v === '' ? null : String(v);
-  }
-  onAskedChange(v: string | number | null):    void { this.offerForm.askedSalary = this.asNum(v); }
-  onProposedChange(v: string | number | null): void { this.offerForm.proposedSalary = this.asNum(v); }
-  onNoteChange(v: string | number | null):     void { this.offerForm.salaryNote = this.asStr(v); }
-  onReasonChange(v: string | number | null):   void { this.rejectReason = typeof v === 'string' ? v : ''; }
-
-  // Date fields use the lib multi-date-picker (single mode) ↔ ISO strings.
-  getHireDate(): Date | null { return isoToDate(this.offerForm.expectedHireDate ?? null); }
-  setHireDate(v: Date | Date[] | null): void { this.offerForm.expectedHireDate = dateToIso(v) || null; }
-  getExpiryDate(): Date | null { return isoToDate(this.offerForm.expiryDate ?? null); }
-  setExpiryDate(v: Date | Date[] | null): void { this.offerForm.expiryDate = dateToIso(v) || null; }
-
-  // ── Display helpers ─────────────────────────────────────────────────────
-  fitScoreClass(score: number): string {
-    if (score >= 85) return 'text-[#79D7BE] font-bold text-sm';
-    if (score >= 65) return 'text-primary font-bold text-sm';
-    return 'text-outline font-bold text-sm';
-  }
-
-  badgeVariant(badgeType: string): BadgeVariant {
-    return BADGE_VARIANT[badgeType] ?? 'neutral';
-  }
-
-  resolveAvatar(candidate: KanbanCandidate): string {
-    return getAvatarUrl(candidate.id, candidate.photoUrl, candidate.gender);
-  }
-
-  onAvatarError(id: number): void {
-    this.avatarFailed.update(s => new Set(s).add(id));
-  }
-
-  initials(name: string): string {
-    return name.split(' ').slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('');
-  }
-
-  // ── KPI tiles (daf-metric-card from lib) ──
-  readonly kpiTotal  = computed(() => this.stats()?.totalCandidats ?? 0);
-  readonly kpiDelay  = computed(() => this.stats()?.delaiMoyenJours ?? null);
-  readonly kpiUrgent = computed(() => this.stats()?.urgents ?? 0);
-
-  readonly totalMetricValue  = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
-  readonly delayMetricValue  = computed(() => {
-    this.translate.currentLang();
-    return this.kpiDelay() != null ? this.translate.instant('PIPELINE.DAYS', { count: this.kpiDelay() }) : '—';
-  });
-  readonly urgentMetricValue = computed(() => {
-    this.translate.currentLang();
-    return this.translate.instant('PIPELINE.URGENT_OPEN', { count: this.kpiUrgent() });
-  });
-
-  // ── Delta indicators ──
-  readonly totalDelta = computed<MetricDelta | null>(() => {
-    const s = this.stats();
-    if (!s) return null;
-    const closureRate = s.totalCandidats > 0 ? Math.round((s.recrutementsClos / s.totalCandidats) * 100) : 0;
-    return {
-      value: `${closureRate}% closure rate`,
-      direction: closureRate >= 50 ? 'up' : closureRate >= 30 ? 'neutral' : 'down',
-    };
-  });
-
-  readonly delayDelta = computed<MetricDelta | null>(() => {
-    const delay = this.kpiDelay();
-    if (delay == null) return null;
-    const direction: 'up' | 'down' | 'neutral' = delay > 30 ? 'down' : delay > 15 ? 'neutral' : 'up';
-    return {
-      value: delay > 30 ? 'Exceeds target' : delay > 15 ? 'Within range' : 'Excellent pace',
-      direction,
-    };
-  });
-
-  readonly urgentDelta = computed<MetricDelta | null>(() => {
-    const urgent = this.kpiUrgent();
-    if (urgent === 0) return null;
-    return {
-      value: `${urgent} requiring immediate action`,
-      direction: 'down',
-    };
-  });
 }

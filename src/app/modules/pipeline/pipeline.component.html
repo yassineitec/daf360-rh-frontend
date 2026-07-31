@@ -1,506 +1,136 @@
-<div class="space-y-6">
+<!-- /rh/candidates — canonical page shape (UI-PLAYBOOK §1).
+     `daf-page` owns the 32px vertical rhythm, so there is no wrapper gap, no
+     `space-y-*` between sections and no full-page spinner. `kpis="3"` matches the
+     three tiles, so the first-load skeleton doesn't draw a fourth that never
+     resolves. No `icon` on the header — page titles carry none. -->
+<daf-page [loading]="firstLoad()" [kpis]="3">
 
-  <!-- ── Notice banner ─────────────────────────────────────────── -->
-  @if (notice()) {
-    <div class="flex items-center gap-2 bg-secondary-container text-on-secondary-container px-4 py-2 rounded-lg text-[13px]">
-      <span class="material-symbols-outlined text-[18px]">info</span>
-      <span class="flex-1">{{ notice() }}</span>
-      <button class="material-symbols-outlined text-[18px]" (click)="notice.set(null)">close</button>
-    </div>
-  }
+  <daf-page-header
+    [title]="'PIPELINE.TITLE' | translate"
+    [subtitle]="'PIPELINE.SUBTITLE' | translate">
+    <ng-container pageActions>
+      <daf-button *dafHasPermission="'CREATE_CANDIDATE'"
+        [options]="{ variant: 'teal', label: ('PIPELINE.NEW_CANDIDATE' | translate), iconStart: 'add' }"
+        (onClick)="onNewCandidate()" />
+    </ng-container>
+  </daf-page-header>
 
-  <!-- ── Page header ───────────────────────────────────────────── -->
-  <div class="flex justify-between items-end gap-4">
-    <div>
-      <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-        {{ 'PIPELINE.TITLE' | translate }}
-      </h1>
-      <p class="text-[13px] sm:text-[14px] text-outline mt-1">
-        {{ 'PIPELINE.SUBTITLE' | translate }}
-      </p>
-    </div>
-    <!-- Mobile: icon-only "+" -->
-    <daf-button
-      class="sm:hidden icon-btn-toggle"
-      variant="teal"
-      [options]="{ iconStart: 'add', size: 'md' }"
-      [title]="'PIPELINE.NEW_CANDIDATE' | translate"
-      (onClick)="onNewCandidate()" />
-    <!-- Desktop/tablet: full label -->
-    <daf-button
-      class="hidden sm:inline-flex"
-      [label]="'PIPELINE.NEW_CANDIDATE' | translate"
-      variant="teal"
-      [options]="{ iconStart: 'add', size: 'md' }"
-      (onClick)="onNewCandidate()" />
-  </div>
-
-  <!-- ── KPI tiles: metric cards on desktop/tablet ── -->
-  <div class="hidden md:grid grid-cols-3 gap-6">
+  <!-- KPIs — one row at every width, never wraps. The bespoke mobile stat strip
+       is gone: three metric cards at grid-cols-3 gap-2 cover both widths. -->
+  <section class="grid grid-cols-3 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'PIPELINE.KPI_TOTAL' | translate"
       [value]="totalMetricValue()"
       [delta]="totalDelta()"
       [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
     <daf-metric-card
       [label]="'PIPELINE.KPI_AVG_DELAY' | translate"
       [value]="delayMetricValue()"
       [delta]="delayDelta()"
       [options]="{ icon: 'timer', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+
     <daf-metric-card
       [label]="'PIPELINE.KPI_URGENT' | translate"
       [value]="urgentMetricValue()"
       [delta]="urgentDelta()"
       [options]="{ icon: 'priority_high', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
-  </div>
+  </section>
 
-  <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-    <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
-          <span class="material-symbols-outlined text-[18px]">group</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiTotal() }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">{{ 'PIPELINE.KPI_TOTAL' | translate }}</p>
-      </div>
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-teal/10 text-teal">
-          <span class="material-symbols-outlined text-[18px]">timer</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiDelay() ?? '—' }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">{{ 'PIPELINE.KPI_AVG_DELAY' | translate }}</p>
-      </div>
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center bg-danger/10 text-danger">
-          <span class="material-symbols-outlined text-[18px]">priority_high</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiUrgent() }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">{{ 'PIPELINE.KPI_URGENT' | translate }}</p>
-      </div>
+  <!-- Search + filters + view toggle: one lib toolbar, one card. Replaces the
+       hand-rolled search card, its mobile search toggle and the bespoke
+       kanban/list button pair. The stage dropdown lives inside the filter panel. -->
+  <daf-search-toolbar
+    [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
+
+  @if (actionError()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ actionError() }}
     </div>
-  </div>
+  }
 
-  <!-- ── Search + view toggle (same card as the Pipeline RH page) ── -->
-  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
-    <div class="flex items-center justify-between gap-3 p-4 sm:p-5">
-
-      <!-- Desktop/tablet: full search box -->
-      <div class="hidden sm:block w-56 shrink-0 ml-0.5">
-        <rh-search-bar
-          [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
-          [value]="search()"
-          (valueChange)="onSearch($event)" />
-      </div>
-
-      <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
-      @if (mobileSearchOpen()) {
-        <div class="sm:hidden flex-1 flex items-center gap-2">
-          <rh-search-bar
-            class="flex-1"
-            [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
-            [value]="search()"
-            (valueChange)="onSearch($event)" />
-          <daf-button
-            class="icon-btn-toggle shrink-0"
-            [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
-            [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-            (onClick)="mobileSearchOpen.set(false)" />
-        </div>
-      } @else {
-        <!-- Mobile, search closed: icon-only toggle, consistent with the rest of the app -->
-        <daf-button
-          class="sm:hidden icon-btn-toggle shrink-0"
-          [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
-          [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-          (onClick)="mobileSearchOpen.set(true)" />
-
-      <!-- View toggle: kanban ⇄ list -->
-      <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-        <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
-          [class.bg-primary]="viewMode() === 'kanban'" [class.text-white]="viewMode() === 'kanban'" [class.text-outline]="viewMode() !== 'kanban'"
-          [title]="'PIPELINE.VIEW_KANBAN' | translate" (click)="setView('kanban')">
-          <span class="material-symbols-outlined text-[18px]">view_kanban</span>
-        </button>
-        <button type="button" class="flex items-center justify-center w-11 h-11 transition-colors"
-          [class.bg-primary]="viewMode() === 'list'" [class.text-white]="viewMode() === 'list'" [class.text-outline]="viewMode() !== 'list'"
-          [title]="'PIPELINE.VIEW_LIST' | translate" (click)="setView('list')">
-          <span class="material-symbols-outlined text-[18px]">view_list</span>
-        </button>
-      </div>
-      }
+  @if (notice()) {
+    <div class="flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">
+      <span class="material-symbols-outlined text-[18px]">info</span>
+      <span class="flex-1">{{ notice() }}</span>
+      <button type="button" class="text-primary/70 hover:text-primary" (click)="notice.set(null)">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
     </div>
-  </daf-card>
+  }
 
-  <!-- Loading spinner -->
-  @if (loading()) {
-    <div class="flex justify-center items-center h-64">
-      <span class="material-symbols-outlined text-[48px] text-outline animate-spin">progress_activity</span>
-    </div>
-  } @else if (viewMode() === 'list') {
-
-    <!-- ── List view ────────────────────────────────────────────── -->
-    <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-      <daf-data-table [columns]="listColumns()" [rows]="listRows()" [config]="listConfig">
-        <ng-template dafCell="_actions" let-row>
-          <button type="button"
-            class="px-3 py-1.5 text-[12px] font-semibold rounded-lg text-[#50717B] hover:bg-surface-container transition-colors whitespace-nowrap"
-            (click)="onCandidateClick(row['_source'].id)">{{ 'PIPELINE.VIEW_ARROW' | translate }}</button>
-        </ng-template>
-      </daf-data-table>
-    </div>
-    @if (listRows().length === 0) {
-      <div class="text-center py-12 text-outline border border-dashed border-outline-variant rounded-xl">
-        {{ 'PIPELINE.NO_CANDIDATES' | translate }}
-      </div>
-    }
-
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
+       Each section renders only at its own breakpoint (host class), so there is
+       no duplicated desktop/mobile tree here (§8b). -->
+  @if (viewMode() === 'kanban') {
+    <rh-pipeline-board-section
+      [columns]="boardColumns()"
+      [offboarding]="offboardingActive()"
+      [showOffboarding]="canViewOffboarding()"
+      [loading]="loading()"
+      [actioningId]="actioningId()"
+      (open)="onView($event)"
+      (openOffboarding)="onViewOffboarding($event)"
+      (toggleSort)="toggleColumnSort($event)"
+      (sendOffer)="openOfferModal($event, 'send')"
+      (acceptOffer)="acceptOffer($event)"
+      (renegotiate)="openOfferModal($event, 'renegotiate')"
+      (refuse)="openRefuseModal($event)" />
   } @else {
-
-    <!-- ── Kanban board — all columns inside one global card ──────────── -->
-    <div class="board-card">
-    <div #kanbanBoard class="flex gap-6 overflow-x-auto pb-2 items-start custom-scroll" (scroll)="onBoardScroll()">
-
-      @for (col of boardColumns(); track col.key) {
-        <div class="shrink-0 w-[85vw] max-w-[320px] sm:w-80 sm:max-w-none space-y-4">
-
-          <!-- Column header -->
-          <div class="flex justify-between items-center px-2 py-1">
-            <span class="font-bold text-on-surface flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full" [style.backgroundColor]="col.accent"></span>
-              {{ col.label }}
-              <span class="bg-surface-container-highest px-2 py-0.5 rounded text-xs">{{ col.count }}</span>
-            </span>
-            <button type="button"
-              class="flex items-center justify-center w-4 h-4 shrink-0 text-outline-variant hover:text-outline transition-colors"
-              [title]="(columnSortDir(col.key) === 'asc' ? 'PIPELINE.SORT_DESC' : 'PIPELINE.SORT_ASC') | translate"
-              (click)="toggleColumnSort(col.key)">
-              <span class="material-symbols-outlined text-[14px]" style="font-variation-settings:'wght' 200">swap_vert</span>
-            </button>
-          </div>
-
-          <!-- Cards — shows ~3 at a time, scrolls for the rest -->
-          <div class="flex flex-col gap-4 max-h-[610px] overflow-y-auto overscroll-contain pr-2 py-4 custom-scroll-y">
-          @for (c of col.candidates; track c.id) {
-            <rh-kanban-card-shell
-              class="min-h-64"
-              [surface]="'white'"
-              (click)="onCandidateClick(c.id)">
-
-              <div class="flex justify-between mb-3">
-                <daf-badge [label]="c.badge" [options]="{ variant: badgeVariant(c.badgeType), size: 'sm' }" />
-                <span [class]="fitScoreClass(c.fitScore)">{{ c.fitScore }}% Fit</span>
-              </div>
-
-              <div class="flex items-center gap-3 mb-3">
-                <div class="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-outline-variant bg-surface-container-high flex items-center justify-center">
-                  @if (!avatarFailed().has(c.id)) {
-                    <img [src]="resolveAvatar(c)" [alt]="c.fullName" class="w-full h-full object-cover" (error)="onAvatarError(c.id)" />
-                  } @else {
-                    <span class="text-[14px] font-bold text-on-surface-variant">{{ c.initials ?? initials(c.fullName) }}</span>
-                  }
-                </div>
-                <div class="min-w-0">
-                  <h4 class="font-bold text-on-surface truncate">{{ c.fullName }}</h4>
-                  <p class="text-xs text-outline truncate">{{ c.poste }}</p>
-                </div>
-              </div>
-
-              <!-- Screening: skill chips -->
-              @if (col.key === 'SCREENING' && c.skills.length) {
-                <div class="flex flex-wrap gap-1.5 mb-3">
-                  @for (skill of c.skills.slice(0, 3); track skill) {
-                    <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">{{ skill }}</span>
-                  }
-                </div>
-              }
-
-              <!-- Offre: offer note / signature status -->
-              @if (col.key === 'OFFRE') {
-                <div class="bg-surface-container-low p-2 rounded-lg mb-3 text-xs">
-                  <p class="text-on-surface-variant italic">
-                    @if (isOfferPending(c)) {
-                      "{{ 'PIPELINE.CARD.PENDING_SIGNATURE' | translate }}@if (c.offerExpiry) { {{ 'PIPELINE.CARD.EXPIRES' | translate:{ date: c.offerExpiry } }} }."
-                    } @else if (c.offerStatus === 'ACCEPTED') {
-                      "{{ 'PIPELINE.CARD.OFFER_ACCEPTED' | translate }}"
-                    } @else {
-                      "{{ c.note || ('PIPELINE.CARD.OFFER_IN_PREP' | translate) }}"
-                    }
-                  </p>
-                </div>
-              }
-
-              <!-- Footer: one item left · one item (or actions) right (pinned to bottom) -->
-              <div class="mt-auto pt-3 border-t border-outline-variant flex items-center justify-between gap-2 text-on-surface-variant">
-                @switch (col.key) {
-
-                  @case ('SCREENING') {
-                    <span class="flex items-center gap-1 text-[11px] min-w-0 max-w-[55%]">
-                      <span class="material-symbols-outlined text-[14px] shrink-0">mail</span>
-                      <span class="truncate">{{ c.email || '—' }}</span>
-                    </span>
-                    <span class="flex items-center gap-1 text-[11px] min-w-0 shrink-0">
-                      <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
-                      <span class="truncate">{{ c.location || '—' }}</span>
-                    </span>
-                  }
-
-                  @case ('ENTRETIEN') {
-                    <span class="flex items-center gap-1 text-[11px] min-w-0">
-                      <span class="material-symbols-outlined text-[14px] shrink-0">calendar_month</span>
-                      <span class="truncate">{{ c.nextEvent || ('PIPELINE.CARD.INTERVIEW_TO_SCHEDULE' | translate) }}</span>
-                    </span>
-                    <div class="flex items-center gap-2 shrink-0 min-w-0">
-                      @if (c.interviewLocation) {
-                        <span class="flex items-center gap-1 text-[11px] min-w-0">
-                          <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
-                          <span class="truncate max-w-[90px]">{{ c.interviewLocation }}</span>
-                        </span>
-                      }
-                      @if (canSendOffer(c)) {
-                        <button type="button" [title]="'PIPELINE.CARD.SEND_OFFER_TITLE' | translate"
-                          class="shrink-0 p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors"
-                          (click)="openOfferModal(c, 'send', $event)">
-                          <span class="material-symbols-outlined text-[18px]">send</span>
-                        </button>
-                      }
-                    </div>
-                  }
-
-                  @case ('OFFRE') {
-                    <span class="flex items-center gap-1 text-[11px] min-w-0">
-                      <span class="material-symbols-outlined text-[14px] shrink-0">payments</span>
-                      <span class="truncate">{{ c.askedSalary || '—' }} ~ {{ c.proposedSalary || '—' }}</span>
-                    </span>
-                    @if (isOfferPending(c)) {
-                      <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" [title]="'PIPELINE.CARD.ACCEPT_OFFER_TITLE' | translate" [disabled]="actioningId() === c.id"
-                          class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors disabled:opacity-40"
-                          (click)="acceptOffer(c, $event)">
-                          <span class="material-symbols-outlined text-[18px]">check_circle</span>
-                        </button>
-                        <button type="button" [title]="'PIPELINE.CARD.RENEGOTIATE_TITLE' | translate"
-                          class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors"
-                          (click)="openOfferModal(c, 'renegotiate', $event)">
-                          <span class="material-symbols-outlined text-[18px]">sync</span>
-                        </button>
-                        <button type="button" [title]="'PIPELINE.CARD.REFUSE_OFFER_TITLE' | translate" [disabled]="actioningId() === c.id"
-                          class="p-1.5 rounded-lg text-[#50717B] hover:bg-surface-container transition-colors disabled:opacity-40"
-                          (click)="openRejectModal(c, $event)">
-                          <span class="material-symbols-outlined text-[18px]">cancel</span>
-                        </button>
-                      </div>
-                    } @else {
-                      <span class="text-[11px] shrink-0 text-outline">{{ c.offerStatus === 'ACCEPTED' ? ('PIPELINE.CARD.OFFER_ACCEPTED_SHORT' | translate) : '' }}</span>
-                    }
-                  }
-
-                  @case ('RECRUTE') {
-                    <span class="flex items-center gap-1 text-[11px] min-w-0 max-w-[55%]">
-                      <span class="material-symbols-outlined text-[14px] shrink-0">badge</span>
-                      <span class="truncate">{{ c.contractType || '—' }}</span>
-                    </span>
-                    <span class="flex items-center gap-1 text-[11px] min-w-0 shrink-0">
-                      <span class="material-symbols-outlined text-[14px] shrink-0">login</span>
-                      <span class="truncate">{{ c.location || '—' }}</span>
-                    </span>
-                  }
-                }
-              </div>
-            </rh-kanban-card-shell>
-          }
-          </div>
-
-          <!-- Empty column -->
-          @if (col.candidates.length === 0) {
-            <div class="text-center py-10 text-outline border border-dashed border-outline-variant rounded-xl">
-              <span class="material-symbols-outlined text-[32px] block mb-1">inbox</span>
-              <p class="text-[12px]">{{ 'PIPELINE.NO_CANDIDATE_COLUMN' | translate }}</p>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- ── Offboarding column (display-only; employees in an active offboarding workflow) ── -->
-      <div *dafHasPermission="'RH_MANAGE_OFFBOARDING'"
-           class="shrink-0 w-[85vw] max-w-[320px] sm:w-80 sm:max-w-none space-y-4">
-
-        <!-- Column header -->
-        <div class="flex justify-between items-center px-2 py-1">
-          <span class="font-bold text-on-surface flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background-color:#64748b"></span>
-            {{ 'PIPELINE.OFFBOARDING.COLUMN' | translate }}
-            <span class="bg-surface-container-highest px-2 py-0.5 rounded text-xs">{{ offboardingActive().length }}</span>
-          </span>
-        </div>
-
-        <!-- Cards -->
-        <div class="flex flex-col gap-4 max-h-[610px] overflow-y-auto overscroll-contain pr-2 pt-4 custom-scroll-y">
-          @for (o of offboardingActive(); track o.id) {
-            <rh-kanban-card-shell
-              class="min-h-[180px]"
-              [surface]="'white'"
-              (click)="onViewOffboarding(o.id)">
-
-              <!-- Employee -->
-              <div class="flex items-center gap-3 mb-3">
-                <div class="w-12 h-12 rounded-lg flex items-center justify-center text-[14px] font-bold text-white shrink-0" style="background:#64748b">
-                  {{ initials(o.employeeFullName || '') }}
-                </div>
-                <div class="min-w-0">
-                  <h4 class="font-bold text-on-surface truncate">{{ o.employeeFullName || '—' }}</h4>
-                  <p class="text-xs text-outline truncate">{{ 'LIFECYCLE.REASON.' + o.departureReason | translate }}</p>
-                </div>
-              </div>
-
-              <!-- Status + SLA -->
-              <div class="flex items-center gap-2 mb-3">
-                <daf-badge [label]="'LIFECYCLE.STATUS.' + o.status | translate" [options]="{ variant: 'neutral', size: 'sm' }" />
-                @if (o.slaBreachFlag) {
-                  <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-danger bg-danger/10 px-2 py-0.5 rounded-full">
-                    <span class="material-symbols-outlined text-[13px]">warning</span>
-                    {{ 'PIPELINE.OFFBOARDING.SLA' | translate }}
-                  </span>
-                }
-              </div>
-
-              <!-- Footer: last working day + handover manager -->
-              <div class="mt-auto pt-3 border-t border-outline-variant flex items-center justify-between gap-2 text-on-surface-variant text-[11px]">
-                <span class="flex items-center gap-1 min-w-0">
-                  <span class="material-symbols-outlined text-[14px] shrink-0">event</span>
-                  <span class="truncate">{{ o.lastWorkingDay || '—' }}</span>
-                </span>
-                @if (o.handoverManagerName) {
-                  <span class="flex items-center gap-1 min-w-0 shrink-0">
-                    <span class="material-symbols-outlined text-[14px] shrink-0">handshake</span>
-                    <span class="truncate max-w-[120px]">{{ o.handoverManagerName }}</span>
-                  </span>
-                }
-              </div>
-            </rh-kanban-card-shell>
-          }
-        </div>
-
-        <!-- Empty column -->
-        @if (offboardingActive().length === 0) {
-          <div class="text-center py-10 text-outline border border-dashed border-outline-variant rounded-xl">
-            <span class="material-symbols-outlined text-[32px] block mb-1">logout</span>
-            <p class="text-[12px]">{{ 'PIPELINE.OFFBOARDING.EMPTY' | translate }}</p>
-          </div>
-        }
-      </div>
-    </div>
-    </div>
+    <rh-pipeline-table-section
+      [columns]="boardColumns()"
+      [loading]="loading()"
+      (open)="onView($event)" />
   }
 
-  <!-- ═══ Kanban navigation minimap (fixed bottom-right) ═══ -->
-  @if (!loading() && viewMode() === 'kanban' && boardHasOverflow()) {
-    <div class="hidden sm:block fixed bottom-6 right-6 z-40">
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-2
-                  opacity-30 shadow-md origin-bottom-right transition-all duration-200
-                  hover:opacity-100 hover:scale-150 hover:shadow-2xl">
-        <div class="relative flex gap-1" style="width: 172px;">
-          @for (col of boardColumns(); track col.key; let i = $index) {
-            <button type="button"
-              class="flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105"
-              [style.background]="col.badgeBg"
-              [title]="col.label + ' (' + col.count + ')'"
-              (click)="scrollToColumn(i)">
-              <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
-              <span class="text-[10px] font-bold leading-none" [style.color]="col.accent">{{ col.count }}</span>
-            </button>
-          }
-          <div class="absolute top-0 bottom-0 rounded-md border-2 border-primary pointer-events-none transition-all duration-150"
-               [style.left]="viewportStyle().left" [style.width]="viewportStyle().width"></div>
-        </div>
-      </div>
-    </div>
-  }
-</div>
+  <!-- Mobile is always the card list: a horizontal board and a data table are
+       both unusable at that width. -->
+  <rh-pipeline-mobile-section
+    [columns]="boardColumns()"
+    [items]="mobileItems()"
+    [totalCount]="visibleCount()"
+    [stageFilter]="mobileStageFilter()"
+    [offboarding]="offboardingActive()"
+    [showOffboarding]="canViewOffboarding()"
+    [loading]="loading()"
+    [actioningId]="actioningId()"
+    (stageFilterChange)="mobileStageFilter.set($event)"
+    (open)="onView($event)"
+    (openOffboarding)="onViewOffboarding($event)"
+    (sendOffer)="openOfferModal($event, 'send')"
+    (acceptOffer)="acceptOffer($event)"
+    (renegotiate)="openOfferModal($event, 'renegotiate')"
+    (refuse)="openRefuseModal($event)" />
 
-<!-- ── Send / renegotiate offer modal ───────────────────────────── -->
-@if (offerTarget(); as target) {
-  <app-modal
-    [title]="offerMode() === 'renegotiate' ? ('PIPELINE.OFFER.RENEGOTIATE_TITLE' | translate) : ('PIPELINE.OFFER.SEND_TITLE' | translate)"
-    [visible]="true"
-    (closed)="closeOfferModal()"
-    [hasFooter]="true">
+</daf-page>
 
-    <p class="text-[13px] text-outline mb-4">{{ target.fullName }} — {{ target.poste }}</p>
+<!-- Modals live at the page root, outside `daf-page`: the overlay is
+     `position: fixed`, and an ancestor carrying transform / filter /
+     backdrop-filter would become its containing block. -->
+<rh-offer-modal
+  [visible]="offerTarget() !== null"
+  [candidate]="offerTarget()"
+  [mode]="offerMode()"
+  [initial]="offerInitial()"
+  [submitting]="offerSubmitting()"
+  [error]="offerError()"
+  (closed)="closeOfferModal()"
+  (submit)="submitOffer($event)" />
 
-    <div class="grid grid-cols-2 gap-3">
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.ASKED_SALARY_NET' | translate }}</label>
-        <daf-form-field [value]="offerForm.askedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onAskedChange($event)" />
-      </div>
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.PROPOSED_SALARY_NET' | translate }}</label>
-        <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
-      </div>
-    </div>
-
-    <!-- Salary simulator (future module) -->
-    <div class="mt-2">
-      <daf-button [label]="'PIPELINE.OFFER.SALARY_SIM' | translate" variant="ghost"
-        [options]="{ iconStart: 'calculate', size: 'sm', disabled: true }"
-        [title]="'PIPELINE.OFFER.MODULE_SOON' | translate" />
-      <span class="text-[11px] text-outline ml-1">{{ 'PIPELINE.OFFER.COMING_SOON' | translate }}</span>
-    </div>
-
-    <div class="flex flex-col gap-1 mt-3">
-      <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.NOTE' | translate }}</label>
-      <daf-form-field [value]="offerForm.salaryNote ?? null" [options]="noteFieldOpts" (valueChange)="onNoteChange($event)" />
-    </div>
-
-    <div class="grid grid-cols-2 gap-3 mt-3">
-      <daf-multi-date-picker
-        [value]="getHireDate()"
-        [config]="{ label: ('PIPELINE.OFFER.EXPECTED_HIRE_DATE' | translate), placeholder: ('PIPELINE.OFFER.SELECT' | translate), selectionMode: 'single' }"
-        (valueChange)="setHireDate($event)" />
-      <daf-multi-date-picker
-        [value]="getExpiryDate()"
-        [config]="{ label: ('PIPELINE.OFFER.EXPIRY' | translate), placeholder: ('PIPELINE.OFFER.SELECT' | translate), selectionMode: 'single' }"
-        (valueChange)="setExpiryDate($event)" />
-    </div>
-
-    @if (offerError()) {
-      <p class="text-xs text-danger mt-3">{{ offerError() }}</p>
-    }
-
-    <div slot="footer">
-      <daf-button [label]="'PIPELINE.OFFER.CANCEL' | translate" variant="secondary" (onClick)="closeOfferModal()" />
-      <daf-button
-        [label]="offerSubmitting() ? ('PIPELINE.OFFER.SENDING' | translate) : (offerMode() === 'renegotiate' ? ('PIPELINE.OFFER.RENEGOTIATE' | translate) : ('PIPELINE.OFFER.SEND_OFFER' | translate))"
-        variant="primary"
-        [options]="{ iconStart: 'send', disabled: offerSubmitting(), loading: offerSubmitting() }"
-        (onClick)="submitOffer()" />
-    </div>
-  </app-modal>
-}
-
-<!-- ── Refuse offer modal ───────────────────────────────────────── -->
-@if (rejectTarget(); as target) {
-  <app-modal
-    [title]="'PIPELINE.OFFER.REFUSE_TITLE' | translate"
-    [visible]="true"
-    (closed)="closeRejectModal()"
-    [hasFooter]="true">
-
-    <p class="text-[13px] font-semibold text-on-surface mb-3">{{ target.fullName }}</p>
-    <div class="flex flex-col gap-1">
-      <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.REJECTION_REASON' | translate }} <span class="text-danger">*</span></label>
-      <daf-form-field [value]="rejectReason" [options]="reasonFieldOpts" (valueChange)="onReasonChange($event)" />
-    </div>
-    @if (offerError()) {
-      <p class="text-xs text-danger mt-3">{{ offerError() }}</p>
-    }
-
-    <div slot="footer">
-      <daf-button [label]="'PIPELINE.OFFER.CANCEL' | translate" variant="secondary" (onClick)="closeRejectModal()" />
-      <daf-button
-        [label]="rejectSubmitting() ? ('PIPELINE.OFFER.REFUSING' | translate) : ('PIPELINE.OFFER.CONFIRM_REFUSE' | translate)"
-        variant="danger"
-        [options]="{ iconStart: 'cancel', disabled: rejectSubmitting() || !rejectReason.trim(), loading: rejectSubmitting() }"
-        (onClick)="submitReject()" />
-    </div>
-  </app-modal>
-}
+<rh-refuse-offer-modal
+  [visible]="refuseTarget() !== null"
+  [candidate]="refuseTarget()"
+  [submitting]="refuseSubmitting()"
+  [error]="refuseError()"
+  (closed)="closeRefuseModal()"
+  (submit)="submitRefuse($event)" />

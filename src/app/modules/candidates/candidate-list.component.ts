@@ -1,326 +1,294 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { catchError, forkJoin, of } from 'rxjs';
 import {
-  AvatarCell,
   BadgeCell,
-  ButtonComponent,
-  DafCellDirective,
-  DataTableComponent,
-  MetricCardComponent,
-  PaginationComponent,
-  SelectComponent,
-  SelectConfig,
-  SelectOption,
-  StatusBadgeComponent,
-  TableColumn,
-  TableConfig,
-  TableRow,
   BadgeOptions,
-  BadgeVariant,
+  ButtonComponent,
+  DafHasPermissionDirective,
+  FilterField,
+  FilterResult,
+  MetricCardComponent,
+  PageComponent,
+  PageHeaderComponent,
+  PaginationComponent,
+  SearchToolbarComponent,
+  SearchToolbarFilterConfig,
 } from '@khalilrebhiitec/daf360';
+
+import { ConfirmService } from '../../core/confirm.service';
+import { UserStore } from '../../core/user.store';
+import { statusBadge } from '../../shared/status-badge.utils';
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
-import { UserStore } from '../../core/user.store';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
+  CandidateHistoryItem,
   CandidateListItem,
   CandidateStats,
-  CandidateHistoryItem,
+  CandidateStatus,
   PageResponse,
 } from './candidate.model';
-import { statusBadge } from '../../shared/status-badge.utils';
-import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { ConfirmService } from '../../core/confirm.service';
+import { CandidatesTableSectionComponent } from './sections/candidates-table-section.component';
+import { CandidateDossierPanelComponent } from './sections/candidate-dossier-panel.component';
 
-const STATUS_VARIANT: Record<string, BadgeVariant> = {
-  PENDING:        'neutral',
-  ACCEPTED:       'success',
-  REJECTED:       'danger',
-  IT_IN_PROGRESS: 'info',
-  EMAIL_RECEIVED: 'teal',
-  HR_IN_PROGRESS: 'warning',
-  HIRED:          'success',
-  ARCHIVED:       'neutral',
-};
+const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
+/** Candidate status codes, in workflow order, for the status filter. */
+const STATUS_CODES: CandidateStatus[] = [
+  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
+  'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
+];
+
+/**
+ * /rh/candidates/list — the flat, server-paginated candidate register.
+ *
+ * Architecture follows UI-PLAYBOOK §1 + §8b: `daf-page` + `daf-page-header` +
+ * the KPI row + `daf-search-toolbar` + `rh-candidates-table-section` +
+ * `daf-pagination`, with the per-candidate decision history and the MS365
+ * automation explainer moved into `rh-candidate-dossier-panel`, a right-edge
+ * `daf-drawer` (§10e). All state lives here; both sections are stateless.
+ *
+ * The table is the **same component** /rh/recrutement's list view uses — the two
+ * were byte-for-byte identical `daf-data-table` blocks maintained separately.
+ */
 @Component({
   selector: 'app-candidate-list',
   standalone: true,
   imports: [
-    DafHasPermissionDirective,
     ButtonComponent,
-    SelectComponent,
+    DafHasPermissionDirective,
     MetricCardComponent,
+    PageComponent,
+    PageHeaderComponent,
     PaginationComponent,
-    StatusBadgeComponent,
-    DataTableComponent,
-    DafCellDirective,
+    SearchToolbarComponent,
+    CandidatesTableSectionComponent,
+    CandidateDossierPanelComponent,
     RejectModalComponent,
-    RhSearchBarComponent,
     TranslatePipe,
   ],
   templateUrl: './candidate-list.component.html',
 })
 export class CandidateListComponent implements OnInit {
   private svc       = inject(CandidateService);
-  private confirm = inject(ConfirmService);
-  protected router  = inject(Router);
-  readonly userStore = inject(UserStore);
+  private confirm   = inject(ConfirmService);
+  private router    = inject(Router);
   private translate = inject(TranslateService);
+  readonly userStore = inject(UserStore);
 
-  /** Candidate status codes, in workflow order, for the status filter select. */
-  private readonly STATUS_CODES = [
-    'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
-    'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
-  ];
+  // ── Data ───────────────────────────────────────────────────────────────────
+  readonly page  = signal<PageResponse<CandidateListItem> | null>(null);
+  readonly stats = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
 
-  candidates    = signal<PageResponse<CandidateListItem> | null>(null);
-  stats         = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
-  history       = signal<CandidateHistoryItem[]>([]);
-  selectedId    = signal<number | null>(null);
+  readonly candidates    = computed(() => this.page()?.content ?? []);
+  readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
+  readonly totalPages    = computed(() => this.page()?.totalPages ?? 0);
 
-  isLoadingStats      = signal(true);
-  isLoadingCandidates = signal(true);
-  isLoadingHistory    = signal(false);
-  showFilters         = signal(false);
+  /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
+  readonly firstLoad = signal(true);
+  /** Every subsequent fetch — skeleton rows inside the table only. */
+  readonly loading   = signal(false);
 
-  currentPage = signal(0);
-  pageSize    = signal(10);
+  // ── View state ─────────────────────────────────────────────────────────────
+  readonly search       = signal('');
+  readonly statusFilter = signal('');
+  readonly currentPage  = signal(0);
+  readonly pageSize     = signal(PAGE_SIZE);
+  readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
-  // ── Filter signals bound to daf360 components ────────────────────────────
-  searchValue    = signal<string | number | null>('');
-  selectedStatus = signal<string[]>([]);
+  // ── Dossier drawer ─────────────────────────────────────────────────────────
+  readonly selectedId       = signal<number | null>(null);
+  readonly dossierOpen      = signal(false);
+  readonly history        = signal<CandidateHistoryItem[]>([]);
+  readonly historyLoading = signal(false);
 
-  // ── Reject modal state ────────────────────────────────────────────────────
-  rejectTarget = signal<CandidateListItem | null>(null);
-  isActioning  = signal(false);
-  actionError  = signal<string | null>(null);
-
-  // ── Computed ──────────────────────────────────────────────────────────────
-  readonly selectedCandidate = computed(() => {
-    const id = this.selectedId();
-    return this.candidates()?.content?.find(c => c.id === id) ?? null;
-  });
-
-  readonly canAcceptReject = computed(() =>
-    this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE')
+  readonly selectedCandidate = computed(() =>
+    this.candidates().find(c => c.id === this.selectedId()) ?? null,
   );
 
-  // ── daf360 options ────────────────────────────────────────────────────────
-  readonly statusSelectConfig = computed<SelectConfig>(() => {
+  // ── Actions ────────────────────────────────────────────────────────────────
+  readonly rejectTarget = signal<CandidateListItem | null>(null);
+  readonly actioningId  = signal<number | null>(null);
+  readonly actionError  = signal<string | null>(null);
+
+  readonly canAcceptReject = computed(() => this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'));
+
+  // ── Toolbar ────────────────────────────────────────────────────────────────
+  /** The status dropdown belongs *inside* the filter panel, not loose in a toggled row. */
+  readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return { placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES') };
+    return [{
+      name: 'status',
+      label: this.translate.instant('CANDIDATES.LIST.COL_STATUS'),
+      type: 'select',
+      placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES'),
+      options: STATUS_CODES.map(code => ({
+        value: code,
+        label: this.translate.instant('CANDIDATES.STATUS.' + code),
+      })),
+    }];
   });
 
-  readonly statusSelectOptions = computed<SelectOption[]>(() => {
-    this.translate.currentLang();
-    return this.STATUS_CODES.map(code => ({
-      value: code,
-      label: this.translate.instant('CANDIDATES.STATUS.' + code),
-    }));
-  });
-
-  readonly skeletonRows = [1, 2, 3, 4, 5];
-
-  protected readonly statusBadge = statusBadge;
-
-  // ── daf-data-table setup ──────────────────────────────────────────────────
-  readonly columns = computed<TableColumn[]>(() => {
+  /**
+   * `initialValues` is a seed read once on first open, and a `select` needs the
+   * panel's internal shape — a `string[]`, not a bare string (§10b).
+   */
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
-    return [
-      { key: 'candidat', label: t('CANDIDATES.LIST.COL_CANDIDATE'), type: 'avatar' },
-      { key: 'appliedPosition', label: t('CANDIDATES.LIST.COL_POSITION') },
-      { key: 'status', label: t('CANDIDATES.LIST.COL_STATUS'), type: 'badge' },
-      { key: 'expectedStartDate', label: t('CANDIDATES.LIST.COL_START_DATE') },
-      { key: '_actions', label: t('CANDIDATES.LIST.COL_ACTIONS'), align: 'right' },
-    ];
-  });
-
-  readonly rows = computed<TableRow[]>(() => {
-    this.translate.currentLang();
-    return (this.candidates()?.content ?? []).map(c => ({
-      candidat: {
-        name: `${c.firstName} ${c.lastName}`,
-        initials: this.getInitials(c.firstName, c.lastName),
-        subtitle: c.emailPersonal,
-      } as AvatarCell,
-      appliedPosition: c.appliedPosition ?? '—',
-      status: { label: this.getStatusLabel(c.status), options: this.getStatusBadgeOptions(c.status) } as BadgeCell,
-      expectedStartDate: this.formatDateFr(c.expectedStartDate),
-      _source: c,
-    }));
-  });
-
-  readonly tableConfig = computed<TableConfig>(() => {
-    this.translate.currentLang();
     return {
-      hoverable: true,
-      loading: this.isLoadingCandidates(),
-      skeletonRows: this.skeletonRows.length,
-      emptyMessage: this.translate.instant('CANDIDATES.LIST.EMPTY'),
+      title:        t('CANDIDATES.FILTERS.TITLE'),
+      applyLabel:   t('CANDIDATES.FILTERS.APPLY'),
+      cancelLabel:  t('CANDIDATES.FILTERS.CANCEL'),
+      resetLabel:   t('CANDIDATES.FILTERS.RESET'),
+      triggerLabel: t('CANDIDATES.FILTERS.TRIGGER'),
+      align:        'right',
+      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
     };
   });
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-  ngOnInit(): void {
-    this.loadStats();
-    this.loadCandidates();
-  }
+  // ── Presentation callbacks handed to the sections ──────────────────────────
+  readonly statusLabel = computed(() => {
+    this.translate.currentLang();
+    return (status: string) => this.translate.instant('CANDIDATES.STATUS.' + status);
+  });
 
-  loadStats(): void {
-    this.isLoadingStats.set(true);
-    this.svc.getStats().subscribe({
-      next:  s  => { this.stats.set(s); this.isLoadingStats.set(false); },
-      error: () => this.isLoadingStats.set(false),
+  /** Translated label + the shared badge variant, for the table's badge column. */
+  readonly statusBadgeCell = computed(() => {
+    this.translate.currentLang();
+    return (status: string): BadgeCell => ({
+      label:   this.translate.instant('CANDIDATES.STATUS.' + status),
+      options: statusBadge(status).options as BadgeOptions,
+    });
+  });
+
+  // ── KPI tiles ──────────────────────────────────────────────────────────────
+  readonly totalMetricValue   = computed(() => this.stats().total.toLocaleString('fr-FR'));
+  readonly pendingMetricValue = computed(() => this.stats().pending.toLocaleString('fr-FR'));
+  readonly hiredMetricValue   = computed(() => this.stats().hired.toLocaleString('fr-FR'));
+
+  // ── Load ───────────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    forkJoin({
+      stats: this.svc.getStats().pipe(catchError(() => of(null))),
+      page:  this.svc.getCandidates(this.query()).pipe(catchError(() => of(null))),
+    }).subscribe(({ stats, page }) => {
+      if (stats) this.stats.set(stats);
+      if (page)  this.page.set(page);
+      this.firstLoad.set(false);
     });
   }
 
-  loadCandidates(): void {
-    this.isLoadingCandidates.set(true);
-    this.svc.getCandidates({
+  private query() {
+    return {
       paysId: this.userStore.currentUser()?.paysId,
-      status: this.selectedStatus()[0] || undefined,
-      search: (this.searchValue() as string) || undefined,
+      status: this.statusFilter() || undefined,
+      search: this.search()       || undefined,
       page:   this.currentPage(),
       size:   this.pageSize(),
-    }).subscribe({
-      next:  r  => { this.candidates.set(r); this.isLoadingCandidates.set(false); },
-      error: () => this.isLoadingCandidates.set(false),
+    };
+  }
+
+  private loadCandidates(): void {
+    this.loading.set(true);
+    this.svc.getCandidates(this.query()).subscribe({
+      next:  r  => { this.page.set(r); this.loading.set(false); },
+      error: () => this.loading.set(false),
     });
   }
 
-  // ── Filter handlers ───────────────────────────────────────────────────────
-  onSearch(value: string | number | null): void {
-    this.searchValue.set(value);
+  private loadStats(): void {
+    this.svc.getStats().subscribe({ next: s => this.stats.set(s), error: () => {} });
+  }
+
+  // ── Toolbar handlers ───────────────────────────────────────────────────────
+  onSearch(value: string): void {
+    if (value === this.search()) return; // daf-search-toolbar re-emits on blur
+    this.search.set(value ?? '');
     this.currentPage.set(0);
     this.loadCandidates();
   }
 
-  onStatusChange(values: string[]): void {
-    this.selectedStatus.set(values);
+  applyFilters(result: FilterResult): void {
+    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
     this.currentPage.set(0);
     this.loadCandidates();
   }
 
-  applyFilters(): void {
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadCandidates();
+  }
+
+  /** `pageSizeChange` fires alone — the page decides to go back to page 0 (§7). */
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
     this.currentPage.set(0);
     this.loadCandidates();
   }
 
-  clearFilters(): void {
-    this.searchValue.set('');
-    this.selectedStatus.set([]);
-    this.currentPage.set(0);
-    this.loadCandidates();
-  }
+  // ── Navigation ─────────────────────────────────────────────────────────────
+  onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
+  onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
 
-  toggleFilters(): void { this.showFilters.update(v => !v); }
-
-  onPageChange(p: number): void { this.currentPage.set(p); this.loadCandidates(); }
-
-  // ── Row selection ─────────────────────────────────────────────────────────
-  onRowClick(candidateId: number): void {
-    const same = this.selectedId() === candidateId;
-    this.selectedId.set(same ? null : candidateId);
-    if (same) return;
-    this.isLoadingHistory.set(true);
+  // ── Dossier drawer ─────────────────────────────────────────────────────────
+  /** A row click opens the dossier; the row's "Voir" button opens the candidate. */
+  openDossier(candidateId: number): void {
+    this.dossierOpen.set(true);
+    if (this.selectedId() === candidateId) return; // already loaded
+    this.selectedId.set(candidateId);
+    this.historyLoading.set(true);
+    this.history.set([]);
     this.svc.getHistory(candidateId).subscribe({
-      next:  h  => { this.history.set(h); this.isLoadingHistory.set(false); },
-      error: () => this.isLoadingHistory.set(false),
+      next:  h  => { this.history.set(h); this.historyLoading.set(false); },
+      error: () => this.historyLoading.set(false),
     });
   }
 
-  // ── Badge helper ──────────────────────────────────────────────────────────
-  getStatusBadgeOptions(status: string): BadgeOptions {
-    return { variant: STATUS_VARIANT[status] ?? 'neutral', size: 'sm', dot: true };
-  }
-
-  getStatusLabel(s: string): string {
-    return this.translate.instant('CANDIDATES.STATUS.' + s);
-  }
-
-  // ── Timeline helpers ──────────────────────────────────────────────────────
-  getTimelineDotStyle(action: string): object {
-    const m: Record<string, { bg: string; color: string }> = {
-      ACCEPT_CANDIDATE:            { bg: '#4648d4', color: '#fff' },
-      ACCEPT:                      { bg: '#4648d4', color: '#fff' },
-      REJECT_CANDIDATE:            { bg: '#ba1a1a', color: '#fff' },
-      REJECT:                      { bg: '#ba1a1a', color: '#fff' },
-      UPLOAD_CV:                   { bg: 'rgba(51,65,85,.1)', color: '#1d2b3e' },
-      CREATE_CANDIDATE:            { bg: 'rgba(51,65,85,.1)', color: '#1d2b3e' },
-      CREATE:                      { bg: 'rgba(51,65,85,.1)', color: '#1d2b3e' },
-      SUBMIT_MS365_EMAIL:          { bg: '#004941', color: '#00c1ad' },
-      COMPLETE_IT_PROVISIONING:    { bg: '#334155', color: '#9eadc5' },
-      COMPLETE_ONBOARDING_PROFILE: { bg: '#4648d4', color: '#fff' },
-    };
-    const s = m[action] ?? { bg: 'rgba(51,65,85,.1)', color: '#1d2b3e' };
-    return { 'background-color': s.bg, color: s.color };
-  }
-
-  getTimelineIcon(action: string): string {
-    const m: Record<string, string> = {
-      ACCEPT_CANDIDATE:            'check',
-      ACCEPT:                      'check',
-      REJECT_CANDIDATE:            'close',
-      REJECT:                      'close',
-      CREATE_CANDIDATE:            'person_add',
-      CREATE:                      'person_add',
-      UPLOAD_CV:                   'upload_file',
-      UPDATE:                      'edit',
-      UPDATE_CANDIDATE:            'edit',
-      SUBMIT_MS365_EMAIL:          'computer',
-      COMPLETE_IT_PROVISIONING:    'lan',
-      COMPLETE_ONBOARDING_PROFILE: 'how_to_reg',
-    };
-    return m[action] ?? 'history';
-  }
-
-  // ── Misc helpers ──────────────────────────────────────────────────────────
-  getInitials(fn: string, ln: string): string {
-    return ((fn?.[0] ?? '') + (ln?.[0] ?? '')).toUpperCase();
-  }
-
-  formatDateFr(d: string | null | undefined): string {
-    if (!d) return '—';
-    const dt = new Date(d);
-    if (isNaN(dt.getTime())) return '—';
-    const mo = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-    return `${dt.getDate()} ${mo[dt.getMonth()]} ${dt.getFullYear()}`;
-  }
-
-  formatTimestamp(ts: string | null): string {
-    if (!ts) return '—';
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
-         + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // ── Accept / Reject ───────────────────────────────────────────────────────
-  async quickAccept(c: CandidateListItem, event: Event): Promise<void> {
+  // ── Accept / reject (PENDING candidates only) ──────────────────────────────
+  async quickAccept({ candidate, event }: { candidate: CandidateListItem; event: Event }): Promise<void> {
     event.stopPropagation();
     if (!(await this.confirm.ask({
-      title: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_TITLE'),
-      message: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_MESSAGE', { name: `${c.firstName} ${c.lastName}` }),
+      title:   this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_TITLE'),
+      message: this.translate.instant('CANDIDATES.CONFIRM.ACCEPT_MESSAGE', { name: `${candidate.firstName} ${candidate.lastName}` }),
       confirmLabel: this.translate.instant('CANDIDATES.ACTIONS.ACCEPT'), icon: 'check_circle',
     }))) return;
-    this.isActioning.set(true);
-    this.svc.accept(c.id).subscribe({
-      next:  () => { this.isActioning.set(false); this.loadCandidates(); },
-      error: err => { this.isActioning.set(false); this.actionError.set(err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.GENERIC')); },
+
+    this.actioningId.set(candidate.id);
+    this.actionError.set(null);
+    this.svc.accept(candidate.id).subscribe({
+      next:  () => { this.actioningId.set(null); this.reload(); },
+      error: err => {
+        this.actioningId.set(null);
+        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.GENERIC'));
+      },
     });
   }
 
-  openRejectModal(c: CandidateListItem, event: Event): void {
+  openRejectModal({ candidate, event }: { candidate: CandidateListItem; event: Event }): void {
     event.stopPropagation();
-    this.rejectTarget.set(c);
     this.actionError.set(null);
+    this.rejectTarget.set(candidate);
   }
 
   onRejected(): void {
     this.rejectTarget.set(null);
+    this.reload();
+  }
+
+  /** After an action: the list, the KPIs and — if it's open — the dossier history. */
+  private reload(): void {
     this.loadCandidates();
+    this.loadStats();
+    const id = this.selectedId();
+    if (id != null) {
+      this.historyLoading.set(true);
+      this.svc.getHistory(id).subscribe({
+        next:  h  => { this.history.set(h); this.historyLoading.set(false); },
+        error: () => this.historyLoading.set(false),
+      });
+    }
   }
 }

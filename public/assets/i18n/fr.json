@@ -196,6 +196,10 @@
       "TITLE": "Suivi recrutement",
       "CLOSE": "Fermer le suivi recrutement"
     },
+    "DOSSIER": {
+      "TITLE": "Dossier candidat",
+      "CLOSE": "Fermer le dossier candidat"
+    },
     "KANBAN": {
       "COL_PENDING": "En attente",
       "COL_ACCEPTED": "Acceptés",
@@ -459,8 +463,11 @@
     "SEARCH_PLACEHOLDER": "Rechercher un candidat...",
     "VIEW_KANBAN": "Vue kanban",
     "VIEW_LIST": "Vue liste",
+    "VIEW": "Voir",
     "VIEW_ARROW": "Voir →",
+    "ALL": "Tous",
     "NO_CANDIDATES": "Aucun candidat trouvé.",
+    "TRY_ADJUST": "Essayez d'ajuster la recherche ou les filtres.",
     "NO_CANDIDATE_COLUMN": "Aucun candidat",
     "SORT_ASC": "Trier par Fit croissant",
     "SORT_DESC": "Trier par Fit décroissant",
@@ -470,6 +477,21 @@
     "COL_POSITION": "Poste",
     "COL_STAGE": "Étape",
     "COL_FIT": "Fit",
+    "FILTERS": {
+      "TITLE": "Filtrer les candidats",
+      "TRIGGER": "Filtres",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "RESET": "Réinitialiser",
+      "ALL_STAGES": "Toutes les étapes"
+    },
+    "DELTA": {
+      "CLOSURE_RATE": "{{pct}}% de clôture",
+      "DELAY_OVER": "Au-delà de l'objectif",
+      "DELAY_OK": "Dans la cible",
+      "DELAY_GOOD": "Excellent rythme",
+      "URGENT": "{{count}} à traiter en priorité"
+    },
     "STAGE": {
       "SCREENING": "Préqualification",
       "ENTRETIEN": "Entretien",

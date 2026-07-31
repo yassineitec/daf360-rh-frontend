@@ -1,295 +1,96 @@
-<!-- ── Page header ─────────────────────────────────────────────────────── -->
-<div class="flex items-center justify-between mb-8">
-  <div>
-    <h1 class="flex items-center gap-2 text-2xl font-bold text-on-surface">
-      {{ 'CANDIDATES.LIST.TITLE' | translate }}
-    </h1>
-    <p class="text-sm text-outline mt-1">{{ 'CANDIDATES.LIST.SUBTITLE' | translate }}</p>
-  </div>
+<!-- /rh/candidates/list — canonical page shape (UI-PLAYBOOK §1).
+     `daf-page` owns the 32px rhythm: no `mb-8` between sections, no outer card
+     around the table, no hand-rolled `h1`. `kpis="3"` matches the three tiles. -->
+<daf-page [loading]="firstLoad()" [kpis]="3">
 
-  <ng-container *dafHasPermission="'CREATE_CANDIDATE'">
-    <daf-button
-      [label]="'CANDIDATES.ACTIONS.NEW_CANDIDATE' | translate"
-      variant="teal"
-      [options]="{ iconStart: 'person_add', size: 'md' }"
-      (onClick)="router.navigate(['/rh/candidates', 'new'])"
-    />
-  </ng-container>
-</div>
+  <daf-page-header
+    [title]="'CANDIDATES.LIST.TITLE' | translate"
+    [subtitle]="'CANDIDATES.LIST.SUBTITLE' | translate">
+    <ng-container pageActions>
+      <daf-button *dafHasPermission="'CREATE_CANDIDATE'"
+        [options]="{ variant: 'teal', label: ('CANDIDATES.ACTIONS.NEW_CANDIDATE' | translate), iconStart: 'person_add' }"
+        (onClick)="onNewCandidate()" />
+    </ng-container>
+  </daf-page-header>
 
-<!-- ── Stats metric cards ─────────────────────────────────────────────────────── -->
-<div class="grid grid-cols-3 gap-6 mb-8">
-  <daf-metric-card
-    [label]="'CANDIDATES.STATS.TOTAL' | translate"
-    [value]="isLoadingStats() ? '…' : stats().total"
-    [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
-  <daf-metric-card
-    [label]="'CANDIDATES.STATS.PENDING' | translate"
-    [value]="isLoadingStats() ? '…' : stats().pending"
-    [options]="{ icon: 'schedule', iconColor: 'text-amber', iconBg: 'bg-amber/10' }" />
-  <daf-metric-card
-    [label]="'CANDIDATES.STATS.HIRED' | translate"
-    [value]="isLoadingStats() ? '…' : stats().hired"
-    [options]="{ icon: 'how_to_reg', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
-</div>
+  <!-- KPIs — one row at every width. `text-amber` / `bg-amber/10` on the middle
+       tile rendered nothing: `amber` is not a token (§4). It is `warning` now. -->
+  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'CANDIDATES.STATS.TOTAL' | translate"
+      [value]="totalMetricValue()"
+      [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
 
-<!-- ── Table section ───────────────────────────────────────────────────── -->
-<div class="bg-surface rounded-2xl border border-outline-variant overflow-hidden mb-6">
+    <daf-metric-card
+      [label]="'CANDIDATES.STATS.PENDING' | translate"
+      [value]="pendingMetricValue()"
+      [options]="{ icon: 'schedule', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
 
-  <!-- Toolbar -->
-  <div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
-    <span class="text-sm font-semibold text-on-surface">{{ 'CANDIDATES.LIST.TABLE_TITLE' | translate }}</span>
-    <daf-button
-      [label]="(showFilters() ? 'CANDIDATES.FILTERS.HIDE' : 'CANDIDATES.FILTERS.SHOW') | translate"
-      variant="ghost"
-      [options]="{ iconStart: 'tune', size: 'sm' }"
-      (onClick)="toggleFilters()"
-    />
-  </div>
+    <daf-metric-card
+      [label]="'CANDIDATES.STATS.HIRED' | translate"
+      [value]="hiredMetricValue()"
+      [options]="{ icon: 'how_to_reg', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+  </section>
 
-  <!-- Filter panel -->
-  @if (showFilters()) {
-    <div class="flex gap-3 flex-wrap items-end px-5 py-4 bg-surface-container-low border-b border-outline-variant">
-      <div class="flex-1 min-w-52">
-        <rh-search-bar
-          [placeholder]="'CANDIDATES.LIST.SEARCH_PLACEHOLDER' | translate"
-          [value]="(searchValue() ?? '').toString()"
-          (valueChange)="onSearch($event)"
-        />
-      </div>
+  <!-- Search + filters: one lib toolbar. Replaces the "Afficher/Masquer les
+       filtres" row, the search bar, the loose status select and the
+       Appliquer / Réinitialiser pair — the panel applies and resets itself. -->
+  <daf-search-toolbar
+    [placeholder]="'CANDIDATES.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)" />
 
-      <daf-select
-        [selected]="selectedStatus()"
-        [options]="statusSelectOptions()"
-        [config]="statusSelectConfig()"
-        (selectedChange)="onStatusChange($event)"
-      />
-
-      <daf-button
-        [label]="'CANDIDATES.ACTIONS.APPLY' | translate"
-        variant="primary"
-        [options]="{ iconStart: 'search', size: 'md' }"
-        (onClick)="applyFilters()"
-      />
-      <daf-button
-        [label]="'CANDIDATES.ACTIONS.RESET' | translate"
-        variant="ghost"
-        [options]="{ iconStart: 'close', size: 'md' }"
-        (onClick)="clearFilters()"
-      />
+  @if (actionError()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ actionError() }}
     </div>
   }
 
-  <!-- Table -->
-  <daf-data-table
-    [columns]="columns()"
-    [rows]="rows()"
-    [config]="tableConfig()"
-    (rowClick)="onRowClick($event['_source'].id)"
-  >
+  <!-- The table sits free in the page (§1) and is shared with /rh/recrutement.
+       A row click opens the dossier drawer; "Voir" opens the candidate. -->
+  <rh-candidates-table-section
+    [candidates]="candidates()"
+    [loading]="loading()"
+    [skeletonRows]="pageSize()"
+    [canAcceptReject]="canAcceptReject()"
+    [actioningId]="actioningId()"
+    [statusBadge]="statusBadgeCell()"
+    (rowActivate)="openDossier($event)"
+    (open)="onView($event)"
+    (accept)="quickAccept($event)"
+    (reject)="openRejectModal($event)" />
 
-    <ng-template dafCell="_actions" let-row>
-      <div class="inline-flex items-center gap-1 flex-wrap justify-end" (click)="$event.stopPropagation()">
-
-        @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
-          <daf-button
-            [label]="'CANDIDATES.ACTIONS.ACCEPT' | translate"
-            variant="ghost"
-            [options]="{ iconStart: 'check_circle', size: 'sm' }"
-            [class.opacity-50]="isActioning()"
-            (onClick)="quickAccept(row['_source'], $event)"
-          />
-          <daf-button
-            [label]="'CANDIDATES.ACTIONS.REJECT' | translate"
-            variant="danger"
-            [options]="{ iconStart: 'cancel', size: 'sm' }"
-            [class.opacity-50]="isActioning()"
-            (onClick)="openRejectModal(row['_source'], $event)"
-          />
-        }
-
-        <daf-button
-          [label]="'CANDIDATES.ACTIONS.VIEW' | translate"
-          variant="ghost"
-          [options]="{ iconStart: 'open_in_new', size: 'sm' }"
-          (onClick)="router.navigate(['/rh/candidates', row['_source'].id])"
-        />
-      </div>
-    </ng-template>
-
-  </daf-data-table>
-
-  <!-- Pagination -->
-  @if (!isLoadingCandidates() && (candidates()?.totalPages ?? 0) > 1) {
-    <div class="flex items-center justify-between px-5 py-3 border-t border-outline-variant">
-      <span class="text-sm text-outline">
-        {{ 'CANDIDATES.LIST.PAGE_OF' | translate:{ page: (candidates()?.number ?? 0) + 1, total: candidates()?.totalPages ?? 1 } }}
-        &nbsp;·&nbsp;
-        {{ 'CANDIDATES.LIST.RESULTS_COUNT' | translate:{ count: candidates()?.totalElements ?? 0 } }}
-      </span>
-      <daf-pagination
-        [currentPage]="currentPage()"
-        [totalPages]="candidates()?.totalPages ?? 1"
-        [totalElements]="candidates()?.totalElements ?? 0"
-        (pageChange)="onPageChange($event)"
-      />
-    </div>
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
   }
-</div>
 
-<!-- ── Bottom: History + Workflow ──────────────────────────────────────── -->
-<div class="grid grid-cols-2 gap-5">
+</daf-page>
 
-  <!-- Decision history -->
-  <div class="bg-surface rounded-2xl border border-outline-variant p-6">
+<!-- Dossier drawer (daf-drawer, §10e). Kept at the page root: the panel is
+     `position: fixed`, and any ancestor carrying transform / filter /
+     backdrop-filter would become its containing block. -->
+<rh-candidate-dossier-panel
+  [(open)]="dossierOpen"
+  [candidate]="selectedCandidate()"
+  [history]="history()"
+  [loading]="historyLoading()"
+  [statusLabel]="statusLabel()" />
 
-    <div class="flex items-center gap-2 mb-5">
-      <span class="material-symbols-outlined text-xl text-primary">history</span>
-      <div>
-        <p class="text-sm font-semibold text-on-surface">
-          {{ 'CANDIDATES.HISTORY.TITLE' | translate }}
-          @if (selectedCandidate()) {
-            <span class="text-primary"> — {{ selectedCandidate()!.firstName }} {{ selectedCandidate()!.lastName }}</span>
-          }
-        </p>
-        <p class="text-xs text-outline">{{ 'CANDIDATES.HISTORY.SUB' | translate }}</p>
-      </div>
-    </div>
-
-    @if (!selectedId()) {
-      <div class="flex flex-col items-center justify-center py-12 gap-2 text-outline">
-        <span class="material-symbols-outlined text-5xl opacity-40">history</span>
-        <p class="text-sm text-on-surface">{{ 'CANDIDATES.HISTORY.SELECT_PROMPT' | translate }}</p>
-        <p class="text-xs">{{ 'CANDIDATES.HISTORY.SELECT_HINT' | translate }}</p>
-      </div>
-    }
-
-    @if (selectedId() && isLoadingHistory()) {
-      <div class="flex flex-col gap-4">
-        @for (r of skeletonRows; track r) {
-          <div class="flex gap-3 pl-10">
-            <div class="flex-1">
-              <div class="w-40 h-3 rounded bg-surface-container-high animate-pulse mb-1"></div>
-              <div class="w-56 h-2.5 rounded bg-surface-container-high animate-pulse"></div>
-            </div>
-          </div>
-        }
-      </div>
-    }
-
-    @if (selectedId() && !isLoadingHistory()) {
-      @if (history().length === 0) {
-        <div class="flex flex-col items-center justify-center py-8 gap-2 text-outline">
-          <span class="material-symbols-outlined text-4xl opacity-35">event_note</span>
-          <span class="text-sm">{{ 'CANDIDATES.HISTORY.EMPTY' | translate }}</span>
-        </div>
-      } @else {
-        <div class="relative flex flex-col gap-4 pl-11">
-          @for (item of history(); track item.id) {
-            <div class="relative">
-              <div
-                class="absolute -left-11 top-0.5 w-8 h-8 rounded-full flex items-center justify-center border-2 border-surface shadow-sm"
-                [style]="getTimelineDotStyle(item.action)"
-              >
-                <span class="material-symbols-outlined text-[15px]">{{ getTimelineIcon(item.action) }}</span>
-              </div>
-              <div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant/50">
-                <div class="flex items-start justify-between gap-2 mb-1">
-                  <span class="text-sm font-semibold text-on-surface">{{ item.actionLabel || item.action }}</span>
-                  <span class="text-xs text-outline shrink-0 whitespace-nowrap">{{ formatTimestamp(item.timestamp) }}</span>
-                </div>
-                @if (item.performedByName) {
-                  <div class="text-xs text-outline mb-1">
-                    <span class="material-symbols-outlined text-[13px] align-middle">person</span>
-                    {{ item.performedByName }}
-                  </div>
-                }
-                @if (item.resultingStatus) {
-                  <div class="mt-1">
-                    <daf-badge
-                      [label]="getStatusLabel(item.resultingStatus)"
-                      [options]="getStatusBadgeOptions(item.resultingStatus)"
-                    />
-                  </div>
-                }
-                @if (item.comment) {
-                  <div class="text-xs text-on-surface mt-2 px-3 py-2 bg-surface rounded-lg border-l-2 border-primary/30 italic">
-                    "{{ item.comment }}"
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      }
-    }
-  </div>
-
-  <!-- Workflow automation -->
-  <div class="bg-surface rounded-2xl border border-outline-variant p-6 relative overflow-hidden">
-
-    <div class="flex items-center gap-3 mb-6">
-      <div class="bg-primary rounded-xl p-2 flex text-white">
-        <span class="material-symbols-outlined text-xl">auto_awesome</span>
-      </div>
-      <div>
-        <p class="text-sm font-semibold text-on-surface">{{ 'CANDIDATES.WORKFLOW.TITLE' | translate }}</p>
-        <p class="text-xs text-outline">{{ 'CANDIDATES.WORKFLOW.SUB' | translate }}</p>
-      </div>
-    </div>
-
-    <!-- Step 1 -->
-    <div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-outline-variant/50 mb-1">
-      <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl" style="color:#004941">task_alt</span>
-        <div>
-          <p class="text-sm font-semibold text-on-surface">{{ 'CANDIDATES.WORKFLOW.STEP1' | translate }}</p>
-          <p class="text-xs text-outline">{{ 'CANDIDATES.WORKFLOW.TRIGGER' | translate }}</p>
-        </div>
-      </div>
-      <span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
-    </div>
-
-    <div class="flex justify-center my-1">
-      <div class="w-px h-7 bg-primary/25"></div>
-    </div>
-
-    <!-- Notification card -->
-    <div class="bg-on-surface rounded-xl p-5 rotate-[0.8deg]">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">{{ 'CANDIDATES.WORKFLOW.NOTIF_TITLE' | translate }}</span>
-        <span class="material-symbols-outlined text-[18px] text-outline-variant">lan</span>
-      </div>
-      <div class="font-mono text-[12px] leading-relaxed text-surface opacity-90">
-        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_SUBJECT_LABEL' | translate }}</span>{{ 'CANDIDATES.WORKFLOW.EMAIL_SUBJECT' | translate }}</div>
-        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_NAME_LABEL' | translate }}</span>{{ selectedCandidate() ? (selectedCandidate()!.firstName + ' ' + selectedCandidate()!.lastName) : ('CANDIDATES.WORKFLOW.EMAIL_NO_CANDIDATE' | translate) }}</div>
-        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_POSITION_LABEL' | translate }}</span>{{ selectedCandidate()?.appliedPosition ?? '—' }}</div>
-        <div><span class="text-outline-variant">{{ 'CANDIDATES.WORKFLOW.EMAIL_START_LABEL' | translate }}</span>{{ selectedCandidate()?.expectedStartDate ? formatDateFr(selectedCandidate()!.expectedStartDate!) : '—' }}</div>
-        <div class="mt-2 pt-2 border-t border-surface/15 text-[11px]">{{ 'CANDIDATES.WORKFLOW.EMAIL_ACTION' | translate }}</div>
-      </div>
-      <div class="mt-3 flex justify-end">
-        @if (['ACCEPTED','IT_IN_PROGRESS','EMAIL_RECEIVED','HR_IN_PROGRESS','HIRED'].includes(selectedCandidate()?.status ?? '')) {
-          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-teal-300 bg-teal-900/30">{{ 'CANDIDATES.WORKFLOW.SENT' | translate }}</span>
-        } @else {
-          <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded text-outline-variant bg-surface-container/20">{{ 'CANDIDATES.WORKFLOW.PENDING' | translate }}</span>
-        }
-      </div>
-    </div>
-
-    <!-- Footer note -->
-    <div class="flex gap-2 mt-4 text-outline">
-      <span class="material-symbols-outlined text-base shrink-0 mt-0.5">info</span>
-      <p class="text-xs leading-relaxed">
-        {{ 'CANDIDATES.WORKFLOW.FOOTER' | translate }}
-      </p>
-    </div>
-  </div>
-</div>
-
-<!-- ── Reject modal ───────────────────────────────────────────────── -->
+<!-- Reject modal -->
 <app-reject-modal
-  [visible]="!!rejectTarget()"
+  [visible]="rejectTarget() !== null"
   [target]="rejectTarget()"
   (closed)="rejectTarget.set(null)"
-  (rejected)="onRejected()"
-/>
+  (rejected)="onRejected()" />

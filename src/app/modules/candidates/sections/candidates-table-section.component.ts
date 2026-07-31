@@ -1,83 +1,66 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  BadgeCell, ButtonComponent, CardComponent, DafCellDirective, DafHasPermissionDirective,
-  DataTableComponent, TableColumn, TableConfig, TableRow,
+  BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
+import { TableActionComponent } from '../../../shared/table-action.component';
 import { CandidateListItem } from '../candidate.model';
 import { candidateAvatar, candidateInitials, formatDate } from '../candidate-display';
 
 /**
- * List view of /rh/recrutement — `daf-data-table` over the server-paginated
- * candidate page. Stateless: rows are derived from `candidates`, and every
- * action leaves as an output.
+ * Candidate list table — `daf-data-table` on the canonical table pattern
+ * (UI-PLAYBOOK §6b, mirroring `/rh/profiles`). Shared by `/rh/recrutement`
+ * (list view) and `/rh/candidates/list`, which had two identical tables before.
  *
- * `config.loading` renders skeleton rows shaped per column, so this section
- * needs no separate `daf-skeleton` for re-fetches (UI-PLAYBOOK §10b).
+ * Stateless: rows are derived from `candidates`, and every action leaves as an
+ * output. A row click and the trailing view action are deliberately *separate*
+ * outputs — recrutement opens the candidate on both, while the list page opens
+ * the decision-history drawer on the row and navigates only from the action.
+ *
+ * The section carries **no breakpoint class**: the page decides whether it is
+ * desktop-only (recrutement pairs it with a mobile card list) or shown at every
+ * width (the list page has no mobile variant and scrolls horizontally instead).
+ *
+ * Accept / reject are per-row (PENDING + permission) and `TableAction` has no
+ * row predicate, so the actions are a projected cell of `rh-table-action` rather
+ * than `config.actions` — same rendering, per-row visibility (§6b).
  */
 @Component({
   selector: 'rh-candidates-table-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    ButtonComponent, CardComponent, DafCellDirective, DafHasPermissionDirective,
-    DataTableComponent, TranslatePipe,
-  ],
-  host: { class: 'hidden sm:block' },
+  imports: [DataTableComponent, DafCellDirective, TableActionComponent, TranslatePipe],
   template: `
-    @if (!loading() && candidates().length === 0) {
-      <daf-card [options]="{ variant: 'glass', padding: 'lg' }">
-        <div class="flex flex-col items-center justify-center py-10 gap-4">
-          <span class="material-symbols-outlined text-6xl text-outline">inbox</span>
-          <div class="text-center">
-            <p class="text-body-md font-medium text-on-surface-variant">
-              {{ 'CANDIDATES.PIPELINE_RH.NO_CANDIDATES_FOUND' | translate }}
-            </p>
-            <p class="text-label-sm text-outline mt-1">{{ 'CANDIDATES.PIPELINE_RH.TRY_ADJUST' | translate }}</p>
-          </div>
-          <ng-container *dafHasPermission="'CREATE_CANDIDATE'">
-            <daf-button
-              [label]="'CANDIDATES.ACTIONS.ADD_CANDIDATE' | translate"
-              variant="secondary"
-              [options]="{ iconStart: 'person_add', size: 'sm' }"
-              (onClick)="create.emit()" />
-          </ng-container>
+    <daf-data-table
+      [columns]="columns()"
+      [rows]="rows()"
+      [config]="tableConfig()"
+      (rowClick)="rowActivate.emit($any($event)['_source'].id)">
+
+      <ng-template dafCell="_actions" let-row>
+        <div class="flex items-center justify-end gap-2">
+          @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
+            <rh-table-action
+              icon="check_circle"
+              [tooltip]="'CANDIDATES.ACTIONS.ACCEPT' | translate"
+              [loading]="actioningId() === row['_source'].id"
+              (action)="accept.emit({ candidate: row['_source'], event: $event })" />
+            <rh-table-action
+              icon="cancel"
+              variant="danger"
+              [tooltip]="'CANDIDATES.ACTIONS.REJECT' | translate"
+              [disabled]="actioningId() === row['_source'].id"
+              (action)="reject.emit({ candidate: row['_source'], event: $event })" />
+          }
+          <rh-table-action
+            id="view"
+            [tooltip]="'CANDIDATES.ACTIONS.VIEW' | translate"
+            (action)="open.emit(row['_source'].id)" />
         </div>
-      </daf-card>
-    } @else {
-      <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <daf-data-table
-          [columns]="columns()"
-          [rows]="rows()"
-          [config]="tableConfig()"
-          (rowClick)="open.emit($any($event)['_source'].id)">
+      </ng-template>
 
-          <ng-template dafCell="_actions" let-row>
-            <div class="inline-flex items-center gap-1 flex-wrap justify-end">
-              @if (row['_source'].status === 'PENDING' && canAcceptReject()) {
-                <daf-button
-                  [label]="'CANDIDATES.ACTIONS.ACCEPT' | translate"
-                  variant="ghost"
-                  [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioningId() === row['_source'].id }"
-                  (onClick)="accept.emit({ candidate: row['_source'], event: $event })" />
-                <daf-button
-                  [label]="'CANDIDATES.ACTIONS.REJECT' | translate"
-                  variant="danger"
-                  [options]="{ iconStart: 'cancel', size: 'sm' }"
-                  (onClick)="reject.emit({ candidate: row['_source'], event: $event })" />
-              }
-              <daf-button
-                [label]="'CANDIDATES.ACTIONS.VIEW' | translate"
-                variant="ghost"
-                [options]="{ iconStart: 'open_in_new', size: 'sm' }"
-                (onClick)="open.emit(row['_source'].id)" />
-            </div>
-          </ng-template>
-
-        </daf-data-table>
-      </div>
-    }
+    </daf-data-table>
   `,
 })
 export class CandidatesTableSectionComponent {
@@ -91,20 +74,27 @@ export class CandidatesTableSectionComponent {
   /** Status → translated badge label + variant, owned by the page. */
   readonly statusBadge     = input.required<(status: string) => BadgeCell>();
 
-  readonly open   = output<number>();
-  readonly create = output<void>();
-  readonly accept = output<{ candidate: CandidateListItem; event: Event }>();
-  readonly reject = output<{ candidate: CandidateListItem; event: Event }>();
+  /** The trailing view action — always means "open this candidate". */
+  readonly open = output<number>();
+  /**
+   * A row was clicked. Separate from `open` on purpose: recrutement opens the
+   * candidate, while /rh/candidates/list opens the decision-history drawer.
+   */
+  readonly rowActivate = output<number>();
+  readonly accept      = output<{ candidate: CandidateListItem; event: Event }>();
+  readonly reject      = output<{ candidate: CandidateListItem; event: Event }>();
 
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    // No column is `sortable`: daf-data-table sorts client-side, which on a
+    // server-paginated list reorders only the visible page (§10b).
     return [
       { key: 'candidat',          label: t('CANDIDATES.LIST.COL_CANDIDATE'), type: 'avatar' },
       { key: 'poste',             label: t('CANDIDATES.LIST.COL_POSITION') },
       { key: 'status',            label: t('CANDIDATES.LIST.COL_STATUS'), type: 'badge' },
       { key: 'expectedStartDate', label: t('CANDIDATES.LIST.COL_START_DATE') },
-      { key: '_actions',          label: t('CANDIDATES.LIST.COL_ACTIONS'), align: 'right', clickable: true },
+      { key: '_actions',          label: '', align: 'right', width: '1%' },
     ];
   });
 
@@ -117,15 +107,26 @@ export class CandidatesTableSectionComponent {
         subtitle: c.emailPersonal,
       },
       poste:             c.appliedPosition ?? '—',
-      status:            this.statusBadge()(c.status),
+      status:            this.dottedBadge(c.status),
       expectedStartDate: formatDate(c.expectedStartDate),
       _source:           c,
     })),
   );
 
-  protected readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable:    true,
-    loading:      this.loading(),
-    skeletonRows: this.skeletonRows(),
-  }));
+  protected readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      showHeader:   false,          // the page's daf-page-header is the only h1
+      hoverable:    true,
+      loading:      this.loading(),
+      skeletonRows: Math.min(this.skeletonRows(), 20),
+      emptyMessage: this.translate.instant('CANDIDATES.PIPELINE_RH.NO_CANDIDATES_FOUND'),
+    };
+  });
+
+  /** Status badges carry a dot everywhere in the app (§6b). */
+  private dottedBadge(status: string): BadgeCell {
+    const cell = this.statusBadge()(status);
+    return { ...cell, options: { ...cell.options, dot: true } };
+  }
 }

@@ -196,6 +196,10 @@
       "TITLE": "Recruitment insights",
       "CLOSE": "Close recruitment insights"
     },
+    "DOSSIER": {
+      "TITLE": "Candidate file",
+      "CLOSE": "Close candidate file"
+    },
     "KANBAN": {
       "COL_PENDING": "Pending",
       "COL_ACCEPTED": "Accepted",
@@ -459,8 +463,11 @@
     "SEARCH_PLACEHOLDER": "Search for a candidate...",
     "VIEW_KANBAN": "Kanban view",
     "VIEW_LIST": "List view",
+    "VIEW": "View",
     "VIEW_ARROW": "View →",
+    "ALL": "All",
     "NO_CANDIDATES": "No candidates found.",
+    "TRY_ADJUST": "Try adjusting the search or the filters.",
     "NO_CANDIDATE_COLUMN": "No candidate",
     "SORT_ASC": "Sort by Fit ascending",
     "SORT_DESC": "Sort by Fit descending",
@@ -470,6 +477,21 @@
     "COL_POSITION": "Position",
     "COL_STAGE": "Stage",
     "COL_FIT": "Fit",
+    "FILTERS": {
+      "TITLE": "Filter candidates",
+      "TRIGGER": "Filters",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "RESET": "Reset",
+      "ALL_STAGES": "All stages"
+    },
+    "DELTA": {
+      "CLOSURE_RATE": "{{pct}}% closure rate",
+      "DELAY_OVER": "Exceeds target",
+      "DELAY_OK": "Within range",
+      "DELAY_GOOD": "Excellent pace",
+      "URGENT": "{{count}} requiring immediate action"
+    },
     "STAGE": {
       "SCREENING": "Screening",
       "ENTRETIEN": "Interview",

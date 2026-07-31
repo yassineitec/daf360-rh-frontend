@@ -83,7 +83,10 @@
       (dragLeave)="onDragLeave($event)"
       (cardDrop)="onDrop($event)" />
   } @else {
+    <!-- The table section carries no breakpoint class of its own — this page is
+         the one that pairs it with a mobile card list, so it gates it here. -->
     <rh-candidates-table-section
+      class="hidden sm:block"
       [candidates]="candidates()"
       [loading]="loading()"
       [skeletonRows]="pageSize()"
@@ -91,7 +94,7 @@
       [actioningId]="actioningId()"
       [statusBadge]="statusBadgeCell()"
       (open)="onView($event)"
-      (create)="onNewCandidate()"
+      (rowActivate)="onView($event)"
       (accept)="quickAccept($event)"
       (reject)="openRejectModal($event)" />
   }
