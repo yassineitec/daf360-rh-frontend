@@ -266,7 +266,7 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
           <p class="text-[13px] text-outline">{{ 'CANDIDATES.INTERVIEWS.EMPTY' | translate }}</p>
         </div>
       }
-    </daf-card>
+    </rh-section-card>
   `,
 })
 export class CandidateInterviewsComponent implements OnInit {

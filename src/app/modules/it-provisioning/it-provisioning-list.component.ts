@@ -1,50 +1,78 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import {
+  FilterField,
+  FilterResult,
+  MetricCardComponent,
+  MetricDelta,
+  PageComponent,
+  PageHeaderComponent,
+  PaginationComponent,
+  SearchToolbarComponent,
+  SearchToolbarFilterConfig,
+  ToolbarToggleOption,
+} from '@khalilrebhiitec/daf360';
 
 import { ItProvisioningService } from './it-provisioning.service';
-import { ProvisioningListItem } from './it-provisioning.model';
-import { statusBadge } from '../../shared/status-badge.utils';
-import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { BadgeCell, ButtonComponent, CardComponent, DafCellDirective, DataTableComponent, MetricCardComponent, MetricDelta, PaginationComponent, SelectComponent, SelectConfig, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow, ProgressBarComponent } from '@khalilrebhiitec/daf360';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ItProvisioningStatus, ProvisioningListItem } from './it-provisioning.model';
+import { hardwareComplete, isOverdue, licencesComplete } from './it-provisioning-display';
+import { ItProvisioningCardsSectionComponent } from './sections/it-provisioning-cards-section.component';
+import { ItProvisioningTableSectionComponent } from './sections/it-provisioning-table-section.component';
 
 const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
+/** Provisioning statuses in workflow order, for the status filter. */
+const STATUS_CODES: ItProvisioningStatus[] = ['PENDING', 'IN_PROGRESS', 'EMAIL_CREATED', 'COMPLETED'];
+
+type ViewMode = 'grid' | 'list';
+
+/**
+ * /rh/it-provisioning — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
+ * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
+ * `daf-pagination`.
+ *
+ * The endpoint returns the whole list in one call, so search, the status filter
+ * and paging are all client-side projections of `items`.
+ *
+ * All view state lives here and the two sections are stateless input/output
+ * shells, which is what makes flipping between cards and list lossless.
+ */
 @Component({
-  imports: [DataTableComponent, DafCellDirective, SelectComponent, MetricCardComponent, CardComponent, StatusBadgeComponent, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, ProgressBarComponent, TranslatePipe],
   standalone: true,
+  imports: [
+    MetricCardComponent,
+    PageComponent,
+    PageHeaderComponent,
+    PaginationComponent,
+    SearchToolbarComponent,
+    ItProvisioningCardsSectionComponent,
+    ItProvisioningTableSectionComponent,
+    TranslatePipe,
+  ],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
-  private service = inject(ItProvisioningService);
-  private router  = inject(Router);
+  private service   = inject(ItProvisioningService);
+  private router    = inject(Router);
   private translate = inject(TranslateService);
 
-  items   = signal<ProvisioningListItem[]>([]);
-  loading = signal(true);
-  error   = signal<string | null>(null);
+  // ── Data ───────────────────────────────────────────────────────────────────
+  readonly items = signal<ProvisioningListItem[]>([]);
+  /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
+  readonly firstLoad = signal(true);
+  /** Every refresh after that — skeletons inside the affected section only. */
+  readonly loading = signal(false);
+  readonly error   = signal<string | null>(null);
 
-  search           = signal('');
-  mobileSearchOpen = signal(false);
-  statusFilter     = signal('');
-  viewMode         = signal<'grid' | 'list'>('grid');
-
-  readonly statusSelectOptions = computed<SelectOption[]>(() => {
-    this.translate.currentLang();
-    return [
-      { value: 'PENDING',       label: this.translate.instant('IT_PROVISIONING.STATUS.PENDING') },
-      { value: 'IN_PROGRESS',   label: this.translate.instant('IT_PROVISIONING.STATUS.IN_PROGRESS') },
-      { value: 'EMAIL_CREATED', label: this.translate.instant('IT_PROVISIONING.STATUS.EMAIL_CREATED') },
-      { value: 'COMPLETED',     label: this.translate.instant('IT_PROVISIONING.STATUS.COMPLETED') },
-    ];
-  });
-  readonly statusSelectConfig = computed<SelectConfig>(() => {
-    this.translate.currentLang();
-    return { placeholder: this.translate.instant('IT_PROVISIONING.LIST.FILTER_ALL') };
-  });
-
-  protected readonly statusBadge = statusBadge;
+  // ── View state ─────────────────────────────────────────────────────────────
+  readonly viewMode     = signal<ViewMode>('grid');
+  readonly search       = signal('');
+  readonly statusFilter = signal('');
+  readonly currentPage  = signal(0);
+  readonly pageSize     = signal(PAGE_SIZE);
+  readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
   readonly filteredItems = computed(() => {
     const term   = this.search().trim().toLowerCase();
@@ -52,175 +80,166 @@ export class ItProvisioningListComponent implements OnInit {
     return this.items().filter(r => {
       const matchesTerm = !term
         || r.candidateFullName.toLowerCase().includes(term)
-        || (r.ms365Email ?? '').toLowerCase().includes(term);
-      const matchesStatus = !status || r.status === status;
-      return matchesTerm && matchesStatus;
+        || (r.ms365Email ?? '').toLowerCase().includes(term)
+        || (r.appliedPosition ?? '').toLowerCase().includes(term);
+      return matchesTerm && (!status || r.status === status);
     });
   });
 
-  currentPage = signal(0);
-  readonly totalPages = computed(() => Math.ceil(this.filteredItems().length / PAGE_SIZE));
+  readonly totalElements = computed(() => this.filteredItems().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
-    const start = this.currentPage() * PAGE_SIZE;
-    return this.filteredItems().slice(start, start + PAGE_SIZE);
+    const start = this.currentPage() * this.pageSize();
+    return this.filteredItems().slice(start, start + this.pageSize());
   });
 
-  onPageChange(page: number): void {
-    this.currentPage.set(page);
-  }
-
-  readonly rows = computed<TableRow[]>(() =>
-    this.pagedItems().map(r => ({
-      candidat:   { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
-      ms365Email: r.ms365Email,
-      status:     { label: this.statusBadge(r.status).label, options: this.statusBadge(r.status).options } as BadgeCell,
-      expectedStartDate: r.expectedStartDate,
-      overdue:    this.isOverdue(r),
-      hwCount:    r.assetsProvided ?? 0,
-      hwDone:     this.hwProgress(r) === '6/6',
-      hwLabel:    this.hwProgress(r),
-      licCount:   this.licCount(r),
-      licDone:    this.licProgress(r) === '5/5',
-      licLabel:   this.licProgress(r),
-      adDone:     r.status === 'EMAIL_CREATED' || r.status === 'COMPLETED',
-      isCompleted: r.status === 'COMPLETED',
-      _source:     r,
-    })),
-  );
-
+  // ── KPIs ───────────────────────────────────────────────────────────────────
   readonly stats = computed(() => {
-    const openList = this.items().filter(r => r.status !== 'COMPLETED');
+    const open = this.items().filter(r => r.status !== 'COMPLETED');
     return {
-      pending:      openList.length,
-      overdue:      openList.filter(r => this.isOverdue(r)).length,
-      hwIncomplete: openList.filter(r => this.hwProgress(r) !== '6/6').length,
-      licIncomplete: openList.filter(r => this.licProgress(r) !== '5/5').length,
+      pending:       open.length,
+      overdue:       open.filter(r => isOverdue(r)).length,
+      hwIncomplete:  open.filter(r => !hardwareComplete(r)).length,
+      licIncomplete: open.filter(r => !licencesComplete(r)).length,
     };
   });
 
-  // ── Delta indicators ──
+  /** Share of all files that are done — the same rate every tile's delta reads. */
+  private completionRate(incomplete: number): number {
+    const total = this.items().length;
+    return total > 0 ? Math.round(((total - incomplete) / total) * 100) : 0;
+  }
+
+  /** Deltas are translated — they used to be hardcoded English on a French page. */
   readonly pendingDelta = computed<MetricDelta | null>(() => {
-    const s = this.stats();
-    const completionRate = this.items().length > 0
-      ? Math.round(((this.items().length - s.pending) / this.items().length) * 100)
-      : 0;
+    this.translate.currentLang();
+    const rate = this.completionRate(this.stats().pending);
     return {
-      value: `${completionRate}% complete`,
-      direction: completionRate >= 70 ? 'up' : completionRate >= 40 ? 'neutral' : 'down',
+      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_COMPLETE', { pct: rate }),
+      direction: rate >= 70 ? 'up' : rate >= 40 ? 'neutral' : 'down',
     };
   });
 
   readonly overdueDelta = computed<MetricDelta | null>(() => {
-    const s = this.stats();
-    if (s.overdue === 0) return null;
+    this.translate.currentLang();
+    const overdue = this.stats().overdue;
+    if (overdue === 0) return null;
     return {
-      value: `${s.overdue} tasks past deadline`,
+      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_OVERDUE', { count: overdue }),
       direction: 'down',
     };
   });
 
   readonly hwDelta = computed<MetricDelta | null>(() => {
-    const s = this.stats();
-    const completionRate = this.items().length > 0
-      ? Math.round(((this.items().length - s.hwIncomplete) / this.items().length) * 100)
-      : 0;
+    this.translate.currentLang();
+    const rate = this.completionRate(this.stats().hwIncomplete);
     return {
-      value: `${completionRate}% hardware ready`,
-      direction: completionRate >= 70 ? 'up' : 'neutral',
+      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_HW_READY', { pct: rate }),
+      direction: rate >= 70 ? 'up' : 'neutral',
     };
   });
 
   readonly licDelta = computed<MetricDelta | null>(() => {
-    const s = this.stats();
-    const completionRate = this.items().length > 0
-      ? Math.round(((this.items().length - s.licIncomplete) / this.items().length) * 100)
-      : 0;
+    this.translate.currentLang();
+    const rate = this.completionRate(this.stats().licIncomplete);
     return {
-      value: `${completionRate}% licenses ready`,
-      direction: completionRate >= 70 ? 'up' : 'neutral',
+      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_LIC_READY', { pct: rate }),
+      direction: rate >= 70 ? 'up' : 'neutral',
     };
   });
 
-  readonly columns = computed<TableColumn[]>(() => {
+  // ── Toolbar ────────────────────────────────────────────────────────────────
+  /** The status dropdown belongs *inside* the filter panel, not loose beside the search. */
+  readonly filterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    return [{
+      name: 'status',
+      label: this.translate.instant('IT_PROVISIONING.LIST.COL_STATUS'),
+      type: 'select',
+      placeholder: this.translate.instant('IT_PROVISIONING.LIST.FILTER_ALL'),
+      options: STATUS_CODES.map(code => ({
+        value: code,
+        label: this.translate.instant('IT_PROVISIONING.STATUS.' + code),
+      })),
+    }];
+  });
+
+  /**
+   * `initialValues` is a seed read once on first open, and a `select` needs the
+   * panel's internal shape — a `string[]`, not a bare string (§10b).
+   */
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return {
+      title:        t('IT_PROVISIONING.LIST.FILTERS.TITLE'),
+      applyLabel:   t('IT_PROVISIONING.LIST.FILTERS.APPLY'),
+      cancelLabel:  t('IT_PROVISIONING.LIST.FILTERS.CANCEL'),
+      resetLabel:   t('IT_PROVISIONING.LIST.FILTERS.RESET'),
+      triggerLabel: t('IT_PROVISIONING.LIST.FILTERS.TRIGGER'),
+      align:        'right',
+      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+    };
+  });
+
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
     this.translate.currentLang();
     return [
-      { key: 'candidat', label: this.translate.instant('IT_PROVISIONING.LIST.COL_CANDIDATE'), type: 'avatar', sortable: true },
-      { key: 'ms365Email', label: this.translate.instant('IT_PROVISIONING.LIST.COL_EMAIL') },
-      { key: 'status', label: this.translate.instant('IT_PROVISIONING.LIST.COL_STATUS'), type: 'badge' },
-      { key: 'expectedStartDate', label: this.translate.instant('IT_PROVISIONING.LIST.COL_START') },
-      { key: 'hwLabel', label: this.translate.instant('IT_PROVISIONING.LIST.COL_HARDWARE') },
-      { key: 'licLabel', label: this.translate.instant('IT_PROVISIONING.LIST.COL_LICENSES') },
-      { key: '_actions', label: this.translate.instant('IT_PROVISIONING.LIST.COL_ACTIONS') },
+      { id: 'grid', icon: 'grid_view', tooltip: this.translate.instant('IT_PROVISIONING.LIST.VIEW_GRID') },
+      { id: 'list', icon: 'view_list', tooltip: this.translate.instant('IT_PROVISIONING.LIST.VIEW_LIST') },
     ];
   });
 
-  readonly tableConfig = computed<TableConfig>(() => {
-    this.translate.currentLang();
-    return {
-      hoverable: true,
-      loading: this.loading(),
-      emptyMessage: this.translate.instant('IT_PROVISIONING.LIST.TABLE_EMPTY'),
-    };
-  });
-
-  ngOnInit(): void { this.load(); }
+  // ── Load ───────────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.load();
+  }
 
   load(): void {
-    this.loading.set(true);
+    if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
     this.service.getAllList().subscribe({
-      next:  (data) => { this.items.set(data); this.loading.set(false); },
-      error: ()     => { this.error.set(this.translate.instant('IT_PROVISIONING.LIST.LOAD_ERROR')); this.loading.set(false); },
+      next: data => {
+        this.items.set(data);
+        this.loading.set(false);
+        this.firstLoad.set(false);
+      },
+      error: () => {
+        this.error.set(this.translate.instant('IT_PROVISIONING.LIST.LOAD_ERROR'));
+        this.loading.set(false);
+        this.firstLoad.set(false);
+      },
     });
   }
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
   onSearch(value: string): void {
-    this.search.set(value);
+    if (value === this.search()) return; // daf-search-toolbar re-emits on blur
+    this.search.set(value ?? '');
     this.currentPage.set(0);
   }
 
-  onStatusChange(values: string[]): void {
-    this.statusFilter.set(values[0] ?? '');
+  applyFilters(result: FilterResult): void {
+    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
     this.currentPage.set(0);
   }
 
-  initials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+  setView(mode: string): void {
+    this.viewMode.set(mode as ViewMode);
   }
 
-  isOverdue(r: ProvisioningListItem): boolean {
-    if (!r.expectedStartDate || r.status === 'COMPLETED') return false;
-    return new Date(r.expectedStartDate).getTime() < Date.now();
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
   }
 
-  overdueDays(r: TableRow): number {
-    const source = r['_source'] as ProvisioningListItem;
-    if (!source.expectedStartDate) return 0;
-    const diffMs = Date.now() - new Date(source.expectedStartDate).getTime();
-    return Math.max(0, Math.floor(diffMs / 86_400_000));
+  /** `pageSizeChange` fires alone — the page decides to go back to page 0 (§7). */
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.currentPage.set(0);
   }
 
-  hwProgress(r: ProvisioningListItem): string {
-    return (r.assetsProvided ?? 0) + '/6';
-  }
-
-  licCount(r: ProvisioningListItem): number {
-    return [
-      r.licenseOffice365,
-      r.licenseAutocad,
-      r.licenseRevit,
-      r.licenseAutodesk,
-      r.licenseKaspersky,
-    ].filter(Boolean).length;
-  }
-
-  licProgress(r: ProvisioningListItem): string {
-    return this.licCount(r) + '/5';
-  }
-
-  navigate(id: number): void {
+  open(id: number): void {
     this.router.navigate(['/rh/it-provisioning', id]);
   }
 }

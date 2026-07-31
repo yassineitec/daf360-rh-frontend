@@ -1,302 +1,88 @@
-<div class="space-y-8">
+<!-- /rh/it-provisioning — canonical page shape (UI-PLAYBOOK §1). `daf-page` owns
+     the 32px rhythm, so there is no `space-y-8` wrapper and no gap between
+     sections. `kpis="4"` matches the four tiles. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
 
-  <!-- Page header -->
-  <div>
-    <h1 class="text-2xl font-bold text-on-surface">
-      {{ 'IT_PROVISIONING.LIST.TITLE' | translate }}
-    </h1>
-    <p class="text-sm text-outline mt-1">
-      {{ 'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending } }}
-    </p>
-  </div>
+  <daf-page-header
+    [title]="'IT_PROVISIONING.LIST.TITLE' | translate"
+    [subtitle]="'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending }" />
 
-  @if (error()) {
-    <div class="bg-danger/10 text-danger text-sm rounded-xl px-4 py-3">{{ error() }}</div>
-  }
-
-  <!-- KPI Metric cards -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+  <!-- KPIs — one row at every width. The two right-hand tiles used `text-amber` /
+       `bg-amber/10`, which renders nothing: `amber` is not a token (§4). -->
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'IT_PROVISIONING.LIST.KPI_PENDING' | translate"
       [value]="stats().pending"
       [delta]="pendingDelta()"
       [options]="{ icon: 'assignment_late', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
     <daf-metric-card
       [label]="'IT_PROVISIONING.LIST.KPI_OVERDUE' | translate"
       [value]="stats().overdue"
       [delta]="overdueDelta()"
       [options]="{ icon: 'error', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+
     <daf-metric-card
       [label]="'IT_PROVISIONING.LIST.KPI_HW_INCOMPLETE' | translate"
       [value]="stats().hwIncomplete"
       [delta]="hwDelta()"
-      [options]="{ icon: 'package_2', iconColor: 'text-amber', iconBg: 'bg-amber/10' }" />
+      [options]="{ icon: 'package_2', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+
     <daf-metric-card
       [label]="'IT_PROVISIONING.LIST.KPI_LIC_INCOMPLETE' | translate"
       [value]="stats().licIncomplete"
       [delta]="licDelta()"
-      [options]="{ icon: 'subscriptions', iconColor: 'text-amber', iconBg: 'bg-amber/10' }" />
-  </div>
+      [options]="{ icon: 'subscriptions', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+  </section>
 
-  <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-    <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(221,225,255,0.30); color:#00288e">
-          <span class="material-symbols-outlined text-[18px]">assignment_late</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().pending }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">Dossiers en attente</p>
-      </div>
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,218,214,0.30); color:#ba1a1a">
-          <span class="material-symbols-outlined text-[18px]">error</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().overdue }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">En retard</p>
-      </div>
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,221,184,0.30); color:#4c2e00">
-          <span class="material-symbols-outlined text-[18px]">package_2</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().hwIncomplete }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">Matériel incomplet</p>
-      </div>
-      <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-        <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,221,184,0.30); color:#4c2e00">
-          <span class="material-symbols-outlined text-[18px]">subscriptions</span>
-        </span>
-        <span class="text-[20px] font-bold text-on-surface leading-none">{{ stats().licIncomplete }}</span>
-        <p class="text-[10.5px] text-outline leading-tight">Licences incomplètes</p>
-      </div>
-    </div>
-  </div>
+  <!-- Search + status filter + refresh + view toggle: one lib toolbar, one card,
+       one breakpoint. This replaces two separate hand-built cards (a desktop one
+       and a mobile one with its own search toggle), the loose status `daf-select`
+       and the bespoke refresh and grid/list buttons. -->
+  <daf-search-toolbar
+    [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
 
-  <!-- ═══ Desktop / tablet: search on the left, select + refresh + view toggle on the right, all inside one card (matches /finance/clients) ═══ -->
-  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="hidden sm:block">
-    <div class="flex items-center justify-between gap-3 p-4 sm:p-5">
-      <div class="w-[360px] shrink-0">
-        <rh-search-bar
-          [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
-          [value]="search()"
-          (valueChange)="onSearch($event)" />
-      </div>
-
-      <div class="flex items-center gap-3">
-        <daf-select
-          [selected]="statusFilter() ? [statusFilter()] : []"
-          [options]="statusSelectOptions()"
-          [config]="statusSelectConfig()"
-          (selectedChange)="onStatusChange($event)" />
-
-        <button type="button"
-          class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
-          [title]="'IT_PROVISIONING.LIST.REFRESH' | translate"
-          (click)="load()">
-          <span class="material-symbols-outlined text-[18px]">cached</span>
-        </button>
-
-        <div class="flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-          <button type="button"
-            class="flex items-center justify-center w-11 h-11 transition-colors"
-            [class.bg-primary]="viewMode() === 'grid'"
-            [class.text-white]="viewMode() === 'grid'"
-            [class.text-outline]="viewMode() !== 'grid'"
-            [title]="'IT_PROVISIONING.LIST.VIEW_GRID' | translate"
-            (click)="viewMode.set('grid')">
-            <span class="material-symbols-outlined text-[18px]">grid_view</span>
-          </button>
-          <button type="button"
-            class="flex items-center justify-center w-11 h-11 transition-colors"
-            [class.bg-primary]="viewMode() === 'list'"
-            [class.text-white]="viewMode() === 'list'"
-            [class.text-outline]="viewMode() !== 'list'"
-            [title]="'IT_PROVISIONING.LIST.VIEW_LIST' | translate"
-            (click)="viewMode.set('list')">
-            <span class="material-symbols-outlined text-[18px]">view_list</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </daf-card>
-
-  <div class="hidden sm:block">
-    @if (viewMode() === 'grid') {
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <ng-container *ngTemplateOutlet="cardsTpl" />
-      </div>
-    }
-
-    @if (viewMode() === 'list') {
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
-
-        <ng-template dafCell="ms365Email" let-row>
-          @if (row['ms365Email']) {
-            <span class="text-body-md text-on-surface">{{ row['ms365Email'] }}</span>
-          } @else {
-            <span class="text-body-sm text-outline italic">{{ 'IT_PROVISIONING.LIST.EMAIL_PENDING_TABLE' | translate }}</span>
-          }
-        </ng-template>
-
-        <ng-template dafCell="expectedStartDate" let-row>
-          <p class="text-body-md text-on-surface">{{ row['expectedStartDate'] ?? '—' }}</p>
-          @if (row['overdue']) {
-            <p class="text-body-sm text-danger font-bold flex items-center gap-1">
-              <span class="material-symbols-outlined text-body-lg">error</span>
-              {{ 'IT_PROVISIONING.LIST.OVERDUE_DAYS' | translate:{ days: overdueDays(row) } }}
-            </p>
-          }
-        </ng-template>
-
-        <ng-template dafCell="hwLabel" let-row>
-          <div class="w-24">
-            <daf-progress-bar
-              [label]="row['hwLabel']"
-              [value]="row['hwCount']"
-              [options]="{ max: 6, size: 'xs', variant: row['hwDone'] ? 'tertiary' : 'primary', showPercent: false }" />
-          </div>
-        </ng-template>
-
-        <ng-template dafCell="licLabel" let-row>
-          <div class="w-24">
-            <daf-progress-bar
-              [label]="row['licLabel']"
-              [value]="row['licCount']"
-              [options]="{ max: 5, size: 'xs', variant: row['licDone'] ? 'tertiary' : 'secondary', showPercent: false }" />
-          </div>
-        </ng-template>
-
-        <ng-template dafCell="_actions" let-row>
-          <daf-button
-            [label]="(row['isCompleted'] ? 'IT_PROVISIONING.LIST.VIEW' : 'IT_PROVISIONING.LIST.COMPLETE') | translate"
-            [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
-            [options]="{ size: 'sm' }"
-            (onClick)="navigate(row['_source'].id)" />
-        </ng-template>
-
-      </daf-data-table>
-    }
-  </div>
-
-  <!-- ═══ Mobile: icon-only search, cards only — no toggle, no table ═══ -->
-  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="sm:hidden block">
-    <div class="flex items-center justify-between gap-2 p-4">
-      <daf-select
-        class="shrink-0"
-        [selected]="statusFilter() ? [statusFilter()] : []"
-        [options]="statusSelectOptions()"
-        [config]="statusSelectConfig()"
-        (selectedChange)="onStatusChange($event)" />
-      <button type="button"
-        class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant shrink-0"
-        [class.bg-primary]="mobileSearchOpen()"
-        [class.text-white]="mobileSearchOpen()"
-        (click)="mobileSearchOpen.set(!mobileSearchOpen())"
-        [attr.aria-label]="'IT_PROVISIONING.LIST.SEARCH_ARIA' | translate">
-        <span class="material-symbols-outlined text-[18px]">{{ mobileSearchOpen() ? 'close' : 'search' }}</span>
-      </button>
-    </div>
-
-    @if (mobileSearchOpen()) {
-      <div class="px-4 pb-4">
-        <rh-search-bar
-          [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
-          [value]="search()"
-          (valueChange)="onSearch($event)" />
-      </div>
-    }
-  </daf-card>
-
-  <div class="grid grid-cols-1 gap-4 sm:hidden">
-    <ng-container *ngTemplateOutlet="cardsTpl" />
-  </div>
-
-  <!-- Count + Pagination -->
-  @if (filteredItems().length > 0) {
-    <div class="flex items-center justify-between gap-3 flex-wrap">
-      <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> {{ 'IT_PROVISIONING.LIST.COUNT_SUFFIX' | translate }}</span>
-      @if (totalPages() > 1) {
-        <daf-pagination
-          [currentPage]="currentPage()"
-          [totalPages]="totalPages()"
-          [totalElements]="filteredItems().length"
-          (pageChange)="onPageChange($event)" />
-      }
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
     </div>
   }
 
-  <ng-template #cardsTpl>
-    @for (row of rows(); track row['_source'].id) {
-      <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', hoverable: true }" class="block">
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-[12px] font-semibold text-on-surface-variant shrink-0">
-              {{ row['candidat'].initials }}
-            </div>
-            <div class="min-w-0">
-              <p class="font-semibold text-on-surface truncate">{{ row['candidat'].name }}</p>
-              <p class="text-[12px] text-outline truncate">{{ row['candidat'].subtitle || ('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED' | translate) }}</p>
-            </div>
-          </div>
-          <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
-        </div>
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
+       Both views render at every width now: the cards grid goes 1 → 2 → 3
+       columns, and the table scrolls horizontally inside daf-data-table. -->
+  @if (viewMode() === 'grid') {
+    <rh-it-provisioning-cards-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      (open)="open($event)" />
+  } @else {
+    <rh-it-provisioning-table-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      (open)="open($event)" />
+  }
 
-        <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
-          <div class="min-w-0">
-            <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'IT_PROVISIONING.LIST.EMAIL_LABEL' | translate }}</p>
-            @if (row['ms365Email']) {
-              <p class="text-on-surface truncate">{{ row['ms365Email'] }}</p>
-            } @else {
-              <p class="text-outline italic">{{ 'IT_PROVISIONING.LIST.EMAIL_PENDING' | translate }}</p>
-            }
-          </div>
-          <div>
-            <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'IT_PROVISIONING.LIST.START_LABEL' | translate }}</p>
-            <p class="text-on-surface">{{ row['expectedStartDate'] ?? '—' }}</p>
-            @if (row['overdue']) {
-              <p class="text-danger font-bold flex items-center gap-1 mt-0.5">
-                <span class="material-symbols-outlined text-[13px]">error</span>
-                {{ 'IT_PROVISIONING.LIST.OVERDUE_SHORT' | translate:{ days: overdueDays(row) } }}
-              </p>
-            }
-          </div>
-        </div>
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
 
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-outline uppercase font-bold">{{ 'IT_PROVISIONING.LIST.HARDWARE_LABEL' | translate }}</span>
-              <span class="font-bold" [class.text-success]="row['hwDone']">{{ row['hwLabel'] }}</span>
-            </div>
-            <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
-              <div class="h-full bg-primary" [style.width.%]="(row['hwCount'] / 6) * 100"></div>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-outline uppercase font-bold">{{ 'IT_PROVISIONING.LIST.LICENSES_LABEL' | translate }}</span>
-              <span class="font-bold" [class.text-success]="row['licDone']">{{ row['licLabel'] }}</span>
-            </div>
-            <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
-              <div class="h-full bg-tertiary" [style.width.%]="(row['licCount'] / 5) * 100"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end pt-3 border-t border-outline-variant">
-          <daf-button
-            [label]="(row['isCompleted'] ? 'IT_PROVISIONING.LIST.VIEW' : 'IT_PROVISIONING.LIST.COMPLETE') | translate"
-            [variant]="row['isCompleted'] ? 'secondary' : 'teal'"
-            [options]="{ size: 'sm' }"
-            (onClick)="navigate(row['_source'].id)" />
-        </div>
-      </daf-card>
-    } @empty {
-      <div class="col-span-full flex flex-col items-center gap-2 py-16 text-center text-outline">
-        <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
-        <p class="text-[13px]">{{ 'IT_PROVISIONING.LIST.EMPTY' | translate }}</p>
-      </div>
-    }
-  </ng-template>
-
-
-</div>
+</daf-page>
