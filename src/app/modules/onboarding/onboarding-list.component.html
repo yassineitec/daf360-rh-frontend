@@ -1,280 +1,88 @@
-<div class="space-y-6">
+<!-- /rh/onboarding — canonical page shape (UI-PLAYBOOK §1). `daf-page` owns the
+     32px rhythm, so there is no `space-y-6` wrapper and no gap between sections.
+     `kpis="4"` matches the four tiles. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
 
-      <!-- Page header -->
-      <div>
-        <h1 class="text-[24px] sm:text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-          {{ 'ONBOARDING.LIST.TITLE' | translate }}
-        </h1>
-        <p class="text-[14px] text-outline mt-1">{{ 'ONBOARDING.LIST.SUBTITLE' | translate }}</p>
-      </div>
+  <daf-page-header
+    [title]="'ONBOARDING.LIST.TITLE' | translate"
+    [subtitle]="'ONBOARDING.LIST.SUBTITLE' | translate">
+  </daf-page-header>
 
-      <!-- KPI Metric cards on desktop/tablet -->
-      <div class="hidden md:grid grid-cols-4 gap-4">
-        <daf-metric-card
-          [label]="'ONBOARDING.LIST.KPI_PENDING' | translate"
-          [value]="kpiStats()?.pendingCount ?? items().length"
-          [delta]="pendingDelta()"
-          [options]="{ icon: 'pending_actions', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
-        <daf-metric-card
-          [label]="'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate"
-          [value]="kpiStats()?.profilesCreatedToday ?? '—'"
-          [delta]="createdTodayDelta()"
-          [options]="{ icon: 'person_add', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
-        <daf-metric-card
-          [label]="'ONBOARDING.LIST.KPI_INCOMPLETE' | translate"
-          [value]="kpiStats()?.incompleteProfiles ?? '—'"
-          [delta]="incompleteDelta()"
-          [options]="{ icon: 'error_outline', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
-        <daf-metric-card
-          [label]="'ONBOARDING.LIST.KPI_AVG_TIME' | translate"
-          [value]="kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—'"
-          [delta]="avgTimeDelta()"
-          [options]="{ icon: 'timer', iconColor: 'text-amber', iconBg: 'bg-amber/10' }" />
-      </div>
+  <!-- KPIs — one row at every width. The "temps moyen" tile used `text-amber` /
+       `bg-amber/10`, which renders nothing: `amber` is not a token (§4). -->
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'ONBOARDING.LIST.KPI_PENDING' | translate"
+      [value]="kpiPending()"
+      [delta]="pendingDelta()"
+      [options]="{ icon: 'pending_actions', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
 
-      <div class="md:hidden rounded-3xl bg-white border border-outline-variant/50 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-        <div class="flex gap-2.5 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
-          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(221,225,255,0.30); color:#00288e">
-              <span class="material-symbols-outlined text-[18px]">pending_actions</span>
-            </span>
-            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.pendingCount ?? items().length }}</span>
-            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_PENDING' | translate }}</p>
-          </div>
-          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(108,248,187,0.30); color:#006c49">
-              <span class="material-symbols-outlined text-[18px]">person_add</span>
-            </span>
-            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.profilesCreatedToday ?? '—' }}</span>
-            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate }}</p>
-          </div>
-          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,218,214,0.30); color:#ba1a1a">
-              <span class="material-symbols-outlined text-[18px]">error_outline</span>
-            </span>
-            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.incompleteProfiles ?? '—' }}</span>
-            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_INCOMPLETE' | translate }}</p>
-          </div>
-          <div class="shrink-0 snap-start w-[110px] rounded-2xl p-3 bg-surface-container-lowest flex flex-col items-center text-center gap-1.5">
-            <span class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,221,184,0.30); color:#4c2e00">
-              <span class="material-symbols-outlined text-[18px]">timer</span>
-            </span>
-            <span class="text-[20px] font-bold text-on-surface leading-none">{{ kpiStats()?.avgCreationMinutes != null ? (kpiStats()!.avgCreationMinutes + ' ' + ('ONBOARDING.LIST.MIN_UNIT' | translate)) : '—' }}</span>
-            <p class="text-[10.5px] text-outline leading-tight">{{ 'ONBOARDING.LIST.KPI_AVG_TIME' | translate }}</p>
-          </div>
-        </div>
-      </div>
+    <daf-metric-card
+      [label]="'ONBOARDING.LIST.KPI_CREATED_TODAY' | translate"
+      [value]="kpiStats()?.profilesCreatedToday ?? '—'"
+      [delta]="createdTodayDelta()"
+      [options]="{ icon: 'person_add', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
 
-      <!-- Filters: desktop/tablet — full search box; mobile — icon-only toggle -->
-      <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl', hoverable: true }" class="block">
-        <div class="flex items-center justify-between gap-2 p-4 sm:p-5">
-          <div class="hidden sm:block w-[360px] ml-0.5">
-            <rh-search-bar
-              [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
-              [value]="search()"
-              (valueChange)="onSearch($event)" />
-          </div>
+    <daf-metric-card
+      [label]="'ONBOARDING.LIST.KPI_INCOMPLETE' | translate"
+      [value]="kpiStats()?.incompleteProfiles ?? '—'"
+      [delta]="incompleteDelta()"
+      [options]="{ icon: 'error_outline', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
 
-          @if (mobileSearchOpen()) {
-            <div class="sm:hidden flex-1 flex items-center gap-2">
-              <rh-search-bar
-                class="flex-1"
-                [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
-                [value]="search()"
-                (valueChange)="onSearch($event)" />
-              <daf-button
-                class="icon-btn-toggle shrink-0"
-                [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
-                [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-                (onClick)="mobileSearchOpen.set(false)" />
-            </div>
-          } @else {
-            <daf-button
-              class="sm:hidden icon-btn-toggle shrink-0"
-              [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
-              [title]="'PROFILES.LIST.SEARCH_ARIA' | translate"
-              (onClick)="mobileSearchOpen.set(true)" />
+    <daf-metric-card
+      [label]="'ONBOARDING.LIST.KPI_AVG_TIME' | translate"
+      [value]="kpiAvgTime()"
+      [delta]="avgTimeDelta()"
+      [options]="{ icon: 'timer', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+  </section>
 
-            <div class="flex items-center justify-end gap-2">
-              <button type="button"
-                class="flex items-center justify-center w-11 h-11 rounded-lg border border-outline-variant text-outline hover:bg-surface-container-low transition-colors shrink-0"
-                [title]="'ONBOARDING.LIST.REFRESH' | translate"
-                (click)="load()">
-                <span class="material-symbols-outlined text-[18px]">cached</span>
-              </button>
-              <div class="hidden sm:flex items-center rounded-lg border border-outline-variant overflow-hidden shrink-0">
-                <button type="button"
-                  class="flex items-center justify-center w-11 h-11 transition-colors"
-                  [class.bg-primary]="viewMode() === 'grid'"
-                  [class.text-white]="viewMode() === 'grid'"
-                  [class.text-outline]="viewMode() !== 'grid'"
-                  [title]="'ONBOARDING.LIST.VIEW_GRID' | translate"
-                  (click)="viewMode.set('grid')">
-                  <span class="material-symbols-outlined text-[18px]">grid_view</span>
-                </button>
-                <button type="button"
-                  class="flex items-center justify-center w-11 h-11 transition-colors"
-                  [class.bg-primary]="viewMode() === 'list'"
-                  [class.text-white]="viewMode() === 'list'"
-                  [class.text-outline]="viewMode() !== 'list'"
-                  [title]="'ONBOARDING.LIST.VIEW_LIST' | translate"
-                  (click)="viewMode.set('list')">
-                  <span class="material-symbols-outlined text-[18px]">view_list</span>
-                </button>
-              </div>
-            </div>
-          }
-        </div>
-      </daf-card>
+  <!-- Search + status filter + view toggle: one lib toolbar, one card, one
+       breakpoint. Replaces the hand-built card that held a desktop search box, a
+       mobile search toggle, a square refresh button and a grid/list button pair. -->
+  <daf-search-toolbar
+    [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
 
-      <!-- Error alert -->
-      @if (error()) {
-        <div class="bg-error/10 border border-error/30 text-error rounded-xl px-4 py-3 text-[13px]"
-             role="alert">
-          {{ error() }}
-        </div>
-      }
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
+    </div>
+  }
 
-      <!-- Loading skeleton -->
-      @if (loading()) {
-        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-          <div class="skel-header rounded-t-2xl"></div>
-          <div class="row-skel"></div>
-          <div class="row-skel"></div>
-          <div class="row-skel"></div>
-        </daf-card>
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
+       Both views render at every width now: the cards grid goes 1 → 2 → 3
+       columns, and the table scrolls horizontally inside daf-data-table. -->
+  @if (viewMode() === 'grid') {
+    <rh-onboarding-cards-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      (open)="open($event)" />
+  } @else {
+    <rh-onboarding-table-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      (open)="open($event)" />
+  }
 
-      <!-- Empty state -->
-      } @else if (filteredItems().length === 0) {
-        <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-          <div class="flex flex-col items-center py-16 gap-3 text-center">
-            <span class="material-symbols-outlined text-display text-outline-variant">
-              assignment_turned_in
-            </span>
-            <p class="text-body-lg font-semibold text-on-surface">{{ 'ONBOARDING.LIST.EMPTY_TITLE' | translate }}</p>
-            <p class="text-[13px] text-outline">{{ 'ONBOARDING.LIST.EMPTY_SUB' | translate }}</p>
-          </div>
-        </daf-card>
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
 
-      <!-- Cards content, shared between desktop grid view and mobile (always cards) -->
-      } @else {
-
-        <ng-template #cardsTpl>
-          @for (row of rows(); track row['_source'].candidateId) {
-            <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', hoverable: true }" class="block">
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-[12px] font-semibold text-on-surface-variant shrink-0">
-                    {{ row['employe'].initials }}
-                  </div>
-                  <div class="min-w-0">
-                    <p class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] truncate">{{ row['employe'].name }}</p>
-                    <p class="text-[12px] text-outline truncate">{{ row['employe'].subtitle || ('ONBOARDING.LIST.POSITION_UNSPECIFIED' | translate) }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-1.5 flex-wrap mb-3">
-                <daf-badge [label]="row['status'].label" [options]="row['status'].options" />
-                @if (row['hasDraft']) {
-                  <daf-badge [label]="'ONBOARDING.LIST.BADGE_DRAFT' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
-                }
-              </div>
-
-              <div class="grid grid-cols-2 gap-3 text-[12px] mb-3">
-                <div class="min-w-0">
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_EMAIL' | translate }}</p>
-                  <p class="text-on-surface truncate">{{ row['ms365Email'] || '—' }}</p>
-                </div>
-                <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_IT_STATUS' | translate }}</p>
-                  <daf-badge [label]="row['itStatus'].label" [options]="row['itStatus'].options" />
-                </div>
-                <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_START' | translate }}</p>
-                  <p class="text-on-surface">{{ row['expectedStartDate'] }}</p>
-                </div>
-                <div>
-                  <p class="text-outline uppercase text-label-caps font-bold mb-0.5">{{ 'ONBOARDING.LIST.COL_UPDATED' | translate }}</p>
-                  <p class="text-on-surface">{{ row['maj'] }}</p>
-                </div>
-              </div>
-
-              <div class="flex justify-end pt-3 border-t border-outline-variant">
-                <daf-button [label]="'ONBOARDING.LIST.COMPLETE' | translate" variant="teal"
-                  [options]="{ size: 'sm' }"
-                  (onClick)="navigate(row['_source'].candidateId)" />
-              </div>
-            </daf-card>
-          }
-        </ng-template>
-
-        <!-- Desktop / tablet: grid or table per toggle -->
-        <div class="hidden sm:block">
-          @if (viewMode() === 'grid') {
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              <ng-container *ngTemplateOutlet="cardsTpl" />
-            </div>
-          } @else {
-            <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
-
-              <ng-template dafCell="ms365Email" let-row>
-                <span class="text-[12px] text-on-surface-variant">{{ row['ms365Email'] || '—' }}</span>
-              </ng-template>
-
-              <ng-template dafCell="itStatus" let-row>
-                <daf-badge [label]="row['itStatus'].label" [options]="row['itStatus'].options" />
-              </ng-template>
-
-              <ng-template dafCell="expectedStartDate" let-row>
-                <span class="text-[12px] text-outline whitespace-nowrap">{{ row['expectedStartDate'] }}</span>
-              </ng-template>
-
-              <ng-template dafCell="status" let-row>
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <daf-badge
-                    [label]="row['status'].label"
-                    [options]="row['status'].options"
-                  />
-                  @if (row['hasDraft']) {
-                    <daf-badge [label]="'ONBOARDING.LIST.BADGE_DRAFT' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
-                  }
-                </div>
-              </ng-template>
-
-              <ng-template dafCell="maj" let-row>
-                <span class="text-[12px] text-outline whitespace-nowrap">{{ row['maj'] }}</span>
-              </ng-template>
-
-              <ng-template dafCell="_actions" let-row>
-                <daf-button [label]="'ONBOARDING.LIST.COMPLETE' | translate" variant="teal"
-                  [options]="{ size: 'sm' }"
-                  (onClick)="navigate(row['_source'].candidateId)" />
-              </ng-template>
-
-            </daf-data-table>
-            </div>
-          }
-        </div>
-
-        <!-- Mobile: always cards, no table, no toggle -->
-        <div class="grid grid-cols-1 gap-4 sm:hidden">
-          <ng-container *ngTemplateOutlet="cardsTpl" />
-        </div>
-
-        <!-- Count + Pagination -->
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <span class="text-[12px] text-outline"><strong>{{ filteredItems().length }}</strong> {{ 'ONBOARDING.LIST.FILES_WORD' | translate }}</span>
-          @if (totalPages() > 1) {
-            <daf-pagination
-              [currentPage]="currentPage()"
-              [totalPages]="totalPages()"
-              [totalElements]="filteredItems().length"
-              (pageChange)="onPageChange($event)" />
-          }
-        </div>
-
-      }
-
-</div>
+</daf-page>

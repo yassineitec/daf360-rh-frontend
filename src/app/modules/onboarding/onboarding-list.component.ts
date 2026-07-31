@@ -1,187 +1,248 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
-import { OnboardingService }    from './onboarding.service';
-import { OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import {
-  BadgeCell,
-  ButtonComponent,
-  CardComponent,
-  DafCellDirective,
-  DataTableComponent,
+  FilterField,
+  FilterResult,
   MetricCardComponent,
   MetricDelta,
+  PageComponent,
+  PageHeaderComponent,
   PaginationComponent,
-  StatusBadgeComponent,
-  TableColumn,
-  TableConfig,
-  TableRow,
+  SearchToolbarComponent,
+  SearchToolbarFilterConfig,
+  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
-import { statusBadge } from '../../shared/status-badge.utils';
-import { RhSearchBarComponent } from '../../shared/search-bar.component';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+
+import { OnboardingService } from './onboarding.service';
+import { CandidateOnboardingStatus, OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
+import { OnboardingCardsSectionComponent } from './sections/onboarding-cards-section.component';
+import { OnboardingTableSectionComponent } from './sections/onboarding-table-section.component';
 
 const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
+/** The two statuses a file can carry while it waits for onboarding. */
+const STATUS_CODES: CandidateOnboardingStatus[] = ['EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
+
+type ViewMode = 'grid' | 'list';
+
+/**
+ * /rh/onboarding — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
+ * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
+ * `daf-pagination`.
+ *
+ * The endpoint returns the whole pending list in one call, so search, the status
+ * filter and paging are all client-side projections of `items`.
+ *
+ * All view state lives here and both sections are stateless input/output shells,
+ * which is what makes flipping between cards and list lossless.
+ */
 @Component({
   selector: 'app-onboarding-list',
   standalone: true,
-  imports: [CardComponent, MetricCardComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent, NgTemplateOutlet, RhSearchBarComponent, ButtonComponent, TranslatePipe],
+  imports: [
+    MetricCardComponent,
+    PageComponent,
+    PageHeaderComponent,
+    PaginationComponent,
+    SearchToolbarComponent,
+    OnboardingCardsSectionComponent,
+    OnboardingTableSectionComponent,
+    TranslatePipe,
+  ],
   templateUrl: './onboarding-list.component.html',
-  styleUrl:    './onboarding-list.component.scss',
 })
 export class OnboardingListComponent implements OnInit {
-  private service = inject(OnboardingService);
-  private router  = inject(Router);
-  private route   = inject(ActivatedRoute);
+  private service   = inject(OnboardingService);
+  private router    = inject(Router);
+  private route     = inject(ActivatedRoute);
   private translate = inject(TranslateService);
 
-  items    = signal<OnboardingListItem[]>([]);
-  loading  = signal(true);
-  error    = signal<string | null>(null);
-  kpiStats = signal<OnboardingKpiStats | null>(null);
+  // ── Data ───────────────────────────────────────────────────────────────────
+  readonly items    = signal<OnboardingListItem[]>([]);
+  readonly kpiStats = signal<OnboardingKpiStats | null>(null);
+  /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
+  readonly firstLoad = signal(true);
+  /** Every refresh after that — skeletons inside the affected section only. */
+  readonly loading = signal(false);
+  readonly error   = signal<string | null>(null);
 
-  search   = signal('');
-  mobileSearchOpen = signal(false);
-  viewMode = signal<'grid' | 'list'>('grid');
-
-  protected readonly statusBadge = statusBadge;
+  // ── View state ─────────────────────────────────────────────────────────────
+  readonly viewMode     = signal<ViewMode>('grid');
+  readonly search       = signal('');
+  readonly statusFilter = signal('');
+  readonly currentPage  = signal(0);
+  readonly pageSize     = signal(PAGE_SIZE);
+  readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
   readonly filteredItems = computed(() => {
-    const term = this.search().trim().toLowerCase();
-    if (!term) return this.items();
-    return this.items().filter(r =>
-      r.candidateFullName.toLowerCase().includes(term)
-      || (r.ms365Email ?? '').toLowerCase().includes(term),
-    );
+    const term   = this.search().trim().toLowerCase();
+    const status = this.statusFilter();
+    return this.items().filter(r => {
+      const matchesTerm = !term
+        || r.candidateFullName.toLowerCase().includes(term)
+        || (r.ms365Email ?? '').toLowerCase().includes(term)
+        || (r.appliedPosition ?? '').toLowerCase().includes(term);
+      return matchesTerm && (!status || r.candidateStatus === status);
+    });
   });
 
-  currentPage = signal(0);
-  readonly totalPages = computed(() => Math.ceil(this.filteredItems().length / PAGE_SIZE));
+  readonly totalElements = computed(() => this.filteredItems().length);
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
-    const start = this.currentPage() * PAGE_SIZE;
-    return this.filteredItems().slice(start, start + PAGE_SIZE);
+    const start = this.currentPage() * this.pageSize();
+    return this.filteredItems().slice(start, start + this.pageSize());
   });
 
-  onPageChange(page: number): void {
-    this.currentPage.set(page);
-  }
+  // ── KPIs ───────────────────────────────────────────────────────────────────
+  /** `pendingCount` comes from the stats endpoint; the list length is the fallback. */
+  readonly kpiPending = computed(() => this.kpiStats()?.pendingCount ?? this.items().length);
 
-  readonly rows = computed<TableRow[]>(() =>
-    this.pagedItems().map(r => ({
-      employe:           { name: r.candidateFullName, initials: this.initials(r.candidateFullName), subtitle: r.appliedPosition ?? '' },
-      ms365Email:        r.ms365Email,
-      itStatus:          { label: this.statusBadge(r.itProvisioningStatus).label, options: this.statusBadge(r.itProvisioningStatus).options } as BadgeCell,
-      expectedStartDate: this.formatDate(r.expectedStartDate),
-      status:            { label: this.statusBadge(r.candidateStatus).label, options: this.statusBadge(r.candidateStatus).options } as BadgeCell,
-      hasDraft:          r.hasDraft,
-      maj:               r.draftSavedAt
-                            ? this.formatDate(r.draftSavedAt)
-                            : r.ms365EmailCreatedAt
-                              ? this.formatDate(r.ms365EmailCreatedAt)
-                              : '—',
-      _source:           r,
-    })),
-  );
-
-  readonly columns = computed<TableColumn[]>(() => {
+  readonly kpiAvgTime = computed(() => {
     this.translate.currentLang();
-    const t = (k: string) => this.translate.instant(k);
-    return [
-      { key: 'employe', label: t('ONBOARDING.LIST.COL_EMPLOYEE'), type: 'avatar' },
-      { key: 'ms365Email', label: t('ONBOARDING.LIST.COL_EMAIL') },
-      { key: 'itStatus', label: t('ONBOARDING.LIST.COL_IT_STATUS') },
-      { key: 'expectedStartDate', label: t('ONBOARDING.LIST.COL_START') },
-      { key: 'status', label: t('ONBOARDING.LIST.COL_STATUS') },
-      { key: 'maj', label: t('ONBOARDING.LIST.COL_UPDATED') },
-      { key: '_actions', label: t('ONBOARDING.LIST.COL_ACTIONS') },
-    ];
+    const minutes = this.kpiStats()?.avgCreationMinutes;
+    return minutes == null ? '—' : `${minutes} ${this.translate.instant('ONBOARDING.LIST.MIN_UNIT')}`;
   });
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-  }));
-
-  // ── Delta indicators ──
+  /** Deltas are translated — they used to be hardcoded English on a French page. */
   readonly pendingDelta = computed<MetricDelta | null>(() => {
+    this.translate.currentLang();
     const stats = this.kpiStats();
     if (!stats) return null;
     const incomplete = stats.incompleteProfiles ?? 0;
-    if (incomplete === 0) {
-      return { value: 'All on track', direction: 'up' };
-    }
-    return {
-      value: `${incomplete} incomplete requiring attention`,
-      direction: 'down',
-    };
+    return incomplete === 0
+      ? { value: this.translate.instant('ONBOARDING.LIST.DELTA_ALL_ON_TRACK'), direction: 'up' }
+      : { value: this.translate.instant('ONBOARDING.LIST.DELTA_INCOMPLETE_ATTENTION', { count: incomplete }), direction: 'down' };
   });
 
   readonly createdTodayDelta = computed<MetricDelta | null>(() => {
+    this.translate.currentLang();
     const stats = this.kpiStats();
     if (!stats) return null;
     const created = stats.profilesCreatedToday ?? 0;
-    return {
-      value: created > 0 ? 'Profiles created today' : 'None created yet',
-      direction: created > 0 ? 'up' : 'neutral',
-    };
+    return created > 0
+      ? { value: this.translate.instant('ONBOARDING.LIST.DELTA_CREATED_TODAY'), direction: 'up' }
+      : { value: this.translate.instant('ONBOARDING.LIST.DELTA_NONE_CREATED'),  direction: 'neutral' };
   });
 
   readonly incompleteDelta = computed<MetricDelta | null>(() => {
-    const stats = this.kpiStats();
-    if (!stats) return null;
-    const incomplete = stats.incompleteProfiles ?? 0;
+    this.translate.currentLang();
+    const incomplete = this.kpiStats()?.incompleteProfiles ?? 0;
     if (incomplete === 0) return null;
     return {
-      value: `${incomplete} awaiting completion`,
+      value: this.translate.instant('ONBOARDING.LIST.DELTA_AWAITING', { count: incomplete }),
       direction: 'down',
     };
   });
 
   readonly avgTimeDelta = computed<MetricDelta | null>(() => {
-    const stats = this.kpiStats();
-    if (!stats || stats.avgCreationMinutes == null) return null;
-    const minutes = stats.avgCreationMinutes;
-    const direction: 'up' | 'down' | 'neutral' = minutes < 30 ? 'up' : minutes < 60 ? 'neutral' : 'down';
+    this.translate.currentLang();
+    const minutes = this.kpiStats()?.avgCreationMinutes;
+    if (minutes == null) return null;
+    if (minutes < 30) return { value: this.translate.instant('ONBOARDING.LIST.DELTA_PACE_FAST'),   direction: 'up'      };
+    if (minutes < 60) return { value: this.translate.instant('ONBOARDING.LIST.DELTA_PACE_NORMAL'), direction: 'neutral' };
+    return { value: this.translate.instant('ONBOARDING.LIST.DELTA_PACE_SLOW'), direction: 'down' };
+  });
+
+  // ── Toolbar ────────────────────────────────────────────────────────────────
+  /** The status dropdown belongs *inside* the filter panel, not loose beside the search. */
+  readonly filterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    return [{
+      name: 'status',
+      label: this.translate.instant('ONBOARDING.LIST.COL_STATUS'),
+      type: 'select',
+      placeholder: this.translate.instant('ONBOARDING.LIST.FILTER_ALL'),
+      options: STATUS_CODES.map(code => ({
+        value: code,
+        label: this.translate.instant('CANDIDATES.STATUS.' + code),
+      })),
+    }];
+  });
+
+  /**
+   * `initialValues` is a seed read once on first open, and a `select` needs the
+   * panel's internal shape — a `string[]`, not a bare string (§10b).
+   */
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
-      value: minutes < 30 ? 'Fast pace' : minutes < 60 ? 'Normal pace' : 'Needs optimization',
-      direction,
+      title:        t('ONBOARDING.LIST.FILTERS.TITLE'),
+      applyLabel:   t('ONBOARDING.LIST.FILTERS.APPLY'),
+      cancelLabel:  t('ONBOARDING.LIST.FILTERS.CANCEL'),
+      resetLabel:   t('ONBOARDING.LIST.FILTERS.RESET'),
+      triggerLabel: t('ONBOARDING.LIST.FILTERS.TRIGGER'),
+      align:        'right',
+      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
     };
   });
 
-  ngOnInit(): void { this.load(); }
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'grid', icon: 'grid_view', tooltip: this.translate.instant('ONBOARDING.LIST.VIEW_GRID') },
+      { id: 'list', icon: 'view_list', tooltip: this.translate.instant('ONBOARDING.LIST.VIEW_LIST') },
+    ];
+  });
+
+  // ── Load ───────────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.load();
+  }
 
   load(): void {
-    this.loading.set(true);
+    if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
 
-    this.service.getKpiStats().pipe(catchError(() => of(null))).subscribe(stats => {
-      this.kpiStats.set(stats);
-    });
+    // The KPI feed is independent — it must never hold up the list.
+    this.service.getKpiStats().pipe(catchError(() => of(null))).subscribe(stats => this.kpiStats.set(stats));
 
     this.service.getPendingList().subscribe({
-      next:  (data) => { this.items.set(data); this.loading.set(false); },
-      error: ()     => { this.error.set(this.translate.instant('ONBOARDING.LIST.ERROR_LOAD')); this.loading.set(false); },
+      next: data => {
+        this.items.set(data);
+        this.loading.set(false);
+        this.firstLoad.set(false);
+      },
+      error: () => {
+        this.error.set(this.translate.instant('ONBOARDING.LIST.ERROR_LOAD'));
+        this.loading.set(false);
+        this.firstLoad.set(false);
+      },
     });
   }
 
-  navigate(id: number): void {
-    this.router.navigate([id], { relativeTo: this.route });
-  }
-
+  // ── Handlers ───────────────────────────────────────────────────────────────
   onSearch(value: string): void {
-    this.search.set(value);
+    if (value === this.search()) return; // daf-search-toolbar re-emits on blur
+    this.search.set(value ?? '');
     this.currentPage.set(0);
   }
 
-  formatDate(value: string | null): string {
-    if (!value) return '—';
-    return value.slice(0, 10);
+  applyFilters(result: FilterResult): void {
+    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    this.currentPage.set(0);
   }
 
-  initials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+  setView(mode: string): void {
+    this.viewMode.set(mode as ViewMode);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+  }
+
+  /** `pageSizeChange` fires alone — the page decides to go back to page 0 (§7). */
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.currentPage.set(0);
+  }
+
+  /** The wizard lives at `/rh/onboarding/:candidateId`, keyed by candidate. */
+  open(candidateId: number): void {
+    this.router.navigate([candidateId], { relativeTo: this.route });
   }
 }
