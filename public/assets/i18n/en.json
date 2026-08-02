@@ -960,7 +960,8 @@
       "CONTACT_NAME": "Contact name",
       "CONTACT_RELATION": "Relationship",
       "CONTACT_PHONE": "Emergency phone"
-    }
+    },
+    "STEPPER_ARIA": "Onboarding progress"
   },
   "PROFILES": {
     "COMMON": {
@@ -2788,7 +2789,8 @@
       "emailError": "Error while submitting the email.",
       "completeSuccess": "Provisioning marked as completed!",
       "completeError": "Error while finalizing.",
-      "saveBeforeCompleteError": "Error while saving before finalization."
+      "saveBeforeCompleteError": "Error while saving before finalization.",
+      "currentStep": "current step"
     }
   },
   "LEAVE": {

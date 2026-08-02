@@ -1,8 +1,6 @@
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
-import { SlicePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { ItProvisioningService }     from './it-provisioning.service';
@@ -12,16 +10,21 @@ import {
   UpdateProvisioningRequest,
 } from './it-provisioning.model';
 import {
-  StatusBadgeComponent, ButtonComponent, CardComponent,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  FormFieldComponent, SelectComponent, CheckboxComponent, SelectOption,
+  BreadcrumbItem, ButtonComponent, CardComponent, SelectOption,
+  PageComponent, PageHeaderBadge, PageHeaderComponent,
+  StepperComponent, StepperConfig, StepperStep,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { SpinnerComponent }     from '../../shared/spinner.component';
 import { ModalComponent }       from '../../shared/modal.component';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue } from '../../core/lists/configurable-list.model';
-import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
+import { WizardStepCardComponent } from '../../shared/wizard/wizard-step-card.component';
+import { StepIdentityComponent } from './steps/step-identity.component';
+import { StepMs365Component } from './steps/step-ms365.component';
+import { AssetFieldChange, StepHardwareComponent } from './steps/step-hardware.component';
+import { LicenceFlags, StepLicensesComponent } from './steps/step-licenses.component';
+import { StepAdComponent } from './steps/step-ad.component';
+import { StepNotesComponent } from './steps/step-notes.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const STEP_CARD_INFO = [
@@ -37,10 +40,11 @@ const STEP_CARD_INFO = [
   selector: 'app-it-provisioning-form',
   standalone: true,
   imports: [
-    SlicePipe, FormsModule, StatusBadgeComponent, ButtonComponent, CardComponent,
-    DataTableComponent, DafCellDirective, FormFieldComponent, SelectComponent, CheckboxComponent,
-    SpinnerComponent, ModalComponent, ConfirmEmailModalComponent, PdfDownloadButtonComponent,
-    TranslatePipe,
+    ButtonComponent, CardComponent, ModalComponent, ConfirmEmailModalComponent,
+    PageComponent, PageHeaderComponent, StepperComponent, TranslatePipe,
+    WizardStepCardComponent,
+    StepIdentityComponent, StepMs365Component, StepHardwareComponent,
+    StepLicensesComponent, StepAdComponent, StepNotesComponent,
   ],
   templateUrl: './it-provisioning-form.component.html',
 })
@@ -53,6 +57,12 @@ export class ItProvisioningFormComponent implements OnInit {
 
   // ── Page state ────────────────────────────────────────────────────────────
   prov            = signal<ProvisioningDetail | null>(null);
+  /**
+   * Whole-page skeleton — first load only (UI-PLAYBOOK §5). `load()` also runs
+   * after "Marquer comme terminé", and binding `daf-page [loading]` to the
+   * re-fetch would flash the header and the whole wizard away at that moment.
+   */
+  firstLoad       = signal(true);
   loading         = signal(true);
   saving          = signal(false);
   completing      = signal(false);
@@ -83,6 +93,40 @@ export class ItProvisioningFormComponent implements OnInit {
   currentStep = signal(1);
   readonly totalSteps = STEP_CARD_INFO.length;
   readonly wizardSteps = STEP_CARD_INFO;
+
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    this.translate.currentLang();
+    const p = this.prov();
+    return [
+      { label: this.translate.instant('IT_PROVISIONING.form.breadcrumb'), link: '/rh/it-provisioning' },
+      { label: p?.candidateFullName ?? `#${this.provId}` },
+    ];
+  });
+
+  readonly headerTitle = computed(() => this.prov()?.candidateFullName ?? `#${this.provId}`);
+
+  readonly headerSubtitle = computed(() => {
+    this.translate.currentLang();
+    const p = this.prov();
+    if (!p) return '';
+    return p.appliedPosition ?? this.translate.instant('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED');
+  });
+
+  /**
+   * The label comes from `IT_PROVISIONING.STATUS.*` (translated); only the variant
+   * comes from the shared `statusBadge` map, whose labels are hardcoded French.
+   * Same split the list page uses, so one status can't read two ways.
+   */
+  readonly headerBadges = computed<PageHeaderBadge[]>(() => {
+    this.translate.currentLang();
+    const p = this.prov();
+    if (!p) return [];
+    return [{
+      label:   this.translate.instant('IT_PROVISIONING.STATUS.' + p.status),
+      variant: statusBadge(p.status).options.variant ?? 'neutral',
+      size:    'sm',
+    }];
+  });
 
   readonly cardTitle = computed(() => {
     this.translate.currentLang();
@@ -119,13 +163,43 @@ export class ItProvisioningFormComponent implements OnInit {
     return 'bg-surface-container border-outline-variant text-outline';
   }
 
-  stepLabelClasses(i: number): string {
-    return this.currentStep() === i + 1 ? 'text-teal' : 'text-on-surface';
-  }
+  // ── daf-stepper (4.14.0) — the desktop rail ────────────────────────────────
+  /**
+   * `completed` is set on **every** step, not just the done ones: the lib turns
+   * positional inference off as soon as any step declares it, and this wizard
+   * needs that — `stepDone()` is computed from field completeness, so step 4 can
+   * be green while the user is on step 2 (§10g).
+   *
+   * The subtitle only appears on the active step, which is how the hand-rolled
+   * rail read before.
+   */
+  readonly stepperSteps = computed<StepperStep[]>(() => {
+    this.translate.currentLang();
+    const done = this.stepDone();
+    const current = this.currentStep();
+    return STEP_CARD_INFO.map((step, i) => ({
+      title:     this.translate.instant('IT_PROVISIONING.form.steps.' + step.key + '.title'),
+      icon:      step.icon,
+      completed: done[i],
+      subtitle:  current === i + 1 ? this.translate.instant('IT_PROVISIONING.form.underReview') : undefined,
+    }));
+  });
 
-  stepEyebrowClasses(i: number): string {
-    return this.currentStep() === i + 1 ? 'text-teal' : 'text-outline';
-  }
+  /**
+   * `header-only`: the lib draws the rail, this page keeps its own action bar
+   * (Enregistrer le brouillon / Marquer comme terminé), which the lib can't know
+   * about. `clickableSteps` restores the jump-to-step the old rail had.
+   */
+  readonly stepperConfig = computed<StepperConfig>(() => {
+    this.translate.currentLang();
+    return {
+      chrome:           'header-only',
+      clickableSteps:   true,
+      stepperLabel:     this.translate.instant('IT_PROVISIONING.form.progression'),
+      completedLabel:   this.translate.instant('IT_PROVISIONING.form.completed'),
+      currentStepLabel: this.translate.instant('IT_PROVISIONING.form.currentStep'),
+    };
+  });
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly canComplete = computed(() => {
@@ -142,42 +216,51 @@ export class ItProvisioningFormComponent implements OnInit {
 
   readonly adOptions = signal<ListValue[]>([]);
 
-  readonly hwStatuses = computed<{ value: string; label: string }[]>(() => {
-    this.translate.currentLang();
-    return ['NEUF', 'BON_ETAT', 'USAGE', 'EN_REPARATION', 'DEFECTUEUX'].map(value => ({
-      value,
-      label: this.translate.instant('IT_PROVISIONING.form.hwStatus.' + value),
-    }));
-  });
-
-  readonly hwStatusSelectOptions = computed<SelectOption[]>(() =>
-    this.hwStatuses().map(({ value, label }) => ({ value, label })),
+  /**
+   * Mapped in a `computed`, not inline in the template: `[options]="adOptions()
+   * .map(...)"` built a brand-new array on every change-detection cycle, which
+   * `daf-select` sees as a new input every tick.
+   */
+  readonly adSelectOptions = computed<SelectOption[]>(() =>
+    this.adOptions().map(opt => ({ value: opt.valueCode, label: opt.labelFr })),
   );
-
-  // ── Hardware table (daf-data-table) ─────────────────────────────────────────
-  readonly assetColumns = computed<TableColumn[]>(() => {
-    this.translate.currentLang();
-    return [
-      { key: 'provided',         label: this.translate.instant('IT_PROVISIONING.form.assetCol.provided'),  align: 'center', width: '60px' },
-      { key: 'assetTypeLabelFr', label: this.translate.instant('IT_PROVISIONING.form.assetCol.material'), width: '160px' },
-      { key: 'serialNumber',     label: this.translate.instant('IT_PROVISIONING.form.assetCol.serial') },
-      { key: 'brandModel',       label: this.translate.instant('IT_PROVISIONING.form.assetCol.brandModel') },
-      { key: 'assetTag',         label: this.translate.instant('IT_PROVISIONING.form.assetCol.assetTag') },
-      { key: 'status',           label: this.translate.instant('IT_PROVISIONING.form.assetCol.status'), width: '160px' },
-    ];
-  });
-
-  readonly assetRows = computed<TableRow[]>(() =>
-    this.editableAssets().map(a => ({ ...a })),
-  );
-
-  readonly assetTableConfig = computed<TableConfig>(() => {
-    this.translate.currentLang();
-    return { emptyMessage: this.translate.instant('IT_PROVISIONING.form.assetEmpty') };
-  });
 
   assetIndex(assetTypeCode: string): number {
     return this.editableAssets().findIndex(a => a.assetTypeCode === assetTypeCode);
+  }
+
+  // ── Step bridges ──────────────────────────────────────────────────────────
+  /**
+   * The step components address a row by `assetTypeCode`, never by index: the page
+   * resolves the index here, so a re-ordered catalog can't mis-address a write.
+   */
+  onAssetProvided({ assetTypeCode, provided }: { assetTypeCode: string; provided: boolean }): void {
+    const i = this.assetIndex(assetTypeCode);
+    if (i >= 0) this.toggleAssetProvided(i, provided);
+  }
+
+  onAssetField({ assetTypeCode, field, value }: AssetFieldChange): void {
+    const i = this.assetIndex(assetTypeCode);
+    if (i >= 0) this.setAssetField(i, field, value);
+  }
+
+  /** The five licence flags as one object, so the step takes a single input. */
+  readonly licenceFlags = computed<LicenceFlags>(() => ({
+    office365: this.licenseOffice365(),
+    autocad:   this.licenseAutocad(),
+    revit:     this.licenseRevit(),
+    autodesk:  this.licenseAutodesk(),
+    kaspersky: this.licenseKaspersky(),
+  }));
+
+  onLicenceChange({ key, value }: { key: keyof LicenceFlags; value: boolean }): void {
+    switch (key) {
+      case 'office365': this.licenseOffice365.set(value); break;
+      case 'autocad':   this.licenseAutocad.set(value);   break;
+      case 'revit':     this.licenseRevit.set(value);     break;
+      case 'autodesk':  this.licenseAutodesk.set(value);  break;
+      case 'kaspersky': this.licenseKaspersky.set(value); break;
+    }
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -202,10 +285,12 @@ export class ItProvisioningFormComponent implements OnInit {
         this.prov.set(p);
         this.initFromProv(p);
         this.loading.set(false);
+        this.firstLoad.set(false);
       },
       error: () => {
         this.error.set(this.translate.instant('IT_PROVISIONING.form.loadError'));
         this.loading.set(false);
+        this.firstLoad.set(false);
       },
     });
   }

@@ -85,27 +85,19 @@
             </div>
           </daf-card>
 
-          <!-- Stepper -->
+          <!-- Stepper — daf-stepper 4.14.0 with `chrome: 'header-only'`, so the lib
+               draws the rail and this page keeps its own Précédent / Suivant /
+               Soumettre bar below the step content. `currentStep` is 0-BASED here
+               while the wizard counts from 1, hence the −1 / +1.
+               No `completed` flag: progress on this wizard IS positional (a step is
+               done once you're past it), which is the lib's default inference. -->
           <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-            <div class="stepper-track flex items-center overflow-x-auto px-3 sm:px-5 py-3 sm:py-3.5" style="scrollbar-width: none">
-              @for (step of STEPS(); track step.number; let last = $last) {
-                <div class="step-item"
-                  [class.step-done]="currentStep() > step.number"
-                  [class.step-active]="currentStep() === step.number"
-                  (click)="goToStep(step.number)">
-                  <div class="step-bubble">
-                    @if (currentStep() > step.number) {
-                      <span class="material-symbols-outlined text-[14px] font-bold">check</span>
-                    } @else {
-                      {{ step.number }}
-                    }
-                  </div>
-                  <span class="step-label">{{ step.label }}</span>
-                </div>
-                @if (!last) {
-                  <div class="step-connector" [class.step-connector-done]="currentStep() > step.number"></div>
-                }
-              }
+            <div class="px-3 sm:px-5 py-3 sm:py-3.5">
+              <daf-stepper
+                [steps]="stepperSteps()"
+                [currentStep]="currentStep() - 1"
+                [config]="stepperConfig()"
+                (stepClick)="goToStep($event + 1)" />
             </div>
           </daf-card>
 

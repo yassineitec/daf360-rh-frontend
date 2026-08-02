@@ -3,7 +3,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Observable, forkJoin, of, catchError } from 'rxjs';
 
-import { CardComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
+import {
+  CardComponent, ButtonComponent, StepperComponent, StepperConfig, StepperStep,
+} from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OnboardingService } from './onboarding.service';
 import {
@@ -29,6 +31,7 @@ import { NotificationService } from '../../core/notification.service';
   imports: [
     CardComponent,
     ButtonComponent,
+    StepperComponent,
     FormsModule,
     StepIdentityComponent,
     StepContractComponent,
@@ -77,6 +80,26 @@ export class OnboardingFormComponent implements OnInit {
     }));
   });
   readonly totalSteps = 7;
+
+  // ── daf-stepper (4.14.0) ───────────────────────────────────────────────────
+  /**
+   * No `completed` flag on purpose: progress here IS positional — a step counts as
+   * done once you are past it — which is the lib's default inference. Setting the
+   * flag on any step would switch that off for the whole rail (§10g).
+   */
+  readonly stepperSteps = computed<StepperStep[]>(() =>
+    this.STEPS().map(s => ({ title: s.label })),
+  );
+
+  /** `header-only`: the page keeps its own Précédent / Suivant / Soumettre bar. */
+  readonly stepperConfig = computed<StepperConfig>(() => {
+    this.translate.currentLang();
+    return {
+      chrome:         'header-only',
+      clickableSteps: true,
+      stepperLabel:   this.translate.instant('ONBOARDING.STEPPER_ARIA'),
+    };
+  });
 
   // Computed
   readonly ms365Email  = computed(() => this.formData()?.ms365Email ?? '');

@@ -26,6 +26,7 @@ import {
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { WizardStepCardComponent } from '../../shared/wizard/wizard-step-card.component';
 
 @Component({
   selector: 'app-candidate-form',
@@ -34,6 +35,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     ReactiveFormsModule,
     ButtonComponent,
     CardComponent,
+    WizardStepCardComponent,
     ChipGroupComponent,
     MultiDatePickerComponent,
     FileUploadComponent,

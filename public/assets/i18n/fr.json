@@ -960,7 +960,8 @@
       "CONTACT_NAME": "Nom du contact",
       "CONTACT_RELATION": "Lien de parenté",
       "CONTACT_PHONE": "Téléphone d'urgence"
-    }
+    },
+    "STEPPER_ARIA": "Progression du dossier"
   },
   "PROFILES": {
     "COMMON": {
@@ -2788,7 +2789,8 @@
       "emailError": "Erreur lors de la soumission de l'email.",
       "completeSuccess": "Provisioning marqué comme terminé !",
       "completeError": "Erreur lors de la finalisation.",
-      "saveBeforeCompleteError": "Erreur lors de l'enregistrement avant finalisation."
+      "saveBeforeCompleteError": "Erreur lors de l'enregistrement avant finalisation.",
+      "currentStep": "étape courante"
     }
   },
   "LEAVE": {

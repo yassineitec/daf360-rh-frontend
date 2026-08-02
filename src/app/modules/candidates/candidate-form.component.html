@@ -28,31 +28,19 @@
     class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6"
   >
     <!-- ══════════════════ Form area ══════════════════ -->
-    <daf-card
-      class="block flex-1 min-w-0"
-      [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }"
-    >
-      <!-- Card head: icon + step title + sub -->
-      <div
-        class="flex items-center gap-3.5 px-5 sm:px-8 py-5 border-b border-outline-variant"
-        style="background: rgba(121, 215, 190, 0.06)"
-      >
-        <div
-          class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-          style="background: rgba(0, 193, 173, 0.12); color: #00c1ad"
-        >
-          <span class="material-symbols-outlined">{{ cardIcon() }}</span>
-        </div>
-        <div class="min-w-0">
-          <h2 class="text-[10px] font-semibold uppercase tracking-wider text-outline truncate">
-            {{ cardTitle() }}
-          </h2>
-          <p class="text-[11px] text-on-surface-variant leading-snug">{{ cardSub() }}</p>
-        </div>
-      </div>
-
-      <!-- Step body -->
-      <div class="p-5 sm:p-8">
+    <!-- Shared wizard shell (shared/wizard) — the same component the IT
+         provisioning wizard uses. dense: this card shares its row with a sidebar.
+         accent="tertiary" replaces the three raw rgba() values the head carried
+         (rgba(0,193,173,.12) + #00c1ad on the tile, rgba(121,215,190,.06) behind
+         it), none of which any token backed (§4). -->
+    <rh-wizard-step-card
+      class="flex-1 min-w-0"
+      variant="outlined"
+      accent="tertiary"
+      [dense]="true"
+      [icon]="cardIcon()"
+      [title]="cardTitle()"
+      [subtitle]="cardSub()">
         <!-- Step 1 — Identité -->
         @if (currentStep() === 1) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -160,7 +148,7 @@
                 (valueChange)="setTextValue('position.appliedPosition', $event)"
               />
             </div>
-            <div class="mb-8">s
+            <div class="mb-8">
               <daf-chip-group
                 [options]="employmentTypeChipOptions()"
                 [selected]="getSelectNum('position.employmentTypeId')"
@@ -300,37 +288,24 @@
             (valueChange)="setTextValue('notes', $event)"
           />
         }
+      <!-- Projected footer. The host div must be a STATIC root node: an element
+           inside an @if lives in an embedded view and ng-content never matches it (§10f). -->
+      <div stepFooter>
+        @if (!canGoNext()) {
+          <div class="mx-5 sm:mx-8 mb-5 flex items-start gap-2 rounded-xl border border-teal/20 bg-teal/5 px-3.5 py-2.5">
+            <span class="material-symbols-outlined text-[15px] mt-0.5 text-teal">info</span>
+            <span class="text-[12.5px] leading-snug text-teal">{{ stepValidationError() }}</span>
+          </div>
+        }
+        @if (error()) {
+          <div class="mx-5 sm:mx-8 mb-5 flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3">
+            <span class="material-symbols-outlined text-[18px] text-danger mt-0.5"
+                  style="font-variation-settings: 'FILL' 1">error</span>
+            <span class="text-sm text-danger">{{ error() }}</span>
+          </div>
+        }
       </div>
-      <!-- /step body -->
-
-      <!-- Validation hint -->
-      @if (!canGoNext()) {
-        <div
-          class="mx-5 sm:mx-8 mb-5 flex items-start gap-2 rounded-xl px-3.5 py-2.5"
-          style="background: rgba(26, 107, 124, 0.06); border: 1px solid rgba(26, 107, 124, 0.18)"
-        >
-          <span class="material-symbols-outlined text-[15px] mt-0.5" style="color: #1a6b7c"
-            >info</span
-          >
-          <span class="text-[12.5px] leading-snug" style="color: #1a6b7c">{{
-            stepValidationError()
-          }}</span>
-        </div>
-      }
-
-      <!-- Error banner -->
-      @if (error()) {
-        <div
-          class="mx-5 sm:mx-8 mb-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/5 px-4 py-3"
-        >
-          <span
-            class="material-symbols-outlined text-[18px] text-error mt-0.5"
-            style="font-variation-settings: 'FILL' 1"
-            >error</span
-          >
-          <span class="text-sm text-error">{{ error() }}</span>
-        </div>
-      }</daf-card
+    </rh-wizard-step-card
     ><!-- /form area -->
 
     <!-- ══════════════════ Sidebar (desktop) ══════════════════ -->

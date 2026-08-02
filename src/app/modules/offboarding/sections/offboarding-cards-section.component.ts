@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslateService } from '@ngx-translate/core';
 import { EntityCardComponent, EntityCardOptions, SkeletonComponent } from '@khalilrebhiitec/daf360';
 
 import { OffboardingWorkflowInstance } from '../models/offboarding.model';
@@ -27,7 +27,7 @@ interface OffboardingCard {
   selector: 'rh-offboarding-cards-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EntityCardComponent, SkeletonComponent, TranslatePipe],
+  imports: [EntityCardComponent, SkeletonComponent],
   host: { class: 'block' },
   template: `
     @if (loading()) {

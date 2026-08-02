@@ -1,42 +1,47 @@
-@if (loading()) {
-  <div class="flex justify-center p-20"><app-spinner /></div>
-}
+<!-- /rh/it-provisioning/:id — canonical page scaffold (UI-PLAYBOOK §1).
+     `[loading]` is bound to `firstLoad`, NOT `loading`: `load()` runs again after
+     "Marquer comme terminé", and the re-fetch would otherwise blank the header and
+     the whole wizard for a frame (§5). `kpis="0"` (no KPI row), `breadcrumbs` so
+     the first-load skeleton draws the crumb row the header shows.
 
-@if (!loading() && prov(); as p) {
-  <div class="pb-24">
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+     The progression rail is a LOCAL vertical stepper on purpose — `daf-stepper` is
+     horizontal-only and owns its own content card + nav footer. See §10g. -->
+<daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
+
+  @if (prov(); as p) {
+    <daf-page-header
+      [title]="p.candidateFullName"
+      [subtitle]="p.appliedPosition ?? ('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED' | translate)"
+      [badges]="headerBadges()"
+      [breadcrumbs]="breadcrumbs()"
+      [breadcrumbLabel]="'IT_PROVISIONING.form.breadcrumb' | translate">
+      <ng-container pageActions>
+        <daf-button
+          [options]="{ variant: 'ghost', iconStart: 'arrow_back', label: ('IT_PROVISIONING.form.breadcrumb' | translate) }"
+          (onClick)="goBack()" />
+      </ng-container>
+    </daf-page-header>
+  }
+
+  @if (prov(); as p) {
+    <div>
+      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6 items-start">
 
       <!-- ══════════════════════════════════════════════════════════ -->
       <!-- LEFT — form area                                           -->
       <!-- ══════════════════════════════════════════════════════════ -->
       <div class="flex flex-col gap-4 min-w-0">
 
-        <!-- Page header -->
-        <div class="flex flex-col gap-1 mb-1">
-          <nav class="flex items-center gap-1 text-[13px] text-on-surface-variant">
-            <button type="button" class="font-medium hover:underline transition-colors" (click)="goBack()">
-              {{ 'IT_PROVISIONING.form.breadcrumb' | translate }}
-            </button>
-            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-            <span class="font-medium text-teal">{{ p.candidateFullName }}</span>
-          </nav>
-          <div class="flex items-center justify-between gap-2 flex-wrap">
-            <h1 class="text-[22px] sm:text-[28px] font-bold text-on-surface leading-tight break-words">{{ p.candidateFullName }}</h1>
-            <daf-badge [label]="statusBadge(p.status).label" [options]="statusBadge(p.status).options" />
-          </div>
-          <p class="text-[13px] text-outline">{{ p.appliedPosition ?? ('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED' | translate) }}</p>
-        </div>
-
         <!-- Mobile/tablet: compact horizontal stepper (replaces the vertical Progression panel) -->
-        <div class="lg:hidden">
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+        <div class="lg:hidden sticky top-0 z-20 -mx-1 px-1 py-2 bg-background/95 backdrop-blur">
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
             @for (step of wizardSteps; track $index; let i = $index) {
               <button type="button"
                 class="shrink-0"
                 (click)="goToStep(i + 1)">
                 <span [class]="'w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold border-2 transition-colors ' + stepCircleClasses(i)">
                   @if (stepDone()[i] && currentStep() !== i + 1) {
-                    <span class="material-symbols-outlined text-[16px]">check</span>
+                    <span class="material-symbols-outlined text-body-lg">check</span>
                   } @else {
                     {{ i + 1 }}
                   }
@@ -61,271 +66,142 @@
           </div>
         }
 
-        <!-- Form card -->
-        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block overflow-hidden">
+        <!-- Each step is its OWN component; the shared shell owns the icon head,
+             the padding and the hover treatment, so the six cannot drift apart. -->
+        <rh-wizard-step-card
+          [icon]="cardIcon()"
+          [title]="cardTitle()"
+          [subtitle]="cardSub()">
 
-          <!-- Card head -->
-          <div class="flex items-center gap-3 sm:gap-4 px-4 py-5 sm:px-8 sm:py-6 border-b border-outline-variant">
-            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-[24px] sm:text-[32px]">{{ cardIcon() }}</span>
-            </div>
-            <div class="min-w-0">
-              <h2 class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] leading-snug truncate">{{ cardTitle() }}</h2>
-              <p class="text-[12px] sm:text-[13px] text-outline truncate">{{ cardSub() }}</p>
-            </div>
-          </div>
-
-          <!-- Step body -->
-          <div class="px-4 py-5 sm:px-8 sm:py-7">
-
-            <!-- ── STEP 1 : Identité ────────────────────────────────── -->
-            @if (currentStep() === 1) {
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.fullName' | translate }}</span>
-                  <span class="text-[14px] text-on-surface">{{ p.candidateFullName }}</span>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.position' | translate }}</span>
-                  <span class="text-[14px] text-on-surface">{{ p.appliedPosition ?? '—' }}</span>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.expectedStart' | translate }}</span>
-                  <span class="text-[14px] text-on-surface">{{ p.expectedStartDate ?? '—' }}</span>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <span class="text-[11px] font-bold text-outline uppercase tracking-wide">{{ 'IT_PROVISIONING.form.status' | translate }}</span>
-                  <daf-badge [label]="statusBadge(p.status).label" [options]="statusBadge(p.status).options" />
-                </div>
-              </div>
+          @switch (currentStep()) {
+            @case (1) {
+              <rh-step-identity [prov]="p" />
             }
-
-            <!-- ── STEP 2 : Microsoft 365 ───────────────────────────── -->
-            @if (currentStep() === 2) {
-              @if (p.ms365Email) {
-                <div class="flex items-center gap-3.5 bg-success/10 border border-success/30 rounded-xl px-4.5 py-3.5">
-                  <span class="material-symbols-outlined text-success">check_circle</span>
-                  <div>
-                    <p class="text-[14px] font-bold text-on-surface">{{ p.ms365Email }}</p>
-                    <p class="text-[12px] text-outline">{{ 'IT_PROVISIONING.form.submittedOn' | translate }} {{ p.ms365EmailCreatedAt ? (p.ms365EmailCreatedAt | slice:0:10) : '—' }}</p>
-                  </div>
-                </div>
-              } @else {
-                <div class="flex gap-3 items-end">
-                  <div class="flex flex-col gap-1.5 flex-1">
-                    <daf-form-field
-                      [value]="emailInput()"
-                      [options]="{
-                        label: ('IT_PROVISIONING.form.emailFieldLabel' | translate),
-                        type: 'email',
-                        placeholder: ('IT_PROVISIONING.form.emailPlaceholder' | translate),
-                        required: true,
-                        fullWidth: true,
-                        disabled: submittingEmail(),
-                        error: (!emailIsValid() && emailInput().length > 0) ? ('IT_PROVISIONING.form.emailInvalid' | translate) : null
-                      }"
-                      (valueChange)="emailInput.set(toTextValue($event))" />
-                  </div>
-                  <daf-button
-                    [options]="{ variant: 'teal', label: (submittingEmail() ? 'IT_PROVISIONING.form.submitting' : 'IT_PROVISIONING.form.submitEmail') | translate, size: 'md', disabled: !emailIsValid() || submittingEmail(), loading: submittingEmail() }"
-                    (onClick)="onOpenEmailModal()" />
-                </div>
-                @if (!emailIsValid() && emailInput().length > 0) {
-                  <p class="text-[11px] text-danger mt-1">{{ 'IT_PROVISIONING.form.emailInvalid' | translate }}</p>
-                }
-              }
+            @case (2) {
+              <rh-step-ms365
+                [prov]="p"
+                [email]="emailInput()"
+                [valid]="emailIsValid()"
+                [submitting]="submittingEmail()"
+                (emailChange)="emailInput.set($event)"
+                (submit)="onOpenEmailModal()" />
             }
-
-            <!-- ── STEP 3 : Matériel ────────────────────────────────── -->
-            @if (currentStep() === 3) {
-              <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-              <daf-data-table [columns]="assetColumns()" [rows]="assetRows()" [config]="assetTableConfig()">
-
-                <ng-template dafCell="provided" let-row>
-                  <daf-checkbox
-                    [checked]="row['provided']"
-                    (checkedChange)="toggleAssetProvided(assetIndex(row['assetTypeCode']), $event)" />
-                </ng-template>
-
-                <ng-template dafCell="serialNumber" let-row>
-                  <daf-form-field
-                    [value]="row['serialNumber'] ?? null"
-                    [options]="{ placeholder: 'SN-…', required: true, fullWidth: true, disabled: !row['provided'] }"
-                    (valueChange)="setAssetField(assetIndex(row['assetTypeCode']), 'serialNumber', $event)" />
-                </ng-template>
-
-                <ng-template dafCell="brandModel" let-row>
-                  <daf-form-field
-                    [value]="row['brandModel'] ?? null"
-                    [options]="{ placeholder: ('IT_PROVISIONING.form.assetCol.brandModel' | translate), required: true, fullWidth: true, disabled: !row['provided'] }"
-                    (valueChange)="setAssetField(assetIndex(row['assetTypeCode']), 'brandModel', $event)" />
-                </ng-template>
-
-                <ng-template dafCell="assetTag" let-row>
-                  <daf-form-field
-                    [value]="row['assetTag'] ?? null"
-                    [options]="{ placeholder: 'AT-…', required: true, fullWidth: true, disabled: !row['provided'] }"
-                    (valueChange)="setAssetField(assetIndex(row['assetTypeCode']), 'assetTag', $event)" />
-                </ng-template>
-
-                <ng-template dafCell="status" let-row>
-                  <daf-select
-                    [selected]="row['status'] ? [row['status']] : []"
-                    [options]="hwStatusSelectOptions()"
-                    [config]="{ placeholder: '—', required: true, fullWidth: true, disabled: !row['provided'] }"
-                    (selectedChange)="setAssetField(assetIndex(row['assetTypeCode']), 'status', $event[0] || '')" />
-                </ng-template>
-
-              </daf-data-table>
-              </div>
-
-              <div class="flex flex-col gap-1.5 mt-3.5">
-                <daf-form-field
-                  [value]="hardwareNotes()"
-                  [options]="{ label: ('IT_PROVISIONING.form.hardwareNotes' | translate), type: 'textarea', rows: 3, placeholder: ('IT_PROVISIONING.form.hardwareNotesPlaceholder' | translate), fullWidth: true }"
-                  (valueChange)="hardwareNotes.set(toTextValue($event))" />
-              </div>
+            @case (3) {
+              <rh-step-hardware
+                [assets]="editableAssets()"
+                [notes]="hardwareNotes()"
+                (providedChange)="onAssetProvided($event)"
+                (fieldChange)="onAssetField($event)"
+                (notesChange)="hardwareNotes.set($event)" />
             }
-
-            <!-- ── STEP 4 : Licences ────────────────────────────────── -->
-            @if (currentStep() === 4) {
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <daf-checkbox [checked]="licenseOffice365()" (checkedChange)="licenseOffice365.set($event)" [options]="{ label: 'Office 365' }" />
-                <daf-checkbox [checked]="licenseAutocad()" (checkedChange)="licenseAutocad.set($event)" [options]="{ label: 'AutoCAD' }" />
-                <daf-checkbox [checked]="licenseRevit()" (checkedChange)="licenseRevit.set($event)" [options]="{ label: 'Revit' }" />
-                <daf-checkbox [checked]="licenseAutodesk()" (checkedChange)="licenseAutodesk.set($event)" [options]="{ label: 'Autodesk' }" />
-                <daf-checkbox [checked]="licenseKaspersky()" (checkedChange)="licenseKaspersky.set($event)" [options]="{ label: 'Kaspersky' }" />
-              </div>
-              <div class="flex flex-col gap-1.5 mt-3.5">
-                <daf-form-field
-                  [value]="licenseOther()"
-                  [options]="{ label: ('IT_PROVISIONING.form.otherLicenses' | translate), placeholder: ('IT_PROVISIONING.form.otherLicensesPlaceholder' | translate), required: true, fullWidth: true }"
-                  (valueChange)="licenseOther.set(toTextValue($event))" />
-              </div>
+            @case (4) {
+              <rh-step-licenses
+                [licences]="licenceFlags()"
+                [other]="licenseOther()"
+                (licenceChange)="onLicenceChange($event)"
+                (otherChange)="licenseOther.set($event)" />
             }
-
-            <!-- ── STEP 5 : Active Directory ─────────────────────────── -->
-            @if (currentStep() === 5) {
-              <daf-checkbox [checked]="adAccountCreated()" (checkedChange)="adAccountCreated.set($event)" [options]="{ label: ('IT_PROVISIONING.form.adAccountCreated' | translate) }" />
-              <div class="flex flex-col gap-1.5 mt-3.5">
-                <daf-select
-                  [selected]="adProfileType() ? [adProfileType()] : []"
-                  [options]="adOptions().map(opt => ({ value: opt.valueCode, label: opt.labelFr }))"
-                  [config]="{ label: ('IT_PROVISIONING.form.adProfileType' | translate), required: true, fullWidth: true }"
-                  (selectedChange)="adProfileType.set($event[0] || '')" />
-              </div>
+            @case (5) {
+              <rh-step-ad
+                [accountCreated]="adAccountCreated()"
+                [profileType]="adProfileType()"
+                [profileTypeOptions]="adSelectOptions()"
+                (accountCreatedChange)="adAccountCreated.set($event)"
+                (profileTypeChange)="adProfileType.set($event)" />
             }
-
-            <!-- ── STEP 6 : Notes & finalisation ─────────────────────── -->
-            @if (currentStep() === 6) {
-              <div class="flex flex-col gap-1.5">
-                <daf-form-field
-                  [value]="notes()"
-                  [options]="{ label: ('IT_PROVISIONING.form.generalNotes' | translate), type: 'textarea', rows: 4, placeholder: ('IT_PROVISIONING.form.generalNotesPlaceholder' | translate), fullWidth: true }"
-                  (valueChange)="notes.set(toTextValue($event))" />
-              </div>
-
-              @if (isCompleted()) {
-                <div class="flex items-center justify-between gap-4 flex-wrap bg-tertiary/[0.06] border border-tertiary/25 rounded-xl px-5 py-4 mt-5">
-                  <div class="flex items-start gap-3 flex-1">
-                    <span class="material-symbols-outlined text-teal">description</span>
-                    <div>
-                      <p class="text-[13px] font-bold text-on-surface">{{ 'IT_PROVISIONING.form.dischargeTitle' | translate }}</p>
-                      <p class="text-[12px] text-outline">{{ 'IT_PROVISIONING.form.dischargeSub' | translate }}</p>
-                    </div>
-                  </div>
-                  <app-pdf-download-button
-                    [label]="'IT_PROVISIONING.form.generateDischarge' | translate"
-                    endpoint="/api/hr/documents/decharge-responsabilite"
-                    [body]="{ candidateId: prov()!.candidateId, itProvisioningId: prov()!.id, context: 'IT_COMPLETE' }"
-                    [filename]="'decharge-responsabilite.pdf'"
-                    variant="outline" />
-                </div>
-              }
+            @case (6) {
+              <rh-step-notes
+                [notes]="notes()"
+                [completed]="isCompleted()"
+                [candidateId]="p.candidateId"
+                [provisioningId]="p.id"
+                (notesChange)="notes.set($event)" />
             }
-
-          </div><!-- /step body -->
-
-          <!-- Bottom action bar -->
-          <div class="flex items-center justify-between gap-4 flex-wrap px-4 py-4 sm:px-8 sm:py-5 border-t border-outline-variant bg-surface-container-lowest">
-            <daf-button
-              [options]="{ variant: 'ghost', label: ('IT_PROVISIONING.form.previous' | translate), iconStart: 'arrow_back', disabled: currentStep() === 1 }"
-              (onClick)="goPrev()" />
-
-            <div class="flex items-center gap-3">
-              <daf-button
-                [options]="{ variant: 'secondary', label: (saving() ? 'IT_PROVISIONING.form.saving' : (isCompleted() ? 'IT_PROVISIONING.form.save' : 'IT_PROVISIONING.form.saveDraft')) | translate, iconStart: 'save', disabled: saving(), loading: saving() }"
-                (onClick)="onSave()" />
-              @if (currentStep() < totalSteps) {
-                <daf-button
-                  [options]="{ variant: 'teal', pill: true, label: ('IT_PROVISIONING.form.next' | translate), iconEnd: 'arrow_forward' }"
-                  (onClick)="goNext()" />
-              } @else {
-                <daf-button
-                  [options]="{
-                    variant: 'teal',
-                    pill: true,
-                    label: (isCompleted() ? 'IT_PROVISIONING.form.provDone' : (completing() ? 'IT_PROVISIONING.form.finalizing' : 'IT_PROVISIONING.form.markComplete')) | translate,
-                    iconStart: isCompleted() ? 'check_circle' : undefined,
-                    iconEnd: isCompleted() ? undefined : 'flag',
-                    disabled: !canComplete() || completing() || isCompleted(),
-                    loading: completing()
-                  }"
-                  (onClick)="onOpenCompleteModal()" />
-              }
-            </div>
-          </div>
-          @if (currentStep() === totalSteps && !canComplete() && !isCompleted()) {
-            <p class="text-[11px] text-outline text-center pb-4">{{ 'IT_PROVISIONING.form.completeHint' | translate }}</p>
           }
 
-        </daf-card><!-- /form card -->
+          <!-- The wizard action bar, projected so every step shows the same one.
+               The host div must be a STATIC root node of the projected content —
+               an element inside an @if never matches ng-content select (§10f). -->
+          <div stepFooter>
+            <div class="flex flex-wrap items-center justify-between gap-4 border-t border-outline-variant
+                        bg-surface-container-lowest px-4 py-4 sm:px-8 sm:py-5">
+              <daf-button
+                [options]="{ variant: 'ghost', label: ('IT_PROVISIONING.form.previous' | translate), iconStart: 'arrow_back', disabled: currentStep() === 1 }"
+                (onClick)="goPrev()" />
+
+              <div class="flex items-center gap-3">
+                <daf-button
+                  [options]="{ variant: 'secondary', label: (saving() ? 'IT_PROVISIONING.form.saving' : (isCompleted() ? 'IT_PROVISIONING.form.save' : 'IT_PROVISIONING.form.saveDraft')) | translate, iconStart: 'save', disabled: saving(), loading: saving() }"
+                  (onClick)="onSave()" />
+                @if (currentStep() < totalSteps) {
+                  <daf-button
+                    [options]="{ variant: 'teal', pill: true, label: ('IT_PROVISIONING.form.next' | translate), iconEnd: 'arrow_forward' }"
+                    (onClick)="goNext()" />
+                } @else {
+                  <daf-button
+                    [options]="{
+                      variant: 'teal',
+                      pill: true,
+                      label: (isCompleted() ? 'IT_PROVISIONING.form.provDone' : (completing() ? 'IT_PROVISIONING.form.finalizing' : 'IT_PROVISIONING.form.markComplete')) | translate,
+                      iconStart: isCompleted() ? 'check_circle' : undefined,
+                      iconEnd: isCompleted() ? undefined : 'flag',
+                      disabled: !canComplete() || completing() || isCompleted(),
+                      loading: completing()
+                    }"
+                    (onClick)="onOpenCompleteModal()" />
+                }
+              </div>
+            </div>
+            @if (currentStep() === totalSteps && !canComplete() && !isCompleted()) {
+              <p class="pb-4 text-center text-[11px] text-outline">{{ 'IT_PROVISIONING.form.completeHint' | translate }}</p>
+            }
+          </div>
+        </rh-wizard-step-card>
       </div><!-- /form-area -->
 
       <!-- ══════════════════════════════════════════════════════════ -->
       <!-- RIGHT — sidebar                                            -->
       <!-- ══════════════════════════════════════════════════════════ -->
-      <aside class="hidden lg:flex lg:flex-col gap-4 lg:sticky lg:top-6">
-
-        <!-- Progression -->
-        <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-          <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-outline">{{ 'IT_PROVISIONING.form.progression' | translate }}</p>
-          </div>
-          <div class="p-5">
-            <div class="relative flex flex-col">
-              <div class="absolute left-5 top-10 bottom-10 w-0.5 bg-outline-variant rounded-full"></div>
-              @for (step of wizardSteps; track $index; let i = $index) {
-                <button type="button"
-                  class="relative z-10 flex items-start gap-3.5 py-3 text-left w-full"
-                  (click)="goToStep(i + 1)">
-                  <span [class]="'w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ' + stepCircleClasses(i)">
-                    <span class="material-symbols-outlined text-[20px]">{{ step.icon }}</span>
-                  </span>
-                  <div class="pt-1 flex-1 min-w-0">
-                    <div class="flex items-center justify-between gap-2">
-                      <p [class]="'text-[10px] font-bold uppercase tracking-wide ' + stepEyebrowClasses(i)">{{ 'IT_PROVISIONING.form.step' | translate:{ n: i + 1 } }}</p>
-                      @if (stepDone()[i] && currentStep() !== i + 1) {
-                        <span class="w-2 h-2 rounded-full bg-tertiary shrink-0" [title]="'IT_PROVISIONING.form.completed' | translate"></span>
-                      }
-                    </div>
-                    <p [class]="'text-[14px] font-bold leading-snug ' + stepLabelClasses(i)">{{ 'IT_PROVISIONING.form.steps.' + step.key + '.title' | translate }}</p>
-                    @if (currentStep() === i + 1) {
-                      <p class="text-[11px] text-outline mt-0.5">{{ 'IT_PROVISIONING.form.underReview' | translate }}</p>
-                    }
-                  </div>
-                </button>
-              }
+      <!-- Sticky goes on an INNER wrapper, not on the grid item: the item has to
+           stay full-height for its child to stick against it, which is the same
+           pattern the two detail pages use (§10f). `max-h` + `overflow-y-auto`
+           keep the six steps reachable on a short viewport instead of clipping
+           them off the bottom of the sticky box. -->
+      <aside class="hidden lg:block">
+        <div class="lg:sticky lg:top-6">
+          <daf-card [options]="{ variant: 'default', padding: 'none', radius: 'xl' }">
+            <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
+              <p class="text-label-caps font-bold uppercase tracking-widest text-outline">{{ 'IT_PROVISIONING.form.progression' | translate }}</p>
             </div>
-          </div>
-        </daf-card>
-
+            <div class="p-5 max-h-[calc(100vh-10rem)] overflow-y-auto">
+              <!-- daf-stepper 4.14.0: vertical + `chrome: 'header-only'`, so the lib
+                   draws the rail and this page keeps its own action bar. `currentStep`
+                   is 0-BASED here while the wizard counts from 1, hence the −1 / +1.
+                   `completed` is set on every step, which switches the lib off
+                   positional inference — required, because step 4 can be done while
+                   the user sits on step 2 (§10g). -->
+              <daf-stepper
+                orientation="vertical"
+                [steps]="stepperSteps()"
+                [currentStep]="currentStep() - 1"
+                [config]="stepperConfig()"
+                (stepClick)="goToStep($event + 1)" />
+            </div>
+          </daf-card>
+        </div>
       </aside><!-- /sidebar -->
 
     </div><!-- /grid -->
   </div>
+} <!-- end @if prov -->
 
-  <!-- ── Email confirmation modal ─────────────────────────────────────── -->
+</daf-page>
+
+<!-- ── Modals, at the page root ──────────────────────────────────────────────
+     Outside `daf-page`: the overlay is `position: fixed`, and an ancestor with
+     transform / filter / backdrop-filter — the form's own glass `daf-card` — would
+     become its containing block and position it against the card (§10e). -->
+@if (prov(); as p) {
   <app-confirm-email-modal
     [visible]="showEmailModal()"
     [candidateName]="p.candidateFullName"
@@ -333,7 +209,6 @@
     (confirmed)="onEmailConfirmed()"
     (closed)="showEmailModal.set(false)" />
 
-  <!-- ── Complete confirmation modal ──────────────────────────────────── -->
   <app-modal
     [title]="'IT_PROVISIONING.form.confirmCompleteTitle' | translate"
     [visible]="showCompleteModal()"
@@ -347,5 +222,4 @@
       <daf-button [options]="{ variant: 'teal', label: ('IT_PROVISIONING.form.confirm' | translate) }" (onClick)="onCompleteConfirmed()" />
     </div>
   </app-modal>
-
-} <!-- end @if prov -->
+}
