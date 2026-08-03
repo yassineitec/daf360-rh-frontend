@@ -814,7 +814,8 @@
       "PHOTO_WARNING": "La photo ne sera enregistrée qu’une fois l’intégration finalisée.",
       "PHOTO_CHANGE": "Changer la photo",
       "ERR_CERT_REQUIRED": "Veuillez joindre l’attestation bancaire/RIB avant de finaliser.",
-      "UPLOAD_PARTIAL_FAILED": "Profil créé, mais certaines pièces jointes n’ont pas pu être téléchargées. Vous pouvez les ajouter depuis la page du profil."
+      "UPLOAD_PARTIAL_FAILED": "Profil créé, mais certaines pièces jointes n’ont pas pu être téléchargées. Vous pouvez les ajouter depuis la page du profil.",
+      "BREADCRUMB_ARIA": "Fil d’Ariane"
     },
     "SUCCESS": {
       "TITLE": "Dossier créé avec succès !",

@@ -1,146 +1,154 @@
-<div class="form-page" style="font-family: 'Manrope', sans-serif;">
+<!-- /rh/onboarding/:candidateId — the /rh/profiles/:id layout, one wizard step at a
+     time instead of tabs (UI-PLAYBOOK §1).
 
-  <!-- Back -->
-  <div class="px-4 sm:px-6 pt-4 sm:pt-5">
-    <button class="flex items-center gap-1.5 text-[13px] text-outline hover:text-on-surface transition-colors"
-      type="button" (click)="goBack()">
-      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-      {{ 'ONBOARDING.FORM.BACK_TO_LIST' | translate }}
-    </button>
-  </div>
+     Left, sticky: the candidate identity card — the same shell as
+     `rh-identity-card` on the profile page (photo · name · pills, then a bordered
+     info block), carrying the read-only IT pre-provisioning fields — and under it
+     the integration tracker, which used to sit in a right-hand aside.
 
-  <!-- Alerts -->
-  <div class="px-4 sm:px-6 pt-3 flex flex-col gap-2">
-    @if (error()) {
-      <div class="alert alert-error" role="alert">{{ error() }}</div>
-    }
-    @if (successMsg()) {
-      <div class="alert alert-success" role="status">{{ successMsg() }}</div>
-    }
-    @if (!loading() && hasDraft() && draftSavedAt()) {
-      <div class="draft-banner">
-        <span class="material-symbols-outlined text-[16px]">info</span>
-        {{ 'ONBOARDING.FORM.DRAFT_SAVED_ON' | translate:{ date: draftSavedAt()!.slice(0, 10) } }}
-      </div>
-    }
-  </div>
+     Right: the wizard. `daf-stepper` takes the place the tabs strip holds on the
+     profile page, and the step content sits in an `rh-section-card`, the same
+     shell every profile tab panel uses.
 
-  <!-- Main content -->
-  <div class="px-4 sm:px-6 pt-5 pb-40 sm:pb-28">
+     `[loading]` is bound to `firstLoad`, not `loading`, so saving a draft never
+     blanks the wizard (§5). `kpis="0"` (no KPI row), `breadcrumbs` so the
+     first-load skeleton draws the crumb row. `pb-32` clears the fixed action bar. -->
+<daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
 
-    <!-- Page title -->
-    <section class="mb-6 space-y-1">
-      <h1 class="text-[20px] sm:text-[24px] font-extrabold text-on-surface leading-tight">{{ 'ONBOARDING.FORM.TITLE' | translate }}</h1>
-      <p class="text-[13px] sm:text-[14px] text-on-surface-variant max-w-[640px]">
-        {{ 'ONBOARDING.FORM.SUBTITLE' | translate }}
-      </p>
-    </section>
+  <daf-page-header
+    [title]="'ONBOARDING.FORM.TITLE' | translate"
+    [subtitle]="'ONBOARDING.FORM.SUBTITLE' | translate"
+    [breadcrumbs]="breadcrumbs()"
+    [breadcrumbLabel]="'ONBOARDING.FORM.BREADCRUMB_ARIA' | translate">
+    <ng-container pageActions>
+      <daf-button
+        [options]="{ variant: 'ghost', iconStart: 'arrow_back',
+                     label: ('ONBOARDING.FORM.BACK_TO_LIST' | translate) }"
+        (onClick)="goBack()" />
+    </ng-container>
+  </daf-page-header>
 
-    @if (loading()) {
-      <div class="flex justify-center py-20">
-        <app-spinner />
-      </div>
-    }
+  <!-- Banners — the canonical shape (§1). The `.alert` / `.draft-banner` SCSS they
+       replaced carried six raw hex values (#fef2f2 … #4c2e00) that no token backs. -->
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
+    </div>
+  }
+  @if (successMsg()) {
+    <div class="flex items-center gap-2 rounded-xl bg-success/10 px-4 py-3 text-sm text-success" role="status">
+      <span class="material-symbols-outlined text-[18px]">check_circle</span>
+      {{ successMsg() }}
+    </div>
+  }
+  @if (hasDraft() && draftSavedAt()) {
+    <div class="flex items-center gap-2 rounded-xl bg-warning/10 px-4 py-3 text-[13px] text-warning">
+      <span class="material-symbols-outlined text-[16px]">info</span>
+      {{ 'ONBOARDING.FORM.DRAFT_SAVED_ON' | translate:{ date: draftSavedAt()!.slice(0, 10) } }}
+    </div>
+  }
 
-    @if (!loading() && formData(); as fd) {
-      <div class="flex flex-col lg:flex-row gap-6 items-start">
+  @if (formData(); as fd) {
+    <!-- Same split as the profile page: 32% / rest, 32px gutter, stacked below lg. -->
+    <div class="flex flex-col gap-8 pb-32 lg:flex-row">
 
-        <!-- ── Left: form content ── -->
-        <div class="flex-1 min-w-0 w-full flex flex-col gap-5">
+      <!-- ── Left: identity + tracker, always on screen ── -->
+      <div class="lg:w-[32%] lg:shrink-0">
+        <div class="flex flex-col gap-6 lg:sticky lg:top-6">
 
-          <!-- IT Pre-provisioning (read-only) -->
-          <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-            <div class="bg-surface-container-high/50 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/30">
-              <h2 class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] flex flex-wrap items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[18px]">terminal</span>
+          <!-- Identity card — the profile page's shell: photo with the circular
+               upload FAB, name, pills, then a bordered block of read-only facts.
+               Here that block is the IT pre-provisioning, which is exactly what it
+               is: identity data the wizard cannot change. -->
+          <daf-card [options]="{ variant: 'glass', radius: 'xl', padding: 'none' }">
+
+            <!-- Photo · nom · pills -->
+            <div class="flex flex-col items-center gap-1 p-8 text-center">
+              <div class="relative mb-3">
+                <!-- p-1.5 insets the image from the rim; object-top crops from the
+                     bottom so the face stays in frame on portrait shots. -->
+                <div class="h-32 w-32 overflow-hidden rounded-full border-4 border-surface-container-lowest
+                            bg-surface-container p-1.5 shadow-xl ring-1 ring-primary/10">
+                  <!-- Picked photo → gender avatar → initials. -->
+                  @if (photoPreview() || !photoFailed()) {
+                    <img [src]="photoPreview() ?? resolvePhoto(fd)"
+                         [alt]="firstName() + ' ' + lastName()"
+                         class="h-full w-full rounded-full object-cover object-top"
+                         (error)="photoFailed.set(true)" />
+                  } @else {
+                    <span class="flex h-full w-full items-center justify-center rounded-full bg-primary/10
+                                 text-[28px] font-bold text-primary">{{ candidateInitials(fd) }}</span>
+                  }
+                </div>
+
+                <!-- The button opens the picker programmatically: a daf-button inside
+                     a <label> swallows the click, so label activation never reaches
+                     the input (same fix as the profile page). -->
+                <daf-button
+                  class="absolute -bottom-1 -right-1 opacity-70 transition-opacity hover:opacity-100"
+                  [options]="{ variant: 'primary', pill: true, size: 'sm', iconStart: 'photo_camera' }"
+                  [title]="'ONBOARDING.FORM.PHOTO_CHANGE' | translate"
+                  (onClick)="photoInput.click()" />
+                <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden
+                       (change)="onPhotoChange($event)" />
+              </div>
+
+              <!-- A <p>, not a heading: daf-page-header owns the page's single h1. -->
+              <p class="text-[20px] font-black leading-tight text-on-surface">
+                {{ firstName() }} {{ lastName() }}
+              </p>
+              @if (fd.appliedPosition) {
+                <p class="text-[14px] font-medium text-outline">{{ fd.appliedPosition }}</p>
+              }
+
+              <div class="mt-3 flex flex-wrap justify-center gap-2">
+                <daf-badge [label]="'ONBOARDING.FORM.NEW_ARRIVAL' | translate"
+                           [options]="{ variant: 'teal', size: 'sm', pill: true }" />
+                <daf-badge [label]="'ONBOARDING.FORM.VERIFIED_BY_IT' | translate"
+                           [options]="{ variant: 'success', size: 'sm', pill: true, icon: 'verified' }" />
+              </div>
+            </div>
+
+            <!-- Pré-provisionnement IT — the profile card's "État civil" block, with
+                 the micro-label heading and a two-column field grid (the column is
+                 288-380px wide, so three never fit). -->
+            <div class="border-t border-outline-variant/40 px-8 pb-8 pt-5">
+              <h2 class="mb-6 flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-widest text-outline">
+                <span class="material-symbols-outlined text-[16px]">terminal</span>
                 {{ 'ONBOARDING.FORM.PREPROV_TITLE' | translate }}
-                <span class="text-[13px] font-normal text-outline">{{ 'ONBOARDING.FORM.READ_ONLY' | translate }}</span>
+                <span class="font-semibold normal-case tracking-normal">{{ 'ONBOARDING.FORM.READ_ONLY' | translate }}</span>
               </h2>
-              <span class="bg-success/10 text-success px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 shrink-0">
-                <span class="material-symbols-outlined text-[14px]">verified</span>
-                {{ 'ONBOARDING.FORM.VERIFIED_BY_IT' | translate }}
-              </span>
-            </div>
-            <div class="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-              <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.MATRICULE' | translate }}</label>
-                <p class="text-[14px] font-bold text-on-surface">{{ fd.matricule ?? ('EMP-' + fd.paysId + '-' + fd.candidateId) }}</p>
-              </div>
-              <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.EMAIL_PRO' | translate }}</label>
-                <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365Email }}</p>
-              </div>
-              <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.PC_ASSIGNED' | translate }}</label>
-                <p class="text-[14px] font-bold text-on-surface">{{ fd.itDeviceName ?? '—' }}</p>
-              </div>
-              <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.MS_LICENSE' | translate }}</label>
-                <p class="text-[14px] font-bold text-on-surface">{{ fd.ms365LicenseType ?? ('ONBOARDING.FORM.LICENSE_ASSIGNED' | translate) }}</p>
-              </div>
-              <div>
-                <label class="text-[10px] font-extrabold tracking-widest uppercase text-outline block mb-1">{{ 'ONBOARDING.FORM.IT_STATUS' | translate }}</label>
-                <span class="text-[14px] font-bold text-success">{{ fd.itProvisioningStatus ?? ('ONBOARDING.FORM.PROVISIONED' | translate) }}</span>
+
+              <div class="grid grid-cols-1 gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                <rh-profile-field
+                  [label]="'ONBOARDING.FORM.MATRICULE' | translate"
+                  [value]="fd.matricule ?? ('EMP-' + fd.paysId + '-' + fd.candidateId)" />
+                <rh-profile-field
+                  [label]="'ONBOARDING.FORM.PC_ASSIGNED' | translate"
+                  [value]="fd.itDeviceName" />
+                <rh-profile-field [wide]="true"
+                  [label]="'ONBOARDING.FORM.EMAIL_PRO' | translate"
+                  [value]="fd.ms365Email" />
+                <rh-profile-field
+                  [label]="'ONBOARDING.FORM.MS_LICENSE' | translate"
+                  [value]="fd.ms365LicenseType ?? ('ONBOARDING.FORM.LICENSE_ASSIGNED' | translate)" />
+                <rh-profile-field
+                  [label]="'ONBOARDING.FORM.IT_STATUS' | translate"
+                  [value]="fd.itProvisioningStatus ?? ('ONBOARDING.FORM.PROVISIONED' | translate)" />
               </div>
             </div>
+
           </daf-card>
 
-          <!-- Stepper — daf-stepper 4.14.0 with `chrome: 'header-only'`, so the lib
-               draws the rail and this page keeps its own Précédent / Suivant /
-               Soumettre bar below the step content. `currentStep` is 0-BASED here
-               while the wizard counts from 1, hence the −1 / +1.
-               No `completed` flag: progress on this wizard IS positional (a step is
-               done once you're past it), which is the lib's default inference. -->
-          <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-            <div class="px-3 sm:px-5 py-3 sm:py-3.5">
-              <daf-stepper
-                [steps]="stepperSteps()"
-                [currentStep]="currentStep() - 1"
-                [config]="stepperConfig()"
-                (stepClick)="goToStep($event + 1)" />
-            </div>
-          </daf-card>
-
-          <!-- Step content — NOT glass: the lib's select/date-picker dropdown is
-               position:fixed and a backdrop-filter (glass) ancestor becomes its containing
-               block, throwing the panel far from the trigger. A non-blur card keeps the
-               panel viewport-anchored. --color-primary is scoped to tertiary so all daf360
-               lib controls (form-field / select / date-picker) render green borders & lines. -->
-          <daf-card class="step-content-card" [options]="{ variant: 'default', padding: 'lg', radius: 'xl' }">
-            <div class="min-h-64" style="--color-primary: var(--color-tertiary);">
-              @if (currentStep() === 1) {
-                <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-              }
-              @if (currentStep() === 2) {
-                <app-step-contract [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-              }
-              @if (currentStep() === 3) {
-                <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-              }
-              @if (currentStep() === 4) {
-                <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-              }
-              @if (currentStep() === 5) {
-                <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" (certificationSelected)="selectedCertification.set($event)" />
-              }
-              @if (currentStep() === 6) {
-                <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
-              }
-              @if (currentStep() === 7) {
-                <app-step-summary [data]="draftData()" [formInfo]="fd" (editStep)="goToStep($event)" />
-              }
-            </div>
-          </daf-card>
-
-        </div>
-
-        <!-- ── Right: Process tracker sidebar — full width & non-sticky on mobile/tablet, docked on desktop ── -->
-        <aside class="w-full lg:w-72 shrink-0 flex flex-col gap-4 lg:sticky lg:top-6">
-
+          <!-- ── Integration tracker — dated milestones, under the info card ──
+               Not a daf-stepper: these are timeline events (request validated / IT
+               account / equipment / manager), not a position in the wizard above. -->
           <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-            <h3 class="text-[0.9rem] sm:text-[1.05rem] font-bold text-[#0b1c30] border-b border-outline-variant/30 pb-3 mb-5">
+            <h2 class="mb-5 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-outline">
+              <span class="material-symbols-outlined text-[16px]">timeline</span>
               {{ 'ONBOARDING.FORM.INTEGRATION_STATUS' | translate }}
-            </h3>
+            </h2>
 
             <div class="space-y-0">
               <!-- Step: Demande validée (done) -->
@@ -193,7 +201,7 @@
                 </div>
                 <div class="pt-0.5">
                   <p class="text-[14px] font-bold text-tertiary">{{ 'ONBOARDING.FORM.TRACKER_HR_PROFILE' | translate }}</p>
-                  <p class="text-[12px] text-success font-semibold">{{ 'ONBOARDING.FORM.TRACKER_STEP_IN_PROGRESS' | translate }}</p>
+                  <p class="text-[12px] font-semibold text-success">{{ 'ONBOARDING.FORM.TRACKER_STEP_IN_PROGRESS' | translate }}</p>
                 </div>
               </div>
 
@@ -231,104 +239,107 @@
             </div>
 
             <!-- HR tip -->
-            <div class="mt-6 p-3.5 bg-primary/5 border border-primary/15 rounded-xl">
-              <p class="text-[12px] font-semibold text-on-surface mb-1">{{ 'ONBOARDING.FORM.HR_TIP_LABEL' | translate }}</p>
-              <p class="text-[12px] text-on-surface-variant italic">{{ 'ONBOARDING.FORM.HR_TIP_TEXT' | translate }}</p>
+            <div class="mt-6 rounded-xl border border-primary/15 bg-primary/5 p-3.5">
+              <p class="mb-1 text-[12px] font-semibold text-on-surface">{{ 'ONBOARDING.FORM.HR_TIP_LABEL' | translate }}</p>
+              <p class="text-[12px] italic text-on-surface-variant">{{ 'ONBOARDING.FORM.HR_TIP_TEXT' | translate }}</p>
             </div>
           </daf-card>
 
-          <!-- Candidate profile card — info panel is always visible on mobile/tablet
-               (no hover on touch) and becomes a hover-reveal on desktop, where the
-               sidebar is a narrow 288px column and the photo needs room to breathe. -->
-          <div class="relative overflow-hidden rounded-2xl group cursor-pointer h-44 sm:h-56 lg:h-60"
-               style="background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 24px rgba(0,0,0,0.07);"
-               (click)="photoInput.click()">
-
-            <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhotoChange($event)" />
-
-            <!-- Upload affordance -->
-            <div class="absolute top-3 right-3 z-20 w-9 h-9 rounded-full flex items-center justify-center shadow-md"
-                 style="background: rgba(255,255,255,0.92); color: var(--color-tertiary);"
-                 [title]="'ONBOARDING.FORM.PHOTO_CHANGE' | translate">
-              <span class="material-symbols-outlined text-[18px]">photo_camera</span>
-            </div>
-
-            <!-- Photo -->
-            <div class="absolute inset-0">
-              @if (photoPreview() || !photoFailed()) {
-                <img [src]="photoPreview() ?? resolvePhoto(fd)"
-                     [alt]="firstName() + ' ' + lastName()"
-                     class="w-full h-full object-cover object-top"
-                     (error)="photoFailed.set(true)" />
-              } @else {
-                <div class="w-full h-full flex items-center justify-center"
-                     style="background: linear-gradient(135deg, #1B3A4B 0%, #50717B 100%)">
-                  <span class="text-[52px] font-extrabold" style="color: rgba(255,255,255,0.28)">
-                    {{ candidateInitials(fd) }}
-                  </span>
-                </div>
-              }
-            </div>
-
-            <!-- Persistent bottom gradient — full-height below lg (info panel always shown), hover-grows on desktop -->
-            <div class="absolute inset-x-0 bottom-0 h-full from-black/60 lg:h-20 lg:from-black/50 bg-gradient-to-t to-transparent
-                        transition-all duration-300 lg:group-hover:h-full lg:group-hover:from-black/60"></div>
-
-            <!-- Info panel — always docked below lg; slides up from below on hover at lg+ -->
-            <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-3
-                        translate-y-0 lg:translate-y-full lg:group-hover:translate-y-0
-                        transition-transform duration-300 ease-out">
-              <p class="text-[10px] font-extrabold tracking-widest uppercase mb-1"
-                 style="color: #79D7BE">{{ 'ONBOARDING.FORM.NEW_ARRIVAL' | translate }}</p>
-              <h4 class="text-[16px] font-bold text-white leading-tight">
-                {{ firstName() }} {{ lastName() }}
-              </h4>
-              @if (fd.appliedPosition) {
-                <p class="text-[12px] mt-0.5" style="color: rgba(255,255,255,0.70)">{{ fd.appliedPosition }}</p>
-              }
-              <p class="text-[11px] mt-2 flex items-center gap-1" style="color: rgba(255,255,255,0.50)">
-                <span class="material-symbols-outlined text-[13px]">mail</span>
-                {{ fd.ms365Email }}
-              </p>
-            </div>
-          </div>
-
-        </aside>
+        </div>
       </div>
-    }
-  </div>
 
+      <!-- ── Right: the wizard — stepper where the profile page puts its tabs ── -->
+      <div class="flex min-w-0 flex-1 flex-col gap-6">
+
+        <!-- daf-stepper 4.14.0, `chrome: 'header-only'`: the lib draws the rail and
+             this page keeps its own Précédent / Suivant / Soumettre bar below.
+             `currentStep` is 0-BASED here while the wizard counts from 1, hence the
+             −1 / +1. No `completed` flag: progress IS positional (a step is done
+             once you're past it), which is the lib's default inference. -->
+        <daf-stepper
+          [steps]="stepperSteps()"
+          [currentStep]="currentStep() - 1"
+          [config]="stepperConfig()"
+          (stepClick)="goToStep($event + 1)" />
+
+        <!-- Step content in the same shell every profile tab panel uses, so the two
+             pages can't drift apart on padding, heading size or icon placement.
+
+             --color-primary is scoped to tertiary so every daf360 control inside
+             (form-field / select / date-picker) renders green borders & lines. -->
+        <rh-section-card
+          [title]="currentStepLabel()" [icon]="currentStepIcon()" tone="text-primary"
+          accent="primary">
+          <div class="min-h-64" style="--color-primary: var(--color-tertiary);">
+            @if (currentStep() === 1) {
+              <app-step-identity [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+            }
+            @if (currentStep() === 2) {
+              <app-step-contract [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+            }
+            @if (currentStep() === 3) {
+              <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+            }
+            @if (currentStep() === 4) {
+              <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+            }
+            @if (currentStep() === 5) {
+              <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" (certificationSelected)="selectedCertification.set($event)" />
+            }
+            @if (currentStep() === 6) {
+              <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+            }
+            @if (currentStep() === 7) {
+              <app-step-summary [data]="draftData()" [formInfo]="fd" (editStep)="goToStep($event)" />
+            }
+          </div>
+        </rh-section-card>
+
+      </div>
+    </div>
+  }
+
+</daf-page>
+
+<!-- ── Action bar ────────────────────────────────────────────────────────────
+     Anchored to the VIEWPORT (`inset-x-0`), not offset by the sidebar. It used to
+     be `position: fixed; left: 220px` with a `@media (max-width: 768px)` override —
+     both copies of values the shell owns, so a sidebar resize or a change to its
+     collapse breakpoint silently misaligned this bar. Same fix as the save bar on
+     /rh/profiles/:id (§10f): pin to the viewport, centre the content on the page's
+     own max-width, and let `pointer-events` keep the gutters click-through. -->
+<div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
+  <div class="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3
+              rounded-xl border border-outline-variant bg-surface-container-lowest p-4
+              shadow-[0_-4px_24px_rgba(0,0,0,0.12)]">
+    <div class="flex items-center gap-2">
+      <daf-button
+        [options]="{ variant: 'ghost', label: ('ONBOARDING.FORM.CANCEL' | translate) }"
+        (onClick)="goBack()" />
+      @if (currentStep() > 1) {
+        <daf-button
+          [options]="{ variant: 'ghost', label: ('ONBOARDING.FORM.PREV' | translate), iconStart: 'arrow_back' }"
+          (onClick)="prevStep()" />
+      }
+    </div>
+
+    <div class="flex items-center gap-2.5">
+      <daf-button
+        [options]="{ variant: 'secondary', label: ((saving() ? 'ONBOARDING.FORM.SAVING' : 'ONBOARDING.FORM.SAVE_DRAFT') | translate), iconStart: 'save', disabled: saving(), loading: saving() }"
+        (onClick)="onSaveDraft()" />
+
+      @if (currentStep() < 7) {
+        <daf-button
+          [options]="{ variant: 'teal', label: ((currentStep() === 1 ? 'ONBOARDING.FORM.CREATE_AND_NEXT' : 'ONBOARDING.FORM.NEXT') | translate), iconEnd: 'arrow_forward' }"
+          (onClick)="nextStep()" />
+      } @else {
+        <daf-button
+          [options]="{ variant: 'teal', label: ('ONBOARDING.FORM.SUBMIT_CREATE' | translate), iconEnd: 'arrow_forward', disabled: submitting(), loading: submitting() }"
+          (onClick)="openConfirmModal()" />
+      }
+    </div>
+  </div>
 </div>
-
-<!-- Fixed footer -->
-<footer class="form-footer">
-  <div class="footer-left">
-    <daf-button
-      [options]="{ variant: 'ghost', label: ('ONBOARDING.FORM.CANCEL' | translate) }"
-      (onClick)="goBack()" />
-    @if (currentStep() > 1) {
-      <daf-button
-        [options]="{ variant: 'ghost', label: ('ONBOARDING.FORM.PREV' | translate), iconStart: 'arrow_back' }"
-        (onClick)="prevStep()" />
-    }
-  </div>
-
-  <div class="footer-right">
-    <daf-button
-      [options]="{ variant: 'secondary', label: ((saving() ? 'ONBOARDING.FORM.SAVING' : 'ONBOARDING.FORM.SAVE_DRAFT') | translate), iconStart: 'save', disabled: saving(), loading: saving() }"
-      (onClick)="onSaveDraft()" />
-
-    @if (currentStep() < 7) {
-      <daf-button
-        [options]="{ variant: 'teal', label: ((currentStep() === 1 ? 'ONBOARDING.FORM.CREATE_AND_NEXT' : 'ONBOARDING.FORM.NEXT') | translate), iconEnd: 'arrow_forward' }"
-        (onClick)="nextStep()" />
-    } @else {
-      <daf-button
-        [options]="{ variant: 'teal', label: ('ONBOARDING.FORM.SUBMIT_CREATE' | translate), iconEnd: 'arrow_forward', disabled: submitting(), loading: submitting() }"
-        (onClick)="openConfirmModal()" />
-    }
-  </div>
-</footer>
 
 <!-- Confirmation modal -->
 @if (!loading() && formData()) {

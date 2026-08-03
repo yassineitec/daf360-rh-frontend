@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Observable, forkJoin, of, catchError } from 'rxjs';
 
 import {
-  CardComponent, ButtonComponent, StepperComponent, StepperConfig, StepperStep,
+  BreadcrumbItem, CardComponent, ButtonComponent, PageComponent, PageHeaderComponent,
+  StatusBadgeComponent, StepperComponent, StepperConfig, StepperStep,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OnboardingService } from './onboarding.service';
@@ -21,9 +22,10 @@ import { StepBankComponent } from './steps/step-bank.component';
 import { StepEmergencyComponent } from './steps/step-emergency.component';
 import { StepSummaryComponent } from './steps/step-summary.component';
 import { ConfirmSubmitModalComponent } from './confirm-submit-modal.component';
-import { SpinnerComponent } from '../../shared/spinner.component';
 import { isFemale } from '../../shared/utils/avatar.utils';
 import { NotificationService } from '../../core/notification.service';
+import { ProfileFieldComponent } from '../../shared/detail/profile-field.component';
+import { SectionCardComponent } from '../../shared/detail/section-card.component';
 
 @Component({
   selector: 'app-onboarding-form',
@@ -31,7 +33,12 @@ import { NotificationService } from '../../core/notification.service';
   imports: [
     CardComponent,
     ButtonComponent,
+    PageComponent,
+    PageHeaderComponent,
+    StatusBadgeComponent,
     StepperComponent,
+    ProfileFieldComponent,
+    SectionCardComponent,
     FormsModule,
     StepIdentityComponent,
     StepContractComponent,
@@ -41,7 +48,6 @@ import { NotificationService } from '../../core/notification.service';
     StepEmergencyComponent,
     StepSummaryComponent,
     ConfirmSubmitModalComponent,
-    SpinnerComponent,
     TranslatePipe,
   ],
   templateUrl: './onboarding-form.component.html',
@@ -64,6 +70,11 @@ export class OnboardingFormComponent implements OnInit {
   currentStep      = signal(1);
   formData         = signal<OnboardingFormData | null>(null);
   draftData        = signal<OnboardingProfileDto>({});
+  /**
+   * Whole-page skeleton — first load only (UI-PLAYBOOK §5). Kept separate from
+   * `loading` so a later re-fetch never blanks the header and the wizard.
+   */
+  firstLoad        = signal(true);
   loading          = signal(true);
   saving           = signal(false);
   submitting       = signal(false);
@@ -91,6 +102,18 @@ export class OnboardingFormComponent implements OnInit {
     this.STEPS().map(s => ({ title: s.label })),
   );
 
+  /**
+   * Heading of the section card holding the step content, so the step reads like a
+   * section of the record on `/rh/profiles/:id` rather than a bare panel. Indexed
+   * by `STEPS` order: identité · poste · régime · personnel · banque · urgence ·
+   * récapitulatif.
+   */
+  private readonly STEP_ICONS = [
+    'badge', 'work', 'schedule', 'person', 'account_balance', 'emergency', 'fact_check',
+  ];
+  readonly currentStepLabel = computed(() => this.STEPS()[this.currentStep() - 1]?.label ?? '');
+  readonly currentStepIcon  = computed(() => this.STEP_ICONS[this.currentStep() - 1] ?? '');
+
   /** `header-only`: the page keeps its own Précédent / Suivant / Soumettre bar. */
   readonly stepperConfig = computed<StepperConfig>(() => {
     this.translate.currentLang();
@@ -99,6 +122,16 @@ export class OnboardingFormComponent implements OnInit {
       clickableSteps: true,
       stepperLabel:   this.translate.instant('ONBOARDING.STEPPER_ARIA'),
     };
+  });
+
+  /** Onboarding ▸ the employee being onboarded. */
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    this.translate.currentLang();
+    const name = `${this.firstName()} ${this.lastName()}`.trim();
+    return [
+      { label: this.translate.instant('ONBOARDING.LIST.TITLE'), link: '/rh/onboarding' },
+      { label: name || `#${this.candidateId()}` },
+    ];
   });
 
   // Computed
@@ -195,10 +228,12 @@ export class OnboardingFormComponent implements OnInit {
           emergencyContactPhone:   data.emergencyContactPhone   ?? undefined,
         });
         this.loading.set(false);
+        this.firstLoad.set(false);
       },
       error: () => {
         this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_LOAD_FORM'));
         this.loading.set(false);
+        this.firstLoad.set(false);
       },
     });
   }

@@ -814,7 +814,8 @@
       "PHOTO_WARNING": "The photo is only saved once onboarding is completed.",
       "PHOTO_CHANGE": "Change photo",
       "ERR_CERT_REQUIRED": "Please attach the bank/RIB attestation before finalizing.",
-      "UPLOAD_PARTIAL_FAILED": "Profile created, but some attachments could not be uploaded. You can add them from the profile page."
+      "UPLOAD_PARTIAL_FAILED": "Profile created, but some attachments could not be uploaded. You can add them from the profile page.",
+      "BREADCRUMB_ARIA": "Breadcrumb"
     },
     "SUCCESS": {
       "TITLE": "File created successfully!",
