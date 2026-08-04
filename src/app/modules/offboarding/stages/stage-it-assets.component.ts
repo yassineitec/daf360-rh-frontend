@@ -8,10 +8,14 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import {
-  OffboardingAssetReturn, OffboardingChecklistItem, OffboardingWorkflowInstance,
+  OffboardingAssetReturn, OffboardingChecklistItem, OffboardingTask,
+  OffboardingWorkflowInstance,
 } from '../models/offboarding.model';
-import { StageView, assetIcon, checklistOf, dayMonth, shortDate } from '../offboarding-display';
+import {
+  StageView, assetIcon, checklistOf, dayMonth, shortDate, stampDate,
+} from '../offboarding-display';
 import { ListRowComponent } from '../../../shared/detail/list-row.component';
+import { StageTasksComponent } from './stage-tasks.component';
 import { isoToDate } from '../../../shared/date-picker.utils';
 
 /**
@@ -26,9 +30,9 @@ import { isoToDate } from '../../../shared/date-picker.utils';
   selector: 'rh-stage-it-assets',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [StagePanelComponent, 
+  imports: [StagePanelComponent,
     ButtonComponent, CheckboxComponent, MultiDatePickerComponent,
-    ToggleComponent, ListRowComponent, TranslatePipe,
+    ToggleComponent, ListRowComponent, StageTasksComponent, TranslatePipe,
   ],
   host: { class: 'block' },
   template: `
@@ -98,19 +102,26 @@ import { isoToDate } from '../../../shared/date-picker.utils';
           <div class="flex flex-col gap-4 rounded-2xl border border-outline-variant/20
                       bg-surface-container-low p-5">
 
-            <!-- PENDING V46 — account_deactivation_at. The design shows a datetime;
-                 daf-multi-date-picker is date-only, so the time half waits for the
-                 backend column (and for the lib's showTime flag). -->
+            <!-- V61 — account_deactivation_at. The column stores a moment; the picker is
+                 date-only, so choosing a day sets it to the end of that day (the employee
+                 works until then) — see the page's onDeactivationDate. -->
             <daf-multi-date-picker
               [config]="{
                 label: ('OFFBOARDING.STAGE.IT_DEACTIVATION' | translate),
-                selectionMode: 'single', fullWidth: true, disabled: true
+                selectionMode: 'single', fullWidth: true, disabled: !canEdit()
               }"
-              [value]="deactivationDate()" />
+              [value]="deactivationDate()"
+              (valueChange)="deactivationChange.emit($event)" />
 
-            <!-- PENDING V46 — checklist group ACCESS. Three fixed rows in the design;
-                 rendered from data when it exists, otherwise the seeded labels
-                 disabled so the shape of the step is visible. -->
+            @if (wf().accountDeactivationAt) {
+              <p class="-mt-2 text-[11px] text-on-surface-variant">
+                {{ 'OFFBOARDING.IT.DEACTIVATION_SET' | translate:
+                     { when: stamp(wf().accountDeactivationAt) } }}
+              </p>
+            }
+
+            <!-- Checklist group ACCESS — seeded per file since V60. The @empty branch only
+                 shows for files that predate it and were never backfilled (terminal ones). -->
             <div class="flex flex-col gap-2">
               @for (item of accessItems(); track item.code) {
                 <daf-checkbox
@@ -125,25 +136,51 @@ import { isoToDate } from '../../../shared/date-picker.utils';
               }
             </div>
 
-            <!-- PENDING V46 — discharge_document_url -->
+            <!-- V61 — generated from the live asset list, so it can be re-issued after a
+                 late return. Disabled with nothing tracked: a décharge that enumerates
+                 nothing certifies nothing, and the API refuses it. -->
             <daf-button
               [options]="{
                 variant: 'primary', fullWidth: true, iconStart: 'history_edu',
-                label: ('OFFBOARDING.STAGE.IT_GENERATE_DISCHARGE' | translate),
-                disabled: true
+                label: (wf().dischargeDocumentUrl ? 'OFFBOARDING.IT.DISCHARGE_REGENERATE'
+                                                  : 'OFFBOARDING.STAGE.IT_GENERATE_DISCHARGE') | translate,
+                disabled: !canEdit() || !assets().length,
+                loading: generatingDischarge()
               }"
               (onClick)="generateDischarge.emit()" />
+
+            @if (!assets().length) {
+              <p class="-mt-2 text-[11px] italic text-on-surface-variant">
+                {{ 'OFFBOARDING.IT.DISCHARGE_NEEDS_ASSETS' | translate }}
+              </p>
+            } @else if (pendingCount()) {
+              <!-- Generating early is legitimate (it names what is still out), but the user
+                   should know the document will say so. -->
+              <p class="-mt-2 flex items-start gap-1.5 text-[11px] text-on-surface-variant">
+                <span class="material-symbols-outlined shrink-0 text-[14px]">info</span>
+                {{ 'OFFBOARDING.IT.DISCHARGE_PENDING_WARN' | translate: { count: pendingCount() } }}
+              </p>
+            }
 
             @if (wf().dischargeDocumentUrl) {
               <a class="flex items-center gap-2 text-[12px] font-bold text-tertiary underline"
                  [href]="wf().dischargeDocumentUrl" target="_blank" rel="noopener">
                 <span class="material-symbols-outlined text-[16px]">download</span>
-                {{ 'OFFBOARDING.STAGE.IT_DISCHARGE_DOWNLOAD' | translate }}
+                {{ wf().dischargeDocumentName ?? ('OFFBOARDING.STAGE.IT_DISCHARGE_DOWNLOAD' | translate) }}
               </a>
             }
           </div>
         </div>
       </div>
+
+      <!-- Spans both columns: the three IT tasks (retour équipements, retour badge,
+           désactivation des accès) settle the stage, and ASSET_RETURN_IT is the file's
+           blocking gate. -->
+      <rh-stage-tasks class="mt-8"
+        [tasks]="tasks()"
+        [canEdit]="canEdit()"
+        (complete)="completeTask.emit($event)"
+        (skip)="skipTask.emit($event)" />
     </rh-stage-panel>
   `,
 })
@@ -151,14 +188,20 @@ export class StageItAssetsComponent {
   readonly view    = input.required<StageView>();
   readonly wf      = input.required<OffboardingWorkflowInstance>();
   readonly assets  = input<OffboardingAssetReturn[]>([]);
+  readonly tasks   = input<OffboardingTask[]>([]);
   readonly canEdit = input(false);
   readonly syncing = input(false);
+  readonly generatingDischarge = input(false);
 
   readonly confirmAsset     = output<OffboardingAssetReturn>();
   readonly syncAssets       = output<void>();
   readonly addAsset         = output<void>();
   readonly toggleAccess     = output<{ item: OffboardingChecklistItem; done: boolean }>();
   readonly generateDischarge = output<void>();
+  readonly completeTask     = output<OffboardingTask>();
+  readonly skipTask         = output<OffboardingTask>();
+  /** Emits the picker's raw Date(s); the page converts and adds the end-of-day time. */
+  readonly deactivationChange = output<Date | Date[] | null>();
 
   protected readonly assetIcon = assetIcon;
 
@@ -173,17 +216,32 @@ export class StageItAssetsComponent {
     () => checklistOf(this.wf().checklistItems, 'ACCESS'),
   );
 
-  protected readonly deactivationDate = computed(() => isoToDate(this.wf().accountDeactivationAt ?? ''));
+  /** The stored value is a timestamp; the picker only speaks dates, so it takes the day. */
+  protected readonly deactivationDate = computed(
+    () => isoToDate((this.wf().accountDeactivationAt ?? '').slice(0, 10)),
+  );
 
-  /** "SN: DAF-IT-0092" · "Validé le 08/10" · "Urgent" — the design's three metas. */
+  /** Assets still out — drives the warning under the décharge button. */
+  protected readonly pendingCount = computed(
+    () => this.assets().filter(a => !a.actualReturnDate && !a.isWrittenOff).length,
+  );
+
+  protected readonly stamp = stampDate;
+
+  /**
+   * The serial now has its own column (V61), so it can sit on the meta line alongside the
+   * state instead of being appended to the description — which is what the design shows.
+   */
   protected assetMeta(a: OffboardingAssetReturn): string | null {
-    if (a.actualReturnDate) return `✓ ${dayMonth(a.actualReturnDate)}`;
-    if (a.serialNumber)     return `SN: ${a.serialNumber}`;
-    if (a.expectedReturnDate) return shortDate(a.expectedReturnDate);
-    return null;
+    const parts: string[] = [];
+    if (a.serialNumber) parts.push(`S/N ${a.serialNumber}`);
+    if (a.actualReturnDate)        parts.push(`✓ ${dayMonth(a.actualReturnDate)}`);
+    else if (a.isWrittenOff)       parts.push('⨯');
+    else if (a.expectedReturnDate) parts.push(shortDate(a.expectedReturnDate));
+    return parts.length ? parts.join(' · ') : null;
   }
 
-  /** No `is_urgent` column yet — an unreturned asset past its expected date is. */
+  /** The explicit flag wins; otherwise an unreturned asset past its expected date is urgent. */
   protected isUrgent(a: OffboardingAssetReturn): boolean {
     if (a.isUrgent) return true;
     if (a.actualReturnDate || !a.expectedReturnDate) return false;

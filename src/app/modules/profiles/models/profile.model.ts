@@ -10,13 +10,21 @@ export type LifecycleStatus =
   | 'TERMINATED'
   | 'ARCHIVED';
 
+/**
+ * Mirror of `LifecycleStatus.canTransitionTo` in rh-service — the server rejects anything
+ * this map allows by mistake, and hides anything it forgets. Keep the two in step.
+ *
+ * `OFFBOARDING → ACTIVE` is the cancellation path (a departure called off returns the
+ * employee to duty); `ON_LEAVE|ON_MISSION → OFFBOARDING` because resigning while on leave
+ * or on mission is ordinary; `TERMINATED → OFFBOARDING` is the reopen path.
+ */
 export const LIFECYCLE_TRANSITIONS: Record<LifecycleStatus, LifecycleStatus[]> = {
   PRE_ONBOARDING: ['ACTIVE'],
   ACTIVE: ['ON_LEAVE', 'ON_MISSION', 'OFFBOARDING'],
-  ON_LEAVE: ['ACTIVE'],
-  ON_MISSION: ['ACTIVE'],
-  OFFBOARDING: ['TERMINATED'],
-  TERMINATED: ['ARCHIVED'],
+  ON_LEAVE: ['ACTIVE', 'OFFBOARDING'],
+  ON_MISSION: ['ACTIVE', 'OFFBOARDING'],
+  OFFBOARDING: ['TERMINATED', 'ACTIVE'],
+  TERMINATED: ['ARCHIVED', 'OFFBOARDING'],
   ARCHIVED: [],
 };
 

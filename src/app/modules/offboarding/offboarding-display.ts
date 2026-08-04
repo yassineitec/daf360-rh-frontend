@@ -85,20 +85,54 @@ export interface StageDef {
   railKey:   string;
   /** Task codes rolled up by this stage. Empty ⇒ state comes from the instance. */
   taskCodes: readonly string[];
+  /**
+   * Stages that must be `done` before this one can be worked on. Anything unmet makes
+   * this stage `locked`, which the wizard already refuses to navigate into.
+   *
+   * Stages 3-7 require DECLARATION *and* VALIDATION: no equipment is collected, no
+   * settlement is computed and no file is closed before the departure has been agreed and
+   * signed off. Safe only since V59 gave stage 2 real endpoints — gating on a stage that
+   * nothing could stamp would have locked the rest of the wizard forever. V59 also
+   * backfills both stamps on pre-existing instances so files already in flight do not
+   * regress behind a gate nobody was ever asked to pass.
+   */
+  requires:  readonly StageCode[];
+  /**
+   * Any-of permissions that let a user see this stage's body and act on it.
+   *
+   * Mirror of `OffboardingStagePermissions` on the server, which guards the calls. RH
+   * reaching every stage is not special-cased here — V58 grants DRH and Administrateur
+   * all of these, so it falls out of the grants.
+   */
+  permissions: readonly string[];
 }
 
+const RH_MANAGE   = 'RH_MANAGE_OFFBOARDING';
+const RH_VALIDATE = 'RH_VALIDATE_OFFBOARDING';
+
 export const STAGES: readonly StageDef[] = [
-  { code: 'DECLARATION', icon: 'check_circle',   railKey: 'DECLARATION', taskCodes: [] },
-  { code: 'VALIDATION',  icon: 'verified',       railKey: 'VALIDATION',  taskCodes: [] },
-  { code: 'HANDOVER',    icon: 'handshake',      railKey: 'HANDOVER',    taskCodes: ['KNOWLEDGE_TRANSFER'] },
+  { code: 'DECLARATION', icon: 'check_circle',   railKey: 'DECLARATION', taskCodes: [],
+    requires: [], permissions: [RH_MANAGE] },
+  { code: 'VALIDATION',  icon: 'verified',       railKey: 'VALIDATION',  taskCodes: [],
+    requires: ['DECLARATION'], permissions: [RH_VALIDATE, RH_MANAGE] },
+  { code: 'HANDOVER',    icon: 'handshake',      railKey: 'HANDOVER',    taskCodes: ['KNOWLEDGE_TRANSFER'],
+    requires: ['DECLARATION', 'VALIDATION'], permissions: ['RH_OFFBOARDING_STAGE_HANDOVER', RH_MANAGE] },
   { code: 'IT_ASSETS',   icon: 'inventory_2',    railKey: 'IT_ASSETS',
-    taskCodes: ['ASSET_RETURN_IT', 'ASSET_RETURN_BADGE', 'IT_ACCESS_REVOKE'] },
+    taskCodes: ['ASSET_RETURN_IT', 'ASSET_RETURN_BADGE', 'IT_ACCESS_REVOKE'],
+    requires: ['DECLARATION', 'VALIDATION'], permissions: ['RH_OFFBOARDING_STAGE_IT', RH_MANAGE] },
   { code: 'HR_DOCS',     icon: 'assignment_ind', railKey: 'HR_DOCS',
-    taskCodes: ['EXIT_INTERVIEW', 'WORK_CERTIFICATE', 'INTERNAL_ANNOUNCEMENT'] },
+    taskCodes: ['EXIT_INTERVIEW', 'WORK_CERTIFICATE', 'INTERNAL_ANNOUNCEMENT'],
+    requires: ['DECLARATION', 'VALIDATION'], permissions: ['RH_CONDUCT_EXIT_INTERVIEW', RH_MANAGE] },
   { code: 'PAYROLL',     icon: 'payments',       railKey: 'PAYROLL',
-    taskCodes: ['FINAL_SETTLEMENT', 'EXPENSE_CLOSE'] },
-  { code: 'CLOSURE',     icon: 'lock',           railKey: 'CLOSURE',     taskCodes: [] },
+    taskCodes: ['FINAL_SETTLEMENT', 'EXPENSE_CLOSE'],
+    requires: ['DECLARATION', 'VALIDATION'], permissions: ['RH_OFFBOARDING_STAGE_PAYROLL', RH_MANAGE] },
+  { code: 'CLOSURE',     icon: 'lock',           railKey: 'CLOSURE',     taskCodes: [],
+    requires: ['DECLARATION', 'VALIDATION'], permissions: [RH_VALIDATE, RH_MANAGE] },
 ];
+
+export function stageDef(code: StageCode): StageDef {
+  return STAGES.find(s => s.code === code) ?? STAGES[0];
+}
 
 /**
  * Everything a stage component needs to draw its own `rh-stage-panel` header.
@@ -117,6 +151,22 @@ export interface StageView {
   statusLabel: string;   // translated pill text
 }
 
+/**
+ * Has stage 1 been filled in?
+ *
+ * A file started from a profile carries only a departure type: the profile action asks
+ * for nothing else, and `trigger_date` is NOT NULL so the service stamps it with the day
+ * the file was opened. `triggerDate` therefore cannot tell a fresh file from a declared
+ * one — every file has it. `lastWorkingDay` can: it is the negotiated departure date,
+ * it is nullable, and filling it is what stage 1 is *for*.
+ *
+ * Widen this when the V46 declaration fields land (justification document, notice
+ * period, theoretical exit date) if the declaration should require more than the date.
+ */
+export function isDeclarationComplete(wf: OffboardingWorkflowInstance): boolean {
+  return !!wf.lastWorkingDay;
+}
+
 export function tasksOfStage(stage: StageDef, tasks: OffboardingTask[]): OffboardingTask[] {
   return tasks.filter(t => stage.taskCodes.includes(t.taskCode));
 }
@@ -129,15 +179,18 @@ export function isSettled(t: OffboardingTask): boolean {
  * State of every stage in one pass, so the rail and the cards agree.
  *
  * Rules, in order:
- * - `DECLARATION` is done as soon as the file exists (a workflow cannot be created
- *   without a reason and a trigger date).
+ * - `DECLARATION` is done once the departure dates are in (`isDeclarationComplete`),
+ *   `active` before that — a file can now be opened from a profile with nothing but a
+ *   departure type, and stage 1 is where the dates get filled.
  * - `VALIDATION` is done once the instance carries a validation stamp.
  * - a task-backed stage is `done` when every one of its tasks is DONE/SKIPPED,
  *   `blocked` when one is BLOCKED **or** a mandatory one is past due, `active` when
  *   at least one has moved, else `pending`.
  * - `CLOSURE` is `done` on VALIDATED/ARCHIVED, `locked` while any blocking task is
  *   outstanding, else `active`.
- * - finally, the first stage that is neither done nor blocked is promoted to
+ * - then any stage whose `requires` are not all `done` becomes `locked` (an already-done
+ *   stage is left alone).
+ * - finally, the first stage that is neither done, blocked nor locked is promoted to
  *   `active`, so exactly one stage reads as "where we are".
  */
 export function resolveStageStates(
@@ -152,12 +205,23 @@ export function resolveStageStates(
 
   for (const stage of STAGES) {
     if (stage.code === 'DECLARATION') {
-      states[stage.code] = 'done';
+      // `|| isTerminal`: `lastWorkingDay` is nullable and validation never required it,
+      // so a closed file can lack one. Without this the rail on a VALIDATED file would
+      // point back at stage 1 as "where we are".
+      states[stage.code] = isDeclarationComplete(wf) || isTerminal(wf.status)
+        ? 'done' : 'active';
       continue;
     }
     if (stage.code === 'VALIDATION') {
-      states[stage.code] = wf.validatedAt || wf.hrValidatedAt || wf.managerValidatedAt
-        ? 'done' : 'pending';
+      // RH's stamp closes the stage; the manager's stamp only starts it. Deliberately does
+      // NOT read `wf.validatedAt` any more — that is the stage-7 file closure, and reading
+      // it here turned stage 2 green the moment the file was closed, retroactively claiming
+      // an approval nobody had given.
+      states[stage.code] =
+        wf.hrValidatedAt      ? 'done'
+        : isTerminal(wf.status) ? 'done'
+        : wf.managerValidatedAt ? 'active'
+        : 'pending';
       continue;
     }
     if (stage.code === 'CLOSURE') {
@@ -177,7 +241,17 @@ export function resolveStageStates(
     else                                         states[stage.code] = 'pending';
   }
 
-  // Exactly one "you are here": the first stage that isn't finished or blocked.
+  // Prerequisites, before the "you are here" pass so a locked stage is never promoted.
+  // A stage whose requirements are unmet is `locked` regardless of its own tasks: its
+  // controls would write to a file whose declaration is not settled yet. `done` survives
+  // — a stage someone already completed does not un-complete because of a gate added
+  // later, and showing it as locked would lose that work on screen.
+  for (const stage of STAGES) {
+    if (states[stage.code] === 'done') continue;
+    if (stage.requires.some(req => states[req] !== 'done')) states[stage.code] = 'locked';
+  }
+
+  // Exactly one "you are here": the first stage that isn't finished, blocked or locked.
   const next = STAGES.find(s => states[s.code] === 'pending');
   if (next && !STAGES.some(s => states[s.code] === 'active')) states[next.code] = 'active';
 
@@ -293,6 +367,19 @@ export interface StageProgress {
   done: number;
   /** True when the live stage is blocked rather than merely in progress. */
   blocked: boolean;
+}
+
+/**
+ * The board column a file belongs in.
+ *
+ * `stageProgressOf` alone is not enough for a closed file: validation only requires the
+ * *blocking* tasks to be settled, so a VALIDATED workflow can still carry a PENDING
+ * `EXPENSE_CLOSE` or `INTERNAL_ANNOUNCEMENT`. `resolveStageStates` would then promote
+ * that stage to `active` and the closed file would sit back under Kit RH or Paie.
+ * A terminal file is done being worked on, wherever its tasks stand — it goes to Clôture.
+ */
+export function boardStageOf(wf: OffboardingWorkflowInstance): StageCode {
+  return isTerminal(wf.status) ? 'CLOSURE' : stageProgressOf(wf).code;
 }
 
 export function stageProgressOf(wf: OffboardingWorkflowInstance): StageProgress {

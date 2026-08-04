@@ -113,7 +113,7 @@ export interface IdentityPill {
           (patch)="patch.emit($event)" />
 
         <!-- Actions, at the foot of the card as in the design. -->
-        @if (canTransition() || canEdit()) {
+        @if (canTransition() || canEdit() || canStartOffboarding()) {
           <div class="mt-8 flex gap-3">
             @if (canTransition()) {
               <daf-button class="flex-1"
@@ -132,6 +132,16 @@ export interface IdentityPill {
                 (onClick)="toggleEdit.emit()" />
             }
           </div>
+
+          <!-- Offboarding is a destructive, one-way action on a career: it gets its own
+               row below the routine actions, full width, in danger tone — never sitting
+               flush beside "Modifier" where it can be hit by accident. -->
+          @if (canStartOffboarding()) {
+            <daf-button class="mt-3 block"
+              [options]="{ variant: 'danger', fullWidth: true, size: 'sm', iconStart: 'logout',
+                           label: ('PROFILES.DETAIL.START_OFFBOARDING' | translate) }"
+              (onClick)="startOffboarding.emit()" />
+          }
         }
 
       </div>
@@ -148,6 +158,8 @@ export class IdentityCardComponent {
   readonly uploading = input(false);
   readonly pills     = input<IdentityPill[]>([]);
   readonly canTransition = input(false);
+  /** Gated on the permission AND the lifecycle status — the page decides both. */
+  readonly canStartOffboarding = input(false);
 
   readonly genderOptions        = input<SelectOption[]>([]);
   readonly maritalStatusOptions = input<SelectOption[]>([]);
@@ -157,6 +169,7 @@ export class IdentityCardComponent {
   readonly patch        = output<Partial<ProfileUpdateDto>>();
   readonly changeStatus = output<void>();
   readonly toggleEdit   = output<void>();
+  readonly startOffboarding = output<void>();
 
   /** Which step of the photo → avatar → initials chain has failed to load. */
   private readonly photoFailed  = signal(false);

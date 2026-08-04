@@ -2,25 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, model, out
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonComponent, DrawerComponent } from '@khalilrebhiitec/daf360';
 
-import {
-  ExitInterview, OffboardingAssetReturn, OffboardingTask, OffboardingWorkflowInstance,
-} from './models/offboarding.model';
+import { OffboardingAuditEntry } from './models/offboarding.model';
 import { stampDate } from './offboarding-display';
 import { TimelineComponent, TimelineItem } from '../../shared/detail/timeline.component';
 
 /**
  * "Historique d'audit" — the design's right-hand panel.
  *
- * Every mutation on this file is already written to `audit_logs` by
- * `OffboardingWorkflowService`, but no endpoint can fetch them per entity yet
- * (`/api/hr/audit/logs` is unfiltered and paged over the whole table). So the
- * trail is **reconstructed client-side** from the timestamps the DTOs already
- * carry: task completions/skips, asset confirmations, the interview, and the
- * instance's own lifecycle stamps.
+ * Reads the real audit log (`GET /{id}/audit`) since V63's companion endpoint.
  *
- * PENDING V46 — swap `items()` for the filtered endpoint (see
- * OFFBOARDING-BACKEND-CHANGES.md §3) and the actor names stop being ids; the
- * timeline itself does not change.
+ * It used to RECONSTRUCT the trail client-side from whatever timestamps the DTOs happened to
+ * carry, because `/api/hr/audit/logs` was unfiltered and paged over the whole table. That
+ * could only ever surface events which left a visible field behind — so a skipped task, a
+ * deleted checklist line, a corrected settlement amount, a reopened file and every actor's
+ * name were all invisible. Now the drawer renders what actually happened, attributed.
  */
 @Component({
   selector: 'rh-offboarding-audit-drawer',
@@ -38,13 +33,19 @@ import { TimelineComponent, TimelineItem } from '../../shared/detail/timeline.co
         closeLabel: ('OFFBOARDING.AUDIT.CLOSE' | translate)
       }">
 
-      <rh-timeline [items]="items()" [emptyLabel]="'OFFBOARDING.AUDIT.EMPTY' | translate" />
+      @if (loading()) {
+        <p class="px-1 py-3 text-[13px] text-on-surface-variant">
+          {{ 'OFFBOARDING.AUDIT.LOADING' | translate }}
+        </p>
+      } @else {
+        <rh-timeline [items]="items()" [emptyLabel]="'OFFBOARDING.AUDIT.EMPTY' | translate" />
+      }
 
       <div drawerFooter class="flex justify-end">
-        <!-- PENDING V46 — needs the filtered audit endpoint + CSV export. -->
         <daf-button
           [options]="{ variant: 'secondary', fullWidth: true, iconStart: 'download',
-                       label: ('OFFBOARDING.AUDIT.DOWNLOAD' | translate), disabled: true }"
+                       label: ('OFFBOARDING.AUDIT.DOWNLOAD' | translate),
+                       disabled: !entries().length }"
           (onClick)="download.emit()" />
       </div>
     </daf-drawer>
@@ -56,52 +57,36 @@ export class OffboardingAuditDrawerComponent {
   /** Two-way, driven by the header's history button. */
   readonly open = model(false);
 
-  readonly wf        = input.required<OffboardingWorkflowInstance>();
-  readonly tasks     = input<OffboardingTask[]>([]);
-  readonly assets    = input<OffboardingAssetReturn[]>([]);
-  readonly interview = input<ExitInterview | null>(null);
+  readonly entries = input<OffboardingAuditEntry[]>([]);
+  readonly loading = input(false);
 
   readonly download = output<void>();
 
-  /** Newest first, like the design. */
+  /**
+   * Already newest-first from the API. Actions are translated through
+   * `OFFBOARDING.AUDIT.ACTION.<CODE>`, falling back to the raw code — a new audit action
+   * added server-side then shows as e.g. `OFFBOARDING_REOPENED` rather than disappearing.
+   */
   protected readonly items = computed<TimelineItem[]>(() => {
     this.translate.currentLang();
-    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p);
-    const w = this.wf();
-    const rows: { at: string; item: TimelineItem }[] = [];
-
-    const push = (at: string | null | undefined, title: string, meta?: string | null) => {
-      if (!at) return;
-      rows.push({ at, item: { title, meta, date: stampDate(at), state: 'done' } });
-    };
-
-    push(w.createdAt, t('OFFBOARDING.AUDIT.EV_STARTED'),
-      t('OFFBOARDING.REASON.' + w.departureReason));
-
-    for (const task of this.tasks()) {
-      push(task.completedAt, t('OFFBOARDING.AUDIT.EV_TASK_DONE', { task: task.taskLabel }),
-        task.comments || null);
-      if (task.skippedBy && !task.completedAt) {
-        push(task.createdAt, t('OFFBOARDING.AUDIT.EV_TASK_SKIPPED', { task: task.taskLabel }),
-          task.skipReason || null);
-      }
-    }
-
-    for (const asset of this.assets()) {
-      push(asset.confirmedAt ?? asset.actualReturnDate,
-        t('OFFBOARDING.AUDIT.EV_ASSET_RETURNED', { asset: asset.assetDescription }),
-        asset.conditionOnReturn || null);
-    }
-
-    const iv = this.interview();
-    if (iv) push(iv.createdAt, t('OFFBOARDING.AUDIT.EV_INTERVIEW'), null);
-
-    push(w.validatedAt,  t('OFFBOARDING.AUDIT.EV_VALIDATED'), null);
-    push(w.cancelledAt,  t('OFFBOARDING.AUDIT.EV_CANCELLED'), w.cancellationReason);
-
-    rows.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-
-    // The newest event is the live one, so it reads as the current position.
-    return rows.map((r, i) => i === 0 ? { ...r.item, state: 'active' as const } : r.item);
+    return this.entries().map((e, i) => {
+      const key = 'OFFBOARDING.AUDIT.ACTION.' + e.action;
+      const label = this.translate.instant(key);
+      return {
+        title: label === key ? e.action : label,
+        meta: this.metaOf(e),
+        date: stampDate(e.timestamp),
+        state: i === 0 ? ('active' as const) : ('done' as const),
+      };
+    });
   });
+
+  /** Actor, then whatever the entry recorded about the change. */
+  private metaOf(e: OffboardingAuditEntry): string | null {
+    const parts: string[] = [];
+    if (e.actorName) parts.push(e.actorName);
+    if (e.oldValue && e.newValue) parts.push(`${e.oldValue} → ${e.newValue}`);
+    else if (e.newValue)          parts.push(e.newValue);
+    return parts.length ? parts.join(' · ') : null;
+  }
 }

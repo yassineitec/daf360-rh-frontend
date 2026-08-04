@@ -47,6 +47,8 @@ import {
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
 import { ConfirmService } from '../../core/confirm.service';
+import { OffboardingService } from '../offboarding/offboarding.service';
+import { DepartureReason } from '../offboarding/models/offboarding.model';
 
 import { IdentityCardComponent, IdentityPill } from './detail-sections/identity-card.component';
 import { EmploymentSectionComponent } from './detail-sections/employment-section.component';
@@ -67,6 +69,15 @@ import { fromDate, toDate } from './detail-sections/field-bridges';
 type TabId =
   | 'emploi' | 'contact' | 'bancaire'
   | 'contrats' | 'historique' | 'documents';
+
+/**
+ * Departure types offered by the profile's "Démarrer l'offboarding" action.
+ *
+ * Only RESIGNATION for now, by request. Add the other codes of `DEPARTURE_REASONS` here
+ * one line at a time — the modal, the request and the redirect are already generic, and
+ * a single-entry list still renders as a chooser so the type is always a deliberate pick.
+ */
+const OFFERED_DEPARTURE_REASONS: readonly DepartureReason[] = ['RESIGNATION'];
 
 /**
  * Which `ProfileUpdateDto` keys belong to which tab. Drives the per-tab dirty
@@ -128,6 +139,7 @@ export class ProfileDetailComponent implements OnInit {
   private refSvc       = inject(RefDataService);
   private lcSvc        = inject(ContractLifecycleService);
   private modalService = inject(ModalService);
+  private offboardingSvc = inject(OffboardingService);
   private translate    = inject(TranslateService);
   private notify       = inject(NotificationService);
 
@@ -299,6 +311,19 @@ export class ProfileDetailComponent implements OnInit {
     return p ? (LIFECYCLE_TRANSITIONS[p.lifecycleStatus] ?? []) : [];
   });
 
+  /**
+   * `RH_MANAGE_OFFBOARDING` is what `OffboardingController` enforces, and the profile must
+   * be in a state the lifecycle can move to OFFBOARDING from. Derived from
+   * `LIFECYCLE_TRANSITIONS` rather than hardcoded, so it cannot drift from the state
+   * machine the server enforces — an already-OFFBOARDING profile is excluded for free.
+   */
+  readonly canStartOffboarding = computed(() => {
+    const status = this.profile()?.lifecycleStatus;
+    return !!status
+      && (LIFECYCLE_TRANSITIONS[status] ?? []).includes('OFFBOARDING')
+      && this.userStore.hasPermission('RH_MANAGE_OFFBOARDING');
+  });
+
   lifecycleLabel(s: LifecycleStatus): string {
     return LIFECYCLE_LABELS[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
   }
@@ -399,6 +424,7 @@ export class ProfileDetailComponent implements OnInit {
 
   // ── Modal bodies, opened imperatively via ModalService ─────────────────────
   transitionTpl    = viewChild<TemplateRef<unknown>>('transitionTpl');
+  offboardingTpl   = viewChild<TemplateRef<unknown>>('offboardingTpl');
   validateTrialTpl = viewChild<TemplateRef<unknown>>('validateTrialTpl');
   renewCDDTpl      = viewChild<TemplateRef<unknown>>('renewCDDTpl');
   convertCDITpl    = viewChild<TemplateRef<unknown>>('convertCDITpl');
@@ -593,6 +619,82 @@ export class ProfileDetailComponent implements OnInit {
 
   onTransitionReason(v: string | number | null): void {
     this.transitionReason = v == null ? '' : String(v);
+  }
+
+  // ── Start an offboarding ───────────────────────────────────────────────────
+  readonly offboardingReasons = OFFERED_DEPARTURE_REASONS;
+  readonly offboardingReason  = signal<DepartureReason | null>(null);
+  readonly offboardingError   = signal<string | null>(null);
+  readonly startingOffboarding = signal(false);
+
+  offboardingReasonLabel(r: DepartureReason): string {
+    return this.translate.instant('OFFBOARDING.REASON.' + r);
+  }
+
+  openOffboardingModal(): void {
+    // Pre-selected when there is only one type on offer, so the single-option case is
+    // one click rather than two — but still visible, so the type is never implicit.
+    this.offboardingReason.set(
+      this.offboardingReasons.length === 1 ? this.offboardingReasons[0] : null,
+    );
+    this.offboardingError.set(null);
+    const tpl = this.offboardingTpl();
+    if (!tpl) return;
+    this.modalService.open({
+      title: this.translate.instant('PROFILES.OFFBOARDING.MODAL_TITLE'),
+      body: tpl,
+      buttons: [
+        { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: ref => ref.close() },
+        {
+          label: this.translate.instant('PROFILES.OFFBOARDING.CONFIRM'),
+          variant: 'primary',
+          action: ref => this.confirmStartOffboarding(ref),
+        },
+      ],
+    });
+  }
+
+  /**
+   * Sends the type and nothing else. `triggerDate` is still required by the API (and is
+   * `NOT NULL` in the schema), so it is stamped with today — which is factually the date
+   * the departure was declared. `lastWorkingDay` is deliberately left unset: that is the
+   * negotiated date, it is what stage 1 is for, and leaving it null is exactly what puts
+   * the new file in the Déclaration column (see `isDeclarationComplete`).
+   */
+  confirmStartOffboarding(ref: ModalRef): void {
+    const reason = this.offboardingReason();
+    if (!reason) {
+      this.offboardingError.set(this.translate.instant('PROFILES.OFFBOARDING.ERR_SELECT'));
+      return;
+    }
+    if (this.startingOffboarding()) return;
+    this.offboardingError.set(null);
+    this.startingOffboarding.set(true);
+
+    this.offboardingSvc.startOffboarding({
+      employeeProfileId: this.profileId,
+      departureReason:   reason,
+      // `fromDate`, not `toISOString().slice(0,10)`: the latter is UTC, so before 01:00
+      // in Tunis it would declare the departure as yesterday.
+      triggerDate:       fromDate(new Date()),
+    }).pipe(
+      catchError(err => {
+        this.startingOffboarding.set(false);
+        this.offboardingError.set(
+          this.extractErrorMessage(err, this.translate.instant('PROFILES.OFFBOARDING.ERR_START')),
+        );
+        return of(null);
+      }),
+    ).subscribe(created => {
+      this.startingOffboarding.set(false);
+      if (created) {
+        ref.close();
+        this.notify.success(this.translate.instant('PROFILES.OFFBOARDING.STARTED'));
+        // Straight into the file: the declaration still has to be filled in, and the
+        // profile page has nowhere to do that.
+        this.router.navigate(['/rh/offboarding', created.id]);
+      }
+    });
   }
 
   // ── Uploads ────────────────────────────────────────────────────────────────

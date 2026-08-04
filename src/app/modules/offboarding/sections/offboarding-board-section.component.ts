@@ -15,10 +15,16 @@ import { OffboardingKanbanCardComponent } from '../../pipeline/components/offboa
  * board, so the two pages read as one system. Stateless with respect to the data:
  * columns and the loading flag come in, every interaction goes out.
  *
- * Deliberately NOT drag-and-drop, unlike the recruitment board. An offboarding status is
- * derived from the workflow — tasks completed, exit interview held, settlement validated —
- * so dragging a file into "Validé" would assert an outcome the backend never authorised.
- * Status changes happen on the detail page, through the stage actions.
+ * One column per stage — Déclaration, Validation, Passation, IT & Matériel, Kit RH,
+ * Paie & STC, Clôture — so a glance answers "who is holding this file up".
+ *
+ * Deliberately NOT drag-and-drop, unlike the recruitment board, and there is no drop
+ * target to add: a stage is *derived* from the file's tasks by `resolveStageStates`,
+ * it is not a column anyone can write. Dropping a card on "Clôture" would have to
+ * silently complete every intervening task — including the two blocking gates, IT
+ * return and the settlement — and assert an outcome no backend endpoint authorises.
+ * Files advance from the detail page, one task at a time. The hint line below says so,
+ * because a board that looks like a kanban invites the drag that cannot work.
  */
 @Component({
   selector: 'rh-offboarding-board-section',
@@ -33,6 +39,10 @@ import { OffboardingKanbanCardComponent } from '../../pipeline/components/offboa
     .custom-scroll::-webkit-scrollbar   { display: none; }
     .custom-scroll-y { scrollbar-width: none; }
     .custom-scroll-y::-webkit-scrollbar { display: none; }
+
+    /* A class, not a static style attribute: the same element also carries a
+       [style.color] binding, and one source of inline style is easier to reason about. */
+    .col-icon { font-variation-settings: 'wght' 500; }
   `],
   template: `
     @if (loading()) {
@@ -48,15 +58,24 @@ import { OffboardingKanbanCardComponent } from '../../pipeline/components/offboa
         }
       </div>
     } @else {
+      <!-- Says out loud why the cards do not move: the columns are computed, not chosen. -->
+      <p class="flex items-center gap-1.5 mb-3 text-xs text-on-surface-variant">
+        <span class="material-symbols-outlined text-[15px]">info</span>
+        {{ 'OFFBOARDING.KANBAN.READ_ONLY_HINT' | translate }}
+      </p>
+
       <div #board class="flex gap-6 overflow-x-auto pb-4 items-start custom-scroll scroll-smooth"
            (scroll)="syncBoardMetrics()">
         @for (col of columns(); track col.key) {
           <div class="w-80 shrink-0 flex flex-col">
 
-            <!-- Column header -->
+            <!-- Column header: the stage's own glyph, the same one the detail page's rail
+                 shows for that step. -->
             <div class="flex items-center gap-2 px-1 mb-3">
-              <span class="w-2.5 h-2.5 rounded-full" [style.background]="col.accent"></span>
-              <span class="text-sm font-bold text-on-surface">{{ col.label }}</span>
+              <span class="col-icon material-symbols-outlined text-[17px] shrink-0"
+                    [style.color]="col.accent">{{ col.icon }}</span>
+              <span class="min-w-0 truncate text-sm font-bold text-on-surface"
+                    [title]="col.label">{{ col.label }}</span>
               <span class="text-xs font-semibold text-on-surface-variant bg-surface-container-high rounded px-2 py-0.5">
                 {{ col.items.length }}
               </span>
@@ -72,7 +91,11 @@ import { OffboardingKanbanCardComponent } from '../../pipeline/components/offboa
             <div class="flex flex-col gap-3 min-h-[120px] max-h-[610px] overflow-y-auto overscroll-contain
                         rounded-xl p-1 pr-2 pt-4 custom-scroll-y">
               @for (item of col.items; track item.id) {
+                <!-- draggable="false" suppresses the browser's own drag ghost. Without it
+                     a card can be picked up and dropped on a column that will never
+                     accept it, which reads as a broken kanban rather than a read-only one. -->
                 <rh-offboarding-kanban-card
+                  draggable="false"
                   [item]="item"
                   [accent]="col.accent"
                   [badgeBg]="col.badgeBg"

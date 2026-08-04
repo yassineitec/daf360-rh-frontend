@@ -47,8 +47,10 @@ export interface OffboardingWorkflowInstance extends OffboardingPendingFields {
   updatedAt:                string | null;
   handoverManagerProfileId: number | null;
   handoverManagerName:      string | null;
+  /** Portal USER id — stage 2's manager panel compares it against the signed-in user. */
+  handoverManagerUserId:    number | null;
   tasks?:                   OffboardingTask[];
-  /** PENDING V46 — handover / access / Kit RH items, all three groups in one list. */
+  /** LIVE since V60 — handover / access / Kit RH items, all three groups in one list. */
   checklistItems?:          OffboardingChecklistItem[];
 }
 
@@ -110,70 +112,150 @@ export interface OffboardingAssetReturn extends AssetPendingFields {
   createdAt:          string;
 }
 
-// ── PENDING BACKEND (see OFFBOARDING-BACKEND-CHANGES.md) ─────────────────────
-// Every field the redesigned page shows that no endpoint returns yet.
-// They are declared here, optional, and merged into the interfaces above so the
-// stage components can bind them today and render a placeholder. When the V46
-// migration and the DTO changes land, nothing in the templates has to move —
-// grep `PENDING V46` for the spots that will simply stop showing an em dash.
+// ── Per-stage instance fields ────────────────────────────────────────────────
+//
+// These began as UI-first placeholders for fields no endpoint returned, which is why they are
+// all optional and merged into the interfaces above rather than declared inline. All seven
+// stages are now backed — V57 (Déclaration), V59 (Validation), V60 (Passation), V61 (IT),
+// V62 (Kit RH), V63 (Paie) — and the per-field comments say which migration.
+//
+// They stay OPTIONAL on purpose: the same interface serves the list endpoint, whose DTO does
+// not populate every stage's fields for every row.
 
-/** Stage 1 (Déclaration) + 2 (Validation) + 4 (IT) + 6 (Paie) instance fields. */
+/** Stage 1 (Déclaration) + 2 (Validation) + 3 (Passation) + 4 (IT) + 6 (Paie) fields. */
 export interface OffboardingPendingFields {
-  // Stage 1 — Déclaration
+  // Stage 1 — Déclaration. LIVE since V57: written by
+  // `PATCH /api/hr/offboarding/{id}/declaration`, returned by the instance DTO.
   justificationDocumentName?: string | null;
   justificationDocumentUrl?:  string | null;
   noticePeriodLabel?:         string | null;   // "3 mois"
   noticeWaiverRequested?:     boolean | null;
   theoreticalExitDate?:       string | null;   // ≠ lastWorkingDay (the negotiated one)
-  // Stage 2 — Validation (today's single validatedBy/At cannot express manager → RH)
+  // Stage 2 — Validation Manager & RH. LIVE since V59: two stamps, separate from the
+  // file-level `validatedBy/At` which belongs to stage 7.
+  managerValidatedBy?:        number | null;
   managerValidatedAt?:        string | null;
   managerValidatedByName?:    string | null;
   managerComment?:            string | null;
+  hrValidatedBy?:             number | null;
   hrValidatedAt?:             string | null;
+  hrValidatedByName?:         string | null;
   noticePaidNotWorked?:       boolean | null;
-  // Stage 3 — Passation
+  // Stage 3 — Passation. LIVE since V60.
   handoverMinutesUrl?:        string | null;   // PV de passation
-  // Stage 4 — IT & Matériel
-  accountDeactivationAt?:     string | null;   // date + time in the design
+  handoverMinutesName?:       string | null;
+  // Stage 4 — IT & Matériel. LIVE since V61.
+  accountDeactivationAt?:     string | null;   // a moment, not a day
   dischargeDocumentUrl?:      string | null;   // "Générer la décharge"
+  dischargeDocumentName?:     string | null;
   // Stage 6 — Paie & STC
   settlementExecutionDate?:   string | null;
   settlementPaymentMode?:     string | null;   // joined from employee_profiles bank fields
   settlement?:                OffboardingSettlement | null;
 }
 
-/** Solde de tout compte. `null` until the settlement engine exists — the stage
- *  then renders its locked state, which is what the design shows anyway. */
+/**
+ * Solde de tout compte — LIVE since V63. `null` while the file has no line, so stage 6
+ * renders its "add the first line" state rather than a total of zero.
+ *
+ * The amounts are stored, not computed: two of the three usual lines have no source in
+ * rh-service (no leave-balance table for congés payés, no per-pays convention scale for
+ * l'indemnité de rupture). Only the prorata 13ᵉ mois is derivable, and `isSuggested` marks
+ * it as the system's proposal until someone overrides it.
+ */
 export interface OffboardingSettlement {
-  lines:    { label: string; amount: number }[];
+  lines:    SettlementLine[];
   totalNet: number;
   currency?: string | null;
+}
+
+export interface SettlementLine {
+  id?:          number;
+  label:        string;
+  /** Signed — a STC carries deductions as well as payments. */
+  amount:       number;
+  isSuggested?: boolean;
+  orderIndex?:  number;
+}
+
+export interface SaveSettlementLineRequest {
+  label:  string;
+  amount: number;
+}
+
+export interface UpdateSettlementRequest {
+  settlementExecutionDate?: string | null;
+}
+
+/** Books the exit interview — the design's **Planifier**. A moment, not a day. */
+export interface ScheduleExitInterviewRequest {
+  scheduledAt: string;
+}
+
+/** One line of the real audit trail, from `GET /{id}/audit`. */
+export interface OffboardingAuditEntry {
+  timestamp:  string;
+  action:     string;
+  entityType: string;
+  entityId:   string;
+  actorName:  string;
+  oldValue:   string | null;
+  newValue:   string | null;
 }
 
 /** Handover checklist · access revocation · Kit RH — one shape, three groups. */
 export type ChecklistGroup = 'HANDOVER' | 'ACCESS' | 'KIT';
 
 export interface OffboardingChecklistItem {
-  id?:          number;
-  group:        ChecklistGroup;
-  code:         string;
-  label:        string;
-  isDone:       boolean;
+  id?:              number;
+  group:            ChecklistGroup;
+  code:             string;
+  label:            string;
+  isDone:           boolean;
+  documentUrl?:     string | null;
+  /** Who ticked it — cleared when the line is unticked. */
+  completedByName?: string | null;
+  orderIndex?:      number;
+}
+
+/** Ticks or unticks a line. Unticking is allowed: a tick is a claim, not a physical fact. */
+export interface UpdateChecklistItemRequest {
+  isDone?:      boolean;
   documentUrl?: string | null;
 }
 
-/** Asset fields the design shows but `offboarding_asset_returns` lacks. */
-export interface AssetPendingFields {
-  serialNumber?: string | null;   // today smuggled into assetDescription
-  isUrgent?:     boolean | null;  // or derived: expectedReturnDate < today
+/** Adds a line — mainly HANDOVER, which cannot be seeded from a catalog. */
+export interface CreateChecklistItemRequest {
+  group: ChecklistGroup;
+  label: string;
 }
 
-/** The design's exit interview is *schedulable*, not just present/absent. */
+/** Stage 3 — the successor and the PV de passation. */
+export interface UpdateHandoverRequest {
+  handoverManagerProfileId?: number | null;
+  handoverMinutesUrl?:       string | null;
+  handoverMinutesName?:      string | null;
+}
+
+/** Asset fields added by V61 — the serial used to be smuggled into assetDescription. */
+export interface AssetPendingFields {
+  serialNumber?: string | null;
+  /** Explicit flag; the UI still falls back to expectedReturnDate < today when false. */
+  isUrgent?:     boolean | null;
+}
+
+/** Stage 4 — when the accounts go off. A moment, so the value carries a time. */
+export interface UpdateItSecurityRequest {
+  accountDeactivationAt?: string | null;
+}
+
+/** The exit interview is *schedulable* — LIVE since V62. */
 export type ExitInterviewStatus = 'PENDING' | 'SCHEDULED' | 'DONE';
 
 export interface ExitInterviewPendingFields {
-  status?:      ExitInterviewStatus | null;
-  scheduledAt?: string | null;
+  status?:          ExitInterviewStatus | null;
+  scheduledAt?:     string | null;
+  conductedByName?: string | null;
 }
 
 // ── Request DTOs ──────────────────────────────────────────────────────────────
@@ -191,6 +273,33 @@ export interface StartOffboardingRequest {
 export interface CompleteTaskRequest {
   comments?:            string;
   attachedDocumentUrl?: string;
+}
+
+/** Stage 2, left panel. The comment is optional — "nothing to add" is a valid decision. */
+export interface ManagerValidationRequest {
+  comment?: string | null;
+}
+
+/** Stage 2, right panel. Both optional: an empty body validates without adjusting. */
+export interface HrValidationRequest {
+  lastWorkingDay?:      string | null;
+  noticePaidNotWorked?: boolean;
+}
+
+/**
+ * Stage 1 of the wizard. Every field optional, and the API treats an absent field as
+ * "leave alone" — it cannot clear a value, so the stage form always posts its whole
+ * shape rather than a diff.
+ */
+export interface UpdateDeclarationRequest {
+  lastWorkingDay?:            string | null;
+  theoreticalExitDate?:       string | null;
+  noticePeriodLabel?:         string | null;
+  noticeWaiverRequested?:     boolean;
+  justificationDocumentUrl?:  string | null;
+  justificationDocumentName?: string | null;
+  departureNotes?:            string | null;
+  handoverManagerProfileId?:  number | null;
 }
 
 export interface CreateAssetReturnRequest {

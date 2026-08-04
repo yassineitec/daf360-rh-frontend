@@ -4,9 +4,11 @@
      predate the design system. `kpis="4"` matches the four tiles. -->
 <daf-page [loading]="firstLoad()" [kpis]="4">
 
+  <!-- Title/subtitle are computed, not piped: on `type/:reason` they name the category
+       ("Offboarding — Démission"), so the page says which population it is showing. -->
   <daf-page-header
-    [title]="'OFFBOARDING.LIST.TITLE' | translate"
-    [subtitle]="'OFFBOARDING.LIST.SUBTITLE' | translate">
+    [title]="pageTitle()"
+    [subtitle]="pageSubtitle()">
     <ng-container pageActions>
       @if (canManage()) {
         <daf-button

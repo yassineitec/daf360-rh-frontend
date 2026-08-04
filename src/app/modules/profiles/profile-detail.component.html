@@ -36,11 +36,13 @@
             [uploading]="photoUploading()"
             [pills]="identityPills()"
             [canTransition]="canTransition()"
+            [canStartOffboarding]="canStartOffboarding()"
             [genderOptions]="genderOptions()"
             [maritalStatusOptions]="maritalStatusOptions()"
             [nationalityOptions]="nationalityOptions()"
             (photoChange)="onPhotoChange($event)"
             (changeStatus)="openTransitionModal()"
+            (startOffboarding)="openOffboardingModal()"
             (toggleEdit)="toggleEdit()"
             (patch)="patch($event)" />
         </div>
@@ -235,6 +237,46 @@
           placeholder: ('PROFILES.PLACEHOLDERS.TRANSITION_REASON' | translate)
         }"
         [value]="transitionReason" (valueChange)="onTransitionReason($event)" />
+    </div>
+  }
+</ng-template>
+
+<!-- Start an offboarding — the TYPE only. Dates, notice and the justification document
+     belong to stage 1 of the file, which is where this redirects. -->
+<ng-template #offboardingTpl>
+  @if (profile(); as p) {
+    <div class="flex flex-col">
+      @if (offboardingError()) {
+        <div class="mb-3.5 rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
+          {{ offboardingError() }}
+        </div>
+      }
+
+      <p class="mb-3.5 mt-0 text-[13px] text-on-surface-variant">
+        {{ 'PROFILES.OFFBOARDING.INTRO' | translate: { name: headerTitle() } }}
+      </p>
+
+      <p class="mb-2 mt-0 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        {{ 'PROFILES.OFFBOARDING.TYPE' | translate }}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        @for (r of offboardingReasons; track r) {
+          <!-- Whole literal classes in a ternary — a runtime-assembled Tailwind name
+               would never be emitted into the stylesheet. -->
+          <button type="button"
+            class="flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-[13px] font-semibold transition-colors"
+            [class]="offboardingReason() === r ? 'border-danger bg-danger/10 text-danger' : 'border-outline-variant text-on-surface hover:border-danger'"
+            (click)="offboardingReason.set(r)">
+            <span class="material-symbols-outlined text-[18px]">edit_document</span>
+            {{ offboardingReasonLabel(r) }}
+          </button>
+        }
+      </div>
+
+      <p class="mb-0 mt-4 flex items-start gap-1.5 text-[12px] text-on-surface-variant">
+        <span class="material-symbols-outlined shrink-0 text-[15px]">info</span>
+        {{ 'PROFILES.OFFBOARDING.NEXT_STEP' | translate }}
+      </p>
     </div>
   }
 </ng-template>

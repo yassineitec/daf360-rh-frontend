@@ -21,6 +21,12 @@ interface AppNavDef {
   route: string;
   /** Any-of gate; empty = visible to every authenticated user. */
   permissions: string[];
+  /**
+   * Sub-entries, rendered by `daf-side-nav` as an expandable group (one level only —
+   * see `NavItem.children` in the lib). `route` is a full path relative to the shell,
+   * so it holds several segments where a top-level entry holds one.
+   */
+  children?: AppNavDef[];
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
@@ -60,6 +66,18 @@ const APP_NAV_DEFS: AppNavDef[] = [
     icon: 'logout',
     route: 'offboarding',
     permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
+    // One child per departure reason. Only RESIGNATION for now, by request; the other
+    // six codes of `DEPARTURE_REASONS` are added here, one line each, when wanted.
+    // The parent entry stays and keeps showing every reason.
+    children: [
+      {
+        id: 'offboarding-resignation',
+        labelKey: 'NAV.OFFBOARDING_RESIGNATION',
+        icon: 'edit_document',
+        route: 'offboarding/type/RESIGNATION',
+        permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
+      },
+    ],
   },
   { id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
   {
@@ -119,9 +137,14 @@ export class HrShellComponent implements OnInit {
   // routes are single segments ('accueil', 'admin', …) while the URL is absolute
   // (e.g. /rh/admin/roles). Map the live URL to the matching nav segment (longest
   // match first) so nested/child routes still light up their top-level item.
+  //
+  // Sub-entries are in the same pool, and longest-match-first is what makes them win:
+  // on /rh/offboarding/type/RESIGNATION both 'offboarding/type/RESIGNATION' and
+  // 'offboarding' match, and returning the parent would leave the child permanently
+  // unlit. The lib lights the parent anyway, via its own `hasActiveChild`.
   readonly activeRoute = computed(() => {
     const url = (this.rawUrl() ?? '').split(/[?#]/)[0];
-    const match = [...APP_NAV_DEFS]
+    const match = APP_NAV_DEFS.flatMap((d) => [d, ...(d.children ?? [])])
       .sort((a, b) => b.route.length - a.route.length)
       .find((d) => new RegExp(`(^|/)${d.route}(/|$)`).test(url));
     return match ? match.route : '';
@@ -134,17 +157,26 @@ export class HrShellComponent implements OnInit {
   // translate PIPE isn't an option here.
   readonly navItems = computed<NavItem[]>(() => {
     this.translate.currentLang();
-    return APP_NAV_DEFS.filter(
-      (def) => def.permissions.length === 0 || this.perm.hasAny(def.permissions),
-    ).map((def) => ({
-      id: def.id,
-      label: this.translate.instant(def.labelKey),
-      icon: def.icon,
-      route: def.route,
-      ...(def.id === 'onboarding' && this.onboardingCount() > 0
-        ? { badge: this.onboardingCount() }
-        : {}),
-    }));
+    const visible = (def: AppNavDef) =>
+      def.permissions.length === 0 || this.perm.hasAny(def.permissions);
+
+    const toNavItem = (def: AppNavDef): NavItem => {
+      const children = (def.children ?? []).filter(visible).map(toNavItem);
+      return {
+        id: def.id,
+        label: this.translate.instant(def.labelKey),
+        icon: def.icon,
+        route: def.route,
+        // Omitted when empty: `children: []` would still make the lib treat the item as
+        // an expandable group, so it would render a chevron that opens nothing.
+        ...(children.length ? { children } : {}),
+        ...(def.id === 'onboarding' && this.onboardingCount() > 0
+          ? { badge: this.onboardingCount() }
+          : {}),
+      };
+    };
+
+    return APP_NAV_DEFS.filter(visible).map(toNavItem);
   });
 
   readonly sideNavConfig = computed<SideNavConfig>(() => {
@@ -175,7 +207,10 @@ export class HrShellComponent implements OnInit {
 
   onNavClick(item: NavItem): void {
     if (item.route) {
-      this.router.navigate([item.route], { relativeTo: this.activatedRoute });
+      // Split: a sub-entry's route is multi-segment ('offboarding/type/RESIGNATION'),
+      // and one array element per segment is unambiguous where a single slash-bearing
+      // string relies on the router re-parsing it.
+      this.router.navigate(item.route.split('/'), { relativeTo: this.activatedRoute });
     }
   }
 

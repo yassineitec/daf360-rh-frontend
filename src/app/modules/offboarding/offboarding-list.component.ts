@@ -1,7 +1,8 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { catchError, of } from 'rxjs';
+import { catchError, map, of } from 'rxjs';
 import {
   ButtonComponent,
   FilterField,
@@ -19,9 +20,10 @@ import {
 import { UserStore } from '../../core/user.store';
 import { OffboardingService } from './offboarding.service';
 import {
-  OFFBOARDING_STATUSES, OffboardingStatus, OffboardingWorkflowInstance,
+  DEPARTURE_REASONS, DepartureReason, OFFBOARDING_STATUSES, OffboardingStatus,
+  OffboardingWorkflowInstance,
 } from './models/offboarding.model';
-import { isActive, isOverdue } from './offboarding-display';
+import { StageCode, boardStageOf, isActive, isOverdue } from './offboarding-display';
 import { StartOffboardingModalComponent } from './start-offboarding-modal.component';
 import { OffboardingCardsSectionComponent } from './sections/offboarding-cards-section.component';
 import { OffboardingTableSectionComponent } from './sections/offboarding-table-section.component';
@@ -34,8 +36,8 @@ const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 /**
- * `kanban` is the default, matching the recruitment board: an offboarding file is a
- * workflow with a status, so the board is the view that shows where the work is stuck.
+ * `kanban` is the default, matching the recruitment board: its columns are the seven
+ * stages, so the board is the view that shows which department each file is waiting on.
  */
 type ViewMode = 'kanban' | 'list';
 
@@ -102,11 +104,54 @@ export class OffboardingListComponent implements OnInit {
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
+  // ── Departure-reason scope (the sidebar's sub-entries) ─────────────────────
+  /**
+   * `type/:reason` → the reason CODE, or null on the unscoped `/rh/offboarding`.
+   *
+   * Read as a signal off `paramMap` rather than from `snapshot`: Angular reuses this
+   * component instance when moving between two sibling `type/:reason` URLs, so a
+   * snapshot read would keep showing the first reason opened.
+   *
+   * An unknown code resolves to null — a hand-typed URL then shows the full list
+   * rather than an empty page that looks like "no departures of this kind".
+   */
+  private readonly routeReason = toSignal(
+    this.route.paramMap.pipe(
+      map(p => {
+        const code = p.get('reason');
+        return code && (DEPARTURE_REASONS as readonly string[]).includes(code)
+          ? (code as DepartureReason)
+          : null;
+      }),
+    ),
+    { initialValue: null },
+  );
+
+  /**
+   * The population this page is about: every file when unscoped, one reason otherwise.
+   * Search, the status filter, the KPIs, the board and paging are all projections of
+   * THIS, not of `items` — otherwise a category page would show "12 actifs" over a
+   * board holding three cards.
+   */
+  readonly scopedItems = computed(() => {
+    const reason = this.routeReason();
+    return reason ? this.items().filter(w => w.departureReason === reason) : this.items();
+  });
+
+  /**
+   * Switching category while deep in the pager would land on a page that does not exist
+   * in the new, smaller population. Same shape as `holidays-admin` / `role-list`.
+   */
+  private resetPageOnReasonChange = effect(() => {
+    this.routeReason();
+    this.currentPage.set(0);
+  });
+
   readonly filteredItems = computed(() => {
     this.translate.currentLang();
     const term   = this.search().trim().toLowerCase();
     const status = this.statusFilter();
-    return this.items().filter(w => {
+    return this.scopedItems().filter(w => {
       const reason = this.translate.instant('OFFBOARDING.REASON.' + w.departureReason).toLowerCase();
       const matchesTerm = !term
         || (w.employeeFullName ?? '').toLowerCase().includes(term)
@@ -132,25 +177,37 @@ export class OffboardingListComponent implements OnInit {
    * Board columns built from the FULL filtered list, not `pagedItems` — a board that only
    * held one page would silently hide files and misreport its column counts. Paging stays
    * bound to the grid/table views.
+   *
+   * Grouped by stage, resolved once per file through `boardStageOf` and bucketed, rather
+   * than re-scanning the list per column: `stageProgressOf` runs the whole stage resolver
+   * over every task of the file, so a filter-per-column would run it 7×.
    */
   readonly boardColumns = computed<OffboardingKanbanColumn[]>(() => {
     this.translate.currentLang();
-    const items = this.filteredItems();
-    const sort  = this.columnSort();
+    const sort = this.columnSort();
+
+    // Seeded with every column so an empty stage still renders its column, and the
+    // tuple is annotated: a bare `[def.key, []]` infers an array, not a Map entry.
+    const buckets = new Map<StageCode, OffboardingWorkflowInstance[]>(
+      OFFBOARDING_KANBAN_COLUMN_DEFS.map(
+        def => [def.key, []] as [StageCode, OffboardingWorkflowInstance[]],
+      ),
+    );
+    for (const wf of this.filteredItems()) {
+      buckets.get(boardStageOf(wf))?.push(wf);
+    }
 
     return OFFBOARDING_KANBAN_COLUMN_DEFS.map(def => {
       const dir = sort[def.key] ?? 'asc';
-      const columnItems = items
-        .filter(w => def.statuses.includes(w.status))
-        .sort((a, b) => dir === 'asc' ? byLastWorkingDayAsc(a, b) : byLastWorkingDayAsc(b, a));
       return {
         key: def.key,
         label: this.translate.instant(def.labelKey),
-        statuses: def.statuses,
+        icon: def.icon,
         accent: def.accent,
         badgeBg: def.badgeBg,
         sortDir: dir,
-        items: columnItems,
+        items: (buckets.get(def.key) ?? [])
+          .sort((a, b) => dir === 'asc' ? byLastWorkingDayAsc(a, b) : byLastWorkingDayAsc(b, a)),
       };
     });
   });
@@ -162,14 +219,43 @@ export class OffboardingListComponent implements OnInit {
   /** The table and the cards share one empty message, and it knows about the filter. */
   readonly emptyMessage = computed(() => {
     this.translate.currentLang();
+    if (this.statusFilter() || this.search()) {
+      return this.translate.instant('OFFBOARDING.LIST.EMPTY_FILTERED');
+    }
+    // A category page with nothing in it is not the same as an empty module.
     return this.translate.instant(
-      this.statusFilter() || this.search() ? 'OFFBOARDING.LIST.EMPTY_FILTERED' : 'OFFBOARDING.LIST.EMPTY',
+      this.routeReason() ? 'OFFBOARDING.LIST.EMPTY_REASON' : 'OFFBOARDING.LIST.EMPTY',
     );
   });
 
+  // ── Header ─────────────────────────────────────────────────────────────────
+  /** Translated label of the scoped reason, e.g. "Démission". */
+  private readonly reasonLabel = computed(() => {
+    this.translate.currentLang();
+    const reason = this.routeReason();
+    return reason ? this.translate.instant('OFFBOARDING.REASON.' + reason) : '';
+  });
+
+  readonly pageTitle = computed(() => {
+    this.translate.currentLang();
+    return this.routeReason()
+      ? this.translate.instant('OFFBOARDING.LIST.TITLE_REASON', { reason: this.reasonLabel() })
+      : this.translate.instant('OFFBOARDING.LIST.TITLE');
+  });
+
+  readonly pageSubtitle = computed(() => {
+    this.translate.currentLang();
+    return this.routeReason()
+      ? this.translate.instant('OFFBOARDING.LIST.SUBTITLE_REASON', { reason: this.reasonLabel() })
+      : this.translate.instant('OFFBOARDING.LIST.SUBTITLE');
+  });
+
   // ── KPIs ───────────────────────────────────────────────────────────────────
+  // Off `scopedItems`, so on a category page the tiles count that category. They stay
+  // blind to the search box and the status filter — a KPI row that moved with the
+  // filters could never be read as "the state of this population".
   readonly stats = computed(() => {
-    const all = this.items();
+    const all = this.scopedItems();
     const active = all.filter(isActive);
     return {
       active:    active.length,
@@ -181,7 +267,7 @@ export class OffboardingListComponent implements OnInit {
 
   readonly activeDelta = computed<MetricDelta | null>(() => {
     this.translate.currentLang();
-    const overdue = this.items().filter(w => isActive(w) && isOverdue(w)).length;
+    const overdue = this.scopedItems().filter(w => isActive(w) && isOverdue(w)).length;
     return overdue === 0
       ? { value: this.translate.instant('OFFBOARDING.LIST.DELTA_ON_TRACK'), direction: 'up' }
       : { value: this.translate.instant('OFFBOARDING.LIST.DELTA_OVERDUE_TASKS', { count: overdue }), direction: 'down' };
@@ -209,7 +295,7 @@ export class OffboardingListComponent implements OnInit {
 
   readonly validatedDelta = computed<MetricDelta | null>(() => {
     this.translate.currentLang();
-    const total = this.items().length;
+    const total = this.scopedItems().length;
     if (total === 0) return null;
     const pct = Math.round((this.stats().validated / total) * 100);
     return {
@@ -305,7 +391,15 @@ export class OffboardingListComponent implements OnInit {
     this.open(id);
   }
 
+  /**
+   * Absolute, not `relativeTo: this.route`.
+   *
+   * This page is mounted on two routes. Relative navigation resolved to
+   * `/rh/offboarding/42` from the list but to `/rh/offboarding/type/RESIGNATION/42`
+   * from a departure-type page — which matches nothing, so `{ path: '**' }` in
+   * app.routes bounced the user to `accueil` instead of opening the file.
+   */
   open(id: number): void {
-    this.router.navigate([id], { relativeTo: this.route });
+    this.router.navigate(['/rh/offboarding', id]);
   }
 }

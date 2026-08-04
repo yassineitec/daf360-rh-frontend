@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { StagePanelComponent } from './stage-panel.component';
-import { ButtonComponent } from '@khalilrebhiitec/daf360';
+import { ButtonComponent, MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
 
-import { OffboardingTask, OffboardingWorkflowInstance } from '../models/offboarding.model';
+import {
+  OffboardingTask, OffboardingWorkflowInstance, SettlementLine,
+} from '../models/offboarding.model';
 import { StageView, money, shortDate } from '../offboarding-display';
+import { StageTasksComponent } from './stage-tasks.component';
+import { isoToDate } from '../../../shared/date-picker.utils';
 
 /**
  * Stage 6 — Paie & Solde de tout compte.
@@ -13,16 +17,23 @@ import { StageView, money, shortDate } from '../offboarding-display';
  * a banner naming what is missing and a link that opens the offending stage — and
  * the figures themselves, dimmed until payroll validates.
  *
- * PENDING V46: `settlement` is null until a settlement engine exists (see
- * OFFBOARDING-BACKEND-CHANGES.md §4), so the breakdown renders its own placeholder
- * rather than invented numbers. This is deliberate — the design's own state for
- * this card is "calcul bloqué".
+ * The breakdown is EDITABLE, not computed (V63). There is no settlement engine because two
+ * of the three usual lines have no source in rh-service: no leave-balance table for the
+ * congés payés, and no per-pays convention scale for l'indemnité de rupture — salary and leave
+ * live in payroll-service. Only the prorata 13ᵉ mois is derivable, from `salaire_net_rh` and
+ * the hire date, and it is offered as a suggestion the user can override (`isSuggested`).
+ *
+ * `settlement` is null until a line exists, so the card shows its own empty state rather than
+ * a total of zero.
  */
 @Component({
   selector: 'rh-stage-payroll',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [StagePanelComponent, ButtonComponent, TranslatePipe],
+  imports: [
+    StagePanelComponent, ButtonComponent, MultiDatePickerComponent, StageTasksComponent,
+    TranslatePipe,
+  ],
   host: { class: 'block' },
   template: `
     <rh-stage-panel [view]="view()">
@@ -68,10 +79,41 @@ import { StageView, money, shortDate } from '../offboarding-display';
 
             @if (settlement(); as s) {
               <div class="flex flex-col gap-2 text-[13px]">
-                @for (line of s.lines; track line.label) {
-                  <div class="flex items-center justify-between gap-3">
-                    <span class="text-on-surface-variant">{{ line.label }}</span>
-                    <span class="font-bold text-on-surface">{{ money(line.amount, s.currency ?? 'TND') }}</span>
+                @for (line of s.lines; track line.id ?? line.label) {
+                  <div class="group flex items-center justify-between gap-3">
+                    <span class="flex min-w-0 items-center gap-1.5 text-on-surface-variant">
+                      <span class="truncate">{{ line.label }}</span>
+                      <!-- Marks a figure the system proposed and nobody has confirmed. It is
+                           cleared the moment anyone edits the line. -->
+                      @if (line.isSuggested) {
+                        <span class="material-symbols-outlined shrink-0 text-[14px] text-primary"
+                              [title]="'OFFBOARDING.SETTLEMENT.SUGGESTED_HINT' | translate">
+                          lightbulb
+                        </span>
+                      }
+                    </span>
+                    <span class="flex shrink-0 items-center gap-1">
+                      <span class="font-bold"
+                            [class]="line.amount < 0 ? 'text-danger' : 'text-on-surface'">
+                        {{ money(line.amount, s.currency ?? 'TND') }}
+                      </span>
+                      @if (canEdit()) {
+                        <button type="button"
+                          class="flex h-6 w-6 items-center justify-center rounded text-outline-variant
+                                 transition-colors hover:bg-tertiary/10 hover:text-tertiary"
+                          [title]="'OFFBOARDING.SETTLEMENT.EDIT_LINE' | translate"
+                          (click)="editLine.emit(line)">
+                          <span class="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                        <button type="button"
+                          class="flex h-6 w-6 items-center justify-center rounded text-outline-variant
+                                 transition-colors hover:bg-danger/10 hover:text-danger"
+                          [title]="'OFFBOARDING.SETTLEMENT.DELETE_LINE' | translate"
+                          (click)="deleteLine.emit(line)">
+                          <span class="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      }
+                    </span>
                   </div>
                 }
                 <div class="mt-2 flex items-center justify-between gap-3 border-t border-outline-variant/20 pt-2">
@@ -82,17 +124,38 @@ import { StageView, money, shortDate } from '../offboarding-display';
                     {{ money(s.totalNet, s.currency ?? 'TND') }}
                   </span>
                 </div>
+                @if (canEdit()) {
+                  <daf-button class="mt-2 block"
+                    [options]="{ variant: 'ghost', size: 'sm', iconStart: 'add',
+                                 label: ('OFFBOARDING.SETTLEMENT.ADD_LINE' | translate) }"
+                    (onClick)="addLine.emit()" />
+                }
               </div>
             } @else {
-              <!-- PENDING V46 — no settlement engine yet. -->
-              <p class="text-[13px] italic text-on-surface-variant">
-                {{ 'OFFBOARDING.STAGE.PAYROLL_NO_FIGURES' | translate }}
+              <!-- No engine to lock behind: the amounts are entered, because two of the three
+                   standard lines have no source in rh-service (no leave balance, no convention
+                   scale). Only the prorata 13ᵉ mois can be proposed. -->
+              <p class="mb-3 text-[13px] italic text-on-surface-variant">
+                {{ 'OFFBOARDING.SETTLEMENT.EMPTY' | translate }}
               </p>
+              @if (canEdit()) {
+                <div class="flex flex-wrap gap-2">
+                  <daf-button
+                    [options]="{ variant: 'teal', size: 'sm', iconStart: 'lightbulb',
+                                 label: ('OFFBOARDING.SETTLEMENT.SUGGEST' | translate),
+                                 loading: suggesting() }"
+                    (onClick)="suggest.emit()" />
+                  <daf-button
+                    [options]="{ variant: 'secondary', size: 'sm', iconStart: 'add',
+                                 label: ('OFFBOARDING.SETTLEMENT.ADD_LINE' | translate) }"
+                    (onClick)="addLine.emit()" />
+                </div>
+              }
             }
           </div>
 
           <div class="flex flex-col gap-4">
-            <!-- PENDING V46 — settlement_payment_mode, joined from the profile's RIB. -->
+            <!-- V63 — settlement_payment_mode, joined and masked from the profile's bank details. -->
             <div class="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4">
               <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
                 {{ 'OFFBOARDING.STAGE.PAYROLL_PAYMENT_MODE' | translate }}
@@ -105,14 +168,21 @@ import { StageView, money, shortDate } from '../offboarding-display';
               </div>
             </div>
 
-            <!-- PENDING V46 — settlement_execution_date -->
+            <!-- V63 — settlement_execution_date -->
             <div class="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4">
               <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
                 {{ 'OFFBOARDING.STAGE.PAYROLL_EXECUTION_DATE' | translate }}
               </span>
-              <span class="text-[13px] font-bold text-on-surface">
-                {{ shortDate(wf().settlementExecutionDate) }}
-              </span>
+              @if (canEdit()) {
+                <daf-multi-date-picker
+                  [value]="executionDate()"
+                  [config]="{ selectionMode: 'single', fullWidth: true }"
+                  (valueChange)="executionDateChange.emit($event)" />
+              } @else {
+                <span class="text-[13px] font-bold text-on-surface">
+                  {{ shortDate(wf().settlementExecutionDate) }}
+                </span>
+              }
             </div>
 
             <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant/50">
@@ -130,6 +200,17 @@ import { StageView, money, shortDate } from '../offboarding-display';
           </div>
         </div>
       </div>
+
+      <!-- FINAL_SETTLEMENT is excluded: it has the prominent CTA above, and two controls
+           for one task is worse than none. This is what makes EXPENSE_CLOSE reachable —
+           it had no control anywhere, and the stage could not go done without it. -->
+      @if (otherTasks().length) {
+        <rh-stage-tasks class="mt-8"
+          [tasks]="otherTasks()"
+          [canEdit]="canEdit()"
+          (complete)="completeTask.emit($event)"
+          (skip)="skipTask.emit($event)" />
+      }
     </rh-stage-panel>
   `,
 })
@@ -141,8 +222,26 @@ export class StagePayrollComponent {
   readonly tasks    = input<OffboardingTask[]>([]);
   readonly canEdit  = input(false);
 
+  readonly suggesting = input(false);
+
   readonly goToBlockers      = output<void>();
   readonly completeSettlement = output<OffboardingTask>();
+  readonly completeTask      = output<OffboardingTask>();
+  readonly skipTask          = output<OffboardingTask>();
+  readonly suggest           = output<void>();
+  readonly addLine           = output<void>();
+  readonly editLine          = output<SettlementLine>();
+  readonly deleteLine        = output<SettlementLine>();
+  readonly executionDateChange = output<Date | Date[] | null>();
+
+  protected readonly executionDate = computed(
+    () => isoToDate(this.wf().settlementExecutionDate ?? ''),
+  );
+
+  /** The stage's tasks minus the settlement, which has its own CTA in the panel above. */
+  protected readonly otherTasks = computed(
+    () => this.tasks().filter(t => t.taskCode !== 'FINAL_SETTLEMENT'),
+  );
 
   protected readonly money     = money;
   protected readonly shortDate = shortDate;

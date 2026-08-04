@@ -1,24 +1,28 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { catchError, of } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 
 import {
   AccordionState, BreadcrumbItem, ButtonComponent, CardComponent, CheckboxComponent,
   FormFieldComponent, MultiDatePickerComponent, PageComponent, PageHeaderComponent,
   PageHeaderBadge, ProgressBarComponent, SelectComponent, SelectOption,
-  StatusBadgeComponent, StepperComponent, StepperConfig, StepperStep,
+  StatusBadgeComponent, StepperComponent, StepperConfig, StepperStep, ToggleComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { OffboardingService } from './offboarding.service';
 import {
-  ASSET_TYPES, AssetType, DEPARTURE_REASONS, DepartureReason, ExitInterview,
-  OffboardingAssetReturn, OffboardingChecklistItem, OffboardingTask,
-  OffboardingWorkflowInstance, computeProgress, findNextDueTask, isTerminal,
+  ASSET_TYPES, AssetType, ChecklistGroup, DEPARTURE_REASONS, DepartureReason, ExitInterview,
+  OffboardingAssetReturn, OffboardingAuditEntry, OffboardingChecklistItem, OffboardingSettlement, OffboardingTask,
+  OffboardingWorkflowInstance, SettlementLine, computeProgress, findNextDueTask, isTerminal,
 } from './models/offboarding.model';
+import { ProfileService } from '../profiles/profile.service';
+import { EmployeeListItem } from '../profiles/models/profile.model';
 import {
   STAGES, StageCode, StageView, activeStageIndex, dayMonth, daysUntil, longDate,
-  outstandingBlockers, resolveStageStates, stageStatusKey, statusVariant, tasksOfStage,
+  outstandingBlockers, resolveStageStates, stageDef, stageStatusKey, statusVariant,
+  tasksOfStage,
 } from './offboarding-display';
 import { ModalComponent } from '../../shared/modal.component';
 // Aliased: this component already exposes an 'employeeAvatar' signal to the template.
@@ -34,6 +38,7 @@ import { StageItAssetsComponent } from './stages/stage-it-assets.component';
 import { StageHrDocsComponent } from './stages/stage-hr-docs.component';
 import { StagePayrollComponent } from './stages/stage-payroll.component';
 import { StageClosureComponent } from './stages/stage-closure.component';
+import { StageReservedComponent } from './stages/stage-reserved.component';
 import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
 
 /**
@@ -56,62 +61,16 @@ import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
     PageComponent, PageHeaderComponent, CardComponent, ButtonComponent,
     StepperComponent, ProgressBarComponent, StatusBadgeComponent,
     FormFieldComponent, SelectComponent, CheckboxComponent, MultiDatePickerComponent,
-    ModalComponent, TranslatePipe,
+    ToggleComponent, ModalComponent, TranslatePipe,
     StageDeclarationComponent, StageValidationComponent, StageHandoverComponent,
     StageItAssetsComponent, StageHrDocsComponent, StagePayrollComponent, StageClosureComponent,
+    StageReservedComponent,
     OffboardingAuditDrawerComponent,
   ],
   templateUrl: './offboarding-detail.component.html',
-  // Vertical stage tracker for the sticky sidebar. Same rules as the onboarding
-  // per-case page (onboarding-form.component.scss) so the two trackers are identical;
-  // inlined here because this page has no stylesheet of its own.
-  styles: [`
-    .tracker-step {
-      display: flex;
-      gap: 12px;
-      padding-bottom: 20px;
-      position: relative;
-      align-items: flex-start;
-    }
-    .tracker-step.tracker-step-last { padding-bottom: 0; }
-
-    .tracker-line {
-      position: absolute;
-      left: 13px;
-      top: 28px;
-      width: 2px;
-      height: calc(100% - 8px);
-      z-index: 0;
-    }
-    .tracker-line.tracker-line-done    { background: var(--color-tertiary); }
-    .tracker-line.tracker-line-pending { background: var(--color-outline-variant); }
-
-    .tracker-dot {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      z-index: 1;
-    }
-    .tracker-dot.tracker-dot-done   { background: var(--color-tertiary); color: #ffffff; }
-    .tracker-dot.tracker-dot-active { border: 4px solid #79d7be; background: #b9e9df; }
-    .tracker-dot.tracker-dot-pending {
-      background: var(--color-surface-container-high);
-      border: 1px solid var(--color-outline-variant);
-      color: var(--color-outline);
-    }
-
-    .tracker-dot-inner {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--color-tertiary);
-    }
-  `],
+  // No `styles` any more: the ~45 lines here drew the vertical stage tracker, which
+  // duplicated the horizontal daf-stepper from the same resolver. Deleting it also
+  // removed this page's last two raw hex values (#79d7be / #b9e9df).
 })
 export class OffboardingDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
@@ -119,13 +78,70 @@ export class OffboardingDetailComponent implements OnInit {
   private translate = inject(TranslateService);
   private userStore = inject(UserStore);
   private notify    = inject(NotificationService);
+  private profileSvc = inject(ProfileService);
 
   workflowId = 0;
 
-  /** Only RH_MANAGE_OFFBOARDING holders may run mutating actions. */
+  /** Only RH_MANAGE_OFFBOARDING holders may run the file-level actions (cancel/validate). */
   readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
-  /** Stage-level edit gate: manageable *and* the file is still open. */
-  readonly canEdit   = computed(() => this.canManage() && !this.isTerminal());
+
+  // ── Per-stage access ───────────────────────────────────────────────────────
+  // Two distinct questions, and conflating them was the old file-wide `canEdit`
+  // (removed — every stage now resolves its own):
+  //   canViewStage — may I read this stage's body?  (owning department, or RH)
+  //   canActOnStage — may I change anything in it?  (the above, and the file still open)
+  // The RAIL is never gated: everyone who can open the file sees all seven stages and
+  // their states, so an IT officer can tell the passation is done without being able to
+  // read it. "RH sees everything" is not special-cased — V58 grants DRH/Admin every
+  // stage permission, so it falls out of the grants.
+
+  private readonly heldPermissions = computed(() => new Set(this.userStore.permissions()));
+
+  /**
+   * Is the signed-in user the handover manager named on THIS file?
+   *
+   * A per-file fact, not a permission — which is why stage 2 cannot be resolved from
+   * `STAGE_PERMISSIONS` alone. Compares portal user ids: the file carries
+   * `handoverManagerUserId` precisely because the client only knows its own *user* id and
+   * cannot match a profile id.
+   */
+  readonly isHandoverManager = computed(() => {
+    const managerUserId = this.wf()?.handoverManagerUserId;
+    const me = this.userStore.currentUser()?.userId;
+    return !!managerUserId && !!me && managerUserId === me;
+  });
+
+  canViewStage(code: StageCode): boolean {
+    const held = this.heldPermissions();
+    if (stageDef(code).permissions.some(p => held.has(p))) return true;
+    // Stage 2's left panel belongs to the named manager, so they must be able to open the
+    // stage even without an RH permission. The single per-file exception to the map.
+    return code === 'VALIDATION' && this.isHandoverManager();
+  }
+
+  canActOnStage(code: StageCode): boolean {
+    return this.canViewStage(code) && !this.isTerminal();
+  }
+
+  /** The manager panel: the named manager, or RH standing in for them. */
+  readonly canValidateAsManager = computed(() =>
+    !this.isTerminal()
+    && (this.isHandoverManager() || this.canManage())
+    && !!this.wf()?.lastWorkingDay,
+  );
+
+  /** RH's panel — ordered after the manager, mirroring the API's own refusal. */
+  readonly canValidateAsHr = computed(() =>
+    !this.isTerminal()
+    && (this.heldPermissions().has('RH_VALIDATE_OFFBOARDING') || this.canManage())
+    && !!this.wf()?.managerValidatedAt,
+  );
+
+  /** Owning department of a stage, for the "réservé à…" placeholder. */
+  stageOwnerLabel(code: StageCode): string {
+    this.translate.currentLang();
+    return this.translate.instant('OFFBOARDING.STAGE_OWNER.' + code);
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
   /** Whole-page skeleton — first load only (§5), so a refetch never blanks it. */
@@ -273,32 +289,12 @@ export class OffboardingDetailComponent implements OnInit {
 
   readonly railIndex = computed(() => activeStageIndex(this.stageStates()));
 
-  /**
-   * The same seven stages as a VERTICAL tracker for the sticky sidebar, matching the
-   * onboarding per-case layout. Derived from the one stage resolver as the horizontal
-   * rail, so the two can never disagree about which stage is live.
-   */
-  readonly trackerSteps = computed(() => {
-    this.translate.currentLang();
-    const states = this.stageStates();
-    const activeIdx = this.railIndex();
-    return STAGES.map((s, i) => {
-      const state = states[s.code];
-      return {
-        code:  s.code,
-        icon:  s.icon,
-        label: this.translate.instant('OFFBOARDING.STAGE.' + s.railKey + '_RAIL'),
-        done:    state === 'done',
-        active:  state !== 'done' && i === activeIdx,
-        // Anything neither finished nor current is still ahead — including locked stages,
-        // which read as pending rather than as a separate visual state.
-        pending: state !== 'done' && i !== activeIdx,
-        last:    i === STAGES.length - 1,
-      };
-    });
-  });
+  // A `trackerSteps` computed used to build the same seven stages again for a VERTICAL
+  // sidebar tracker. Removed: it read from `stageStates` exactly like `railSteps`, so it
+  // could only ever repeat what the horizontal rail already said, while pushing the progress
+  // bar and the next-step chip out of sight below it. Both now sit under the rail itself.
 
-  /** Exposed for the sidebar's date fields — the helper is a module function. */
+  /** Exposed for the identity card's date fields — the helper is a module function. */
   protected readonly longDate = longDate;
 
   /** Set when the image 404s, so the initials tile takes over. */
@@ -362,14 +358,25 @@ export class OffboardingDetailComponent implements OnInit {
   /**
    * Land on the stage that needs attention — the first blocked one, else the active one.
    * Only on first load: never yank a user who has already navigated somewhere else.
+   *
+   * Restricted to stages the user can read, so an IT officer opening a file whose live
+   * stage is Passation lands on IT & Matériel instead of on a "réservé au manager"
+   * placeholder. Falls back to the workflow's real position when they can read none of
+   * it — the rail still tells them where the file stands.
    */
   private seedOpenStages(): void {
     if (this.stageSeeded) return;
     this.stageSeeded = true;
     const states = this.stageStates();
-    const target = STAGES.findIndex(s => states[s.code] === 'blocked');
-    const active = STAGES.findIndex(s => states[s.code] === 'active');
-    const index = target >= 0 ? target : (active >= 0 ? active : 0);
+    const pick = (predicate: (code: StageCode) => boolean) =>
+      STAGES.findIndex(s => predicate(s.code) && this.canViewStage(s.code));
+
+    const blocked = pick(c => states[c] === 'blocked');
+    const active  = pick(c => states[c] === 'active');
+    const anyMine = pick(c => states[c] !== 'locked');
+    const fallback = STAGES.findIndex(s => states[s.code] === 'active');
+
+    const index = [blocked, active, anyMine, fallback].find(i => i >= 0) ?? 0;
     this.currentStageIndex.set(index);
   }
   private stageSeeded = false;
@@ -398,7 +405,31 @@ export class OffboardingDetailComponent implements OnInit {
   readonly currentStage = computed(() => STAGES[this.currentStageIndex()]?.code ?? STAGES[0].code);
 
   readonly canGoPrev = computed(() => this.currentStageIndex() > 0);
-  readonly canGoNext = computed(() => this.currentStageIndex() < STAGES.length - 1);
+
+  /**
+   * Also false when the next stage is locked. `goToIndex` already refused to enter a
+   * locked stage, but the button stayed enabled and swallowed the click — which reads as
+   * a broken button, not as a gate. `nextBlockedReason` says what is missing.
+   */
+  readonly canGoNext = computed(() => {
+    const next = STAGES[this.currentStageIndex() + 1];
+    return !!next && this.stageStates()[next.code] !== 'locked';
+  });
+
+  /** Why Suivant is disabled — shown as the button's tooltip. */
+  readonly nextBlockedReason = computed(() => {
+    this.translate.currentLang();
+    const next = STAGES[this.currentStageIndex() + 1];
+    if (!next || this.stageStates()[next.code] !== 'locked') return '';
+    // Only DECLARATION gates today (see StageDef.requires), so name it rather than
+    // listing prerequisites generically.
+    const unmet = next.requires.filter(r => this.stageStates()[r] !== 'done');
+    return unmet.length
+      ? this.translate.instant('OFFBOARDING.DETAIL.LOCKED_NEEDS', {
+          stages: unmet.map(r => this.translate.instant('OFFBOARDING.STAGE.' + stageDef(r).railKey + '_RAIL')).join(', '),
+        })
+      : this.translate.instant('OFFBOARDING.DETAIL.LOCKED_BLOCKERS');
+  });
 
   /** Label of the next stage, so the button can name where it goes. */
   readonly nextStageTitle = computed(() => {
@@ -420,7 +451,7 @@ export class OffboardingDetailComponent implements OnInit {
   goNext(): void { this.goToIndex(this.currentStageIndex() + 1); }
 
   /**
-   * Jump to a stage by code — used by the rail, the sidebar tracker and the cross-links
+   * Jump to a stage by code — used by the rail and the cross-links
    * a stage emits (e.g. Payroll → "see the blockers in IT & Matériel").
    */
   openOnly(code: StageCode): void {
@@ -489,15 +520,23 @@ export class OffboardingDetailComponent implements OnInit {
     }
   }
 
-  /** Tasks of one stage — the payroll card needs FINAL_SETTLEMENT by code.
-   *  A computed, not a template method: a fresh array on every check would make
-   *  the child's input look changed on every cycle. */
-  readonly payrollTasks = computed(() => this.stageTasks('PAYROLL'));
+  /**
+   * Every stage's tasks, resolved in one pass.
+   *
+   * A computed, not a template method: `tasksOfStage` filters, so a fresh array on every
+   * change-detection cycle would make each child's `tasks` input look changed forever.
+   * One record keeps the references stable while `tasks()` is unchanged.
+   */
+  readonly tasksByStage = computed<Record<StageCode, OffboardingTask[]>>(() => {
+    const all = this.tasks();
+    const out = {} as Record<StageCode, OffboardingTask[]>;
+    for (const stage of STAGES) out[stage.code] = tasksOfStage(stage, all);
+    return out;
+  });
 
-  private stageTasks(code: StageCode): OffboardingTask[] {
-    const stage = STAGES.find(s => s.code === code);
-    return stage ? tasksOfStage(stage, this.tasks()) : [];
-  }
+  /** The payroll card needs FINAL_SETTLEMENT by code for its own settlement CTA, and
+   *  excludes it from the generic task list itself. */
+  readonly payrollTasks = computed(() => this.tasksByStage()['PAYROLL']);
 
   // ── Task actions ───────────────────────────────────────────────────────────
   openCompleteModal(task: OffboardingTask): void {
@@ -528,6 +567,10 @@ export class OffboardingDetailComponent implements OnInit {
         if (updated) {
           this.tasks.update(list => list.map(t => t.id === updated.id ? updated : t));
           this.notify.success(this.translate.instant('OFFBOARDING.TOAST.TASK_DONE'));
+          // Completing the last blocking task flips the instance BLOCKED → IN_PROGRESS
+          // server-side. The response is the task alone, so without this the header badge
+          // keeps reading "Bloqué" on a file that is no longer blocked.
+          this.loadWorkflow();
         }
       });
   }
@@ -548,6 +591,7 @@ export class OffboardingDetailComponent implements OnInit {
         if (updated) {
           this.tasks.update(list => list.map(t => t.id === updated.id ? updated : t));
           this.notify.success(this.translate.instant('OFFBOARDING.TOAST.TASK_SKIPPED'));
+          this.loadWorkflow();
         }
       });
   }
@@ -594,8 +638,675 @@ export class OffboardingDetailComponent implements OnInit {
       });
   }
 
+  // ── Stage 1 — complete the declaration ─────────────────────────────────────
+  // A modal rather than inline editing, matching every other mutation on this page
+  // (complete, skip, cancel, interview, asset) and keeping the stage component stateless.
+
+  showDeclarationModal = signal(false);
+  savingDeclaration    = signal(false);
+  declarationError     = signal<string | null>(null);
+  /** Reported separately: the upload can 403 on its own (see uploadJustification). */
+  justificationError   = signal<string | null>(null);
+
+  declLastWorkingDay   = '';
+  declTheoreticalExit  = '';
+  declNoticePeriod     = '';
+  declNoticeWaiver     = false;
+  declNotes            = '';
+  declFile: File | null = null;
+  declFileName         = signal<string | null>(null);
+
+  openDeclarationModal(): void {
+    const w = this.wf();
+    this.declLastWorkingDay  = w?.lastWorkingDay ?? '';
+    this.declTheoreticalExit = w?.theoreticalExitDate ?? '';
+    this.declNoticePeriod    = w?.noticePeriodLabel ?? '';
+    this.declNoticeWaiver    = w?.noticeWaiverRequested ?? false;
+    this.declNotes           = w?.departureNotes ?? '';
+    this.declFile = null;
+    this.declFileName.set(w?.justificationDocumentName ?? null);
+    this.declarationError.set(null);
+    this.justificationError.set(null);
+    this.showDeclarationModal.set(true);
+  }
+
+  onJustificationPicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.declFile = file;
+    if (file) this.declFileName.set(file.name);
+    this.justificationError.set(null);
+  }
+
+  /**
+   * The departure date is what completes the stage and unlocks the rest of the wizard,
+   * so it is the one required field. Uploads the letter first when one was picked, then
+   * saves — an upload failure does not lose the rest of the form.
+   */
+  saveDeclaration(): void {
+    if (!this.declLastWorkingDay) {
+      this.declarationError.set(this.translate.instant('OFFBOARDING.DECLARATION.ERR_DATE_REQUIRED'));
+      return;
+    }
+    if (this.savingDeclaration()) return;
+    this.declarationError.set(null);
+    this.justificationError.set(null);
+    this.savingDeclaration.set(true);
+
+    const profileId = this.wf()?.employeeProfileId;
+    const upload$ = this.declFile && profileId
+      ? this.svc.uploadJustification(profileId, this.declFile).pipe(
+          catchError(() => {
+            this.justificationError.set(
+              this.translate.instant('OFFBOARDING.DECLARATION.ERR_UPLOAD'));
+            return of(null);
+          }),
+        )
+      : of(null);
+
+    upload$.pipe(
+      switchMap(uploaded => this.svc.updateDeclaration(this.workflowId, {
+        lastWorkingDay:      this.declLastWorkingDay,
+        theoreticalExitDate: this.declTheoreticalExit || null,
+        noticePeriodLabel:   this.declNoticePeriod || null,
+        noticeWaiverRequested: this.declNoticeWaiver,
+        departureNotes:      this.declNotes || null,
+        ...(uploaded ? {
+          justificationDocumentUrl:  uploaded.fileUrl,
+          justificationDocumentName: uploaded.fileName,
+        } : {}),
+      })),
+      catchError(err => {
+        this.declarationError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.DECLARATION.ERR_SAVE'));
+        this.savingDeclaration.set(false);
+        return of(null);
+      }),
+    ).subscribe(updated => {
+      this.savingDeclaration.set(false);
+      if (!updated) return;
+      this.wf.set(updated);
+      this.tasks.set(updated.tasks ?? this.tasks());
+      this.showDeclarationModal.set(false);
+      this.notify.success(this.translate.instant('OFFBOARDING.DECLARATION.SAVED'));
+      // Asset due dates are re-derived from the new departure date server-side.
+      this.loadAssets();
+    });
+  }
+
+  // ── Stage 5 — Kit RH ───────────────────────────────────────────────────────
+
+  showScheduleModal = signal(false);
+  savingSchedule    = signal(false);
+  scheduleError     = signal<string | null>(null);
+  schedDate = '';
+  schedTime = '10:00';
+
+  generatingKit  = signal<string | null>(null);
+  downloadingKit = signal(false);
+
+  openScheduleModal(): void {
+    const at = this.interview()?.scheduledAt;
+    this.schedDate = at ? at.slice(0, 10) : '';
+    this.schedTime = at ? new Date(at).toTimeString().slice(0, 5) : '10:00';
+    this.scheduleError.set(null);
+    this.showScheduleModal.set(true);
+  }
+
+  saveSchedule(): void {
+    if (!this.schedDate || this.savingSchedule()) return;
+    this.savingSchedule.set(true);
+    this.scheduleError.set(null);
+    // Local time, then ISO: an interview is at a wall-clock moment for the people attending.
+    const at = new Date(`${this.schedDate}T${this.schedTime || '10:00'}:00`);
+    this.svc.scheduleExitInterview(this.workflowId, { scheduledAt: at.toISOString() })
+      .pipe(catchError(err => {
+        this.scheduleError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.KIT.ERR_SCHEDULE'));
+        this.savingSchedule.set(false);
+        return of(null);
+      }))
+      .subscribe(iv => {
+        this.savingSchedule.set(false);
+        if (!iv) return;
+        this.interview.set(iv);
+        this.showScheduleModal.set(false);
+        this.notify.success(this.translate.instant('OFFBOARDING.KIT.SCHEDULED'));
+      });
+  }
+
+  generateKitDocument(itemCode: string): void {
+    if (this.generatingKit()) return;
+    this.generatingKit.set(itemCode);
+    this.svc.generateKitDocument(this.workflowId, itemCode)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.KIT.ERR_GENERATE'));
+        this.generatingKit.set(null);
+        return of(null);
+      }))
+      .subscribe(item => {
+        this.generatingKit.set(null);
+        if (!item) return;
+        this.patchChecklist(items => items.map(i => i.id === item.id ? item : i));
+        this.notify.success(this.translate.instant('OFFBOARDING.KIT.GENERATED'));
+      });
+  }
+
+  downloadKitArchive(): void {
+    if (this.downloadingKit()) return;
+    this.downloadingKit.set(true);
+    this.svc.downloadKitArchive(this.workflowId)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.KIT.ERR_DOWNLOAD'));
+        this.downloadingKit.set(false);
+        return of(null);
+      }))
+      .subscribe(blob => {
+        this.downloadingKit.set(false);
+        if (blob) this.saveBlob(blob, `kit-rh-${this.workflowId}.zip`);
+      });
+  }
+
+  /** Anchor-click download. Revoked immediately after: the browser has the bytes by then. */
+  private saveBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Stage 6 — Solde de tout compte ─────────────────────────────────────────
+
+  suggestingSettlement = signal(false);
+  showLineModal        = signal(false);
+  savingLine           = signal(false);
+  lineError            = signal<string | null>(null);
+  editingLine          = signal<SettlementLine | null>(null);
+  lineLabel  = '';
+  lineAmount = '';
+
+  suggestSettlement(): void {
+    if (this.suggestingSettlement()) return;
+    this.suggestingSettlement.set(true);
+    this.svc.suggestSettlement(this.workflowId)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.SETTLEMENT.ERR_SUGGEST'));
+        this.suggestingSettlement.set(false);
+        return of(null);
+      }))
+      .subscribe(settlement => {
+        this.suggestingSettlement.set(false);
+        if (settlement) this.applySettlement(settlement);
+      });
+  }
+
+  openLineModal(line: SettlementLine | null): void {
+    this.editingLine.set(line);
+    this.lineLabel  = line?.label ?? '';
+    this.lineAmount = line ? String(line.amount) : '';
+    this.lineError.set(null);
+    this.showLineModal.set(true);
+  }
+
+  saveLine(): void {
+    const amount = Number(this.lineAmount.replace(',', '.'));
+    if (!this.lineLabel.trim() || Number.isNaN(amount)) {
+      this.lineError.set(this.translate.instant('OFFBOARDING.SETTLEMENT.ERR_INVALID'));
+      return;
+    }
+    if (this.savingLine()) return;
+    this.savingLine.set(true);
+    this.lineError.set(null);
+
+    const existing = this.editingLine();
+    const dto = { label: this.lineLabel.trim(), amount };
+    const call$ = existing?.id
+      ? this.svc.updateSettlementLine(existing.id, dto)
+      : this.svc.addSettlementLine(this.workflowId, dto);
+
+    call$.pipe(catchError(err => {
+      this.lineError.set(err?.error?.message
+        ?? this.translate.instant('OFFBOARDING.SETTLEMENT.ERR_SAVE'));
+      this.savingLine.set(false);
+      return of(null);
+    })).subscribe(settlement => {
+      this.savingLine.set(false);
+      if (!settlement) return;
+      this.applySettlement(settlement);
+      this.showLineModal.set(false);
+    });
+  }
+
+  deleteLine(line: SettlementLine): void {
+    if (!line.id) return;
+    this.svc.deleteSettlementLine(line.id)
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.SETTLEMENT.ERR_SAVE'));
+        return of(null);
+      }))
+      .subscribe(settlement => { if (settlement) this.applySettlement(settlement); });
+  }
+
+  onExecutionDate(value: Date | Date[] | null): void {
+    const iso = dateToIso(value);
+    if (!iso) return;
+    this.svc.updateSettlement(this.workflowId, { settlementExecutionDate: iso })
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.SETTLEMENT.ERR_SAVE'));
+        return of(null);
+      }))
+      .subscribe(updated => { if (updated) this.applyInstance(updated); });
+  }
+
+  /**
+   * The line endpoints return the whole settlement, not the instance — cheaper, and it keeps
+   * the totals authoritative. Patch it onto the instance signal so the stage re-renders.
+   */
+  private applySettlement(settlement: OffboardingSettlement): void {
+    this.wf.update(w => w ? { ...w, settlement } : w);
+  }
+
+  // ── Stage 7 — Reopen / Archive ─────────────────────────────────────────────
+
+  showReopenModal  = signal(false);
+  showArchiveModal = signal(false);
+  reopening        = signal(false);
+  archiving        = signal(false);
+  reopenReason     = '';
+  reopenError      = signal<string | null>(null);
+
+  /** Same right as validating: un-closing a file is the same weight as closing it. */
+  readonly canReopen = computed(() =>
+    this.isTerminal()
+    && this.wf()?.status !== 'ARCHIVED'
+    && (this.heldPermissions().has('RH_VALIDATE_OFFBOARDING') || this.canManage()),
+  );
+
+  readonly canArchive = computed(() =>
+    this.wf()?.status === 'VALIDATED'
+    && (this.heldPermissions().has('RH_VALIDATE_OFFBOARDING') || this.canManage()),
+  );
+
+  openReopenModal(): void {
+    this.reopenReason = '';
+    this.reopenError.set(null);
+    this.showReopenModal.set(true);
+  }
+
+  confirmReopen(): void {
+    if (!this.reopenReason.trim() || this.reopening()) return;
+    this.reopening.set(true);
+    this.reopenError.set(null);
+    this.svc.reopenOffboarding(this.workflowId, this.reopenReason.trim())
+      .pipe(catchError(err => {
+        this.reopenError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.CLOSURE.ERR_REOPEN'));
+        this.reopening.set(false);
+        return of(null);
+      }))
+      .subscribe(updated => {
+        this.reopening.set(false);
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.showReopenModal.set(false);
+        this.notify.success(this.translate.instant('OFFBOARDING.CLOSURE.REOPENED'));
+      });
+  }
+
+  confirmArchive(): void {
+    if (this.archiving()) return;
+    this.archiving.set(true);
+    this.svc.archiveOffboarding(this.workflowId)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.CLOSURE.ERR_ARCHIVE'));
+        this.archiving.set(false);
+        return of(null);
+      }))
+      .subscribe(updated => {
+        this.archiving.set(false);
+        this.showArchiveModal.set(false);
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.notify.success(this.translate.instant('OFFBOARDING.CLOSURE.ARCHIVED'));
+      });
+  }
+
+  auditEntries = signal<OffboardingAuditEntry[]>([]);
+  auditLoading = signal(false);
+
+  /**
+   * Fetched when the drawer is opened, not on page load: it is a per-file query across six
+   * entity types that most visits never look at.
+   */
+  openAuditDrawer(): void {
+    this.auditOpen.set(true);
+    if (this.auditEntries().length || this.auditLoading()) return;
+    this.auditLoading.set(true);
+    this.svc.getAuditTrail(this.workflowId)
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.CLOSURE.ERR_AUDIT'));
+        this.auditLoading.set(false);
+        return of([] as OffboardingAuditEntry[]);
+      }))
+      .subscribe(entries => {
+        this.auditEntries.set(entries);
+        this.auditLoading.set(false);
+      });
+  }
+
+  downloadAuditCsv(): void {
+    this.svc.downloadAuditCsv(this.workflowId)
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.CLOSURE.ERR_AUDIT'));
+        return of(null);
+      }))
+      .subscribe(blob => {
+        if (blob) this.saveBlob(blob, `offboarding-${this.workflowId}-audit.csv`);
+      });
+  }
+
+  // ── Stage 4 — Informatique & Matériel ──────────────────────────────────────
+
+  generatingDischarge = signal(false);
+
+  /**
+   * The column stores a moment but the picker only offers a day, so the chosen date becomes
+   * 23:59 local: the employee works until the end of their last day, and deactivating at
+   * 00:00 would cut them off a day early. Replace with a datetime control if the lib grows
+   * one — the stored value is already precise enough.
+   */
+  onDeactivationDate(value: Date | Date[] | null): void {
+    const day = dateToIso(value);
+    if (!day) return;
+    const at = new Date(`${day}T23:59:00`);
+    this.svc.updateItSecurity(this.workflowId, { accountDeactivationAt: at.toISOString() })
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.IT.ERR_DEACTIVATION'));
+        return of(null);
+      }))
+      .subscribe(updated => {
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.notify.success(this.translate.instant('OFFBOARDING.IT.DEACTIVATION_SAVED'));
+      });
+  }
+
+  generateDischarge(): void {
+    if (this.generatingDischarge()) return;
+    this.generatingDischarge.set(true);
+    this.svc.generateDischarge(this.workflowId)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.IT.ERR_DISCHARGE'));
+        this.generatingDischarge.set(false);
+        return of(null);
+      }))
+      .subscribe(updated => {
+        this.generatingDischarge.set(false);
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.notify.success(this.translate.instant('OFFBOARDING.IT.DISCHARGE_GENERATED'));
+      });
+  }
+
+  // ── Stage 3 — Passation ────────────────────────────────────────────────────
+
+  showSuccessorModal = signal(false);
+  showAddItemModal   = signal(false);
+  savingHandover     = signal(false);
+  savingItem         = signal(false);
+  handoverError      = signal<string | null>(null);
+
+  successorQuery       = '';
+  successorResults     = signal<EmployeeListItem[]>([]);
+  successorSearching   = signal(false);
+  selectedSuccessor    = signal<EmployeeListItem | null>(null);
+  newItemLabel         = '';
+
+  private successorSearch$ = new Subject<string>();
+
+  constructor() {
+    this.successorSearch$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(),
+      switchMap(q => {
+        if (!q.trim()) { this.successorSearching.set(false); return of(null); }
+        this.successorSearching.set(true);
+        return this.profileSvc.listAllEmployees({ search: q }, 0, 8)
+          .pipe(catchError(() => of(null)));
+      }),
+    ).subscribe(res => {
+      this.successorSearching.set(false);
+      // Only employees with a profile, and never the person leaving — the API refuses that
+      // anyway, so offering it would only produce an error.
+      const leaving = this.wf()?.employeeProfileId;
+      this.successorResults.set((res?.content ?? [])
+        .filter(e => e.profileId !== null && e.profileId !== leaving));
+    });
+  }
+
+  openSuccessorModal(): void {
+    this.successorQuery = '';
+    this.successorResults.set([]);
+    this.selectedSuccessor.set(null);
+    this.handoverError.set(null);
+    this.showSuccessorModal.set(true);
+  }
+
+  onSuccessorQuery(q: string): void {
+    this.successorQuery = q;
+    if (!q.trim()) { this.successorResults.set([]); return; }
+    this.successorSearch$.next(q);
+  }
+
+  pickSuccessor(e: EmployeeListItem): void {
+    this.selectedSuccessor.set(e);
+    this.successorResults.set([]);
+    this.successorQuery = '';
+  }
+
+  saveSuccessor(): void {
+    const picked = this.selectedSuccessor();
+    if (!picked?.profileId || this.savingHandover()) return;
+    this.savingHandover.set(true);
+    this.handoverError.set(null);
+    this.svc.updateHandover(this.workflowId, { handoverManagerProfileId: picked.profileId })
+      .pipe(catchError(err => {
+        this.handoverError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.HANDOVER.ERR_SUCCESSOR'));
+        this.savingHandover.set(false);
+        return of(null);
+      }))
+      .subscribe(updated => {
+        this.savingHandover.set(false);
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.showSuccessorModal.set(false);
+        this.notify.success(this.translate.instant('OFFBOARDING.HANDOVER.SUCCESSOR_SAVED'));
+      });
+  }
+
+  /** The PV reuses the employee's own documents, like the declaration's justification. */
+  onMinutesPicked(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    const profileId = this.wf()?.employeeProfileId;
+    if (!file || !profileId) return;
+    this.savingHandover.set(true);
+    this.handoverError.set(null);
+    this.svc.uploadJustification(profileId, file).pipe(
+      switchMap(up => this.svc.updateHandover(this.workflowId, {
+        handoverMinutesUrl:  up.fileUrl,
+        handoverMinutesName: up.fileName,
+      })),
+      catchError(err => {
+        this.handoverError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.HANDOVER.ERR_PV'));
+        this.savingHandover.set(false);
+        return of(null);
+      }),
+    ).subscribe(updated => {
+      this.savingHandover.set(false);
+      if (!updated) return;
+      this.applyInstance(updated);
+      this.notify.success(this.translate.instant('OFFBOARDING.HANDOVER.PV_SAVED'));
+    });
+  }
+
+  openMinutes(): void {
+    const url = this.wf()?.handoverMinutesUrl;
+    if (url) window.open(url, '_blank', 'noopener');
+  }
+
+  // ── Checklists (stages 3, 4, 5) ────────────────────────────────────────────
+
+  openAddItemModal(): void {
+    this.newItemLabel = '';
+    this.handoverError.set(null);
+    this.showAddItemModal.set(true);
+  }
+
+  addChecklistItem(group: ChecklistGroup): void {
+    if (!this.newItemLabel.trim() || this.savingItem()) return;
+    this.savingItem.set(true);
+    this.svc.addChecklistItem(this.workflowId, { group, label: this.newItemLabel.trim() })
+      .pipe(catchError(err => {
+        this.handoverError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.HANDOVER.ERR_ITEM'));
+        this.savingItem.set(false);
+        return of(null);
+      }))
+      .subscribe(created => {
+        this.savingItem.set(false);
+        if (!created) return;
+        this.patchChecklist(items => [...items, created]);
+        this.showAddItemModal.set(false);
+      });
+  }
+
+  /**
+   * Ticks a line. Patches the one item in place rather than refetching the instance: the
+   * checkbox has already flipped optimistically in the DOM, and a refetch would make the
+   * whole stage flicker on every tick.
+   */
+  onToggleChecklistItem(payload: { item: OffboardingChecklistItem; done: boolean }): void {
+    const id = payload.item.id;
+    if (!id) return;
+    this.svc.updateChecklistItem(id, { isDone: payload.done })
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.HANDOVER.ERR_ITEM'));
+        // Put the model back so the checkbox stops disagreeing with the server.
+        this.patchChecklist(items => items.map(i => i.id === id ? { ...i, isDone: !payload.done } : i));
+        return of(null);
+      }))
+      .subscribe(updated => {
+        if (updated) this.patchChecklist(items => items.map(i => i.id === id ? updated : i));
+      });
+  }
+
+  removeChecklistItem(item: OffboardingChecklistItem): void {
+    if (!item.id) return;
+    this.svc.deleteChecklistItem(item.id)
+      .pipe(catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.HANDOVER.ERR_ITEM'));
+        return of(null);
+      }))
+      .subscribe(() => this.patchChecklist(items => items.filter(i => i.id !== item.id)));
+  }
+
+  /** The checklist lives on the instance signal, so edits go through a shallow copy. */
+  private patchChecklist(
+    fn: (items: OffboardingChecklistItem[]) => OffboardingChecklistItem[],
+  ): void {
+    this.wf.update(w => w ? { ...w, checklistItems: fn(w.checklistItems ?? []) } : w);
+  }
+
+  // ── Stage 2 — Validation Manager & RH ──────────────────────────────────────
+
+  showManagerModal = signal(false);
+  showHrModal      = signal(false);
+  savingManager    = signal(false);
+  savingHr         = signal(false);
+  managerError     = signal<string | null>(null);
+  hrError          = signal<string | null>(null);
+
+  mgrComment       = '';
+  hrLastWorkingDay = '';
+  hrNoticePaid     = false;
+
+  openManagerModal(): void {
+    this.mgrComment = this.wf()?.managerComment ?? '';
+    this.managerError.set(null);
+    this.showManagerModal.set(true);
+  }
+
+  openHrModal(): void {
+    const w = this.wf();
+    // Pre-filled with the declared date: RH confirms it far more often than it changes it,
+    // and an empty picker would read as "no date agreed" on a file that has one.
+    this.hrLastWorkingDay = w?.lastWorkingDay ?? '';
+    this.hrNoticePaid     = w?.noticePaidNotWorked ?? false;
+    this.hrError.set(null);
+    this.showHrModal.set(true);
+  }
+
+  saveManagerValidation(): void {
+    if (this.savingManager()) return;
+    this.savingManager.set(true);
+    this.managerError.set(null);
+    this.svc.validateAsManager(this.workflowId, { comment: this.mgrComment || null })
+      .pipe(catchError(err => {
+        this.managerError.set(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.VALIDATION.ERR_MANAGER'));
+        this.savingManager.set(false);
+        return of(null);
+      }))
+      .subscribe(updated => {
+        this.savingManager.set(false);
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.showManagerModal.set(false);
+        this.notify.success(this.translate.instant('OFFBOARDING.VALIDATION.MANAGER_SAVED'));
+      });
+  }
+
+  saveHrValidation(): void {
+    if (this.savingHr()) return;
+    this.savingHr.set(true);
+    this.hrError.set(null);
+    this.svc.validateAsHr(this.workflowId, {
+      lastWorkingDay:      this.hrLastWorkingDay || null,
+      noticePaidNotWorked: this.hrNoticePaid,
+    }).pipe(catchError(err => {
+      this.hrError.set(err?.error?.message
+        ?? this.translate.instant('OFFBOARDING.VALIDATION.ERR_HR'));
+      this.savingHr.set(false);
+      return of(null);
+    })).subscribe(updated => {
+      this.savingHr.set(false);
+      if (!updated) return;
+      this.applyInstance(updated);
+      this.showHrModal.set(false);
+      this.notify.success(this.translate.instant('OFFBOARDING.VALIDATION.HR_SAVED'));
+      // RH may have moved the departure date, which re-dates the pending returns.
+      this.loadAssets();
+    });
+  }
+
+  /** Both validation endpoints return the whole instance, tasks included. */
+  private applyInstance(updated: OffboardingWorkflowInstance): void {
+    this.wf.set(updated);
+    if (updated.tasks) this.tasks.set(updated.tasks);
+  }
+
   // ── Exit interview ─────────────────────────────────────────────────────────
-  /** PENDING V46 — the design's action is *schedule*; until the API can express a
+  /** V62 — scheduling has its own modal (openScheduleModal); this one records the
    *  scheduled interview this opens the record-it form, prefilled if it exists. */
   openInterviewModal(): void {
     const iv = this.interview();
@@ -715,19 +1426,18 @@ export class OffboardingDetailComponent implements OnInit {
         if (updated) {
           this.assets.update(list => list.map(a => a.id === updated.id ? updated : a));
           this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_CONFIRMED'));
+          // ASSET_RETURN_IT auto-completes server-side once every asset is back, and it is
+          // the file's blocking gate — so the rail, the stage states and Clôture all move
+          // on the *last* confirmation. Refetch rather than guess which one that was.
+          this.loadWorkflow();
         }
       });
   }
 
-  // ── PENDING V46 — no endpoint yet; the controls that call these are disabled ──
-  onToggleAccess(_payload: { item: OffboardingChecklistItem; done: boolean }): void { /* PENDING V46 */ }
-  onGenerateDischarge(): void { /* PENDING V46 */ }
-  onDownloadKit(): void { /* PENDING V46 */ }
-  onViewHandoverMinutes(): void {
-    const url = this.wf()?.handoverMinutesUrl;
-    if (url) window.open(url, '_blank', 'noopener');
-  }
-  onDownloadAudit(): void { /* PENDING V46 */ }
+  // ── Still without an endpoint; the controls that call these are disabled ──
+  // `onToggleAccess` used to live here as an empty stub while stage 4's checkboxes were
+  // enabled — so ticking one silently discarded the click. It now goes to
+  // `onToggleChecklistItem` like every other group.
 
   // ── Label helpers ──────────────────────────────────────────────────────────
   statusLabel(s: string): string { return this.translate.instant('OFFBOARDING.STATUS.' + s); }
