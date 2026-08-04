@@ -4,8 +4,9 @@ import { EntityCardComponent, EntityCardOptions, SkeletonComponent } from '@khal
 
 import { OffboardingWorkflowInstance } from '../models/offboarding.model';
 import {
-  cardStatus, hasTasks, initialsOf, isOverdue, localeDate, progressPct,
+  cardStatus, initialsOf, isOverdue, localeDate, stageProgressOf,
 } from '../offboarding-display';
+import { employeeAvatar } from '../../../shared/utils/avatar.utils';
 
 /** One card's options plus the workflow id its click needs. */
 interface OffboardingCard {
@@ -62,6 +63,11 @@ export class OffboardingCardsSectionComponent {
 
   readonly open = output<number>();
 
+  /** photo → gendered avatar → undefined (initials). One rule, shared app-wide. */
+  private avatarFor(item: OffboardingWorkflowInstance): string | undefined {
+    return employeeAvatar(item.employeeProfileId, item.employeePhotoUrl, item.employeeGender);
+  }
+
   protected readonly cards = computed<OffboardingCard[]>(() => {
     // Read the language inside the computed so the cards re-translate on change (§6).
     this.translate.currentLang();
@@ -71,12 +77,17 @@ export class OffboardingCardsSectionComponent {
     return this.items().map(item => {
       const late = item.slaBreachFlag;
       const overdue = !late && isOverdue(item);
+      // Resolved once: it walks every task to work out where the file stands.
+      const stage = stageProgressOf(item);
       return {
         id: item.id,
         options: {
           variant: 'glass',
           clickable: true,
           image: {
+            // Photo → gendered avatar → initials, same rule as the board and the list.
+            // Must be undefined (not male.png) for the initials fallback to be reachable.
+            avatar: this.avatarFor(item),
             initials: initialsOf(item.employeeFullName),
             // Complete literal classes — a runtime-assembled one is never emitted (§3).
             badgeBg: late ? 'bg-danger' : 'bg-gradient-to-br from-primary to-secondary',
@@ -89,12 +100,16 @@ export class OffboardingCardsSectionComponent {
           },
           metricsColumns: 2,
           metrics: [
-            { label: t('OFFBOARDING.LIST.COL_TRIGGER'),  value: localeDate(item.triggerDate, locale) },
-            { label: t('OFFBOARDING.LIST.COL_LAST_DAY'), value: localeDate(item.lastWorkingDay, locale) },
+            // Which stage the file is waiting on leads: it is the thing you scan for.
+            {
+              label: t('OFFBOARDING.LIST.COL_STAGE'),
+              value: t(stage.titleKey),
+            },
             {
               label: t('OFFBOARDING.LIST.COL_PROGRESS'),
-              value: hasTasks(item) ? `${progressPct(item)}%` : '—',
+              value: t('OFFBOARDING.LIST.STEP_OF', { step: stage.step, total: stage.total }),
             },
+            { label: t('OFFBOARDING.LIST.COL_LAST_DAY'), value: localeDate(item.lastWorkingDay, locale) },
             {
               label: t('OFFBOARDING.LIST.COL_SLA'),
               value: late    ? t('OFFBOARDING.BADGE.SLA_BREACHED')

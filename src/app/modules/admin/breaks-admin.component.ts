@@ -7,6 +7,7 @@ import {
   TableColumn, TableConfig, TableRow, ModalService,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './breaks/break.service';
+import { PointageStatusService, PointageStatusOption } from './breaks/pointage-status.service';
 import { RegimeService } from './regimes/regime.service';
 import { LegalRulesAdminComponent } from './breaks/legal-rules-admin.component';
 import {
@@ -106,6 +107,21 @@ type BreakTab = 'templates' | 'legal-rules';
               [options]="{ label: ('ADMIN.regimes.breaks.timeEnd' | translate), type: 'time', fullWidth: true }"
               [value]="formTimeEnd"
               (valueChange)="formTimeEnd = $any($event) ?? ''" />
+            <!-- Presence status this window switches into. Without it the break window
+                 is scheduling/payroll-only and changes nobody's pointage status. -->
+            <div class="ba-form-span2">
+              <daf-select
+                [selected]="formStatusCode ? [formStatusCode] : []"
+                [options]="statusOptions()"
+                [config]="{
+                  label: ('ADMIN.regimes.breaks.statusCode' | translate),
+                  placeholder: ('ADMIN.regimes.breaks.statusCodePlaceholder' | translate),
+                  hint: ('ADMIN.regimes.breaks.statusCodeHint' | translate),
+                  searchable: true,
+                  fullWidth: true
+                }"
+                (selectedChange)="formStatusCode = $event[0]" />
+            </div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <daf-button
@@ -195,6 +211,7 @@ type BreakTab = 'templates' | 'legal-rules';
 })
 export class BreaksAdminComponent implements OnChanges {
   private breakSvc  = inject(BreakService);
+  private statusSvc = inject(PointageStatusService);
   private regimeSvc = inject(RegimeService);
   private modal     = inject(ModalService);
   private translate = inject(TranslateService);
@@ -240,6 +257,7 @@ export class BreaksAdminComponent implements OnChanges {
       { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.breaks.columns.days') },
       { key: 'schedule', label: this.translate.instant('ADMIN.regimes.breaks.columns.schedule') },
       { key: 'trigger', label: this.translate.instant('ADMIN.regimes.breaks.columns.trigger') },
+      { key: 'statusCode', label: this.translate.instant('ADMIN.regimes.breaks.columns.statusCode') },
       { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
     ];
   });
@@ -254,6 +272,7 @@ export class BreaksAdminComponent implements OnChanges {
       appliesToDays: this.formatDays(t.appliesToDays),
       schedule: t.breakTimeStart ? `${t.breakTimeStart} – ${t.breakTimeEnd}` : '—',
       trigger: t.minWorkHoursTrigger ? `≥ ${t.minWorkHoursTrigger}h` : '—',
+      statusCode: this.statusLabel(t.statusCode),
       _source: t,
     }));
   }
@@ -274,6 +293,25 @@ export class BreaksAdminComponent implements OnChanges {
   formMinHours: number | null = null;
   formTimeStart = '';
   formTimeEnd   = '';
+  formStatusCode = '';
+
+  /** Pointage status catalogue (from the log service) for the status mapping select. */
+  pointageStatuses = signal<PointageStatusOption[]>([]);
+
+  readonly statusOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    const none = { value: '', label: this.translate.instant('ADMIN.regimes.breaks.statusCodeNone') };
+    return [none, ...this.pointageStatuses().map(s => ({
+      value: s.status,
+      label: `${s.labelFr || s.status} (${s.status})`,
+    }))];
+  });
+
+  /** Human label for a stored code; falls back to the raw code if it is unknown. */
+  statusLabel(code?: string | null): string {
+    if (!code) return '—';
+    return this.pointageStatuses().find(s => s.status === code)?.labelFr ?? code;
+  }
 
   readonly Number = Number;
   readonly String = String;

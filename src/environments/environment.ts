@@ -10,4 +10,9 @@ export const environment = {
   apiUrl: 'http://localhost:8891',
   /** Payroll service — cost simulation engine */
   payrollApiUrl: 'http://localhost:8893',
+  /**
+   * Log (pointage) service — read-only: the break-template form needs the pointage
+   * status catalogue so HR can map a break window to the status it switches into.
+   */
+  logApiUrl: 'http://localhost:9000',
 };

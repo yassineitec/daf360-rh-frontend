@@ -60,10 +60,21 @@
     [view]="viewMode()"
     (viewChange)="setView($event)" />
 
-  <!-- Content sits free in the page — never wrapped in an outer card (§1). -->
-  @if (viewMode() === 'grid') {
+  <!-- Content sits free in the page — never wrapped in an outer card (§1).
+       The board renders every filtered file across its status columns, so it owns no
+       pagination; the grid and table views stay paged. -->
+  @if (viewMode() === 'kanban') {
+    <rh-offboarding-board-section
+      [columns]="boardColumns()"
+      [loading]="loading()"
+      (open)="open($event)"
+      (toggleSort)="toggleColumnSort($event)" />
+
+    <!-- Mobile: a horizontal board is unusable at that width, so the card list stands in
+         (the board section hides itself below `sm`). -->
     <rh-offboarding-cards-section
-      [items]="pagedItems()"
+      class="sm:hidden"
+      [items]="filteredItems()"
       [loading]="loading()"
       [emptyMessage]="emptyMessage()"
       (open)="open($event)" />
@@ -76,7 +87,7 @@
       (open)="open($event)" />
   }
 
-  @if (totalPages() > 0) {
+  @if (viewMode() !== 'kanban' && totalPages() > 0) {
     <daf-pagination
       [currentPage]="currentPage()"
       [totalPages]="totalPages()"

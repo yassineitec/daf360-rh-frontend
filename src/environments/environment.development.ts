@@ -3,4 +3,5 @@ export const environment = {
   portalUrl: 'http://localhost:8080',
   hrApiUrl:      'http://localhost:8888',
   payrollApiUrl: 'http://localhost:8893',
+  logApiUrl:     'http://localhost:9000',
 };

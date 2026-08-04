@@ -17,6 +17,8 @@ export interface OnboardingListItem {
   itProvisioningId: number;
   hasDraft: boolean;
   draftSavedAt: string | null;
+  /** Canonical GENDER value_code (MALE/FEMALE/OTHER/…) — drives the avatar tile. */
+  gender: string | null;
 }
 
 export interface RegimeSummary {

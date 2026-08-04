@@ -5,4 +5,5 @@ export const environment = {
   shellUrl:   '',
   apiUrl:        '',
   payrollApiUrl: '',
+  logApiUrl:     '',
 };

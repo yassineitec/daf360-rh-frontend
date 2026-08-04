@@ -48,8 +48,9 @@ export class OffboardingService {
   }
 
   // ── Exit interview ─────────────────────────────────────────────────────────
-  getExitInterview(instanceId: number): Observable<ExitInterview> {
-    return this.http.get<ExitInterview>(`${this.base}/${instanceId}/exit-interview`);
+  /** Null when none recorded yet — the endpoint answers 204, not 404. */
+  getExitInterview(instanceId: number): Observable<ExitInterview | null> {
+    return this.http.get<ExitInterview | null>(`${this.base}/${instanceId}/exit-interview`);
   }
 
   saveExitInterview(instanceId: number, dto: ExitInterviewRequest): Observable<ExitInterview> {

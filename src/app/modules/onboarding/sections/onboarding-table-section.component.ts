@@ -9,6 +9,7 @@ import { TableActionComponent } from '../../../shared/table-action.component';
 import { statusBadge } from '../../../shared/status-badge.utils';
 import { OnboardingListItem } from '../onboarding.model';
 import { initialsOf, isoDate, lastUpdated } from '../onboarding-display';
+import { avatarUrl } from '../../../shared/utils/avatar.utils';
 
 /**
  * List view of `/rh/onboarding`, on the §6b table house style: no wrapper,
@@ -96,6 +97,9 @@ export class OnboardingTableSectionComponent {
     return this.items().map(item => ({
       employe: {
         name:     item.candidateFullName,
+        // Same rule as the card view: the shared gendered avatar PNG (the cell prefers
+        // `avatar` and only falls back to `initials`).
+        avatar:   avatarUrl(item.gender),
         initials: initialsOf(item.candidateFullName),
         subtitle: item.appliedPosition ?? '',
       },

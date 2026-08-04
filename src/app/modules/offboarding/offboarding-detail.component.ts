@@ -1,486 +1,116 @@
-import {
-  Component, computed, inject, OnInit, signal,
-} from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { catchError, of } from 'rxjs';
+
+import {
+  AccordionState, BreadcrumbItem, ButtonComponent, CardComponent, CheckboxComponent,
+  FormFieldComponent, MultiDatePickerComponent, PageComponent, PageHeaderComponent,
+  PageHeaderBadge, ProgressBarComponent, SelectComponent, SelectOption,
+  StatusBadgeComponent, StepperComponent, StepperConfig, StepperStep,
+} from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { OffboardingService } from './offboarding.service';
 import {
-  OffboardingWorkflowInstance, OffboardingTask, ExitInterview,
-  OffboardingAssetReturn, AssetType,
-  DEPARTURE_REASONS, DepartureReason, ASSET_TYPES,
-  computeProgress, isTerminal,
+  ASSET_TYPES, AssetType, DEPARTURE_REASONS, DepartureReason, ExitInterview,
+  OffboardingAssetReturn, OffboardingChecklistItem, OffboardingTask,
+  OffboardingWorkflowInstance, computeProgress, findNextDueTask, isTerminal,
 } from './models/offboarding.model';
 import {
-  StatusBadgeComponent, BadgeOptions, ButtonComponent,
-  CardComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  FormFieldComponent, SelectComponent, SelectOption, CheckboxComponent,
-  MultiDatePickerComponent,
-} from '@khalilrebhiitec/daf360';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { SpinnerComponent } from '../../shared/spinner.component';
-import { ModalComponent }   from '../../shared/modal.component';
+  STAGES, StageCode, StageView, activeStageIndex, dayMonth, daysUntil, longDate,
+  outstandingBlockers, resolveStageStates, stageStatusKey, statusVariant, tasksOfStage,
+} from './offboarding-display';
+import { ModalComponent } from '../../shared/modal.component';
+// Aliased: this component already exposes an 'employeeAvatar' signal to the template.
+import { employeeAvatar as resolveEmployeeAvatar } from '../../shared/utils/avatar.utils';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
 
-type BadgeVariant = BadgeOptions['variant'];
+import { StageDeclarationComponent } from './stages/stage-declaration.component';
+import { StageValidationComponent } from './stages/stage-validation.component';
+import { StageHandoverComponent } from './stages/stage-handover.component';
+import { StageItAssetsComponent } from './stages/stage-it-assets.component';
+import { StageHrDocsComponent } from './stages/stage-hr-docs.component';
+import { StagePayrollComponent } from './stages/stage-payroll.component';
+import { StageClosureComponent } from './stages/stage-closure.component';
+import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
 
-const TASK_STATUS_VARIANTS: Record<string, BadgeVariant> = {
-  PENDING:    'neutral',
-  IN_PROGRESS:'teal',
-  DONE:       'success',
-  BLOCKED:    'danger',
-  SKIPPED:    'neutral',
-};
-
+/**
+ * `/rh/offboarding/:id` — the canonical record page (UI-PLAYBOOK §1, §10f) laid out
+ * from `design/offboarding-detail.html`: header + progress, the 7-stage rail, then
+ * one accordion card per stage.
+ *
+ * What this replaced: a flat `daf-data-table` of the 9 tasks plus two loose
+ * sections, a hand-rolled breadcrumb, an `app-spinner` and ~65 lines of raw-hex
+ * SCSS. The workflow is not a table — it is seven stages with states, which is
+ * what the rail and the cards now show.
+ *
+ * The page stays the **single writer**: every stage component is stateless, takes
+ * its data in and emits intent out, and every mutation goes through a modal here.
+ */
 @Component({
   selector: 'rh-offboarding-detail',
   standalone: true,
   imports: [
-    RouterLink,
-    StatusBadgeComponent, ButtonComponent, CardComponent,
-    DataTableComponent, DafCellDirective,
+    PageComponent, PageHeaderComponent, CardComponent, ButtonComponent,
+    StepperComponent, ProgressBarComponent, StatusBadgeComponent,
     FormFieldComponent, SelectComponent, CheckboxComponent, MultiDatePickerComponent,
-    SpinnerComponent, ModalComponent, TranslatePipe,
+    ModalComponent, TranslatePipe,
+    StageDeclarationComponent, StageValidationComponent, StageHandoverComponent,
+    StageItAssetsComponent, StageHrDocsComponent, StagePayrollComponent, StageClosureComponent,
+    OffboardingAuditDrawerComponent,
   ],
-  template: `
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb">
-      <a routerLink="/rh/offboarding" class="bc-link">{{ 'OFFBOARDING.DETAIL.BREADCRUMB' | translate }}</a>
-      <span class="bc-sep">›</span>
-      <span class="bc-current">{{ 'OFFBOARDING.DETAIL.FILE' | translate:{ id: workflowId } }}</span>
-    </nav>
+  templateUrl: './offboarding-detail.component.html',
+  // Vertical stage tracker for the sticky sidebar. Same rules as the onboarding
+  // per-case page (onboarding-form.component.scss) so the two trackers are identical;
+  // inlined here because this page has no stylesheet of its own.
+  styles: [`
+    .tracker-step {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 20px;
+      position: relative;
+      align-items: flex-start;
+    }
+    .tracker-step.tracker-step-last { padding-bottom: 0; }
 
-    @if (loading()) {
-      <div class="center-spin"><app-spinner size="lg" /></div>
-    } @else if (!wf()) {
-      <div class="error-state"><p>{{ 'OFFBOARDING.DETAIL.NOT_FOUND' | translate }}</p><a routerLink="/rh/offboarding" class="btn-back">{{ 'OFFBOARDING.DETAIL.BACK' | translate }}</a></div>
-    } @else {
+    .tracker-line {
+      position: absolute;
+      left: 13px;
+      top: 28px;
+      width: 2px;
+      height: calc(100% - 8px);
+      z-index: 0;
+    }
+    .tracker-line.tracker-line-done    { background: var(--color-tertiary); }
+    .tracker-line.tracker-line-pending { background: var(--color-outline-variant); }
 
-      <!-- SLA / blocked banner -->
-      @if (wf()!.slaBreachFlag || wf()!.status === 'BLOCKED') {
-        <div class="alert-banner alert-danger">
-          <span class="material-symbols-outlined">warning</span>
-          @if (wf()!.slaBreachFlag) { <span>{{ 'OFFBOARDING.DETAIL.ALERT_SLA' | translate }}</span> }
-          @else { <span>{{ 'OFFBOARDING.DETAIL.ALERT_BLOCKED' | translate }}</span> }
-        </div>
-      }
-
-      <!-- Header -->
-      <daf-card [options]="{ padding: 'lg', radius: 'xl' }" class="block wf-header">
-        <div class="header-row">
-          <div class="header-meta">
-            <h1 class="wf-title">{{ 'OFFBOARDING.DETAIL.TITLE' | translate:{ name: employeeName() } }}</h1>
-            <div class="header-chips">
-              <daf-badge [label]="statusLabel(wf()!.status)" [options]="{ variant: statusVariant(wf()!.status), size: 'sm' }" />
-              <daf-badge [label]="reasonLabel(wf()!.departureReason)" [options]="{ variant: 'neutral', size: 'sm' }" />
-              @if (wf()!.slaBreachFlag) {
-                <daf-badge [label]="'OFFBOARDING.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
-              }
-            </div>
-          </div>
-          <!-- Action buttons (mutations gated on RH_MANAGE_OFFBOARDING) -->
-          @if (!isTerminal() && canManage()) {
-            <div class="header-actions">
-              @if (canValidate()) {
-                <daf-button [label]="'OFFBOARDING.DETAIL.VALIDATE' | translate" variant="teal" [options]="{ iconStart: 'check_circle', loading: validating() }" (onClick)="showValidateModal.set(true)" />
-              }
-              <daf-button [label]="'OFFBOARDING.DETAIL.CANCEL' | translate" variant="danger" [options]="{ iconStart: 'cancel', loading: cancelling() }" (onClick)="showCancelModal.set(true)" />
-            </div>
-          }
-        </div>
-
-        <!-- Key dates -->
-        <div class="dates-row">
-          <div class="date-item">
-            <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_TRIGGER' | translate }}</span>
-            <span class="date-val">{{ fmt(wf()!.triggerDate) }}</span>
-          </div>
-          @if (wf()!.lastWorkingDay) {
-            <div class="date-item">
-              <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_LAST_DAY' | translate }}</span>
-              <span class="date-val">{{ fmt(wf()!.lastWorkingDay) }}</span>
-            </div>
-          }
-          @if (wf()!.validatedAt) {
-            <div class="date-item">
-              <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_VALIDATED' | translate }}</span>
-              <span class="date-val">{{ fmt(wf()!.validatedAt) }}</span>
-            </div>
-          }
-          @if (wf()!.cancelledAt) {
-            <div class="date-item">
-              <span class="date-label">{{ 'OFFBOARDING.DETAIL.DATE_CANCELLED' | translate }}</span>
-              <span class="date-val">{{ fmt(wf()!.cancelledAt) }}</span>
-            </div>
-          }
-          @if (wf()!.handoverManagerName) {
-            <div class="date-item">
-              <span class="date-label">{{ 'OFFBOARDING.DETAIL.HANDOVER_MANAGER' | translate }}</span>
-              <span class="date-val">{{ wf()!.handoverManagerName }}</span>
-            </div>
-          }
-        </div>
-
-        @if (wf()!.cancellationReason) {
-          <p class="cancel-reason"><strong>{{ 'OFFBOARDING.DETAIL.CANCEL_REASON_LABEL' | translate }}</strong> {{ wf()!.cancellationReason }}</p>
-        }
-        @if (wf()!.departureNotes) {
-          <p class="notes-text"><strong>{{ 'OFFBOARDING.DETAIL.NOTES_LABEL' | translate }}</strong> {{ wf()!.departureNotes }}</p>
-        }
-
-        <!-- Progress bar -->
-        @if (tasks().length > 0) {
-          <div class="progress-section">
-            <div class="progress-label">
-              <span>{{ 'OFFBOARDING.DETAIL.PROGRESS_TITLE' | translate }}</span>
-              <span class="progress-pct-val">{{ progressPct() }}% — {{ doneTasks() }}/{{ tasks().length }}</span>
-            </div>
-            <div class="progress-bar-lg">
-              <div class="progress-fill-lg" [style.width]="progressPct() + '%'" [class.done]="progressPct() >= 100"></div>
-            </div>
-          </div>
-        }
-      </daf-card>
-
-      <!-- ── Tasks ──────────────────────────────────────────────────────────── -->
-      <section class="detail-section">
-        <h2 class="section-title">{{ 'OFFBOARDING.DETAIL.TASKS_TITLE' | translate }}</h2>
-        @if (tasks().length === 0) {
-          <p class="section-empty">{{ 'OFFBOARDING.DETAIL.TASKS_EMPTY' | translate }}</p>
-        } @else {
-          <daf-data-table [columns]="taskColumns()" [rows]="taskRows()" [config]="taskTableConfig">
-
-            <ng-template dafCell="status" let-row>
-              <daf-badge
-                [label]="taskStatusLabel(row['_status'])"
-                [options]="{ variant: taskStatusVariant(row['_status']), size: 'sm' }"
-              />
-            </ng-template>
-
-            <ng-template dafCell="sla" let-row>
-              @if (row['_slaBreached']) {
-                <daf-badge [label]="'OFFBOARDING.BADGE.SLA_BREACHED' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
-              } @else if (row['_dueDate']) {
-                <span class="date-muted">{{ row['_dueDate'] }}</span>
-              } @else {
-                <span class="cell-muted">—</span>
-              }
-            </ng-template>
-
-            <ng-template dafCell="blocking" let-row>
-              @if (row['_blocking']) {
-                <daf-badge [label]="'OFFBOARDING.BADGE.BLOCKING' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
-              } @else {
-                <span class="cell-muted">—</span>
-              }
-            </ng-template>
-
-            <ng-template dafCell="actions" let-row>
-              @if (row['_status'] !== 'DONE' && row['_status'] !== 'SKIPPED' && !isTerminal() && canManage()) {
-                <div class="row-actions">
-                  <daf-button [label]="'OFFBOARDING.DETAIL.COMPLETE' | translate" variant="teal" [options]="{ size: 'sm' }" (onClick)="openCompleteModal(row['_task'])" />
-                  @if (!row['_blocking']) {
-                    <daf-button [label]="'OFFBOARDING.DETAIL.SKIP' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openSkipModal(row['_task'])" />
-                  }
-                </div>
-              }
-            </ng-template>
-
-          </daf-data-table>
-        }
-      </section>
-
-      <!-- ── Exit interview ─────────────────────────────────────────────────── -->
-      <section class="detail-section">
-        <div class="section-header-row">
-          <h2 class="section-title">{{ 'OFFBOARDING.DETAIL.INTERVIEW_TITLE' | translate }}</h2>
-          @if (!interview() && !isTerminal() && canManage()) {
-            <daf-button [label]="'OFFBOARDING.DETAIL.INTERVIEW_ADD' | translate" variant="secondary" [options]="{ size: 'sm', iconStart: 'add' }" (onClick)="showInterviewForm.set(true)" />
-          }
-        </div>
-
-        @if (interviewLoading()) {
-          <app-spinner size="sm" />
-        } @else if (interview()) {
-          <div class="interview-card">
-            @if (interview()!.isAnonymised) {
-              <p class="anon-notice">{{ 'OFFBOARDING.DETAIL.INTERVIEW_ANON' | translate }}</p>
-            } @else {
-              <div class="interview-grid">
-                <div>
-                  <span class="meta-label">{{ 'OFFBOARDING.DETAIL.INTERVIEW_DATE' | translate }}</span>
-                  <span class="meta-val">{{ fmt(interview()!.conductedDate) }}</span>
-                </div>
-                @if (interview()!.departureReasons) {
-                  <div>
-                    <span class="meta-label">{{ 'OFFBOARDING.DETAIL.INTERVIEW_REASONS' | translate }}</span>
-                    <span class="meta-val">{{ parseReasons(interview()!.departureReasons) }}</span>
-                  </div>
-                }
-              </div>
-              @if (interview()!.feedbackText) {
-                <div class="feedback-text">
-                  <span class="meta-label">{{ 'OFFBOARDING.DETAIL.INTERVIEW_FEEDBACK' | translate }}</span>
-                  <p>{{ interview()!.feedbackText }}</p>
-                </div>
-              }
-            }
-          </div>
-        } @else if (!showInterviewForm()) {
-          <p class="section-empty">{{ 'OFFBOARDING.DETAIL.INTERVIEW_EMPTY' | translate }}</p>
-        }
-
-        @if (showInterviewForm() && canManage()) {
-          <div class="inline-form">
-            <div class="form-grid-2">
-              <daf-multi-date-picker
-                [value]="asDate(ivDate)"
-                [config]="{ label: 'OFFBOARDING.DETAIL.IV_DATE_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
-                (valueChange)="ivDate = toIso($event)" />
-              <div class="field-full">
-                <label class="form-label">{{ 'OFFBOARDING.DETAIL.IV_REASONS_LABEL' | translate }}</label>
-                <div class="reasons-checkboxes">
-                  @for (r of DEPARTURE_REASONS; track r) {
-                    <daf-checkbox
-                      [options]="{ label: 'OFFBOARDING.REASON.' + r | translate }"
-                      [checked]="ivReasons.includes(r)"
-                      (checkedChange)="setReason(r, $event)" />
-                  }
-                </div>
-              </div>
-              <div class="field-full">
-                <daf-form-field
-                  [options]="{ label: 'OFFBOARDING.DETAIL.IV_FEEDBACK_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.DETAIL.IV_FEEDBACK_PH' | translate }"
-                  [value]="ivFeedback" (valueChange)="ivFeedback = $any($event) ?? ''" />
-              </div>
-            </div>
-            <div class="inline-form-actions">
-              <daf-button [label]="'OFFBOARDING.DETAIL.SAVE' | translate" variant="teal" [options]="{ loading: savingInterview() }" (onClick)="saveInterview()" />
-              <daf-button [label]="'OFFBOARDING.DETAIL.CANCEL' | translate" variant="ghost" (onClick)="showInterviewForm.set(false)" />
-            </div>
-            @if (interviewError()) { <p class="inline-error">{{ interviewError() }}</p> }
-          </div>
-        }
-      </section>
-
-      <!-- ── Asset returns ──────────────────────────────────────────────────── -->
-      <section class="detail-section">
-        <div class="section-header-row">
-          <h2 class="section-title">{{ 'OFFBOARDING.DETAIL.ASSETS_TITLE' | translate }}</h2>
-          <div class="section-actions">
-            @if (!isTerminal() && canManage()) {
-              <daf-button [label]="'OFFBOARDING.DETAIL.ASSETS_SYNC' | translate" variant="ghost"
-                [options]="{ size: 'sm', iconStart: 'sync', loading: syncingAssets() }"
-                (onClick)="syncAssetsFromIt()" />
-              <daf-button [label]="'OFFBOARDING.DETAIL.ASSETS_ADD' | translate" variant="secondary"
-                [options]="{ size: 'sm', iconStart: 'add' }"
-                (onClick)="showAssetForm.set(true)" />
-            }
-          </div>
-        </div>
-
-        @if (assetsLoading()) {
-          <app-spinner size="sm" />
-        } @else if (assets().length === 0 && !showAssetForm()) {
-          <p class="section-empty">{{ 'OFFBOARDING.DETAIL.ASSETS_EMPTY' | translate }}</p>
-        }
-
-        @if (assets().length > 0) {
-          <div class="asset-list">
-            @for (a of assets(); track a.id) {
-              <div class="asset-row" [class.returned]="!!a.actualReturnDate">
-                <div class="asset-info">
-                  <daf-badge [label]="'OFFBOARDING.ASSET_TYPE.' + a.assetType | translate" [options]="{ variant: 'teal', size: 'sm' }" />
-                  <span class="asset-desc">{{ a.assetDescription }}</span>
-                </div>
-                <div class="asset-dates">
-                  <span class="meta-label">{{ 'OFFBOARDING.DETAIL.ASSET_EXPECTED' | translate }}</span>
-                  <span>{{ fmt(a.expectedReturnDate) }}</span>
-                </div>
-                @if (a.actualReturnDate) {
-                  <div class="asset-dates">
-                    <span class="meta-label">{{ 'OFFBOARDING.DETAIL.ASSET_RETURNED_ON' | translate }}</span>
-                    <span>{{ fmt(a.actualReturnDate) }}</span>
-                  </div>
-                  <daf-badge [label]="'OFFBOARDING.BADGE.RETURNED' | translate" [options]="{ variant: 'success', size: 'sm' }" />
-                } @else if (!isTerminal() && canManage()) {
-                  <daf-button [label]="'OFFBOARDING.DETAIL.CONFIRM_RETURN' | translate" variant="secondary" [options]="{ size: 'sm' }" (onClick)="openConfirmAsset(a)" />
-                } @else {
-                  <daf-badge [label]="'OFFBOARDING.BADGE.NOT_RETURNED' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
-                }
-              </div>
-            }
-          </div>
-        }
-
-        @if (showAssetForm() && canManage()) {
-          <div class="inline-form">
-            <div class="form-grid-2">
-              <div class="field-full">
-                <daf-form-field
-                  [options]="{ label: 'OFFBOARDING.DETAIL.ASSET_DESC_LABEL' | translate, type: 'text', placeholder: 'OFFBOARDING.DETAIL.ASSET_DESC_PH' | translate }"
-                  [value]="assetDesc" (valueChange)="assetDesc = $any($event) ?? ''" />
-              </div>
-              <daf-select
-                [options]="assetTypeOptions()"
-                [config]="{ label: 'OFFBOARDING.DETAIL.ASSET_TYPE_LABEL' | translate }"
-                [selected]="[assetType]"
-                (selectedChange)="assetType = $any($event[0])" />
-              <daf-multi-date-picker
-                [value]="asDate(assetExpectedDate)"
-                [config]="{ label: 'OFFBOARDING.DETAIL.ASSET_EXPECTED_LABEL' | translate, selectionMode: 'single', fullWidth: true }"
-                (valueChange)="assetExpectedDate = toIso($event)" />
-            </div>
-            <div class="inline-form-actions">
-              <daf-button [label]="'OFFBOARDING.DETAIL.ADD' | translate" variant="teal" [options]="{ loading: savingAsset() }" (onClick)="saveAsset()" />
-              <daf-button [label]="'OFFBOARDING.DETAIL.CANCEL' | translate" variant="ghost" (onClick)="showAssetForm.set(false)" />
-            </div>
-            @if (assetError()) { <p class="inline-error">{{ assetError() }}</p> }
-          </div>
-        }
-      </section>
-
+    .tracker-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .tracker-dot.tracker-dot-done   { background: var(--color-tertiary); color: #ffffff; }
+    .tracker-dot.tracker-dot-active { border: 4px solid #79d7be; background: #b9e9df; }
+    .tracker-dot.tracker-dot-pending {
+      background: var(--color-surface-container-high);
+      border: 1px solid var(--color-outline-variant);
+      color: var(--color-outline);
     }
 
-    <!-- ── Complete task modal ─────────────────────────────────────────────── -->
-    <app-modal [title]="'OFFBOARDING.MODAL.COMPLETE_TITLE' | translate" [visible]="showCompleteModal()" [hasFooter]="true" (closed)="showCompleteModal.set(false)">
-      @if (activeTask()) {
-        <p class="modal-task-name">{{ activeTask()!.taskLabel }}</p>
-      }
-      <div class="modal-field">
-        <daf-form-field
-          [options]="{ label: 'OFFBOARDING.MODAL.COMMENT_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.MODAL.COMMENT_PH' | translate }"
-          [value]="taskComment" (valueChange)="taskComment = $any($event) ?? ''" />
-      </div>
-      <div slot="footer">
-        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showCompleteModal.set(false)" />
-        <daf-button [label]="'OFFBOARDING.MODAL.MARK_DONE' | translate" variant="teal" [options]="{ loading: actioning() }" (onClick)="confirmComplete()" />
-      </div>
-    </app-modal>
-
-    <!-- ── Skip task modal ────────────────────────────────────────────────── -->
-    <app-modal [title]="'OFFBOARDING.MODAL.SKIP_TITLE' | translate" [visible]="showSkipModal()" [hasFooter]="true" (closed)="showSkipModal.set(false)">
-      @if (activeTask()) {
-        <p class="modal-task-name">{{ activeTask()!.taskLabel }}</p>
-      }
-      <div class="modal-field">
-        <daf-form-field
-          [options]="{ label: 'OFFBOARDING.MODAL.SKIP_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.MODAL.SKIP_REASON_PH' | translate }"
-          [value]="skipReason" (valueChange)="skipReason = $any($event) ?? ''" />
-      </div>
-      <div slot="footer">
-        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showSkipModal.set(false)" />
-        <daf-button [label]="'OFFBOARDING.MODAL.SKIP_CONFIRM' | translate" variant="danger" [options]="{ loading: actioning(), disabled: !skipReason.trim() }" (onClick)="confirmSkip()" />
-      </div>
-    </app-modal>
-
-    <!-- ── Validate modal ─────────────────────────────────────────────────── -->
-    <app-modal [title]="'OFFBOARDING.MODAL.VALIDATE_TITLE' | translate" [visible]="showValidateModal()" [hasFooter]="true" (closed)="showValidateModal.set(false)">
-      <p class="modal-body-text">{{ 'OFFBOARDING.MODAL.VALIDATE_BODY' | translate }}</p>
-      <div slot="footer">
-        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showValidateModal.set(false)" />
-        <daf-button [label]="'OFFBOARDING.MODAL.VALIDATE_CONFIRM' | translate" variant="teal" [options]="{ loading: validating() }" (onClick)="confirmValidate()" />
-      </div>
-    </app-modal>
-
-    <!-- ── Cancel modal ───────────────────────────────────────────────────── -->
-    <app-modal [title]="'OFFBOARDING.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()" [hasFooter]="true" (closed)="showCancelModal.set(false)">
-      <p class="modal-body-text">{{ 'OFFBOARDING.MODAL.CANCEL_BODY' | translate }}</p>
-      <div class="modal-field">
-        <daf-form-field
-          [options]="{ label: 'OFFBOARDING.MODAL.CANCEL_REASON_LABEL' | translate, type: 'textarea', rows: 3, placeholder: 'OFFBOARDING.MODAL.CANCEL_REASON_PH' | translate }"
-          [value]="cancelReason" (valueChange)="cancelReason = $any($event) ?? ''" />
-      </div>
-      <div slot="footer">
-        <daf-button [label]="'OFFBOARDING.MODAL.CANCEL_KEEP' | translate" variant="secondary" (onClick)="showCancelModal.set(false)" />
-        <daf-button [label]="'OFFBOARDING.MODAL.CANCEL_CONFIRM' | translate" variant="danger" [options]="{ loading: cancelling() }" (onClick)="confirmCancel()" />
-      </div>
-    </app-modal>
-
-    <!-- ── Confirm asset return modal ─────────────────────────────────────── -->
-    <app-modal [title]="'OFFBOARDING.MODAL.ASSET_TITLE' | translate" [visible]="showConfirmAssetModal()" [hasFooter]="true" (closed)="showConfirmAssetModal.set(false)">
-      @if (activeAsset()) {
-        <p class="modal-task-name">{{ activeAsset()!.assetDescription }}</p>
-      }
-      <div class="modal-field">
-        <daf-form-field
-          [options]="{ label: 'OFFBOARDING.MODAL.ASSET_CONDITION_LABEL' | translate, type: 'text', placeholder: 'OFFBOARDING.MODAL.ASSET_CONDITION_PH' | translate }"
-          [value]="assetCondition" (valueChange)="assetCondition = $any($event) ?? ''" />
-      </div>
-      <div slot="footer">
-        <daf-button [label]="'OFFBOARDING.MODAL.COMMON_CANCEL' | translate" variant="secondary" (onClick)="showConfirmAssetModal.set(false)" />
-        <daf-button [label]="'OFFBOARDING.MODAL.ASSET_CONFIRM' | translate" variant="teal" [options]="{ loading: confirmingAsset() }" (onClick)="confirmAssetReturn()" />
-      </div>
-    </app-modal>
-  `,
-  styleUrl: './offboarding-detail.component.scss',
-  styles: [`
-    .breadcrumb      { display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:20px }
-    .bc-link         { color:var(--color-primary,#1C4E5C);text-decoration:none }
-    .bc-link:hover   { text-decoration:underline }
-    .bc-sep          { color:var(--color-text-muted) }
-    .bc-current      { color:var(--color-text-muted) }
-    .center-spin     { display:flex;justify-content:center;padding:80px 0 }
-    .error-state     { text-align:center;padding:60px 20px }
-    .btn-back        { display:inline-block;margin-top:12px;color:var(--color-primary);font-size:13px }
-    .alert-banner    { display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px }
-    .alert-danger    { background:#fee2e2;color:#991b1b;border:1px solid #fca5a5 }
-    .wf-header       { margin-bottom:24px }
-    .header-row      { display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap }
-    .header-meta     { flex:1 }
-    .wf-title        { font-size:20px;font-weight:700;color:var(--color-text,#1A1C1E);margin:0 0 10px }
-    .header-chips    { display:flex;flex-wrap:wrap;gap:8px }
-    .header-actions  { display:flex;gap:8px;flex-wrap:wrap }
-    .dates-row       { display:flex;flex-wrap:wrap;gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border,#E0E7E9) }
-    .date-item       { display:flex;flex-direction:column;gap:2px }
-    .date-label      { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted) }
-    .date-val        { font-size:14px;font-weight:500;color:var(--color-text) }
-    .cancel-reason, .notes-text { font-size:13px;color:var(--color-text-muted);margin:12px 0 0 }
-    .progress-section  { margin-top:16px }
-    .progress-label    { display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-muted);margin-bottom:6px }
-    .progress-pct-val  { font-weight:600 }
-    .progress-bar-lg   { height:8px;background:var(--color-bg-secondary,#E5E7EB);border-radius:4px }
-    .progress-fill-lg  { height:100%;background:var(--color-primary,#1C4E5C);border-radius:4px;transition:width .3s }
-    .progress-fill-lg.done { background:#22C55E }
-    .detail-section    { background:var(--color-surface,#fff);border:1px solid var(--color-border,#E0E7E9);border-radius:12px;padding:20px 24px;margin-bottom:20px }
-    .section-header-row{ display:flex;justify-content:space-between;align-items:center;margin-bottom:16px }
-    .section-actions   { display:flex;gap:8px;align-items:center }
-    .section-title     { font-size:15px;font-weight:700;color:var(--color-text);margin:0 0 16px }
-    .section-header-row .section-title { margin:0 }
-    .section-empty     { font-size:13px;color:var(--color-text-muted);font-style:italic }
-    .cell-muted, .date-muted { font-size:12px;color:var(--color-text-muted) }
-    .row-actions       { display:flex;gap:6px }
-    .interview-card    { background:var(--color-bg-secondary,#F8FAFC);border-radius:8px;padding:16px }
-    .interview-grid    { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px }
-    .meta-label        { display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted);margin-bottom:2px }
-    .meta-val          { font-size:13px;color:var(--color-text) }
-    .feedback-text     { margin-top:8px }
-    .feedback-text p   { font-size:13px;color:var(--color-text);margin:4px 0 0;line-height:1.5 }
-    .anon-notice       { font-size:13px;color:var(--color-text-muted);font-style:italic }
-    .asset-list        { display:flex;flex-direction:column;gap:10px }
-    .asset-row         { display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--color-bg-secondary,#F8FAFC);border-radius:8px;flex-wrap:wrap }
-    .asset-row.returned{ opacity:.7 }
-    .asset-info        { display:flex;align-items:center;gap:8px;flex:1 }
-    .asset-type-badge  { font-size:11px;font-weight:600;background:var(--color-primary-light,#E0EEF2);color:var(--color-primary,#1C4E5C);padding:2px 8px;border-radius:999px }
-    .asset-desc        { font-size:13px;font-weight:500 }
-    .asset-dates       { display:flex;flex-direction:column;gap:2px;font-size:12px }
-    .inline-form       { background:var(--color-bg-secondary,#F8FAFC);border:1px solid var(--color-border);border-radius:10px;padding:16px;margin-top:14px }
-    .form-grid-2       { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px }
-    .field-full        { grid-column:1/-1 }
-    .inline-form-actions { display:flex;gap:8px }
-    .inline-error      { font-size:12px;color:#DC2626;margin:8px 0 0 }
-    .form-label        { display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted);margin-bottom:4px }
-    .form-input        { width:100%;padding:8px 12px;border:1px solid var(--color-border,#E0E7E9);border-radius:8px;font-size:13px;font-family:inherit;background:var(--color-surface,#fff);color:var(--color-text,#1A1C1E);outline:none;box-sizing:border-box;transition:border .15s }
-    .form-input:focus  { border-color:var(--color-primary,#1C4E5C) }
-    .form-textarea     { resize:vertical }
-    .reasons-checkboxes { display:flex;flex-wrap:wrap;gap:10px }
-    .cb-label          { display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer }
-    .modal-task-name   { font-weight:600;font-size:14px;margin:0 0 14px }
-    .modal-body-text   { font-size:14px;color:var(--color-text);margin:0 0 14px;line-height:1.5 }
-    .modal-field       { margin-top:8px }
-    @media(max-width:600px) { .form-grid-2 { grid-template-columns:1fr } .interview-grid { grid-template-columns:1fr } }
+    .tracker-dot-inner {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-tertiary);
+    }
   `],
 })
 export class OffboardingDetailComponent implements OnInit {
@@ -494,16 +124,21 @@ export class OffboardingDetailComponent implements OnInit {
 
   /** Only RH_MANAGE_OFFBOARDING holders may run mutating actions. */
   readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+  /** Stage-level edit gate: manageable *and* the file is still open. */
+  readonly canEdit   = computed(() => this.canManage() && !this.isTerminal());
 
   // ── State ──────────────────────────────────────────────────────────────────
+  /** Whole-page skeleton — first load only (§5), so a refetch never blanks it. */
+  firstLoad         = signal(true);
   loading           = signal(true);
+  loadFailed        = signal(false);
   wf                = signal<OffboardingWorkflowInstance | null>(null);
   tasks             = signal<OffboardingTask[]>([]);
   interview         = signal<ExitInterview | null>(null);
-  interviewLoading  = signal(false);
   assets            = signal<OffboardingAssetReturn[]>([]);
-  assetsLoading     = signal(false);
   syncingAssets     = signal(false);
+
+  auditOpen = signal(false);
 
   // ── Modal state ────────────────────────────────────────────────────────────
   showCompleteModal     = signal(false);
@@ -511,8 +146,8 @@ export class OffboardingDetailComponent implements OnInit {
   showValidateModal     = signal(false);
   showCancelModal       = signal(false);
   showConfirmAssetModal = signal(false);
-  showInterviewForm     = signal(false);
-  showAssetForm         = signal(false);
+  showInterviewModal    = signal(false);
+  showAssetModal        = signal(false);
 
   activeTask  = signal<OffboardingTask | null>(null);
   activeAsset = signal<OffboardingAssetReturn | null>(null);
@@ -530,63 +165,176 @@ export class OffboardingDetailComponent implements OnInit {
   assetExpectedDate = '';
 
   // ── Loading flags ──────────────────────────────────────────────────────────
-  actioning      = signal(false);
-  validating     = signal(false);
-  cancelling     = signal(false);
-  savingInterview= signal(false);
-  interviewError = signal<string | null>(null);
-  savingAsset    = signal(false);
-  assetError     = signal<string | null>(null);
-  confirmingAsset= signal(false);
+  actioning       = signal(false);
+  validating      = signal(false);
+  cancelling      = signal(false);
+  savingInterview = signal(false);
+  interviewError  = signal<string | null>(null);
+  savingAsset     = signal(false);
+  assetError      = signal<string | null>(null);
+  confirmingAsset = signal(false);
 
-  // ── Computed ───────────────────────────────────────────────────────────────
+  // ── Derived ────────────────────────────────────────────────────────────────
   readonly progressPct = computed(() => computeProgress(this.tasks()));
-  readonly doneTasks   = computed(() => this.tasks().filter(t => t.status === 'DONE' || t.status === 'SKIPPED').length);
-  readonly canValidate = computed(() => {
-    const blocking = this.tasks().filter(t => t.isBlocking && t.status !== 'DONE' && t.status !== 'SKIPPED');
-    return blocking.length === 0 && this.tasks().length > 0;
-  });
-  readonly isTerminal  = computed(() => {
+  readonly doneTasks   = computed(() =>
+    this.tasks().filter(t => t.status === 'DONE' || t.status === 'SKIPPED').length);
+
+  readonly isTerminal = computed(() => {
     const w = this.wf();
     return !!w && isTerminal(w.status);
   });
+
+  readonly blockers = computed(() => outstandingBlockers(this.tasks()));
+  readonly canValidate = computed(() => this.tasks().length > 0 && this.blockers().length === 0);
+
   readonly employeeName = computed(() => {
     const w = this.wf();
     return w?.employeeFullName
       ?? this.translate.instant('OFFBOARDING.LIST.PROFILE_PREFIX', { id: w?.employeeProfileId });
   });
 
-  // ── Table config ───────────────────────────────────────────────────────────
-  readonly taskColumns = computed<TableColumn[]>(() => [
-    { key: 'taskLabel',  label: this.translate.instant('OFFBOARDING.DETAIL.COL_TASK') },
-    { key: 'ownerRole',  label: this.translate.instant('OFFBOARDING.DETAIL.COL_OWNER'),  width: '160px' },
-    { key: 'status',     label: this.translate.instant('OFFBOARDING.DETAIL.COL_STATUS'), width: '130px' },
-    { key: 'sla',        label: this.translate.instant('OFFBOARDING.DETAIL.COL_SLA'),    width: '130px' },
-    { key: 'blocking',   label: this.translate.instant('OFFBOARDING.DETAIL.COL_TYPE'),   width: '110px' },
-    { key: 'actions',    label: '',                                                    width: '160px' },
-  ]);
-  readonly taskTableConfig: TableConfig = {};
+  /** "Départ : 15 octobre 2023 (J-5)" — the design's sub-line. */
+  readonly headerSubtitle = computed(() => {
+    this.translate.currentLang();
+    const w = this.wf();
+    if (!w) return '';
+    const date = longDate(w.lastWorkingDay ?? w.triggerDate);
+    const days = daysUntil(w.lastWorkingDay);
+    const suffix = days == null ? ''
+      : days > 0 ? ` (${this.translate.instant('OFFBOARDING.DETAIL.DAYS_LEFT', { n: days })})`
+      : days === 0 ? ` (${this.translate.instant('OFFBOARDING.DETAIL.DAY_TODAY')})`
+      : ` (${this.translate.instant('OFFBOARDING.DETAIL.DAYS_PAST', { n: -days })})`;
+    return `${this.translate.instant('OFFBOARDING.DETAIL.DEPARTURE')} : ${date}${suffix}`;
+  });
 
-  readonly taskRows = computed<TableRow[]>(() =>
-    this.tasks().map(t => ({
-      taskLabel: t.taskLabel,
-      ownerRole: this.ownerRoleLabel(t.ownerRole),
-      status:    '',
-      sla:       '',
-      blocking:  '',
-      actions:   '',
-      _status:   t.status,
-      _dueDate:  this.fmt(t.dueDate),
-      _slaBreached: !!t.slaBreachDate,
-      _blocking: t.isBlocking,
-      _task:     t,
-    })),
-  );
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    this.translate.currentLang();
+    return [
+      { label: this.translate.instant('OFFBOARDING.LIST.TITLE'), link: '/rh/offboarding' },
+      { label: this.employeeName() },
+    ];
+  });
 
-  // ── Constants for template ─────────────────────────────────────────────────
+  readonly headerBadges = computed<PageHeaderBadge[]>(() => {
+    this.translate.currentLang();
+    const w = this.wf();
+    if (!w) return [];
+    const badges: PageHeaderBadge[] = [
+      { label: this.reasonLabel(w.departureReason), variant: 'danger',  size: 'sm', pill: true },
+      { label: this.statusLabel(w.status),          variant: statusVariant(w.status), size: 'sm' },
+    ];
+    if (w.slaBreachFlag) {
+      badges.push({ label: this.translate.instant('OFFBOARDING.BADGE.SLA_BREACHED'), variant: 'danger', size: 'sm' });
+    }
+    return badges;
+  });
+
+  /** The task the design names in its pulsing header chip. */
+  readonly nextStepLabel = computed(() => findNextDueTask(this.tasks())?.taskLabel ?? null);
+
+  // ── Stages ─────────────────────────────────────────────────────────────────
+  readonly stageStates = computed<Record<StageCode, AccordionState>>(() => {
+    const w = this.wf();
+    return w ? resolveStageStates(w, this.tasks()) : ({} as Record<StageCode, AccordionState>);
+  });
+
+  /** One view per stage — header chrome only; the bodies bind the raw data. */
+  readonly stageViews = computed<Record<StageCode, StageView>>(() => {
+    this.translate.currentLang();
+    const states = this.stageStates();
+    const out = {} as Record<StageCode, StageView>;
+    STAGES.forEach((stage, i) => {
+      const state = states[stage.code] ?? 'pending';
+      out[stage.code] = {
+        code:     stage.code,
+        index:    i + 1,
+        icon:     stage.icon,
+        title:    this.translate.instant('OFFBOARDING.STAGE.' + stage.railKey + '_TITLE'),
+        subtitle: this.stageSubtitle(stage.code, state),
+        state,
+        statusLabel: this.translate.instant('OFFBOARDING.STAGE_STATUS.' + stageStatusKey(state)),
+      };
+    });
+    return out;
+  });
+
+  readonly railSteps = computed<StepperStep[]>(() => {
+    this.translate.currentLang();
+    const states = this.stageStates();
+    return STAGES.map(s => ({
+      title:     this.translate.instant('OFFBOARDING.STAGE.' + s.railKey + '_RAIL'),
+      icon:      s.icon,
+      // `completed` is all-or-nothing (§10g): set on every step, from the resolver,
+      // so stage 4 can be in progress while 1–3 are green.
+      completed: states[s.code] === 'done',
+      disabled:  states[s.code] === 'locked',
+    }));
+  });
+
+  readonly railIndex = computed(() => activeStageIndex(this.stageStates()));
+
+  /**
+   * The same seven stages as a VERTICAL tracker for the sticky sidebar, matching the
+   * onboarding per-case layout. Derived from the one stage resolver as the horizontal
+   * rail, so the two can never disagree about which stage is live.
+   */
+  readonly trackerSteps = computed(() => {
+    this.translate.currentLang();
+    const states = this.stageStates();
+    const activeIdx = this.railIndex();
+    return STAGES.map((s, i) => {
+      const state = states[s.code];
+      return {
+        code:  s.code,
+        icon:  s.icon,
+        label: this.translate.instant('OFFBOARDING.STAGE.' + s.railKey + '_RAIL'),
+        done:    state === 'done',
+        active:  state !== 'done' && i === activeIdx,
+        // Anything neither finished nor current is still ahead — including locked stages,
+        // which read as pending rather than as a separate visual state.
+        pending: state !== 'done' && i !== activeIdx,
+        last:    i === STAGES.length - 1,
+      };
+    });
+  });
+
+  /** Exposed for the sidebar's date fields — the helper is a module function. */
+  protected readonly longDate = longDate;
+
+  /** Set when the image 404s, so the initials tile takes over. */
+  readonly avatarFailed = signal(false);
+
+  /**
+   * Photo → gendered avatar → null (initials). The payload now carries `employeeGender`
+   * and `employeePhotoUrl`, so the case page shows the same avatar as the board and the
+   * list. Not `getAvatarUrl`, which always returns a URL and would render an employee
+   * with no recorded gender as male.
+   */
+  readonly employeeAvatar = computed(() => {
+    const w = this.wf();
+    if (!w || this.avatarFailed()) return null;
+    return resolveEmployeeAvatar(w.employeeProfileId, w.employeePhotoUrl, w.employeeGender) ?? null;
+  });
+
+  readonly employeeInitials = computed(() => {
+    const parts = (this.wf()?.employeeFullName ?? '').trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
+  });
+
+  readonly railConfig = computed<StepperConfig>(() => {
+    this.translate.currentLang();
+    return {
+      chrome:           'header-only',
+      clickableSteps:   true,
+      stepperLabel:     this.translate.instant('OFFBOARDING.DETAIL.RAIL_ARIA'),
+      completedLabel:   this.translate.instant('OFFBOARDING.STAGE_STATUS.DONE'),
+      currentStepLabel: this.translate.instant('OFFBOARDING.STAGE_STATUS.IN_PROGRESS'),
+    };
+  });
+
+  /** Reasons for the exit-interview checkbox list. */
   protected readonly DEPARTURE_REASONS = DEPARTURE_REASONS;
 
-  /** Asset-type options for daf-select, labels normalised via i18n. */
   readonly assetTypeOptions = computed<SelectOption[]>(() =>
     ASSET_TYPES.map(t => ({ value: t, label: this.translate.instant('OFFBOARDING.ASSET_TYPE.' + t) })),
   );
@@ -604,43 +352,151 @@ export class OffboardingDetailComponent implements OnInit {
     this.svc.getOffboarding(this.workflowId).pipe(catchError(() => of(null))).subscribe(w => {
       this.wf.set(w);
       this.tasks.set(w?.tasks ?? []);
+      this.loadFailed.set(!w);
       this.loading.set(false);
+      this.firstLoad.set(false);
+      if (w) this.seedOpenStages();
     });
   }
 
+  /**
+   * Land on the stage that needs attention — the first blocked one, else the active one.
+   * Only on first load: never yank a user who has already navigated somewhere else.
+   */
+  private seedOpenStages(): void {
+    if (this.stageSeeded) return;
+    this.stageSeeded = true;
+    const states = this.stageStates();
+    const target = STAGES.findIndex(s => states[s.code] === 'blocked');
+    const active = STAGES.findIndex(s => states[s.code] === 'active');
+    const index = target >= 0 ? target : (active >= 0 ? active : 0);
+    this.currentStageIndex.set(index);
+  }
+  private stageSeeded = false;
+
   private loadInterview(): void {
-    this.interviewLoading.set(true);
-    this.svc.getExitInterview(this.workflowId).pipe(
-      catchError(err => err?.status === 404 ? of(null) : of(null)),
-    ).subscribe(iv => {
-      this.interview.set(iv);
-      this.interviewLoading.set(false);
-    });
+    this.svc.getExitInterview(this.workflowId)
+      .pipe(catchError(() => of(null)))
+      .subscribe(iv => this.interview.set(iv));
   }
 
   private loadAssets(): void {
-    this.assetsLoading.set(true);
-    this.svc.getAssets(this.workflowId).pipe(catchError(() => of([]))).subscribe(list => {
-      this.assets.set(list);
-      this.assetsLoading.set(false);
-    });
+    this.svc.getAssets(this.workflowId).pipe(catchError(() => of([]))).subscribe(list =>
+      this.assets.set(list));
   }
 
-  syncAssetsFromIt(): void {
-    this.syncingAssets.set(true);
-    this.svc.syncAssetsFromIt(this.workflowId).pipe(
-      catchError(() => {
-        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.ASSET_SYNC_ERR'));
-        this.syncingAssets.set(false);
-        return of(null);
-      }),
-    ).subscribe(list => {
-      if (list) {
-        this.assets.set(list);
-        this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_SYNCED'));
+  // ── Wizard navigation ──────────────────────────────────────────────────────
+  // The page shows exactly ONE stage; Précédent / Suivant, the rail and the sidebar
+  // tracker all move between them. It used to be seven accordions with several open at
+  // once, which buried the stage that actually needed work.
+
+  /** Index into STAGES of the stage on screen. */
+  readonly currentStageIndex = signal(0);
+  /** Exposed for the action bar's "Étape x sur y" counter. */
+  protected readonly totalStages = STAGES.length;
+
+  readonly currentStage = computed(() => STAGES[this.currentStageIndex()]?.code ?? STAGES[0].code);
+
+  readonly canGoPrev = computed(() => this.currentStageIndex() > 0);
+  readonly canGoNext = computed(() => this.currentStageIndex() < STAGES.length - 1);
+
+  /** Label of the next stage, so the button can name where it goes. */
+  readonly nextStageTitle = computed(() => {
+    this.translate.currentLang();
+    const next = STAGES[this.currentStageIndex() + 1];
+    return next ? this.translate.instant('OFFBOARDING.STAGE.' + next.railKey + '_RAIL') : '';
+  });
+
+  readonly prevStageTitle = computed(() => {
+    this.translate.currentLang();
+    const prev = STAGES[this.currentStageIndex() - 1];
+    return prev ? this.translate.instant('OFFBOARDING.STAGE.' + prev.railKey + '_RAIL') : '';
+  });
+
+  /** True when the stage on screen is the one the workflow is waiting on. */
+  isCurrent(code: StageCode): boolean { return this.currentStage() === code; }
+
+  goPrev(): void { this.goToIndex(this.currentStageIndex() - 1); }
+  goNext(): void { this.goToIndex(this.currentStageIndex() + 1); }
+
+  /**
+   * Jump to a stage by code — used by the rail, the sidebar tracker and the cross-links
+   * a stage emits (e.g. Payroll → "see the blockers in IT & Matériel").
+   */
+  openOnly(code: StageCode): void {
+    const index = STAGES.findIndex(s => s.code === code);
+    if (index >= 0) this.goToIndex(index);
+  }
+
+  private goToIndex(index: number): void {
+    if (index < 0 || index >= STAGES.length) return;
+    // A locked stage has unmet prerequisites; navigating into it would show controls that
+    // cannot be used. The rail already renders it disabled — this guards the other paths.
+    if (this.stageStates()[STAGES[index].code] === 'locked') return;
+    this.currentStageIndex.set(index);
+    // No scrolling: the panel swaps in place under a sticky sidebar and a fixed action
+    // bar, so a smooth-scroll only animated the page for no reason. Matches the
+    // onboarding wizard, which also just swaps its step.
+  }
+
+  onRailClick(index: number): void {
+    const stage = STAGES[index];
+    if (stage && this.stageStates()[stage.code] !== 'locked') this.goToIndex(index);
+  }
+
+  view(code: StageCode): StageView {
+    return this.stageViews()[code];
+  }
+
+  /** The one-liner under each stage title — data, not decoration. */
+  private stageSubtitle(code: StageCode, state: AccordionState): string {
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p);
+    const w = this.wf();
+    if (!w) return '';
+
+    switch (code) {
+      case 'DECLARATION':
+        return t('OFFBOARDING.STAGE.DECLARATION_SUB', { date: dayMonth(w.triggerDate) });
+      case 'VALIDATION': {
+        const at = w.hrValidatedAt ?? w.validatedAt ?? w.managerValidatedAt;
+        return at ? t('OFFBOARDING.STAGE.VALIDATION_SUB', { date: dayMonth(at) })
+                  : t('OFFBOARDING.STAGE.VALIDATION_SUB_PENDING');
       }
-      this.syncingAssets.set(false);
-    });
+      case 'HANDOVER':
+        return w.handoverManagerName
+          ? t('OFFBOARDING.STAGE.HANDOVER_SUB', { name: w.handoverManagerName })
+          : t('OFFBOARDING.STAGE.HANDOVER_SUB_PENDING');
+      case 'IT_ASSETS': {
+        const pending = this.assets().filter(a => !a.actualReturnDate).length;
+        return pending
+          ? t('OFFBOARDING.STAGE.IT_SUB_PENDING', { assets: pending })
+          : t('OFFBOARDING.STAGE.IT_SUB_DONE');
+      }
+      case 'HR_DOCS':
+        return this.interview()
+          ? t('OFFBOARDING.STAGE.HR_SUB_DONE')
+          : t('OFFBOARDING.STAGE.HR_SUB_PENDING');
+      case 'PAYROLL': {
+        const s = w.settlement;
+        return s
+          ? t('OFFBOARDING.STAGE.PAYROLL_SUB', { amount: s.totalNet.toLocaleString('fr-FR') })
+          : t('OFFBOARDING.STAGE.PAYROLL_SUB_PENDING');
+      }
+      case 'CLOSURE':
+        return state === 'done'
+          ? t('OFFBOARDING.STAGE.CLOSURE_SUB_DONE')
+          : t('OFFBOARDING.STAGE.CLOSURE_SUB_PENDING');
+    }
+  }
+
+  /** Tasks of one stage — the payroll card needs FINAL_SETTLEMENT by code.
+   *  A computed, not a template method: a fresh array on every check would make
+   *  the child's input look changed on every cycle. */
+  readonly payrollTasks = computed(() => this.stageTasks('PAYROLL'));
+
+  private stageTasks(code: StageCode): OffboardingTask[] {
+    const stage = STAGES.find(s => s.code === code);
+    return stage ? tasksOfStage(stage, this.tasks()) : [];
   }
 
   // ── Task actions ───────────────────────────────────────────────────────────
@@ -718,8 +574,13 @@ export class OffboardingDetailComponent implements OnInit {
   confirmCancel(): void {
     this.cancelling.set(true);
     this.svc.cancelOffboarding(this.workflowId, this.cancelReason)
-      .pipe(catchError(() => {
-        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.CANCEL_ERR'));
+      .pipe(catchError(err => {
+        // Surface the server's reason. Cancel legitimately fails with 422
+        // INVALID_TRANSITION ("only active workflows can be cancelled") — e.g. the file is
+        // already CANCELLED or VALIDATED. A generic toast left the user unable to tell that
+        // from a network failure.
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.TOAST.CANCEL_ERR'));
         this.cancelling.set(false);
         return of(null);
       }))
@@ -734,6 +595,17 @@ export class OffboardingDetailComponent implements OnInit {
   }
 
   // ── Exit interview ─────────────────────────────────────────────────────────
+  /** PENDING V46 — the design's action is *schedule*; until the API can express a
+   *  scheduled interview this opens the record-it form, prefilled if it exists. */
+  openInterviewModal(): void {
+    const iv = this.interview();
+    this.ivDate     = iv?.conductedDate ?? '';
+    this.ivFeedback = iv?.feedbackText ?? '';
+    this.ivReasons  = this.parseReasonList(iv?.departureReasons);
+    this.interviewError.set(null);
+    this.showInterviewModal.set(true);
+  }
+
   setReason(r: DepartureReason, checked: boolean): void {
     this.ivReasons = checked
       ? [...this.ivReasons, r]
@@ -760,15 +632,40 @@ export class OffboardingDetailComponent implements OnInit {
       this.savingInterview.set(false);
       if (iv) {
         this.interview.set(iv);
-        this.showInterviewForm.set(false);
+        this.showInterviewModal.set(false);
         this.notify.success(this.translate.instant('OFFBOARDING.TOAST.INTERVIEW_SAVED'));
-        // also refresh tasks (EXIT_INTERVIEW task may have been auto-completed)
+        // EXIT_INTERVIEW may have been auto-completed server-side.
         this.loadWorkflow();
       }
     });
   }
 
-  // ── Asset returns ──────────────────────────────────────────────────────────
+  // ── Assets ─────────────────────────────────────────────────────────────────
+  syncAssetsFromIt(): void {
+    this.syncingAssets.set(true);
+    this.svc.syncAssetsFromIt(this.workflowId).pipe(
+      catchError(() => {
+        this.notify.error(this.translate.instant('OFFBOARDING.TOAST.ASSET_SYNC_ERR'));
+        this.syncingAssets.set(false);
+        return of(null);
+      }),
+    ).subscribe(list => {
+      if (list) {
+        this.assets.set(list);
+        this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_SYNCED'));
+      }
+      this.syncingAssets.set(false);
+    });
+  }
+
+  openAssetModal(): void {
+    this.assetDesc = '';
+    this.assetType = 'IT';
+    this.assetExpectedDate = '';
+    this.assetError.set(null);
+    this.showAssetModal.set(true);
+  }
+
   saveAsset(): void {
     if (!this.assetDesc.trim() || !this.assetExpectedDate) return;
     this.savingAsset.set(true);
@@ -790,11 +687,8 @@ export class OffboardingDetailComponent implements OnInit {
       this.savingAsset.set(false);
       if (asset) {
         this.assets.update(list => [...list, asset]);
-        this.showAssetForm.set(false);
+        this.showAssetModal.set(false);
         this.notify.success(this.translate.instant('OFFBOARDING.TOAST.ASSET_ADDED'));
-        this.assetDesc = '';
-        this.assetExpectedDate = '';
-        this.assetType = 'IT';
       }
     });
   }
@@ -825,32 +719,26 @@ export class OffboardingDetailComponent implements OnInit {
       });
   }
 
-  // ── Badge helpers ──────────────────────────────────────────────────────────
-  statusLabel(s: string): string       { return this.translate.instant('OFFBOARDING.STATUS.' + s); }
-  statusVariant(s: string): BadgeVariant {
-    const map: Record<string, BadgeVariant> = {
-      PENDING:'neutral', IN_PROGRESS:'teal', BLOCKED:'danger', VALIDATED:'success', CANCELLED:'neutral', ARCHIVED:'neutral',
-    };
-    return map[s] ?? 'neutral';
+  // ── PENDING V46 — no endpoint yet; the controls that call these are disabled ──
+  onToggleAccess(_payload: { item: OffboardingChecklistItem; done: boolean }): void { /* PENDING V46 */ }
+  onGenerateDischarge(): void { /* PENDING V46 */ }
+  onDownloadKit(): void { /* PENDING V46 */ }
+  onViewHandoverMinutes(): void {
+    const url = this.wf()?.handoverMinutesUrl;
+    if (url) window.open(url, '_blank', 'noopener');
   }
-  reasonLabel(r: string): string       { return this.translate.instant('OFFBOARDING.REASON.' + r); }
-  /** Normalise the backend owner-role enum; fall back to the raw code if unmapped. */
-  ownerRoleLabel(role: string): string {
-    const key = 'OFFBOARDING.OWNER_ROLE.' + role;
-    const label = this.translate.instant(key);
-    return label === key ? role : label;
+  onDownloadAudit(): void { /* PENDING V46 */ }
+
+  // ── Label helpers ──────────────────────────────────────────────────────────
+  statusLabel(s: string): string { return this.translate.instant('OFFBOARDING.STATUS.' + s); }
+  reasonLabel(r: string): string { return this.translate.instant('OFFBOARDING.REASON.' + r); }
+
+  private parseReasonList(json: string | null | undefined): DepartureReason[] {
+    if (!json) return [];
+    try { return JSON.parse(json) as DepartureReason[]; } catch { return []; }
   }
-  taskStatusLabel(s: string): string   { return this.translate.instant('OFFBOARDING.TASK_STATUS.' + s); }
-  taskStatusVariant(s: string): BadgeVariant { return TASK_STATUS_VARIANTS[s] ?? 'neutral'; }
-  parseReasons(json: string): string {
-    try { return (JSON.parse(json) as string[]).map(r => this.translate.instant('OFFBOARDING.REASON.' + r)).join(', '); }
-    catch { return json; }
-  }
-  fmt(iso: string | null | undefined): string {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleDateString('fr-FR'); } catch { return iso; }
-  }
+
   // Bridge the plain ISO-string date fields to daf-multi-date-picker's Date model.
-  asDate(iso: string): Date | null           { return isoToDate(iso); }
-  toIso(v: Date | Date[] | null): string     { return dateToIso(v); }
+  asDate(iso: string): Date | null       { return isoToDate(iso); }
+  toIso(v: Date | Date[] | null): string { return dateToIso(v); }
 }

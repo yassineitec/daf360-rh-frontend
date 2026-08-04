@@ -68,6 +68,8 @@ export class RegimeCatalogComponent implements OnChanges {
     daysPerWeek:      [5,  [Validators.required, Validators.min(1), Validators.max(7)]],
     startTime:        [''],
     endTime:          [''],
+    seasonalFrom:     [''],
+    seasonalTo:       [''],
     isFlexible:       [false],
     isDefault:        [false],
     breakDurationMin: [0],
@@ -84,6 +86,8 @@ export class RegimeCatalogComponent implements OnChanges {
     daysPerWeek:      [5,  [Validators.required, Validators.min(1), Validators.max(7)]],
     startTime:        [''],
     endTime:          [''],
+    seasonalFrom:     [''],
+    seasonalTo:       [''],
     isFlexible:       [false],
     isDefault:        [false],
     breakDurationMin: [0],
@@ -115,6 +119,7 @@ export class RegimeCatalogComponent implements OnChanges {
       descriptionFr: r.descriptionFr ?? '',
       hoursPerWeek: r.hoursPerWeek, daysPerWeek: r.daysPerWeek,
       startTime: r.startTime ?? '', endTime: r.endTime ?? '',
+      seasonalFrom: r.seasonalFrom ?? '', seasonalTo: r.seasonalTo ?? '',
       isFlexible: r.isFlexible, isDefault: r.isDefault,
       breakDurationMin: r.breakDurationMin ?? 0,
       overtimeAllowed: r.overtimeAllowed ?? false,
@@ -145,6 +150,8 @@ export class RegimeCatalogComponent implements OnChanges {
       breakDurationMin: v.breakDurationMin ?? 0,
       overtimeAllowed: v.overtimeAllowed ?? false,
       maxHoursPerDay: v.maxHoursPerDay ?? undefined,
+      // null (not undefined) so clearing a seasonal window actually erases it
+      seasonalFrom: v.seasonalFrom || null, seasonalTo: v.seasonalTo || null,
     }).subscribe({
       next: updated => {
         this.regimes.update(rs => rs.map(r => r.id === updated.id ? updated : r));
@@ -201,6 +208,7 @@ export class RegimeCatalogComponent implements OnChanges {
       breakDurationMin: v.breakDurationMin ?? 0,
       overtimeAllowed: v.overtimeAllowed ?? false,
       maxHoursPerDay: v.maxHoursPerDay ?? undefined,
+      seasonalFrom: v.seasonalFrom || null, seasonalTo: v.seasonalTo || null,
       paysId: this.paysId(),
     };
     this.svc.createRegime(dto).subscribe({
@@ -219,6 +227,18 @@ export class RegimeCatalogComponent implements OnChanges {
     if (!d) return false;
     return d.employeeCount === 0 && d.roleCount === 0 && !this.selectedRegime()?.isDefault;
   });
+
+  /**
+   * True when the regime's seasonal window covers today, i.e. it is currently the regime
+   * in force for its entity — outranking role assignments and personal overrides.
+   * An open-ended `seasonalTo` means "until further notice".
+   */
+  isSeasonalActive(r: WorkingTimeRegime): boolean {
+    if (!r.seasonalFrom) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    if (r.seasonalFrom > today) return false;
+    return !r.seasonalTo || r.seasonalTo >= today;
+  }
 
   formatTime(t: string | undefined): string { return t ?? '—'; }
 

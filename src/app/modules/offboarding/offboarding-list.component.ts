@@ -25,11 +25,19 @@ import { isActive, isOverdue } from './offboarding-display';
 import { StartOffboardingModalComponent } from './start-offboarding-modal.component';
 import { OffboardingCardsSectionComponent } from './sections/offboarding-cards-section.component';
 import { OffboardingTableSectionComponent } from './sections/offboarding-table-section.component';
+import { OffboardingBoardSectionComponent } from './sections/offboarding-board-section.component';
+import {
+  OFFBOARDING_KANBAN_COLUMN_DEFS, OffboardingKanbanColumn, byLastWorkingDayAsc,
+} from './offboarding-kanban.model';
 
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-type ViewMode = 'grid' | 'list';
+/**
+ * `kanban` is the default, matching the recruitment board: an offboarding file is a
+ * workflow with a status, so the board is the view that shows where the work is stuck.
+ */
+type ViewMode = 'kanban' | 'list';
 
 /**
  * /rh/offboarding — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
@@ -58,6 +66,7 @@ type ViewMode = 'grid' | 'list';
     StartOffboardingModalComponent,
     OffboardingCardsSectionComponent,
     OffboardingTableSectionComponent,
+    OffboardingBoardSectionComponent,
     TranslatePipe,
   ],
   templateUrl: './offboarding-list.component.html',
@@ -86,7 +95,7 @@ export class OffboardingListComponent implements OnInit {
   readonly showModal = signal(false);
 
   // ── View state ─────────────────────────────────────────────────────────────
-  readonly viewMode     = signal<ViewMode>('grid');
+  readonly viewMode     = signal<ViewMode>('kanban');
   readonly search       = signal('');
   readonly statusFilter = signal('');
   readonly currentPage  = signal(0);
@@ -114,6 +123,41 @@ export class OffboardingListComponent implements OnInit {
     const start = this.currentPage() * this.pageSize();
     return this.filteredItems().slice(start, start + this.pageSize());
   });
+
+  // ── Kanban board ───────────────────────────────────────────────────────────
+  /** Per-column sort direction, keyed by column key. Toggled from the column header. */
+  private readonly columnSort = signal<Record<string, 'asc' | 'desc'>>({});
+
+  /**
+   * Board columns built from the FULL filtered list, not `pagedItems` — a board that only
+   * held one page would silently hide files and misreport its column counts. Paging stays
+   * bound to the grid/table views.
+   */
+  readonly boardColumns = computed<OffboardingKanbanColumn[]>(() => {
+    this.translate.currentLang();
+    const items = this.filteredItems();
+    const sort  = this.columnSort();
+
+    return OFFBOARDING_KANBAN_COLUMN_DEFS.map(def => {
+      const dir = sort[def.key] ?? 'asc';
+      const columnItems = items
+        .filter(w => def.statuses.includes(w.status))
+        .sort((a, b) => dir === 'asc' ? byLastWorkingDayAsc(a, b) : byLastWorkingDayAsc(b, a));
+      return {
+        key: def.key,
+        label: this.translate.instant(def.labelKey),
+        statuses: def.statuses,
+        accent: def.accent,
+        badgeBg: def.badgeBg,
+        sortDir: dir,
+        items: columnItems,
+      };
+    });
+  });
+
+  toggleColumnSort(key: string): void {
+    this.columnSort.update(s => ({ ...s, [key]: (s[key] ?? 'asc') === 'asc' ? 'desc' : 'asc' }));
+  }
 
   /** The table and the cards share one empty message, and it knows about the filter. */
   readonly emptyMessage = computed(() => {
@@ -211,7 +255,7 @@ export class OffboardingListComponent implements OnInit {
   readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
     this.translate.currentLang();
     return [
-      { id: 'grid', icon: 'grid_view', tooltip: this.translate.instant('OFFBOARDING.LIST.VIEW_GRID') },
+      { id: 'kanban', icon: 'view_kanban', tooltip: this.translate.instant('OFFBOARDING.LIST.VIEW_KANBAN') },
       { id: 'list', icon: 'view_list', tooltip: this.translate.instant('OFFBOARDING.LIST.VIEW_LIST') },
     ];
   });

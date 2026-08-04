@@ -12,6 +12,12 @@ export interface BreakTemplateDto {
   isActive: boolean;
   breakTimeStart?: string | null;  // "HH:mm" format, e.g. "10:00"
   breakTimeEnd?:   string | null;  // "HH:mm" format, e.g. "10:15"
+  /**
+   * Pointage status this break switches employees into (status_definitions.status in
+   * DAF360_LOG). null = the break drives no presence transition. Labels are free text,
+   * so this explicit mapping is the only way to tell a coffee break from lunch.
+   */
+  statusCode?:     string | null;
 }
 
 export interface BreakLegalRuleDto {
@@ -40,6 +46,8 @@ export interface CreateBreakTemplateRequest {
   sortOrder?: number;
   breakTimeStart?: string;
   breakTimeEnd?:   string;
+  /** Pointage status to switch into during this window; omit for no transition. */
+  statusCode?:     string;
 }
 
 export interface CreateBreakLegalRuleRequest {

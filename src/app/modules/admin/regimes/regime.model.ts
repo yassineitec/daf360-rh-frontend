@@ -14,6 +14,13 @@ export interface WorkingTimeRegime {
   breakDurationMin?: number;
   overtimeAllowed?: boolean;
   maxHoursPerDay?: number;
+  /**
+   * Seasonal (temporary) window, e.g. a summer "séance unique". While active this regime
+   * outranks role assignments AND personal overrides for its entity — it is checked
+   * first. Both null = an ordinary year-round regime.
+   */
+  seasonalFrom?: string | null;
+  seasonalTo?:   string | null;
   paysId: number;
 }
 
@@ -49,9 +56,11 @@ export interface ResolvedRegimeDto {
   breakDurationMin?: number;
   overtimeAllowed?: boolean;
   maxHoursPerDay?: number;
-  assignmentLevel: 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT';
+  assignmentLevel: 'SEASONAL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT';
   effectiveFrom?: string;
   effectiveTo?: string;
+  isSeasonal?: boolean;
+  paysId?: number;
 }
 
 export interface CreateRegimeRequest {
@@ -68,6 +77,9 @@ export interface CreateRegimeRequest {
   breakDurationMin?: number;
   overtimeAllowed?: boolean;
   maxHoursPerDay?: number;
+  /** Seasonal window — set both to make this the entity's temporary regime. */
+  seasonalFrom?: string | null;
+  seasonalTo?:   string | null;
   paysId: number;
 }
 
@@ -103,7 +115,7 @@ export interface EmployeeRegimeOverview {
   roleName: string | null;
   resolvedRegimeId: number | null;
   resolvedRegimeLabelFr: string | null;
-  assignmentLevel: 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | null;
+  assignmentLevel: 'SEASONAL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | null;
   hoursPerWeek?: number;
   daysPerWeek?: number;
 }

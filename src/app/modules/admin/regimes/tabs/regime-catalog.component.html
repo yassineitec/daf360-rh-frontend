@@ -24,6 +24,10 @@
             </div>
             <div class="rc-card-badges">
               @if (r.isDefault) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeDefault' | translate" [options]="{ variant: 'teal' }" /> }
+              <!-- A currently-active seasonal window overrides every other assignment,
+                   so it must be obvious at a glance which regime is in force. -->
+              @if (isSeasonalActive(r)) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonalActive' | translate" [options]="{ variant: 'warning' }" /> }
+              @else if (r.seasonalFrom) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonal' | translate" [options]="{ variant: 'neutral' }" /> }
               @if (r.isFlexible) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeFlexible' | translate" [options]="{ variant: 'info' }" /> }
               @if (!r.isActive) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeInactive' | translate" [options]="{ variant: 'neutral' }" /> }
             </div>
@@ -133,6 +137,17 @@
               [options]="{ label: ('ADMIN.regimes.catalog.endTime' | translate), type: 'time', fullWidth: true }"
               [value]="form.get('endTime')?.value ?? ''"
               (valueChange)="form.get('endTime')?.setValue($any($event))" />
+            <!-- Seasonal window: while active, this regime outranks role assignments
+                 and personal overrides for the whole entity. Leave empty for a normal
+                 year-round regime. -->
+            <daf-form-field
+              [options]="{ label: ('ADMIN.regimes.catalog.seasonalFrom' | translate), type: 'date', hint: ('ADMIN.regimes.catalog.seasonalHint' | translate), fullWidth: true }"
+              [value]="form.get('seasonalFrom')?.value ?? ''"
+              (valueChange)="form.get('seasonalFrom')?.setValue($any($event))" />
+            <daf-form-field
+              [options]="{ label: ('ADMIN.regimes.catalog.seasonalTo' | translate), type: 'date', fullWidth: true }"
+              [value]="form.get('seasonalTo')?.value ?? ''"
+              (valueChange)="form.get('seasonalTo')?.setValue($any($event))" />
           </div>
           <div class="rc-form-row rc-toggles">
             <daf-toggle

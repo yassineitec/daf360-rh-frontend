@@ -1,0 +1,506 @@
+<!-- /rh/offboarding/:id — laid out from design/offboarding-detail.html.
+     Canonical scaffold (UI-PLAYBOOK §1): daf-page owns the 32px rhythm and the
+     first-load skeleton, so there is no wrapper gap, no space-y-* between sections
+     and no spinner of its own. `kpis="0"` (the design has no KPI row — the progress
+     tile is not one), `breadcrumbs` so the skeleton draws the crumb row.
+     No `icon` on the header (§1). -->
+<daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
+
+  <daf-page-header
+    [title]="employeeName()"
+    [subtitle]="headerSubtitle()"
+    [badges]="headerBadges()"
+    [breadcrumbs]="breadcrumbs()"
+    [breadcrumbLabel]="'OFFBOARDING.DETAIL.BREADCRUMB_ARIA' | translate">
+    <ng-container pageActions>
+      <daf-button
+        [options]="{ variant: 'ghost', iconStart: 'history',
+                     label: ('OFFBOARDING.AUDIT.OPEN' | translate) }"
+        (onClick)="auditOpen.set(true)" />
+      @if (!isTerminal() && canManage()) {
+        @if (canValidate()) {
+          <daf-button
+            [options]="{ variant: 'teal', iconStart: 'check_circle',
+                         label: ('OFFBOARDING.DETAIL.VALIDATE' | translate), loading: validating() }"
+            (onClick)="showValidateModal.set(true)" />
+        }
+        <daf-button
+          [options]="{ variant: 'danger', iconStart: 'cancel',
+                       label: ('OFFBOARDING.DETAIL.CANCEL' | translate), loading: cancelling() }"
+          (onClick)="showCancelModal.set(true)" />
+      }
+    </ng-container>
+  </daf-page-header>
+
+  @if (loadFailed()) {
+    <div class="flex flex-col items-start gap-3 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">error</span>
+        {{ 'OFFBOARDING.DETAIL.NOT_FOUND' | translate }}
+      </span>
+    </div>
+  } @else if (wf(); as w) {
+
+    <!-- SLA / blocked banner — the canonical shape (§1); replaces six raw hex values. -->
+    @if (w.slaBreachFlag || w.status === 'BLOCKED') {
+      <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
+        <span class="material-symbols-outlined text-[18px]">warning</span>
+        {{ (w.slaBreachFlag ? 'OFFBOARDING.DETAIL.ALERT_SLA' : 'OFFBOARDING.DETAIL.ALERT_BLOCKED') | translate }}
+      </div>
+    }
+
+    <!-- ── Two-column case layout, mirroring the onboarding per-case page ────
+         Left: a sticky identity card + vertical stage tracker. Right: the rail and
+         the stage accordions. Same 32%/flex-1 split, same `lg:sticky lg:top-6`
+         sidebar and same `pb-32` runway as /rh/onboarding/:id, so the two case
+         pages read as one screen. -->
+    <div class="flex flex-col gap-8 pb-32 lg:flex-row">
+
+      <!-- ── Left: identity + progress ──────────────────────────────────────── -->
+      <div class="lg:w-[32%] lg:shrink-0">
+        <div class="flex flex-col gap-6 lg:sticky lg:top-6">
+
+          <!-- Employee identity -->
+          <daf-card [options]="{ variant: 'glass', radius: 'xl', padding: 'none' }">
+            <div class="flex flex-col items-center gap-1 p-8 text-center">
+              <!-- Photo if on file, else the gendered avatar, else initials. -->
+              @if (employeeAvatar(); as src) {
+                <img [src]="src" alt="" (error)="avatarFailed.set(true)"
+                     class="mb-3 h-24 w-24 rounded-full border-4 border-surface-container-lowest
+                            bg-surface-container-high object-cover shadow-lg" />
+              } @else {
+                <div class="mb-3 flex h-24 w-24 items-center justify-center rounded-full
+                            border-4 border-surface-container-lowest bg-gradient-to-br
+                            from-primary to-secondary text-[26px] font-bold text-white shadow-lg">
+                  {{ employeeInitials() }}
+                </div>
+              }
+              <p class="text-[18px] font-bold text-on-surface">{{ w.employeeFullName || '—' }}</p>
+              <p class="text-[13px] text-on-surface-variant">
+                {{ 'OFFBOARDING.REASON.' + w.departureReason | translate }}
+              </p>
+              <div class="mt-3 flex flex-wrap justify-center gap-2">
+                <daf-badge [label]="'OFFBOARDING.STATUS.' + w.status | translate"
+                           [options]="{ variant: 'neutral', size: 'sm' }" />
+                @if (w.slaBreachFlag) {
+                  <daf-badge [label]="'OFFBOARDING.DETAIL.BADGE_SLA' | translate"
+                             [options]="{ variant: 'danger', size: 'sm' }" />
+                }
+              </div>
+            </div>
+
+            <div class="border-t border-outline-variant/40 px-8 pb-8 pt-5">
+              <div class="grid grid-cols-1 gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-wider text-outline">
+                    {{ 'OFFBOARDING.DETAIL.FIELD_LAST_DAY' | translate }}
+                  </p>
+                  <p class="text-[13px] font-medium text-on-surface">{{ longDate(w.lastWorkingDay) }}</p>
+                </div>
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-wider text-outline">
+                    {{ 'OFFBOARDING.DETAIL.FIELD_TRIGGER_DATE' | translate }}
+                  </p>
+                  <p class="text-[13px] font-medium text-on-surface">{{ longDate(w.triggerDate) }}</p>
+                </div>
+                <div class="sm:col-span-2">
+                  <p class="text-[11px] font-semibold uppercase tracking-wider text-outline">
+                    {{ 'OFFBOARDING.DETAIL.FIELD_HANDOVER' | translate }}
+                  </p>
+                  <p class="text-[13px] font-medium text-on-surface">{{ w.handoverManagerName || '—' }}</p>
+                </div>
+              </div>
+            </div>
+          </daf-card>
+
+          <!-- Vertical stage tracker + progress -->
+          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+            <p class="mb-4 text-[11px] font-semibold uppercase tracking-wider text-outline">
+              {{ 'OFFBOARDING.DETAIL.PROGRESS_TITLE' | translate }}
+            </p>
+
+            <div class="space-y-0">
+              @for (step of trackerSteps(); track step.code) {
+                <div class="tracker-step" [class.tracker-step-last]="step.last">
+                  @if (!step.last) {
+                    <div class="tracker-line"
+                         [class.tracker-line-done]="step.done"
+                         [class.tracker-line-pending]="!step.done"></div>
+                  }
+                  <div class="tracker-dot"
+                       [class.tracker-dot-done]="step.done"
+                       [class.tracker-dot-active]="step.active"
+                       [class.tracker-dot-pending]="step.pending">
+                    @if (step.done) {
+                      <span class="material-symbols-outlined text-[14px]">check</span>
+                    } @else if (step.active) {
+                      <div class="tracker-dot-inner"></div>
+                    } @else {
+                      <span class="material-symbols-outlined text-[14px]">{{ step.icon }}</span>
+                    }
+                  </div>
+                  <!-- Clicking a tracker step focuses its accordion, same as the rail. -->
+                  <button type="button" class="pt-0.5 text-left" (click)="openOnly(step.code)">
+                    <p class="text-[14px]"
+                       [class.font-bold]="step.active"
+                       [class.text-tertiary]="step.active"
+                       [class.font-medium]="!step.active"
+                       [class.text-outline]="step.pending"
+                       [class.text-on-surface]="step.done">{{ step.label }}</p>
+                    @if (step.active) {
+                      <p class="text-[12px] font-semibold text-success">
+                        {{ 'OFFBOARDING.DETAIL.STEP_IN_PROGRESS' | translate }}
+                      </p>
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+
+            <div class="mt-6 border-t border-outline-variant/40 pt-5">
+              <daf-progress-bar
+                [label]="'OFFBOARDING.DETAIL.PROGRESS_TITLE' | translate"
+                [value]="progressPct()"
+                [options]="{ variant: 'tertiary', size: 'sm' }" />
+              <p class="mt-1 text-[11px] text-on-surface-variant">
+                {{ 'OFFBOARDING.DETAIL.PROGRESS_COUNT' | translate:{ done: doneTasks(), total: tasks().length } }}
+              </p>
+            </div>
+
+            @if (nextStepLabel(); as next) {
+              <div class="mt-4 flex items-start gap-1.5 rounded-xl border border-warning/30 bg-warning/10 p-3">
+                <span class="mt-1 h-2 w-2 shrink-0 animate-pulse rounded-full bg-warning"></span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-warning">
+                  {{ 'OFFBOARDING.DETAIL.NEXT_STEP' | translate }} : {{ next }}
+                </span>
+              </div>
+            }
+          </daf-card>
+
+        </div>
+      </div>
+
+      <!-- ── Right: the rail + the stages ───────────────────────────────────── -->
+      <div class="flex min-w-0 flex-1 flex-col gap-6">
+
+      <!-- ── The 7-stage rail ──────────────────────────────────────────────────
+           daf-stepper (§10g), `chrome: 'header-only'` — the page owns everything
+           below it. `completed` is set on every step from the stage resolver, so a
+           later stage can be green while an earlier one is still open. Clicking a
+           step focuses that accordion card. -->
+      <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
+        <div class="overflow-x-auto">
+          <div class="min-w-[560px]">
+            <daf-stepper
+              [steps]="railSteps()"
+              [currentStep]="railIndex()"
+              [config]="railConfig()"
+              (stepClick)="onRailClick($event)" />
+          </div>
+        </div>
+      </daf-card>
+
+    <!-- ── The stages — one at a time ─────────────────────────────────────────
+         A wizard, not an accordion: exactly the stage in focus is rendered, and the
+         rail, the sidebar tracker and the Précédent / Suivant bar below all move
+         between them. Each component stays stateless (§10g): data in, intent out. -->
+    <div id="stage-wizard" class="flex flex-col gap-4">
+
+      @if (isCurrent('DECLARATION')) {
+
+      <div id="stage-DECLARATION">
+        <rh-stage-declaration
+          [view]="view('DECLARATION')"
+          [wf]="w"
+          [reasonLabel]="reasonLabel(w.departureReason)" />
+      </div>
+      }
+
+      @if (isCurrent('VALIDATION')) {
+
+      <div id="stage-VALIDATION">
+        <rh-stage-validation
+          [view]="view('VALIDATION')"
+          [wf]="w" />
+      </div>
+      }
+
+      @if (isCurrent('HANDOVER')) {
+
+      <div id="stage-HANDOVER">
+        <rh-stage-handover
+          [view]="view('HANDOVER')"
+          [wf]="w"
+          (viewMinutes)="onViewHandoverMinutes()" />
+      </div>
+      }
+
+      @if (isCurrent('IT_ASSETS')) {
+
+      <div id="stage-IT_ASSETS">
+        <rh-stage-it-assets
+          [view]="view('IT_ASSETS')"
+          [wf]="w"
+          [assets]="assets()"
+          [canEdit]="canEdit()"
+          [syncing]="syncingAssets()"
+          (confirmAsset)="openConfirmAsset($event)"
+          (syncAssets)="syncAssetsFromIt()"
+          (addAsset)="openAssetModal()"
+          (toggleAccess)="onToggleAccess($event)"
+          (generateDischarge)="onGenerateDischarge()" />
+      </div>
+      }
+
+      @if (isCurrent('HR_DOCS')) {
+
+      <div id="stage-HR_DOCS">
+        <rh-stage-hr-docs
+          [view]="view('HR_DOCS')"
+          [wf]="w"
+          [interview]="interview()"
+          [canEdit]="canEdit()"
+          (scheduleInterview)="openInterviewModal()"
+          (viewInterview)="openInterviewModal()"
+          (downloadKit)="onDownloadKit()" />
+      </div>
+      }
+
+      @if (isCurrent('PAYROLL')) {
+
+      <div id="stage-PAYROLL">
+        <rh-stage-payroll
+          [view]="view('PAYROLL')"
+          [wf]="w"
+          [tasks]="payrollTasks()"
+          [blockers]="blockers()"
+          [canEdit]="canEdit()"
+          (goToBlockers)="openOnly('IT_ASSETS')"
+          (completeSettlement)="openCompleteModal($event)" />
+      </div>
+      }
+
+      @if (isCurrent('CLOSURE')) {
+
+      <div id="stage-CLOSURE">
+        <rh-stage-closure
+          [view]="view('CLOSURE')"
+          [wf]="w"
+          [blockers]="blockers()"
+          [canEdit]="canEdit()"
+          [validating]="validating()"
+          (validate)="showValidateModal.set(true)" />
+      </div>
+      }
+    </div>
+
+      </div><!-- /right column -->
+    </div><!-- /two-column case layout -->
+  }
+
+</daf-page>
+
+<!-- ── Wizard action bar ─────────────────────────────────────────────────────
+     Same fixed footer as the onboarding per-case page: anchored to the VIEWPORT
+     (`inset-x-0`), never offset by the shell sidebar, content centred on the page's
+     own max-width, `pointer-events` keeping the gutters click-through. `pb-32` on the
+     layout above clears it.
+
+     Buttons name their destination rather than just "Suivant", so it is clear which
+     stage you move to. A locked next stage disables the button — its prerequisites are
+     unmet, and the panel would only show dead controls. -->
+@if (!loadFailed() && wf()) {
+  <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
+    <div class="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3
+                rounded-xl border border-outline-variant bg-surface-container-lowest p-4
+                shadow-[0_-4px_24px_rgba(0,0,0,0.12)]">
+      <daf-button
+        [options]="{ variant: 'ghost', iconStart: 'arrow_back',
+                     disabled: !canGoPrev(),
+                     label: canGoPrev() ? prevStageTitle() : ('OFFBOARDING.DETAIL.PREV' | translate) }"
+        (onClick)="goPrev()" />
+
+      <span class="text-[12px] font-semibold text-on-surface-variant">
+        {{ 'OFFBOARDING.DETAIL.STEP_COUNTER' | translate:{ current: currentStageIndex() + 1, total: totalStages } }}
+      </span>
+
+      <daf-button
+        [options]="{ variant: 'teal', iconEnd: 'arrow_forward',
+                     disabled: !canGoNext(),
+                     label: canGoNext() ? nextStageTitle() : ('OFFBOARDING.DETAIL.NEXT' | translate) }"
+        (onClick)="goNext()" />
+    </div>
+  </div>
+}
+
+<!-- ── Audit drawer ──────────────────────────────────────────────────────────
+     At the page root, never inside daf-page: the panel is `position: fixed` and any
+     ancestor with transform / filter / backdrop-filter — daf-card's glass variant
+     included — would become its containing block (§10e). -->
+@if (wf(); as w) {
+  <rh-offboarding-audit-drawer
+    [(open)]="auditOpen"
+    [wf]="w"
+    [tasks]="tasks()"
+    [assets]="assets()"
+    [interview]="interview()"
+    (download)="onDownloadAudit()" />
+}
+
+<!-- ── Complete task modal ─────────────────────────────────────────────────── -->
+<app-modal [title]="'OFFBOARDING.MODAL.COMPLETE_TITLE' | translate" [visible]="showCompleteModal()"
+           [hasFooter]="true" (closed)="showCompleteModal.set(false)">
+  @if (activeTask(); as t) {
+    <p class="mb-3.5 text-[14px] font-semibold text-on-surface">{{ t.taskLabel }}</p>
+  }
+  <daf-form-field
+    [options]="{ label: ('OFFBOARDING.MODAL.COMMENT_LABEL' | translate), type: 'textarea', rows: 3,
+                 placeholder: ('OFFBOARDING.MODAL.COMMENT_PH' | translate) }"
+    [value]="taskComment" (valueChange)="taskComment = $any($event) ?? ''" />
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.COMMON_CANCEL' | translate) }"
+                (onClick)="showCompleteModal.set(false)" />
+    <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.MODAL.MARK_DONE' | translate), loading: actioning() }"
+                (onClick)="confirmComplete()" />
+  </div>
+</app-modal>
+
+<!-- ── Skip task modal ────────────────────────────────────────────────────── -->
+<app-modal [title]="'OFFBOARDING.MODAL.SKIP_TITLE' | translate" [visible]="showSkipModal()"
+           [hasFooter]="true" (closed)="showSkipModal.set(false)">
+  @if (activeTask(); as t) {
+    <p class="mb-3.5 text-[14px] font-semibold text-on-surface">{{ t.taskLabel }}</p>
+  }
+  <daf-form-field
+    [options]="{ label: ('OFFBOARDING.MODAL.SKIP_REASON_LABEL' | translate), type: 'textarea', rows: 3,
+                 placeholder: ('OFFBOARDING.MODAL.SKIP_REASON_PH' | translate) }"
+    [value]="skipReason" (valueChange)="skipReason = $any($event) ?? ''" />
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.COMMON_CANCEL' | translate) }"
+                (onClick)="showSkipModal.set(false)" />
+    <daf-button [options]="{ variant: 'danger', label: ('OFFBOARDING.MODAL.SKIP_CONFIRM' | translate),
+                             loading: actioning(), disabled: !skipReason.trim() }"
+                (onClick)="confirmSkip()" />
+  </div>
+</app-modal>
+
+<!-- ── Validate modal ─────────────────────────────────────────────────────── -->
+<app-modal [title]="'OFFBOARDING.MODAL.VALIDATE_TITLE' | translate" [visible]="showValidateModal()"
+           [hasFooter]="true" (closed)="showValidateModal.set(false)">
+  <p class="text-[14px] leading-relaxed text-on-surface">{{ 'OFFBOARDING.MODAL.VALIDATE_BODY' | translate }}</p>
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.COMMON_CANCEL' | translate) }"
+                (onClick)="showValidateModal.set(false)" />
+    <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.MODAL.VALIDATE_CONFIRM' | translate), loading: validating() }"
+                (onClick)="confirmValidate()" />
+  </div>
+</app-modal>
+
+<!-- ── Cancel modal ───────────────────────────────────────────────────────── -->
+<app-modal [title]="'OFFBOARDING.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()"
+           [hasFooter]="true" (closed)="showCancelModal.set(false)">
+  <p class="mb-3.5 text-[14px] leading-relaxed text-on-surface">{{ 'OFFBOARDING.MODAL.CANCEL_BODY' | translate }}</p>
+  <daf-form-field
+    [options]="{ label: ('OFFBOARDING.MODAL.CANCEL_REASON_LABEL' | translate), type: 'textarea', rows: 3,
+                 placeholder: ('OFFBOARDING.MODAL.CANCEL_REASON_PH' | translate) }"
+    [value]="cancelReason" (valueChange)="cancelReason = $any($event) ?? ''" />
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.CANCEL_KEEP' | translate) }"
+                (onClick)="showCancelModal.set(false)" />
+    <daf-button [options]="{ variant: 'danger', label: ('OFFBOARDING.MODAL.CANCEL_CONFIRM' | translate), loading: cancelling() }"
+                (onClick)="confirmCancel()" />
+  </div>
+</app-modal>
+
+<!-- ── Confirm asset return modal — opened by the switch on an asset row ──── -->
+<app-modal [title]="'OFFBOARDING.MODAL.ASSET_TITLE' | translate" [visible]="showConfirmAssetModal()"
+           [hasFooter]="true" (closed)="showConfirmAssetModal.set(false)">
+  @if (activeAsset(); as a) {
+    <p class="mb-3.5 text-[14px] font-semibold text-on-surface">{{ a.assetDescription }}</p>
+  }
+  <daf-form-field
+    [options]="{ label: ('OFFBOARDING.MODAL.ASSET_CONDITION_LABEL' | translate), type: 'text',
+                 placeholder: ('OFFBOARDING.MODAL.ASSET_CONDITION_PH' | translate) }"
+    [value]="assetCondition" (valueChange)="assetCondition = $any($event) ?? ''" />
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.COMMON_CANCEL' | translate) }"
+                (onClick)="showConfirmAssetModal.set(false)" />
+    <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.MODAL.ASSET_CONFIRM' | translate), loading: confirmingAsset() }"
+                (onClick)="confirmAssetReturn()" />
+  </div>
+</app-modal>
+
+<!-- ── Add asset modal — was an inline form under the assets section ──────── -->
+<app-modal [title]="'OFFBOARDING.DETAIL.ASSETS_ADD' | translate" [visible]="showAssetModal()"
+           [hasFooter]="true" (closed)="showAssetModal.set(false)">
+  <div class="flex flex-col gap-3.5">
+    <daf-form-field
+      [options]="{ label: ('OFFBOARDING.DETAIL.ASSET_DESC_LABEL' | translate), type: 'text',
+                   placeholder: ('OFFBOARDING.DETAIL.ASSET_DESC_PH' | translate) }"
+      [value]="assetDesc" (valueChange)="assetDesc = $any($event) ?? ''" />
+    <daf-select
+      [options]="assetTypeOptions()"
+      [config]="{ label: ('OFFBOARDING.DETAIL.ASSET_TYPE_LABEL' | translate) }"
+      [selected]="[assetType]"
+      (selectedChange)="assetType = $any($event[0])" />
+    <daf-multi-date-picker
+      [value]="asDate(assetExpectedDate)"
+      [config]="{ label: ('OFFBOARDING.DETAIL.ASSET_EXPECTED_LABEL' | translate),
+                  selectionMode: 'single', fullWidth: true }"
+      (valueChange)="assetExpectedDate = toIso($event)" />
+    @if (assetError()) {
+      <p class="text-[12px] text-danger">{{ assetError() }}</p>
+    }
+  </div>
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.COMMON_CANCEL' | translate) }"
+                (onClick)="showAssetModal.set(false)" />
+    <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.DETAIL.ADD' | translate),
+                             loading: savingAsset(), disabled: !assetDesc.trim() || !assetExpectedDate }"
+                (onClick)="saveAsset()" />
+  </div>
+</app-modal>
+
+<!-- ── Exit interview modal ───────────────────────────────────────────────────
+     PENDING V46 — the design's button says "Planifier". Until the API carries a
+     scheduled date this records the interview instead, which is what it can do. -->
+<app-modal [title]="'OFFBOARDING.DETAIL.INTERVIEW_TITLE' | translate" [visible]="showInterviewModal()"
+           [hasFooter]="true" size="lg" (closed)="showInterviewModal.set(false)">
+  <div class="flex flex-col gap-3.5">
+    <daf-multi-date-picker
+      [value]="asDate(ivDate)"
+      [config]="{ label: ('OFFBOARDING.DETAIL.IV_DATE_LABEL' | translate),
+                  selectionMode: 'single', fullWidth: true }"
+      (valueChange)="ivDate = toIso($event)" />
+
+    <div>
+      <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        {{ 'OFFBOARDING.DETAIL.IV_REASONS_LABEL' | translate }}
+      </label>
+      <div class="flex flex-wrap gap-x-4 gap-y-2">
+        @for (r of DEPARTURE_REASONS; track r) {
+          <daf-checkbox
+            [options]="{ label: ('OFFBOARDING.REASON.' + r) | translate }"
+            [checked]="ivReasons.includes(r)"
+            (checkedChange)="setReason(r, $event)" />
+        }
+      </div>
+    </div>
+
+    <daf-form-field
+      [options]="{ label: ('OFFBOARDING.DETAIL.IV_FEEDBACK_LABEL' | translate), type: 'textarea', rows: 4,
+                   placeholder: ('OFFBOARDING.DETAIL.IV_FEEDBACK_PH' | translate) }"
+      [value]="ivFeedback" (valueChange)="ivFeedback = $any($event) ?? ''" />
+
+    @if (interviewError()) {
+      <p class="text-[12px] text-danger">{{ interviewError() }}</p>
+    }
+  </div>
+  <div slot="footer">
+    <daf-button [options]="{ variant: 'secondary', label: ('OFFBOARDING.MODAL.COMMON_CANCEL' | translate) }"
+                (onClick)="showInterviewModal.set(false)" />
+    <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.DETAIL.SAVE' | translate),
+                             loading: savingInterview(), disabled: !ivDate }"
+                (onClick)="saveInterview()" />
+  </div>
+</app-modal>

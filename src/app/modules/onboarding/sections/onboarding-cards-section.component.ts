@@ -4,6 +4,7 @@ import { EntityCardComponent, EntityCardOptions, SkeletonComponent } from '@khal
 
 import { OnboardingListItem } from '../onboarding.model';
 import { initialsOf, isoDate, lastUpdated } from '../onboarding-display';
+import { avatarUrl } from '../../../shared/utils/avatar.utils';
 
 /** One card's options plus the candidate id its click needs. */
 interface OnboardingCard {
@@ -76,6 +77,9 @@ export class OnboardingCardsSectionComponent {
         variant: 'glass',
         clickable: true,
         image: {
+          // The two shared avatar PNGs, via the same helper the profiles grid and the
+          // onboarding form already use — one avatar convention across every module.
+          avatar: avatarUrl(item.gender),
           initials: initialsOf(item.candidateFullName),
           // Complete literal classes — a runtime-assembled one is never emitted (§3).
           badgeBg: item.hasDraft ? 'bg-warning' : 'bg-gradient-to-br from-primary to-secondary',

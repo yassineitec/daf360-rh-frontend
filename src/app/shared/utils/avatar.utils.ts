@@ -1,6 +1,52 @@
-/** True for any casing/whitespace variant of female (FEMALE, "Female ", female). */
+/**
+ * Canonical gender, tolerant of the pre-V38 vocabularies.
+ *
+ * `V38__unify_gender_values.sql` normalises employee_profiles.gender to
+ * MALE/FEMALE/OTHER/UNSPECIFIED — but rh-service has no Flyway, so that script is applied
+ * by hand and any un-migrated row still holds 'Homme', 'Femme', 'M', 'F', 'Masculin'…
+ * Matching only 'MALE'/'FEMALE' silently drops the avatar for those rows, which is exactly
+ * how "no avatars anywhere" happens. Same value lists as the migration.
+ */
+export type CanonicalGender = 'MALE' | 'FEMALE' | 'OTHER' | 'UNSPECIFIED';
+
+const MALE_VALUES   = ['HOMME', 'MASCULIN', 'MASCULINO', 'MALE', 'M', 'H'];
+const FEMALE_VALUES = ['FEMME', 'FEMININ', 'FÉMININ', 'FEMENINO', 'FEMALE', 'F'];
+
+export function canonicalGender(gender: string | null | undefined): CanonicalGender {
+  const g = gender?.trim().toUpperCase() ?? '';
+  if (MALE_VALUES.includes(g)) return 'MALE';
+  if (FEMALE_VALUES.includes(g)) return 'FEMALE';
+  if (g === 'AUTRE' || g === 'OTHER' || g === 'O') return 'OTHER';
+  return 'UNSPECIFIED';
+}
+
+/** True for any casing/whitespace/vocabulary variant of female. */
 export function isFemale(gender: string | null | undefined): boolean {
-  return gender?.trim().toUpperCase() === 'FEMALE';
+  return canonicalGender(gender) === 'FEMALE';
+}
+
+/**
+ * The gendered avatar, or `undefined` when the gender is unknown — callers then leave the
+ * image unset so initials render. Deliberately different from {@link avatarUrl}, which
+ * always returns a URL and would show an employee of unrecorded gender as male.
+ */
+export function genderAvatarUrl(gender: string | null | undefined): string | undefined {
+  const g = canonicalGender(gender);
+  if (g === 'MALE')   return '/images/avatars/male.png';
+  if (g === 'FEMALE') return '/images/avatars/female.png';
+  return undefined;
+}
+
+/**
+ * The one avatar rule for employee/candidate tiles: real photo → gendered avatar →
+ * `undefined` (caller falls back to initials).
+ */
+export function employeeAvatar(
+  profileId: number | null | undefined,
+  photoUrl: string | null | undefined,
+  gender: string | null | undefined,
+): string | undefined {
+  return profilePhotoUrl(profileId, photoUrl) ?? genderAvatarUrl(gender);
 }
 
 export function avatarUrl(gender: string | null | undefined): string {
