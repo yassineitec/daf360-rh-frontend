@@ -182,6 +182,21 @@ export interface OffboardingCatalogTask {
   createdAt:      string;
 }
 
+/**
+ * The role designated to give the RH validation of a departure in one country (V66).
+ *
+ * A row rather than a permission grant: `RH_VALIDATE_OFFBOARDING` is held globally by DRH and
+ * Administrateur, and a permission belongs to a role, which has no pays — so "the country
+ * director validates their own country's departures" cannot be expressed as one. A pays with no
+ * row keeps the permission-only rule.
+ */
+export interface OffboardingValidator {
+  id:       number;
+  paysId:   number;
+  roleId:   number;
+  roleName: string | null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Document templates
 // ─────────────────────────────────────────────────────────────────────────────

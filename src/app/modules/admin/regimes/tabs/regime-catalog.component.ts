@@ -3,10 +3,13 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
-  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent, ModalService,
+  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent,
+  ModalService, SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
+import { RefDataService } from '../../../../core/ref/ref-data.service';
+import { PaysTimezone, TimezoneOption } from '../../../../core/ref/ref-data.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { ModalComponent } from '../../../../shared/modal.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -16,7 +19,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   standalone: true,
   imports: [
     ReactiveFormsModule, DafHasPermissionDirective,
-    ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent, ModalComponent,
+    ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent,
+    ModalComponent, SelectComponent,
     TranslatePipe,
   ],
   templateUrl: './regime-catalog.component.html',
@@ -27,6 +31,7 @@ export class RegimeCatalogComponent implements OnChanges {
   private fb    = inject(FormBuilder);
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
+  private refData   = inject(RefDataService);
 
   readonly paysId = input<number>(179);
 
@@ -58,6 +63,51 @@ export class RegimeCatalogComponent implements OnChanges {
   formTouched       = signal(false);
   createFormTouched = signal(false);
 
+  // ── Timezone ───────────────────────────────────────────────────────────────
+  /** The entity's own zone — what a regime inherits when it declares none. */
+  paysTimezone = signal<PaysTimezone | null>(null);
+  private readonly timezones = signal<TimezoneOption[]>([]);
+
+  /**
+   * Options for the regime override, with an explicit "inherit" entry first.
+   *
+   * Inheriting is the right answer for almost every regime, so it must be the visible
+   * default rather than something achieved by leaving a select untouched.
+   */
+  readonly timezoneOptions = computed<SelectOption[]>(() => {
+    const inheritLabel = this.paysTimezone()?.timezone
+      ? this.translate.instant('ADMIN.regimes.catalog.tzInheritFrom',
+          { zone: this.paysTimezone()!.timezone })
+      : this.translate.instant('ADMIN.regimes.catalog.tzInheritUnset');
+    return [
+      { value: '', label: inheritLabel },
+      ...this.timezones().map(t => ({ value: t.id, label: t.label })),
+    ];
+  });
+
+  /**
+   * daf-select's value is an array (it is multi-capable). Mirrored in signals rather than
+   * read from the control, because FormControl.value is not reactive — a computed over it
+   * would be evaluated once and then never update the select.
+   */
+  timezoneSelected       = signal<string[]>(['']);
+  createTimezoneSelected = signal<string[]>(['']);
+
+  /** True while a regime declares its own zone — worth flagging, it is the exception. */
+  readonly timezoneOverridden = computed(() => !!this.timezoneSelected()[0]);
+
+  onTimezoneChange(values: string[]): void {
+    const tz = values[0] ?? '';
+    this.timezoneSelected.set([tz]);
+    this.form.get('timezone')?.setValue(tz);
+  }
+
+  onCreateTimezoneChange(values: string[]): void {
+    const tz = values[0] ?? '';
+    this.createTimezoneSelected.set([tz]);
+    this.createForm.get('timezone')?.setValue(tz);
+  }
+
   // ── Forms ──────────────────────────────────────────────────────────────────
   form = this.fb.group({
     code:             ['', [Validators.required, Validators.maxLength(50)]],
@@ -70,6 +120,7 @@ export class RegimeCatalogComponent implements OnChanges {
     endTime:          [''],
     seasonalFrom:     [''],
     seasonalTo:       [''],
+    timezone:         [''],
     isFlexible:       [false],
     isDefault:        [false],
     breakDurationMin: [0],
@@ -88,6 +139,7 @@ export class RegimeCatalogComponent implements OnChanges {
     endTime:          [''],
     seasonalFrom:     [''],
     seasonalTo:       [''],
+    timezone:         [''],
     isFlexible:       [false],
     isDefault:        [false],
     breakDurationMin: [0],
@@ -97,7 +149,20 @@ export class RegimeCatalogComponent implements OnChanges {
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['paysId']) { this.loadRegimes(); }
+    if (changes['paysId']) {
+      this.loadRegimes();
+      this.loadTimezoneContext();
+    }
+  }
+
+  /**
+   * The entity's zone (to show what a regime inherits) plus the IANA catalogue.
+   * Both are best-effort: a failure here must not stop the regime form from working.
+   */
+  private loadTimezoneContext(): void {
+    this.refData.getPaysTimezones().subscribe(list =>
+      this.paysTimezone.set(list.find(p => p.id === this.paysId()) ?? null));
+    this.refData.getTimezones().subscribe(tzs => this.timezones.set(tzs));
   }
 
   loadRegimes(): void {
@@ -120,11 +185,13 @@ export class RegimeCatalogComponent implements OnChanges {
       hoursPerWeek: r.hoursPerWeek, daysPerWeek: r.daysPerWeek,
       startTime: r.startTime ?? '', endTime: r.endTime ?? '',
       seasonalFrom: r.seasonalFrom ?? '', seasonalTo: r.seasonalTo ?? '',
+      timezone: r.timezone ?? '',
       isFlexible: r.isFlexible, isDefault: r.isDefault,
       breakDurationMin: r.breakDurationMin ?? 0,
       overtimeAllowed: r.overtimeAllowed ?? false,
       maxHoursPerDay: r.maxHoursPerDay ?? null,
     });
+    this.timezoneSelected.set([r.timezone ?? '']);
     this.svc.getRegimeDetail(r.id).subscribe({ next: d => this.detail.set(d) });
   }
 
@@ -152,6 +219,9 @@ export class RegimeCatalogComponent implements OnChanges {
       maxHoursPerDay: v.maxHoursPerDay ?? undefined,
       // null (not undefined) so clearing a seasonal window actually erases it
       seasonalFrom: v.seasonalFrom || null, seasonalTo: v.seasonalTo || null,
+      // Same reason: null restores inheritance from the entity's zone. Sending undefined
+      // would leave a stale override running this regime on another country's clock.
+      timezone: v.timezone || null,
     }).subscribe({
       next: updated => {
         this.regimes.update(rs => rs.map(r => r.id === updated.id ? updated : r));
@@ -209,13 +279,15 @@ export class RegimeCatalogComponent implements OnChanges {
       overtimeAllowed: v.overtimeAllowed ?? false,
       maxHoursPerDay: v.maxHoursPerDay ?? undefined,
       seasonalFrom: v.seasonalFrom || null, seasonalTo: v.seasonalTo || null,
+      timezone: v.timezone || null,
       paysId: this.paysId(),
     };
     this.svc.createRegime(dto).subscribe({
       next: created => {
         this.regimes.update(rs => [...rs, created]);
         this.showCreateModal.set(false);
-        this.createForm.reset({ hoursPerWeek: 40, daysPerWeek: 5, isFlexible: false, isDefault: false, breakDurationMin: 0, overtimeAllowed: false });
+        this.createForm.reset({ hoursPerWeek: 40, daysPerWeek: 5, isFlexible: false, isDefault: false, breakDurationMin: 0, overtimeAllowed: false, timezone: '' });
+        this.createTimezoneSelected.set(['']);
         this.selectRegime(created);
       },
       error: err => this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate')),

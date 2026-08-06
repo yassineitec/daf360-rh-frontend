@@ -162,12 +162,15 @@ import { isoToDate } from '../../../shared/date-picker.utils';
               </p>
             }
 
+            <!-- A button, not a link: the stored value is a path on the server's storage
+                 volume, so linking to it downloaded nothing. The page fetches the bytes. -->
             @if (wf().dischargeDocumentUrl) {
-              <a class="flex items-center gap-2 text-[12px] font-bold text-tertiary underline"
-                 [href]="wf().dischargeDocumentUrl" target="_blank" rel="noopener">
+              <button type="button"
+                      class="flex items-center gap-2 text-[12px] font-bold text-tertiary underline"
+                      (click)="downloadDischarge.emit()">
                 <span class="material-symbols-outlined text-[16px]">download</span>
                 {{ wf().dischargeDocumentName ?? ('OFFBOARDING.STAGE.IT_DISCHARGE_DOWNLOAD' | translate) }}
-              </a>
+              </button>
             }
           </div>
         </div>
@@ -198,6 +201,7 @@ export class StageItAssetsComponent {
   readonly addAsset         = output<void>();
   readonly toggleAccess     = output<{ item: OffboardingChecklistItem; done: boolean }>();
   readonly generateDischarge = output<void>();
+  readonly downloadDischarge = output<void>();
   readonly completeTask     = output<OffboardingTask>();
   readonly skipTask         = output<OffboardingTask>();
   /** Emits the picker's raw Date(s); the page converts and adds the end-of-day time. */

@@ -217,7 +217,14 @@ import { isoToDate } from '../../../shared/date-picker.utils';
 export class StagePayrollComponent {
   readonly view     = input.required<StageView>();
   readonly wf       = input.required<OffboardingWorkflowInstance>();
-  /** Blocking tasks outstanding anywhere in the file — why this stage is locked. */
+  /**
+   * Blocking tasks outstanding **elsewhere** in the file — why this stage is locked.
+   *
+   * Must NOT include FINAL_SETTLEMENT. It is itself `is_blocking = 1`, so the page's full
+   * `blockers()` list contains this stage: passing that made the lock banner cite "Solde de
+   * tout compte" as its own blocker and disabled the only button that could complete it.
+   * The page passes `payrollBlockers()` for exactly this reason.
+   */
   readonly blockers = input<OffboardingTask[]>([]);
   readonly tasks    = input<OffboardingTask[]>([]);
   readonly canEdit  = input(false);

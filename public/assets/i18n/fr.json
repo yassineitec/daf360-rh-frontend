@@ -1379,7 +1379,6 @@
     "LIST": {
       "TITLE": "Offboarding",
       "COUNT": "{{count}} dossier(s)",
-      "START_BUTTON": "Démarrer un offboarding",
       "ALL_STATUSES": "Tous les statuts",
       "RESET": "Réinitialiser",
       "EMPTY": "Aucun dossier d'offboarding",
@@ -1483,7 +1482,7 @@
       "HANDOVER_MANAGER": "Responsable passation",
       "CANCEL_REASON_LABEL": "Motif d'annulation :",
       "NOTES_LABEL": "Notes :",
-      "PROGRESS_TITLE": "Progression des tâches",
+      "PROGRESS_TITLE": "Progression du dossier",
       "TASKS_TITLE": "Tâches",
       "TASKS_EMPTY": "Aucune tâche définie pour ce dossier.",
       "TASK_DUE": "échéance {{date}}",
@@ -1562,28 +1561,7 @@
       "ASSET_CONFIRM": "Confirmer",
       "COMMON_CANCEL": "Annuler"
     },
-    "NEW": {
-      "TITLE": "Démarrer un offboarding",
-      "EMPLOYEE_LABEL": "Employé *",
-      "EMPLOYEE_PH": "Rechercher par nom ou identifiant…",
-      "EMPLOYEE_REQUIRED": "Sélectionner un employé",
-      "MANAGER_LABEL": "Responsable passation (Passation des projets)",
-      "MANAGER_PH": "Rechercher le manager responsable…",
-      "REASON_LABEL": "Motif de départ *",
-      "SELECT": "Sélectionner…",
-      "REASON_REQUIRED": "Requis",
-      "TRIGGER_LABEL": "Date de déclenchement *",
-      "TRIGGER_REQUIRED": "Requis",
-      "LAST_DAY_LABEL": "Dernier jour de travail",
-      "NOTES_LABEL": "Notes",
-      "NOTES_PH": "Optionnel…",
-      "CANCEL": "Annuler",
-      "START": "Démarrer",
-      "REQUIRED": "Requis"
-    },
     "TOAST": {
-      "CREATED": "Offboarding démarré avec succès.",
-      "CREATE_ERR": "Erreur lors de la création",
       "VALIDATED": "Offboarding validé avec succès.",
       "VALIDATE_ERR": "Erreur lors de la validation de l'offboarding.",
       "CANCELLED": "Offboarding annulé.",
@@ -1739,8 +1717,21 @@
       "PV_UPLOAD": "Téléverser le PV",
       "PV_REPLACE": "Remplacer le PV",
       "PV_SAVED": "PV de passation enregistré.",
+      "WINDOW_TITLE": "Période de passation",
+      "START_LABEL": "Début de la passation",
+      "END_LABEL": "Dernier jour travaillé",
+      "WINDOW_SAVED": "Période de passation enregistrée.",
+      "WINDOW_INCOMPLETE": "Renseignez le début de la passation et le dernier jour travaillé pour calculer la durée.",
+      "DURATION_DAYS": "jours",
+      "DURATION_BREAKDOWN": "{{working}} j ouvrables + {{leave}} j de congés",
+      "LEAVE_HINT": "{{count}} jour(s) de congés validés tombent dans cette période : le temps de passation effectif en est réduit.",
+      "PV_TEXT_LABEL": "PV rédigé",
+      "PV_TEXT_PH": "Décrivez ce qui a été transmis, à qui, et ce qui reste à traiter…",
+      "PV_TEXT_SAVE": "Enregistrer le PV",
+      "PV_TEXT_SAVED": "PV de passation enregistré.",
       "ERR_SUCCESSOR": "Impossible de désigner ce successeur.",
       "ERR_PV": "Impossible d'enregistrer le PV de passation.",
+      "ERR_SAVE": "Impossible d'enregistrer la passation.",
       "ERR_ITEM": "Impossible de mettre à jour la checklist."
     },
     "VALIDATION": {
@@ -1775,7 +1766,8 @@
       "LAST_DAY_LABEL": "Dernier jour travaillé",
       "THEORETICAL_LABEL": "Date théorique de sortie",
       "NOTICE_LABEL": "Préavis",
-      "NOTICE_PH": "Ex : 3 mois",
+      "NOTICE_UNKNOWN": "Non configuré pour ce pays",
+      "NOTICE_SOURCE": "Défini par la configuration du type de contrat de ce pays",
       "WAIVER_LABEL": "Dispense de préavis demandée",
       "JUSTIFICATION_LABEL": "Justificatif (lettre de démission)",
       "ERR_DATE_REQUIRED": "Le dernier jour travaillé est obligatoire.",
@@ -1854,6 +1846,9 @@
       "ERR_SCHEDULE": "Impossible de planifier l'entretien.",
       "ERR_GENERATE": "Impossible de générer le document.",
       "ERR_DOWNLOAD": "Impossible de télécharger le Kit RH."
+    },
+    "DOC": {
+      "ERR_DOWNLOAD": "Impossible de télécharger le document."
     },
     "SETTLEMENT": {
       "EMPTY": "Aucune ligne enregistrée. Les montants sont saisis par le service financier : le prorata 13ᵉ mois peut être proposé automatiquement, les congés payés et l'indemnité de rupture dépendent de données absentes de ce module.",
@@ -2123,6 +2118,12 @@
         "save": "Enregistrer",
         "add": "Ajouter",
         "saveError": "Erreur lors de l'enregistrement",
+        "validatorTitle": "Rôle validateur des départs",
+        "validatorSubtitle": "Le rôle autorisé à donner la validation RH d'un offboarding pour ce pays.",
+        "validatorNone": "Aucun — permission RH standard",
+        "validatorSave": "Enregistrer",
+        "validatorFallback": "Sans rôle désigné, tout détenteur de RH_VALIDATE_OFFBOARDING peut valider les départs de ce pays.",
+        "validatorError": "Impossible d'enregistrer le rôle validateur.",
         "contractType": {
           "CDI": "CDI",
           "CDD": "CDD",
@@ -2556,7 +2557,13 @@
         "seasonalTo": "au",
         "seasonalHint": "Régime temporaire (ex. séance unique d'été). Prioritaire sur les régimes de rôle et individuels pendant cette période. Laisser vide pour un régime annuel.",
         "badgeSeasonal": "Saisonnier",
-        "badgeSeasonalActive": "Saisonnier actif"
+        "badgeSeasonalActive": "Saisonnier actif",
+        "timezone": "Fuseau horaire du régime",
+        "timezoneHint": "Laissez « héritage » sauf si ce régime doit suivre l'horloge d'un autre pays (mission à l'étranger).",
+        "tzInheritFrom": "Héritage de l'entité ({{zone}})",
+        "tzInheritUnset": "Héritage de l'entité (aucun fuseau configuré)",
+        "timezoneOverrideWarning": "Ce régime utilise son propre fuseau horaire : ses heures ne sont pas lues sur l'horloge de l'entité. Réservé aux régimes temporaires (mission à l'étranger).",
+        "timezoneEntityMissing": "Cette entité n'a aucun fuseau horaire configuré : l'automatisation du pointage est désactivée pour ses employés. Renseignez-le en haut de cette page."
       },
       "overview": {
         "empty": "Aucun employé trouvé",
@@ -2697,6 +2704,14 @@
         "removeMid": " du rôle ",
         "removeAfter": " ?",
         "revertWarning": "employé(s) reviendront au régime par défaut de l'entité."
+      },
+      "timezone": {
+        "title": "Fuseau horaire de l'entité",
+        "unset": "Aucun fuseau configuré — automatisation du pointage désactivée",
+        "help": "Toutes les heures des régimes et des pauses de cette entité (08:00, 12:30…) sont lues dans ce fuseau. Utilisez un identifiant IANA (Africa/Tunis), jamais un décalage (GMT+1) : un décalage ignore l'heure d'été et les changements de règles.",
+        "field": "Fuseau horaire",
+        "saved": "Fuseau horaire enregistré.",
+        "errorSave": "Erreur lors de l'enregistrement du fuseau horaire."
       }
     },
     "catalog": {

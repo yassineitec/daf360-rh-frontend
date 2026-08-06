@@ -3,12 +3,12 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
-import { catchError, of } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { AdminService } from './admin.service';
 import {
-  CONTRACT_TYPES, OffboardingCatalogTask, SaveCatalogTaskRequest,
+  CONTRACT_TYPES, OffboardingCatalogTask, Role, SaveCatalogTaskRequest,
 } from './models/admin.model';
 import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
@@ -24,6 +24,38 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
       </div>
       <daf-button class="desktop-only" [label]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
       <daf-button class="icon-btn-toggle mobile-only" [title]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
+    </div>
+
+    <!-- Validator role for this country (V66) — kept in this tab rather than in one of its
+         own: it is offboarding configuration for the same pays the catalog below is scoped to,
+         and a whole tab for a single select would be harder to find, not easier. -->
+    <div class="validator-card">
+      <div class="validator-head">
+        <span class="material-symbols-outlined">verified_user</span>
+        <div>
+          <p class="validator-title">{{ 'ADMIN.docs.offboarding.validatorTitle' | translate }}</p>
+          <p class="validator-sub">{{ 'ADMIN.docs.offboarding.validatorSubtitle' | translate }}</p>
+        </div>
+      </div>
+      <div class="validator-row">
+        <select class="form-input" [(ngModel)]="validatorRoleId" [disabled]="savingValidator()">
+          <option [ngValue]="null">{{ 'ADMIN.docs.offboarding.validatorNone' | translate }}</option>
+          @for (role of roles(); track role.id) {
+            <option [ngValue]="role.id">{{ role.frenchName }}</option>
+          }
+        </select>
+        <daf-button
+          [label]="'ADMIN.docs.offboarding.validatorSave' | translate"
+          variant="teal"
+          [options]="{ size: 'sm', loading: savingValidator() }"
+          (onClick)="saveValidator()" />
+      </div>
+      @if (validatorRoleId === null) {
+        <p class="validator-hint">{{ 'ADMIN.docs.offboarding.validatorFallback' | translate }}</p>
+      }
+      @if (validatorError()) {
+        <div class="error-banner">{{ validatorError() }}</div>
+      }
     </div>
 
     <!-- Filter bar -->
@@ -204,6 +236,14 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
     .section-title { font-size:15px;font-weight:700;color:var(--color-text);margin:0 0 4px }
     .section-sub   { font-size:13px;color:var(--color-text-muted);margin:0 }
     .filter-bar    { display:flex;align-items:center;gap:10px;margin-bottom:16px }
+    .validator-card { border:1px solid var(--color-border);border-radius:10px;padding:14px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px }
+    .validator-head { display:flex;align-items:flex-start;gap:10px }
+    .validator-head .material-symbols-outlined { font-size:20px;color:var(--color-primary) }
+    .validator-title { font-size:13px;font-weight:700;color:var(--color-text);margin:0 }
+    .validator-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
+    .validator-row   { display:flex;align-items:center;gap:10px;flex-wrap:wrap }
+    .validator-row .form-input { min-width:240px;flex:0 1 320px }
+    .validator-hint  { font-size:11px;font-style:italic;color:var(--color-text-muted);margin:0 }
     .filter-select { padding:7px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;background:var(--color-surface);color:var(--color-text);min-width:200px }
     .skeleton-wrap { display:flex;flex-direction:column;gap:8px }
     .skeleton-row  { height:44px;background:var(--color-bg-secondary,#F5F7F9);border-radius:6px;animation:pulse 1.4s ease-in-out infinite }
@@ -273,6 +313,13 @@ export class OffboardingCatalogAdminComponent implements OnInit {
   loading  = signal(false);
   rows     = signal<OffboardingCatalogTask[]>([]);
 
+  // ── Validator role for this pays (V66) ─────────────────────────────────────
+  roles           = signal<Role[]>([]);
+  /** null = no row configured, i.e. the pays falls back to the RH permission. */
+  validatorRoleId: number | null = null;
+  savingValidator = signal(false);
+  validatorError  = signal<string | null>(null);
+
   showForm  = signal(false);
   editingId = signal<number | null>(null);
   saving    = signal(false);
@@ -302,7 +349,44 @@ export class OffboardingCatalogAdminComponent implements OnInit {
       .sort((a, b) => a.contractType.localeCompare(b.contractType));
   });
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.load();
+    this.loadValidator();
+  }
+
+  /**
+   * The role list is the full `Roles` table on purpose: the validator is chosen freely rather
+   * than picked from a hardcoded shortlist, because role naming is per-deployment.
+   */
+  private loadValidator() {
+    this.svc.listRoles().pipe(catchError(() => of([] as Role[])))
+      .subscribe(list => this.roles.set(list));
+
+    this.svc.getOffboardingValidator(this.paysId())
+      .pipe(catchError(() => of(null)))
+      .subscribe(v => { this.validatorRoleId = v?.roleId ?? null; });
+  }
+
+  saveValidator() {
+    if (this.savingValidator()) return;
+    this.savingValidator.set(true);
+    this.validatorError.set(null);
+
+    // Clearing the select is a real operation, not a no-op: it removes the row and puts the
+    // pays back on the permission-only rule. Widened to `unknown` so the two branches share
+    // one observable type — DELETE answers void, PUT answers the saved row, and neither
+    // payload is used here.
+    const req$: Observable<unknown> = this.validatorRoleId === null
+      ? this.svc.clearOffboardingValidator(this.paysId())
+      : this.svc.setOffboardingValidator(this.paysId(), this.validatorRoleId);
+
+    req$.pipe(catchError(err => {
+      this.validatorError.set(err?.error?.message
+        ?? this.translate.instant('ADMIN.docs.offboarding.validatorError'));
+      this.savingValidator.set(false);
+      return of(null);
+    })).subscribe(() => this.savingValidator.set(false));
+  }
 
   load() {
     this.loading.set(true);

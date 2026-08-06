@@ -122,15 +122,32 @@ export interface OffboardingAssetReturn extends AssetPendingFields {
 // They stay OPTIONAL on purpose: the same interface serves the list endpoint, whose DTO does
 // not populate every stage's fields for every row.
 
+/**
+ * Stage 3 — the passation window, broken down (V65). Exported so the page can type its
+ * `updateHandover` patches. Derived server-side, never stored:
+ * `workingDays` excludes days on validated leave and `leaveDays` counts exactly those, so the
+ * two add up to `totalDays`. Null until both ends of the window exist.
+ */
+export interface OffboardingHandoverDuration {
+  startDate?:   string | null;
+  endDate?:     string | null;
+  workingDays:  number;
+  leaveDays:    number;
+  totalDays:    number;
+}
+
 /** Stage 1 (Déclaration) + 2 (Validation) + 3 (Passation) + 4 (IT) + 6 (Paie) fields. */
 export interface OffboardingPendingFields {
   // Stage 1 — Déclaration. LIVE since V57: written by
   // `PATCH /api/hr/offboarding/{id}/declaration`, returned by the instance DTO.
   justificationDocumentName?: string | null;
   justificationDocumentUrl?:  string | null;
+  // Both DERIVED server-side since V64 from `contract_type_config` (pays × contract type) —
+  // read-only here, and no longer part of the declaration form.
   noticePeriodLabel?:         string | null;   // "3 mois"
+  noticePeriodDays?:          number | null;   // the raw configured figure
   noticeWaiverRequested?:     boolean | null;
-  theoreticalExitDate?:       string | null;   // ≠ lastWorkingDay (the negotiated one)
+  theoreticalExitDate?:       string | null;   // triggerDate + préavis, ≠ the negotiated day
   // Stage 2 — Validation Manager & RH. LIVE since V59: two stamps, separate from the
   // file-level `validatedBy/At` which belongs to stage 7.
   managerValidatedBy?:        number | null;
@@ -141,9 +158,19 @@ export interface OffboardingPendingFields {
   hrValidatedAt?:             string | null;
   hrValidatedByName?:         string | null;
   noticePaidNotWorked?:       boolean | null;
+  /**
+   * V66 — may the SIGNED-IN user give the RH validation of this file? Answered by the server
+   * because the rule is a role designated per pays, which no permission on the client encodes.
+   */
+  canValidateAsHr?:           boolean | null;
   // Stage 3 — Passation. LIVE since V60.
   handoverMinutesUrl?:        string | null;   // PV de passation
   handoverMinutesName?:       string | null;
+  // V65 — the PV can be written instead of (or beside) the uploaded file, and the window has
+  // a manager-set start. `handoverDuration` is computed server-side on every read.
+  handoverMinutesText?:       string | null;
+  handoverStartedAt?:         string | null;
+  handoverDuration?:          OffboardingHandoverDuration | null;
   // Stage 4 — IT & Matériel. LIVE since V61.
   accountDeactivationAt?:     string | null;   // a moment, not a day
   dischargeDocumentUrl?:      string | null;   // "Générer la décharge"
@@ -235,6 +262,9 @@ export interface UpdateHandoverRequest {
   handoverManagerProfileId?: number | null;
   handoverMinutesUrl?:       string | null;
   handoverMinutesName?:      string | null;
+  /** V65. A blank `handoverMinutesText` clears it — unlike the other fields here. */
+  handoverStartedAt?:        string | null;
+  handoverMinutesText?:      string | null;
 }
 
 /** Asset fields added by V61 — the serial used to be smuggled into assetDescription. */
@@ -293,8 +323,7 @@ export interface HrValidationRequest {
  */
 export interface UpdateDeclarationRequest {
   lastWorkingDay?:            string | null;
-  theoreticalExitDate?:       string | null;
-  noticePeriodLabel?:         string | null;
+  // No préavis fields: the API ignores them since V64 (derived from contract_type_config).
   noticeWaiverRequested?:     boolean;
   justificationDocumentUrl?:  string | null;
   justificationDocumentName?: string | null;

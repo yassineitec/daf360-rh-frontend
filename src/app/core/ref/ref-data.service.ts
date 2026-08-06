@@ -3,13 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { RefDataItem, CreateRefDataRequest } from './ref-data.model';
+import { RefDataItem, CreateRefDataRequest, TimezoneOption, PaysTimezone } from './ref-data.model';
 
 @Injectable({ providedIn: 'root' })
 export class RefDataService {
   private http = inject(HttpClient);
   private base = environment.hrApiUrl + '/api/hr/ref';
   private cache = new Map<string, Observable<RefDataItem[]>>();
+  /** Separate from `cache`, which is typed to RefDataItem[]. */
+  private timezones$?: Observable<TimezoneOption[]>;
 
   getGrades(paysId?: number): Observable<RefDataItem[]> {
     const key = paysId ? `grades_${paysId}` : 'grades_all';
@@ -61,7 +63,34 @@ export class RefDataService {
       this.http.get<RefDataItem[]>(`${this.base}/it-asset-types`).pipe(catchError(() => of([]))));
   }
 
-  invalidateAll(): void { this.cache.clear(); }
+  // ── Entity timezones ───────────────────────────────────────────────────────
+  //
+  // Not a cosmetic setting: everything in the pointage module compares wall-clock times
+  // ("08:00", "12:30") that only mean something in a zone, so an entity without one has no
+  // presence automation at all.
+
+  /** The full IANA catalogue with current offsets. Cached — it is ~450 entries. */
+  getTimezones(): Observable<TimezoneOption[]> {
+    if (!this.timezones$) {
+      this.timezones$ = this.http.get<TimezoneOption[]>(`${this.base}/timezones`).pipe(
+        catchError(() => of([])),
+        shareReplay(1),
+      );
+    }
+    return this.timezones$;
+  }
+
+  /** Entities with their configured zone. Not cached: the admin panel edits it. */
+  getPaysTimezones(): Observable<PaysTimezone[]> {
+    return this.http.get<PaysTimezone[]>(`${this.base}/pays`).pipe(catchError(() => of([])));
+  }
+
+  /** Sets an entity's zone; a null/empty value clears it (disabling its automation). */
+  setPaysTimezone(paysId: number, timezone: string | null): Observable<void> {
+    return this.http.put<void>(`${this.base}/pays/${paysId}/timezone`, { timezone });
+  }
+
+  invalidateAll(): void { this.cache.clear(); this.timezones$ = undefined; }
 
   private cached(key: string, obs: Observable<RefDataItem[]>): Observable<RefDataItem[]> {
     if (!this.cache.has(key)) this.cache.set(key, obs.pipe(shareReplay(1)));

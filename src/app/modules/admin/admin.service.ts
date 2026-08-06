@@ -6,7 +6,7 @@ import {
   Holiday, HolidayDto, ParameterDto, ParameterSet,
   RegimeDto, RequestTypeCatalog, RequestTypeDto,
   Role, WorkingTimeRegime,
-  OffboardingCatalogTask, SaveCatalogTaskRequest,
+  OffboardingCatalogTask, OffboardingValidator, SaveCatalogTaskRequest,
   DocumentTemplate, SaveDocumentTemplateRequest, VariableDef,
 } from './models/admin.model';
 
@@ -176,5 +176,24 @@ export class AdminService {
 
   deleteCatalogTask(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/offboarding-catalog/${id}`);
+  }
+
+  // ── Offboarding validator role, per pays (V66) ─────────────────────────────
+  // Which role may give the RH validation of a departure in this country. A permission cannot
+  // say "for this pays only", which is why this is a row rather than a grant.
+
+  /** Answers 204 (→ null here) when the pays has none configured and falls back to RH. */
+  getOffboardingValidator(paysId: number): Observable<OffboardingValidator | null> {
+    return this.http.get<OffboardingValidator | null>(
+      `${this.base}/offboarding-validators/${paysId}`);
+  }
+
+  setOffboardingValidator(paysId: number, roleId: number): Observable<OffboardingValidator> {
+    return this.http.put<OffboardingValidator>(
+      `${this.base}/offboarding-validators/${paysId}`, { roleId });
+  }
+
+  clearOffboardingValidator(paysId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/offboarding-validators/${paysId}`);
   }
 }

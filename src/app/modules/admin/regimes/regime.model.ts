@@ -21,6 +21,13 @@ export interface WorkingTimeRegime {
    */
   seasonalFrom?: string | null;
   seasonalTo?:   string | null;
+  /**
+   * IANA timezone this regime's hours are read in. Null/empty = inherit the entity's zone,
+   * which is what almost every regime should do. Set it only to run a regime on another
+   * country's clock — assigned as a time-boxed personal override, that is how business
+   * travel is expressed (hours and weekends stay contractual, only the clock moves).
+   */
+  timezone?: string | null;
   paysId: number;
 }
 
@@ -61,6 +68,8 @@ export interface ResolvedRegimeDto {
   effectiveTo?: string;
   isSeasonal?: boolean;
   paysId?: number;
+  /** Resolved zone: the regime's own override, else the entity's. */
+  timezone?: string | null;
 }
 
 export interface CreateRegimeRequest {
@@ -80,6 +89,8 @@ export interface CreateRegimeRequest {
   /** Seasonal window — set both to make this the entity's temporary regime. */
   seasonalFrom?: string | null;
   seasonalTo?:   string | null;
+  /** IANA timezone override; null/empty = inherit the entity's zone. */
+  timezone?: string | null;
   paysId: number;
 }
 

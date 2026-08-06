@@ -149,6 +149,27 @@
               [value]="form.get('seasonalTo')?.value ?? ''"
               (valueChange)="form.get('seasonalTo')?.setValue($any($event))" />
           </div>
+          <!-- Timezone: which clock this regime's hours are read in. Inheriting the
+               entity's zone is correct for almost every regime; an override exists for
+               a regime that must run on another country's clock (business travel,
+               assigned as a time-boxed personal override). -->
+          <div class="rc-form-row">
+            <daf-select
+              [selected]="timezoneSelected()"
+              [options]="timezoneOptions()"
+              [config]="{ label: ('ADMIN.regimes.catalog.timezone' | translate), searchable: true, fullWidth: true, hint: ('ADMIN.regimes.catalog.timezoneHint' | translate) }"
+              (selectedChange)="onTimezoneChange($event)" />
+          </div>
+          @if (timezoneOverridden()) {
+            <div class="rc-msg rc-msg-info">
+              {{ 'ADMIN.regimes.catalog.timezoneOverrideWarning' | translate }}
+            </div>
+          }
+          @if (!paysTimezone()?.timezone) {
+            <div class="rc-msg rc-msg-error">
+              {{ 'ADMIN.regimes.catalog.timezoneEntityMissing' | translate }}
+            </div>
+          }
           <div class="rc-form-row rc-toggles">
             <daf-toggle
               [options]="{ label: ('ADMIN.regimes.catalog.flexibleHours' | translate) }"
@@ -208,6 +229,13 @@
         [options]="{ label: ('ADMIN.regimes.catalog.labelEn' | translate), type: 'text', fullWidth: true }"
         [value]="createForm.get('labelEn')?.value ?? ''"
         (valueChange)="createForm.get('labelEn')?.setValue($any($event))" />
+    </div>
+    <div class="rc-form-row">
+      <daf-select
+        [selected]="createTimezoneSelected()"
+        [options]="timezoneOptions()"
+        [config]="{ label: ('ADMIN.regimes.catalog.timezone' | translate), searchable: true, fullWidth: true, hint: ('ADMIN.regimes.catalog.timezoneHint' | translate) }"
+        (selectedChange)="onCreateTimezoneChange($event)" />
     </div>
     <div class="rc-form-row rc-toggles">
       <daf-toggle

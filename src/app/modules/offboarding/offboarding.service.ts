@@ -76,6 +76,18 @@ export class OffboardingService {
     return this.http.get(`${this.base}/${id}/documents/kit`, { responseType: 'blob' });
   }
 
+  // ── Document downloads ─────────────────────────────────────────────────────
+  // Every stored *Url on a file is a path on the server's storage volume, not a URL, and
+  // rh-service serves no static resources — the panels used to put them straight into an
+  // `href`, which fetched nothing. These stream the bytes through the API instead.
+  downloadInstanceDocument(id: number, kind: 'discharge' | 'minutes' | 'justification'): Observable<Blob> {
+    return this.http.get(`${this.base}/${id}/documents/${kind}`, { responseType: 'blob' });
+  }
+
+  downloadChecklistDocument(itemId: number): Observable<Blob> {
+    return this.http.get(`${this.base}/checklist-items/${itemId}/document`, { responseType: 'blob' });
+  }
+
   // ── Stage 6 — Solde de tout compte ─────────────────────────────────────────
   updateSettlement(id: number, dto: UpdateSettlementRequest): Observable<OffboardingWorkflowInstance> {
     return this.http.patch<OffboardingWorkflowInstance>(`${this.base}/${id}/settlement`, dto);

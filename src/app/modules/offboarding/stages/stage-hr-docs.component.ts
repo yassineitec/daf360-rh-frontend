@@ -115,13 +115,16 @@ import { StageTasksComponent } from './stage-tasks.component';
                 [meta]="item.isDone ? item.completedByName : null"
                 [state]="item.isDone ? 'done' : 'default'">
                 <div trailing class="flex items-center gap-1">
+                  <!-- The item's documentUrl is a server-side storage path, not something a
+                       browser can fetch — the page downloads the bytes through the API. -->
                   @if (item.documentUrl) {
-                    <a class="flex h-7 w-7 items-center justify-center rounded-lg text-tertiary
-                              transition-colors hover:bg-tertiary/10"
-                       [href]="item.documentUrl" target="_blank" rel="noopener"
-                       [title]="'OFFBOARDING.KIT.OPEN_DOC' | translate">
+                    <button type="button"
+                            class="flex h-7 w-7 items-center justify-center rounded-lg text-tertiary
+                                   transition-colors hover:bg-tertiary/10"
+                            [title]="'OFFBOARDING.KIT.OPEN_DOC' | translate"
+                            (click)="downloadDoc.emit(item)">
                       <span class="material-symbols-outlined text-[18px]">description</span>
-                    </a>
+                    </button>
                   }
                   @if (canEdit()) {
                     <!-- Generating is also the tick: the document and the checklist line are
@@ -190,6 +193,7 @@ export class StageHrDocsComponent {
   readonly viewInterview     = output<void>();
   readonly downloadKit       = output<void>();
   readonly generateDoc       = output<string>();
+  readonly downloadDoc       = output<OffboardingChecklistItem>();
   readonly completeTask      = output<OffboardingTask>();
   readonly skipTask          = output<OffboardingTask>();
 

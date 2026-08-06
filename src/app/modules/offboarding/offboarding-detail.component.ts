@@ -15,13 +15,14 @@ import { OffboardingService } from './offboarding.service';
 import {
   ASSET_TYPES, AssetType, ChecklistGroup, DEPARTURE_REASONS, DepartureReason, ExitInterview,
   OffboardingAssetReturn, OffboardingAuditEntry, OffboardingChecklistItem, OffboardingSettlement, OffboardingTask,
-  OffboardingWorkflowInstance, SettlementLine, computeProgress, findNextDueTask, isTerminal,
+  OffboardingWorkflowInstance, SettlementLine, UpdateHandoverRequest, computeProgress,
+  findNextDueTask, isTerminal,
 } from './models/offboarding.model';
 import { ProfileService } from '../profiles/profile.service';
 import { EmployeeListItem } from '../profiles/models/profile.model';
 import {
-  STAGES, StageCode, StageView, activeStageIndex, dayMonth, daysUntil, longDate,
-  outstandingBlockers, resolveStageStates, stageDef, stageStatusKey, statusVariant,
+  STAGES, StageCode, StageView, dayMonth, daysUntil, isSettled, longDate,
+  outstandingBlockers, resolveStageStates, shortDate, stageDef, stageStatusKey, statusVariant,
   tasksOfStage,
 } from './offboarding-display';
 import { ModalComponent } from '../../shared/modal.component';
@@ -114,9 +115,11 @@ export class OffboardingDetailComponent implements OnInit {
   canViewStage(code: StageCode): boolean {
     const held = this.heldPermissions();
     if (stageDef(code).permissions.some(p => held.has(p))) return true;
-    // Stage 2's left panel belongs to the named manager, so they must be able to open the
-    // stage even without an RH permission. The single per-file exception to the map.
-    return code === 'VALIDATION' && this.isHandoverManager();
+    // Two per-file exceptions to the map, both because the owner is a *person* rather than a
+    // department: stage 2's left panel belongs to the named manager, and since V65 stage 3 is
+    // the manager's own (the API accepts them there too — see assertMayManageHandover, which
+    // also accepts a hierarchical manager the client cannot identify on its own).
+    return (code === 'VALIDATION' || code === 'HANDOVER') && this.isHandoverManager();
   }
 
   canActOnStage(code: StageCode): boolean {
@@ -130,12 +133,20 @@ export class OffboardingDetailComponent implements OnInit {
     && !!this.wf()?.lastWorkingDay,
   );
 
-  /** RH's panel — ordered after the manager, mirroring the API's own refusal. */
-  readonly canValidateAsHr = computed(() =>
-    !this.isTerminal()
-    && (this.heldPermissions().has('RH_VALIDATE_OFFBOARDING') || this.canManage())
-    && !!this.wf()?.managerValidatedAt,
-  );
+  /**
+   * RH's panel — ordered after the manager, mirroring the API's own refusal.
+   *
+   * The right itself comes from the instance (`canValidateAsHr`), not from a permission: since
+   * V66 a pays can designate the role that validates its departures, and no permission encodes
+   * a country. The server answers for the caller, so the button matches what the API accepts;
+   * the permission check remains only as the fallback for a stale DTO that lacks the field.
+   */
+  readonly canValidateAsHr = computed(() => {
+    const w = this.wf();
+    if (this.isTerminal() || !w?.managerValidatedAt) return false;
+    return w.canValidateAsHr
+      ?? (this.heldPermissions().has('RH_VALIDATE_OFFBOARDING') || this.canManage());
+  });
 
   /** Owning department of a stage, for the "réservé à…" placeholder. */
   stageOwnerLabel(code: StageCode): string {
@@ -200,8 +211,24 @@ export class OffboardingDetailComponent implements OnInit {
     return !!w && isTerminal(w.status);
   });
 
+  /** Every outstanding blocking task — the gate on closing the file (stage 7). */
   readonly blockers = computed(() => outstandingBlockers(this.tasks()));
   readonly canValidate = computed(() => this.tasks().length > 0 && this.blockers().length === 0);
+
+  /**
+   * The blockers stage 6 should care about — everything EXCEPT the settlement itself.
+   *
+   * `FINAL_SETTLEMENT` is seeded `is_blocking = 1`, so it appears in its own blocker list.
+   * Handing `blockers()` to stage 6 made it render "Calcul du STC bloqué" listing *itself*
+   * and disable the one button that can complete it — a closed loop with no way out of the
+   * UI, which also left CLOSURE locked and the file impossible to validate.
+   *
+   * Mirrors `completeTask` on the server, which already filters the task out of its own
+   * check (`.filter(t -> !t.getId().equals(taskId))`), so the button's enabled state and the
+   * API's answer now agree instead of contradicting each other.
+   */
+  readonly payrollBlockers = computed(
+    () => this.blockers().filter(t => t.taskCode !== 'FINAL_SETTLEMENT'));
 
   readonly employeeName = computed(() => {
     const w = this.wf();
@@ -258,9 +285,11 @@ export class OffboardingDetailComponent implements OnInit {
   readonly stageViews = computed<Record<StageCode, StageView>>(() => {
     this.translate.currentLang();
     const states = this.stageStates();
+    const byStage = this.tasksByStage();
     const out = {} as Record<StageCode, StageView>;
     STAGES.forEach((stage, i) => {
       const state = states[stage.code] ?? 'pending';
+      const own = byStage[stage.code] ?? [];
       out[stage.code] = {
         code:     stage.code,
         index:    i + 1,
@@ -268,6 +297,11 @@ export class OffboardingDetailComponent implements OnInit {
         title:    this.translate.instant('OFFBOARDING.STAGE.' + stage.railKey + '_TITLE'),
         subtitle: this.stageSubtitle(stage.code, state),
         state,
+        // Null rather than 0/0 for the task-less stages, so the header shows nothing at all
+        // instead of a chip that reads as "no progress".
+        taskCount: own.length
+          ? { done: own.filter(isSettled).length, total: own.length }
+          : null,
         statusLabel: this.translate.instant('OFFBOARDING.STAGE_STATUS.' + stageStatusKey(state)),
       };
     });
@@ -287,7 +321,11 @@ export class OffboardingDetailComponent implements OnInit {
     }));
   });
 
-  readonly railIndex = computed(() => activeStageIndex(this.stageStates()));
+  // `railIndex` (= activeStageIndex(stageStates)) used to drive the stepper's [currentStep].
+  // Removed with that binding: the stepper now follows `currentStageIndex`, i.e. the stage on
+  // screen. Where the WORKFLOW stands is still shown, per step, by railSteps()'s
+  // completed/disabled flags — and `activeStageIndex` itself is still what the board uses via
+  // `stageProgressOf` to decide which column a file sits in.
 
   // A `trackerSteps` computed used to build the same seven stages again for a VERTICAL
   // sidebar tracker. Removed: it read from `stageStates` exactly like `railSteps`, so it
@@ -296,6 +334,8 @@ export class OffboardingDetailComponent implements OnInit {
 
   /** Exposed for the identity card's date fields — the helper is a module function. */
   protected readonly longDate = longDate;
+  /** Same, for the declaration modal's read-only préavis block. */
+  protected readonly shortDate = shortDate;
 
   /** Set when the image 404s, so the initials tile takes over. */
   readonly avatarFailed = signal(false);
@@ -649,8 +689,8 @@ export class OffboardingDetailComponent implements OnInit {
   justificationError   = signal<string | null>(null);
 
   declLastWorkingDay   = '';
-  declTheoreticalExit  = '';
-  declNoticePeriod     = '';
+  // No `declTheoreticalExit` / `declNoticePeriod`: the préavis and the theoretical exit date
+  // come from `contract_type_config` (V64) and are read-only everywhere.
   declNoticeWaiver     = false;
   declNotes            = '';
   declFile: File | null = null;
@@ -659,8 +699,6 @@ export class OffboardingDetailComponent implements OnInit {
   openDeclarationModal(): void {
     const w = this.wf();
     this.declLastWorkingDay  = w?.lastWorkingDay ?? '';
-    this.declTheoreticalExit = w?.theoreticalExitDate ?? '';
-    this.declNoticePeriod    = w?.noticePeriodLabel ?? '';
     this.declNoticeWaiver    = w?.noticeWaiverRequested ?? false;
     this.declNotes           = w?.departureNotes ?? '';
     this.declFile = null;
@@ -707,8 +745,6 @@ export class OffboardingDetailComponent implements OnInit {
     upload$.pipe(
       switchMap(uploaded => this.svc.updateDeclaration(this.workflowId, {
         lastWorkingDay:      this.declLastWorkingDay,
-        theoreticalExitDate: this.declTheoreticalExit || null,
-        noticePeriodLabel:   this.declNoticePeriod || null,
         noticeWaiverRequested: this.declNoticeWaiver,
         departureNotes:      this.declNotes || null,
         ...(uploaded ? {
@@ -806,6 +842,35 @@ export class OffboardingDetailComponent implements OnInit {
       .subscribe(blob => {
         this.downloadingKit.set(false);
         if (blob) this.saveBlob(blob, `kit-rh-${this.workflowId}.zip`);
+      });
+  }
+
+  // ── Document downloads ─────────────────────────────────────────────────────
+  // The stored *Url values are server-side storage paths, so nothing can be linked to: the
+  // bytes come through the API and are saved from a blob, like the Kit RH archive.
+
+  downloadInstanceDocument(kind: 'discharge' | 'minutes' | 'justification'): void {
+    this.svc.downloadInstanceDocument(this.workflowId, kind)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.DOC.ERR_DOWNLOAD'));
+        return of(null);
+      }))
+      .subscribe(blob => {
+        if (blob) this.saveBlob(blob, `${kind}-${this.workflowId}.pdf`);
+      });
+  }
+
+  downloadChecklistDocument(item: OffboardingChecklistItem): void {
+    if (!item.id) return;
+    this.svc.downloadChecklistDocument(item.id)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.DOC.ERR_DOWNLOAD'));
+        return of(null);
+      }))
+      .subscribe(blob => {
+        if (blob) this.saveBlob(blob, `${item.label ?? 'document'}.pdf`);
       });
   }
 
@@ -1133,6 +1198,39 @@ export class OffboardingDetailComponent implements OnInit {
       });
   }
 
+  // ── Stage 3 — window and written PV (V65) ──────────────────────────────────
+
+  /** The manager's start date. The end of the window is always the last working day. */
+  onHandoverStart(value: Date | Date[] | null): void {
+    const iso = this.toIso(value);
+    if (!iso) return;
+    this.saveHandover({ handoverStartedAt: iso }, 'OFFBOARDING.HANDOVER.WINDOW_SAVED');
+  }
+
+  /** Empty text is sent as an empty string on purpose: that is how the PV gets cleared. */
+  savePvText(text: string): void {
+    this.saveHandover({ handoverMinutesText: text ?? '' }, 'OFFBOARDING.HANDOVER.PV_TEXT_SAVED');
+  }
+
+  private saveHandover(patch: UpdateHandoverRequest, successKey: string): void {
+    if (this.savingHandover()) return;
+    this.savingHandover.set(true);
+    this.handoverError.set(null);
+    this.svc.updateHandover(this.workflowId, patch)
+      .pipe(catchError(err => {
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('OFFBOARDING.HANDOVER.ERR_SAVE'));
+        this.savingHandover.set(false);
+        return of(null);
+      }))
+      .subscribe(updated => {
+        this.savingHandover.set(false);
+        if (!updated) return;
+        this.applyInstance(updated);
+        this.notify.success(this.translate.instant(successKey));
+      });
+  }
+
   /** The PV reuses the employee's own documents, like the declaration's justification. */
   onMinutesPicked(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
@@ -1159,9 +1257,9 @@ export class OffboardingDetailComponent implements OnInit {
     });
   }
 
+  /** `window.open` on the stored path opened a blank tab — the file lives on the server's disk. */
   openMinutes(): void {
-    const url = this.wf()?.handoverMinutesUrl;
-    if (url) window.open(url, '_blank', 'noopener');
+    if (this.wf()?.handoverMinutesUrl) this.downloadInstanceDocument('minutes');
   }
 
   // ── Checklists (stages 3, 4, 5) ────────────────────────────────────────────

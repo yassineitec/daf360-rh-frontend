@@ -149,6 +149,16 @@ export interface StageView {
   subtitle:    string;   // data-dependent one-liner, already formatted
   state:       AccordionState;
   statusLabel: string;   // translated pill text
+  /**
+   * THIS stage's own task count, e.g. `2/3`. Null for the four stages that roll up no
+   * tasks (Déclaration, Validation, Clôture — and any stage whose codes are unseeded).
+   *
+   * Exists because the progress bar under the rail is file-wide: standing on a stage with
+   * three tasks while the bar reads "5/9" invited the reading that the two were about the
+   * same thing. The bar answers "how far is this departure", this answers "how far is this
+   * step", and now both are on screen and labelled.
+   */
+  taskCount:   { done: number; total: number } | null;
 }
 
 /**

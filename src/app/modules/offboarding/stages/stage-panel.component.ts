@@ -39,6 +39,15 @@ import { StageView } from '../offboarding-display';
             @if (view().statusLabel) {
               <daf-badge [label]="view().statusLabel" [options]="{ variant: badgeVariant(), size: 'sm' }" />
             }
+            <!-- THIS stage's tasks. The bar under the rail is file-wide, so without this a
+                 stage with 3 tasks sat under a "5/9" and the two looked like one number. -->
+            @if (view().taskCount; as count) {
+              <span class="rounded-md bg-surface-container-high px-1.5 py-0.5 text-[11px]
+                           font-bold tabular-nums"
+                    [class]="count.done === count.total ? 'text-tertiary' : 'text-on-surface-variant'">
+                {{ count.done }}/{{ count.total }}
+              </span>
+            }
           </div>
           @if (view().subtitle) {
             <p class="mt-1 text-[13px] text-on-surface-variant">{{ view().subtitle }}</p>

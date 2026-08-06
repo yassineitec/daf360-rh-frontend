@@ -58,14 +58,17 @@ import { ProfileFieldComponent } from '../../../shared/detail/profile-field.comp
           <span class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
             {{ 'OFFBOARDING.STAGE.DECLARATION_JUSTIFICATION' | translate }}
           </span>
+          <!-- A button, not a link: the stored value is a path on the server's storage
+               volume, so the anchor fetched nothing. The page downloads it through the API. -->
           @if (wf().justificationDocumentName) {
-            <a class="mt-1 flex items-center gap-2 rounded-xl border border-tertiary/20 bg-tertiary/5 px-3 py-2
-                      text-[13px] font-bold text-tertiary transition-colors hover:bg-tertiary/10"
-               [href]="wf().justificationDocumentUrl" target="_blank" rel="noopener">
+            <button type="button"
+                    class="mt-1 flex w-full items-center gap-2 rounded-xl border border-tertiary/20 bg-tertiary/5 px-3 py-2
+                           text-left text-[13px] font-bold text-tertiary transition-colors hover:bg-tertiary/10"
+                    (click)="downloadJustification.emit()">
               <span class="material-symbols-outlined text-[18px]">description</span>
               <span class="truncate">{{ wf().justificationDocumentName }}</span>
               <span class="material-symbols-outlined ml-auto text-[18px]">download</span>
-            </a>
+            </button>
           } @else {
             <span class="text-[13px] text-on-surface">—</span>
           }
@@ -127,6 +130,7 @@ export class StageDeclarationComponent {
 
   /** Opens the page's declaration modal. */
   readonly edit = output<void>();
+  readonly downloadJustification = output<void>();
 
   /** Same predicate the stage resolver uses, so the button and the gate cannot disagree. */
   protected complete(): boolean {

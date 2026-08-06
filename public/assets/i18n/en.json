@@ -1379,7 +1379,6 @@
     "LIST": {
       "TITLE": "Offboarding",
       "COUNT": "{{count}} case(s)",
-      "START_BUTTON": "Start an offboarding",
       "ALL_STATUSES": "All statuses",
       "RESET": "Reset",
       "EMPTY": "No offboarding case",
@@ -1483,7 +1482,7 @@
       "HANDOVER_MANAGER": "Handover manager",
       "CANCEL_REASON_LABEL": "Cancellation reason:",
       "NOTES_LABEL": "Notes:",
-      "PROGRESS_TITLE": "Task progress",
+      "PROGRESS_TITLE": "Case progress",
       "TASKS_TITLE": "Tasks",
       "TASKS_EMPTY": "No task defined for this case.",
       "TASK_DUE": "due {{date}}",
@@ -1562,28 +1561,7 @@
       "ASSET_CONFIRM": "Confirm",
       "COMMON_CANCEL": "Cancel"
     },
-    "NEW": {
-      "TITLE": "Start an offboarding",
-      "EMPLOYEE_LABEL": "Employee *",
-      "EMPLOYEE_PH": "Search by name or identifier…",
-      "EMPLOYEE_REQUIRED": "Select an employee",
-      "MANAGER_LABEL": "Handover manager (Project handover)",
-      "MANAGER_PH": "Search for the responsible manager…",
-      "REASON_LABEL": "Departure reason *",
-      "SELECT": "Select…",
-      "REASON_REQUIRED": "Required",
-      "TRIGGER_LABEL": "Trigger date *",
-      "TRIGGER_REQUIRED": "Required",
-      "LAST_DAY_LABEL": "Last working day",
-      "NOTES_LABEL": "Notes",
-      "NOTES_PH": "Optional…",
-      "CANCEL": "Cancel",
-      "START": "Start",
-      "REQUIRED": "Required"
-    },
     "TOAST": {
-      "CREATED": "Offboarding started successfully.",
-      "CREATE_ERR": "Error while creating",
       "VALIDATED": "Offboarding validated successfully.",
       "VALIDATE_ERR": "Error while validating the offboarding.",
       "CANCELLED": "Offboarding cancelled.",
@@ -1739,8 +1717,21 @@
       "PV_UPLOAD": "Upload the minutes",
       "PV_REPLACE": "Replace the minutes",
       "PV_SAVED": "Handover minutes saved.",
+      "WINDOW_TITLE": "Handover period",
+      "START_LABEL": "Handover start",
+      "END_LABEL": "Last working day",
+      "WINDOW_SAVED": "Handover period saved.",
+      "WINDOW_INCOMPLETE": "Set the handover start and the last working day to compute the duration.",
+      "DURATION_DAYS": "days",
+      "DURATION_BREAKDOWN": "{{working}} working days + {{leave}} days of leave",
+      "LEAVE_HINT": "{{count}} day(s) of approved leave fall inside this period, so the effective handover time is shorter.",
+      "PV_TEXT_LABEL": "Written minutes",
+      "PV_TEXT_PH": "Describe what was handed over, to whom, and what is still open…",
+      "PV_TEXT_SAVE": "Save the minutes",
+      "PV_TEXT_SAVED": "Handover minutes saved.",
       "ERR_SUCCESSOR": "Could not assign this successor.",
       "ERR_PV": "Could not save the handover minutes.",
+      "ERR_SAVE": "Could not save the handover.",
       "ERR_ITEM": "Could not update the checklist."
     },
     "VALIDATION": {
@@ -1775,7 +1766,8 @@
       "LAST_DAY_LABEL": "Last working day",
       "THEORETICAL_LABEL": "Theoretical exit date",
       "NOTICE_LABEL": "Notice period",
-      "NOTICE_PH": "e.g. 3 months",
+      "NOTICE_UNKNOWN": "Not configured for this country",
+      "NOTICE_SOURCE": "Set by this country's contract-type configuration",
       "WAIVER_LABEL": "Notice waiver requested",
       "JUSTIFICATION_LABEL": "Supporting document (resignation letter)",
       "ERR_DATE_REQUIRED": "The last working day is required.",
@@ -1854,6 +1846,9 @@
       "ERR_SCHEDULE": "Could not schedule the interview.",
       "ERR_GENERATE": "Could not generate the document.",
       "ERR_DOWNLOAD": "Could not download the HR kit."
+    },
+    "DOC": {
+      "ERR_DOWNLOAD": "Could not download the document."
     },
     "SETTLEMENT": {
       "EMPTY": "No line recorded. Amounts are entered by finance: the 13th-month prorata can be proposed automatically, while paid leave and severance depend on data this module does not hold.",
@@ -2123,6 +2118,12 @@
         "save": "Save",
         "add": "Add",
         "saveError": "Error while saving",
+        "validatorTitle": "Departure validator role",
+        "validatorSubtitle": "The role allowed to give the HR validation of an offboarding in this country.",
+        "validatorNone": "None — standard HR permission",
+        "validatorSave": "Save",
+        "validatorFallback": "With no designated role, any RH_VALIDATE_OFFBOARDING holder can validate this country's departures.",
+        "validatorError": "Could not save the validator role.",
         "contractType": {
           "CDI": "CDI",
           "CDD": "CDD",
@@ -2556,7 +2557,13 @@
         "seasonalTo": "to",
         "seasonalHint": "Temporary regime (e.g. summer single session). Takes priority over role and individual regimes during this period. Leave empty for a year-round regime.",
         "badgeSeasonal": "Seasonal",
-        "badgeSeasonalActive": "Seasonal active"
+        "badgeSeasonalActive": "Seasonal active",
+        "timezone": "Regime timezone",
+        "timezoneHint": "Leave on \"inherit\" unless this regime must follow another country's clock (business travel).",
+        "tzInheritFrom": "Inherit from entity ({{zone}})",
+        "tzInheritUnset": "Inherit from entity (no timezone configured)",
+        "timezoneOverrideWarning": "This regime uses its own timezone: its hours are not read on the entity's clock. Intended for temporary regimes (business travel).",
+        "timezoneEntityMissing": "This entity has no timezone configured: pointage automation is disabled for its employees. Set it at the top of this page."
       },
       "overview": {
         "empty": "No employee found",
@@ -2697,6 +2704,14 @@
         "removeMid": " from the role ",
         "removeAfter": "?",
         "revertWarning": "employee(s) will revert to the entity default regime."
+      },
+      "timezone": {
+        "title": "Entity timezone",
+        "unset": "No timezone configured — pointage automation disabled",
+        "help": "Every regime and break time for this entity (08:00, 12:30…) is read in this zone. Use an IANA identifier (Africa/Tunis), never an offset (GMT+1): an offset ignores DST and rule changes.",
+        "field": "Timezone",
+        "saved": "Timezone saved.",
+        "errorSave": "Could not save the timezone."
       }
     },
     "catalog": {

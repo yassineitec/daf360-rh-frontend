@@ -146,9 +146,14 @@
       <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
         <div class="overflow-x-auto">
           <div class="min-w-[560px]">
+            <!-- `currentStageIndex`, not `railIndex`: "current step" means the step you are
+                 ON. It used to be bound to the resolver's active stage, so pressing Suivant
+                 or clicking a rail step moved the panel and the "Étape x sur y" counter while
+                 the highlight stayed behind — three things on screen disagreeing. Where the
+                 WORKFLOW stands is already carried by each step's completed/disabled flag. -->
             <daf-stepper
               [steps]="railSteps()"
-              [currentStep]="railIndex()"
+              [currentStep]="currentStageIndex()"
               [config]="railConfig()"
               (stepClick)="onRailClick($event)" />
           </div>
@@ -197,7 +202,8 @@
             [wf]="w"
             [reasonLabel]="reasonLabel(w.departureReason)"
             [canEdit]="canActOnStage('DECLARATION')"
-            (edit)="openDeclarationModal()" />
+            (edit)="openDeclarationModal()"
+            (downloadJustification)="downloadInstanceDocument('justification')" />
         } @else {
           <rh-stage-reserved [view]="view('DECLARATION')"
                              [ownerLabel]="stageOwnerLabel('DECLARATION')" />
@@ -230,12 +236,16 @@
             [wf]="w"
             [tasks]="tasksByStage()['HANDOVER']"
             [canEdit]="canActOnStage('HANDOVER')"
+            [savingPv]="savingHandover()"
+            (startChange)="onHandoverStart($event)"
+            (savePvText)="savePvText($event)"
             (viewMinutes)="openMinutes()"
             (uploadMinutes)="minutesInput.click()"
             (assignSuccessor)="openSuccessorModal()"
             (addItem)="openAddItemModal()"
             (toggleItem)="onToggleChecklistItem($event)"
             (removeItem)="removeChecklistItem($event)"
+            (downloadDoc)="downloadChecklistDocument($event)"
             (completeTask)="openCompleteModal($event)"
             (skipTask)="openSkipModal($event)" />
           <!-- The PV file input lives here, outside the stage component: a hidden input
@@ -268,6 +278,7 @@
             (toggleAccess)="onToggleChecklistItem($event)"
             (deactivationChange)="onDeactivationDate($event)"
             (generateDischarge)="generateDischarge()"
+            (downloadDischarge)="downloadInstanceDocument('discharge')"
             (completeTask)="openCompleteModal($event)"
             (skipTask)="openSkipModal($event)" />
         } @else {
@@ -291,6 +302,7 @@
             (scheduleInterview)="openScheduleModal()"
             (viewInterview)="openInterviewModal()"
             (generateDoc)="generateKitDocument($event)"
+            (downloadDoc)="downloadChecklistDocument($event)"
             (downloadKit)="downloadKitArchive()"
             (completeTask)="openCompleteModal($event)"
             (skipTask)="openSkipModal($event)" />
@@ -304,11 +316,14 @@
       @if (isCurrent('PAYROLL')) {
       <div id="stage-PAYROLL">
         @if (canViewStage('PAYROLL')) {
+          <!-- `payrollBlockers`, NOT `blockers`: FINAL_SETTLEMENT is itself a blocking task,
+               so the full list contained this very stage — the banner listed "Solde de tout
+               compte" as its own blocker and disabled the only button that could complete it. -->
           <rh-stage-payroll
             [view]="view('PAYROLL')"
             [wf]="w"
             [tasks]="payrollTasks()"
-            [blockers]="blockers()"
+            [blockers]="payrollBlockers()"
             [canEdit]="canActOnStage('PAYROLL')"
             [suggesting]="suggestingSettlement()"
             (goToBlockers)="openOnly('IT_ASSETS')"
@@ -742,16 +757,27 @@
                   selectionMode: 'single', fullWidth: true, required: true }"
       (valueChange)="declLastWorkingDay = toIso($event)" />
 
-    <daf-multi-date-picker
-      [value]="asDate(declTheoreticalExit)"
-      [config]="{ label: ('OFFBOARDING.DECLARATION.THEORETICAL_LABEL' | translate),
-                  selectionMode: 'single', fullWidth: true }"
-      (valueChange)="declTheoreticalExit = toIso($event)" />
-
-    <daf-form-field
-      [options]="{ label: ('OFFBOARDING.DECLARATION.NOTICE_LABEL' | translate), type: 'text',
-                   placeholder: ('OFFBOARDING.DECLARATION.NOTICE_PH' | translate) }"
-      [value]="declNoticePeriod" (valueChange)="declNoticePeriod = $any($event) ?? ''" />
+    <!-- The préavis and the theoretical exit date used to be typed here. Since V64 they are
+         resolved from `contract_type_config` for this file's pays and contract type, so the
+         form shows them as the read-only consequence of the contract instead of collecting
+         two figures that could disagree with it. -->
+    <div class="flex flex-col gap-1 rounded-xl border border-outline-variant/40 bg-surface-variant/30 px-3.5 py-2.5">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        {{ 'OFFBOARDING.DECLARATION.NOTICE_LABEL' | translate }}
+      </span>
+      <span class="text-[13px] font-bold text-on-surface">
+        {{ wf()?.noticePeriodLabel ?? ('OFFBOARDING.DECLARATION.NOTICE_UNKNOWN' | translate) }}
+      </span>
+      @if (wf()?.theoreticalExitDate) {
+        <span class="text-[12px] text-on-surface-variant">
+          {{ 'OFFBOARDING.DECLARATION.THEORETICAL_LABEL' | translate }} :
+          {{ shortDate(wf()!.theoreticalExitDate) }}
+        </span>
+      }
+      <span class="text-[11px] italic text-on-surface-variant">
+        {{ 'OFFBOARDING.DECLARATION.NOTICE_SOURCE' | translate }}
+      </span>
+    </div>
 
     <div class="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/40 px-3.5 py-2.5">
       <span class="text-[13px] text-on-surface">{{ 'OFFBOARDING.DECLARATION.WAIVER_LABEL' | translate }}</span>

@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { RegimeCatalogComponent } from './regimes/tabs/regime-catalog.component';
 import { RegimeRoleAssignmentComponent } from './regimes/tabs/regime-role-assignment.component';
 import { RegimeOverviewComponent } from './regimes/tabs/regime-overview.component';
+import { EntityTimezoneCardComponent } from './regimes/entity-timezone-card.component';
 import { TranslateService } from '@ngx-translate/core';
 
 type RegimeTab = 'catalog' | 'roles' | 'overview';
@@ -9,9 +10,17 @@ type RegimeTab = 'catalog' | 'roles' | 'overview';
 @Component({
   selector: 'app-regimes-admin',
   standalone: true,
-  imports: [RegimeCatalogComponent, RegimeRoleAssignmentComponent, RegimeOverviewComponent],
+  imports: [
+    RegimeCatalogComponent, RegimeRoleAssignmentComponent, RegimeOverviewComponent,
+    EntityTimezoneCardComponent,
+  ],
   template: `
     <div>
+      <!-- The entity's clock. Above the tabs because every regime, break window and
+           pointage transition below is read in this zone — without it the entity has no
+           presence automation at all. -->
+      <app-entity-timezone-card [paysId]="paysId()" />
+
       <!-- Tab bar -->
       <nav class="ra-tab-bar" role="tablist">
         @for (tab of tabs(); track tab.id) {

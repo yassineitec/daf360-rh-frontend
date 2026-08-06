@@ -131,6 +131,14 @@ daf-card.rc-card-active {
   color: var(--color-on-error-container);
 }
 
+/* Informational, not a failure: used for the timezone override notice, which is a
+   deliberate configuration choice worth making visible rather than an error. */
+.rc-msg-info {
+  background: var(--color-surface-container);
+  border-color: var(--color-outline-variant);
+  color: var(--color-on-surface-variant);
+}
+
 .rc-warning {
   background: #fef3c7;
   border: 1px solid var(--color-warning);

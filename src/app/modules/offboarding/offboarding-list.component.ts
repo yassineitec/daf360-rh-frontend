@@ -4,7 +4,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, map, of } from 'rxjs';
 import {
-  ButtonComponent,
   FilterField,
   FilterResult,
   MetricCardComponent,
@@ -17,14 +16,12 @@ import {
   ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 
-import { UserStore } from '../../core/user.store';
 import { OffboardingService } from './offboarding.service';
 import {
   DEPARTURE_REASONS, DepartureReason, OFFBOARDING_STATUSES, OffboardingStatus,
   OffboardingWorkflowInstance,
 } from './models/offboarding.model';
 import { StageCode, boardStageOf, isActive, isOverdue } from './offboarding-display';
-import { StartOffboardingModalComponent } from './start-offboarding-modal.component';
 import { OffboardingCardsSectionComponent } from './sections/offboarding-cards-section.component';
 import { OffboardingTableSectionComponent } from './sections/offboarding-table-section.component';
 import { OffboardingBoardSectionComponent } from './sections/offboarding-board-section.component';
@@ -59,13 +56,11 @@ type ViewMode = 'kanban' | 'list';
   selector: 'rh-offboarding-list',
   standalone: true,
   imports: [
-    ButtonComponent,
     MetricCardComponent,
     PageComponent,
     PageHeaderComponent,
     PaginationComponent,
     SearchToolbarComponent,
-    StartOffboardingModalComponent,
     OffboardingCardsSectionComponent,
     OffboardingTableSectionComponent,
     OffboardingBoardSectionComponent,
@@ -78,14 +73,10 @@ export class OffboardingListComponent implements OnInit {
   private router    = inject(Router);
   private route     = inject(ActivatedRoute);
   private translate = inject(TranslateService);
-  private userStore = inject(UserStore);
 
-  /**
-   * `RH_MANAGE_OFFBOARDING` — the permission `OffboardingController` actually
-   * enforces. This used to read `RH_MANAGE_LIFECYCLE`, so a user could see the
-   * "Démarrer" button and then get a 403 from every call behind it.
-   */
-  readonly canManage = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+  // No `canManage` / UserStore here any more: it existed only to gate the "Démarrer un
+  // offboarding" button, which has moved to the employee's profile page. This page is
+  // read-only — every mutation happens inside a file, which has its own per-stage gates.
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly items = signal<OffboardingWorkflowInstance[]>([]);
@@ -93,8 +84,6 @@ export class OffboardingListComponent implements OnInit {
   readonly firstLoad = signal(true);
   /** Every reload after that — skeletons inside the affected section only. */
   readonly loading = signal(false);
-
-  readonly showModal = signal(false);
 
   // ── View state ─────────────────────────────────────────────────────────────
   readonly viewMode     = signal<ViewMode>('kanban');
@@ -384,11 +373,6 @@ export class OffboardingListComponent implements OnInit {
   onPageSizeChange(size: number): void {
     this.pageSize.set(size);
     this.currentPage.set(0);
-  }
-
-  onCreated(id: number): void {
-    this.showModal.set(false);
-    this.open(id);
   }
 
   /**

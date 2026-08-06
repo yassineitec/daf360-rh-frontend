@@ -6,18 +6,14 @@
 
   <!-- Title/subtitle are computed, not piped: on `type/:reason` they name the category
        ("Offboarding — Démission"), so the page says which population it is showing. -->
+  <!-- No pageActions: an offboarding is started from the employee's own profile
+       (/rh/profiles/:id → "Démarrer l'offboarding"), which is where the person being
+       offboarded is already on screen. Starting one from a list meant searching for the
+       employee again in a modal, and the dates/notes that modal collected are now filled
+       in at the Déclaration stage of the file itself. -->
   <daf-page-header
     [title]="pageTitle()"
-    [subtitle]="pageSubtitle()">
-    <ng-container pageActions>
-      @if (canManage()) {
-        <daf-button
-          [options]="{ variant: 'teal', iconStart: 'logout',
-                       label: ('OFFBOARDING.LIST.START_BUTTON' | translate) }"
-          (onClick)="showModal.set(true)" />
-      }
-    </ng-container>
-  </daf-page-header>
+    [subtitle]="pageSubtitle()" />
 
   <!-- KPIs — one row at every width. The page had none; these read off the same
        list, so no extra request. -->
@@ -101,10 +97,3 @@
   }
 
 </daf-page>
-
-<!-- At the page root: the modal overlay is `position: fixed` and must not inherit
-     a transformed ancestor (daf-card's glass variant would be one). -->
-<rh-start-offboarding-modal
-  [visible]="showModal()"
-  (closed)="showModal.set(false)"
-  (created)="onCreated($event)" />
