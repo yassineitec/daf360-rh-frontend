@@ -757,10 +757,10 @@
                   selectionMode: 'single', fullWidth: true, required: true }"
       (valueChange)="declLastWorkingDay = toIso($event)" />
 
-    <!-- The préavis and the theoretical exit date used to be typed here. Since V64 they are
-         resolved from `contract_type_config` for this file's pays and contract type, so the
-         form shows them as the read-only consequence of the contract instead of collecting
-         two figures that could disagree with it. -->
+    <!-- The préavis and the theoretical exit date used to be typed here. They now come from
+         the figure frozen on this employee's contract (V69, négocié at hiring), so the form
+         shows them as the read-only consequence of the contract instead of collecting two
+         figures that could disagree with it. -->
     <div class="flex flex-col gap-1 rounded-xl border border-outline-variant/40 bg-surface-variant/30 px-3.5 py-2.5">
       <span class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
         {{ 'OFFBOARDING.DECLARATION.NOTICE_LABEL' | translate }}

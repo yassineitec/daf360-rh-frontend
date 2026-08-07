@@ -199,15 +199,10 @@
                 />
               </div>
 
-              <div class="field field-span2">
-                <label class="label" for="budgetRange">{{ 'RECRUITMENT_DEMANDS.FORM.BUDGET' | translate }}</label>
-                <input
-                  id="budgetRange"
-                  class="input"
-                  formControlName="budgetRange"
-                  [placeholder]="'RECRUITMENT_DEMANDS.FORM.BUDGET_PH' | translate"
-                />
-              </div>
+              <!-- No budget field: raising a headcount need and pricing it are different
+                   decisions by different people, and asking the manager for a "fourchette
+                   budgétaire" implied it was theirs. The column stays on the demand for the
+                   rows that already carry a value. -->
             </div>
           </section>
 

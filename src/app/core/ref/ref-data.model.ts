@@ -8,6 +8,12 @@ export interface RefDataItem {
   isActive: boolean;
   swiftCode?: string;
   parentId?: number;
+  /**
+   * Grades only — the DEFAULT préavis in calendar days a negotiation starts from (V64).
+   * `null`/absent means the grade has no default: show it as unset, never as 0. The figure
+   * that actually applies to an employee is frozen on their contract, not here.
+   */
+  noticePeriodDays?: number | null;
 }
 
 /**
@@ -41,4 +47,6 @@ export interface CreateRefDataRequest {
   sortOrder?: number;
   swiftCode?: string;
   parentId?: number;
+  /** Grades only — default préavis in calendar days. */
+  noticePeriodDays?: number | null;
 }

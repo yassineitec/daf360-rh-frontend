@@ -90,6 +90,18 @@ export class RefDataService {
     return this.http.put<void>(`${this.base}/pays/${paysId}/timezone`, { timezone });
   }
 
+  /**
+   * Sets (or clears, with null) the grade's DEFAULT préavis — V64.
+   *
+   * This moves only the figure a future negotiation starts from. Contracts already signed
+   * carry their own agreed value and are untouched.
+   */
+  setGradeNoticePeriod(gradeId: number, noticePeriodDays: number | null): Observable<RefDataItem> {
+    this.invalidateAll();
+    return this.http.put<RefDataItem>(
+      `${this.base}/grades/${gradeId}/notice-period`, { noticePeriodDays });
+  }
+
   invalidateAll(): void { this.cache.clear(); this.timezones$ = undefined; }
 
   private cached(key: string, obs: Observable<RefDataItem[]>): Observable<RefDataItem[]> {

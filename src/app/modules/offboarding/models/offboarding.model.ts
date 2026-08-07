@@ -142,10 +142,11 @@ export interface OffboardingPendingFields {
   // `PATCH /api/hr/offboarding/{id}/declaration`, returned by the instance DTO.
   justificationDocumentName?: string | null;
   justificationDocumentUrl?:  string | null;
-  // Both DERIVED server-side since V64 from `contract_type_config` (pays × contract type) —
-  // read-only here, and no longer part of the declaration form.
+  // Both DERIVED server-side from the préavis frozen on the employee's contract (V69,
+  // négocié at hiring; grade default as fallback for pre-V69 contracts) — read-only here,
+  // and no longer part of the declaration form.
   noticePeriodLabel?:         string | null;   // "3 mois"
-  noticePeriodDays?:          number | null;   // the raw configured figure
+  noticePeriodDays?:          number | null;   // the raw agreed figure
   noticeWaiverRequested?:     boolean | null;
   theoreticalExitDate?:       string | null;   // triggerDate + préavis, ≠ the negotiated day
   // Stage 2 — Validation Manager & RH. LIVE since V59: two stamps, separate from the
@@ -323,7 +324,7 @@ export interface HrValidationRequest {
  */
 export interface UpdateDeclarationRequest {
   lastWorkingDay?:            string | null;
-  // No préavis fields: the API ignores them since V64 (derived from contract_type_config).
+  // No préavis fields: the API ignores them — the figure is frozen on the contract (V69).
   noticeWaiverRequested?:     boolean;
   justificationDocumentUrl?:  string | null;
   justificationDocumentName?: string | null;

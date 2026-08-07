@@ -5,10 +5,12 @@ import { catchError, of } from 'rxjs';
 import {
   BadgeCell,
   ButtonComponent,
-  CardComponent,
   ChipGroupComponent,
   DafCellDirective,
   DataTableComponent,
+  PageComponent,
+  PageHeaderComponent,
+  PageHeaderBadge,
   PaginationComponent,
   StatusBadgeComponent,
   TableColumn,
@@ -22,8 +24,13 @@ import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
 import { UserStore } from '../../core/user.store';
 import { NewRequestComponent } from './new-request.component';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { TableActionComponent } from '../../shared/table-action.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import {
+  RecruitmentValidationSectionComponent,
+  RECRUITMENT_APPROVE_PERMISSION,
+} from '../recruitment-demands/recruitment-validation-section.component';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
 const DONE_STATUSES: RequestStatus[] = ['APPROVED', 'REJECTED', 'CANCELLED'];
@@ -42,132 +49,105 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
   standalone: true,
   imports: [
     ButtonComponent,
-    CardComponent,
     ChipGroupComponent,
     StatusBadgeComponent,
     DataTableComponent,
     DafCellDirective,
+    PageComponent,
+    PageHeaderComponent,
     PaginationComponent,
     SlaCountdownPipe,
+    TableActionComponent,
     NewRequestComponent,
+    RecruitmentValidationSectionComponent,
     TranslatePipe,
   ],
   template: `
-    <div class="space-y-6">
+    <!-- Canonical page per UI-PLAYBOOK §1: daf-page owns the 32px rhythm, so there are no
+         space-y-* / mb-* between sections, and the title is the header's single h1.
+         kpis="0" — this page has no KPI row, so the skeleton must not draw one. -->
+    <daf-page [loading]="firstLoad()" [kpis]="0">
 
-      <!-- ── Header ─────────────────────────────────────────────────────── -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <h1 class="text-[32px] font-bold leading-tight tracking-tight text-on-surface">
-            {{ 'REQUESTS.LIST.TITLE' | translate }}
-          </h1>
-          <daf-badge [label]="total().toString()" [options]="{ variant: 'teal', pill: true }" />
-        </div>
-        <div class="flex items-center gap-3">
-          @if (canViewInbox()) {
-            <daf-button
-              [options]="{ variant: 'ghost', label: ('REQUESTS.LIST.INBOX_BTN' | translate), iconStart: 'inbox' }"
-              (onClick)="goToInbox()"
-            />
-          }
-          <daf-button
-            [options]="{ variant: 'teal', label: ('REQUESTS.LIST.NEW_BTN' | translate), iconStart: 'add' }"
-            (onClick)="showNew.set(true)"
-          />
-        </div>
-      </div>
-      <!-- ── Intro card ─────────────────────────────────────────────────── -->
-      <daf-card class="block mb-6" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-        <p class="text-[11px] font-bold uppercase tracking-widest text-teal mb-1">
-          {{ 'REQUESTS.LIST.INTRO_EYEBROW' | translate }}
-        </p>
-        <h2 class="text-[18px] font-bold text-on-surface">
-          {{ 'REQUESTS.LIST.INTRO_TITLE' | translate }}
-        </h2>
-      </daf-card>
-      <!-- ── Main card ──────────────────────────────────────────────────── -->
-      <daf-card class="block" [options]="{ variant: 'default', padding: 'none', radius: 'xl' }">
-        <!-- Tabs -->
-        <div class="p-4 sm:p-5 border-b border-outline-variant">
-          <daf-chip-group
-            [options]="tabOptions()"
-            [selected]="[activeTab()]"
-            (selectedChange)="onTabChange($event)"
-          />
-        </div>
-        <div class="p-4 sm:p-5">
-          <!-- Empty state -->
-          @if (!loading() && visibleRows().length === 0) {
-            <div class="flex flex-col items-center py-16 gap-3 text-center">
-              <span class="material-symbols-outlined text-display text-outline-variant"
-                >move_to_inbox</span
-              >
-              <p class="text-body-lg font-semibold text-on-surface">
-                @if (activeTab() === 'done') {
-                  {{ 'REQUESTS.LIST.EMPTY_DONE' | translate }}
-                } @else {
-                  {{ 'REQUESTS.LIST.EMPTY_ACTIVE' | translate }}
-                }
-              </p>
-              <p class="text-[13px] text-outline">{{ 'REQUESTS.LIST.EMPTY_HINT' | translate }}</p>
+      <daf-page-header
+        [title]="'REQUESTS.LIST.TITLE' | translate"
+        [subtitle]="'REQUESTS.LIST.INTRO_TITLE' | translate"
+        [badges]="headerBadges()">
+        @if (canViewInbox()) {
+          <daf-button pageActions
+            [options]="{ variant: 'ghost', label: ('REQUESTS.LIST.INBOX_BTN' | translate), iconStart: 'inbox' }"
+            (onClick)="goToInbox()" />
+        }
+        <daf-button pageActions
+          [options]="{ variant: 'teal', label: ('REQUESTS.LIST.NEW_BTN' | translate), iconStart: 'add' }"
+          (onClick)="showNew.set(true)" />
+      </daf-page-header>
+
+      <!-- ── Validation des demandes de recrutement ─────────────────────
+           Its own section, not a third tab: the tabs below page through
+           \`employee_requests\`, and recruitment demands are a different table with a
+           different approval chain. Rendered only for RH_APPROVE_RECRUITMENT_DEMAND —
+           the same permission the review endpoint enforces. -->
+      @if (canValidateRecruitment()) {
+        <app-recruitment-validation-section />
+      }
+
+      <!-- Tabs sit free in the page. They used to be the header row of a container card
+           wrapping the table, which double-bordered it (§6b rule 1). -->
+      <daf-chip-group
+        [options]="tabOptions()"
+        [selected]="[activeTab()]"
+        (selectedChange)="onTabChange($event)" />
+
+      <!-- No wrapper, no outer card, no overflow div — daf-data-table draws its own
+           chrome and owns its horizontal scroll. The empty state is the table's
+           \`emptyMessage\`, so empty and populated share the same chrome (§6b rule 3). -->
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+        <ng-template dafCell="type" let-row>
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal/10 text-teal">
+              <span class="material-symbols-outlined text-[18px]">description</span>
             </div>
+            <span class="font-semibold text-on-surface">{{ row['type'] }}</span>
+          </div>
+        </ng-template>
 
-            <!-- Table -->
+        <ng-template dafCell="sla" let-row>
+          @if (row['isActive']) {
+            @let sla = row['slaDeadline'] | slaCountdown;
+            <daf-badge
+              [label]="sla.label"
+              [options]="{ variant: slaVariant(sla.level), size: 'sm', dot: true }" />
           } @else {
-            <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
-              <ng-template dafCell="type" let-row>
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-9 h-9 rounded-lg bg-teal/10 text-teal flex items-center justify-center shrink-0"
-                  >
-                    <span class="material-symbols-outlined text-[18px]">description</span>
-                  </div>
-                  <span class="font-semibold text-on-surface">{{ row['type'] }}</span>
-                </div>
-              </ng-template>
-
-              <ng-template dafCell="sla" let-row>
-                @if (row['isActive']) {
-                  @let sla = row['slaDeadline'] | slaCountdown;
-                  <daf-badge
-                    [label]="sla.label"
-                    [options]="{ variant: slaVariant(sla.level), size: 'sm', dot: true }"
-                  />
-                } @else {
-                  <span class="text-outline">—</span>
-                }
-              </ng-template>
-              <ng-template dafCell="_actions" let-row>
-                <div class="flex items-center justify-end gap-1">
-                  <daf-button
-                    [options]="{ variant: 'ghost', size: 'sm', iconStart: 'visibility' }"
-                    (onClick)="viewDetail(row['_source'].id)"
-                  />
-                  @if (row['_source'].status === 'SUBMITTED') {
-                    <daf-button
-                      [options]="{ variant: 'danger', size: 'sm', iconStart: 'delete_outline' }"
-                      (onClick)="cancel(row['_source'])"
-                    />
-                  }
-                </div>
-              </ng-template>
-            </daf-data-table>
-
-            @if (totalPages() > 1) {
-              <div class="mt-4 flex justify-center">
-                <daf-pagination
-                  [currentPage]="page()"
-                  [totalPages]="totalPages()"
-                  [totalElements]="total()"
-                  [config]="{ showPrevNext: true, size: 'sm' }"
-                  (pageChange)="goPage($event)"
-                />
-              </div>
-            }
+            <span class="text-outline">—</span>
           }
-        </div>
-      </daf-card>
-    </div>
+        </ng-template>
+
+        <!-- Projected rather than config.actions because "cancel" is conditional on the
+             row's status, and TableAction has no row predicate. rh-table-action gives the
+             lib's own icon-only rendering and stops propagation itself (§6b rule 4). -->
+        <ng-template dafCell="_actions" let-row>
+          <div class="flex items-center justify-end gap-2">
+            <rh-table-action id="view"
+              [tooltip]="'REQUESTS.LIST.VIEW' | translate"
+              (action)="viewDetail(row['_source'].id)" />
+            @if (row['_source'].status === 'SUBMITTED') {
+              <rh-table-action id="delete" variant="danger"
+                [tooltip]="'REQUESTS.CANCEL.CONFIRM' | translate"
+                (action)="cancel(row['_source'])" />
+            }
+          </div>
+        </ng-template>
+      </daf-data-table>
+
+      @if (totalPages() > 1) {
+        <daf-pagination
+          [currentPage]="page()"
+          [totalPages]="totalPages()"
+          [totalElements]="total()"
+          (pageChange)="goPage($event)" />
+      }
+
+    </daf-page>
 
     <!-- ── New request modal ─────────────────────────────── -->
     <app-new-request
@@ -187,6 +167,14 @@ export class RequestListComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private translate = inject(TranslateService);
 
+  /**
+   * Whole-page skeleton, first load only — `daf-page [loading]`.
+   *
+   * Separate from `loading` on purpose (UI-PLAYBOOK §5): `loading` drives the table's own
+   * skeleton rows on every refetch, so a tab switch or a page change never blanks the
+   * header and the toolbar the way a single flag would.
+   */
+  firstLoad = signal(true);
   loading = signal(false);
   allRows = signal<EmployeeRequest[]>([]);
   total = signal(0);
@@ -198,7 +186,25 @@ export class RequestListComponent implements OnInit {
   protected readonly statusBadge = statusBadge;
   protected readonly slaVariant = (level: SlaLevel) => SLA_BADGE_VARIANT[level];
 
+  /**
+   * The total count, on the title line — where the hand-rolled `daf-badge` next to the old
+   * h1 used to sit. Hidden at zero rather than showing "0": an empty page already says so
+   * through the table's own empty state.
+   */
+  readonly headerBadges = computed<PageHeaderBadge[]>(() =>
+    this.total() > 0
+      ? [{ label: this.total().toString(), variant: 'teal', pill: true }]
+      : []);
+
   canViewInbox = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
+
+  /**
+   * Gates the recruitment-validation section. Permission-based, not role-based: V31 grants
+   * RH_APPROVE_RECRUITMENT_DEMAND to Directeur / DRH / Administrateur today, but the whole
+   * point of a permission is that the grant can move without touching this page.
+   */
+  canValidateRecruitment = computed(() =>
+    this.userStore.hasPermission(RECRUITMENT_APPROVE_PERMISSION));
   currentPaysId = computed(() => this.userStore.currentUser()?.paysId ?? 1);
   currentProfileId = computed(() => {
     const u = this.userStore.currentUser();
@@ -234,7 +240,9 @@ export class RequestListComponent implements OnInit {
       { key: 'submissionDate', label: this.translate.instant('REQUESTS.LIST.COL_SUBMITTED') },
       { key: 'status', label: this.translate.instant('REQUESTS.LIST.COL_STATUS'), type: 'badge' },
       { key: 'sla', label: this.translate.instant('REQUESTS.LIST.COL_SLA') },
-      { key: '_actions', label: this.translate.instant('REQUESTS.LIST.COL_ACTIONS'), align: 'right' },
+      // §6b: an actions column carries no label and takes the minimum width. Never
+      // `clickable: true` — that styles the whole cell as a row target.
+      { key: '_actions', label: '', align: 'right', width: '1%' },
     ];
   });
 
@@ -256,9 +264,17 @@ export class RequestListComponent implements OnInit {
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
     return {
-      hoverable: true,
-      loading: this.loading(),
-      emptyMessage: this.translate.instant('REQUESTS.LIST.TABLE_EMPTY'),
+      // The page-header is the only h1; without this the table draws a second, EMPTY
+      // title bar above the rows (§6b rule 2).
+      showHeader:   false,
+      hoverable:    true,
+      loading:      this.loading(),
+      // Matches the rows we expect so the skeleton does not jump when data lands.
+      skeletonRows: Math.min(Math.max(this.visibleRows().length, 5), 20),
+      // Per-tab wording: "no active requests" and "no closed requests" are different
+      // statements, and the tab you are on decides which one is true.
+      emptyMessage: this.translate.instant(
+        this.activeTab() === 'done' ? 'REQUESTS.LIST.EMPTY_DONE' : 'REQUESTS.LIST.EMPTY_ACTIVE'),
     };
   });
 
@@ -295,6 +311,9 @@ export class RequestListComponent implements OnInit {
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
         this.loading.set(false);
+        // Cleared whether or not the call succeeded: on failure the page must render its
+        // real (empty) state, not sit on a skeleton forever.
+        this.firstLoad.set(false);
         if (res) {
           this.allRows.set(res.content);
           this.total.set(res.totalElements);

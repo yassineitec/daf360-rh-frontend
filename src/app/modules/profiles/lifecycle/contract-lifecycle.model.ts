@@ -27,6 +27,10 @@ export interface ContractListDto {
   dateDebut:            string;
   dateFinPrevue:        string | null;
   dateFinPeriodeEssai:  string | null;
+  /** Préavis frozen on this contract; null on contracts created before V69. */
+  noticePeriodDays:     number | null;
+  /** GRADE_DEFAULT | NEGOTIATED | MANUAL — explains the figure rather than just showing it. */
+  noticePeriodSource:   string | null;
   isActive:             boolean;
   dossierLocked:        boolean;
   referenceContrat:     string | null;
@@ -45,6 +49,10 @@ export interface ContractDetailDto {
   dateFinPeriodeEssai:        string | null;
   periodeEssaiRenouvelee:     boolean | null;
   dateFinPeRenouvellement:    string | null;
+  /** Préavis frozen on this contract (V69); null on contracts created before it existed. */
+  noticePeriodDays:           number | null;
+  /** GRADE_DEFAULT | NEGOTIATED | MANUAL */
+  noticePeriodSource:         string | null;
   endReasonCode:              string | null;
   endNotes:                   string | null;
   referenceContrat:           string | null;
@@ -125,6 +133,12 @@ export interface CreateContractRequest {
   detachementEntiteAccueilId?: number | null;
   detachementRetourPrevu?:    string | null;
   cddContratParentId?:        number | null;
+  /**
+   * Préavis in calendar days, frozen onto the contract (V69). Omit/null to let the backend
+   * resolve it from the candidate's accepted offer, then the employee's grade default.
+   * 0 is a real value — "aucun préavis dû" — and is sent as such.
+   */
+  noticePeriodDays?:          number | null;
 }
 
 export interface TransitionRequest {

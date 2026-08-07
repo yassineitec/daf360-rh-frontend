@@ -59,6 +59,20 @@ import { badgeVariant, candidateAvatar, candidateInitials, fitScoreClass } from 
           <div class="min-w-0">
             <h4 class="font-bold text-on-surface truncate">{{ candidate().fullName }}</h4>
             <p class="text-xs text-outline truncate">{{ candidate().poste || '—' }}</p>
+            <!-- Which vacancy this candidature answers. Shown on every column, not just one
+                 stage: "what are we hiring them against" is the question asked at every step,
+                 and a spontaneous application (no demand) should be visible as such. -->
+            @if (candidate().demandTitle) {
+              <p class="mt-1 flex items-center gap-1 text-[11px] text-tertiary truncate"
+                 [title]="candidate().demandTitle!">
+                <span class="material-symbols-outlined text-[13px] shrink-0">work_history</span>
+                <span class="truncate">{{ candidate().demandTitle }}</span>
+              </p>
+            } @else {
+              <p class="mt-1 text-[11px] italic text-outline/70">
+                {{ 'PIPELINE.CARD.SPONTANEOUS' | translate }}
+              </p>
+            }
           </div>
         </div>
         @if (showChevron()) {

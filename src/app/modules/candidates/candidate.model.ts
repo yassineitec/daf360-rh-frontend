@@ -92,7 +92,9 @@ export interface CandidateDetail {
   cvOriginalName: string | null;
   cvUploadedAt: string | null;
   itProvisioning: ItProvisioningSummary | null;
+  /** The vacancy this candidature answers; null for a spontaneous application. */
   recruitmentDemandId: number | null;
+  /** Populated server-side from the demand — `jobExactTitle` when set, else `jobTitle`. */
   recruitmentDemandJobTitle: string | null;
   experienceYears: number | null;
   location: string | null;

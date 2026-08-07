@@ -51,6 +51,13 @@ export interface OnboardingFormData {
   gender:            string | null;
   passportNumber:    string | null;
   ms365Email:        string;
+  /**
+   * The vacancy this hire fills, carried from the candidature. Null for a spontaneous
+   * application — shown as such so "which opening does this close" is answerable at the
+   * last step of recruitment, not just the first.
+   */
+  recruitmentDemandId?:       number | null;
+  recruitmentDemandJobTitle?: string | null;
   // Employment
   appliedPosition:   string | null;
   appliedGrade:      string | null;
@@ -97,10 +104,55 @@ export interface OnboardingFormData {
   requestValidatedAt?:     string | null;
   itAccountCreatedAt?:     string | null;
   equipmentAssignedAt?:    string | null;
+  // Contrat (step 3) — read-only recruitment evidence + the prefilled agreed terms
+  recruitment?:          OnboardingRecruitment | null;
+  noticePeriodDays?:     number | null;
+  agreedNetSalary?:      number | null;
+  contractDocumentUrl?:  string | null;
+  contractDocumentName?: string | null;
   // Meta
   candidateStatus: string;
   hasDraft:        boolean;
   draftSavedAt:    string | null;
+}
+
+/**
+ * What recruitment already decided, for the Contrat step to display. READ-ONLY — RH confirms
+ * these figures in the editable fields beside them rather than retyping them from memory.
+ */
+export interface OnboardingRecruitment {
+  offer?: {
+    askedSalary?:      number | null;
+    proposedSalary?:   number | null;
+    salaryNote?:       string | null;
+    noticePeriodDays?: number | null;
+    noticePeriodNote?: string | null;
+    expectedHireDate?: string | null;
+    expiryDate?:       string | null;
+    status?:           string | null;
+    sentAt?:           string | null;
+    decidedAt?:        string | null;
+  } | null;
+  candidateDeclaredNetSalary?: number | null;
+  hrAssessedNetSalary?:        number | null;
+  /** The applied grade's default préavis — null when the grade has none configured. */
+  gradeNoticePeriodDays?:      number | null;
+  costApprovals?: {
+    status?:             string | null;
+    salaireNetRh?:       number | null;
+    salaireNetCandidat?: number | null;
+    contrePropSalaire?:  number | null;
+    approvalNotes?:      string | null;
+    submittedAt?:        string | null;
+    approvedAt?:         string | null;
+  }[];
+  interviewNotes?: {
+    sequenceNumber?:   number | null;
+    interviewType?:    string | null;
+    result?:           string | null;
+    interviewerNotes?: string | null;
+    scheduledAt?:      string | null;
+  }[];
 }
 
 export interface OnboardingProfileDto {
@@ -127,7 +179,13 @@ export interface OnboardingProfileDto {
   departmentId?: number | null;
   isOnProbation?: boolean;
   probationEndDate?: string | null;
-  // Step 3 — Regime
+  // Step 3 — Contrat. The préavis is editable HERE and nowhere else: after completion it is
+  // frozen on the contract, and changing it means creating a new contract.
+  noticePeriodDays?: number | null;
+  agreedNetSalary?: number | null;
+  contractDocumentUrl?: string | null;
+  contractDocumentName?: string | null;
+  // Step 4 — Regime
   regimeTemplateId?: number | null;
   regimeStartDate?: string | null;
   // Step 4 — Personal & Social
@@ -163,11 +221,14 @@ export interface CompletionResult {
 export const STEPS = [
   { number: 1, label: 'Identité',     key: 'identity'   },
   { number: 2, label: 'Poste',        key: 'contract'   },
-  { number: 3, label: 'Régime',       key: 'regime'     },
-  { number: 4, label: 'Personnel',    key: 'personal'   },
-  { number: 5, label: 'Banque',       key: 'bank'       },
-  { number: 6, label: 'Urgence',      key: 'emergency'  },
-  { number: 7, label: 'Récapitulatif',key: 'summary'    },
+  // Sits after Poste because the grade is chosen there, and the grade is what the préavis
+  // default comes from — so this step opens with a figure to confirm, not a blank.
+  { number: 3, label: 'Contrat',      key: 'contractTerms' },
+  { number: 4, label: 'Régime',       key: 'regime'     },
+  { number: 5, label: 'Personnel',    key: 'personal'   },
+  { number: 6, label: 'Banque',       key: 'bank'       },
+  { number: 7, label: 'Urgence',      key: 'emergency'  },
+  { number: 8, label: 'Récapitulatif',key: 'summary'    },
 ];
 
 export const CONTRACT_OPTIONS  = [{ value:'',              label:'—' }, { value:'PERMANENT',   label:'CDI' }, { value:'FIXED_TERM',  label:'CDD' }, { value:'INTERN',      label:'Stage' }, { value:'CONSULTANT',  label:'Consultant' }];

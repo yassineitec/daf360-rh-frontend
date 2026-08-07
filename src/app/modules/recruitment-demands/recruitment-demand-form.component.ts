@@ -83,7 +83,7 @@ export class RecruitmentDemandFormComponent {
     educationLevelId:  [null as number | null],
     headcount:         [1, [Validators.required, Validators.min(1), Validators.max(50)]],
     targetStartDate:   [null as string | null],
-    budgetRange:       [null as string | null],
+    // No budgetRange: the manager raising the need does not set its budget.
     department:        [null as string | null],
     additionalNotes:   [null as string | null],
   });
@@ -103,7 +103,7 @@ export class RecruitmentDemandFormComponent {
       urgencyLevelId: null, cspCategoryId: null,
       experienceLevelId: null, educationLevelId: null,
       headcount: 1, targetStartDate: null,
-      budgetRange: null, department: null, additionalNotes: null,
+      department: null, additionalNotes: null,
     });
     this.recruitmentReason.set(null);
     this.technicalSkills.set([]);
@@ -162,7 +162,6 @@ export class RecruitmentDemandFormComponent {
       softSkills:        this.softSkills(),
       headcount:         v.headcount!,
       targetStartDate:   v.targetStartDate   || null,
-      budgetRange:       v.budgetRange       || null,
       additionalNotes:   v.additionalNotes   || null,
     };
 

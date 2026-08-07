@@ -135,6 +135,30 @@
         <!-- Step 2 — Poste & Contrat -->
         @if (currentStep() === 2) {
           <div class="space-y-8">
+            <!-- FIRST in this step, because picking it fills the rest: the vacancy already
+                 carries the title, department, grade, contract type and target start date
+                 that the fields below ask for. Optional — a spontaneous application has no
+                 demand behind it, and forcing one would invent a vacancy. -->
+            <div class="mb-8">
+              <daf-select
+                [selected]="getSelectNum('position.recruitmentDemandId')"
+                [options]="demandOptions()"
+                [config]="{
+                  label: ('CANDIDATES.FORM.DEMAND' | translate),
+                  placeholder: ('CANDIDATES.FORM.DEMAND_PH' | translate),
+                  hint: ('CANDIDATES.FORM.DEMAND_HINT' | translate),
+                  fullWidth: true,
+                  searchable: true,
+                }"
+                (selectedChange)="onDemandSelected($event)"
+              />
+              @if (demandOptions().length === 0) {
+                <p class="mt-1.5 text-[12px] text-outline">
+                  {{ 'CANDIDATES.FORM.DEMAND_NONE' | translate }}
+                </p>
+              }
+            </div>
+
             <div class="mb-8">
               <daf-form-field
                 [options]="{

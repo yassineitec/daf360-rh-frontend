@@ -8,6 +8,12 @@ export interface CreateOfferRequest {
   askedSalary?: number | null;
   proposedSalary?: number | null;
   salaryNote?: string | null;
+  /**
+   * Préavis négocié in calendar days. Omitted on send → the backend applies the
+   * candidate's grade default; omitted on renegotiation → left unchanged.
+   */
+  noticePeriodDays?: number | null;
+  noticePeriodNote?: string | null;
   expectedHireDate?: string | null; // ISO yyyy-MM-dd
   expiryDate?: string | null;       // ISO yyyy-MM-dd
 }
@@ -18,6 +24,8 @@ export interface OfferResponse {
   askedSalary: number | null;
   proposedSalary: number | null;
   salaryNote: string | null;
+  noticePeriodDays: number | null;
+  noticePeriodNote: string | null;
   expectedHireDate: string | null;
   expiryDate: string | null;
   sentAt: string | null;

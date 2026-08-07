@@ -63,6 +63,31 @@ export type OfferMode = 'send' | 'renegotiate';
                         (valueChange)="patch({ salaryNote: asStr($event) })" />
       </div>
 
+      <!-- Préavis (V68) — negotiated here, then frozen on the contract at hiring. -->
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.NOTICE_PERIOD' | translate }}</label>
+          <daf-form-field [value]="form().noticePeriodDays ?? null" [options]="noticeOpts"
+                          (valueChange)="patch({ noticePeriodDays: asNum($event) })" />
+          @if (gradeDefault() !== null) {
+            <span class="text-[11px]"
+                  [class]="isDerogation() ? 'text-warning font-semibold' : 'text-outline'">
+              {{ (isDerogation() ? 'PIPELINE.OFFER.NOTICE_DEROGATION' : 'PIPELINE.OFFER.NOTICE_DEFAULT')
+                 | translate: { days: gradeDefault() } }}
+            </span>
+          } @else {
+            <!-- No grade default: leaving the field empty would send an offer with no
+                 préavis at all, so say so instead of showing a silent blank. -->
+            <span class="text-[11px] text-danger">{{ 'PIPELINE.OFFER.NOTICE_NO_DEFAULT' | translate }}</span>
+          }
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-on-surface">{{ 'PIPELINE.OFFER.NOTICE_NOTE' | translate }}</label>
+          <daf-form-field [value]="form().noticePeriodNote ?? null" [options]="noticeNoteOpts()"
+                          (valueChange)="patch({ noticePeriodNote: asStr($event) })" />
+        </div>
+      </div>
+
       <div class="grid grid-cols-2 gap-3 mt-3">
         <daf-multi-date-picker
           [value]="hireDate()"
@@ -116,7 +141,15 @@ export class OfferModalComponent {
   constructor() {
     effect(() => {
       this.visible();                       // reseed every time the modal opens
-      this.form.set({ ...(this.initial() ?? {}) });
+      const seed: CreateOfferRequest = { ...(this.initial() ?? {}) };
+      // Show the grade default rather than an empty box the backend will silently fill:
+      // RH should see the figure they are about to commit to, and be able to change it.
+      // Only when the offer itself carries none — a sent offer's own value always wins,
+      // including a deliberate 0.
+      if (seed.noticePeriodDays === null || seed.noticePeriodDays === undefined) {
+        seed.noticePeriodDays = this.candidate()?.gradeNoticePeriodDays ?? null;
+      }
+      this.form.set(seed);
     });
   }
 
@@ -126,8 +159,33 @@ export class OfferModalComponent {
     return { type: 'text', placeholder: this.translate.instant('PIPELINE.OFFER.NOTE_PLACEHOLDER'), fullWidth: true };
   });
 
+  protected readonly noticeOpts: FormFieldOptions = { type: 'number', placeholder: '0', fullWidth: true };
+  protected readonly noticeNoteOpts = computed<FormFieldOptions>(() => {
+    this.translate.currentLang();
+    return {
+      type: 'text',
+      placeholder: this.translate.instant('PIPELINE.OFFER.NOTICE_NOTE_PLACEHOLDER'),
+      fullWidth: true,
+    };
+  });
+
   protected readonly hireDate   = computed(() => isoToDate(this.form().expectedHireDate ?? null));
   protected readonly expiryDate = computed(() => isoToDate(this.form().expiryDate ?? null));
+
+  /** The applied grade's default préavis, or null when the grade has none configured. */
+  protected readonly gradeDefault = computed<number | null>(
+    () => this.candidate()?.gradeNoticePeriodDays ?? null);
+
+  /**
+   * True when the typed préavis differs from the grade default — which is legitimate (that
+   * is what negotiating means) but should be visibly a derogation rather than a silent one.
+   * An empty field is not a derogation: the backend fills the default in on send.
+   */
+  protected readonly isDerogation = computed(() => {
+    const d = this.gradeDefault();
+    const v = this.form().noticePeriodDays;
+    return d !== null && v !== null && v !== undefined && v !== d;
+  });
 
   protected patch(part: Partial<CreateOfferRequest>): void {
     this.form.update(f => ({ ...f, ...part }));

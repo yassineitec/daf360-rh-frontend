@@ -278,18 +278,23 @@
               <app-step-contract [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
             }
             @if (currentStep() === 3) {
-              <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              <app-step-contract-terms
+                [data]="draftData()" [formInfo]="fd" [candidateId]="candidateId()"
+                (changed)="onStepChanged($event)" />
             }
             @if (currentStep() === 4) {
-              <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              <app-step-regime [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
             }
             @if (currentStep() === 5) {
-              <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" (certificationSelected)="selectedCertification.set($event)" />
+              <app-step-personal [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
             }
             @if (currentStep() === 6) {
-              <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+              <app-step-bank [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" (certificationSelected)="selectedCertification.set($event)" />
             }
             @if (currentStep() === 7) {
+              <app-step-emergency [data]="draftData()" [formInfo]="fd" (changed)="onStepChanged($event)" />
+            }
+            @if (currentStep() === 8) {
               <app-step-summary [data]="draftData()" [formInfo]="fd" (editStep)="goToStep($event)" />
             }
           </div>
@@ -328,7 +333,7 @@
         [options]="{ variant: 'secondary', label: ((saving() ? 'ONBOARDING.FORM.SAVING' : 'ONBOARDING.FORM.SAVE_DRAFT') | translate), iconStart: 'save', disabled: saving(), loading: saving() }"
         (onClick)="onSaveDraft()" />
 
-      @if (currentStep() < 7) {
+      @if (currentStep() < totalSteps) {
         <daf-button
           [options]="{ variant: 'teal', label: ((currentStep() === 1 ? 'ONBOARDING.FORM.CREATE_AND_NEXT' : 'ONBOARDING.FORM.NEXT') | translate), iconEnd: 'arrow_forward' }"
           (onClick)="nextStep()" />

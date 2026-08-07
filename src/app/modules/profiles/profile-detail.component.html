@@ -109,10 +109,16 @@
                 (patch)="patch($event)" />
             }
 
-            @case ('contrats') {
+            @case ('historique') {
+              <!-- ONE section owns contracts now. It holds the lifecycle contracts (state
+                   machine, trial period, préavis) and their four actions, and renders the
+                   dossier log (historique_contrat) as cards in the same shell below them.
+                   app-contract-history is gone from here: it was a second component with a
+                   second design and a second "Nouveau" button describing the same events. -->
               <rh-lifecycle-section
                 [contracts]="lcContracts()"
                 [history]="lcHistory()"
+                [contractLog]="lcContractLog()"
                 [loading]="lcLoading()"
                 [canEdit]="canEdit()"
                 [candidateId]="p.candidateId"
@@ -120,10 +126,6 @@
                 (validateTrial)="openValidateTrialModal($event)"
                 (renewCdd)="openRenewCDDModal($event)"
                 (convertCdi)="openConvertCDIModal($event)" />
-            }
-
-            @case ('historique') {
-              <app-contract-history [profileId]="p.id" [canEdit]="canEdit()" />
             }
 
             @case ('documents') {

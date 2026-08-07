@@ -30,6 +30,20 @@ export class OnboardingService {
   }
 
   /**
+   * Upload the signed contract PDF on the Contrat step.
+   *
+   * Goes to the candidate, not the profile: the profile does not exist until completion, so
+   * the file is staged and the returned {url, name} travel in the draft. Completion turns it
+   * into a CONTRACT_SIGNED document on the profile.
+   */
+  uploadContractDocument(candidateId: number, file: File): Observable<{ url: string; name: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ url: string; name: string }>(
+      `${this.base}/${candidateId}/contract-document`, formData);
+  }
+
+  /**
    * Upload the profile photo to the freshly-created employee profile. Reuses the
    * existing profiles endpoint (POST /api/hr/profiles/{id}/photo) — the profile only
    * exists after completeProfile(), so this is called right after completion.

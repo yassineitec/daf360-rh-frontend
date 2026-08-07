@@ -10,6 +10,9 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue }               from '../../core/lists/configurable-list.model';
+import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
+import { ApprovedDemandOption }     from '../recruitment-demands/recruitment-demand.model';
+import { catchError, of }           from 'rxjs';
 import {
   ButtonComponent,
   CardComponent,
@@ -53,6 +56,7 @@ export class CandidateFormComponent implements OnInit {
   private userStore        = inject(UserStore);
   private refSvc           = inject(RefDataService);
   private listSvc          = inject(ConfigurableListService);
+  private demandSvc        = inject(RecruitmentDemandService);
   private router           = inject(Router);
   private translate        = inject(TranslateService);
 
@@ -209,8 +213,93 @@ export class CandidateFormComponent implements OnInit {
   get identityGroup(): FormGroup { return this.form.get('identity') as FormGroup; }
   get positionGroup(): FormGroup { return this.form.get('position') as FormGroup; }
 
+  // ── Vacancy (recruitment demand) ─────────────────────────────────────────
+
+  /** Approved demands only — the endpoint filters, an unapproved demand is not a vacancy. */
+  readonly demands = signal<ApprovedDemandOption[]>([]);
+
+  readonly demandOptions = computed<SelectOption[]>(() =>
+    this.demands().map(d => ({
+      value: String(d.id),
+      label: d.department ? `${d.label} — ${d.department}` : d.label,
+    })));
+
+  /**
+   * Minimum years implied by each required experience level.
+   *
+   * Read off the seeded labels, which state the bands: Junior (0-2), Confirmé (3-5),
+   * Sénior (6-10), Expert (+10). JUNIOR maps to 1 rather than its literal floor of 0, because 0
+   * is both "fresh graduate" and "slider untouched" — 1 keeps the two distinguishable.
+   *
+   * Keyed on the value CODE, never the label: labels are admin-editable.
+   */
+  private static readonly EXPERIENCE_YEARS: Record<string, number> = {
+    DEBUTANT: 0, JUNIOR: 1, CONFIRME: 3, SENIOR: 6, EXPERT: 10,
+  };
+
+  /**
+   * Attaches the candidature to a vacancy and prefills everything the vacancy knows.
+   *
+   * Prefill only fills fields the recruiter has left EMPTY. Overwriting typed values would make
+   * picking a demand destructive, and a candidate is often considered for a slightly different
+   * shape of the role than the demand describes.
+   *
+   * Department, grade and discipline now come across as IDs (V72) — the demand carries the same
+   * dimension FKs the employee profile will. This used to match the department by label string,
+   * and grade/discipline could not be filled at all because the demand did not hold them.
+   */
+  onDemandSelected(values: string[]): void {
+    this.setSelectNum('position.recruitmentDemandId', values);
+    const id = values[0] ? Number(values[0]) : null;
+    if (id == null) return;
+
+    this.demandSvc.getById(id).pipe(catchError(() => of(null))).subscribe(d => {
+      if (!d) return;
+      const pos = this.positionGroup;
+      const fillIfEmpty = (key: string, value: unknown) => {
+        const ctrl = pos.get(key);
+        if (!ctrl) return;
+        const cur = ctrl.value;
+        if (value != null && value !== '' && (cur == null || cur === '')) ctrl.setValue(value);
+      };
+
+      fillIfEmpty('appliedPosition',     d.jobExactTitle?.trim() || d.jobTitle?.trim());
+      fillIfEmpty('expectedStartDate',   d.targetStartDate);
+      fillIfEmpty('departmentId',        d.departmentId);
+      fillIfEmpty('appliedGradeId',      d.gradeId);
+      fillIfEmpty('appliedDisciplineId', d.disciplineId);
+
+      // Departments fall back to the label for demands raised before V72, which have an id of
+      // null but still carry a name.
+      if (d.departmentId == null && d.department && pos.get('departmentId')?.value == null) {
+        const match = this.departments().find(x => x.labelFr === d.department);
+        if (match) pos.get('departmentId')?.setValue(match.id);
+      }
+
+      /*
+       * Experience is the one field where the two sides mean different things: the demand says
+       * what the ROLE requires, `experienceYears` is what THIS candidate has. So the slider is
+       * seeded with the role's minimum — a starting point the recruiter is expected to correct —
+       * and only while it is still untouched at 0.
+       */
+      const years = d.experienceLevelCode
+        ? CandidateFormComponent.EXPERIENCE_YEARS[d.experienceLevelCode.toUpperCase()]
+        : undefined;
+      if (years !== undefined && this.experienceYears() === 0) {
+        this.experienceYears.set(years);
+      }
+
+      pos.markAsTouched();
+    });
+  }
+
   ngOnInit(): void {
     const paysId = this.userStore.currentUser()?.paysId;
+    if (paysId) {
+      this.demandSvc.getApprovedOptions(paysId)
+        .pipe(catchError(() => of([] as ApprovedDemandOption[])))
+        .subscribe(d => this.demands.set(d));
+    }
     this.refSvc.getGrades().subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines().subscribe(r => this.disciplines.set(r));
     this.refSvc.getDepartments().subscribe(r => this.departments.set(r));

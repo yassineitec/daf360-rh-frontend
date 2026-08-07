@@ -689,8 +689,8 @@ export class OffboardingDetailComponent implements OnInit {
   justificationError   = signal<string | null>(null);
 
   declLastWorkingDay   = '';
-  // No `declTheoreticalExit` / `declNoticePeriod`: the préavis and the theoretical exit date
-  // come from `contract_type_config` (V64) and are read-only everywhere.
+  // No `declTheoreticalExit` / `declNoticePeriod`: the préavis is frozen on the employee's
+  // contract (V69) and the theoretical exit date derives from it — read-only everywhere.
   declNoticeWaiver     = false;
   declNotes            = '';
   declFile: File | null = null;

@@ -334,6 +334,7 @@ export class PipelineComponent implements OnInit {
       this.offerService.getOffer(candidate.id).subscribe({
         next: o => this.offerInitial.set({
           askedSalary: o.askedSalary, proposedSalary: o.proposedSalary, salaryNote: o.salaryNote,
+          noticePeriodDays: o.noticePeriodDays, noticePeriodNote: o.noticePeriodNote,
           expectedHireDate: o.expectedHireDate, expiryDate: o.expiryDate,
         }),
         error: () => { /* keep the blank form if the offer can't be loaded */ },

@@ -16,6 +16,7 @@ import {
 } from './onboarding.model';
 import { StepIdentityComponent } from './steps/step-identity.component';
 import { StepContractComponent } from './steps/step-contract.component';
+import { StepContractTermsComponent } from './steps/step-contract-terms.component';
 import { StepRegimeComponent } from './steps/step-regime.component';
 import { StepPersonalComponent } from './steps/step-personal.component';
 import { StepBankComponent } from './steps/step-bank.component';
@@ -42,6 +43,7 @@ import { SectionCardComponent } from '../../shared/detail/section-card.component
     FormsModule,
     StepIdentityComponent,
     StepContractComponent,
+    StepContractTermsComponent,
     StepRegimeComponent,
     StepPersonalComponent,
     StepBankComponent,
@@ -90,7 +92,7 @@ export class OnboardingFormComponent implements OnInit {
       label: this.translate.instant('ONBOARDING.STEPS.' + s.key.toUpperCase()),
     }));
   });
-  readonly totalSteps = 7;
+  readonly totalSteps = STEPS.length;
 
   // ── daf-stepper (4.14.0) ───────────────────────────────────────────────────
   /**
@@ -105,11 +107,12 @@ export class OnboardingFormComponent implements OnInit {
   /**
    * Heading of the section card holding the step content, so the step reads like a
    * section of the record on `/rh/profiles/:id` rather than a bare panel. Indexed
-   * by `STEPS` order: identité · poste · régime · personnel · banque · urgence ·
-   * récapitulatif.
+   * by `STEPS` order: identité · poste · contrat · régime · personnel · banque ·
+   * urgence · récapitulatif — keep it the same length as STEPS.
    */
   private readonly STEP_ICONS = [
-    'badge', 'work', 'schedule', 'person', 'account_balance', 'emergency', 'fact_check',
+    'badge', 'work', 'description', 'schedule', 'person', 'account_balance',
+    'emergency', 'fact_check',
   ];
   readonly currentStepLabel = computed(() => this.STEPS()[this.currentStep() - 1]?.label ?? '');
   readonly currentStepIcon  = computed(() => this.STEP_ICONS[this.currentStep() - 1] ?? '');
@@ -284,24 +287,28 @@ export class OnboardingFormComponent implements OnInit {
       this.currentStep.set(2);
       return;
     }
+    // Contrat is step 3 now, so every target below shifted by one. The préavis is
+    // deliberately NOT required: it can legitimately be unknown, and completion then resolves
+    // it from the offer or the grade. Blocking here would strand a hire over a figure the
+    // backend can work out.
     if (!d.regimeTemplateId) {
       this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_REGIME_REQUIRED'));
-      this.currentStep.set(3);
+      this.currentStep.set(4);
       return;
     }
     if (!d.cnssNumber) {
       this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_CNSS_REQUIRED'));
-      this.currentStep.set(4);
+      this.currentStep.set(5);
       return;
     }
     if (!d.rib) {
       this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_RIB_REQUIRED'));
-      this.currentStep.set(5);
+      this.currentStep.set(6);
       return;
     }
     if (!this.selectedCertification()) {
       this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_CERT_REQUIRED'));
-      this.currentStep.set(5);
+      this.currentStep.set(6);
       return;
     }
     this.error.set(null);

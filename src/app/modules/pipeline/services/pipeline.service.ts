@@ -45,6 +45,19 @@ export interface KanbanCandidate {
   offerExpiry?: string;
   /** Offer lifecycle status: SENT | ACCEPTED | REJECTED | EXPIRED. */
   offerStatus?: string;
+  /**
+   * The vacancy this candidature answers. Null = spontaneous application, which the card
+   * renders as such rather than leaving blank.
+   */
+  demandId?: number | null;
+  demandTitle?: string | null;
+  /** Préavis négocié on the offer, in calendar days; null when not discussed. */
+  offerNoticePeriodDays?: number | null;
+  /**
+   * The applied grade's default préavis — what the offer form starts from, so a derogation
+   * is visible as one. Null when the grade has no default configured.
+   */
+  gradeNoticePeriodDays?: number | null;
 }
 
 export interface KanbanColumn {

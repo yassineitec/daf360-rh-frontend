@@ -1,0 +1,211 @@
+<div class="sct-layout">
+
+  <!-- ══ LEFT — Recruitment evidence. READ-ONLY. ══════════════════════════ -->
+  <div class="sct-col">
+    <h4 class="sct-col-title">
+      <span class="material-symbols-outlined">history_edu</span>
+      {{ 'ONBOARDING.STEP_CONTRACT_TERMS.RECRUITMENT_TITLE' | translate }}
+    </h4>
+    <p class="sct-col-hint">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.RECRUITMENT_HINT' | translate }}</p>
+
+    <!-- The vacancy this hire closes. First, because it is the frame for everything below:
+         the offer and its salary were made against THIS opening. -->
+    <div class="sct-card">
+      <div class="sct-card-head">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.VACANCY' | translate }}</div>
+      @if (formInfo()?.recruitmentDemandJobTitle) {
+        <p class="sct-strong" style="margin:0;font-size:13px;">
+          {{ formInfo()!.recruitmentDemandJobTitle }}
+        </p>
+      } @else {
+        <p class="sct-muted" style="margin:0;">
+          {{ 'ONBOARDING.STEP_CONTRACT_TERMS.NO_VACANCY' | translate }}
+        </p>
+      }
+    </div>
+
+    <!-- Offer -->
+    @if (offer(); as o) {
+      <div class="sct-card">
+        <div class="sct-card-head">
+          <span>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.OFFER' | translate }}</span>
+          @if (o.status) { <span class="sct-chip">{{ o.status }}</span> }
+        </div>
+        <dl class="sct-dl">
+          <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.ASKED' | translate }}</dt>
+          <dd>{{ o.askedSalary != null ? (o.askedSalary | number:'1.0-3') : '—' }}</dd>
+
+          <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.PROPOSED' | translate }}</dt>
+          <dd class="sct-strong">{{ o.proposedSalary != null ? (o.proposedSalary | number:'1.0-3') : '—' }}</dd>
+
+          <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.OFFER_NOTICE' | translate }}</dt>
+          <dd class="sct-strong">
+            {{ o.noticePeriodDays != null
+                 ? ('ONBOARDING.STEP_CONTRACT_TERMS.DAYS' | translate: { days: o.noticePeriodDays })
+                 : ('ONBOARDING.STEP_CONTRACT_TERMS.NOT_DISCUSSED' | translate) }}
+          </dd>
+
+          @if (o.noticePeriodNote) {
+            <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.NOTICE_REASON' | translate }}</dt>
+            <dd>{{ o.noticePeriodNote }}</dd>
+          }
+          @if (o.salaryNote) {
+            <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.SALARY_NOTE' | translate }}</dt>
+            <dd>{{ o.salaryNote }}</dd>
+          }
+        </dl>
+      </div>
+    } @else {
+      <div class="sct-empty">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.NO_OFFER' | translate }}</div>
+    }
+
+    <!-- Declared / assessed salaries -->
+    @if (recruitment(); as r) {
+      <div class="sct-card">
+        <div class="sct-card-head">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.SALARIES' | translate }}</div>
+        <dl class="sct-dl">
+          <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.CANDIDATE_DECLARED' | translate }}</dt>
+          <dd>{{ r.candidateDeclaredNetSalary != null ? (r.candidateDeclaredNetSalary | number:'1.0-3') : '—' }}</dd>
+          <dt>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.HR_ASSESSED' | translate }}</dt>
+          <dd>{{ r.hrAssessedNetSalary != null ? (r.hrAssessedNetSalary | number:'1.0-3') : '—' }}</dd>
+        </dl>
+      </div>
+    }
+
+    <!-- Finance cost approvals -->
+    @if (approvals().length) {
+      <div class="sct-card">
+        <div class="sct-card-head">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.APPROVALS' | translate }}</div>
+        @for (a of approvals(); track $index) {
+          <div class="sct-row">
+            <div class="sct-row-head">
+              <span class="sct-chip"
+                    [class.sct-chip-ok]="a.status === 'APPROVED'"
+                    [class.sct-chip-no]="a.status === 'REJECTED'">{{ a.status }}</span>
+              <span class="sct-strong">
+                {{ a.salaireNetRh != null ? (a.salaireNetRh | number:'1.0-3') : '—' }}
+              </span>
+            </div>
+            @if (a.contrePropSalaire != null) {
+              <!-- The single most consequential line on this side: Finance countered, so the
+                   figure RH confirms should normally be this one. -->
+              <p class="sct-counter">
+                {{ 'ONBOARDING.STEP_CONTRACT_TERMS.COUNTER' | translate }} :
+                <strong>{{ a.contrePropSalaire | number:'1.0-3' }}</strong>
+              </p>
+            }
+            @if (a.approvalNotes) { <p class="sct-note">{{ a.approvalNotes }}</p> }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Interview feedback -->
+    @if (interviews().length) {
+      <div class="sct-card">
+        <div class="sct-card-head">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.INTERVIEWS' | translate }}</div>
+        @for (i of interviews(); track $index) {
+          <div class="sct-row">
+            <div class="sct-row-head">
+              <span class="sct-strong">
+                {{ i.interviewType || ('ONBOARDING.STEP_CONTRACT_TERMS.ROUND' | translate: { n: i.sequenceNumber }) }}
+              </span>
+              @if (i.result) {
+                <span class="sct-chip"
+                      [class.sct-chip-ok]="i.result === 'PASS'"
+                      [class.sct-chip-no]="i.result === 'FAIL'">{{ i.result }}</span>
+              }
+            </div>
+            <p class="sct-note">{{ i.interviewerNotes }}</p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- ══ RIGHT — What RH confirms. EDITABLE. ══════════════════════════════ -->
+  <div class="sct-col">
+    <h4 class="sct-col-title">
+      <span class="material-symbols-outlined">edit_document</span>
+      {{ 'ONBOARDING.STEP_CONTRACT_TERMS.AGREED_TITLE' | translate }}
+    </h4>
+    <p class="sct-col-hint">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.AGREED_HINT' | translate }}</p>
+
+    <!-- Préavis — the one field that cannot be changed after completion -->
+    <div class="form-field">
+      <label class="form-label">
+        {{ 'ONBOARDING.STEP_CONTRACT_TERMS.NOTICE_PERIOD' | translate }}
+      </label>
+      <daf-form-field
+        [options]="{ type: 'number', placeholder: '30', fullWidth: true }"
+        [value]="noticePeriodDays()"
+        (valueChange)="noticePeriodDays.set(asNum($any($event))); emit()" />
+
+      <div class="sct-locked">
+        <span class="material-symbols-outlined">lock_clock</span>
+        <span>{{ 'ONBOARDING.STEP_CONTRACT_TERMS.NOTICE_LOCKED' | translate }}</span>
+      </div>
+
+      @if (divergesFromOffer()) {
+        <p class="sct-warn">
+          {{ 'ONBOARDING.STEP_CONTRACT_TERMS.NOTICE_DIVERGES'
+             | translate: { days: offer()?.noticePeriodDays } }}
+        </p>
+      } @else if (gradeDefault() !== null) {
+        <p class="sct-muted">
+          {{ 'ONBOARDING.STEP_CONTRACT_TERMS.GRADE_DEFAULT' | translate: { days: gradeDefault() } }}
+        </p>
+      } @else {
+        <p class="sct-warn">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.NO_GRADE_DEFAULT' | translate }}</p>
+      }
+    </div>
+
+    <!-- Agreed salary -->
+    <div class="form-field">
+      <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.AGREED_SALARY' | translate }}</label>
+      <daf-form-field
+        [options]="{ type: 'number', placeholder: '0', fullWidth: true }"
+        [value]="agreedNetSalary()"
+        (valueChange)="agreedNetSalary.set(asNum($any($event))); emit()" />
+
+      @if (salaryDivergesFromOffer()) {
+        <p class="sct-warn">
+          {{ 'ONBOARDING.STEP_CONTRACT_TERMS.SALARY_DIVERGES'
+             | translate: { amount: offer()?.proposedSalary } }}
+        </p>
+      }
+      @if (counterProposal() !== null) {
+        <p class="sct-muted">
+          {{ 'ONBOARDING.STEP_CONTRACT_TERMS.COUNTER_HINT' | translate: { amount: counterProposal() } }}
+        </p>
+      }
+      <p class="sct-muted">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.SALARY_TARGET' | translate }}</p>
+    </div>
+
+    <!-- Signed contract PDF -->
+    <div class="form-field">
+      <daf-file-upload
+        [config]="{
+          label: ('ONBOARDING.STEP_CONTRACT_TERMS.SIGNED_CONTRACT' | translate),
+          accept: '.pdf',
+          maxSizeMb: 10,
+          hint: ('ONBOARDING.STEP_CONTRACT_TERMS.UPLOAD_HINT' | translate)
+        }"
+        [files]="contractFiles()"
+        (filesChange)="onContractFiles($event)" />
+
+      @if (uploading()) {
+        <p class="sct-muted">{{ 'ONBOARDING.STEP_CONTRACT_TERMS.UPLOADING' | translate }}</p>
+      }
+      @if (contractDocumentName()) {
+        <div class="sct-attached">
+          <span class="material-symbols-outlined">check_circle</span>
+          <span class="sct-attached-name">{{ contractDocumentName() }}</span>
+          <button type="button" class="sct-remove" (click)="removeContractDocument()">
+            {{ 'ONBOARDING.STEP_CONTRACT_TERMS.REMOVE' | translate }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

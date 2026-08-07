@@ -67,7 +67,17 @@ export interface RecruitmentDemandDetail {
   paysId: number;
   jobTitle: string;
   jobExactTitle: string | null;
+  /** Department LABEL. `departmentId` is the real link — prefer it. */
   department: string | null;
+  /**
+   * Position dimensions (V72), from the same tables the employee profiles use. These are what
+   * let the candidate form prefill its position step by ID instead of matching label strings.
+   */
+  departmentId: number | null;
+  gradeId: number | null;
+  gradeLabel: string | null;
+  disciplineId: number | null;
+  disciplineLabel: string | null;
   requiredProfile: string;
   scopeOfWork: string;
   needDescription: string | null;
@@ -79,6 +89,8 @@ export interface RecruitmentDemandDetail {
   cspCategoryLabel: string | null;
   experienceLevelId: number | null;
   experienceLevelLabel: string | null;
+  /** Stable code (DEBUTANT / JUNIOR / …) — branch on this, never on the label. */
+  experienceLevelCode: string | null;
   educationLevelId: number | null;
   educationLevelLabel: string | null;
   technicalSkills: string[];

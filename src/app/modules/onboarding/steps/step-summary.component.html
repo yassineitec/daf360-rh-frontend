@@ -78,11 +78,35 @@
     </div>
   </daf-card>
 
-  <!-- Card 3 — Régime -->
+  <!-- Card 3 — Contrat. Last chance to see the préavis before it is frozen. -->
+  <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
+    <div class="card-header">
+      <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_CONTRACT_TERMS' | translate }}</h4>
+      <button type="button" class="btn-edit" (click)="editStep.emit(3)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
+    </div>
+    <div class="card-body">
+      <dl>
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.NOTICE_PERIOD' | translate }}</dt>
+        <dd>
+          {{ data()?.noticePeriodDays != null
+               ? ('ONBOARDING.STEP_SUMMARY.NOTICE_DAYS' | translate: { days: data()!.noticePeriodDays })
+               : ('ONBOARDING.STEP_SUMMARY.NOTICE_FROM_OFFER' | translate) }}
+        </dd>
+
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.AGREED_SALARY' | translate }}</dt>
+        <dd>{{ data()?.agreedNetSalary != null ? data()!.agreedNetSalary : '—' }}</dd>
+
+        <dt>{{ 'ONBOARDING.STEP_SUMMARY.SIGNED_CONTRACT' | translate }}</dt>
+        <dd>{{ val(data()?.contractDocumentName) }}</dd>
+      </dl>
+    </div>
+  </daf-card>
+
+  <!-- Card 4 — Régime -->
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_REGIME' | translate }}</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(3)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
+      <button type="button" class="btn-edit" (click)="editStep.emit(4)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
@@ -99,7 +123,7 @@
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_PERSONAL' | translate }}</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(4)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
+      <button type="button" class="btn-edit" (click)="editStep.emit(5)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
@@ -128,7 +152,7 @@
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_BANK' | translate }}</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(5)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
+      <button type="button" class="btn-edit" (click)="editStep.emit(6)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>
@@ -157,7 +181,7 @@
   <daf-card [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }" class="block">
     <div class="card-header">
       <h4 class="card-title">{{ 'ONBOARDING.STEP_SUMMARY.CARD_EMERGENCY' | translate }}</h4>
-      <button type="button" class="btn-edit" (click)="editStep.emit(6)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
+      <button type="button" class="btn-edit" (click)="editStep.emit(7)">{{ 'ONBOARDING.STEP_SUMMARY.EDIT' | translate }}</button>
     </div>
     <div class="card-body">
       <dl>

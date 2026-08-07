@@ -40,7 +40,8 @@ import { RegimeService } from '../admin/regimes/regime.service';
 import { ResolvedRegimeDto } from '../admin/regimes/regime.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem } from '../../core/ref/ref-data.model';
-import { ContractHistoryComponent } from './contract-history/contract-history.component';
+import { ContractHistoryService } from './contract-history/contract-history.service';
+import { ContractHistoryDto } from './contract-history/contract-history.model';
 import { ContractLifecycleService } from './lifecycle/contract-lifecycle.service';
 import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto, CONTRACT_TYPE_CONFIG,
@@ -68,7 +69,12 @@ import { fromDate, toDate } from './detail-sections/field-bridges';
  */
 type TabId =
   | 'emploi' | 'contact' | 'bancaire'
-  | 'contrats' | 'historique' | 'documents';
+  // One 'Contrats' tab, not two. 'contrats' (lifecycle) and 'historique' (the manual
+  // historique_contrat log) were separate tabs showing two unrelated notions of "contract";
+  // they are merged under 'historique' so the lifecycle actions — New contract, which is the
+  // only way to change an employee's frozen préavis, plus trial validation / CDD renewal /
+  // CDI conversion — stay reachable from one place.
+  | 'historique' | 'documents';
 
 /**
  * Departure types offered by the profile's "Démarrer l'offboarding" action.
@@ -122,7 +128,7 @@ const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB
     IdentityCardComponent, EmploymentSectionComponent,
     PositionSectionComponent, RegimeSectionComponent, ContactSectionComponent,
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
-    ContractHistoryComponent, DocumentsSectionComponent, DocumentsDrawerComponent,
+    DocumentsSectionComponent, DocumentsDrawerComponent,
     NewContractFormComponent,
     TranslatePipe,
   ],
@@ -138,6 +144,7 @@ export class ProfileDetailComponent implements OnInit {
   private regimeSvc    = inject(RegimeService);
   private refSvc       = inject(RefDataService);
   private lcSvc        = inject(ContractLifecycleService);
+  private contractHistorySvc = inject(ContractHistoryService);
   private modalService = inject(ModalService);
   private offboardingSvc = inject(OffboardingService);
   private translate    = inject(TranslateService);
@@ -189,8 +196,9 @@ export class ProfileDetailComponent implements OnInit {
       items.push({ id: 'bancaire', label: t('PROFILES.SECTIONS.BANK'), marker: dirty.has('bancaire') });
     }
     items.push(
-      { id: 'contrats',   label: t('PROFILES.SECTIONS.LIFECYCLE'), count: this.lcContracts().length || null },
-      { id: 'historique', label: t('PROFILES.SECTIONS.CONTRACT_HISTORY') },
+      // Count is the lifecycle contracts, not the historique rows: those are the ones with a
+      // state machine, a trial period and a préavis.
+      { id: 'historique', label: t('PROFILES.SECTIONS.CONTRACTS'), count: this.lcContracts().length || null },
       { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documents().length || null },
     );
     return items;
@@ -408,6 +416,8 @@ export class ProfileDetailComponent implements OnInit {
   // ── Contract lifecycle ─────────────────────────────────────────────────────
   readonly lcContracts = signal<ContractListDto[]>([]);
   readonly lcHistory   = signal<ContractTransitionHistoryDto[]>([]);
+  /** The dossier log (historique_contrat), rendered as cards by rh-lifecycle-section. */
+  readonly lcContractLog = signal<ContractHistoryDto[]>([]);
   readonly lcLoading   = signal(false);
   readonly lcSaving    = signal(false);
   readonly lcError     = signal<string | null>(null);
@@ -432,7 +442,7 @@ export class ProfileDetailComponent implements OnInit {
   constructor() {
     // Contracts are fetched the first time their tab is opened, not on page load.
     effect(() => {
-      if (this.activeTab() === 'contrats') this.loadContracts();
+      if (this.activeTab() === 'historique') this.loadContracts();
     });
   }
 
@@ -762,6 +772,11 @@ export class ProfileDetailComponent implements OnInit {
       .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); });
     this.lcSvc.getLifecycleHistory(this.profileId).pipe(catchError(() => of([])))
       .subscribe(h => this.lcHistory.set(h));
+    // The dossier log used to be fetched by app-contract-history itself. That component is
+    // gone from this tab, so the page owns the read and passes it down — which is also what
+    // lets one refresh after a contract is created cover both lists.
+    this.contractHistorySvc.getHistory(this.profileId).pipe(catchError(() => of([])))
+      .subscribe(l => this.lcContractLog.set(l));
   }
 
   private refreshContracts(): void {
@@ -771,6 +786,8 @@ export class ProfileDetailComponent implements OnInit {
 
   onContractCreated(_contract: ContractDetailDto): void {
     this.showNewContractModal.set(false);
+    // One refresh covers both lists now: refreshContracts re-reads the contracts, the
+    // lifecycle timeline AND the dossier log, all of which that single submit wrote to.
     this.refreshContracts();
   }
 

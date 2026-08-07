@@ -98,7 +98,25 @@ const TABS: TabConfig[] = [
             <span class="rda-badge rda-badge-no">{{ 'ADMIN.data.refData.NO' | translate }}</span>
           }
         </ng-template>
+        <ng-template dafCell="noticePeriod" let-row>
+          @if (row['_source'].noticePeriodDays === null || row['_source'].noticePeriodDays === undefined) {
+            <!-- Red, not a dash: a grade with no default leaves every negotiation from it
+                 starting at nothing, which is a configuration gap and not a valid state. -->
+            <span class="rda-notice-unset">{{ 'ADMIN.data.refData.NOTICE_UNSET' | translate }}</span>
+          } @else {
+            <span class="rda-notice-set">
+              {{ 'ADMIN.data.refData.NOTICE_DAYS' | translate: { days: row['_source'].noticePeriodDays } }}
+            </span>
+          }
+        </ng-template>
         <ng-template dafCell="_actions" let-row>
+          @if (isGradesTab()) {
+            <daf-button
+              [title]="'ADMIN.data.refData.EDIT_NOTICE_PERIOD' | translate"
+              variant="secondary"
+              [options]="{ size: 'sm', iconStart: 'timelapse' }"
+              (onClick)="openNoticePeriodModal(row['_source'])" />
+          }
           <daf-button
             class="icon-btn-delete"
             [title]="'ADMIN.data.refData.DELETE' | translate"
@@ -186,6 +204,12 @@ const TABS: TabConfig[] = [
         [options]="{ label: ('ADMIN.data.refData.FIELD_ORDER' | translate), type: 'number', placeholder: ('ADMIN.data.refData.PH_ORDER' | translate), fullWidth: true }"
         [value]="createForm.sortOrder"
         (valueChange)="createForm.sortOrder = $event === null || $event === '' ? null : +$event" />
+      @if (isGradesTab()) {
+        <daf-form-field
+          [options]="{ label: ('ADMIN.data.refData.FIELD_NOTICE_PERIOD' | translate), type: 'number', placeholder: ('ADMIN.data.refData.PH_NOTICE_PERIOD' | translate), hint: ('ADMIN.data.refData.HINT_NOTICE_PERIOD' | translate), fullWidth: true }"
+          [value]="createForm.noticePeriodDays"
+          (valueChange)="createForm.noticePeriodDays = $event === null || $event === '' ? null : +$event" />
+      }
     </div>
     <div slot="footer">
       <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="showForm.set(false)" />
@@ -230,6 +254,32 @@ const TABS: TabConfig[] = [
     </div>
   </app-modal>
 }
+
+<!-- Préavis par défaut — grades only (V64) -->
+<app-modal
+  [title]="'ADMIN.data.refData.MODAL_NOTICE_PERIOD' | translate"
+  [visible]="noticeTarget() !== null"
+  [hasFooter]="true"
+  (closed)="closeNoticePeriodModal()"
+>
+  @if (noticeTarget(); as g) {
+    <p class="rda-notice-hint">
+      {{ 'ADMIN.data.refData.MODAL_NOTICE_HELP' | translate: { grade: g.labelFr } }}
+    </p>
+    <daf-form-field
+      [options]="{ label: ('ADMIN.data.refData.FIELD_NOTICE_PERIOD' | translate), type: 'number', placeholder: ('ADMIN.data.refData.PH_NOTICE_PERIOD' | translate), hint: ('ADMIN.data.refData.HINT_NOTICE_PERIOD' | translate), fullWidth: true }"
+      [value]="noticeDays"
+      (valueChange)="noticeDays = $event === null || $event === '' ? null : +$event" />
+  }
+  <div slot="footer">
+    <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="closeNoticePeriodModal()" />
+    <daf-button
+      [label]="saving() ? ('ADMIN.data.refData.SAVING' | translate) : ('ADMIN.data.refData.SAVE' | translate)"
+      variant="teal"
+      [options]="{ disabled: saving(), loading: saving() }"
+      (onClick)="saveNoticePeriod()" />
+  </div>
+</app-modal>
   `,
   styles: [`
     .rda-tab-bar { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;border-bottom:1px solid var(--color-outline-variant);overflow-x:auto }
@@ -243,6 +293,9 @@ const TABS: TabConfig[] = [
     .rda-badge-no  { background:var(--color-surface-container);color:var(--color-on-surface-variant) }
     .rda-pagination { display:flex;justify-content:flex-end;padding:10px 0 }
     .rda-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
+    .rda-notice-unset { font-size:12px;font-weight:700;color:var(--color-error) }
+    .rda-notice-set   { font-size:13px;color:var(--color-on-surface) }
+    .rda-notice-hint  { font-size:12px;color:var(--color-on-surface-variant);margin:0 0 12px }
     .table-scroll  { overflow-x:auto }
 
     @media (max-width: 480px) {
@@ -277,6 +330,7 @@ export class RefDataAdminComponent implements OnChanges {
   tcCreateLabelFr  = '';
   tcCreateLabelEn  = '';
   isTypeContratTab = computed(() => this.activeTab().key === 'type-contrat');
+  isGradesTab      = computed(() => this.activeTab().key === 'grades');
 
   readonly tabs = TABS;
 
@@ -288,20 +342,68 @@ export class RefDataAdminComponent implements OnChanges {
   error     = signal<string | null>(null);
   successMsg = signal<string | null>(null);
 
-  createForm: { labelFr: string; labelEn: string; code: string; sortOrder: number | null } = {
-    labelFr: '', labelEn: '', code: '', sortOrder: null,
-  };
+  createForm: {
+    labelFr: string; labelEn: string; code: string;
+    sortOrder: number | null; noticePeriodDays: number | null;
+  } = { labelFr: '', labelEn: '', code: '', sortOrder: null, noticePeriodDays: null };
+
+  // ── Préavis par défaut (grades, V64) ───────────────────────────────────────
+  /** The grade whose default préavis is being edited; null closes the modal. */
+  noticeTarget = signal<RefDataItem | null>(null);
+  /** Null is a real value here — it clears the default rather than meaning "unchanged". */
+  noticeDays: number | null = null;
+
+  openNoticePeriodModal(g: RefDataItem): void {
+    this.noticeDays = g.noticePeriodDays ?? null;
+    this.noticeTarget.set(g);
+  }
+
+  closeNoticePeriodModal(): void {
+    this.noticeTarget.set(null);
+    this.noticeDays = null;
+  }
+
+  saveNoticePeriod(): void {
+    const g = this.noticeTarget();
+    if (!g) return;
+    if (this.noticeDays !== null && this.noticeDays < 0) {
+      this.error.set(this.translate.instant('ADMIN.data.refData.ERR_NOTICE_NEGATIVE'));
+      return;
+    }
+    this.saving.set(true);
+    this.error.set(null);
+    this.refSvc.setGradeNoticePeriod(g.id, this.noticeDays).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.closeNoticePeriodModal();
+        this.flash(this.translate.instant('ADMIN.data.refData.OK_NOTICE_SAVED'));
+        this.loadItems();
+      },
+      error: () => {
+        this.saving.set(false);
+        this.error.set(this.translate.instant('ADMIN.data.refData.ERR_NOTICE_SAVE'));
+      },
+    });
+  }
 
   readonly itemColumns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
-    return [
+    const cols: TableColumn[] = [
       { key: 'labelFr',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR') },
       { key: 'labelEn',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN') },
       { key: 'code',      label: this.translate.instant('ADMIN.data.refData.COL_CODE') },
       { key: 'sortOrder', label: this.translate.instant('ADMIN.data.refData.COL_ORDER') },
+    ];
+    // Grades carry the default préavis a negotiation starts from (V64) — no other
+    // dimension has one, so the column only exists on this tab.
+    if (this.isGradesTab()) {
+      cols.push({ key: 'noticePeriod', label: this.translate.instant('ADMIN.data.refData.COL_NOTICE_PERIOD') });
+    }
+    cols.push(
       { key: 'isActive',  label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
       { key: '_actions',  label: '', align: 'right' },
-    ];
+    );
+    return cols;
   });
 
   currentPage = signal(0);
@@ -329,12 +431,15 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly itemRows = computed<TableRow[]>(() =>
     this.pagedItems().map(i => ({
-      labelFr:   i.labelFr,
-      labelEn:   i.labelEn,
-      code:      i.code ?? '—',
-      sortOrder: i.sortOrder ?? '—',
-      isActive:  i.isActive,
-      _source:   i,
+      labelFr:      i.labelFr,
+      labelEn:      i.labelEn,
+      code:         i.code ?? '—',
+      sortOrder:    i.sortOrder ?? '—',
+      // Rendered by a cell template, which reads `_source` — the value here is only a
+      // fallback for any consumer that reads the row flat.
+      noticePeriod: i.noticePeriodDays ?? '—',
+      isActive:     i.isActive,
+      _source:      i,
     })),
   );
 
@@ -433,6 +538,8 @@ export class RefDataAdminComponent implements OnChanges {
       code:      this.createForm.code.trim()    || undefined,
       sortOrder: this.createForm.sortOrder      ?? undefined,
       paysId:    tab.hasPays ? this.paysId()    : undefined,
+      // Grades only; left undefined elsewhere so the backend ignores it.
+      noticePeriodDays: tab.key === 'grades' ? this.createForm.noticePeriodDays : undefined,
     };
     this.refSvc.invalidateAll();
     this.refSvc.create(tab.endpoint, req).subscribe({
@@ -512,7 +619,7 @@ export class RefDataAdminComponent implements OnChanges {
   }
 
   resetForm(): void {
-    this.createForm = { labelFr: '', labelEn: '', code: '', sortOrder: null };
+    this.createForm = { labelFr: '', labelEn: '', code: '', sortOrder: null, noticePeriodDays: null };
   }
 
   private flash(msg: string): void {

@@ -1,4 +1,5 @@
 import { Component, inject, input, output } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonComponent, SkeletonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
@@ -8,6 +9,7 @@ import {
   STATUS_CONFIG, CONTRACT_TYPE_CONFIG,
 } from '../lifecycle/contract-lifecycle.model';
 import { SectionCardComponent } from '../../../shared/detail/section-card.component';
+import { ContractHistoryDto } from '../contract-history/contract-history.model';
 import { fmtDate } from './field-bridges';
 
 /**
@@ -25,7 +27,7 @@ import { fmtDate } from './field-bridges';
   standalone: true,
   imports: [
     SectionCardComponent, ButtonComponent, SkeletonComponent,
-    StatusBadgeComponent, RouterLink, TranslatePipe,
+    StatusBadgeComponent, RouterLink, DecimalPipe, TranslatePipe,
   ],
   host: { class: 'block' },
   template: `
@@ -97,6 +99,26 @@ import { fmtDate } from './field-bridges';
                   }
                 </div>
 
+                <!-- Préavis (V69). Shown per contract because that is where it lives: it was
+                     agreed for THIS contract and cannot be edited — a different figure means a
+                     new contract. The source is spelled out so a number nobody remembers
+                     agreeing to is still explainable. -->
+                <div class="flex flex-wrap items-center gap-2 text-[12px]">
+                  <span class="text-on-surface-variant">{{ 'PROFILES.LC.NOTICE_PERIOD' | translate }} :</span>
+                  @if (c.noticePeriodDays !== null && c.noticePeriodDays !== undefined) {
+                    <span class="font-semibold text-on-surface">
+                      {{ 'PROFILES.LC.NOTICE_DAYS' | translate:{ days: c.noticePeriodDays } }}
+                    </span>
+                    @if (c.noticePeriodSource) {
+                      <span class="text-[11px] text-outline">
+                        {{ 'PROFILES.LC.NOTICE_SOURCE.' + c.noticePeriodSource | translate }}
+                      </span>
+                    }
+                  } @else {
+                    <span class="text-[11px] text-outline">{{ 'PROFILES.LC.NOTICE_NONE' | translate }}</span>
+                  }
+                </div>
+
                 @if (c.referenceContrat) {
                   <span class="text-[11px] text-outline">{{ 'PROFILES.LC.REF' | translate:{ ref: c.referenceContrat } }}</span>
                 }
@@ -120,6 +142,64 @@ import { fmtDate } from './field-bridges';
           </div>
         } @empty {
           <p class="m-0 text-[13px] text-on-surface-variant">{{ 'PROFILES.LC.NONE' | translate }}</p>
+        }
+
+        <!-- ── Dossier log (historique_contrat) ─────────────────────────────
+             Same card shell as the contracts above, deliberately: it describes the same
+             events from the dossier's side (document type, salary, motif) and used to be a
+             separate component with its own design. Read-only — entries are written by the
+             Nouveau contrat form, which creates the contract and logs it in one submit. -->
+        @if (contractLog().length) {
+          <div>
+            <p class="mt-0 mb-2.5 text-[11px] font-bold uppercase tracking-[0.4px] text-on-surface-variant">
+              {{ 'PROFILES.HISTORY.TITLE' | translate }}
+            </p>
+            <div class="flex flex-col gap-2.5">
+              @for (c of contractLog(); track c.id) {
+                <div class="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3.5">
+                  <div class="flex flex-wrap items-start justify-between gap-2.5">
+                    <div class="flex flex-1 flex-col gap-1.5">
+
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[13px] font-bold text-on-surface">{{ c.typeContratLabelFr }}</span>
+                        <daf-badge
+                          [label]="(c.typeDocument === 'CONTRAT_INITIAL' ? 'PROFILES.HISTORY.DOC_INITIAL' : 'PROFILES.HISTORY.DOC_AMENDMENT') | translate"
+                          [options]="{ variant: c.typeDocument === 'CONTRAT_INITIAL' ? 'info' : 'warning', pill: true, size: 'sm' }" />
+                        @if (c.isActive) {
+                          <daf-badge [label]="'PROFILES.HISTORY.ACTIVE' | translate"
+                                     [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
+                        }
+                      </div>
+
+                      <div class="flex flex-wrap gap-3.5 text-[12px] text-on-surface-variant">
+                        <span>
+                          {{ 'PROFILES.HISTORY.FROM_LABEL' | translate }} {{ fmtDate(c.dateEffet) }}
+                          @if (c.dateFin) { → {{ fmtDate(c.dateFin) }} }
+                          @else { → {{ 'PROFILES.HISTORY.ONGOING' | translate }} }
+                        </span>
+                        @if (c.salaireNet) {
+                          <span class="font-semibold text-on-surface">
+                            {{ c.salaireNet | number:'1.0-0' }} {{ 'PROFILES.HISTORY.TND_NET_MONTH_SUFFIX' | translate }}
+                          </span>
+                        }
+                      </div>
+
+                      @if (c.motif) {
+                        <span class="text-[11px] italic text-outline">{{ c.motif }}</span>
+                      }
+                      @if (c.commentaire) {
+                        <span class="text-[11px] text-outline">{{ c.commentaire }}</span>
+                      }
+                    </div>
+
+                    <span class="shrink-0 whitespace-nowrap text-[11px] text-outline">
+                      {{ fmtDate(c.dateCreation) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
         }
 
         <!-- Lifecycle transition history -->
@@ -161,6 +241,14 @@ export class LifecycleSectionComponent {
 
   readonly contracts   = input<ContractListDto[]>([]);
   readonly history     = input<ContractTransitionHistoryDto[]>([]);
+  /**
+   * The dossier log (`historique_contrat`) — document type, salary, motif per contract event.
+   *
+   * A separate input from `history`, which is the lifecycle STATE-machine timeline. The two
+   * were previously two components on one tab, each with its own chrome and its own add
+   * button; this section now renders both so there is one design and one write path.
+   */
+  readonly contractLog = input<ContractHistoryDto[]>([]);
   readonly loading     = input(false);
   readonly canEdit     = input(false);
   readonly candidateId = input<number | null>(null);
