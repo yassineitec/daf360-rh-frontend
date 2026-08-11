@@ -35,6 +35,11 @@
   --color-error: var(--color-danger);
 }
 
+/* ⚠️ The three brand overrides below are duplicated VERBATIM in daf360-shell,
+   daf360-facturation-frontend and daf360-payroll-frontend. Every remote's styles.css
+   is loaded into the shell's single document, so the last :root to load wins — if the
+   four blocks disagree, the whole app's text/background colour changes depending on
+   which remote you happened to navigate through. Change one, change all four. */
 :root {
   /* Matches the Finance module's heading/body text color (hardcoded as
      $on-surface: #0b1c30 in its component SCSS) so RH pages use the same
