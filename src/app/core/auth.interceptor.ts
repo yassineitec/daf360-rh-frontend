@@ -1,8 +1,9 @@
-import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { inject, Injector } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { selectCurrentUser } from '@khalilrebhiitec/daf360';
+import { catchError, throwError, take } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { UserStore } from './user.store';
 import { NotificationService } from './notification.service';
 
 /**
@@ -12,41 +13,60 @@ import { NotificationService } from './notification.service';
  *    This avoids cross-port cookie-sending issues (cookie set at :8080, used at :8082).
  * 3. Catches 401 from the PORTAL only → redirects to Azure OAuth2 (session expired).
  *    rh-service 401s are propagated so components show their own error state.
+ *
+ * Uses Store directly (not UserStore) to avoid the circular dependency:
+ *   UserStore → HttpClient → interceptor → UserStore
  */
+
+/** Read the current user's rhToken synchronously from the NgRx store. */
+function getRhToken(store: Store): string | null | undefined {
+  let token: string | null | undefined;
+  store.select(selectCurrentUser).pipe(take(1)).subscribe(u => { token = u?.rhToken; });
+  return token;
+}
+
+function withRhToken(req: HttpRequest<unknown>, token: string | null | undefined): HttpRequest<unknown> {
+  return token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` }, withCredentials: true })
+    : req.clone({ withCredentials: true });
+}
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const userStore = inject(UserStore);
-  const notify = inject(NotificationService);
+  // Use Store directly — avoids UserStore → HttpClient → interceptor → UserStore cycle.
+  const store    = inject(Store);
+  // Use Injector for lazy NotificationService — it's not a singleton singleton but
+  // injecting it eagerly here still risks timing issues during bootstrap.
+  const injector = inject(Injector);
+  const getNotify = () => injector.get(NotificationService);
 
-  const isPortal  = req.url.startsWith(environment.portalUrl);
-  const isHrApi   = req.url.startsWith(environment.hrApiUrl);
+  const isPortal = req.url.startsWith(environment.portalUrl);
+  const isHrApi  = req.url.startsWith(environment.hrApiUrl);
 
-  // Attach credentials to all our backends
-  let authReq = (isPortal || isHrApi)
-    ? req.clone({ withCredentials: true })
-    : req;
-
-  // For rh-service: also send the HMAC token as Bearer so the service can validate it
-  // without relying on cross-port cookie delivery.
-  if (isHrApi) {
-    const rhToken = userStore.currentUser()?.rhToken;
-    if (rhToken) {
-      authReq = authReq.clone({
-        setHeaders: { Authorization: `Bearer ${rhToken}` },
-      });
-    }
+  if (isPortal) {
+    return next(req.clone({ withCredentials: true })).pipe(
+      catchError(err => {
+        if (err.status === 401) {
+          window.location.href = `${environment.portalUrl}/oauth2/authorization/azure`;
+        }
+        return throwError(() => err);
+      }),
+    );
   }
 
-  return next(authReq).pipe(
-    catchError(err => {
-      if (err.status === 401 && isPortal) {
-        // Portal session expired → re-auth via Azure OAuth2.
-        window.location.href = `${environment.portalUrl}/oauth2/authorization/azure`;
-      } else if (err.status === 403) {
-        notify.error("Vous n'avez pas les droits pour cette action.", 'Accès refusé');
-      } else if (err.status >= 500) {
-        notify.error('Une erreur serveur est survenue. Veuillez réessayer.', 'Erreur serveur');
-      }
-      return throwError(() => err);
-    })
-  );
+  if (isHrApi) {
+    return next(withRhToken(req, getRhToken(store))).pipe(
+      catchError(err => {
+        if (err.status === 401) {
+          window.location.href = `${environment.portalUrl}/oauth2/authorization/azure`;
+        } else if (err.status === 403) {
+          getNotify().error("Vous n'avez pas les droits pour cette action.", 'Accès refusé');
+        } else if (err.status >= 500) {
+          getNotify().error('Une erreur serveur est survenue. Veuillez réessayer.', 'Erreur serveur');
+        }
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  return next(req);
 };

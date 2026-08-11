@@ -1,4 +1,13 @@
-const { withNativeFederation, shareAll } = require('@angular-architects/native-federation/config');
+const { withNativeFederation, shareAll, DEFAULT_SKIP_LIST } = require('@angular-architects/native-federation/config');
+
+const EXTRA_SKIP = [
+  'ckeditor5',
+  '@ckeditor/ckeditor5-angular',
+  '@schematics/angular',
+  'vite',
+  pkg => pkg.startsWith('@angular/cdk/testing'),
+  pkg => pkg.startsWith('@angular/') && pkg.includes('/schematics'),
+];
 
 module.exports = withNativeFederation({
   name: 'rh',
@@ -8,7 +17,10 @@ module.exports = withNativeFederation({
   },
 
   shared: {
-    ...shareAll({ singleton: true, strictVersion: false, requiredVersion: 'auto' }),
+    ...shareAll(
+      { singleton: true, strictVersion: false, requiredVersion: 'auto' },
+      { skipList: [...DEFAULT_SKIP_LIST, ...EXTRA_SKIP] }
+    ),
     '@angular/core': { singleton: true, strictVersion: false, requiredVersion: '^21.2.0' },
     '@angular/common': { singleton: true, strictVersion: false, requiredVersion: '^21.2.0' },
     '@angular/router': { singleton: true, strictVersion: false, requiredVersion: '^21.2.0' },
@@ -32,5 +44,10 @@ module.exports = withNativeFederation({
       requiredVersion: 'auto',
     },
   },
-  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
+  skip: [
+    'rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket',
+    'ckeditor5', '@ckeditor/ckeditor5-angular',
+    '@schematics/angular', 'vite',
+    '@angular/cdk/testing-selenium-webdriver',
+  ],
 });

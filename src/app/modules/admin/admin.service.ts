@@ -8,6 +8,7 @@ import {
   Role, WorkingTimeRegime,
   OffboardingCatalogTask, OffboardingValidator, SaveCatalogTaskRequest,
   DocumentTemplate, SaveDocumentTemplateRequest, VariableDef,
+  DocumentTemplateVersion,
 } from './models/admin.model';
 
 @Injectable({ providedIn: 'root' })
@@ -152,6 +153,14 @@ export class AdminService {
       { htmlContent: html, paysId, employeeProfileId: employeeProfileId ?? null },
       { responseType: 'blob' }
     );
+  }
+
+  getTemplateVersions(id: number): Observable<DocumentTemplateVersion[]> {
+    return this.http.get<DocumentTemplateVersion[]>(`${this.base}/document-templates/${id}/versions`);
+  }
+
+  restoreTemplateVersion(id: number, versionId: number): Observable<DocumentTemplate> {
+    return this.http.post<DocumentTemplate>(`${this.base}/document-templates/${id}/versions/${versionId}/restore`, null);
   }
 
   // ── Offboarding task catalog ──────────────────────────────────────────────

@@ -1,13 +1,30 @@
 import {
-  Component, computed, ElementRef, inject, input, OnInit, signal, ViewChild,
+  Component, computed, ElementRef, inject, input, OnDestroy, OnInit, signal, ViewChild,
 } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import {
+  ClassicEditor,
+  Essentials, Paragraph, Heading,
+  Bold, Italic, Underline, Strikethrough,
+  Alignment,
+  FontSize,
+  List, Indent, IndentBlock,
+  Link,
+  Table, TableToolbar,
+  HorizontalLine,
+  BlockQuote,
+  GeneralHtmlSupport,
+  Undo,
+} from 'ckeditor5';
+import type { EditorConfig } from 'ckeditor5';
+import { CKEditorComponent, CKEditorModule } from '@ckeditor/ckeditor5-angular';
 
 import { AdminService } from './admin.service';
 import {
-  DocumentTemplate, SaveDocumentTemplateRequest,
+  DocumentTemplate, DocumentTemplateVersion, SaveDocumentTemplateRequest,
   TEMPLATE_CATEGORIES, VariableDef,
 } from './models/admin.model';
 import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
@@ -52,7 +69,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 @Component({
   selector: 'app-document-templates-admin',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [FormsModule, CKEditorModule, ButtonComponent, StatusBadgeComponent, TranslatePipe],
   template: `
     <!-- Header -->
     <div class="tmpl-header">
@@ -137,9 +154,16 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
           <div class="modal-header">
             <h4>{{ (editingId() ? 'ADMIN.docs.templates.editTitle' : 'ADMIN.docs.templates.newTemplate') | translate }}</h4>
-            <button class="icon-btn" (click)="closeForm()">
-              <span class="material-symbols-outlined">close</span>
-            </button>
+            <div class="modal-header-actions">
+              @if (editingId()) {
+                <button class="icon-btn history-toggle-btn" [class.active]="showHistory()" title="Historique des versions" (click)="toggleHistory()">
+                  <span class="material-symbols-outlined">history</span>
+                </button>
+              }
+              <button class="icon-btn" (click)="closeForm()">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
           </div>
 
           <div class="modal-body">
@@ -168,59 +192,155 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
             <!-- Editor + Variable picker -->
             <div class="editor-layout">
-              <!-- Left: HTML editor -->
+              <!-- Left: editor -->
               <div class="editor-pane">
                 <div class="editor-toolbar">
-                  <label class="form-label" style="margin:0">{{ 'ADMIN.docs.templates.htmlLabel' | translate }}</label>
+                  <!-- Mode toggle -->
+                  <div class="mode-toggle">
+                    <button class="mode-btn" [class.active]="editorMode() === 'wysiwyg'" (click)="switchToWysiwyg()" title="Éditeur visuel">
+                      <span class="material-symbols-outlined">wysiwyg</span>
+                      WYSIWYG
+                    </button>
+                    <button class="mode-btn" [class.active]="editorMode() === 'source'" (click)="switchToSource()" title="Code HTML brut">
+                      <span class="material-symbols-outlined">code</span>
+                      Source HTML
+                    </button>
+                  </div>
                   <button class="toolbar-btn" [title]="'ADMIN.docs.templates.insertDefaultTooltip' | translate"
                     (click)="insertDefaultTemplate()">
                     <span class="material-symbols-outlined">restart_alt</span> {{ 'ADMIN.docs.templates.templateBtn' | translate }}
                   </button>
                 </div>
-                <textarea
-                  #htmlEditor
-                  id="html-editor"
-                  class="html-textarea"
-                  [(ngModel)]="form.htmlContent"
-                  rows="22"
-                  spellcheck="false"
-                  [placeholder]="'ADMIN.docs.templates.htmlPlaceholder' | translate"
-                ></textarea>
-              </div>
 
-              <!-- Right: Variable picker -->
-              <div class="var-panel">
-                <div class="var-panel-title">{{ 'ADMIN.docs.templates.availableVariables' | translate }}</div>
-                <p class="var-hint">{{ 'ADMIN.docs.templates.variableHint' | translate }}</p>
-
-                @if (variableGroups().length === 0) {
-                  <div class="var-loading">{{ 'ADMIN.docs.templates.loading' | translate }}</div>
-                } @else {
-                  @for (group of variableGroups(); track group.name) {
-                    <div class="var-group">
-                      <div class="var-group-label">{{ group.name }}</div>
-                      @for (v of group.vars; track v.key) {
-                        <button class="var-chip" (click)="insertVariable(v.key)">
-                          <code class="var-code">{{ '{{' + v.key + '}}' }}</code>
-                          <span class="var-label-text">{{ v.labelFr }}</span>
-                        </button>
-                      }
-                    </div>
-                  }
+                <!-- CKEditor (WYSIWYG mode) -->
+                @if (editorMode() === 'wysiwyg') {
+                  <div class="ck-wrapper">
+                    <ckeditor
+                      [editor]="Editor"
+                      [config]="ckConfig"
+                      [(ngModel)]="bodyContent"
+                      (change)="syncContent()"
+                      (ready)="onEditorReady($event)"
+                    ></ckeditor>
+                  </div>
                 }
 
-                <!-- Preview profile ID -->
-                <div class="preview-section">
-                  <div class="var-group-label" style="margin-top:16px">{{ 'ADMIN.docs.templates.preview' | translate }}</div>
-                  <label class="form-label" style="margin-top:8px">{{ 'ADMIN.docs.templates.previewProfileLabel' | translate }}</label>
-                  <input class="form-input" type="number" [(ngModel)]="previewProfileId"
-                    [placeholder]="'ADMIN.docs.templates.previewProfilePlaceholder' | translate" />
-                  <daf-button [label]="'ADMIN.docs.templates.previewPdf' | translate" variant="ghost"
-                    [options]="{ iconStart: 'visibility', loading: previewing(), size: 'sm' }"
-                    (onClick)="preview()" style="margin-top:8px;display:block" />
+                <!-- Source textarea (Source mode) -->
+                @if (editorMode() === 'source') {
+                  <textarea
+                    #htmlEditor
+                    class="html-textarea"
+                    [(ngModel)]="form.htmlContent"
+                    rows="22"
+                    spellcheck="false"
+                    [placeholder]="'ADMIN.docs.templates.htmlPlaceholder' | translate"
+                  ></textarea>
+                }
+              </div>
+
+              <!-- Right: Variables | Live Preview panel -->
+              <div class="var-panel">
+                <!-- Tab toggle -->
+                <div class="panel-tabs">
+                  <button class="panel-tab" [class.active]="rightPanelMode() === 'variables'" (click)="switchToVariablesPanel()">
+                    <span class="material-symbols-outlined">data_object</span>
+                    Variables
+                  </button>
+                  <button class="panel-tab" [class.active]="rightPanelMode() === 'preview'" (click)="switchToPreviewPanel()">
+                    <span class="material-symbols-outlined">visibility</span>
+                    Aperçu rendu
+                  </button>
                 </div>
+
+                <!-- Variables tab content -->
+                @if (rightPanelMode() === 'variables') {
+                  <div class="var-panel-title">{{ 'ADMIN.docs.templates.availableVariables' | translate }}</div>
+                  <p class="var-hint">{{ 'ADMIN.docs.templates.variableHint' | translate }}</p>
+
+                  @if (variableGroups().length === 0) {
+                    <div class="var-loading">{{ 'ADMIN.docs.templates.loading' | translate }}</div>
+                  } @else {
+                    @for (group of variableGroups(); track group.name) {
+                      <div class="var-group">
+                        <div class="var-group-label">{{ group.name }}</div>
+                        @for (v of group.vars; track v.key) {
+                          <button class="var-chip" (click)="insertVariable(v.key)">
+                            <code class="var-code">{{ '{{' + v.key + '}}' }}</code>
+                            <span class="var-label-text">{{ v.labelFr }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  }
+
+                  <!-- Preview PDF -->
+                  <div class="preview-section">
+                    <div class="var-group-label" style="margin-top:16px">{{ 'ADMIN.docs.templates.preview' | translate }}</div>
+                    <label class="form-label" style="margin-top:8px">{{ 'ADMIN.docs.templates.previewProfileLabel' | translate }}</label>
+                    <input class="form-input" type="number" [(ngModel)]="previewProfileId"
+                      [placeholder]="'ADMIN.docs.templates.previewProfilePlaceholder' | translate" />
+                    <daf-button [label]="'ADMIN.docs.templates.previewPdf' | translate" variant="ghost"
+                      [options]="{ iconStart: 'picture_as_pdf', loading: previewing(), size: 'sm' }"
+                      (onClick)="preview()" style="margin-top:8px;display:block" />
+                  </div>
+                }
+
+                <!-- Live preview tab content -->
+                @if (rightPanelMode() === 'preview') {
+                  <div class="live-preview-wrap">
+                    <p class="var-hint">Rendu HTML en temps réel (mise à jour à chaque modification).</p>
+                    @if (previewSrc()) {
+                      <iframe
+                        class="live-preview-frame"
+                        [src]="previewSrc()!"
+                        sandbox="allow-scripts"
+                        title="Aperçu rendu HTML"
+                      ></iframe>
+                    } @else {
+                      <div class="live-preview-empty">
+                        <span class="material-symbols-outlined">description</span>
+                        <p>Commencez à éditer pour voir l'aperçu.</p>
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
+
+            <!-- Version History panel -->
+            @if (showHistory() && editingId()) {
+              <div class="history-panel">
+                <div class="history-header">
+                  <span class="material-symbols-outlined">history</span>
+                  <span class="history-title-text">Historique des versions</span>
+                  @if (versionsLoading()) {
+                    <span class="history-loading">
+                      <span class="material-symbols-outlined spin">autorenew</span>
+                    </span>
+                  }
+                </div>
+                @if (!versionsLoading() && versions().length === 0) {
+                  <p class="history-empty">Aucune version enregistrée pour ce modèle.</p>
+                }
+                @for (v of versions(); track v.id) {
+                  <div class="history-row">
+                    <span class="history-ver">v{{ v.versionNumber }}</span>
+                    <span class="history-date">{{ formatVersionDate(v.changedAt) }}</span>
+                    <span class="history-summary">{{ v.changeSummary || '—' }}</span>
+                    <button class="toolbar-btn restore-btn"
+                      [disabled]="restoringVersionId() === v.id"
+                      (click)="restoreVersion(v.id)">
+                      @if (restoringVersionId() === v.id) {
+                        <span class="material-symbols-outlined spin" style="font-size:14px">autorenew</span>
+                      } @else {
+                        <span class="material-symbols-outlined" style="font-size:14px">restore</span>
+                        Restaurer
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+            }
 
             @if (formError()) {
               <div class="error-banner">{{ formError() }}</div>
@@ -282,6 +402,8 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .modal-xl       { max-width:1100px }
     .modal-header   { display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--color-border) }
     .modal-header h4{ margin:0;font-size:15px;font-weight:700 }
+    .modal-header-actions { display:flex;align-items:center;gap:4px }
+    .history-toggle-btn.active { background:var(--color-bg-secondary);color:var(--color-primary) }
     .modal-body     { padding:20px 22px;overflow-y:auto }
     .modal-footer   { display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--color-border) }
 
@@ -295,9 +417,23 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .editor-layout  { display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start }
     .editor-pane    { display:flex;flex-direction:column;gap:8px }
     .editor-toolbar { display:flex;justify-content:space-between;align-items:center }
+
+    /* Mode toggle */
+    .mode-toggle    { display:flex;gap:4px;background:var(--color-bg-secondary);border-radius:8px;padding:3px }
+    .mode-btn       { display:flex;align-items:center;gap:5px;padding:5px 10px;border:none;border-radius:6px;background:transparent;color:var(--color-text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s }
+    .mode-btn:hover { color:var(--color-text) }
+    .mode-btn.active { background:var(--color-surface);color:var(--color-primary);box-shadow:0 1px 3px rgba(0,0,0,.12) }
+    .mode-btn .material-symbols-outlined { font-size:15px }
+
+    /* CKEditor wrapper */
+    .ck-wrapper     { border:1px solid var(--color-border);border-radius:8px;overflow:hidden }
+    .ck-wrapper :global(.ck-editor__editable) { min-height:360px;font-size:13px }
+
     .toolbar-btn    { display:flex;align-items:center;gap:4px;padding:5px 10px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-muted);font-size:12px;cursor:pointer;transition:background .12s }
-    .toolbar-btn:hover { background:var(--color-bg-secondary);color:var(--color-text) }
+    .toolbar-btn:hover:not(:disabled) { background:var(--color-bg-secondary);color:var(--color-text) }
+    .toolbar-btn:disabled { opacity:.5;cursor:not-allowed }
     .toolbar-btn .material-symbols-outlined { font-size:16px }
+
     .html-textarea  { width:100%;box-sizing:border-box;padding:12px;border:1px solid var(--color-border);border-radius:8px;font-family:'Cascadia Code','Fira Code',monospace;font-size:12px;line-height:1.6;background:var(--color-bg-secondary);color:var(--color-text);resize:vertical;outline:none;tab-size:2 }
     .html-textarea:focus { border-color:var(--color-primary) }
 
@@ -316,13 +452,47 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .var-loading     { font-size:12px;color:var(--color-text-muted);padding:8px }
     .preview-section { border-top:1px solid var(--color-border);margin-top:12px;padding-top:12px }
 
+    /* Panel tabs (Variables | Aperçu rendu) */
+    .panel-tabs      { display:flex;gap:3px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:3px;margin-bottom:10px }
+    .panel-tab       { flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:5px 6px;border:none;border-radius:6px;background:transparent;color:var(--color-text-muted);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap }
+    .panel-tab:hover { color:var(--color-text) }
+    .panel-tab.active { background:var(--color-primary);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15) }
+    .panel-tab .material-symbols-outlined { font-size:13px }
+
+    /* Live preview iframe */
+    .live-preview-wrap  { display:flex;flex-direction:column;flex:1;min-height:0 }
+    .live-preview-frame { width:100%;height:460px;border:1px solid var(--color-border);border-radius:8px;background:#fff }
+    .live-preview-empty { display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 16px;color:var(--color-text-muted);text-align:center }
+    .live-preview-empty .material-symbols-outlined { font-size:36px;opacity:.35 }
+    .live-preview-empty p { font-size:12px;margin:0 }
+
+    /* Version history */
+    .history-panel  { margin-top:16px;border:1px solid var(--color-border);border-radius:10px;overflow:hidden }
+    .history-header { display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border);font-size:12px;font-weight:700;color:var(--color-text) }
+    .history-header .material-symbols-outlined { font-size:17px;color:var(--color-primary) }
+    .history-title-text { flex:1 }
+    .history-loading { display:flex;align-items:center }
+    .history-empty  { font-size:12px;color:var(--color-text-muted);padding:12px 14px;margin:0 }
+    .history-row    { display:grid;grid-template-columns:42px 1fr 1fr auto;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--color-border);font-size:12px }
+    .history-row:first-of-type { border-top:none }
+    .history-ver    { font-weight:700;color:var(--color-primary);font-size:11px }
+    .history-date   { color:var(--color-text-muted) }
+    .history-summary { color:var(--color-text-muted);font-style:italic }
+    .restore-btn    { white-space:nowrap }
+
+    @keyframes spin  { to { transform:rotate(360deg) } }
+    .spin           { display:inline-block;animation:spin .8s linear infinite }
+
     .error-banner   { margin-top:12px;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px }
 
     @media(max-width:800px) {
       .editor-layout   { grid-template-columns:1fr }
-      .var-panel       { max-height:250px }
+      .var-panel       { max-height:300px }
+      .live-preview-frame { height:280px }
       .tmpl-head, .tmpl-row { grid-template-columns:1fr 90px 70px }
       .col-vars        { display:none }
+      .history-row     { grid-template-columns:42px 1fr auto }
+      .history-summary { display:none }
     }
     @media(max-width:500px) { .meta-grid { grid-template-columns:1fr } }
 
@@ -333,15 +503,47 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     }
   `],
 })
-export class DocumentTemplatesAdminComponent implements OnInit {
-  private svc = inject(AdminService);
+export class DocumentTemplatesAdminComponent implements OnInit, OnDestroy {
+  private svc       = inject(AdminService);
   private translate = inject(TranslateService);
+  private sanitizer = inject(DomSanitizer);
 
   paysId = input.required<number>();
 
-  @ViewChild('htmlEditor') htmlEditorRef!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('htmlEditor') private htmlEditorRef?: ElementRef<HTMLTextAreaElement>;
+  @ViewChild(CKEditorComponent) private ckEditorRef?: CKEditorComponent;
 
   protected readonly TEMPLATE_CATEGORIES = TEMPLATE_CATEGORIES;
+  protected readonly Editor = ClassicEditor;
+  protected readonly ckConfig: EditorConfig = {
+    licenseKey: 'GPL',
+    plugins: [
+      Essentials, Paragraph, Heading,
+      Bold, Italic, Underline, Strikethrough,
+      Alignment, FontSize,
+      List, Indent, IndentBlock,
+      Link,
+      Table, TableToolbar,
+      HorizontalLine, BlockQuote,
+      GeneralHtmlSupport, Undo,
+    ],
+    toolbar: {
+      items: [
+        'heading', '|',
+        'bold', 'italic', 'underline', 'strikethrough', '|',
+        'fontSize', 'alignment', '|',
+        'bulletedList', 'numberedList', 'indent', 'outdent', '|',
+        'link', 'insertTable', 'horizontalLine', 'blockQuote', '|',
+        'undo', 'redo',
+      ],
+    },
+    htmlSupport: {
+      allow: [{ name: /^.+$/, attributes: true, classes: true, styles: true }],
+    },
+    table: {
+      contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells'],
+    },
+  };
 
   // ── State ──────────────────────────────────────────────────────────────────
   filterCategory = '';
@@ -355,6 +557,22 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   saving    = signal(false);
   previewing = signal(false);
   formError = signal<string | null>(null);
+
+  editorMode = signal<'wysiwyg' | 'source'>('wysiwyg');
+  bodyContent = '';
+  private headPart = '';
+
+  // Right sidebar: variables vs live preview toggle
+  rightPanelMode  = signal<'variables' | 'preview'>('variables');
+  previewSrc      = signal<SafeResourceUrl | null>(null);
+  private previewBlobUrl:    string | null              = null;
+  private previewDebounce:   ReturnType<typeof setTimeout> | null = null;
+  private headCssStyleEl:    HTMLStyleElement | null    = null;
+
+  showHistory       = signal(false);
+  versionsLoading   = signal(false);
+  versions          = signal<DocumentTemplateVersion[]>([]);
+  restoringVersionId = signal<number | null>(null);
 
   previewProfileId: number | null = null;
 
@@ -392,62 +610,204 @@ export class DocumentTemplatesAdminComponent implements OnInit {
 
   openAdd() {
     this.editingId.set(null);
-    this.form = {
-      paysId:      this.paysId(),
-      category:    this.filterCategory,
-      name:        '',
-      description: '',
-      htmlContent: '',
-    };
+    this.form = { paysId: this.paysId(), category: this.filterCategory, name: '', description: '', htmlContent: '' };
+    this.bodyContent = '';
+    this.headPart = '';
     this.previewProfileId = null;
     this.formError.set(null);
+    this.showHistory.set(false);
+    this.versions.set([]);
+    this.editorMode.set('wysiwyg');
     this.showForm.set(true);
   }
 
   openEdit(t: DocumentTemplate) {
     this.editingId.set(t.id);
-    this.form = {
-      paysId:      t.paysId,
-      category:    t.category,
-      name:        t.name,
-      description: t.description ?? '',
-      htmlContent: t.htmlContent,
-    };
+    this.form = { paysId: t.paysId, category: t.category, name: t.name, description: t.description ?? '', htmlContent: t.htmlContent };
+    const split = this.splitHtml(t.htmlContent);
+    this.headPart = split.head;
+    this.bodyContent = split.body;
     this.previewProfileId = null;
     this.formError.set(null);
+    this.showHistory.set(false);
+    this.versions.set([]);
+    this.editorMode.set('wysiwyg');
     this.showForm.set(true);
+  }
+
+  ngOnDestroy() {
+    if (this.previewBlobUrl) URL.revokeObjectURL(this.previewBlobUrl);
+    if (this.headCssStyleEl) this.headCssStyleEl.remove();
+    if (this.previewDebounce) clearTimeout(this.previewDebounce);
+  }
+
+  // ── CKEditor CSS injection ──────────────────────────────────────────────────
+  onEditorReady(_editor: unknown) {
+    this.injectCkStyles();
+  }
+
+  private injectCkStyles() {
+    if (this.headCssStyleEl) { this.headCssStyleEl.remove(); this.headCssStyleEl = null; }
+    const css = this.extractHeadCss();
+    if (!css.trim()) return;
+    const scoped = this.scopeCssToEditable(css);
+    const el = document.createElement('style');
+    el.setAttribute('data-ck-tmpl', '');
+    el.textContent = scoped;
+    document.head.appendChild(el);
+    this.headCssStyleEl = el;
+  }
+
+  private extractHeadCss(): string {
+    const matches = this.headPart.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) ?? [];
+    return matches
+      .map(m => m.replace(/<style[^>]*>/i, '').replace(/<\/style>/i, ''))
+      .join('\n');
+  }
+
+  private scopeCssToEditable(css: string): string {
+    // Scope each CSS rule to .ck-editor__editable; map `body` → editable root
+    return css.replace(/([^{}@]+)\{([^{}]*)\}/g, (_match, selector: string, body: string) => {
+      const trimSel = selector.trim();
+      if (!trimSel) return _match;
+      const scoped = trimSel.split(',').map(s => {
+        const st = s.trim();
+        if (!st) return '';
+        if (st === 'body') return '.ck-editor__editable';
+        return `.ck-editor__editable ${st}`;
+      }).filter(Boolean).join(', ');
+      return `${scoped} { ${body.trim()} }`;
+    });
+  }
+
+  // ── Live preview ────────────────────────────────────────────────────────────
+  switchToPreviewPanel() {
+    this.rightPanelMode.set('preview');
+    this.updatePreview();
+  }
+
+  switchToVariablesPanel() {
+    this.rightPanelMode.set('variables');
+  }
+
+  private schedulePreviewUpdate() {
+    if (this.previewDebounce) clearTimeout(this.previewDebounce);
+    this.previewDebounce = setTimeout(() => this.updatePreview(), 400);
+  }
+
+  private updatePreview() {
+    if (this.previewBlobUrl) URL.revokeObjectURL(this.previewBlobUrl);
+    const html = this.buildHtml();
+    const blob = new Blob([html], { type: 'text/html' });
+    this.previewBlobUrl = URL.createObjectURL(blob);
+    this.previewSrc.set(this.sanitizer.bypassSecurityTrustResourceUrl(this.previewBlobUrl));
   }
 
   closeForm() { this.showForm.set(false); }
 
   isFormValid(): boolean {
-    return !!(this.form.category && this.form.name.trim() && this.form.htmlContent.trim());
+    const hasContent = this.editorMode() === 'source'
+      ? !!this.form.htmlContent.trim()
+      : !!this.bodyContent.trim();
+    return !!(this.form.category && this.form.name.trim() && hasContent);
   }
 
   insertDefaultTemplate() {
+    const split = this.splitHtml(DEFAULT_HTML);
+    this.headPart = split.head;
+    this.bodyContent = split.body;
     this.form.htmlContent = DEFAULT_HTML;
     if (!this.form.category) this.form.category = 'ATTESTATION';
   }
 
   insertVariable(key: string) {
-    const ta = this.htmlEditorRef?.nativeElement;
-    if (!ta) {
-      this.form.htmlContent += `{{${key}}}`;
+    const token = `{{${key}}}`;
+
+    if (this.editorMode() === 'wysiwyg') {
+      const editor = this.ckEditorRef?.editorInstance;
+      if (editor) {
+        editor.model.change(writer => {
+          editor.model.insertContent(
+            writer.createText(token),
+            editor.model.document.selection,
+          );
+        });
+        return;
+      }
+      this.bodyContent += token;
+      this.syncContent();
       return;
     }
-    const start   = ta.selectionStart ?? this.form.htmlContent.length;
-    const end     = ta.selectionEnd   ?? start;
-    const token   = `{{${key}}}`;
+
+    const ta = this.htmlEditorRef?.nativeElement;
+    if (!ta) { this.form.htmlContent += token; return; }
+    const start = ta.selectionStart ?? this.form.htmlContent.length;
+    const end   = ta.selectionEnd   ?? start;
     this.form.htmlContent =
       this.form.htmlContent.substring(0, start) + token + this.form.htmlContent.substring(end);
-    setTimeout(() => {
-      ta.selectionStart = ta.selectionEnd = start + token.length;
-      ta.focus();
+    setTimeout(() => { ta.selectionStart = ta.selectionEnd = start + token.length; ta.focus(); });
+  }
+
+  switchToWysiwyg() {
+    if (this.editorMode() === 'wysiwyg') return;
+    const split = this.splitHtml(this.form.htmlContent);
+    this.headPart = split.head;
+    this.bodyContent = split.body;
+    this.editorMode.set('wysiwyg');
+    setTimeout(() => this.injectCkStyles(), 50);
+  }
+
+  switchToSource() {
+    if (this.editorMode() === 'source') return;
+    this.form.htmlContent = this.buildHtml();
+    this.editorMode.set('source');
+  }
+
+  syncContent() {
+    this.form.htmlContent = this.buildHtml();
+    if (this.rightPanelMode() === 'preview') this.schedulePreviewUpdate();
+  }
+
+  toggleHistory() {
+    const id = this.editingId();
+    if (!id) return;
+    const next = !this.showHistory();
+    this.showHistory.set(next);
+    if (next && this.versions().length === 0) this.loadVersions(id);
+  }
+
+  private loadVersions(id: number) {
+    this.versionsLoading.set(true);
+    this.svc.getTemplateVersions(id)
+      .pipe(catchError(() => of([])))
+      .subscribe(v => { this.versions.set(v); this.versionsLoading.set(false); });
+  }
+
+  restoreVersion(versionId: number) {
+    const id = this.editingId();
+    if (!id) return;
+    this.restoringVersionId.set(versionId);
+    this.svc.restoreTemplateVersion(id, versionId).pipe(
+      catchError(err => {
+        this.formError.set(err?.error?.message ?? 'Erreur lors de la restauration.');
+        this.restoringVersionId.set(null);
+        return of(null);
+      }),
+    ).subscribe(result => {
+      this.restoringVersionId.set(null);
+      if (!result) return;
+      this.form.htmlContent = result.htmlContent;
+      const split = this.splitHtml(result.htmlContent);
+      this.headPart = split.head;
+      this.bodyContent = split.body;
+      if (this.editorMode() === 'source') this.editorMode.set('wysiwyg');
+      this.loadVersions(id);
     });
   }
 
   save() {
     if (!this.isFormValid()) return;
+    this.form.htmlContent = this.buildHtml();
     const id      = this.editingId();
     const payload = { ...this.form, description: this.form.description || undefined };
     this.saving.set(true);
@@ -470,13 +830,10 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   }
 
   preview() {
-    if (!this.form.htmlContent.trim()) return;
+    const html = this.buildHtml();
+    if (!html.trim()) return;
     this.previewing.set(true);
-    this.svc.previewRawTemplate(
-      this.form.htmlContent,
-      this.paysId(),
-      this.previewProfileId ?? undefined,
-    ).pipe(
+    this.svc.previewRawTemplate(html, this.paysId(), this.previewProfileId ?? undefined).pipe(
       catchError(() => { this.previewing.set(false); return of(null); }),
     ).subscribe(blob => {
       this.previewing.set(false);
@@ -500,5 +857,30 @@ export class DocumentTemplatesAdminComponent implements OnInit {
     const key = `ADMIN.docs.templates.category.${cat}`;
     const val = this.translate.instant(key);
     return val === key ? cat : val;
+  }
+
+  formatVersionDate(iso: string): string {
+    try {
+      return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return iso; }
+  }
+
+  private splitHtml(full: string): { head: string; body: string } {
+    const bodyOpenMatch = full.match(/<body[^>]*>/i);
+    const bodyCloseIdx = full.lastIndexOf('</body>');
+    if (bodyOpenMatch?.index !== undefined && bodyCloseIdx !== -1) {
+      const bodyStart = bodyOpenMatch.index + bodyOpenMatch[0].length;
+      return {
+        head: full.substring(0, bodyStart),
+        body: full.substring(bodyStart, bodyCloseIdx).trim(),
+      };
+    }
+    return { head: '', body: full };
+  }
+
+  private buildHtml(): string {
+    if (this.editorMode() === 'source') return this.form.htmlContent;
+    if (!this.headPart) return this.bodyContent;
+    return `${this.headPart}\n${this.bodyContent}\n</body>\n</html>`;
   }
 }

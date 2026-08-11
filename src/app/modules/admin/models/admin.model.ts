@@ -232,6 +232,16 @@ export interface SaveDocumentTemplateRequest {
   pageSize?:    string;
 }
 
+export interface DocumentTemplateVersion {
+  id:            number;
+  templateId:    number;
+  versionNumber: number;
+  htmlContent:   string;
+  changedBy:     number | null;
+  changedAt:     string;
+  changeSummary: string | null;
+}
+
 export interface SaveCatalogTaskRequest {
   paysId:         number;
   contractType:   string;

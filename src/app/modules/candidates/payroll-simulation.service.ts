@@ -3,9 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export type SimulationMode = 'NET_TO_BRUT' | 'BRUT_TO_NET';
+
 export interface SimulateFromNetRequest {
   paysId: number;
-  inputNet: number;
+  /** NET_TO_BRUT: required. BRUT_TO_NET: ignored. */
+  inputNet?: number;
+  /** BRUT_TO_NET: required. NET_TO_BRUT: ignored. */
+  inputGross?: number;
+  /** Defaults to NET_TO_BRUT when omitted. */
+  mode?: SimulationMode;
   contractType?: string;
   joursTravailes?: number;
 }
@@ -33,6 +40,7 @@ export interface PayrollSimulationResult {
   rubriquesApplied?: string;
   iterationsUsed: number;
   convergenceOk: boolean;
+  mode: SimulationMode | null;
   simulatedAt: string;
 }
 

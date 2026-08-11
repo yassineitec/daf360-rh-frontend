@@ -5,6 +5,7 @@ import { CandidateDetail } from './candidate.model';
 import {
   PayrollSimulationService,
   PayrollSimulationResult,
+  SimulationMode,
   SubmitCostApprovalRequest,
   CandidateCostApprovalDto,
 } from './payroll-simulation.service';
@@ -22,23 +23,79 @@ import { SectionCardComponent } from '../../shared/detail/section-card.component
          tint: one section shell on /rh/candidates/:id (UI-PLAYBOOK §10f). -->
     <rh-section-card title="Simulation de coût salarial" icon="calculate" accent="tertiary">
       <div class="space-y-5">
+        <!-- Mode toggle -->
+        <div class="flex rounded-xl border border-outline-variant overflow-hidden text-[12px] font-semibold">
+          <button type="button"
+                  class="flex-1 flex items-center justify-center gap-1 px-3 py-2 transition-colors"
+                  [class.bg-teal]="simMode() === 'NET_TO_BRUT'"
+                  [class.text-white]="simMode() === 'NET_TO_BRUT'"
+                  [class.text-on-surface-variant]="simMode() !== 'NET_TO_BRUT'"
+                  (click)="setSimMode('NET_TO_BRUT')">
+            <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+            Net → Brut
+          </button>
+          <button type="button"
+                  class="flex-1 flex items-center justify-center gap-1 px-3 py-2 border-l border-outline-variant transition-colors"
+                  [class.bg-teal]="simMode() === 'BRUT_TO_NET'"
+                  [class.text-white]="simMode() === 'BRUT_TO_NET'"
+                  [class.text-on-surface-variant]="simMode() !== 'BRUT_TO_NET'"
+                  (click)="setSimMode('BRUT_TO_NET')">
+            <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+            Brut → Net
+          </button>
+        </div>
+
+        <!-- Period toggle -->
+        <div class="flex rounded-xl border border-outline-variant overflow-hidden text-[12px] font-semibold">
+          <button type="button"
+                  class="flex-1 flex items-center justify-center gap-1 px-3 py-2 transition-colors"
+                  [class.bg-teal]="period() === 'MONTHLY'"
+                  [class.text-white]="period() === 'MONTHLY'"
+                  [class.text-on-surface-variant]="period() !== 'MONTHLY'"
+                  (click)="setPeriod('MONTHLY')">
+            <span class="material-symbols-outlined text-[14px]">calendar_view_month</span>
+            Mensuel
+          </button>
+          <button type="button"
+                  class="flex-1 flex items-center justify-center gap-1 px-3 py-2 border-l border-outline-variant transition-colors"
+                  [class.bg-teal]="period() === 'YEARLY'"
+                  [class.text-white]="period() === 'YEARLY'"
+                  [class.text-on-surface-variant]="period() !== 'YEARLY'"
+                  (click)="setPeriod('YEARLY')">
+            <span class="material-symbols-outlined text-[14px]">calendar_month</span>
+            Annuel
+          </button>
+        </div>
+
         <!-- Input row -->
         <div class="flex items-end gap-3">
           <div class="flex-1">
-            <label class="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-1.5">
-              Salaire net RH ({{ localCurrency() }})
-            </label>
-            <input type="number" min="0" step="100"
-                   class="w-full rounded-xl border border-outline-variant px-3.5 py-2.5 text-[14px]
-                          focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-colors"
-                   [ngModel]="salaireNetRh()"
-                   (ngModelChange)="salaireNetRh.set($event)" />
+            @if (simMode() === 'NET_TO_BRUT') {
+              <label class="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-1.5">
+                Salaire net RH {{ period() === 'YEARLY' ? 'annuel' : 'mensuel' }} ({{ localCurrency() }})
+              </label>
+              <input type="number" min="0" step="100"
+                     class="w-full rounded-xl border border-outline-variant px-3.5 py-2.5 text-[14px]
+                            focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-colors"
+                     [ngModel]="salaireNetRh()"
+                     (ngModelChange)="salaireNetRh.set($event)" />
+            } @else {
+              <label class="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-1.5">
+                Salaire brut {{ period() === 'YEARLY' ? 'annuel' : 'mensuel' }} ({{ localCurrency() }})
+              </label>
+              <input type="number" min="0" step="100"
+                     class="w-full rounded-xl border border-outline-variant px-3.5 py-2.5 text-[14px]
+                            focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-colors"
+                     [ngModel]="inputGross()"
+                     (ngModelChange)="inputGross.set($event)" />
+            }
           </div>
           <div class="shrink-0">
             <daf-button
               label="Calculer"
               [options]="{ variant: 'teal', pill: true, iconStart: 'calculate',
-                           loading: calculating(), disabled: !salaireNetRh() || calculating() }"
+                           loading: calculating(),
+                           disabled: (simMode() === 'NET_TO_BRUT' ? !salaireNetRh() : !inputGross()) || calculating() }"
               (onClick)="calculate()" />
           </div>
         </div>
@@ -96,8 +153,35 @@ import { SectionCardComponent } from '../../shared/detail/section-card.component
                     {{ row.value | number:'1.2-2' }} {{ localCurrency() }}
                     @if (row.eur) { <span class="text-[11px] text-on-surface-variant ml-1">(≈ {{ row.eur | number:'1.0-0' }} €)</span> }
                   </p>
+                  <p class="text-[10px] text-on-surface-variant/70 tabular-nums mt-0.5">
+                    ≈ {{ row.annual | number:'1.0-0' }} {{ localCurrency() }} / an
+                  </p>
                 </div>
               }
+            </div>
+
+            <!-- Annual net / loaded cost summary -->
+            <div class="rounded-xl border border-outline-variant/40 overflow-hidden">
+              <div class="px-3 py-1.5 bg-surface-container-low border-b border-outline-variant/30 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[13px] text-outline" style="font-variation-settings:'FILL' 1">event_repeat</span>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Annuel (× 12)</p>
+              </div>
+              <div class="grid grid-cols-2 divide-x divide-outline-variant/30">
+                <div class="px-4 py-2.5">
+                  <p class="text-[9px] text-on-surface-variant uppercase tracking-wide mb-0.5">Net / an</p>
+                  <p class="text-[13px] font-semibold tabular-nums">
+                    {{ (result()!.gross - result()!.employeeCharges - result()!.irppAmount) * 12 | number:'1.0-0' }}
+                    <span class="text-[11px] font-normal text-on-surface-variant">{{ localCurrency() }}</span>
+                  </p>
+                </div>
+                <div class="px-4 py-2.5">
+                  <p class="text-[9px] text-on-surface-variant uppercase tracking-wide mb-0.5">Coût chargé / an</p>
+                  <p class="text-[14px] font-bold text-teal tabular-nums">
+                    {{ result()!.loadedCost * 12 | number:'1.0-0' }}
+                    <span class="text-[11px] font-normal text-on-surface-variant">{{ localCurrency() }}</span>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -146,6 +230,9 @@ export class CandidateCostSimulationComponent implements OnInit {
   private userStore     = inject(UserStore);
 
   salaireNetRh  = signal<number | null>(null);
+  inputGross    = signal<number | null>(null);
+  simMode       = signal<SimulationMode>('NET_TO_BRUT');
+  period        = signal<'MONTHLY' | 'YEARLY'>('MONTHLY');
   result        = signal<PayrollSimulationResult | null>(null);
   calculating   = signal(false);
   calcError     = signal<string | null>(null);
@@ -166,12 +253,15 @@ export class CandidateCostSimulationComponent implements OnInit {
   readonly resultRows = computed(() => {
     const r = this.result();
     if (!r) return [];
+    // Net in hand: always computed from reliable fields — r.inputNet is unreliable in BRUT_TO_NET mode
+    const netMonthly = r.gross - r.employeeCharges - r.irppAmount;
     return [
-      { label: 'Salaire brut',     value: r.gross,           highlight: false, eur: r.fxRateEur ? r.gross          / r.fxRateEur : null },
-      { label: 'Charges salarié',  value: r.employeeCharges, highlight: false, eur: null },
-      { label: 'IRPP',             value: r.irppAmount,      highlight: false, eur: null },
-      { label: 'Charges employeur',value: r.employerCharges, highlight: false, eur: null },
-      { label: 'Coût chargé',      value: r.loadedCost,      highlight: true,  eur: r.loadedCostEur ?? null },
+      { label: 'Salaire brut',     value: r.gross,           annual: r.gross * 12,           highlight: false, eur: r.fxRateEur ? r.gross / r.fxRateEur : null },
+      { label: 'Charges salarié',  value: r.employeeCharges, annual: r.employeeCharges * 12,  highlight: false, eur: null },
+      { label: 'IRPP',             value: r.irppAmount,       annual: r.irppAmount * 12,       highlight: false, eur: null },
+      { label: 'Salaire net',      value: netMonthly,         annual: netMonthly * 12,         highlight: true,  eur: r.fxRateEur ? netMonthly / r.fxRateEur : null },
+      { label: 'Charges employeur',value: r.employerCharges,  annual: r.employerCharges * 12,  highlight: false, eur: null },
+      { label: 'Coût chargé',      value: r.loadedCost,       annual: r.loadedCost * 12,       highlight: true,  eur: r.loadedCostEur ?? null },
     ];
   });
 
@@ -195,17 +285,37 @@ export class CandidateCostSimulationComponent implements OnInit {
     });
   }
 
+  setSimMode(m: SimulationMode): void {
+    this.simMode.set(m);
+    this.result.set(null);
+    this.calcError.set(null);
+  }
+
+  setPeriod(p: 'MONTHLY' | 'YEARLY'): void {
+    this.period.set(p);
+    this.result.set(null);
+    this.calcError.set(null);
+  }
+
   calculate(): void {
-    const net = this.salaireNetRh();
-    if (!net || net <= 0) return;
+    const mode  = this.simMode();
+    const net   = this.salaireNetRh();
+    const gross = this.inputGross();
+
+    if (mode === 'NET_TO_BRUT' && (!net || net <= 0)) return;
+    if (mode === 'BRUT_TO_NET' && (!gross || gross <= 0)) return;
+
     this.calculating.set(true);
     this.calcError.set(null);
     this.result.set(null);
     this.submitted.set(false);
 
+    const divisor = this.period() === 'YEARLY' ? 12 : 1;
     this.simulationSvc.simulateFromNet({
       paysId:       this.candidate.paysId,
-      inputNet:     net,
+      mode,
+      inputNet:     mode === 'NET_TO_BRUT' ? net!   / divisor : undefined,
+      inputGross:   mode === 'BRUT_TO_NET' ? gross! / divisor : undefined,
       contractType: this.contractCode(),
     }).subscribe({
       next:  res  => { this.result.set(res); this.calculating.set(false); },
@@ -259,18 +369,18 @@ export class CandidateCostSimulationComponent implements OnInit {
   }
 
   submitForApproval(): void {
-    const r   = this.result();
-    const net = this.salaireNetRh();
-    if (!r || !net) return;
+    const r = this.result();
+    if (!r) return;
 
     this.submitting.set(true);
     this.submitError.set(null);
 
+    // r.inputNet is always the actual net in hand regardless of simulation mode
     const req: SubmitCostApprovalRequest = {
       candidateId:        this.candidate.id,
       paysId:             this.candidate.paysId,
       fiscalYear:         new Date().getFullYear(),
-      salaireNetRh:       net,
+      salaireNetRh:       r.inputNet,
       salaireNetCandidat: this.candidate.salaireNetCandidat ?? undefined,
       contractTypeCode:   this.contractCode(),
       simulationSnapshot: JSON.stringify(r),
