@@ -92,6 +92,9 @@
       "LOADING": "Chargement…",
       "SENDING": "Envoi…",
       "NONE": "— Aucun —",
+      "EDIT": "Modifier",
+      "SAVE": "Enregistrer",
+      "REMOVE": "Retirer",
       "COMMENT_PLACEHOLDER": "Commentaire…"
     },
     "STATUS": {
@@ -317,6 +320,7 @@
       "TITLE": "Entretiens",
       "SCHEDULE": "Planifier",
       "SCHEDULE_TITLE": "Planifier un entretien",
+      "EDIT_TITLE": "Modifier l'entretien",
       "LOADING_TYPES": "Chargement des types...",
       "NO_TYPES": "Aucun type d'entretien actif disponible. Configurez-en dans l'Administration.",
       "TYPE": "Type",
@@ -326,6 +330,8 @@
       "LOCATION_PLACEHOLDER": "Ex : Salle A, Zoom…",
       "NOTES_OPTIONAL": "Notes (optionnel)",
       "INTERVIEWER": "Interviewer (optionnel)",
+      "INTERVIEWERS": "Interviewers (optionnel)",
+      "INTERVIEWERS_PLACEHOLDER": "Sélectionner un ou plusieurs interviewers",
       "RESULT_PASS": "✓ Validé",
       "RESULT_FAIL": "✗ Non validé",
       "PASS": "Réussi",

@@ -23,6 +23,8 @@ import {
 
 type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
 
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
 @Component({
   selector: 'app-candidate-interviews',
   standalone: true,
@@ -67,7 +69,9 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
       <!-- Schedule form -->
       @if (showForm()) {
         <div class="p-4 mb-4 rounded-xl" style="background:var(--color-surface-container-low);border:1px solid var(--color-outline-variant)">
-          <p class="text-[12px] font-semibold text-on-surface mb-3">{{ 'CANDIDATES.INTERVIEWS.SCHEDULE_TITLE' | translate }}</p>
+          <p class="text-[12px] font-semibold text-on-surface mb-3">
+            {{ (editingId() ? 'CANDIDATES.INTERVIEWS.EDIT_TITLE' : 'CANDIDATES.INTERVIEWS.SCHEDULE_TITLE') | translate }}
+          </p>
 
           @if (typesLoading()) {
             <div class="flex items-center gap-2 py-2 text-[12px] text-outline">
@@ -108,6 +112,8 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                   (valueChange)="formNotes.set($any($event) ?? '')" />
               </div>
 
+              <!-- Panel: several interviewers can sit on the same interview. The
+                   first one picked stays the lead (calendar owner, list column). -->
               <div class="sm:col-span-2">
                 @if (usersLoading()) {
                   <p class="text-[12px] text-outline py-1">{{ 'CANDIDATES.COMMON.LOADING' | translate }}</p>
@@ -115,8 +121,21 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                   <daf-select
                     [selected]="interviewerSelected()"
                     [options]="interviewerOptions()"
-                    [config]="{ label: ('CANDIDATES.INTERVIEWS.INTERVIEWER' | translate), placeholder: ('CANDIDATES.COMMON.NONE' | translate), fullWidth: true, searchable: true }"
-                    (selectedChange)="onInterviewerChange($event)" />
+                    [config]="{ label: ('CANDIDATES.INTERVIEWS.INTERVIEWERS' | translate), placeholder: ('CANDIDATES.INTERVIEWS.INTERVIEWERS_PLACEHOLDER' | translate), fullWidth: true, searchable: true, multiple: true }"
+                    (selectedChange)="onInterviewersChange($event)" />
+                  @if (formInterviewerIds().length) {
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                      @for (u of selectedInterviewers(); track u.id) {
+                        <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[11px]"
+                              style="background:var(--color-tertiary-container);color:var(--color-tertiary)">
+                          {{ u.fullName }}
+                          <button type="button" class="material-symbols-outlined text-[13px] leading-none"
+                                  [attr.aria-label]="'CANDIDATES.COMMON.REMOVE' | translate"
+                                  (click)="removeInterviewer(u.id)">close</button>
+                        </span>
+                      }
+                    </div>
+                  }
                 }
               </div>
             </div>
@@ -128,9 +147,11 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
           <div class="flex justify-end gap-2 mt-3">
             <daf-button [label]="'CANDIDATES.COMMON.CANCEL' | translate" variant="ghost" [options]="{ size: 'sm' }"
               (onClick)="cancelForm()" />
-            <daf-button [label]="'CANDIDATES.INTERVIEWS.SCHEDULE' | translate" variant="teal"
+            <daf-button
+              [label]="(editingId() ? 'CANDIDATES.COMMON.SAVE' : 'CANDIDATES.INTERVIEWS.SCHEDULE') | translate"
+              variant="teal"
               [options]="{ size: 'sm', loading: formLoading(), disabled: formLoading() || !activeTypes().length }"
-              (onClick)="submitCreate()" />
+              (onClick)="submitForm()" />
           </div>
         </div>
       }
@@ -194,10 +215,12 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                           {{ iv.location }}
                         </span>
                       }
-                      @if (iv.interviewerName) {
+                      @if (interviewerNames(iv)) {
                         <span class="flex items-center gap-1">
-                          <span class="material-symbols-outlined text-[13px]">person</span>
-                          {{ iv.interviewerName }}
+                          <span class="material-symbols-outlined text-[13px]">
+                            {{ (iv.interviewers?.length ?? 0) > 1 ? 'groups' : 'person' }}
+                          </span>
+                          {{ interviewerNames(iv) }}
                         </span>
                       }
                     </div>
@@ -208,31 +231,46 @@ type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
                     }
                   </div>
 
-                  <!-- Action buttons (PLANNED only) -->
-                  @if (canManage() && iv.status === 'PLANNED' && updatingId() !== iv.id) {
+                  <!-- Actions. Edit stays available until the interview is DONE —
+                       a finished interview is a record and the backend rejects edits. -->
+                  @if (canManage() && iv.status !== 'DONE' && updatingId() !== iv.id) {
                     <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
                       <button type="button"
-                              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
-                              style="border-color:var(--color-tertiary);color:var(--color-tertiary);background:var(--color-tertiary-container)"
-                              (click)="openUpdate(iv, 'DONE_PASS')">
-                        {{ 'CANDIDATES.INTERVIEWS.PASS' | translate }}
-                      </button>
-                      <button type="button"
-                              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
-                              style="border-color:var(--color-danger);color:var(--color-danger);background:var(--color-error-container)"
-                              (click)="openUpdate(iv, 'DONE_FAIL')">
-                        {{ 'CANDIDATES.INTERVIEWS.FAIL' | translate }}
-                      </button>
-                      <button type="button"
                               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border
-                                     border-outline-variant"
+                                     border-outline-variant inline-flex items-center gap-1"
                               style="color:var(--color-on-surface-variant);background:var(--color-surface-container-low)"
-                              (click)="openUpdate(iv, 'CANCELLED')">
-                        {{ 'CANDIDATES.COMMON.CANCEL' | translate }}
+                              (click)="openEdit(iv)">
+                        <span class="material-symbols-outlined text-[13px]">edit</span>
+                        {{ 'CANDIDATES.COMMON.EDIT' | translate }}
                       </button>
                     </div>
                   }
                 </div>
+
+                <!-- Status transitions (PLANNED only) -->
+                @if (canManage() && iv.status === 'PLANNED' && updatingId() !== iv.id) {
+                  <div class="flex items-center gap-1.5 flex-wrap justify-end mt-2">
+                    <button type="button"
+                            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
+                            style="border-color:var(--color-tertiary);color:var(--color-tertiary);background:var(--color-tertiary-container)"
+                            (click)="openUpdate(iv, 'DONE_PASS')">
+                      {{ 'CANDIDATES.INTERVIEWS.PASS' | translate }}
+                    </button>
+                    <button type="button"
+                            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
+                            style="border-color:var(--color-danger);color:var(--color-danger);background:var(--color-error-container)"
+                            (click)="openUpdate(iv, 'DONE_FAIL')">
+                      {{ 'CANDIDATES.INTERVIEWS.FAIL' | translate }}
+                    </button>
+                    <button type="button"
+                            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border
+                                   border-outline-variant"
+                            style="color:var(--color-on-surface-variant);background:var(--color-surface-container-low)"
+                            (click)="openUpdate(iv, 'CANCELLED')">
+                      {{ 'CANDIDATES.COMMON.CANCEL' | translate }}
+                    </button>
+                  </div>
+                }
 
                 <!-- Inline update confirm -->
                 @if (updatingId() === iv.id) {
@@ -289,16 +327,18 @@ export class CandidateInterviewsComponent implements OnInit {
     this.userStore.isAdmin(),
   );
 
-  // ── Create form ─────────────────────────────────────────────────────────────
+  // ── Create / edit form ──────────────────────────────────────────────────────
+  // One form serves both: `editingId` null = scheduling a new interview.
   showForm     = signal(false);
+  editingId    = signal<number | null>(null);
   formLoading  = signal(false);
   formError    = signal<string | null>(null);
-  formTypeId        = signal(0);
-  formDate          = signal<Date | null>(null);
-  formTime          = signal('');
-  formLocation      = signal('');
-  formNotes         = signal('');
-  formInterviewerId = signal(0);
+  formTypeId         = signal(0);
+  formDate           = signal<Date | null>(null);
+  formTime           = signal('');
+  formLocation       = signal('');
+  formNotes          = signal('');
+  formInterviewerIds = signal<number[]>([]);
 
   users        = signal<UserPickerItem[]>([]);
   usersLoading = signal(false);
@@ -307,12 +347,17 @@ export class CandidateInterviewsComponent implements OnInit {
     this.activeTypes().map(t => ({ value: String(t.id), label: t.name })),
   );
 
-  readonly interviewerOptions = computed<SelectOption[]>(() => {
-    this.translate.currentLang();
-    return [
-      { value: '', label: this.translate.instant('CANDIDATES.COMMON.NONE') },
-      ...this.users().map(u => ({ value: String(u.id), label: u.fullName })),
-    ];
+  readonly interviewerOptions = computed<SelectOption[]>(() =>
+    this.users().map(u => ({ value: String(u.id), label: u.fullName })),
+  );
+
+  /**
+   * Chips under the picker. Falls back to the id when the user list hasn't loaded
+   * yet — an edited interview can reference someone before /users answers.
+   */
+  readonly selectedInterviewers = computed<UserPickerItem[]>(() => {
+    const byId = new Map<number, UserPickerItem>(this.users().map(u => [u.id, u]));
+    return this.formInterviewerIds().map(id => byId.get(id) ?? { id, fullName: `#${id}` });
   });
 
   typeSelected(): string[] {
@@ -320,7 +365,7 @@ export class CandidateInterviewsComponent implements OnInit {
   }
 
   interviewerSelected(): string[] {
-    return this.formInterviewerId() ? [String(this.formInterviewerId())] : [''];
+    return this.formInterviewerIds().map(String);
   }
 
   // ── Update inline ────────────────────────────────────────────────────────────
@@ -353,8 +398,12 @@ export class CandidateInterviewsComponent implements OnInit {
     this.formTypeId.set(values[0] ? +values[0] : 0);
   }
 
-  onInterviewerChange(values: string[]): void {
-    this.formInterviewerId.set(values[0] ? +values[0] : 0);
+  onInterviewersChange(values: string[]): void {
+    this.formInterviewerIds.set(values.map(v => +v).filter(id => !!id));
+  }
+
+  removeInterviewer(id: number): void {
+    this.formInterviewerIds.update(ids => ids.filter(x => x !== id));
   }
 
   onDateChange(value: Date | Date[] | null): void {
@@ -362,9 +411,33 @@ export class CandidateInterviewsComponent implements OnInit {
   }
 
   openForm(): void {
+    this.editingId.set(null);
     this.formTypeId.set(0); this.formDate.set(null); this.formTime.set('');
-    this.formLocation.set(''); this.formNotes.set(''); this.formInterviewerId.set(0);
+    this.formLocation.set(''); this.formNotes.set(''); this.formInterviewerIds.set([]);
     this.formError.set(null); this.showForm.set(true);
+    this.loadFormLookups();
+  }
+
+  openEdit(iv: CandidateInterview): void {
+    this.cancelUpdate();
+    this.editingId.set(iv.id);
+    this.formTypeId.set(iv.interviewTypeId);
+    // Scheduling stamps the typed wall clock as UTC (`...T09:00:00+00:00`), so read
+    // it back in UTC — otherwise re-saving an untouched interview would shift it by
+    // the browser's offset. formatDate() renders in UTC for the same reason.
+    const at = new Date(iv.scheduledAt);
+    const valid = !isNaN(at.getTime());
+    this.formDate.set(valid ? new Date(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()) : null);
+    this.formTime.set(valid ? pad2(at.getUTCHours()) + ':' + pad2(at.getUTCMinutes()) : '');
+    this.formLocation.set(iv.location ?? '');
+    this.formNotes.set(iv.interviewerNotes ?? '');
+    this.formInterviewerIds.set((iv.interviewers ?? []).map(u => u.id));
+    this.formError.set(null); this.showForm.set(true);
+    this.loadFormLookups();
+  }
+
+  /** Types + assignable users, fetched once and reused by every open of the form. */
+  private loadFormLookups(): void {
     if (!this.activeTypes().length) {
       this.typesLoading.set(true);
       this.svc.getActiveTypes(this.paysId).subscribe({
@@ -381,28 +454,47 @@ export class CandidateInterviewsComponent implements OnInit {
     }
   }
 
-  cancelForm(): void { this.showForm.set(false); }
+  cancelForm(): void { this.showForm.set(false); this.editingId.set(null); }
 
-  submitCreate(): void {
+  submitForm(): void {
     if (!this.formTypeId()) { this.formError.set(this.translate.instant('CANDIDATES.INTERVIEWS.ERR_SELECT_TYPE')); return; }
     const dateIso = dateToIso(this.formDate());
     if (!dateIso) { this.formError.set(this.translate.instant('CANDIDATES.INTERVIEWS.ERR_DATE_REQUIRED')); return; }
-    const time = this.formTime() || '09:00';
+    const scheduledAt = `${dateIso}T${this.formTime() || '09:00'}:00+00:00`;
     this.formLoading.set(true); this.formError.set(null);
+
+    const editingId = this.editingId();
+    if (editingId !== null) {
+      // Empty strings are sent on purpose: they clear a location/note that was set.
+      const dto: UpdateInterviewRequest = {
+        interviewTypeId: this.formTypeId(),
+        scheduledAt,
+        location: this.formLocation().trim(),
+        interviewerNotes: this.formNotes().trim(),
+        interviewerUserIds: this.formInterviewerIds(),
+      };
+      this.svc.updateInterview(this.candidateId, editingId, dto).subscribe({
+        next:  () => { this.formLoading.set(false); this.cancelForm(); this.loadInterviews(); },
+        error: err => { this.formLoading.set(false); this.formError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.INTERVIEWS.ERR_UPDATE')); },
+      });
+      return;
+    }
+
     const dto: CreateInterviewRequest = {
       interviewTypeId: this.formTypeId(),
-      scheduledAt: `${dateIso}T${time}:00+00:00`,
+      scheduledAt,
       location: this.formLocation().trim() || undefined,
       interviewerNotes: this.formNotes().trim() || undefined,
-      interviewerUserId: this.formInterviewerId() || undefined,
+      interviewerUserIds: this.formInterviewerIds(),
     };
     this.svc.createInterview(this.candidateId, dto).subscribe({
-      next:  () => { this.formLoading.set(false); this.showForm.set(false); this.loadInterviews(); },
+      next:  () => { this.formLoading.set(false); this.cancelForm(); this.loadInterviews(); },
       error: err => { this.formLoading.set(false); this.formError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.INTERVIEWS.ERR_SCHEDULE')); },
     });
   }
 
   openUpdate(iv: CandidateInterview, action: UpdateAction): void {
+    this.cancelForm();
     this.updatingId.set(iv.id); this.updateAction.set(action);
     this.updateNotes.set(''); this.updateError.set(null);
   }
@@ -431,10 +523,19 @@ export class CandidateInterviewsComponent implements OnInit {
   formatDate(iso: string): string {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
+    // UTC on purpose: the slot is stored as the wall clock that was typed, stamped
+    // +00:00. Rendering it in the browser zone would show a different hour than the
+    // scheduling/edit form.
     return d.toLocaleString('fr-FR', {
       day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
     });
+  }
+
+  /** Panel as a single line: "Alice, Bob" — falls back to the legacy lead name. */
+  interviewerNames(iv: CandidateInterview): string {
+    const panel = iv.interviewers ?? [];
+    return panel.length ? panel.map(u => u.fullName).join(', ') : (iv.interviewerName ?? '');
   }
 
   statusLabel(s: string): string {

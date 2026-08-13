@@ -92,6 +92,9 @@
       "LOADING": "Loading…",
       "SENDING": "Sending…",
       "NONE": "— None —",
+      "EDIT": "Edit",
+      "SAVE": "Save",
+      "REMOVE": "Remove",
       "COMMENT_PLACEHOLDER": "Comment…"
     },
     "STATUS": {
@@ -317,6 +320,7 @@
       "TITLE": "Interviews",
       "SCHEDULE": "Schedule",
       "SCHEDULE_TITLE": "Schedule an interview",
+      "EDIT_TITLE": "Edit interview",
       "LOADING_TYPES": "Loading types...",
       "NO_TYPES": "No active interview type available. Configure them in Administration.",
       "TYPE": "Type",
@@ -326,6 +330,8 @@
       "LOCATION_PLACEHOLDER": "E.g.: Room A, Zoom…",
       "NOTES_OPTIONAL": "Notes (optional)",
       "INTERVIEWER": "Interviewer (optional)",
+      "INTERVIEWERS": "Interviewers (optional)",
+      "INTERVIEWERS_PLACEHOLDER": "Select one or more interviewers",
       "RESULT_PASS": "✓ Passed",
       "RESULT_FAIL": "✗ Failed",
       "PASS": "Passed",

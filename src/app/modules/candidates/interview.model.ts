@@ -36,8 +36,11 @@ export interface CandidateInterview {
   scheduledAt: string;
   location: string | null;
   interviewerNotes: string | null;
+  /** Lead interviewer = first of `interviewers`; kept for older consumers. */
   interviewerUserId: number | null;
   interviewerName: string | null;
+  /** Full interview panel, in the order it was saved. */
+  interviewers: UserPickerItem[];
   status: InterviewStatus;
   result: InterviewResult | null;
   sequenceNumber: number;
@@ -49,14 +52,16 @@ export interface CreateInterviewRequest {
   scheduledAt: string;
   location?: string;
   interviewerNotes?: string;
-  interviewerUserId?: number;
+  interviewerUserIds?: number[];
 }
 
+/** Every field optional — omitted means "leave unchanged"; `[]` clears the panel. */
 export interface UpdateInterviewRequest {
+  interviewTypeId?: number;
   scheduledAt?: string;
   location?: string;
   interviewerNotes?: string;
-  interviewerUserId?: number;
+  interviewerUserIds?: number[];
   status?: string;
   result?: string;
 }
