@@ -1,5 +1,8 @@
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import {
+  AvatarComponent,
+  AvatarData,
+  AvatarGroupComponent,
   BadgeOptions,
   ButtonComponent,
   FormFieldComponent,
@@ -29,6 +32,8 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
   selector: 'app-candidate-interviews',
   standalone: true,
   imports: [
+    AvatarComponent,
+    AvatarGroupComponent,
     ButtonComponent,
     SectionCardComponent,
     SelectComponent,
@@ -126,8 +131,11 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                   @if (formInterviewerIds().length) {
                     <div class="flex flex-wrap gap-1.5 mt-2">
                       @for (u of selectedInterviewers(); track u.id) {
-                        <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[11px]"
+                        <span class="inline-flex items-center gap-1 pl-0.5 pr-1 py-0.5 rounded-full text-[11px]"
                               style="background:var(--color-tertiary-container);color:var(--color-tertiary)">
+                          <!-- Même primitive que la liste : on reconnaît la même personne
+                               d'un écran à l'autre par la même pastille. -->
+                          <daf-avatar [data]="{ name: u.fullName }" size="xs" [showTooltip]="false" />
                           {{ u.fullName }}
                           <button type="button" class="material-symbols-outlined text-[13px] leading-none"
                                   [attr.aria-label]="'CANDIDATES.COMMON.REMOVE' | translate"
@@ -187,7 +195,7 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
 
               <!-- Interview card -->
               <div class="border rounded-xl p-3.5"
-                   [style.border-color]="cardBorder(iv.status)"
+                   [style.border-color]="cardBorder()"
                    [style.background]="cardBg(iv.status)">
 
                 <div class="flex items-start justify-between gap-2 flex-wrap">
@@ -215,12 +223,19 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                           {{ iv.location }}
                         </span>
                       }
-                      @if (interviewerNames(iv)) {
-                        <span class="flex items-center gap-1">
-                          <span class="material-symbols-outlined text-[13px]">
-                            {{ (iv.interviewers?.length ?? 0) > 1 ? 'groups' : 'person' }}
-                          </span>
-                          {{ interviewerNames(iv) }}
+                      <!-- Le panel en pastilles : daf-avatar-group empile les intervieweurs
+                           et son panneau au survol les nomme TOUS, y compris ceux repliés
+                           dans le « +N » — ce qu'une simple liste « Alice, Bob, … » ne fait
+                           pas sans faire déborder la ligne.
+                           (Pas d'accent grave dans ce commentaire : le gabarit est un
+                           littéral encadré par des accents graves, l'un d'eux le
+                           refermerait ici.) -->
+                      @if (interviewerAvatars(iv).length) {
+                        <span class="flex items-center gap-1.5">
+                          <daf-avatar-group
+                            [members]="interviewerAvatars(iv)"
+                            size="xs"
+                            [max]="3" />
                         </span>
                       }
                     </div>
@@ -305,7 +320,7 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
         </div>
       }
     </rh-section-card>
-  `,
+  `
 })
 export class CandidateInterviewsComponent implements OnInit {
   @Input() candidateId!: number;
@@ -532,10 +547,44 @@ export class CandidateInterviewsComponent implements OnInit {
     });
   }
 
-  /** Panel as a single line: "Alice, Bob" — falls back to the legacy lead name. */
-  interviewerNames(iv: CandidateInterview): string {
+  /**
+   * Les panels en données d'avatar, calculés UNE fois par chargement et indexés par
+   * entretien.
+   *
+   * Appelée deux fois par ligne depuis le gabarit (le `@if` puis `[members]`), la version
+   * précédente reconstruisait un tableau à chaque appel et à chaque cycle de détection :
+   * `members` est une entrée signal, une nouvelle identité la fait paraître modifiée en
+   * permanence et refait tourner les calculs internes du groupe pour rien. La méthode
+   * appelée depuis le gabarit ne fait plus qu'une lecture de Map.
+   */
+  private readonly avatarsByInterview = computed<Map<number, AvatarData[]>>(() => {
+    const byId = new Map<number, AvatarData[]>();
+    for (const iv of this.interviews()) byId.set(iv.id, this.buildAvatars(iv));
+    return byId;
+  });
+
+  interviewerAvatars(iv: CandidateInterview): AvatarData[] {
+    return this.avatarsByInterview().get(iv.id) ?? [];
+  }
+
+  /**
+   * Le service garantit désormais que `interviewers` contient au moins le lead ; la
+   * retombée sur `interviewerName` reste par prudence pour une réponse servie par une
+   * version antérieure du backend.
+   *
+   * Un nom absent (utilisateur supprimé du référentiel) devient « #id » plutôt qu'une
+   * pastille vide : `deriveInitials` rendrait « ? », ce qui se lit comme un bug d'affichage
+   * là où « #42 » se lit comme une donnée manquante.
+   */
+  private buildAvatars(iv: CandidateInterview): AvatarData[] {
     const panel = iv.interviewers ?? [];
-    return panel.length ? panel.map(u => u.fullName).join(', ') : (iv.interviewerName ?? '');
+    if (panel.length) {
+      return panel.map(u => ({ name: u.fullName?.trim() || `#${u.id}` }));
+    }
+    if (iv.interviewerUserId != null) {
+      return [{ name: iv.interviewerName?.trim() || `#${iv.interviewerUserId}` }];
+    }
+    return [];
   }
 
   statusLabel(s: string): string {
@@ -568,8 +617,9 @@ export class CandidateInterviewsComponent implements OnInit {
     return s === 'PLANNED' ? 'event' : s === 'DONE' ? 'check_circle' : 'cancel';
   }
 
-  cardBorder(s: string): string {
-    return s === 'CANCELLED' ? 'var(--color-outline-variant)' : 'var(--color-outline-variant)';
+  /** Même bordure pour tous les états : seul le fond distingue un entretien annulé. */
+  cardBorder(): string {
+    return 'var(--color-outline-variant)';
   }
 
   cardBg(s: string): string {
