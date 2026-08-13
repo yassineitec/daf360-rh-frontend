@@ -12,6 +12,7 @@ import { TranslateService } from '@ngx-translate/core';
 import en from '@public/assets/i18n/en.json';
 import fr from '@public/assets/i18n/fr.json';
 import ar from '@public/assets/i18n/ar.json';
+import { resolveInitialLang } from '../core/language-preference';
 
 interface AppNavDef {
   id: string;
@@ -118,8 +119,10 @@ export class HrShellComponent implements OnInit {
     this.translate.setTranslation('ar', ar, true);
     // getCurrentLang() returns string | null (snapshot, not signal).
     // Only activate 'fr' when nothing is set; respect whatever lang the shell picked.
+    // Le repli prend la préférence ENREGISTRÉE et non 'fr' en dur : le service de
+    // traduction de RH est isolé, il démarre donc vide même quand l'hôte est en anglais.
     if (!this.translate.getCurrentLang()) {
-      this.translate.use('fr');
+      this.translate.use(resolveInitialLang());
     }
   }
 
