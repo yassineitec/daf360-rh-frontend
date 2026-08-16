@@ -102,6 +102,11 @@ const DEFAULT_HTML = `<!DOCTYPE html>
             <span class="col-name">
               <span class="tmpl-name">{{ t.name }}</span>
               @if (t.description) { <span class="tmpl-desc">{{ t.description }}</span> }
+              @if (t.sharepointLocation) {
+                <span class="tmpl-sharepoint">
+                  <span class="material-symbols-outlined">folder</span>{{ t.sharepointLocation }}
+                </span>
+              }
             </span>
             <span class="col-cat">
               <span class="cat-badge cat-{{ t.category.toLowerCase() }}">{{ categoryLabel(t.category) }}</span>
@@ -163,6 +168,12 @@ const DEFAULT_HTML = `<!DOCTYPE html>
                 <label class="form-label">{{ 'ADMIN.docs.templates.descriptionLabel' | translate }}</label>
                 <input class="form-input" type="text" [(ngModel)]="form.description"
                   [placeholder]="'ADMIN.docs.templates.descriptionPlaceholder' | translate" />
+              </div>
+              <div class="field-full">
+                <label class="form-label">{{ 'ADMIN.docs.templates.sharepointLocationLabel' | translate }}</label>
+                <input class="form-input" type="text" [(ngModel)]="form.sharepointLocation"
+                  [placeholder]="'ADMIN.docs.templates.sharepointLocationPlaceholder' | translate" />
+                <p class="field-hint">{{ 'ADMIN.docs.templates.sharepointLocationHint' | translate }}</p>
               </div>
             </div>
 
@@ -264,6 +275,8 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .tmpl-row.inactive { opacity:.5 }
     .tmpl-name      { display:block;font-weight:600;font-size:13px }
     .tmpl-desc      { display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px }
+    .tmpl-sharepoint{ display:flex;align-items:center;gap:3px;font-size:10.5px;color:var(--color-text-muted);margin-top:2px;font-family:monospace }
+    .tmpl-sharepoint .material-symbols-outlined { font-size:12px }
     .cat-badge      { font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--color-bg-secondary) }
     .cat-badge.cat-attestation { background:#dbeafe;color:#1d4ed8 }
     .cat-badge.cat-contract    { background:#d1fae5;color:#065f46 }
@@ -290,6 +303,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .form-label     { display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted);margin-bottom:4px }
     .form-input     { width:100%;padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--color-surface);color:var(--color-text);outline:none;box-sizing:border-box }
     .form-input:focus { border-color:var(--color-primary) }
+    .field-hint     { font-size:11px;color:var(--color-text-muted);margin:4px 0 0;line-height:1.5 }
 
     /* Editor layout */
     .editor-layout  { display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start }
@@ -358,12 +372,13 @@ export class DocumentTemplatesAdminComponent implements OnInit {
 
   previewProfileId: number | null = null;
 
-  form: SaveDocumentTemplateRequest & { description: string } = {
-    paysId:      0,
-    category:    '',
-    name:        '',
-    description: '',
-    htmlContent: '',
+  form: SaveDocumentTemplateRequest & { description: string; sharepointLocation: string } = {
+    paysId:             0,
+    category:           '',
+    name:               '',
+    description:        '',
+    htmlContent:        '',
+    sharepointLocation: '',
   };
 
   readonly variableGroups = computed(() => {
@@ -393,11 +408,12 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   openAdd() {
     this.editingId.set(null);
     this.form = {
-      paysId:      this.paysId(),
-      category:    this.filterCategory,
-      name:        '',
-      description: '',
-      htmlContent: '',
+      paysId:             this.paysId(),
+      category:           this.filterCategory,
+      name:               '',
+      description:        '',
+      htmlContent:        '',
+      sharepointLocation: '',
     };
     this.previewProfileId = null;
     this.formError.set(null);
@@ -407,11 +423,12 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   openEdit(t: DocumentTemplate) {
     this.editingId.set(t.id);
     this.form = {
-      paysId:      t.paysId,
-      category:    t.category,
-      name:        t.name,
-      description: t.description ?? '',
-      htmlContent: t.htmlContent,
+      paysId:             t.paysId,
+      category:           t.category,
+      name:               t.name,
+      description:        t.description ?? '',
+      htmlContent:        t.htmlContent,
+      sharepointLocation: t.sharepointLocation ?? '',
     };
     this.previewProfileId = null;
     this.formError.set(null);
@@ -449,7 +466,11 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   save() {
     if (!this.isFormValid()) return;
     const id      = this.editingId();
-    const payload = { ...this.form, description: this.form.description || undefined };
+    const payload = {
+      ...this.form,
+      description:        this.form.description || undefined,
+      sharepointLocation: this.form.sharepointLocation || undefined,
+    };
     this.saving.set(true);
     this.formError.set(null);
 
