@@ -210,26 +210,28 @@ export interface VariableDef {
 }
 
 export interface DocumentTemplate {
-  id:          number;
-  paysId:      number;
-  category:    string;
-  name:        string;
-  description: string | null;
-  htmlContent: string;
-  variables:   string[] | null;
-  pageSize:    string;
-  isActive:    boolean;
-  createdAt:   string;
-  updatedAt:   string | null;
+  id:                  number;
+  paysId:              number;
+  category:            string;
+  name:                string;
+  description:         string | null;
+  htmlContent:         string;
+  variables:           string[] | null;
+  pageSize:            string;
+  sharepointLocation:  string | null;
+  isActive:            boolean;
+  createdAt:           string;
+  updatedAt:           string | null;
 }
 
 export interface SaveDocumentTemplateRequest {
-  paysId:       number;
-  category:     string;
-  name:         string;
-  description?: string;
-  htmlContent:  string;
-  pageSize?:    string;
+  paysId:              number;
+  category:            string;
+  name:                string;
+  description?:        string;
+  htmlContent:         string;
+  pageSize?:           string;
+  sharepointLocation?: string;
 }
 
 export interface SaveCatalogTaskRequest {
