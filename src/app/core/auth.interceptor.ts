@@ -13,9 +13,24 @@ import { NotificationService } from './notification.service';
  * 3. Catches 401 from the PORTAL only → redirects to Azure OAuth2 (session expired).
  *    rh-service 401s are propagated so components show their own error state.
  */
+
+/**
+ * Image retrievals whose failure already has an in-place fallback (real photo →
+ * gendered avatar → initials), so a toast would be pure noise: a profile with no
+ * uploaded file, or a stale `photo_url` pointing at a file that is gone, is a
+ * normal state — see `shared/utils/avatar.utils`.
+ *
+ * Matched on GET only: photo *uploads* (POST .../photo) must keep surfacing their
+ * error, and the upload UI adds its own message on top.
+ */
+const SILENT_IMAGE_GET = ['/photo', '/avatars'];
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const userStore = inject(UserStore);
   const notify = inject(NotificationService);
+
+  const silentImage =
+    req.method === 'GET' && SILENT_IMAGE_GET.some(u => req.url.includes(u));
 
   const isPortal  = req.url.startsWith(environment.portalUrl);
   const isHrApi   = req.url.startsWith(environment.hrApiUrl);
@@ -41,6 +56,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (err.status === 401 && isPortal) {
         // Portal session expired → re-auth via Azure OAuth2.
         window.location.href = `${environment.portalUrl}/oauth2/authorization/azure`;
+      } else if (silentImage) {
+        // Avatar/photo GET failed — the caller falls back to a gendered avatar or
+        // initials, so stay quiet and just propagate the error.
       } else if (err.status === 403) {
         notify.error("Vous n'avez pas les droits pour cette action.", 'Accès refusé');
       } else if (err.status >= 500) {
