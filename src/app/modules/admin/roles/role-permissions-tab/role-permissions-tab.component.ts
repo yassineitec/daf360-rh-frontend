@@ -27,10 +27,60 @@ export class RolePermissionsTabComponent implements OnInit {
   success        = signal<string | null>(null);
   expandedGroups = signal<Set<string>>(new Set());
 
+  /** Every code the RH catalog knows about. */
+  private catalogCodes = computed(
+    () => new Set(this.catalog().flatMap(g => g.permissions.map(p => p.code))),
+  );
+
+  /**
+   * Codes this role actually holds that the catalog does NOT return, shown in their own
+   * group so the tab stops hiding part of the role's real permissions.
+   *
+   * GET /api/hr/admin/permissions/catalog only serves RH's own PermissionCatalog.GROUPS.
+   * The other modules keep their codes in their own catalogs — 26 FACT_* in
+   * FactPermissionCatalog and 2 POINTAGE_* in pointage — yet all of them are stored in the
+   * same RolePermissions table and are perfectly valid grants. Without this group a role
+   * holding them showed a checked count higher than the total, with the extra codes
+   * nowhere on screen.
+   */
+  extraGroup = computed<PermissionGroup | null>(() => {
+    const known = this.catalogCodes();
+    if (known.size === 0) return null; // catalog still loading — do not flag everything
+    const extras = [...new Set([...this.role().permissions, ...this.checkedSet()])]
+      .filter(code => !known.has(code))
+      .sort();
+    if (extras.length === 0) return null;
+    return {
+      groupName: this.translate.instant('ADMIN.roles.permissions.OTHER_MODULES_GROUP'),
+      permissions: extras.map(code => ({ code, label: this.describeExternal(code) })),
+    };
+  });
+
+  /** Catalog groups plus the out-of-catalog group, which is what the template renders. */
+  displayGroups = computed<PermissionGroup[]>(() => {
+    const extra = this.extraGroup();
+    return extra ? [...this.catalog(), extra] : this.catalog();
+  });
+
   totalPermissions = computed(() =>
-    this.catalog().reduce((acc, g) => acc + g.permissions.length, 0),
+    this.displayGroups().reduce((acc, g) => acc + g.permissions.length, 0),
   );
   checkedCount = computed(() => this.checkedSet().size);
+
+  /** No label is available for another module's code, so name the owning module instead. */
+  private describeExternal(code: string): string {
+    const key = code.startsWith('FACT_')     ? 'OTHER_MODULES_FACT'
+              : code.startsWith('POINTAGE_') ? 'OTHER_MODULES_POINTAGE'
+              : code.startsWith('PAYROLL_')  ? 'OTHER_MODULES_PAYROLL'
+              :                                'OTHER_MODULES_UNKNOWN';
+    return this.translate.instant(`ADMIN.roles.permissions.${key}`);
+  }
+
+  /** True for codes that saveAll() cannot remove — see clearAll(). */
+  isExternal(code: string): boolean {
+    const known = this.catalogCodes();
+    return known.size > 0 && !known.has(code);
+  }
 
   // Track role ID so we only re-initialise checkedSet when switching roles,
   // NOT on every permission update emitted back from this component.
@@ -114,11 +164,25 @@ export class RolePermissionsTabComponent implements OnInit {
   }
 
   selectAll(): void {
-    const allCodes = this.catalog().flatMap(g => g.permissions.map(p => p.code));
-    this.checkedSet.set(new Set(allCodes));
+    // Union, not replace: dropping the out-of-catalog codes here would show them unchecked
+    // while they are still granted in the DB, since saveAll() cannot remove them.
+    this.checkedSet.set(new Set([
+      ...this.checkedSet(),
+      ...this.catalog().flatMap(g => g.permissions.map(p => p.code)),
+    ]));
   }
 
-  clearAll(): void { this.checkedSet.set(new Set()); }
+  /**
+   * Clears only what saveAll() is able to remove. PATCH /permissions deliberately deletes
+   * just this module's codes and preserves other modules' grants, so clearing an external
+   * code here would leave the UI claiming it is gone while the row survives. Those are
+   * unchecked one at a time instead — the per-code DELETE does remove them.
+   */
+  clearAll(): void {
+    this.checkedSet.set(new Set(
+      [...this.checkedSet()].filter(code => this.isExternal(code)),
+    ));
+  }
 
   saveAll(): void {
     // Snapshot current checkedSet BEFORE any async operation
@@ -141,7 +205,12 @@ export class RolePermissionsTabComponent implements OnInit {
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.roles.permissions.SAVE_ERROR'));
+        // ProblemDetail puts the message in `detail`; `message` is always undefined here.
+        this.error.set(
+          err?.error?.detail
+            ?? err?.error?.message
+            ?? this.translate.instant('ADMIN.roles.permissions.SAVE_ERROR'),
+        );
       },
     });
   }

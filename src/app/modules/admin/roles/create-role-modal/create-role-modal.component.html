@@ -26,13 +26,32 @@
         (selectedChange)="onParentChange($event[0])" />
     </div>
 
-    <!-- Voir toutes les entités -->
-    <div class="crm-field crm-field-toggle">
-      <daf-toggle
-        [options]="{ label: ('ADMIN.roles.create.SHOW_ALL_LABEL' | translate), hint: ('ADMIN.roles.create.SHOW_ALL_HINT' | translate), disabled: saving() }"
-        [checked]="showAll()"
-        (checkedChange)="showAll.set($event)" />
+    <!-- Périmètre pays -->
+    <div class="crm-field">
+      <daf-select
+        [selected]="scopeModeSelected()"
+        [options]="scopeModeOptions()"
+        [config]="{ label: ('ADMIN.roles.info.SCOPE_MODE_LABEL' | translate), hint: scopeModeHint(), disabled: saving(), fullWidth: true }"
+        (selectedChange)="onScopeModeChange($event)" />
     </div>
+
+    @if (showCountryPicker()) {
+      <div class="crm-field">
+        <daf-select
+          [selected]="paysScopeSelected()"
+          [options]="paysSelectOptions()"
+          [config]="{
+            label: ('ADMIN.roles.info.SCOPE_COUNTRIES_LABEL' | translate),
+            placeholder: ('ADMIN.roles.info.SCOPE_COUNTRIES_PLACEHOLDER' | translate),
+            hint: ('ADMIN.roles.info.SCOPE_COUNTRIES_HINT' | translate),
+            multiple: true,
+            searchable: true,
+            disabled: saving(),
+            fullWidth: true
+          }"
+          (selectedChange)="onPaysScopeChange($event)" />
+      </div>
+    }
   </div>
 
   <!-- Footer -->

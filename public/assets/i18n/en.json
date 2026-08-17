@@ -2007,6 +2007,7 @@
         "PERMISSIONS": "{{count}} permissions",
         "USERS": "{{count}} users",
         "SHOW_ALL": "View all",
+        "SCOPE_LIST": "{{count}} countries",
         "DELETE_DISABLED_TOOLTIP": "{{count}} users — reassign them first",
         "DELETE_TOOLTIP": "Delete"
       },
@@ -2046,7 +2047,19 @@
         "CONFIRM": "Confirm",
         "SAVE_SUCCESS": "Changes saved.",
         "SAVE_ERROR": "An error occurred while saving.",
-        "DELETE_ERROR": "Unable to delete this role."
+        "DELETE_ERROR": "Unable to delete this role.",
+        "SCOPE_MODE_LABEL": "Country scope",
+        "SCOPE_MODE_OWN": "The user's own country",
+        "SCOPE_MODE_LIST": "A defined list of countries",
+        "SCOPE_MODE_ALL": "All countries",
+        "SCOPE_HINT_OWN": "Each user sees only their own country's data. Use this for a role shared across countries.",
+        "SCOPE_HINT_LIST": "Every user with this role sees the same countries, whatever their own country is.",
+        "SCOPE_HINT_ALL": "No country filter: this role sees data from every entity.",
+        "SCOPE_COUNTRIES_LABEL": "Visible countries",
+        "SCOPE_COUNTRIES_PLACEHOLDER": "Select countries…",
+        "SCOPE_COUNTRIES_HINT": "These countries apply to every user holding the role.",
+        "RENAME_CONFIRM": "This role is assigned to {{count}} user(s). Confirm the rename?",
+        "RENAME_CONFIRM_BTN": "Rename anyway"
       },
       "permissions": {
         "TITLE": "Permissions for {{name}}",
@@ -2057,6 +2070,11 @@
         "SAVE_ALL": "Save all",
         "LOADING_CATALOG": "Loading catalog…",
         "TOGGLE_ERROR": "Unable to change the permission — try again",
+        "OTHER_MODULES_GROUP": "Other modules (outside the HR catalog)",
+        "OTHER_MODULES_FACT": "Invoicing module permission",
+        "OTHER_MODULES_POINTAGE": "Time-tracking module permission",
+        "OTHER_MODULES_PAYROLL": "Payroll module permission",
+        "OTHER_MODULES_UNKNOWN": "Unknown code — belongs to no catalog",
         "SAVE_SUCCESS": "Permissions updated successfully.",
         "SAVE_ERROR": "Error while saving."
       },

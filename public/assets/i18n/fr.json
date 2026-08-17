@@ -2007,6 +2007,7 @@
         "PERMISSIONS": "{{count}} permissions",
         "USERS": "{{count}} utilisateurs",
         "SHOW_ALL": "Voir tout",
+        "SCOPE_LIST": "{{count}} pays",
         "DELETE_DISABLED_TOOLTIP": "{{count}} utilisateurs — réassignez-les d'abord",
         "DELETE_TOOLTIP": "Supprimer"
       },
@@ -2046,7 +2047,19 @@
         "CONFIRM": "Confirmer",
         "SAVE_SUCCESS": "Modifications enregistrees.",
         "SAVE_ERROR": "Une erreur est survenue lors de la sauvegarde.",
-        "DELETE_ERROR": "Impossible de supprimer ce role."
+        "DELETE_ERROR": "Impossible de supprimer ce role.",
+        "SCOPE_MODE_LABEL": "Périmètre pays",
+        "SCOPE_MODE_OWN": "Pays de l'utilisateur",
+        "SCOPE_MODE_LIST": "Liste de pays définie",
+        "SCOPE_MODE_ALL": "Tous les pays",
+        "SCOPE_HINT_OWN": "Chaque utilisateur ne voit que les données de son propre pays. À utiliser pour un rôle partagé entre plusieurs pays.",
+        "SCOPE_HINT_LIST": "Tous les utilisateurs de ce rôle voient les mêmes pays, quel que soit leur propre pays.",
+        "SCOPE_HINT_ALL": "Aucun filtre pays : ce rôle voit les données de toutes les entités.",
+        "SCOPE_COUNTRIES_LABEL": "Pays visibles",
+        "SCOPE_COUNTRIES_PLACEHOLDER": "Sélectionner les pays…",
+        "SCOPE_COUNTRIES_HINT": "Ces pays s'appliquent à tous les utilisateurs du rôle.",
+        "RENAME_CONFIRM": "Ce rôle est attribué à {{count}} utilisateur(s). Confirmez-vous le renommage ?",
+        "RENAME_CONFIRM_BTN": "Renommer quand même"
       },
       "permissions": {
         "TITLE": "Permissions de {{name}}",
@@ -2057,6 +2070,11 @@
         "SAVE_ALL": "Enregistrer tout",
         "LOADING_CATALOG": "Chargement du catalogue…",
         "TOGGLE_ERROR": "Impossible de modifier la permission — réessayez",
+        "OTHER_MODULES_GROUP": "Autres modules (hors catalogue RH)",
+        "OTHER_MODULES_FACT": "Permission du module Facturation",
+        "OTHER_MODULES_POINTAGE": "Permission du module Pointage",
+        "OTHER_MODULES_PAYROLL": "Permission du module Paie",
+        "OTHER_MODULES_UNKNOWN": "Code inconnu — n'appartient à aucun catalogue",
         "SAVE_SUCCESS": "Permissions mises à jour avec succès.",
         "SAVE_ERROR": "Erreur lors de la sauvegarde."
       },

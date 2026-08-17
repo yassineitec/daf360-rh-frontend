@@ -20,6 +20,28 @@
   padding: 8px 0;
 }
 
+// Rename of an already-assigned role: same visual language as .delete-confirm, but a
+// warning rather than a destructive action.
+.rit-rename-confirm {
+  background: var(--color-secondary-container);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rit-rename-text {
+  font-size: var(--text-body-md);
+  color: var(--color-on-secondary-container);
+  margin: 0;
+}
+
+.rit-rename-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .rit-delete-zone {
   display: flex;
   flex-direction: column;

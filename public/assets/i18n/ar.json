@@ -684,6 +684,7 @@
         "PERMISSIONS": "{{count}} صلاحية",
         "USERS": "{{count}} مستخدم",
         "SHOW_ALL": "عرض الكل",
+        "SCOPE_LIST": "{{count}} بلدان",
         "DELETE_DISABLED_TOOLTIP": "{{count}} مستخدم — أعد تعيينهم أولاً",
         "DELETE_TOOLTIP": "حذف"
       },
@@ -723,7 +724,19 @@
         "CONFIRM": "تأكيد",
         "SAVE_SUCCESS": "تم حفظ التعديلات.",
         "SAVE_ERROR": "حدث خطأ أثناء الحفظ.",
-        "DELETE_ERROR": "تعذّر حذف هذا الدور."
+        "DELETE_ERROR": "تعذّر حذف هذا الدور.",
+        "SCOPE_MODE_LABEL": "نطاق البلدان",
+        "SCOPE_MODE_OWN": "بلد المستخدم",
+        "SCOPE_MODE_LIST": "قائمة بلدان محددة",
+        "SCOPE_MODE_ALL": "جميع البلدان",
+        "SCOPE_HINT_OWN": "يرى كل مستخدم بيانات بلده فقط. استخدم هذا الخيار لدور مشترك بين عدة بلدان.",
+        "SCOPE_HINT_LIST": "يرى جميع مستخدمي هذا الدور نفس البلدان، بغضّ النظر عن بلدهم.",
+        "SCOPE_HINT_ALL": "بدون تصفية بلد: يرى هذا الدور بيانات جميع الكيانات.",
+        "SCOPE_COUNTRIES_LABEL": "البلدان المرئية",
+        "SCOPE_COUNTRIES_PLACEHOLDER": "اختر البلدان…",
+        "SCOPE_COUNTRIES_HINT": "تنطبق هذه البلدان على جميع مستخدمي الدور.",
+        "RENAME_CONFIRM": "هذا الدور مُعيَّن إلى {{count}} مستخدم. هل تريد تأكيد إعادة التسمية؟",
+        "RENAME_CONFIRM_BTN": "إعادة التسمية على أي حال"
       },
       "permissions": {
         "TITLE": "صلاحيات {{name}}",
@@ -734,6 +747,11 @@
         "SAVE_ALL": "حفظ الكل",
         "LOADING_CATALOG": "جارٍ تحميل الكتالوج…",
         "TOGGLE_ERROR": "تعذّر تعديل الصلاحية — حاول مرة أخرى",
+        "OTHER_MODULES_GROUP": "وحدات أخرى (خارج كتالوج الموارد البشرية)",
+        "OTHER_MODULES_FACT": "صلاحية وحدة الفوترة",
+        "OTHER_MODULES_POINTAGE": "صلاحية وحدة تتبّع الحضور",
+        "OTHER_MODULES_PAYROLL": "صلاحية وحدة الرواتب",
+        "OTHER_MODULES_UNKNOWN": "رمز غير معروف — لا ينتمي إلى أي كتالوج",
         "SAVE_SUCCESS": "تم تحديث الصلاحيات بنجاح.",
         "SAVE_ERROR": "خطأ أثناء الحفظ."
       },
