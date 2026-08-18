@@ -1182,7 +1182,8 @@
       "HR_DOCUMENTS": "Documents RH",
       "COMPENSATION": "Prétentions & rémunération",
       "EMPLOYMENT_POSITION": "Emploi & poste",
-      "SOCIAL_IDS": "Identifiants sociaux & fiscaux"
+      "SOCIAL_IDS": "Identifiants sociaux & fiscaux",
+      "IT_ASSETS": "Matériel IT"
     },
     "FIELDS": {
       "DOB": "Date de naissance",
@@ -1481,6 +1482,80 @@
     "ONBOARDING": {
       "DONE": "Terminé",
       "PENDING": "En cours"
+    },
+    "IT_ASSETS": {
+      "ASSIGN": "Affecter",
+      "SYNC": "Synchroniser",
+      "RETURN": "Rendre",
+      "EDIT": "Corriger",
+      "CURRENT": "Matériel détenu",
+      "PAST": "Historique",
+      "COUNT_CURRENT": "{{count}} en cours",
+      "COUNT_PAST": "{{count}} rendu(s)",
+      "NONE": "Aucun matériel enregistré pour ce collaborateur.",
+      "NONE_HINT": "Utilisez « Synchroniser » pour reprendre le dossier de provisioning IT, ou « Affecter » pour saisir un équipement.",
+      "NONE_CURRENT": "Aucun matériel actuellement détenu.",
+      "SERIAL": "N° de série",
+      "TAG": "Asset Tag",
+      "SINCE": "depuis le {{date}}",
+      "DAYS_HELD": "{{days}} j",
+      "CONDITION_ON_ASSIGN": "État à la remise",
+      "ASSIGNED_BY": "Remis par {{name}}",
+      "PERIOD": "du {{from}} au {{to}} ({{days}} j)",
+      "ASSIGNED": "Matériel affecté.",
+      "SAVED": "Ligne mise à jour.",
+      "RETURNED_OK": "Retour enregistré.",
+      "SYNC_ADDED": "{{count}} équipement(s) repris du dossier IT.",
+      "SYNC_NONE": "Rien à reprendre : le registre est à jour.",
+      "SYNC_ERROR": "La synchronisation a échoué.",
+      "STATUS": {
+        "ASSIGNED": "Détenu",
+        "RETURNED": "Rendu",
+        "LOST": "Perdu",
+        "WRITTEN_OFF": "Mis au rebut"
+      },
+      "SOURCE": {
+        "ONBOARDING": "Embauche",
+        "MANUAL": "Saisie RH",
+        "OFFBOARDING": "Offboarding",
+        "IMPORT": "Import"
+      },
+      "CONDITION": {
+        "NEUF": "Neuf",
+        "BON_ETAT": "Bon état",
+        "USAGE": "Usagé",
+        "EN_REPARATION": "En réparation",
+        "DEFECTUEUX": "Défectueux",
+        "PERDU": "Perdu"
+      },
+      "FORM": {
+        "TITLE_ASSIGN": "Affecter un équipement",
+        "TITLE_EDIT": "Corriger la ligne",
+        "TITLE_RETURN": "Enregistrer le retour",
+        "TYPE": "Type de matériel",
+        "ASSIGNED_AT": "Date de remise",
+        "RETURNED_AT": "Date de retour",
+        "BRAND_MODEL": "Marque / Modèle",
+        "BRAND_MODEL_PH": "Dell Latitude 5540",
+        "SERIAL": "N° de série",
+        "SERIAL_PH": "DAF-IT-0092",
+        "SERIAL_HINT": "Un même numéro de série ne peut être détenu que par une seule personne à la fois.",
+        "TAG": "Asset Tag",
+        "CONDITION": "État à la remise",
+        "CONDITION_ON_RETURN": "État constaté au retour",
+        "OUTCOME": "Issue",
+        "NOTES": "Commentaire",
+        "RETURN_NOTES_PH": "Rayure sur le capot, chargeur manquant…",
+        "CONFIRM_ASSIGN": "Affecter",
+        "CONFIRM_RETURN": "Enregistrer le retour",
+        "SAVE": "Enregistrer",
+        "ERR_TYPE": "Choisissez un type de matériel.",
+        "ERR_DATE": "Indiquez la date de remise.",
+        "ERR_RETURN_DATE": "Indiquez la date de retour.",
+        "ERR_BEFORE_ASSIGN": "La date de retour ne peut pas précéder la date de remise.",
+        "ERR_AFTER_RETURN": "La date de remise ne peut pas être postérieure à la date de retour.",
+        "ERR_SAVE": "L'enregistrement a échoué."
+      }
     }
   },
   "OFFBOARDING": {

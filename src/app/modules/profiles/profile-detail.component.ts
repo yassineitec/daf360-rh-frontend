@@ -47,6 +47,10 @@ import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto, CONTRACT_TYPE_CONFIG,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
+import { ItAssetService } from './it-assets/it-asset.service';
+import { ItAssetAssignmentDto } from './it-assets/it-asset.model';
+import { AssetAssignFormComponent } from './it-assets/asset-assign-form.component';
+import { AssetReturnFormComponent } from './it-assets/asset-return-form.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { OffboardingService } from '../offboarding/offboarding.service';
 import { DepartureReason } from '../offboarding/models/offboarding.model';
@@ -60,6 +64,7 @@ import { EmergencySectionComponent } from './detail-sections/emergency-section.c
 import { BankingSectionComponent } from './detail-sections/banking-section.component';
 import { LifecycleSectionComponent } from './detail-sections/lifecycle-section.component';
 import { DocumentsSectionComponent } from './detail-sections/documents-section.component';
+import { ItAssetsSectionComponent } from './detail-sections/it-assets-section.component';
 import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
 
@@ -74,7 +79,10 @@ type TabId =
   // they are merged under 'historique' so the lifecycle actions — New contract, which is the
   // only way to change an employee's frozen préavis, plus trial validation / CDD renewal /
   // CDI conversion — stay reachable from one place.
-  | 'historique' | 'documents';
+  | 'historique'
+  // The IT equipment ledger (it_asset_assignments, V76) — what the employee holds and
+  // what they held before. Not part of 'documents': it is inventory, not paperwork.
+  | 'materiel' | 'documents';
 
 /**
  * Departure types offered by the profile's "Démarrer l'offboarding" action.
@@ -128,8 +136,8 @@ const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB
     IdentityCardComponent, EmploymentSectionComponent,
     PositionSectionComponent, RegimeSectionComponent, ContactSectionComponent,
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
-    DocumentsSectionComponent, DocumentsDrawerComponent,
-    NewContractFormComponent,
+    DocumentsSectionComponent, DocumentsDrawerComponent, ItAssetsSectionComponent,
+    NewContractFormComponent, AssetAssignFormComponent, AssetReturnFormComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -143,6 +151,7 @@ export class ProfileDetailComponent implements OnInit {
   private pdfSvc       = inject(PdfDownloadService);
   private regimeSvc    = inject(RegimeService);
   private refSvc       = inject(RefDataService);
+  private assetSvc     = inject(ItAssetService);
   private lcSvc        = inject(ContractLifecycleService);
   private contractHistorySvc = inject(ContractHistoryService);
   private modalService = inject(ModalService);
@@ -199,6 +208,9 @@ export class ProfileDetailComponent implements OnInit {
       // Count is the lifecycle contracts, not the historique rows: those are the ones with a
       // state machine, a trial period and a préavis.
       { id: 'historique', label: t('PROFILES.SECTIONS.CONTRACTS'), count: this.lcContracts().length || null },
+      // Count is what the employee holds TODAY, not the whole ledger: the badge answers
+      // 'how much hardware is out with this person', which is the operational question.
+      { id: 'materiel',   label: t('PROFILES.SECTIONS.IT_ASSETS'), count: this.currentAssetCount() || null },
       { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documents().length || null },
     );
     return items;
@@ -424,6 +436,31 @@ export class ProfileDetailComponent implements OnInit {
   readonly showNewContractModal = signal(false);
   private lcLoaded = false;
 
+  // ── IT equipment ledger (V76) ──────────────────────────────────────────────
+  readonly itAssets       = signal<ItAssetAssignmentDto[]>([]);
+  readonly assetsLoading  = signal(false);
+  readonly assetsSyncing  = signal(false);
+  readonly assetTypes     = signal<RefDataItem[]>([]);
+  /** Both the 'Affecter' and the 'Corriger' modal — 'editingAsset' tells them apart. */
+  readonly showAssetForm  = signal(false);
+  readonly editingAsset   = signal<ItAssetAssignmentDto | null>(null);
+  readonly returningAsset = signal<ItAssetAssignmentDto | null>(null);
+  private assetsLoaded = false;
+
+  /** Still held, i.e. no return date — the same rule the backend puts in 'isCurrent'. */
+  readonly currentAssetCount = computed(() => this.itAssets().filter(a => a.isCurrent).length);
+
+  /**
+   * What ItAssetAssignmentController accepts for WRITE. IT_PROVISIONING is in there because
+   * handing hardware over is the IT team's job whether it happens on hire day or two years
+   * in; the tab itself is readable by anyone who can open the dossier.
+   */
+  readonly canManageAssets = computed(() =>
+    this.userStore.hasPermission('RH_MANAGE_IT_ASSETS')
+    || this.userStore.hasPermission('IT_PROVISIONING')
+    || this.userStore.isAdmin(),
+  );
+
   private selectedContractId: number | null = null;
   trialApproved = true;
   trialComment  = '';
@@ -443,6 +480,9 @@ export class ProfileDetailComponent implements OnInit {
     // Contracts are fetched the first time their tab is opened, not on page load.
     effect(() => {
       if (this.activeTab() === 'historique') this.loadContracts();
+      // Same deal for the equipment ledger: two extra requests nobody asked for on a page
+      // whose default tab is Emploi.
+      if (this.activeTab() === 'materiel') this.loadItAssets();
     });
   }
 
@@ -782,6 +822,81 @@ export class ProfileDetailComponent implements OnInit {
   private refreshContracts(): void {
     this.lcLoaded = false;
     this.loadContracts();
+  }
+
+  // ── IT equipment ledger ────────────────────────────────────────────────────
+  loadItAssets(force = false): void {
+    if (this.assetsLoaded && !force) return;
+    this.assetsLoaded = true;
+    this.assetsLoading.set(true);
+    this.assetSvc.getHistory(this.profileId).subscribe(rows => {
+      this.itAssets.set(rows);
+      this.assetsLoading.set(false);
+    });
+    // Needed by the assign form's type picker; cached by RefDataService, so asking again
+    // on a later open costs nothing.
+    if (!this.assetTypes().length) {
+      this.refSvc.getItAssetTypes().subscribe(types => this.assetTypes.set(types));
+    }
+  }
+
+  openAssignAsset(): void {
+    this.editingAsset.set(null);
+    this.showAssetForm.set(true);
+  }
+
+  openEditAsset(asset: ItAssetAssignmentDto): void {
+    this.editingAsset.set(asset);
+    this.showAssetForm.set(true);
+  }
+
+  closeAssetForm(): void {
+    this.showAssetForm.set(false);
+    this.editingAsset.set(null);
+  }
+
+  onAssetSaved(): void {
+    const wasEdit = this.editingAsset() !== null;
+    this.closeAssetForm();
+    // Re-read rather than splice the returned row in: the tab shows two derived lists and a
+    // count, and the server is the one that decides which side a row lands on.
+    this.loadItAssets(true);
+    this.notify.success(this.translate.instant(
+      wasEdit ? 'PROFILES.IT_ASSETS.SAVED' : 'PROFILES.IT_ASSETS.ASSIGNED'));
+  }
+
+  openReturnAsset(asset: ItAssetAssignmentDto): void {
+    this.returningAsset.set(asset);
+  }
+
+  onAssetReturned(): void {
+    this.returningAsset.set(null);
+    this.loadItAssets(true);
+    this.notify.success(this.translate.instant('PROFILES.IT_ASSETS.RETURNED_OK'));
+  }
+
+  /**
+   * Pulls anything marked 'fourni' on the IT provisioning dossier that is not in the ledger
+   * yet. Idempotent server-side, so the button is safe to press twice; an empty result means
+   * the ledger is already up to date, which is worth saying rather than looking like a no-op.
+   */
+  syncItAssets(): void {
+    if (this.assetsSyncing()) return;
+    this.assetsSyncing.set(true);
+    this.assetSvc.syncFromProvisioning(this.profileId).subscribe({
+      next: (added) => {
+        this.assetsSyncing.set(false);
+        this.loadItAssets(true);
+        this.notify.success(this.translate.instant(
+          added.length ? 'PROFILES.IT_ASSETS.SYNC_ADDED' : 'PROFILES.IT_ASSETS.SYNC_NONE',
+          { count: added.length }));
+      },
+      error: (err) => {
+        this.assetsSyncing.set(false);
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('PROFILES.IT_ASSETS.SYNC_ERROR'));
+      },
+    });
   }
 
   onContractCreated(_contract: ContractDetailDto): void {

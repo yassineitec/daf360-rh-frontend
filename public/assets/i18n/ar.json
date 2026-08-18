@@ -171,6 +171,83 @@
       "DETACHEMENT": "إلحاق",
       "PORTAGE": "حمل أجري",
       "FREELANCE": "عمل حر"
+    },
+    "SECTIONS": {
+      "IT_ASSETS": "العتاد المعلوماتي"
+    },
+    "IT_ASSETS": {
+      "ASSIGN": "تخصيص",
+      "SYNC": "مزامنة",
+      "RETURN": "إرجاع",
+      "EDIT": "تصحيح",
+      "CURRENT": "العتاد المحتفظ به",
+      "PAST": "السجل",
+      "COUNT_CURRENT": "{{count}} قيد الاستخدام",
+      "COUNT_PAST": "{{count}} تم إرجاعه",
+      "NONE": "لا يوجد عتاد مسجّل لهذا الموظف.",
+      "NONE_HINT": "استعمل «مزامنة» لاسترجاع ملف التجهيز المعلوماتي، أو «تخصيص» لإضافة عتاد.",
+      "NONE_CURRENT": "لا يوجد عتاد قيد الاستخدام حاليا.",
+      "SERIAL": "الرقم التسلسلي",
+      "TAG": "رقم الجرد",
+      "SINCE": "منذ {{date}}",
+      "DAYS_HELD": "{{days}} يوم",
+      "CONDITION_ON_ASSIGN": "الحالة عند التسليم",
+      "ASSIGNED_BY": "سلّمه {{name}}",
+      "PERIOD": "من {{from}} إلى {{to}} ({{days}} يوم)",
+      "ASSIGNED": "تم تخصيص العتاد.",
+      "SAVED": "تم تحديث السطر.",
+      "RETURNED_OK": "تم تسجيل الإرجاع.",
+      "SYNC_ADDED": "تم استرجاع {{count}} عنصر من ملف التجهيز.",
+      "SYNC_NONE": "لا شيء للاسترجاع: السجل محدّث.",
+      "SYNC_ERROR": "فشلت المزامنة.",
+      "STATUS": {
+        "ASSIGNED": "قيد الاستخدام",
+        "RETURNED": "أُرجع",
+        "LOST": "مفقود",
+        "WRITTEN_OFF": "مُشطب"
+      },
+      "SOURCE": {
+        "ONBOARDING": "الانتداب",
+        "MANUAL": "إدخال الموارد البشرية",
+        "OFFBOARDING": "مغادرة",
+        "IMPORT": "استيراد"
+      },
+      "CONDITION": {
+        "NEUF": "جديد",
+        "BON_ETAT": "حالة جيدة",
+        "USAGE": "مستعمل",
+        "EN_REPARATION": "قيد الإصلاح",
+        "DEFECTUEUX": "معطّل",
+        "PERDU": "مفقود"
+      },
+      "FORM": {
+        "TITLE_ASSIGN": "تخصيص عتاد",
+        "TITLE_EDIT": "تصحيح السطر",
+        "TITLE_RETURN": "تسجيل الإرجاع",
+        "TYPE": "نوع العتاد",
+        "ASSIGNED_AT": "تاريخ التسليم",
+        "RETURNED_AT": "تاريخ الإرجاع",
+        "BRAND_MODEL": "الماركة / الطراز",
+        "BRAND_MODEL_PH": "Dell Latitude 5540",
+        "SERIAL": "الرقم التسلسلي",
+        "SERIAL_PH": "DAF-IT-0092",
+        "SERIAL_HINT": "لا يمكن أن يكون الرقم التسلسلي في حوزة أكثر من شخص في نفس الوقت.",
+        "TAG": "رقم الجرد",
+        "CONDITION": "الحالة عند التسليم",
+        "CONDITION_ON_RETURN": "الحالة عند الإرجاع",
+        "OUTCOME": "النتيجة",
+        "NOTES": "ملاحظة",
+        "RETURN_NOTES_PH": "خدش في الغطاء، الشاحن مفقود…",
+        "CONFIRM_ASSIGN": "تخصيص",
+        "CONFIRM_RETURN": "تسجيل الإرجاع",
+        "SAVE": "حفظ",
+        "ERR_TYPE": "اختر نوع العتاد.",
+        "ERR_DATE": "أدخل تاريخ التسليم.",
+        "ERR_RETURN_DATE": "أدخل تاريخ الإرجاع.",
+        "ERR_BEFORE_ASSIGN": "لا يمكن أن يكون تاريخ الإرجاع قبل تاريخ التسليم.",
+        "ERR_AFTER_RETURN": "لا يمكن أن يكون تاريخ التسليم بعد تاريخ الإرجاع.",
+        "ERR_SAVE": "فشل الحفظ."
+      }
     }
   },
   "OFFBOARDING": {

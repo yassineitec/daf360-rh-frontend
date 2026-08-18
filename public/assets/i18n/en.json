@@ -1182,7 +1182,8 @@
       "HR_DOCUMENTS": "HR Documents",
       "COMPENSATION": "Expectations & pay",
       "EMPLOYMENT_POSITION": "Employment & role",
-      "SOCIAL_IDS": "Social & tax identifiers"
+      "SOCIAL_IDS": "Social & tax identifiers",
+      "IT_ASSETS": "IT equipment"
     },
     "FIELDS": {
       "DOB": "Date of birth",
@@ -1481,6 +1482,80 @@
     "ONBOARDING": {
       "DONE": "Completed",
       "PENDING": "In progress"
+    },
+    "IT_ASSETS": {
+      "ASSIGN": "Assign",
+      "SYNC": "Sync",
+      "RETURN": "Return",
+      "EDIT": "Correct",
+      "CURRENT": "Currently held",
+      "PAST": "History",
+      "COUNT_CURRENT": "{{count}} held",
+      "COUNT_PAST": "{{count}} returned",
+      "NONE": "No equipment recorded for this employee.",
+      "NONE_HINT": "Use \"Sync\" to pull in the IT provisioning record, or \"Assign\" to add an item.",
+      "NONE_CURRENT": "No equipment currently held.",
+      "SERIAL": "Serial no.",
+      "TAG": "Asset tag",
+      "SINCE": "since {{date}}",
+      "DAYS_HELD": "{{days}} d",
+      "CONDITION_ON_ASSIGN": "Condition when handed over",
+      "ASSIGNED_BY": "Handed over by {{name}}",
+      "PERIOD": "{{from}} → {{to}} ({{days}} d)",
+      "ASSIGNED": "Equipment assigned.",
+      "SAVED": "Line updated.",
+      "RETURNED_OK": "Return recorded.",
+      "SYNC_ADDED": "{{count}} item(s) pulled from the IT record.",
+      "SYNC_NONE": "Nothing to pull — the ledger is up to date.",
+      "SYNC_ERROR": "Sync failed.",
+      "STATUS": {
+        "ASSIGNED": "Held",
+        "RETURNED": "Returned",
+        "LOST": "Lost",
+        "WRITTEN_OFF": "Written off"
+      },
+      "SOURCE": {
+        "ONBOARDING": "Hire",
+        "MANUAL": "HR entry",
+        "OFFBOARDING": "Offboarding",
+        "IMPORT": "Import"
+      },
+      "CONDITION": {
+        "NEUF": "New",
+        "BON_ETAT": "Good",
+        "USAGE": "Used",
+        "EN_REPARATION": "Under repair",
+        "DEFECTUEUX": "Faulty",
+        "PERDU": "Lost"
+      },
+      "FORM": {
+        "TITLE_ASSIGN": "Assign equipment",
+        "TITLE_EDIT": "Correct line",
+        "TITLE_RETURN": "Record return",
+        "TYPE": "Equipment type",
+        "ASSIGNED_AT": "Hand-over date",
+        "RETURNED_AT": "Return date",
+        "BRAND_MODEL": "Brand / model",
+        "BRAND_MODEL_PH": "Dell Latitude 5540",
+        "SERIAL": "Serial no.",
+        "SERIAL_PH": "DAF-IT-0092",
+        "SERIAL_HINT": "A serial number can only be held by one person at a time.",
+        "TAG": "Asset tag",
+        "CONDITION": "Condition when handed over",
+        "CONDITION_ON_RETURN": "Condition on return",
+        "OUTCOME": "Outcome",
+        "NOTES": "Comment",
+        "RETURN_NOTES_PH": "Scratched lid, charger missing…",
+        "CONFIRM_ASSIGN": "Assign",
+        "CONFIRM_RETURN": "Record return",
+        "SAVE": "Save",
+        "ERR_TYPE": "Pick an equipment type.",
+        "ERR_DATE": "Enter the hand-over date.",
+        "ERR_RETURN_DATE": "Enter the return date.",
+        "ERR_BEFORE_ASSIGN": "The return date cannot precede the hand-over date.",
+        "ERR_AFTER_RETURN": "The hand-over date cannot be after the return date.",
+        "ERR_SAVE": "Saving failed."
+      }
     }
   },
   "OFFBOARDING": {
