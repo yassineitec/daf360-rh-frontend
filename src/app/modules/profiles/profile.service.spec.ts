@@ -35,6 +35,10 @@ const MOCK_DOC: EmployeeDocument = {
   id: 10, employeeProfileId: 1, documentType: 'CONTRACT',
   fileName: 'contract.pdf', fileUrl: '/files/contract.pdf',
   fileSizeKb: 120, verificationStatus: 'PENDING', uploadedAt: '2024-01-15T00:00:00Z',
+  // Exposed by the backend since the Documents rebuild.
+  expirationDate: null, notes: null, uploadedBy: 42, uploadedByName: 'RH Manager',
+  storageProvider: 'LOCAL',
+  isDeleted: false, deletedAt: null, deletedBy: null, deletedByName: null,
 };
 
 const MOCK_REGIME: WorkingTimeRegime = {

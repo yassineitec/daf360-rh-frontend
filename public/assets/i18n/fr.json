@@ -1349,7 +1349,41 @@
       "TYPE_LABEL": "Type de document",
       "IMPORT_HINT": "Importer un document",
       "NONE": "Aucun document enregistré.",
-      "SIZE_KB": "{{size}} Ko"
+      "SIZE_KB": "{{size}} Ko",
+      "COUNT": "{{count}} pièce(s)",
+      "UPLOADING": "Import en cours…",
+      "UPLOADED": "{{count}} document(s) importé(s).",
+      "SOURCE_GENERATED": "Généré",
+      "ON_DATE": "le {{date}}",
+      "BY": "par {{name}}",
+      "EXPIRES_ON": "expire le {{date}}",
+      "EXPIRES_SOON": "expire dans {{days}} j",
+      "EXPIRED": "Expiré",
+      "OPEN": "Ouvrir",
+      "VERIFY": "Valider",
+      "REJECT": "Refuser",
+      "EDIT": "Modifier",
+      "DELETE": "Retirer",
+      "NOTES": "Commentaire",
+      "EXPIRATION": "Date d'expiration",
+      "EXPIRATION_HINT": "Utile pour une CIN, un passeport ou un titre de séjour. Laisser vide s'il n'y a pas d'échéance.",
+      "EDIT_TITLE": "Modifier le document",
+      "STATUS": {
+        "PENDING": "À vérifier",
+        "VERIFIED": "Vérifié",
+        "REJECTED": "Refusé"
+      },
+      "VERIFIED_OK": "Document vérifié.",
+      "REJECTED_OK": "Document refusé.",
+      "SAVED_OK": "Document mis à jour.",
+      "DELETED_OK": "Document retiré du dossier.",
+      "DELETE_CONFIRM_TITLE": "Retirer ce document ?",
+      "DELETE_CONFIRM_MESSAGE": "« {{name}} » disparaîtra du dossier. Le fichier est conservé et la suppression reste traçable.",
+      "ERR_UPLOAD": "L'import a échoué.",
+      "ERR_OPEN": "Impossible d'ouvrir le document.",
+      "ERR_VERIFY": "La vérification a échoué.",
+      "ERR_DELETE": "Le retrait a échoué.",
+      "ERR_SAVE": "L'enregistrement a échoué."
     },
     "HR_DOCS": {
       "TITLE": "Documents RH",
@@ -1556,6 +1590,24 @@
         "ERR_AFTER_RETURN": "La date de remise ne peut pas être postérieure à la date de retour.",
         "ERR_SAVE": "L'enregistrement a échoué."
       }
+    },
+    "DOC_TYPES": {
+      "CONTRACT": "Contrat de travail",
+      "CONTRACT_SIGNED": "Contrat signé",
+      "AMENDMENT": "Avenant",
+      "ID_CARD": "CIN",
+      "PASSPORT": "Passeport",
+      "RESIDENCE_PERMIT": "Titre de séjour",
+      "DIPLOMA": "Diplôme",
+      "CV": "CV",
+      "MEDICAL_CERTIFICATE": "Certificat médical",
+      "RIB": "RIB bancaire",
+      "CNSS": "CNSS",
+      "TAX_FORM": "Document fiscal",
+      "PHOTO": "Photo d'identité",
+      "RESIGNATION": "Lettre de démission",
+      "DISCHARGE": "Décharge",
+      "OTHER": "Autre"
     }
   },
   "OFFBOARDING": {

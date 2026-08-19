@@ -23,8 +23,10 @@ import {
 
 import { ProfileService } from './profile.service';
 import {
+  DOCUMENT_TYPE_CODES,
   EmployeeDocument,
   EmployeeProfile,
+  ProfileDocumentRow,
   LifecycleStatus,
   LIFECYCLE_TRANSITIONS,
   LIFECYCLE_LABELS,
@@ -47,6 +49,7 @@ import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto, CONTRACT_TYPE_CONFIG,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
+import { DocumentEditFormComponent } from './documents/document-edit-form.component';
 import { ItAssetService } from './it-assets/it-asset.service';
 import { ItAssetAssignmentDto } from './it-assets/it-asset.model';
 import { AssetAssignFormComponent } from './it-assets/asset-assign-form.component';
@@ -110,7 +113,12 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   bancaire: ['bankId', 'iban', 'bankAccountNumber', 'rib', 'socialSecurityNumber', 'taxId', 'cnssNumber', 'cnssAffiliationDate'],
 };
 
-const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB', 'RESIGNATION', 'OTHER'];
+/*
+ * The document-type list is no longer local to this page: the backend validates uploads
+ * against the same set (EmployeeDocumentService.DOCUMENT_TYPES). The old array here was
+ * missing CONTRACT_SIGNED — which onboarding itself writes — so a document the app had
+ * created could not be re-selected, and the codes were shown to the user raw.
+ */
 
 /**
  * /rh/profiles/:id — the employee dossier.
@@ -138,6 +146,7 @@ const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
     DocumentsSectionComponent, DocumentsDrawerComponent, ItAssetsSectionComponent,
     NewContractFormComponent, AssetAssignFormComponent, AssetReturnFormComponent,
+    DocumentEditFormComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -413,12 +422,58 @@ export class ProfileDetailComponent implements OnInit {
   readonly nogLevelOptions    = computed(() => this.refOptions(this.nogLevels()));
   readonly bankOptions        = computed(() => this.refOptions(this.banks()));
 
-  readonly docTypeOptions: SelectOption[] = DOC_TYPES.map(t => ({ value: t, label: t }));
+  readonly docTypeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return DOCUMENT_TYPE_CODES.map(code => ({
+      value: code,
+      label: this.translate.instant('PROFILES.DOC_TYPES.' + code),
+    }));
+  });
 
   // ── Photo / documents upload ───────────────────────────────────────────────
   readonly photoUploading = signal(false);
   readonly uploadType     = signal('CONTRACT');
   readonly uploadFiles    = signal<UploadedFile[]>([]);
+  readonly docUploading   = signal(false);
+
+  /**
+   * The two document sources, merged and sorted newest first.
+   *
+   * Uploaded pieces and generated attestations live in different tables with different
+   * endpoints; the tab used to show only the first, so a dossier with six attestations and
+   * no upload read as empty. Merging here — not in the section — keeps the component free of
+   * both services.
+   */
+  readonly documentRows = computed<ProfileDocumentRow[]>(() => {
+    const uploaded: ProfileDocumentRow[] = this.documents().map(d => ({
+      source: 'UPLOADED',
+      id: d.id,
+      documentType: d.documentType,
+      fileName: d.fileName,
+      fileSizeKb: d.fileSizeKb,
+      date: d.uploadedAt,
+      authorName: d.uploadedByName,
+      verificationStatus: d.verificationStatus,
+      expirationDate: d.expirationDate,
+      notes: d.notes,
+    }));
+    const generated: ProfileDocumentRow[] = this.generatedDocs().map(g => ({
+      source: 'GENERATED',
+      id: g.id,
+      documentType: g.documentType,
+      // The generated PDF has no user-chosen name; the type IS the name of the piece.
+      fileName: null,
+      fileSizeKb: null,
+      date: g.generatedAt,
+      authorName: null,
+      verificationStatus: null,
+      expirationDate: null,
+      notes: null,
+      verificationCode: g.verificationCode,
+    }));
+    return [...uploaded, ...generated]
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+  });
 
   // ── Lifecycle transition modal ─────────────────────────────────────────────
   readonly transitionTarget = signal<LifecycleStatus | null>(null);
@@ -748,9 +803,108 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Uploads ────────────────────────────────────────────────────────────────
+  /**
+   * Actually uploads. This used to set a signal and re-read the list, so the drop zone
+   * accepted a file, showed it, and sent nothing — the document never existed.
+   */
   onDocumentFilesChange(files: UploadedFile[]): void {
     this.uploadFiles.set(files);
-    if (files.length) this.reloadDocuments();
+    const pending = files.map(f => f.file).filter((f): f is File => !!f);
+    if (!pending.length) return;
+
+    const type = this.uploadType();
+    this.docUploading.set(true);
+    // One POST per file, in parallel, each with its OWN catchError: a file the server
+    // rejects (wrong MIME, over 10 MB) reports itself and resolves to null instead of
+    // aborting the whole batch, so the others still land.
+    forkJoin(pending.map(file => this.svc.uploadDocument(this.profileId, file, type).pipe(
+      catchError(err => {
+        this.notify.error(this.extractErrorMessage(
+          err, this.translate.instant('PROFILES.DOCUMENTS.ERR_UPLOAD')));
+        return of(null);
+      }),
+    ))).subscribe(results => {
+      this.docUploading.set(false);
+      this.uploadFiles.set([]);
+      const ok = results.filter(r => r !== null).length;
+      if (ok) {
+        this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.UPLOADED', { count: ok }));
+      }
+      this.reloadDocuments();
+    });
+  }
+
+  /**
+   * Opens a document in a new tab.
+   *
+   * Both sources are fetched as blobs and handed to the browser through an object URL:
+   * `fileUrl` is a server-side path, and the endpoints need the Authorization header that a
+   * plain <a href> would not send.
+   */
+  openDocument(row: ProfileDocumentRow): void {
+    const call$ = row.source === 'GENERATED'
+      ? this.pdfSvc.downloadBlobById(row.id)
+      : this.svc.downloadDocument(this.profileId, row.id);
+    call$.subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Revoked late: revoking immediately can race the new tab's own load.
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_OPEN'))),
+    });
+  }
+
+  verifyDocument(event: { doc: ProfileDocumentRow; status: 'VERIFIED' | 'REJECTED' }): void {
+    this.svc.verifyDocument(this.profileId, event.doc.id, event.status).subscribe({
+      next: () => {
+        this.reloadDocuments();
+        this.notify.success(this.translate.instant(
+          event.status === 'VERIFIED'
+            ? 'PROFILES.DOCUMENTS.VERIFIED_OK'
+            : 'PROFILES.DOCUMENTS.REJECTED_OK'));
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_VERIFY'))),
+    });
+  }
+
+  /**
+   * Soft delete — the row and the file both survive, so the dossier can still show that the
+   * piece was filed and withdrawn. Confirmed first: it disappears from the tab.
+   */
+  async removeDocument(row: ProfileDocumentRow): Promise<void> {
+    if (!(await this.confirm.ask({
+      title:   this.translate.instant('PROFILES.DOCUMENTS.DELETE_CONFIRM_TITLE'),
+      message: this.translate.instant('PROFILES.DOCUMENTS.DELETE_CONFIRM_MESSAGE',
+                                      { name: row.fileName ?? row.documentType }),
+      confirmLabel: this.translate.instant('PROFILES.COMMON.DELETE'), icon: 'delete',
+    }))) return;
+
+    this.svc.deleteDocument(this.profileId, row.id).subscribe({
+      next: () => {
+        this.reloadDocuments();
+        this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.DELETED_OK'));
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_DELETE'))),
+    });
+  }
+
+  readonly editingDocument = signal<EmployeeDocument | null>(null);
+
+  /** The section hands back a merged row; the form needs the uploaded document itself. */
+  openEditDocument(row: ProfileDocumentRow): void {
+    const doc = this.documents().find(d => d.id === row.id);
+    if (doc) this.editingDocument.set(doc);
+  }
+
+  onDocumentUpdated(): void {
+    this.editingDocument.set(null);
+    this.reloadDocuments();
+    this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.SAVED_OK'));
   }
 
   onPhotoChange(event: Event): void {

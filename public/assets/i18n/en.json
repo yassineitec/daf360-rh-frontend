@@ -1349,7 +1349,41 @@
       "TYPE_LABEL": "Document type",
       "IMPORT_HINT": "Import a document",
       "NONE": "No document recorded.",
-      "SIZE_KB": "{{size}} KB"
+      "SIZE_KB": "{{size}} KB",
+      "COUNT": "{{count}} item(s)",
+      "UPLOADING": "Uploading…",
+      "UPLOADED": "{{count}} document(s) uploaded.",
+      "SOURCE_GENERATED": "Generated",
+      "ON_DATE": "on {{date}}",
+      "BY": "by {{name}}",
+      "EXPIRES_ON": "expires {{date}}",
+      "EXPIRES_SOON": "expires in {{days}} d",
+      "EXPIRED": "Expired",
+      "OPEN": "Open",
+      "VERIFY": "Verify",
+      "REJECT": "Reject",
+      "EDIT": "Edit",
+      "DELETE": "Remove",
+      "NOTES": "Comment",
+      "EXPIRATION": "Expiry date",
+      "EXPIRATION_HINT": "Useful for an ID card, passport or residence permit. Leave empty when there is no expiry.",
+      "EDIT_TITLE": "Edit document",
+      "STATUS": {
+        "PENDING": "To verify",
+        "VERIFIED": "Verified",
+        "REJECTED": "Rejected"
+      },
+      "VERIFIED_OK": "Document verified.",
+      "REJECTED_OK": "Document rejected.",
+      "SAVED_OK": "Document updated.",
+      "DELETED_OK": "Document removed from the file.",
+      "DELETE_CONFIRM_TITLE": "Remove this document?",
+      "DELETE_CONFIRM_MESSAGE": "\"{{name}}\" will disappear from the file. The file itself is kept and the removal stays traceable.",
+      "ERR_UPLOAD": "Upload failed.",
+      "ERR_OPEN": "Could not open the document.",
+      "ERR_VERIFY": "Verification failed.",
+      "ERR_DELETE": "Removal failed.",
+      "ERR_SAVE": "Saving failed."
     },
     "HR_DOCS": {
       "TITLE": "HR Documents",
@@ -1556,6 +1590,24 @@
         "ERR_AFTER_RETURN": "The hand-over date cannot be after the return date.",
         "ERR_SAVE": "Saving failed."
       }
+    },
+    "DOC_TYPES": {
+      "CONTRACT": "Employment contract",
+      "CONTRACT_SIGNED": "Signed contract",
+      "AMENDMENT": "Amendment",
+      "ID_CARD": "ID card",
+      "PASSPORT": "Passport",
+      "RESIDENCE_PERMIT": "Residence permit",
+      "DIPLOMA": "Diploma",
+      "CV": "CV",
+      "MEDICAL_CERTIFICATE": "Medical certificate",
+      "RIB": "Bank details",
+      "CNSS": "Social security",
+      "TAX_FORM": "Tax document",
+      "PHOTO": "ID photo",
+      "RESIGNATION": "Resignation letter",
+      "DISCHARGE": "Discharge",
+      "OTHER": "Other"
     }
   },
   "OFFBOARDING": {
