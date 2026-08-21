@@ -328,6 +328,7 @@
       "TIME": "Time",
       "LOCATION": "Location",
       "LOCATION_PLACEHOLDER": "E.g.: Room A, Zoom…",
+      "JOIN_TEAMS": "Join on Teams",
       "NOTES_OPTIONAL": "Notes (optional)",
       "INTERVIEWER": "Interviewer (optional)",
       "INTERVIEWERS": "Interviewers (optional)",

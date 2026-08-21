@@ -215,6 +215,13 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                           {{ iv.location }}
                         </span>
                       }
+                      @if (iv.graphJoinUrl) {
+                        <a [href]="iv.graphJoinUrl" target="_blank" rel="noopener"
+                           class="flex items-center gap-1 text-primary hover:underline">
+                          <span class="material-symbols-outlined text-[13px]">videocam</span>
+                          {{ 'CANDIDATES.INTERVIEWS.JOIN_TEAMS' | translate }}
+                        </a>
+                      }
                       @if (interviewerNames(iv)) {
                         <span class="flex items-center gap-1">
                           <span class="material-symbols-outlined text-[13px]">
