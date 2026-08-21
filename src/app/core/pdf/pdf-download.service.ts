@@ -41,6 +41,17 @@ export class PdfDownloadService {
     );
   }
 
+  /**
+   * The raw blob, for callers that want to open the PDF in a tab rather than save it.
+   * The profile's Documents tab needs this: the endpoint requires the Authorization header,
+   * so a plain link cannot reach it.
+   */
+  downloadBlobById(documentId: number): Observable<Blob> {
+    return this.http.get(
+      environment.hrApiUrl + '/api/hr/documents/download/' + documentId,
+      { responseType: 'blob' });
+  }
+
   downloadById(documentId: number, filename: string): Observable<void> {
     const url = environment.hrApiUrl + '/api/hr/documents/download/' + documentId;
     return this.http.get(url, { responseType: 'blob' }).pipe(

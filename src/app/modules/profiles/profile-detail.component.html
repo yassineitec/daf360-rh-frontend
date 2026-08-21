@@ -128,16 +128,37 @@
                 (convertCdi)="openConvertCDIModal($event)" />
             }
 
+            <!-- Matériel IT — the equipment ledger (V76). Read-only section; both its
+                 modals live at the page root below, like every other modal here. -->
+            @case ('materiel') {
+              <rh-it-assets-section
+                [assets]="itAssets()"
+                [loading]="assetsLoading()"
+                [syncing]="assetsSyncing()"
+                [canEdit]="canManageAssets()"
+                (assign)="openAssignAsset()"
+                (sync)="syncItAssets()"
+                (returnAsset)="openReturnAsset($event)"
+                (edit)="openEditAsset($event)" />
+            }
+
+            <!-- One list for both sources: uploaded pieces and generated attestations.
+                 `documentRows` merges them — the section knows neither service. -->
             @case ('documents') {
               <rh-documents-section
-                [documents]="documents()"
+                [rows]="documentRows()"
                 [loading]="docsLoading()"
+                [uploading]="docUploading()"
                 [canEdit]="canEdit()"
                 [uploadType]="uploadType()"
                 [uploadFiles]="uploadFiles()"
-                [docTypeOptions]="docTypeOptions"
+                [docTypeOptions]="docTypeOptions()"
                 (uploadTypeChange)="uploadType.set($event)"
-                (filesChange)="onDocumentFilesChange($event)" />
+                (filesChange)="onDocumentFilesChange($event)"
+                (open)="openDocument($event)"
+                (verify)="verifyDocument($event)"
+                (edit)="openEditDocument($event)"
+                (remove)="removeDocument($event)" />
             }
           }
         </div>
@@ -190,6 +211,34 @@
       </div>
     </div>
   </div>
+}
+
+<!-- Document — correct the type / expiry / note of a filed piece -->
+@if (editingDocument(); as doc) {
+  <rh-document-edit-form
+    [profileId]="profileId"
+    [document]="doc"
+    (saved)="onDocumentUpdated()"
+    (cancelled)="editingDocument.set(null)" />
+}
+
+<!-- Matériel IT — assign / correct. Same component both ways: a non-null "existing"
+     means correct a line already in the ledger, which is a PATCH instead of a POST. -->
+@if (showAssetForm()) {
+  <rh-asset-assign-form
+    [profileId]="profileId"
+    [assetTypes]="assetTypes()"
+    [existing]="editingAsset()"
+    (saved)="onAssetSaved()"
+    (cancelled)="closeAssetForm()" />
+}
+
+<!-- Matériel IT — close a line (rendu / perdu / mis au rebut) -->
+@if (returningAsset(); as asset) {
+  <rh-asset-return-form
+    [assignment]="asset"
+    (saved)="onAssetReturned()"
+    (cancelled)="returningAsset.set(null)" />
 }
 
 <!-- New contract — opens its own ModalService modal internally -->

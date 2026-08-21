@@ -210,15 +210,77 @@ export interface LifecycleTransitionDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Document
 // ─────────────────────────────────────────────────────────────────────────────
+export type DocumentVerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
 export interface EmployeeDocument {
   id: number;
   employeeProfileId: number;
   documentType: string;
   fileName: string | null;
+  /**
+   * Server-side storage path, NOT a link. Opening a document goes through
+   * `ProfileService.downloadDocument` — nothing serves the upload directory.
+   */
   fileUrl: string;
   fileSizeKb: number | null;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  verificationStatus: DocumentVerificationStatus;
   uploadedAt: string;
+
+  /** Exposed by the backend since the Documents rebuild (columns pre-existed). */
+  expirationDate: string | null;
+  notes: string | null;
+  uploadedBy: number | null;
+  uploadedByName: string | null;
+
+  /** LOCAL | SHAREPOINT — everything is LOCAL until SharePoint is actually integrated. */
+  storageProvider: 'LOCAL' | 'SHAREPOINT';
+
+  isDeleted: boolean;
+  deletedAt: string | null;
+  deletedBy: number | null;
+  deletedByName: string | null;
+}
+
+export interface DocumentMetadataRequest {
+  documentType?: string;
+  expirationDate?: string | null;
+  /** A null `expirationDate` means "leave alone" on a PATCH; this clears it. */
+  clearExpirationDate?: boolean;
+  notes?: string | null;
+}
+
+/**
+ * Every document type the backend accepts (`EmployeeDocumentService.DOCUMENT_TYPES`).
+ * Order is display order; labels come from `PROFILES.DOC_TYPES.*`.
+ */
+export const DOCUMENT_TYPE_CODES = [
+  'CONTRACT', 'CONTRACT_SIGNED', 'AMENDMENT',
+  'ID_CARD', 'PASSPORT', 'RESIDENCE_PERMIT',
+  'DIPLOMA', 'CV', 'MEDICAL_CERTIFICATE',
+  'RIB', 'CNSS', 'TAX_FORM',
+  'PHOTO', 'RESIGNATION', 'DISCHARGE', 'OTHER',
+] as const;
+
+/**
+ * One row of the Documents tab, from either source.
+ *
+ * `UPLOADED` rows are `employee_documents` (verifiable, editable, removable);
+ * `GENERATED` rows are `generated_documents` — attestations produced by the drawer, which
+ * have their own table and their own download endpoint and are read-only here.
+ */
+export interface ProfileDocumentRow {
+  source: 'UPLOADED' | 'GENERATED';
+  id: number;
+  documentType: string;
+  fileName: string | null;
+  fileSizeKb: number | null;
+  date: string;
+  authorName: string | null;
+  verificationStatus: DocumentVerificationStatus | null;
+  expirationDate: string | null;
+  notes: string | null;
+  /** Generated documents only — the code printed in the PDF's verification footer. */
+  verificationCode?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

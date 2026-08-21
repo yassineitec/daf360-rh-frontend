@@ -23,8 +23,10 @@ import {
 
 import { ProfileService } from './profile.service';
 import {
+  DOCUMENT_TYPE_CODES,
   EmployeeDocument,
   EmployeeProfile,
+  ProfileDocumentRow,
   LifecycleStatus,
   LIFECYCLE_TRANSITIONS,
   LIFECYCLE_LABELS,
@@ -47,6 +49,11 @@ import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto, CONTRACT_TYPE_CONFIG,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
+import { DocumentEditFormComponent } from './documents/document-edit-form.component';
+import { ItAssetService } from './it-assets/it-asset.service';
+import { ItAssetAssignmentDto } from './it-assets/it-asset.model';
+import { AssetAssignFormComponent } from './it-assets/asset-assign-form.component';
+import { AssetReturnFormComponent } from './it-assets/asset-return-form.component';
 import { ConfirmService } from '../../core/confirm.service';
 import { OffboardingService } from '../offboarding/offboarding.service';
 import { DepartureReason } from '../offboarding/models/offboarding.model';
@@ -60,6 +67,7 @@ import { EmergencySectionComponent } from './detail-sections/emergency-section.c
 import { BankingSectionComponent } from './detail-sections/banking-section.component';
 import { LifecycleSectionComponent } from './detail-sections/lifecycle-section.component';
 import { DocumentsSectionComponent } from './detail-sections/documents-section.component';
+import { ItAssetsSectionComponent } from './detail-sections/it-assets-section.component';
 import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
 
@@ -74,7 +82,10 @@ type TabId =
   // they are merged under 'historique' so the lifecycle actions — New contract, which is the
   // only way to change an employee's frozen préavis, plus trial validation / CDD renewal /
   // CDI conversion — stay reachable from one place.
-  | 'historique' | 'documents';
+  | 'historique'
+  // The IT equipment ledger (it_asset_assignments, V76) — what the employee holds and
+  // what they held before. Not part of 'documents': it is inventory, not paperwork.
+  | 'materiel' | 'documents';
 
 /**
  * Departure types offered by the profile's "Démarrer l'offboarding" action.
@@ -102,7 +113,12 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   bancaire: ['bankId', 'iban', 'bankAccountNumber', 'rib', 'socialSecurityNumber', 'taxId', 'cnssNumber', 'cnssAffiliationDate'],
 };
 
-const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB', 'RESIGNATION', 'OTHER'];
+/*
+ * The document-type list is no longer local to this page: the backend validates uploads
+ * against the same set (EmployeeDocumentService.DOCUMENT_TYPES). The old array here was
+ * missing CONTRACT_SIGNED — which onboarding itself writes — so a document the app had
+ * created could not be re-selected, and the codes were shown to the user raw.
+ */
 
 /**
  * /rh/profiles/:id — the employee dossier.
@@ -128,8 +144,9 @@ const DOC_TYPES = ['CONTRACT', 'ID_CARD', 'DIPLOMA', 'MEDICAL_CERTIFICATE', 'RIB
     IdentityCardComponent, EmploymentSectionComponent,
     PositionSectionComponent, RegimeSectionComponent, ContactSectionComponent,
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
-    DocumentsSectionComponent, DocumentsDrawerComponent,
-    NewContractFormComponent,
+    DocumentsSectionComponent, DocumentsDrawerComponent, ItAssetsSectionComponent,
+    NewContractFormComponent, AssetAssignFormComponent, AssetReturnFormComponent,
+    DocumentEditFormComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -143,6 +160,7 @@ export class ProfileDetailComponent implements OnInit {
   private pdfSvc       = inject(PdfDownloadService);
   private regimeSvc    = inject(RegimeService);
   private refSvc       = inject(RefDataService);
+  private assetSvc     = inject(ItAssetService);
   private lcSvc        = inject(ContractLifecycleService);
   private contractHistorySvc = inject(ContractHistoryService);
   private modalService = inject(ModalService);
@@ -199,6 +217,9 @@ export class ProfileDetailComponent implements OnInit {
       // Count is the lifecycle contracts, not the historique rows: those are the ones with a
       // state machine, a trial period and a préavis.
       { id: 'historique', label: t('PROFILES.SECTIONS.CONTRACTS'), count: this.lcContracts().length || null },
+      // Count is what the employee holds TODAY, not the whole ledger: the badge answers
+      // 'how much hardware is out with this person', which is the operational question.
+      { id: 'materiel',   label: t('PROFILES.SECTIONS.IT_ASSETS'), count: this.currentAssetCount() || null },
       { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documents().length || null },
     );
     return items;
@@ -401,12 +422,58 @@ export class ProfileDetailComponent implements OnInit {
   readonly nogLevelOptions    = computed(() => this.refOptions(this.nogLevels()));
   readonly bankOptions        = computed(() => this.refOptions(this.banks()));
 
-  readonly docTypeOptions: SelectOption[] = DOC_TYPES.map(t => ({ value: t, label: t }));
+  readonly docTypeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return DOCUMENT_TYPE_CODES.map(code => ({
+      value: code,
+      label: this.translate.instant('PROFILES.DOC_TYPES.' + code),
+    }));
+  });
 
   // ── Photo / documents upload ───────────────────────────────────────────────
   readonly photoUploading = signal(false);
   readonly uploadType     = signal('CONTRACT');
   readonly uploadFiles    = signal<UploadedFile[]>([]);
+  readonly docUploading   = signal(false);
+
+  /**
+   * The two document sources, merged and sorted newest first.
+   *
+   * Uploaded pieces and generated attestations live in different tables with different
+   * endpoints; the tab used to show only the first, so a dossier with six attestations and
+   * no upload read as empty. Merging here — not in the section — keeps the component free of
+   * both services.
+   */
+  readonly documentRows = computed<ProfileDocumentRow[]>(() => {
+    const uploaded: ProfileDocumentRow[] = this.documents().map(d => ({
+      source: 'UPLOADED',
+      id: d.id,
+      documentType: d.documentType,
+      fileName: d.fileName,
+      fileSizeKb: d.fileSizeKb,
+      date: d.uploadedAt,
+      authorName: d.uploadedByName,
+      verificationStatus: d.verificationStatus,
+      expirationDate: d.expirationDate,
+      notes: d.notes,
+    }));
+    const generated: ProfileDocumentRow[] = this.generatedDocs().map(g => ({
+      source: 'GENERATED',
+      id: g.id,
+      documentType: g.documentType,
+      // The generated PDF has no user-chosen name; the type IS the name of the piece.
+      fileName: null,
+      fileSizeKb: null,
+      date: g.generatedAt,
+      authorName: null,
+      verificationStatus: null,
+      expirationDate: null,
+      notes: null,
+      verificationCode: g.verificationCode,
+    }));
+    return [...uploaded, ...generated]
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+  });
 
   // ── Lifecycle transition modal ─────────────────────────────────────────────
   readonly transitionTarget = signal<LifecycleStatus | null>(null);
@@ -423,6 +490,31 @@ export class ProfileDetailComponent implements OnInit {
   readonly lcError     = signal<string | null>(null);
   readonly showNewContractModal = signal(false);
   private lcLoaded = false;
+
+  // ── IT equipment ledger (V76) ──────────────────────────────────────────────
+  readonly itAssets       = signal<ItAssetAssignmentDto[]>([]);
+  readonly assetsLoading  = signal(false);
+  readonly assetsSyncing  = signal(false);
+  readonly assetTypes     = signal<RefDataItem[]>([]);
+  /** Both the 'Affecter' and the 'Corriger' modal — 'editingAsset' tells them apart. */
+  readonly showAssetForm  = signal(false);
+  readonly editingAsset   = signal<ItAssetAssignmentDto | null>(null);
+  readonly returningAsset = signal<ItAssetAssignmentDto | null>(null);
+  private assetsLoaded = false;
+
+  /** Still held, i.e. no return date — the same rule the backend puts in 'isCurrent'. */
+  readonly currentAssetCount = computed(() => this.itAssets().filter(a => a.isCurrent).length);
+
+  /**
+   * What ItAssetAssignmentController accepts for WRITE. IT_PROVISIONING is in there because
+   * handing hardware over is the IT team's job whether it happens on hire day or two years
+   * in; the tab itself is readable by anyone who can open the dossier.
+   */
+  readonly canManageAssets = computed(() =>
+    this.userStore.hasPermission('RH_MANAGE_IT_ASSETS')
+    || this.userStore.hasPermission('IT_PROVISIONING')
+    || this.userStore.isAdmin(),
+  );
 
   private selectedContractId: number | null = null;
   trialApproved = true;
@@ -443,6 +535,9 @@ export class ProfileDetailComponent implements OnInit {
     // Contracts are fetched the first time their tab is opened, not on page load.
     effect(() => {
       if (this.activeTab() === 'historique') this.loadContracts();
+      // Same deal for the equipment ledger: two extra requests nobody asked for on a page
+      // whose default tab is Emploi.
+      if (this.activeTab() === 'materiel') this.loadItAssets();
     });
   }
 
@@ -708,9 +803,108 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Uploads ────────────────────────────────────────────────────────────────
+  /**
+   * Actually uploads. This used to set a signal and re-read the list, so the drop zone
+   * accepted a file, showed it, and sent nothing — the document never existed.
+   */
   onDocumentFilesChange(files: UploadedFile[]): void {
     this.uploadFiles.set(files);
-    if (files.length) this.reloadDocuments();
+    const pending = files.map(f => f.file).filter((f): f is File => !!f);
+    if (!pending.length) return;
+
+    const type = this.uploadType();
+    this.docUploading.set(true);
+    // One POST per file, in parallel, each with its OWN catchError: a file the server
+    // rejects (wrong MIME, over 10 MB) reports itself and resolves to null instead of
+    // aborting the whole batch, so the others still land.
+    forkJoin(pending.map(file => this.svc.uploadDocument(this.profileId, file, type).pipe(
+      catchError(err => {
+        this.notify.error(this.extractErrorMessage(
+          err, this.translate.instant('PROFILES.DOCUMENTS.ERR_UPLOAD')));
+        return of(null);
+      }),
+    ))).subscribe(results => {
+      this.docUploading.set(false);
+      this.uploadFiles.set([]);
+      const ok = results.filter(r => r !== null).length;
+      if (ok) {
+        this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.UPLOADED', { count: ok }));
+      }
+      this.reloadDocuments();
+    });
+  }
+
+  /**
+   * Opens a document in a new tab.
+   *
+   * Both sources are fetched as blobs and handed to the browser through an object URL:
+   * `fileUrl` is a server-side path, and the endpoints need the Authorization header that a
+   * plain <a href> would not send.
+   */
+  openDocument(row: ProfileDocumentRow): void {
+    const call$ = row.source === 'GENERATED'
+      ? this.pdfSvc.downloadBlobById(row.id)
+      : this.svc.downloadDocument(this.profileId, row.id);
+    call$.subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Revoked late: revoking immediately can race the new tab's own load.
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_OPEN'))),
+    });
+  }
+
+  verifyDocument(event: { doc: ProfileDocumentRow; status: 'VERIFIED' | 'REJECTED' }): void {
+    this.svc.verifyDocument(this.profileId, event.doc.id, event.status).subscribe({
+      next: () => {
+        this.reloadDocuments();
+        this.notify.success(this.translate.instant(
+          event.status === 'VERIFIED'
+            ? 'PROFILES.DOCUMENTS.VERIFIED_OK'
+            : 'PROFILES.DOCUMENTS.REJECTED_OK'));
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_VERIFY'))),
+    });
+  }
+
+  /**
+   * Soft delete — the row and the file both survive, so the dossier can still show that the
+   * piece was filed and withdrawn. Confirmed first: it disappears from the tab.
+   */
+  async removeDocument(row: ProfileDocumentRow): Promise<void> {
+    if (!(await this.confirm.ask({
+      title:   this.translate.instant('PROFILES.DOCUMENTS.DELETE_CONFIRM_TITLE'),
+      message: this.translate.instant('PROFILES.DOCUMENTS.DELETE_CONFIRM_MESSAGE',
+                                      { name: row.fileName ?? row.documentType }),
+      confirmLabel: this.translate.instant('PROFILES.COMMON.DELETE'), icon: 'delete',
+    }))) return;
+
+    this.svc.deleteDocument(this.profileId, row.id).subscribe({
+      next: () => {
+        this.reloadDocuments();
+        this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.DELETED_OK'));
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_DELETE'))),
+    });
+  }
+
+  readonly editingDocument = signal<EmployeeDocument | null>(null);
+
+  /** The section hands back a merged row; the form needs the uploaded document itself. */
+  openEditDocument(row: ProfileDocumentRow): void {
+    const doc = this.documents().find(d => d.id === row.id);
+    if (doc) this.editingDocument.set(doc);
+  }
+
+  onDocumentUpdated(): void {
+    this.editingDocument.set(null);
+    this.reloadDocuments();
+    this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.SAVED_OK'));
   }
 
   onPhotoChange(event: Event): void {
@@ -782,6 +976,81 @@ export class ProfileDetailComponent implements OnInit {
   private refreshContracts(): void {
     this.lcLoaded = false;
     this.loadContracts();
+  }
+
+  // ── IT equipment ledger ────────────────────────────────────────────────────
+  loadItAssets(force = false): void {
+    if (this.assetsLoaded && !force) return;
+    this.assetsLoaded = true;
+    this.assetsLoading.set(true);
+    this.assetSvc.getHistory(this.profileId).subscribe(rows => {
+      this.itAssets.set(rows);
+      this.assetsLoading.set(false);
+    });
+    // Needed by the assign form's type picker; cached by RefDataService, so asking again
+    // on a later open costs nothing.
+    if (!this.assetTypes().length) {
+      this.refSvc.getItAssetTypes().subscribe(types => this.assetTypes.set(types));
+    }
+  }
+
+  openAssignAsset(): void {
+    this.editingAsset.set(null);
+    this.showAssetForm.set(true);
+  }
+
+  openEditAsset(asset: ItAssetAssignmentDto): void {
+    this.editingAsset.set(asset);
+    this.showAssetForm.set(true);
+  }
+
+  closeAssetForm(): void {
+    this.showAssetForm.set(false);
+    this.editingAsset.set(null);
+  }
+
+  onAssetSaved(): void {
+    const wasEdit = this.editingAsset() !== null;
+    this.closeAssetForm();
+    // Re-read rather than splice the returned row in: the tab shows two derived lists and a
+    // count, and the server is the one that decides which side a row lands on.
+    this.loadItAssets(true);
+    this.notify.success(this.translate.instant(
+      wasEdit ? 'PROFILES.IT_ASSETS.SAVED' : 'PROFILES.IT_ASSETS.ASSIGNED'));
+  }
+
+  openReturnAsset(asset: ItAssetAssignmentDto): void {
+    this.returningAsset.set(asset);
+  }
+
+  onAssetReturned(): void {
+    this.returningAsset.set(null);
+    this.loadItAssets(true);
+    this.notify.success(this.translate.instant('PROFILES.IT_ASSETS.RETURNED_OK'));
+  }
+
+  /**
+   * Pulls anything marked 'fourni' on the IT provisioning dossier that is not in the ledger
+   * yet. Idempotent server-side, so the button is safe to press twice; an empty result means
+   * the ledger is already up to date, which is worth saying rather than looking like a no-op.
+   */
+  syncItAssets(): void {
+    if (this.assetsSyncing()) return;
+    this.assetsSyncing.set(true);
+    this.assetSvc.syncFromProvisioning(this.profileId).subscribe({
+      next: (added) => {
+        this.assetsSyncing.set(false);
+        this.loadItAssets(true);
+        this.notify.success(this.translate.instant(
+          added.length ? 'PROFILES.IT_ASSETS.SYNC_ADDED' : 'PROFILES.IT_ASSETS.SYNC_NONE',
+          { count: added.length }));
+      },
+      error: (err) => {
+        this.assetsSyncing.set(false);
+        this.notify.error(err?.error?.message
+          ?? this.translate.instant('PROFILES.IT_ASSETS.SYNC_ERROR'));
+      },
+    });
   }
 
   onContractCreated(_contract: ContractDetailDto): void {

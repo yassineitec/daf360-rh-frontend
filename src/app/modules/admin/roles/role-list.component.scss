@@ -136,6 +136,12 @@
   color: #92400e;
 }
 
+// Tokens rather than hex, per the design system — the hardcoded values above predate it.
+.rl-badge-scope {
+  background: var(--color-secondary-container);
+  color: var(--color-on-secondary-container);
+}
+
 .rl-parent {
   font-size: var(--text-body-sm);
   color: var(--color-outline);

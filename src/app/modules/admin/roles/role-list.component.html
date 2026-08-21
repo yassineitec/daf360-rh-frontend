@@ -66,7 +66,11 @@
                     <div class="rl-item-meta">
                       <span class="rl-badge">{{ 'ADMIN.roles.list.PERMISSIONS' | translate:{ count: r.permissionCount } }}</span>
                       <span class="rl-badge rl-badge-users">{{ 'ADMIN.roles.list.USERS' | translate:{ count: r.userCount } }}</span>
-                      @if (r.showAll) { <span class="rl-badge rl-badge-showall">{{ 'ADMIN.roles.list.SHOW_ALL' | translate }}</span> }
+                      @if (r.paysScopeMode === 'ALL' || (!r.paysScopeMode && r.showAll)) {
+                        <span class="rl-badge rl-badge-showall">{{ 'ADMIN.roles.list.SHOW_ALL' | translate }}</span>
+                      } @else if (r.paysScopeMode === 'LIST') {
+                        <span class="rl-badge rl-badge-scope">{{ 'ADMIN.roles.list.SCOPE_LIST' | translate:{ count: r.paysScope.length } }}</span>
+                      }
                     </div>
                     @if (r.parentRoleName) {
                       <span class="rl-parent">↳ {{ r.parentRoleName }}</span>

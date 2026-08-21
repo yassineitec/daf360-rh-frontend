@@ -20,13 +20,27 @@
     [config]="{ label: ('ADMIN.roles.info.PARENT_LABEL' | translate), placeholder: ('ADMIN.roles.info.PARENT_PLACEHOLDER' | translate), fullWidth: true }"
     (selectedChange)="onParentRoleChange($event)" />
 
-  <!-- Voir toutes les entites -->
-  <div class="rit-toggle-row">
-    <daf-toggle
-      [options]="{ label: ('ADMIN.roles.info.SHOW_ALL_LABEL' | translate), labelPosition: 'left' }"
-      [checked]="showAll()"
-      (checkedChange)="showAll.set($event)" />
-  </div>
+  <!-- Perimetre pays -->
+  <daf-select
+    [selected]="scopeModeSelected()"
+    [options]="scopeModeOptions()"
+    [config]="{ label: ('ADMIN.roles.info.SCOPE_MODE_LABEL' | translate), hint: scopeModeHint(), fullWidth: true }"
+    (selectedChange)="onScopeModeChange($event)" />
+
+  @if (showCountryPicker()) {
+    <daf-select
+      [selected]="paysScopeSelected()"
+      [options]="paysSelectOptions()"
+      [config]="{
+        label: ('ADMIN.roles.info.SCOPE_COUNTRIES_LABEL' | translate),
+        placeholder: ('ADMIN.roles.info.SCOPE_COUNTRIES_PLACEHOLDER' | translate),
+        hint: ('ADMIN.roles.info.SCOPE_COUNTRIES_HINT' | translate),
+        multiple: true,
+        searchable: true,
+        fullWidth: true
+      }"
+      (selectedChange)="onPaysScopeChange($event)" />
+  }
 
   <!-- Compteur utilisateurs -->
   <div class="rit-user-count">
@@ -39,6 +53,27 @@
     variant="teal"
     [options]="{ disabled: saving(), loading: saving() }"
     (onClick)="save()" />
+
+  <!-- Renommage d'un role deja attribue : le backend exige forceRename -->
+  @if (renameConflict()) {
+    <div class="rit-rename-confirm">
+      <p class="rit-rename-text">
+        {{ 'ADMIN.roles.info.RENAME_CONFIRM' | translate:{ count: role().userCount } }}
+      </p>
+      <div class="rit-rename-actions">
+        <daf-button
+          [label]="'ADMIN.roles.info.CANCEL' | translate"
+          variant="ghost"
+          [options]="{ size: 'sm' }"
+          (onClick)="cancelRename()" />
+        <daf-button
+          [label]="'ADMIN.roles.info.RENAME_CONFIRM_BTN' | translate"
+          variant="teal"
+          [options]="{ size: 'sm', disabled: saving() }"
+          (onClick)="confirmRename()" />
+      </div>
+    </div>
+  }
 
   <!-- Zone de suppression -->
   <div class="rit-delete-zone">

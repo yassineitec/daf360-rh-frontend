@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import {
   RoleListItem,
   RoleUserItem,
+  PaysOption,
   PermissionGroup,
   CreateRoleRequest,
   UpdateRoleRequest,
@@ -17,6 +18,7 @@ export class RoleManagementService {
   private readonly base = `${environment.hrApiUrl}/api/hr/admin`;
 
   private catalogCache: PermissionGroup[] | null = null;
+  private paysCache: PaysOption[] | null = null;
 
   getRoles(): Observable<RoleListItem[]> {
     return this.http.get<RoleListItem[]>(`${this.base}/roles`);
@@ -72,6 +74,24 @@ export class RoleManagementService {
 
   removeUserFromRole(roleId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/roles/${roleId}/users/${userId}`);
+  }
+
+  /** Full replacement of a role's country list (LIST mode only — see PaysScopeMode). */
+  replacePaysScope(roleId: number, paysIds: number[]): Observable<RoleListItem> {
+    return this.http.put<RoleListItem>(`${this.base}/roles/${roleId}/pays-scope`, paysIds);
+  }
+
+  /**
+   * Countries for the scope picker. Served by the reference controller, not the admin one,
+   * so the URL deliberately does not use `this.base`.
+   */
+  getPaysOptions(): Observable<PaysOption[]> {
+    if (this.paysCache) {
+      return of(this.paysCache);
+    }
+    return this.http
+      .get<PaysOption[]>(`${environment.hrApiUrl}/api/hr/ref/pays`)
+      .pipe(tap(data => (this.paysCache = data)));
   }
 
   getPermissionCatalog(): Observable<PermissionGroup[]> {

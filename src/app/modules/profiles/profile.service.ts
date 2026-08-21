@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  DocumentMetadataRequest,
   EmployeeDocument,
   EmployeeListItem,
   EmployeeProfile,
@@ -67,12 +68,57 @@ export class ProfileService {
     return this.http.get<EmployeeDocument[]>(`${this.base}/profiles/${profileId}/documents`);
   }
 
-  // uploadDocument(profileId: number, file: File, documentType: string): Observable<EmployeeDocument> {
-  //   const fd = new FormData();
-  //   fd.append('file', file);
-  //   fd.append('documentType', documentType);
-  //   return this.http.post<EmployeeDocument>(`${this.base}/profiles/${profileId}/documents`, fd);
-  // }
+  /** The corbeille — soft-deleted rows, so the dossier can show what was withdrawn. */
+  listDeletedDocuments(profileId: number): Observable<EmployeeDocument[]> {
+    return this.http.get<EmployeeDocument[]>(
+      `${this.base}/profiles/${profileId}/documents/deleted`);
+  }
+
+  /**
+   * Uploads a document. This was commented out, which is why the Documents tab's drop zone
+   * accepted a file and silently discarded it — the endpoint existed the whole time.
+   */
+  uploadDocument(
+    profileId: number,
+    file: File,
+    documentType: string,
+    meta: { expirationDate?: string | null; notes?: string | null } = {},
+  ): Observable<EmployeeDocument> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('documentType', documentType);
+    // Omitted rather than sent empty: a blank string fails @DateTimeFormat parsing server-side.
+    if (meta.expirationDate) fd.append('expirationDate', meta.expirationDate);
+    if (meta.notes)          fd.append('notes', meta.notes);
+    return this.http.post<EmployeeDocument>(
+      `${this.base}/profiles/${profileId}/documents`, fd);
+  }
+
+  /**
+   * Fetches the bytes as a blob. `fileUrl` is a path on the service's disk and the upload
+   * directory is not served statically, so this endpoint is the only way to open a document.
+   */
+  downloadDocument(profileId: number, docId: number): Observable<Blob> {
+    return this.http.get(
+      `${this.base}/profiles/${profileId}/documents/${docId}/download`,
+      { responseType: 'blob' });
+  }
+
+  updateDocument(profileId: number, docId: number,
+                 req: DocumentMetadataRequest): Observable<EmployeeDocument> {
+    return this.http.patch<EmployeeDocument>(
+      `${this.base}/profiles/${profileId}/documents/${docId}`, req);
+  }
+
+  /** Soft delete: the row and the file stay, the document leaves the dossier. */
+  deleteDocument(profileId: number, docId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/profiles/${profileId}/documents/${docId}`);
+  }
+
+  restoreDocument(profileId: number, docId: number): Observable<EmployeeDocument> {
+    return this.http.post<EmployeeDocument>(
+      `${this.base}/profiles/${profileId}/documents/${docId}/restore`, {});
+  }
 
   verifyDocument(profileId: number, docId: number, status: 'VERIFIED' | 'REJECTED'): Observable<EmployeeDocument> {
     return this.http.patch<EmployeeDocument>(

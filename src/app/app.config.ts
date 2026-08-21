@@ -8,6 +8,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
 import { UserStore } from './core/user.store';
 import { provideTranslateService, TranslateLoader } from '@ngx-translate/core';
+import { resolveInitialLang } from './core/language-preference';
 import { InlineTranslateLoader } from './core/inline-translate.loader';
 
 export const appConfig: ApplicationConfig = {
@@ -24,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     },
     ...provideTranslateService({
       fallbackLang: 'en',
-      lang: 'fr',
+      lang: resolveInitialLang(),
       loader: { provide: TranslateLoader, useClass: InlineTranslateLoader },
     }),
   ],
