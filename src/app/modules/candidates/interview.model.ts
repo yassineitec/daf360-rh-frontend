@@ -45,6 +45,10 @@ export interface CandidateInterview {
   result: InterviewResult | null;
   sequenceNumber: number;
   createdAt: string;
+  /** Teams join link, present once the calendar sync has succeeded for this
+   * interview (null if Graph is unconfigured, the sync hasn't run yet, or it
+   * failed — never a required field to render the rest of the card). */
+  graphJoinUrl: string | null;
 }
 
 export interface CreateInterviewRequest {

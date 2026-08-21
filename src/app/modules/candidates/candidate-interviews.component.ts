@@ -223,6 +223,13 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                           {{ iv.location }}
                         </span>
                       }
+                      @if (iv.graphJoinUrl) {
+                        <a [href]="iv.graphJoinUrl" target="_blank" rel="noopener"
+                           class="flex items-center gap-1 text-primary hover:underline">
+                          <span class="material-symbols-outlined text-[13px]">videocam</span>
+                          {{ 'CANDIDATES.INTERVIEWS.JOIN_TEAMS' | translate }}
+                        </a>
+                      }
                       <!-- Le panel en pastilles : daf-avatar-group empile les intervieweurs
                            et son panneau au survol les nomme TOUS, y compris ceux repliés
                            dans le « +N » — ce qu'une simple liste « Alice, Bob, … » ne fait
