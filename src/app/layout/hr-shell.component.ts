@@ -80,6 +80,24 @@ const APP_NAV_DEFS: AppNavDef[] = [
       },
     ],
   },
+  // Two entries, two desks: `missions` is the manager planning for their team,
+  // `billeterie` is RH pricing and validating what was planned. Deliberately NOT one
+  // entry with two children — a manager holds only the first permission and would see a
+  // group holding a single child, and RH only the second.
+  {
+    id: 'missions',
+    labelKey: 'NAV.MISSIONS',
+    icon: 'flight_takeoff',
+    route: 'missions',
+    permissions: ['RH_CREATE_MISSION'],
+  },
+  {
+    id: 'billeterie',
+    labelKey: 'NAV.BILLETERIE',
+    icon: 'confirmation_number',
+    route: 'billeterie',
+    permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
+  },
   { id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
   {
     id: 'admin',

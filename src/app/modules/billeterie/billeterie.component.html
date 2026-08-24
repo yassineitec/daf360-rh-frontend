@@ -1,0 +1,129 @@
+<!-- /rh/billeterie — canonical page shape (UI-PLAYBOOK §1), the same one /rh/onboarding
+     and /rh/it-provisioning use. `daf-page` owns the 32px rhythm. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
+
+  <daf-page-header
+    [title]="'BILLETERIE.TITLE' | translate"
+    [subtitle]="'BILLETERIE.SUBTITLE' | translate"
+    [badges]="headerBadges()" />
+
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'BILLETERIE.KPI_QUEUE' | translate"
+      [value]="stats().queue"
+      [delta]="queueDelta()"
+      [options]="{ icon: 'pending_actions', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+
+    <daf-metric-card
+      [label]="'BILLETERIE.KPI_UNPRICED' | translate"
+      [value]="stats().unpriced"
+      [options]="{ icon: 'receipt_long', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
+    <daf-metric-card
+      [label]="'BILLETERIE.KPI_LATE' | translate"
+      [value]="stats().late"
+      [delta]="lateDelta()"
+      [options]="{ icon: 'error', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+
+    <daf-metric-card
+      [label]="'BILLETERIE.KPI_ASKS' | translate"
+      [value]="stats().asks"
+      [options]="{ icon: 'edit_calendar', iconColor: 'text-tertiary', iconBg: 'bg-tertiary/10' }" />
+  </section>
+
+  <!-- Two queues, one page: the missions to price, and the employees' asks. daf-tabs is
+       strip-only, so the panel below is ours — which is what keeps each tab's own view
+       mode and paging in this component. -->
+  <daf-tabs #tabsRef
+    variant="underline"
+    [tabs]="tabs()"
+    [active]="activeTab()"
+    (activeChange)="onTabChange($event)"
+    idPrefix="billeterie" />
+
+  <div role="tabpanel"
+       [id]="tabsRef.panelId(activeTab())"
+       [attr.aria-labelledby]="tabsRef.tabId(activeTab())"
+       class="flex flex-col gap-8">
+
+    @if (activeTab() === 'queue') {
+      <daf-search-toolbar
+        [placeholder]="'BILLETERIE.SEARCH_PLACEHOLDER' | translate"
+        [value]="search()"
+        [debounce]="300"
+        (valueChange)="onSearch($event)"
+        [filterFields]="filterFields()"
+        [filterConfig]="filterConfig()"
+        (filterApply)="applyFilters($event)"
+        [views]="viewOptions()"
+        [view]="viewMode()"
+        (viewChange)="setView($event)" />
+
+      @if (error()) {
+        <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+          <span class="material-symbols-outlined text-[18px]">error</span>
+          {{ error() }}
+        </div>
+      }
+
+      @if (viewMode() === 'grid') {
+        <rh-billeterie-cards-section
+          [items]="pagedItems()"
+          [loading]="loading()"
+          [skeletonCount]="pageSize()"
+          [emptyMessage]="queueEmptyMessage()"
+          (act)="onQueueAction($event)" />
+      } @else {
+        <rh-billeterie-table-section
+          [items]="pagedItems()"
+          [loading]="loading()"
+          [skeletonRows]="pageSize()"
+          [emptyMessage]="queueEmptyMessage()"
+          (act)="onQueueAction($event)" />
+      }
+
+      @if (totalPages() > 0) {
+        <daf-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalElements]="totalElements()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="pageSizeOptions"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)" />
+      }
+
+    } @else {
+      <rh-change-requests-table-section
+        [items]="requests()"
+        [loading]="loading()"
+        [emptyMessage]="'BILLETERIE.EMPTY_REQUESTS' | translate"
+        (act)="onRequestAction($event)" />
+    }
+  </div>
+
+</daf-page>
+
+<!-- Modals and drawer at the PAGE ROOT: they are position:fixed, and daf-card's glass
+     variant would otherwise become their containing block (§10e). -->
+<rh-mission-expense-modal
+  [visible]="!!pricing()"
+  [mission]="pricing()"
+  [submitting]="submitting()"
+  [error]="modalError()"
+  (closed)="pricing.set(null)"
+  (submit)="saveExpenses($event)" />
+
+<rh-mission-decision-modal
+  [visible]="!!deciding()"
+  [mission]="deciding()?.mission ?? null"
+  [approve]="deciding()?.approve ?? true"
+  [submitting]="submitting()"
+  [error]="modalError()"
+  (closed)="deciding.set(null)"
+  (submit)="applyDecision($event)" />
+
+<rh-mission-detail-drawer
+  [mission]="selected()"
+  [open]="!!selected()"
+  (closed)="selected.set(null)" />

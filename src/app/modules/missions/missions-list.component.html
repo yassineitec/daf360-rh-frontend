@@ -1,0 +1,108 @@
+<!-- /rh/missions — canonical page shape (UI-PLAYBOOK §1), the same one
+     /rh/onboarding and /rh/it-provisioning use. `daf-page` owns the 32px rhythm, so
+     there is no wrapper and no gap between sections. `kpis="4"` matches the four tiles. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
+
+  <daf-page-header
+    [title]="'MISSIONS.LIST.TITLE' | translate"
+    [subtitle]="'MISSIONS.LIST.SUBTITLE' | translate"
+    [badges]="headerBadges()">
+    <daf-button pageActions
+      [options]="{ variant: 'teal', label: ('MISSIONS.LIST.NEW_BTN' | translate), iconStart: 'add' }"
+      (onClick)="openForm()" />
+  </daf-page-header>
+
+  <!-- KPIs — one row at every width, 24px gaps (§1). -->
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'MISSIONS.KPI.PENDING_HR' | translate"
+      [value]="stats().pendingHr"
+      [delta]="pendingDelta()"
+      [options]="{ icon: 'pending_actions', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+
+    <daf-metric-card
+      [label]="'MISSIONS.KPI.PENDING_FINANCE' | translate"
+      [value]="stats().pendingFinance"
+      [options]="{ icon: 'price_check', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
+    <daf-metric-card
+      [label]="'MISSIONS.KPI.UPCOMING' | translate"
+      [value]="stats().upcoming"
+      [delta]="upcomingDelta()"
+      [options]="{ icon: 'flight_takeoff', iconColor: 'text-tertiary', iconBg: 'bg-tertiary/10' }" />
+
+    <daf-metric-card
+      [label]="'MISSIONS.KPI.LATE' | translate"
+      [value]="stats().late"
+      [delta]="lateDelta()"
+      [options]="{ icon: 'error', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+  </section>
+
+  <!-- Search + status filter + view toggle: one lib toolbar, which renders its own
+       glass card and anchored filter panel. Both are client-side projections — the
+       endpoint returns the manager's whole list in one call. -->
+  <daf-search-toolbar
+    [placeholder]="'MISSIONS.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1). -->
+  @if (viewMode() === 'grid') {
+    <rh-missions-cards-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonCount]="pageSize()"
+      [emptyMessage]="emptyMessage()"
+      (open)="openDetail($event)"
+      (act)="onCardAction($event)" />
+  } @else {
+    <rh-missions-table-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      [emptyMessage]="emptyMessage()"
+      (open)="openDetail($event)"
+      (act)="onCardAction($event)" />
+  }
+
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
+
+</daf-page>
+
+<!-- Modal and drawer at the PAGE ROOT, outside daf-page: both are position:fixed and
+     daf-card's glass variant would otherwise become their containing block (§10e). -->
+<rh-mission-form-modal
+  [visible]="showForm()"
+  [employees]="employees()"
+  [submitting]="submitting()"
+  [error]="formError()"
+  (closed)="closeForm()"
+  (submit)="create($event)" />
+
+<rh-mission-detail-drawer
+  [mission]="selected()"
+  [open]="!!selected()"
+  (closed)="selected.set(null)" />

@@ -121,6 +121,24 @@ export const routes: Routes = [
       // Old path — kept so bookmarks and the notification deep links still land.
       { path: 'lifecycle', redirectTo: 'offboarding' },
       { path: 'lifecycle/:id', redirectTo: 'offboarding/:id' },
+      // A manager plans missions for their own team. The role-descendant check belongs to
+      // MissionService, not to the guard — this only gates the screen.
+      {
+        path: 'missions',
+        canActivate: [permissionGuard],
+        data: { permissions: ['RH_CREATE_MISSION'] },
+        loadChildren: () =>
+          import('./modules/missions/missions.routes').then(m => m.MISSIONS_ROUTES),
+      },
+      // RH's desk: price the submitted missions, validate or refuse them, and answer the
+      // employees' change / cancellation asks.
+      {
+        path: 'billeterie',
+        canActivate: [permissionGuard],
+        data: { permissions: ['RH_MANAGE_MISSION_BILLETERIE'] },
+        loadChildren: () =>
+          import('./modules/billeterie/billeterie.routes').then(m => m.BILLETERIE_ROUTES),
+      },
       {
         path: 'requests',
         canActivate: [permissionGuard],
