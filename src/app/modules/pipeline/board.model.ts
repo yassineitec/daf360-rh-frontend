@@ -27,13 +27,6 @@ export const BOARD_STAGES: BoardStageDef[] = [
   { key: 'RECRUTE',   labelKey: 'PIPELINE.STAGE.RECRUTE',   accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)'    },
 ];
 
-/**
- * Offboarding is a separate HR workflow, not a candidate stage — it gets a
- * neutral slate accent so it never reads as part of the recruitment funnel.
- */
-export const OFFBOARDING_KEY    = 'OFFBOARDING';
-export const OFFBOARDING_ACCENT = '#64748b';
-
 /** Highest fit score first; candidates without a score sink to the bottom. */
 export function byFitScoreDesc(a: KanbanCandidate, b: KanbanCandidate): number {
   return (b.fitScore ?? -1) - (a.fitScore ?? -1);

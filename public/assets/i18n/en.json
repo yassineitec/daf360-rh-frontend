@@ -527,11 +527,6 @@
       "OFFRE": "Offer",
       "RECRUTE": "Recruited"
     },
-    "OFFBOARDING": {
-      "COLUMN": "Offboarding",
-      "SLA": "SLA breached",
-      "EMPTY": "No active offboarding"
-    },
     "CARD": {
       "SPONTANEOUS": "Spontaneous application",
       "PENDING_SIGNATURE": "Awaiting signature",
@@ -1612,6 +1607,11 @@
     }
   },
   "OFFBOARDING": {
+    "BOARD": {
+      "COLUMN": "Offboarding",
+      "SLA": "SLA breached",
+      "EMPTY": "No active offboarding"
+    },
     "LIST": {
       "TITLE": "Offboarding",
       "COUNT": "{{count}} case(s)",

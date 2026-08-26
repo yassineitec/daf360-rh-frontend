@@ -5,17 +5,29 @@ import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 import { CandidateListItem } from '../candidate.model';
 import { KanbanColumn } from '../kanban.model';
 import { CandidateKanbanCardComponent } from '../components/candidate-kanban-card.component';
+import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
+import {
+  OFFBOARDING_ACCENT, OFFBOARDING_COLUMN_KEY,
+} from '../../offboarding/offboarding-kanban.model';
+import { OffboardingKanbanCardComponent } from '../../offboarding/components/offboarding-kanban-card.component';
 
 /**
  * Mobile view of /rh/recrutement: horizontal stage pills instead of kanban
  * columns, then a single vertical card list. Same card component as the desktop
  * board — the two used to be copy-pasted templates that had already drifted.
+ *
+ * The desktop board's read-only Offboarding column becomes one more pill here;
+ * picking it swaps the list for offboarding cards, since a departure has none of
+ * a candidature's fields to show side by side.
  */
 @Component({
   selector: 'rh-candidates-mobile-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CandidateKanbanCardComponent, SkeletonComponent, TranslatePipe],
+  imports: [
+    CandidateKanbanCardComponent, OffboardingKanbanCardComponent,
+    SkeletonComponent, TranslatePipe,
+  ],
   host: { class: 'sm:hidden' },
   styles: [`
     .custom-scroll { scrollbar-width: none; }
@@ -48,6 +60,17 @@ import { CandidateKanbanCardComponent } from '../components/candidate-kanban-car
               {{ col.label }} <span class="opacity-70">{{ col.candidates.length }}</span>
             </button>
           }
+          @if (showOffboarding()) {
+            <button type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border border-outline-variant transition-colors shrink-0"
+              [class.bg-surface-container]="stageFilter() === offboardingKey"
+              [class.text-on-surface]="stageFilter() === offboardingKey"
+              [class.text-outline]="stageFilter() !== offboardingKey"
+              (click)="stageFilterChange.emit(offboardingKey)">
+              <span class="w-2 h-2 rounded-full" [style.background]="offboardingAccent"></span>
+              {{ 'OFFBOARDING.BOARD.COLUMN' | translate }} <span class="opacity-70">{{ offboarding().length }}</span>
+            </button>
+          }
         </div>
       }
 
@@ -55,6 +78,18 @@ import { CandidateKanbanCardComponent } from '../components/candidate-kanban-car
         <div class="flex flex-col gap-3">
           @for (i of skeletonCards(); track i) {
             <daf-skeleton variant="block" radius="xl" width="100%" height="196px" />
+          }
+        </div>
+      } @else if (stageFilter() === offboardingKey) {
+        <div class="flex flex-col gap-3">
+          @for (o of offboarding(); track o.id) {
+            <rh-offboarding-kanban-card [item]="o" [showChevron]="true"
+                                        (open)="openOffboarding.emit(o.id)" />
+          } @empty {
+            <div class="flex flex-col items-center gap-2 py-16 text-center text-outline">
+              <span class="material-symbols-outlined text-[40px] opacity-30">logout</span>
+              <p class="text-[13px]">{{ 'OFFBOARDING.BOARD.EMPTY' | translate }}</p>
+            </div>
           }
         </div>
       } @else {
@@ -93,11 +128,16 @@ export class CandidatesMobileSectionComponent {
   readonly statusLabel     = input.required<(status: string) => string>();
   readonly accentFor       = input.required<(status: string) => string>();
   readonly badgeBgFor      = input.required<(status: string) => string>();
+  readonly offboarding     = input<OffboardingWorkflowInstance[]>([]);
+  readonly showOffboarding = input(false);
 
   readonly stageFilterChange = output<string | null>();
   readonly open              = output<number>();
+  readonly openOffboarding   = output<number>();
   readonly accept            = output<{ candidate: CandidateListItem; event: Event }>();
   readonly reject            = output<{ candidate: CandidateListItem; event: Event }>();
 
+  protected readonly offboardingKey    = OFFBOARDING_COLUMN_KEY;
+  protected readonly offboardingAccent = OFFBOARDING_ACCENT;
   protected readonly skeletonCards = computed(() => [0, 1, 2]);
 }

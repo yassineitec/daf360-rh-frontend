@@ -80,9 +80,13 @@ export interface IdentityPill {
           }
         </div>
 
-        <p class="text-[20px] font-black leading-tight text-on-surface">{{ profile().fullName ?? '—' }}</p>
+        <!-- wrap-break-word: the card is only ~32% of the page, so a long name or a
+             wordy grade label has to wrap rather than run past the rounded edge. -->
+        <p class="max-w-full wrap-break-word text-[20px] font-black leading-tight text-on-surface">
+          {{ profile().fullName ?? '—' }}
+        </p>
         @if (profile().grade) {
-          <p class="text-[14px] font-medium text-outline">{{ profile().grade }}</p>
+          <p class="max-w-full wrap-break-word text-[14px] font-medium text-outline">{{ profile().grade }}</p>
         }
 
         @if (pills().length) {

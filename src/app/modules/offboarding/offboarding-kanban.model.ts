@@ -63,6 +63,19 @@ export const OFFBOARDING_KANBAN_COLUMN_DEFS: OffboardingKanbanColumnDef[] =
   }));
 
 /**
+ * Identity of the read-only Offboarding column the **recrutement** board borrows
+ * (`/rh/recrutement`, `CandidatesComponent`). Offboarding is a separate HR workflow,
+ * not a candidate status, so it gets a neutral slate rather than any of the funnel
+ * colours — it must never read as one more recruitment stage.
+ *
+ * They live here, next to the offboarding board's own colours, because the module that
+ * owns the workflow owns how it is coloured; the recrutement board only consumes them.
+ */
+export const OFFBOARDING_COLUMN_KEY = 'OFFBOARDING';
+export const OFFBOARDING_ACCENT     = '#64748b';
+export const OFFBOARDING_BADGE_BG   = 'rgba(100,116,139,0.12)';
+
+/**
  * Soonest last-working-day first — the files needing attention next. Instances with no
  * date sink to the bottom rather than sorting as epoch-zero.
  */

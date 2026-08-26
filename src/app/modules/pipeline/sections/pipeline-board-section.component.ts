@@ -5,26 +5,28 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 
-import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
 import { KanbanCandidate } from '../services/pipeline.service';
-import { BoardColumn, OFFBOARDING_ACCENT } from '../board.model';
+import { BOARD_STAGES, BoardColumn } from '../board.model';
 import { PipelineKanbanCardComponent } from '../components/pipeline-kanban-card.component';
-import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban-card.component';
 
 /**
  * Desktop / tablet pipeline board (UI-PLAYBOOK §8b section architecture).
  *
- * Stateless with respect to the data: columns, the offboarding list and the
- * loading flag all come in as inputs and every interaction goes back out as an
- * output. The one thing it does own is its **own scroll geometry** — the board
- * element lives here, so the horizontal navigation minimap that reads
- * `scrollLeft` / `scrollWidth` belongs here too rather than in the page.
+ * Candidate stages only. The read-only Offboarding column that used to sit at the
+ * right end of this board now lives on `/rh/recrutement`
+ * (`rh-candidates-board-section`), where the lifecycle view belongs.
+ *
+ * Stateless with respect to the data: the columns and the loading flag come in as
+ * inputs and every interaction goes back out as an output. The one thing it does
+ * own is its **own scroll geometry** — the board element lives here, so the
+ * horizontal navigation minimap that reads `scrollLeft` / `scrollWidth` belongs
+ * here too rather than in the page.
  */
 @Component({
   selector: 'rh-pipeline-board-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PipelineKanbanCardComponent, OffboardingKanbanCardComponent, SkeletonComponent, TranslatePipe],
+  imports: [PipelineKanbanCardComponent, SkeletonComponent, TranslatePipe],
   host: { class: 'hidden sm:block' },
   styles: [`
     /* The board scrolls horizontally (wheel / drag / minimap) but hides its
@@ -93,33 +95,6 @@ import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban
           </div>
         }
 
-        <!-- Offboarding — display-only; employees in an active offboarding workflow.
-             Not a candidate stage, so it carries no sort control and no accent from
-             BOARD_STAGES, and it is absent from the minimap. -->
-        @if (showOffboarding()) {
-          <div class="w-80 shrink-0 flex flex-col">
-
-            <div class="flex items-center gap-2 px-1 mb-3">
-              <span class="w-2.5 h-2.5 rounded-full" [style.background]="offboardingAccent"></span>
-              <span class="text-sm font-bold text-on-surface">{{ 'PIPELINE.OFFBOARDING.COLUMN' | translate }}</span>
-              <span class="text-xs font-semibold text-on-surface-variant bg-surface-container-high rounded px-2 py-0.5">
-                {{ offboarding().length }}
-              </span>
-            </div>
-
-            <div class="flex flex-col gap-4 min-h-[120px] max-h-[610px] overflow-y-auto overscroll-contain
-                        p-1 pr-2 pt-4 custom-scroll-y">
-              @for (o of offboarding(); track o.id) {
-                <rh-offboarding-kanban-card [item]="o" (open)="openOffboarding.emit(o.id)" />
-              } @empty {
-                <div class="text-center py-10 text-outline border border-dashed border-outline-variant rounded-xl">
-                  <span class="material-symbols-outlined text-[32px] block mb-1">logout</span>
-                  <p class="text-[12px]">{{ 'PIPELINE.OFFBOARDING.EMPTY' | translate }}</p>
-                </div>
-              }
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Horizontal navigation minimap (fixed bottom-right) -->
@@ -154,20 +129,15 @@ import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban
 })
 export class PipelineBoardSectionComponent {
   readonly columns         = input.required<BoardColumn[]>();
-  readonly offboarding     = input<OffboardingWorkflowInstance[]>([]);
-  readonly showOffboarding = input(false);
   readonly loading         = input(false);
   readonly actioningId     = input<number | null>(null);
 
   readonly open            = output<number>();
-  readonly openOffboarding = output<number>();
   readonly toggleSort      = output<string>();
   readonly sendOffer       = output<{ candidate: KanbanCandidate; event: Event }>();
   readonly acceptOffer     = output<{ candidate: KanbanCandidate; event: Event }>();
   readonly renegotiate     = output<{ candidate: KanbanCandidate; event: Event }>();
   readonly refuse          = output<{ candidate: KanbanCandidate; event: Event }>();
-
-  protected readonly offboardingAccent = OFFBOARDING_ACCENT;
 
   constructor() {
     // Re-measure whenever the board is (re)built: the minimap reads scrollWidth,
@@ -175,12 +145,12 @@ export class PipelineBoardSectionComponent {
     effect(() => {
       this.columns();
       this.loading();
-      this.showOffboarding();
       setTimeout(() => this.syncBoardMetrics());
     });
   }
 
-  protected readonly skeletonColumns = computed(() => [0, 1, 2, 3]);
+  /** One skeleton per stage in the schema, so the two can never drift apart. */
+  protected readonly skeletonColumns = computed(() => BOARD_STAGES.map((_, i) => i));
   protected readonly skeletonCards   = computed(() => [0, 1]);
 
   // ── Scroll geometry for the minimap ────────────────────────────────────────

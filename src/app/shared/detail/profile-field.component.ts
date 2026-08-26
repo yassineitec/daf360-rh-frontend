@@ -31,22 +31,23 @@ export type ProfileFieldVariant =
     @switch (variant()) {
 
       @case ('row') {
-        <span class="text-[12px] font-medium text-on-surface-variant">{{ label() }}</span>
-        <span class="text-[14px] font-bold" [class]="valueClass() || 'text-on-surface'">
+        <span class="min-w-0 text-[12px] font-medium text-on-surface-variant">{{ label() }}</span>
+        <span class="min-w-0 wrap-break-word text-right text-[14px] font-bold"
+              [class]="valueClass() || 'text-on-surface'">
           {{ value() ?? '—' }}
         </span>
       }
 
       @case ('tile') {
-        <span class="mb-1 text-[10px] font-bold uppercase tracking-widest text-outline">{{ label() }}</span>
-        <span class="text-[14px] font-bold text-on-surface">{{ value() ?? '—' }}</span>
+        <span class="mb-1 wrap-break-word text-[10px] font-bold uppercase tracking-widest text-outline">{{ label() }}</span>
+        <span class="wrap-break-word text-[14px] font-bold text-on-surface">{{ value() ?? '—' }}</span>
       }
 
       @default {
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        <span class="wrap-break-word text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
           {{ label() }}
         </span>
-        <span class="text-[13px] text-on-surface">{{ value() ?? '—' }}</span>
+        <span class="wrap-break-word text-[13px] text-on-surface">{{ value() ?? '—' }}</span>
       }
     }
   `,
@@ -62,15 +63,22 @@ export class ProfileFieldComponent {
   /** `row` only — drop the divider, for the last row in a card. */
   last    = input(false);
 
+  /**
+   * `min-w-0` on every variant, and `wrap-break-word` on the spans above, is what keeps
+   * a long unbreakable value (a work email, an IBAN, a passport number) inside the
+   * card. A flex/grid item's default `min-width: auto` lets it grow past its track,
+   * so in the narrow identity card's `grid-cols-2` one long value used to widen its
+   * column and push the text out of the card.
+   */
   protected readonly hostClasses = computed(() => {
     switch (this.variant()) {
       case 'row':
-        return 'flex items-center justify-between gap-3 py-2'
+        return 'flex min-w-0 items-center justify-between gap-3 py-2'
           + (this.last() ? '' : ' border-b border-outline-variant/40');
       case 'tile':
-        return 'flex flex-col rounded-xl bg-surface-container-high/50 p-4';
+        return 'flex min-w-0 flex-col rounded-xl bg-surface-container-high/50 p-4';
       default:
-        return (this.wide() ? 'col-span-2 ' : '') + 'flex flex-col gap-0.5';
+        return (this.wide() ? 'col-span-2 ' : '') + 'flex min-w-0 flex-col gap-0.5';
     }
   });
 }

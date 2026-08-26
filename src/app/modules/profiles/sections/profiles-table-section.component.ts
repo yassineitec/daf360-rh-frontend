@@ -63,7 +63,7 @@ export class ProfilesTableSectionComponent {
     const t = (k: string) => this.translate.instant(k);
     // No column is marked `sortable`: daf-data-table sorts client-side, which with
     // a server-paginated list would silently reorder only the visible page. The
-    // backend ignores Pageable's sort too (the SQL pins ORDER BY u.fullName), so
+    // backend ignores Pageable's sort too (the SQL pins ORDER BY hire_date DESC), so
     // shipping the arrows would be a lie. Wire both ends before adding them.
     return [
       // Empty label: the select-all affordance now lives in daf-bulk-action-bar.

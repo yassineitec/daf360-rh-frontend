@@ -32,6 +32,9 @@ import {
 } from './candidate.model';
 import { KANBAN_COLUMN_DEFS, KanbanColumn, KanbanColumnDef, byFitScoreDesc } from './kanban.model';
 import { PipelineService, PipelineActivity, PipelineObjective } from '../pipeline/services/pipeline.service';
+import { OffboardingService } from '../offboarding/offboarding.service';
+import { OffboardingWorkflowInstance, isTerminal } from '../offboarding/models/offboarding.model';
+import { OFFBOARDING_COLUMN_KEY } from '../offboarding/offboarding-kanban.model';
 import { CandidatesBoardSectionComponent } from './sections/candidates-board-section.component';
 import { CandidatesTableSectionComponent } from './sections/candidates-table-section.component';
 import { CandidatesMobileSectionComponent } from './sections/candidates-mobile-section.component';
@@ -59,6 +62,13 @@ type ViewMode = 'list' | 'kanban';
  * board, the list and the KPIs all reflect the same source. The two pipeline
  * endpoints it does call (`/pipeline/activity`, `/pipeline/objectives`) only
  * feed the insights drawer.
+ *
+ * The board also carries a read-only **Offboarding** column (`/api/hr/offboarding`,
+ * gated on `RH_MANAGE_OFFBOARDING`). It used to hang off the design board on
+ * `/rh/candidates`, which reads as "offboarding is a candidature"; this page is the
+ * HR lifecycle board, so departures belong here. It is display-only in every sense —
+ * no drag, no KPI contribution, no status filter — and a card just opens the file at
+ * `/rh/offboarding/:id`.
  *
  * Architecture follows UI-PLAYBOOK §8b: this template is `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section
@@ -91,6 +101,7 @@ export class CandidatesComponent implements OnInit {
   private svc         = inject(CandidateService);
   private confirm     = inject(ConfirmService);
   private pipelineSvc = inject(PipelineService);
+  private offboardingSvc = inject(OffboardingService);
   private router      = inject(Router);
   readonly userStore  = inject(UserStore);
   private translate   = inject(TranslateService);
@@ -105,6 +116,7 @@ export class CandidatesComponent implements OnInit {
   readonly kanbanItems = signal<CandidateListItem[]>([]);
   readonly activities  = signal<PipelineActivity[]>([]);
   readonly objectives  = signal<PipelineObjective[]>([]);
+  private readonly offboardingItems = signal<OffboardingWorkflowInstance[]>([]);
 
   /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
   readonly firstLoad     = signal(true);
@@ -169,6 +181,16 @@ export class CandidatesComponent implements OnInit {
     return Math.min(100, Math.round((o.actual / o.target) * 100));
   });
 
+  // ── Offboarding (display-only, separate HR workflow) ───────────────────────
+  readonly canViewOffboarding = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+
+  /** Active (non-terminal) offboarding files only — a closed file is not "in progress". */
+  readonly offboardingActive = computed(() =>
+    this.offboardingItems().filter(o => !isTerminal(o.status)),
+  );
+
+  onViewOffboarding(id: number): void { this.router.navigate(['/rh/offboarding', id]); }
+
   // ── Kanban ─────────────────────────────────────────────────────────────────
   private readonly columnDefs = KANBAN_COLUMN_DEFS;
   readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
@@ -209,6 +231,9 @@ export class CandidatesComponent implements OnInit {
   readonly mobileCandidates = computed(() => {
     const key = this.mobileStageFilter();
     const cols = this.kanbanColumns();
+    // The offboarding pill is not a status column: the mobile section renders the
+    // offboarding cards itself, and "all" must not fold departures into the funnel.
+    if (key === OFFBOARDING_COLUMN_KEY) return [];
     if (key) return cols.find(c => c.key === key)?.candidates ?? [];
     return cols.flatMap(c => c.candidates).sort(byFitScoreDesc);
   });
@@ -317,6 +342,15 @@ export class CandidatesComponent implements OnInit {
       this.objectives.set(objectives);
       this.extrasLoading.set(false);
     });
+
+    // Offboarding rides alongside, not inside, the board fetch: it is a different
+    // service and only some roles can read it, so a slow or 403'd call must never
+    // delay the candidate columns. Not requested at all without the permission.
+    if (this.canViewOffboarding()) {
+      this.offboardingSvc.listOffboarding()
+        .pipe(catchError(() => of([] as OffboardingWorkflowInstance[])))
+        .subscribe(items => this.offboardingItems.set(items ?? []));
+    }
   }
 
   private loadStats(): void {

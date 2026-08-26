@@ -527,11 +527,6 @@
       "OFFRE": "Offre",
       "RECRUTE": "Recruté"
     },
-    "OFFBOARDING": {
-      "COLUMN": "Offboarding",
-      "SLA": "SLA dépassé",
-      "EMPTY": "Aucun offboarding en cours"
-    },
     "CARD": {
       "SPONTANEOUS": "Candidature spontanée",
       "PENDING_SIGNATURE": "En attente de signature",
@@ -1612,6 +1607,11 @@
     }
   },
   "OFFBOARDING": {
+    "BOARD": {
+      "COLUMN": "Offboarding",
+      "SLA": "SLA dépassé",
+      "EMPTY": "Aucun offboarding en cours"
+    },
     "LIST": {
       "TITLE": "Offboarding",
       "COUNT": "{{count}} dossier(s)",

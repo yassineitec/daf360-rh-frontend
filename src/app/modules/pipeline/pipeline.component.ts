@@ -17,13 +17,10 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../core/user.store';
-import { OffboardingService } from '../offboarding/offboarding.service';
-import { OffboardingWorkflowInstance, isTerminal } from '../offboarding/models/offboarding.model';
 import {
   BOARD_STAGES,
   BoardColumn,
   BoardStageKey,
-  OFFBOARDING_KEY,
   byFitScoreDesc,
 } from './board.model';
 import { OfferModalComponent, OfferMode } from './components/offer-modal.component';
@@ -39,8 +36,11 @@ type ViewMode = 'kanban' | 'list';
 
 /**
  * /rh/candidates — the recruitment board (Préqualification / Entretien / Offre /
- * Recruté), fed by `/api/hr/pipeline/kanban`, plus a read-only Offboarding
- * column for employees in an active offboarding workflow.
+ * Recruté), fed by `/api/hr/pipeline/kanban`.
+ *
+ * Candidate stages only: the read-only Offboarding column this board used to carry
+ * now lives on `/rh/recrutement` (`CandidatesComponent`), which is the lifecycle
+ * board — offboarding is not a candidature.
  *
  * Architecture follows UI-PLAYBOOK §1 + §8b: the template is `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section component
@@ -75,7 +75,6 @@ type ViewMode = 'kanban' | 'list';
 export class PipelineComponent implements OnInit {
   private pipelineService = inject(PipelineService);
   private offerService    = inject(OfferService);
-  private offboardingSvc    = inject(OffboardingService);
   private userStore       = inject(UserStore);
   private router          = inject(Router);
   private translate       = inject(TranslateService);
@@ -83,7 +82,6 @@ export class PipelineComponent implements OnInit {
   // ── Data ───────────────────────────────────────────────────────────────────
   private readonly rawColumns = signal<KanbanColumn[]>([]);
   readonly stats              = signal<PipelineStats | null>(null);
-  private readonly offboardingItems = signal<OffboardingWorkflowInstance[]>([]);
 
   /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
   readonly firstLoad = signal(true);
@@ -101,14 +99,6 @@ export class PipelineComponent implements OnInit {
   readonly notice      = signal<string | null>(null);
   readonly actionError = signal<string | null>(null);
   readonly actioningId = signal<number | null>(null);
-
-  // ── Offboarding (display-only, separate HR workflow) ───────────────────────
-  readonly canViewOffboarding = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
-
-  /** Active (non-terminal) offboarding files only. */
-  readonly offboardingActive = computed(() =>
-    this.offboardingItems().filter(o => !isTerminal(o.status)),
-  );
 
   // ── Board ──────────────────────────────────────────────────────────────────
   /**
@@ -173,7 +163,6 @@ export class PipelineComponent implements OnInit {
   readonly mobileItems = computed<MobilePipelineItem[]>(() => {
     const key  = this.mobileStageFilter();
     const cols = this.boardColumns();
-    if (key === OFFBOARDING_KEY) return [];
     const picked = key ? cols.filter(c => c.key === key) : cols;
     const items = picked.flatMap(col =>
       col.candidates.map(candidate => ({ candidate, stage: col.key as BoardStageKey })),
@@ -285,15 +274,11 @@ export class PipelineComponent implements OnInit {
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     forkJoin({
-      kanban:      this.pipelineService.getKanban().pipe(catchError(() => of(null))),
-      stats:       this.pipelineService.getStats().pipe(catchError(() => of(null))),
-      offboarding: this.canViewOffboarding()
-        ? this.offboardingSvc.listOffboarding().pipe(catchError(() => of([] as OffboardingWorkflowInstance[])))
-        : of([] as OffboardingWorkflowInstance[]),
-    }).subscribe(({ kanban, stats, offboarding }) => {
+      kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
+      stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),
+    }).subscribe(({ kanban, stats }) => {
       if (kanban) this.rawColumns.set(kanban);
       if (stats)  this.stats.set(stats);
-      this.offboardingItems.set(offboarding ?? []);
       this.firstLoad.set(false);
     });
   }
@@ -314,7 +299,6 @@ export class PipelineComponent implements OnInit {
   // ── Navigation ─────────────────────────────────────────────────────────────
   onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
   onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
-  onViewOffboarding(id: number): void { this.router.navigate(['/rh/offboarding', id]); }
 
   // ── Offer modal ────────────────────────────────────────────────────────────
   readonly offerTarget     = signal<KanbanCandidate | null>(null);

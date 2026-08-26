@@ -2,14 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output, si
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { KanbanCardShellComponent } from '../../../shared/kanban-card-shell.component';
-import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
-import { OFFBOARDING_ACCENT } from '../board.model';
-import { candidateInitials } from '../pipeline-display';
-import { stageProgressOf } from '../../offboarding/offboarding-display';
+import { OffboardingWorkflowInstance } from '../models/offboarding.model';
+import { OFFBOARDING_ACCENT, OFFBOARDING_BADGE_BG } from '../offboarding-kanban.model';
+import { candidateInitials } from '../../pipeline/pipeline-display';
+import { stageProgressOf } from '../offboarding-display';
 import { employeeAvatar } from '../../../shared/utils/avatar.utils';
 
 /**
- * One offboarding file, as shown in the board's read-only Offboarding column, in the
+ * One offboarding file, as shown in the recrutement board's read-only Offboarding column, in the
  * dedicated `/rh/offboarding` board and in both mobile lists.
  *
  * Deliberately the SAME anatomy as `rh-candidate-kanban-card`, region for region — tinted
@@ -42,7 +42,7 @@ import { employeeAvatar } from '../../../shared/utils/avatar.utils';
         @if (item().slaBreachFlag) {
           <span class="flex items-center gap-1 text-[11px] font-bold text-danger shrink-0">
             <span class="material-symbols-outlined text-[14px]">warning</span>
-            {{ 'PIPELINE.OFFBOARDING.SLA' | translate }}
+            {{ 'OFFBOARDING.BOARD.SLA' | translate }}
           </span>
         }
       </div>
@@ -116,7 +116,7 @@ export class OffboardingKanbanCardComponent {
    */
   readonly accent = input<string>(OFFBOARDING_ACCENT);
   /** Tinted column colour behind the stage pill. */
-  readonly badgeBg = input<string>('rgba(100,116,139,0.12)');
+  readonly badgeBg = input<string>(OFFBOARDING_BADGE_BG);
   readonly showChevron = input(false);
 
   readonly open = output<void>();

@@ -75,7 +75,10 @@
       [draggedId]="draggedId()"
       [dragOverKey]="dragOverKey()"
       [statusLabel]="statusLabel()"
+      [offboarding]="offboardingActive()"
+      [showOffboarding]="canViewOffboarding()"
       (open)="onView($event)"
+      (openOffboarding)="onViewOffboarding($event)"
       (toggleSort)="toggleColumnSort($event)"
       (dragStart)="onDragStart($event)"
       (dragEnd)="onDragEnd()"
@@ -112,8 +115,11 @@
     [statusLabel]="statusLabel()"
     [accentFor]="accentFor()"
     [badgeBgFor]="badgeBgFor()"
+    [offboarding]="offboardingActive()"
+    [showOffboarding]="canViewOffboarding()"
     (stageFilterChange)="mobileStageFilter.set($event)"
     (open)="onView($event)"
+    (openOffboarding)="onViewOffboarding($event)"
     (accept)="quickAccept($event)"
     (reject)="openRejectModal($event)" />
 

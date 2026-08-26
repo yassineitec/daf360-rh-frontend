@@ -5,8 +5,10 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 
-import { OffboardingKanbanColumn } from '../offboarding-kanban.model';
-import { OffboardingKanbanCardComponent } from '../../pipeline/components/offboarding-kanban-card.component';
+import {
+  OFFBOARDING_KANBAN_COLUMN_DEFS, OffboardingKanbanColumn,
+} from '../offboarding-kanban.model';
+import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban-card.component';
 
 /**
  * Desktop / tablet kanban board for `/rh/offboarding` (UI-PLAYBOOK §8b).
@@ -154,8 +156,15 @@ export class OffboardingBoardSectionComponent {
     });
   }
 
-  protected readonly skeletonColumns = computed(() => [0, 1, 2, 3]);
-  protected readonly skeletonCards   = computed(() => [0, 1, 2]);
+  /**
+   * One skeleton per stage column — seven, from the schema. It used to be a
+   * hardcoded four, so the loading board was three columns shorter than the loaded
+   * one and the layout jumped as soon as the fetch landed.
+   */
+  protected readonly skeletonColumns = computed(() =>
+    OFFBOARDING_KANBAN_COLUMN_DEFS.map((_, i) => i),
+  );
+  protected readonly skeletonCards = computed(() => [0, 1, 2]);
 
   // ── Scroll geometry for the minimap ────────────────────────────────────────
   private readonly board = viewChild<ElementRef<HTMLDivElement>>('board');
