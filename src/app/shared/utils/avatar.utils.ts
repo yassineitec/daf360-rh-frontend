@@ -46,7 +46,8 @@ export function employeeAvatar(
   photoUrl: string | null | undefined,
   gender: string | null | undefined,
 ): string | undefined {
-  return profilePhotoUrl(profileId, photoUrl) ?? genderAvatarUrl(gender);
+  // 'sm' like getAvatarUrl: this helper is documented for tiles, and a tile never needs 512px.
+  return profilePhotoUrl(profileId, photoUrl, 'sm') ?? genderAvatarUrl(gender);
 }
 
 export function avatarUrl(gender: string | null | undefined): string {
@@ -67,16 +68,36 @@ export function avatarUrl(gender: string | null | undefined): string {
 export function profilePhotoUrl(
   profileId: number | null | undefined,
   photoUrl: string | null | undefined,
+  size?: PhotoSize,
 ): string | null {
-  return photoUrl && profileId ? `/api/hr/profiles/${profileId}/photo` : null;
+  if (!photoUrl || !profileId) return null;
+  return `/api/hr/profiles/${profileId}/photo${size === 'sm' ? '?size=sm' : ''}`;
 }
 
+/**
+ * Which cached variant to request. `'sm'` is the 128px copy, for surfaces that draw the face
+ * small — grid cards, table rows, the annuaire. Omit it on the detail page: that one shows a
+ * large portrait and the 512px master is the point.
+ *
+ * The distinction is worth the parameter because the endpoint answers with a seven-day
+ * `Cache-Control`, so a list view that asks for full size makes the browser hold a 512px image
+ * for a 32px cell for a week.
+ */
+export type PhotoSize = 'sm' | 'full';
+
+/**
+ * List-surface avatar: the small photo variant, then the gendered placeholder.
+ *
+ * Always `?size=sm` — every caller of this helper renders a table row or a card, never a
+ * detail-page portrait. A caller that needs full size builds the URL with
+ * {@link profilePhotoUrl} instead.
+ */
 export function getAvatarUrl(
   profileId: number | null | undefined,
   photoUrl: string | null | undefined,
   gender: string | null | undefined,
 ): string {
-  if (photoUrl && profileId) return `/api/hr/profiles/${profileId}/photo`;
+  if (photoUrl && profileId) return `/api/hr/profiles/${profileId}/photo?size=sm`;
   if (isFemale(gender)) return '/images/avatars/female.png';
   return '/images/avatars/male.png';
 }

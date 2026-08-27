@@ -77,18 +77,40 @@ import {
             <!-- Circular: shape only — the size, border and fallback behaviour
                  below are unchanged. -->
             <div
-              class="w-28 h-28 rounded-full overflow-hidden border border-outline-variant bg-surface-container shrink-0"
+              class="relative w-28 h-28 rounded-full overflow-hidden border border-outline-variant bg-surface-container shrink-0"
             >
+              <!-- Shimmer UNDER the image, not instead of it: the <img> is in the DOM from the
+                   start (so the request begins immediately) and simply fades in over this once
+                   it decodes. Rendering the image only after load would delay the request by a
+                   change-detection cycle and cost more than it saves. -->
+              @if (photoSrc() !== null && !imgLoaded()) {
+                <!-- bg-on-surface/10, NOT bg-surface-container-high: styles.css aliases that
+                     token to --color-surface-container, which is this circle's own background,
+                     so the shimmer would have pulsed invisibly. A translucent ink tone works
+                     against both themes' surfaces. -->
+                <div class="absolute inset-0 animate-pulse bg-on-surface/10"></div>
+              }
               @if (photoSrc() !== null) {
-                <!-- object-contain, not object-cover: "cover" fills the circle by
-                     cropping whatever doesn't fit the square, which cut off the
-                     edges of the photo. "contain" fits the whole image inside the
-                     circle instead — nothing is cropped. The shape is unchanged;
-                     the container still clips to a circle. -->
+                <!-- object-cover object-top, and both halves matter.
+                     NOT object-contain: that fits the whole photo inside the circle, which
+                     letterboxes a portrait into a rectangle and exposes bg-surface-container
+                     around it — grey bars that read as a rendering fault whenever the photo's
+                     own background is a different colour.
+                     NOT a centred or 25%-biased crop either: the photos here vary from tight
+                     ID headshots to full-body shots, and any fixed midpoint crops the head off
+                     whichever ones are taller than that guess. Anchoring to the TOP edge cannot
+                     do that — "cover" only ever crops the far edge, so the top of the frame,
+                     which is where a face is, always survives. What gets sacrificed is the
+                     bottom: shoulders and chest, which no one identifies a colleague by. -->
+                <!-- The 3 fallback phases below (photo → gendered avatar → initials) and the
+                     shimmer above are unchanged by this. -->
                 <img
                   [src]="photoSrc()!"
                   [alt]="employee().fullName"
-                  class="w-full h-full object-contain"
+                  decoding="async"
+                  class="w-full h-full object-cover object-top transition-opacity duration-300"
+                  [class.opacity-0]="!imgLoaded()"
+                  (load)="imgLoaded.set(true)"
                   (error)="onImgError()"
                 />
               } @else {
@@ -194,11 +216,19 @@ export class ProfileGridCardComponent {
   // 0 = try real photo, 1 = try gender avatar, 2 = show initials
   private readonly imgPhase = signal<0 | 1 | 2>(0);
 
+  /** Whether the current `photoSrc()` has decoded. Drives the shimmer and the fade — the photo
+   *  arrives from SharePoint on a cold cache, so an empty circle is the honest default state,
+   *  not an error. Reset on every phase change: the fallback avatar is a new request and has to
+   *  earn its own reveal, otherwise it pops in without the transition. */
+  readonly imgLoaded = signal(false);
+
   readonly photoSrc = computed((): string | null => {
     const emp = this.employee();
     const phase = this.imgPhase();
+    // ?size=sm: the circle is 112px and the cached master is 512px. Twelve of those was the
+    // bulk of what this page downloaded on first paint.
     const photoUrl =
-      emp.photoUrl && emp.profileId ? `/api/hr/profiles/${emp.profileId}/photo` : null;
+      emp.photoUrl && emp.profileId ? `/api/hr/profiles/${emp.profileId}/photo?size=sm` : null;
     const genderUrl = emp.gender
       ? isFemale(emp.gender)
         ? '/images/avatars/female.png'
@@ -227,6 +257,7 @@ export class ProfileGridCardComponent {
   onImgError(): void {
     const emp = this.employee();
     const hasRealPhoto = !!(emp.photoUrl && emp.profileId);
+    this.imgLoaded.set(false);
     this.imgPhase.update((p) => (p === 0 && hasRealPhoto ? 1 : 2));
   }
 
