@@ -263,6 +263,8 @@
       "EXPECTED_START": "Début prévu",
       "ACCEPTED_ON": "Accepté le",
       "RECRUITMENT_STEPS": "Étapes du recrutement",
+      "STEP_CURRENT": "étape courante",
+      "STEP_DONE": "terminé",
       "POSITION_CONTRACT": "Poste & Contrat",
       "DESIRED_POSITION": "Poste souhaité",
       "CONTRACT_TYPE": "Type de contrat",
@@ -1471,41 +1473,6 @@
       "ASSIGN": "Assigner",
       "ERR_ASSIGN": "Erreur lors de l'assignation"
     },
-    "NEW": {
-      "BREADCRUMB_LIST": "Profils",
-      "BREADCRUMB_CURRENT": "Nouveau profil",
-      "STEPS_ARIA": "Étapes",
-      "STEP_IDENTITY": "Identité",
-      "STEP_EMPLOYMENT": "Emploi",
-      "STEP_POSITION": "Poste",
-      "STEP_REGIME": "Régime",
-      "STEP_REGIME_TITLE": "Régime horaire",
-      "REGIME_HINT": "Optionnel — peut être assigné ultérieurement.",
-      "USER_ID": "Utilisateur ID (Users.id) *",
-      "EMPLOYEE_ID": "Identifiant employé *",
-      "EMPLOYEE_ID_HINT": "Format: ENTITE-AA-NNNN (ex: ARX-26-0001)",
-      "PAYS": "Pays (ID) *",
-      "HIRE_DATE": "Date d'embauche *",
-      "CONTRACT_TYPE": "Type de contrat *",
-      "CONTRACT_END": "Date de fin de contrat *",
-      "PROBATION_END": "Fin de période d'essai",
-      "DEPARTMENT": "Département",
-      "GRADE": "Grade",
-      "DISCIPLINE": "Discipline",
-      "NOG_LEVEL": "Niveau NOG",
-      "REGIME_TEMPLATE_ID": "ID du modèle de régime",
-      "REGIME_TEMPLATE_PH": "Laisser vide pour le régime par défaut",
-      "REGIME_START": "Date de début d'application",
-      "REGIME_REASON": "Motif de changement de régime",
-      "PREV": "‹ Précédent",
-      "NEXT": "Suivant ›",
-      "SUBMIT": "Créer le profil",
-      "ERR_REQUIRED": "Requis",
-      "ERR_ID_FORMAT": "Format invalide — attendu: ENTITE-AA-NNNN",
-      "ERR_FUTURE_DATE": "La date ne peut pas être dans le futur",
-      "ERR_CDD_END": "Obligatoire pour un contrat CDD",
-      "ERR_CREATE": "Erreur lors de la création"
-    },
     "PAY_FREQUENCY": {
       "MONTHLY": "Mensuel"
     },
@@ -2250,7 +2217,97 @@
         "overtime": "Heures supplémentaires",
         "interviewTypes": "Types d'entretiens",
         "offboardingCatalog": "Tâches offboarding",
-        "documentTemplates": "Maquettes documents"
+        "documentTemplates": "Maquettes documents",
+        "sharepoint": "SharePoint"
+      }
+    },
+    "sharepoint": {
+      "title": "Chemins SharePoint",
+      "subtitle": "Où chaque type de document vit dans l'arborescence SharePoint, et quels employés s'y résolvent. Un chemin se configure ici, il ne se modifie plus par script SQL.",
+      "kindLabel": "Type de document",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "kind": {
+        "PHOTO": "Photo de profil",
+        "PAYSLIP": "Bulletins de paie",
+        "SALARY_CERTIFICATE": "Attestations de salaire"
+      },
+      "panel": {
+        "paths": "Chemins par pays",
+        "employees": "Correspondance employés",
+        "diagnose": "Diagnostic"
+      },
+      "status": {
+        "FOUND": "Trouvé",
+        "NO_CONFIG": "Non configuré",
+        "FOLDER_MISSING": "Dossier introuvable",
+        "AMBIGUOUS": "Dossier ambigu",
+        "AMBIGUOUS_EMPLOYEE": "Homonymes",
+        "NO_NAME": "Nom manquant",
+        "UNAVAILABLE": "SharePoint indisponible",
+        "NEVER": "Jamais résolu"
+      },
+      "paths": {
+        "hint": "Un chemin par pays et par type de document. Les jetons {employeeFolder} et {year} sont remplacés à la lecture.",
+        "add": "Nouveau chemin",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "empty": "Aucun chemin configuré.",
+        "country": "Pays",
+        "template": "Chemin",
+        "templateHint": "Choisissez le dossier réel, puis ajoutez les jetons.",
+        "formTitle": "Chemin SharePoint",
+        "paysId": "ID pays",
+        "browse": "Parcourir",
+        "tokens": "Jetons :"
+      },
+      "employees": {
+        "hint": "Lecture en base uniquement, aucun appel SharePoint. « Résoudre tout » interroge SharePoint pour chaque employé — c'est lent et volontairement explicite.",
+        "resolveAll": "Résoudre tout",
+        "resolving": "Résolution…",
+        "empty": "Aucun employé.",
+        "name": "Employé",
+        "status": "Statut",
+        "folder": "Dossier",
+        "manual": "manuel",
+        "diagnose": "Diagnostiquer",
+        "pin": "Fixer le dossier",
+        "reset": "Réinitialiser"
+      },
+      "pin": {
+        "title": "Fixer le dossier",
+        "hint": "Pour les dossiers que la convention ne permet pas de deviner. Vérifié contre l'arborescence avant enregistrement : un dossier inexistant serait pire qu'aucune correction.",
+        "segment": "Nom exact du dossier",
+        "segmentHint": "Sans slash. Exemple : Bilel ZEDINI-CDI-ARX tunisie"
+      },
+      "diagnose": {
+        "hint": "Résout un employé et affiche le chemin obtenu, la raison d'un échec, et le contenu réel du dossier.",
+        "profileId": "ID profil",
+        "run": "Diagnostiquer",
+        "force": "Forcer",
+        "status": "Statut",
+        "detail": "Détail",
+        "folder": "Dossier employé",
+        "path": "Chemin résolu",
+        "years": "Années",
+        "files": "Fichiers",
+        "noFiles": "Dossier vide",
+        "notConfigured": "SharePoint n'est pas configuré sur ce serveur (variables MS_GRAPH_* vides)."
+      },
+      "picker": {
+        "title": "Choisir un dossier",
+        "root": "Racine",
+        "loading": "Chargement…",
+        "leaf": "Aucun sous-dossier ici.",
+        "error": "Impossible de lister ce dossier.",
+        "selected": "Sélection :",
+        "choose": "Choisir",
+        "cancel": "Annuler"
+      },
+      "errors": {
+        "load": "Chargement impossible.",
+        "save": "Enregistrement impossible.",
+        "resolve": "La résolution a échoué."
       }
     },
     "docs": {

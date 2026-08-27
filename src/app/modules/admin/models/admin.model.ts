@@ -159,7 +159,7 @@ export interface RegimeDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin tabs
 // ─────────────────────────────────────────────────────────────────────────────
-export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog' | 'document-templates';
+export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog' | 'document-templates' | 'sharepoint';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Offboarding task catalog

@@ -1,69 +1,43 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { StepperComponent, StepperConfig, StepperStep } from '@khalilrebhiitec/daf360';
 
 import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 
-/** The coded candidate workflow, in order. Drives the stepper's past/current/future state. */
+/** The coded candidate workflow, in order. Drives the rail's completed/current state. */
 const PIPELINE_STEPS = [
   'PENDING', 'ACCEPTED', 'OFFER_SENT', 'IT_IN_PROGRESS',
   'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED',
 ] as const;
 
-interface Step {
-  status: string;
-  state: 'past' | 'current' | 'future';
-}
-
 /**
- * Recruitment stepper, under the identity card in the sticky left column of
+ * Recruitment rail, under the identity card in the sticky left column of
  * `/rh/candidates/:id`.
  *
- * The state per step is computed here rather than in three template-called
- * methods, and the colours are **lib token classes** — the page used to build
- * `var(--color-…)` strings in TS and bind them to `[style.background]` /
- * `[style.color]`, which meant a theme change had to be mirrored in the
- * component (UI-PLAYBOOK §3/§4).
+ * `daf-stepper` in `orientation: 'vertical'` + `chrome: 'header-only'` — the card owns
+ * everything around it, the same way `/rh/offboarding/:id` drives its rail. The steps are
+ * not clickable: this reports where the candidate stands, it is not a wizard you navigate.
+ *
+ * `completed` is set on EVERY step (§10g): all-or-nothing, so the rail never falls back to
+ * inferring completion from `currentStep` — which is what makes the REJECTED case below
+ * render as "nothing reached" rather than "everything before index -1".
  */
 @Component({
   selector: 'rh-candidate-pipeline-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionCardComponent, TranslatePipe],
+  imports: [SectionCardComponent, StepperComponent, TranslatePipe],
   host: { class: 'block' },
   template: `
     <rh-section-card
       [title]="'CANDIDATES.DETAIL.RECRUITMENT_STEPS' | translate"
       icon="linear_scale">
 
-      <ol class="flex flex-col">
-        @for (step of steps(); track step.status; let last = $last) {
-          <li class="flex items-center gap-3 py-1">
-            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
-                  [class]="dotClass(step.state)">
-              @switch (step.state) {
-                @case ('past') {
-                  <span class="material-symbols-outlined text-[14px]"
-                        style="font-variation-settings:'FILL' 1">check</span>
-                }
-                @case ('current') {
-                  <span class="material-symbols-outlined text-[14px]"
-                        style="font-variation-settings:'FILL' 1">radio_button_checked</span>
-                }
-                @default {
-                  <span class="h-2 w-2 rounded-full bg-outline/30"></span>
-                }
-              }
-            </span>
-            <span class="text-[13px]"
-                  [class]="step.state === 'current' ? 'font-semibold text-teal' : 'text-on-surface-variant'">
-              {{ ('CANDIDATES.STATUS.' + step.status) | translate }}
-            </span>
-          </li>
-          @if (!last) {
-            <li aria-hidden="true" class="ml-3 h-2.5 w-px bg-outline-variant"></li>
-          }
-        }
-      </ol>
+      <daf-stepper
+        orientation="vertical"
+        [steps]="railSteps()"
+        [currentStep]="currentIndex()"
+        [config]="railConfig()" />
 
       @if (rejected()) {
         <p class="mt-4 flex items-center gap-1.5 rounded-lg bg-danger/10 px-3 py-2 text-[12px] text-danger">
@@ -75,24 +49,35 @@ interface Step {
   `,
 })
 export class CandidatePipelineCardComponent {
+  private translate = inject(TranslateService);
+
   readonly status = input.required<string>();
 
-  /** REJECTED / ARCHIVED are off the happy path: no step matches, so every step reads "future". */
+  /** REJECTED / ARCHIVED are off the happy path: no step matches, so the rail reads empty. */
   protected readonly rejected = computed(() => ['REJECTED', 'ARCHIVED'].includes(this.status()));
 
-  protected readonly steps = computed<Step[]>(() => {
-    const current = PIPELINE_STEPS.indexOf(this.status() as (typeof PIPELINE_STEPS)[number]);
-    return PIPELINE_STEPS.map((status, i) => ({
-      status,
-      state: current < 0 ? 'future' : i < current ? 'past' : i === current ? 'current' : 'future',
+  /** -1 for an off-path status — no row is `active`, and no connector fills. */
+  protected readonly currentIndex = computed(() =>
+    PIPELINE_STEPS.indexOf(this.status() as (typeof PIPELINE_STEPS)[number]),
+  );
+
+  protected readonly railSteps = computed<StepperStep[]>(() => {
+    this.translate.currentLang();
+    const current = this.currentIndex();
+    return PIPELINE_STEPS.map((step, i) => ({
+      title:     this.translate.instant('CANDIDATES.STATUS.' + step),
+      completed: current >= 0 && i < current,
     }));
   });
 
-  protected dotClass(state: Step['state']): string {
-    switch (state) {
-      case 'current': return 'bg-teal text-white';
-      case 'past':    return 'bg-tertiary-container text-on-tertiary-container';
-      default:        return 'bg-surface-container-high text-on-surface-variant';
-    }
-  }
+  protected readonly railConfig = computed<StepperConfig>(() => {
+    this.translate.currentLang();
+    return {
+      chrome:           'header-only',
+      labelDensity:     'quiet',
+      stepperLabel:     this.translate.instant('CANDIDATES.DETAIL.RECRUITMENT_STEPS'),
+      currentStepLabel: this.translate.instant('CANDIDATES.DETAIL.STEP_CURRENT'),
+      completedLabel:   this.translate.instant('CANDIDATES.DETAIL.STEP_DONE'),
+    };
+  });
 }

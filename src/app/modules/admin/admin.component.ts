@@ -15,6 +15,7 @@ import { OvertimeAdminComponent }       from './overtime/overtime-admin.componen
 import { InterviewTypesAdminComponent }      from './interview-types-admin.component';
 import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.component';
 import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
+import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
 
 const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
   { key: 'roles',         labelKey: 'ADMIN.shell.tabs.roles',        permission: 'GET_ROLES' },
@@ -30,6 +31,10 @@ const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
   { key: 'interview-types',     labelKey: 'ADMIN.shell.tabs.interviewTypes',     permission: 'RH_ADMIN_INTERVIEW_TYPES' },
   { key: 'offboarding-catalog',  labelKey: 'ADMIN.shell.tabs.offboardingCatalog', permission: 'RH_MANAGE_OFFBOARDING'    },
   { key: 'document-templates',   labelKey: 'ADMIN.shell.tabs.documentTemplates',  permission: 'HR_ADMIN_ROLES'            },
+  // Its own permission, not HR_ADMIN_ROLES: the folder browser in this tab can enumerate
+  // every employee folder on the HR SharePoint site, which is a different capability from
+  // editing roles even though the same people hold both today.
+  { key: 'sharepoint',           labelKey: 'ADMIN.shell.tabs.sharepoint',         permission: 'ADMIN_SHAREPOINT'          },
 ];
 
 @Component({
@@ -49,6 +54,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
     InterviewTypesAdminComponent,
     OffboardingCatalogAdminComponent,
     DocumentTemplatesAdminComponent,
+    SharePointAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -94,6 +100,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
           @if (activeTab() === 'interview-types')     { <app-interview-types-admin [paysId]="paysId()" /> }
           @if (activeTab() === 'offboarding-catalog')  { <app-offboarding-catalog-admin [paysId]="paysId()" /> }
           @if (activeTab() === 'document-templates')   { <app-document-templates-admin [paysId]="paysId()" /> }
+          @if (activeTab() === 'sharepoint')            { <app-sharepoint-admin [paysId]="paysId()" /> }
         </div>
       </div>
     }

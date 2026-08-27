@@ -23,18 +23,26 @@ interface CountryBar {
         <p class="text-[20px] font-bold text-on-surface leading-snug">
           {{ totalActifs() }} {{ 'HOME.WORKFORCE_STATS.ACTIVE_EMPLOYEES' | translate }}
         </p>
-        <div class="mt-6 flex gap-8">
-          <div class="flex flex-col">
-            <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.FEMALE' | translate }}</p>
-            <p class="text-[18px] font-bold text-teal">
-              {{ pctFemmes() != null ? pctFemmes() + '%' : '—' }}
-            </p>
+        <!-- Two even halves, each an illustration + its label/percentage,
+             split by a vertical rule matching the card's other separators. -->
+        <div class="mt-6 grid grid-cols-2 items-center">
+          <div class="flex items-center gap-3 pr-4">
+            <img src="/images/female.svg" alt="" class="w-12 h-12 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.FEMALE' | translate }}</p>
+              <p class="text-[18px] font-bold text-teal">
+                {{ pctFemmes() != null ? pctFemmes() + '%' : '—' }}
+              </p>
+            </div>
           </div>
-          <div class="flex flex-col">
-            <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.MALE' | translate }}</p>
-            <p class="text-[18px] font-bold text-teal">
-              {{ pctHommes() != null ? pctHommes() + '%' : '—' }}
-            </p>
+          <div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+            <img src="/images/male.svg" alt="" class="w-12 h-12 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.MALE' | translate }}</p>
+              <p class="text-[18px] font-bold text-teal">
+                {{ pctHommes() != null ? pctHommes() + '%' : '—' }}
+              </p>
+            </div>
           </div>
         </div>
 

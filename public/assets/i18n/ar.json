@@ -935,7 +935,97 @@
         "overtime": "الساعات الإضافية",
         "interviewTypes": "أنواع المقابلات",
         "offboardingCatalog": "مهام إنهاء الخدمة",
-        "documentTemplates": "قوالب المستندات"
+        "documentTemplates": "قوالب المستندات",
+        "sharepoint": "SharePoint"
+      }
+    },
+    "sharepoint": {
+      "title": "مسارات SharePoint",
+      "subtitle": "موقع كل نوع من المستندات في شجرة SharePoint، والموظفون الذين يتم إيجادهم فيها. يُضبط المسار من هنا ولم يعد يتغيّر عبر سكربت SQL.",
+      "kindLabel": "نوع المستند",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "kind": {
+        "PHOTO": "صورة الملف الشخصي",
+        "PAYSLIP": "قسائم الراتب",
+        "SALARY_CERTIFICATE": "شهادات الراتب"
+      },
+      "panel": {
+        "paths": "المسارات حسب البلد",
+        "employees": "مطابقة الموظفين",
+        "diagnose": "التشخيص"
+      },
+      "status": {
+        "FOUND": "موجود",
+        "NO_CONFIG": "غير مضبوط",
+        "FOLDER_MISSING": "المجلد غير موجود",
+        "AMBIGUOUS": "مجلد غامض",
+        "AMBIGUOUS_EMPLOYEE": "أسماء متكررة",
+        "NO_NAME": "الاسم مفقود",
+        "UNAVAILABLE": "SharePoint غير متاح",
+        "NEVER": "لم يُحسم بعد"
+      },
+      "paths": {
+        "hint": "مسار واحد لكل بلد ونوع مستند. يتم استبدال الرمزين {employeeFolder} و{year} عند القراءة.",
+        "add": "مسار جديد",
+        "edit": "تعديل",
+        "delete": "حذف",
+        "empty": "لا يوجد مسار مضبوط.",
+        "country": "البلد",
+        "template": "المسار",
+        "templateHint": "اختر المجلد الحقيقي ثم أضف الرموز.",
+        "formTitle": "مسار SharePoint",
+        "paysId": "معرّف البلد",
+        "browse": "استعراض",
+        "tokens": "الرموز:"
+      },
+      "employees": {
+        "hint": "قراءة من قاعدة البيانات فقط دون أي اتصال بـ SharePoint. «حسم الكل» يستعلم SharePoint لكل موظف — بطيء ومقصود أن يكون صريحًا.",
+        "resolveAll": "حسم الكل",
+        "resolving": "جارٍ الحسم…",
+        "empty": "لا يوجد موظفون.",
+        "name": "الموظف",
+        "status": "الحالة",
+        "folder": "المجلد",
+        "manual": "يدوي",
+        "diagnose": "تشخيص",
+        "pin": "تثبيت المجلد",
+        "reset": "إعادة التعيين"
+      },
+      "pin": {
+        "title": "تثبيت المجلد",
+        "hint": "للمجلدات التي لا يمكن للاصطلاح توقّعها. يُتحقق منها مقابل الشجرة قبل الحفظ: مجلد غير موجود أسوأ من عدم وجود تصحيح.",
+        "segment": "اسم المجلد بالضبط",
+        "segmentHint": "بدون شرطة مائلة. مثال: Bilel ZEDINI-CDI-ARX tunisie"
+      },
+      "diagnose": {
+        "hint": "يحسم موظفًا واحدًا ويعرض المسار الناتج وسبب الفشل ومحتوى المجلد الفعلي.",
+        "profileId": "معرّف الملف",
+        "run": "تشخيص",
+        "force": "إجبار",
+        "status": "الحالة",
+        "detail": "التفصيل",
+        "folder": "مجلد الموظف",
+        "path": "المسار المحسوم",
+        "years": "السنوات",
+        "files": "الملفات",
+        "noFiles": "المجلد فارغ",
+        "notConfigured": "SharePoint غير مضبوط على هذا الخادم (متغيّرات MS_GRAPH_* فارغة)."
+      },
+      "picker": {
+        "title": "اختيار مجلد",
+        "root": "الجذر",
+        "loading": "جارٍ التحميل…",
+        "leaf": "لا توجد مجلدات فرعية هنا.",
+        "error": "تعذّر سرد هذا المجلد.",
+        "selected": "المحدد:",
+        "choose": "اختيار",
+        "cancel": "إلغاء"
+      },
+      "errors": {
+        "load": "تعذّر التحميل.",
+        "save": "تعذّر الحفظ.",
+        "resolve": "فشل الحسم."
       }
     },
     "docs": {

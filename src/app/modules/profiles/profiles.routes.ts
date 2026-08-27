@@ -7,10 +7,13 @@ export const PROFILES_ROUTES: Routes = [
       import('./profile-list.component').then(m => m.ProfileListComponent),
   },
   {
-    // /hr/profiles/new is disabled — use the Candidate → Onboarding pipeline instead.
+    // The standalone "new profile" wizard is gone — a profile is created by the
+    // Candidate → Onboarding pipeline. Kept as a redirect rather than deleted so the
+    // old URL lands on the list instead of falling through to `:id` and asking the
+    // backend for a profile literally named "new".
     path: 'new',
-    loadComponent: () =>
-      import('./profile-new.component').then(m => m.ProfileNewComponent),
+    redirectTo: '',
+    pathMatch: 'full',
   },
   {
     path: ':id',

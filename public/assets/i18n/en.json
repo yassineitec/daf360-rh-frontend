@@ -263,6 +263,8 @@
       "EXPECTED_START": "Expected start",
       "ACCEPTED_ON": "Accepted on",
       "RECRUITMENT_STEPS": "Recruitment steps",
+      "STEP_CURRENT": "current step",
+      "STEP_DONE": "completed",
       "POSITION_CONTRACT": "Position & Contract",
       "DESIRED_POSITION": "Desired position",
       "CONTRACT_TYPE": "Contract type",
@@ -1471,41 +1473,6 @@
       "ASSIGN": "Assign",
       "ERR_ASSIGN": "Error while assigning"
     },
-    "NEW": {
-      "BREADCRUMB_LIST": "Profiles",
-      "BREADCRUMB_CURRENT": "New profile",
-      "STEPS_ARIA": "Steps",
-      "STEP_IDENTITY": "Identity",
-      "STEP_EMPLOYMENT": "Employment",
-      "STEP_POSITION": "Position",
-      "STEP_REGIME": "Schedule",
-      "STEP_REGIME_TITLE": "Work schedule",
-      "REGIME_HINT": "Optional — can be assigned later.",
-      "USER_ID": "User ID (Users.id) *",
-      "EMPLOYEE_ID": "Employee ID *",
-      "EMPLOYEE_ID_HINT": "Format: ENTITY-YY-NNNN (e.g.: ARX-26-0001)",
-      "PAYS": "Country (ID) *",
-      "HIRE_DATE": "Hire date *",
-      "CONTRACT_TYPE": "Contract type *",
-      "CONTRACT_END": "Contract end date *",
-      "PROBATION_END": "End of probation",
-      "DEPARTMENT": "Department",
-      "GRADE": "Grade",
-      "DISCIPLINE": "Discipline",
-      "NOG_LEVEL": "NOG Level",
-      "REGIME_TEMPLATE_ID": "Schedule template ID",
-      "REGIME_TEMPLATE_PH": "Leave empty for the default schedule",
-      "REGIME_START": "Application start date",
-      "REGIME_REASON": "Schedule change reason",
-      "PREV": "‹ Previous",
-      "NEXT": "Next ›",
-      "SUBMIT": "Create profile",
-      "ERR_REQUIRED": "Required",
-      "ERR_ID_FORMAT": "Invalid format — expected: ENTITY-YY-NNNN",
-      "ERR_FUTURE_DATE": "The date cannot be in the future",
-      "ERR_CDD_END": "Required for a CDD contract",
-      "ERR_CREATE": "Error while creating"
-    },
     "PAY_FREQUENCY": {
       "MONTHLY": "Monthly"
     },
@@ -2250,7 +2217,97 @@
         "overtime": "Overtime",
         "interviewTypes": "Interview types",
         "offboardingCatalog": "Offboarding tasks",
-        "documentTemplates": "Document templates"
+        "documentTemplates": "Document templates",
+        "sharepoint": "SharePoint"
+      }
+    },
+    "sharepoint": {
+      "title": "SharePoint paths",
+      "subtitle": "Where each document kind lives in the SharePoint tree, and which employees resolve there. A path is configured here — no longer changed by SQL script.",
+      "kindLabel": "Document kind",
+      "save": "Save",
+      "cancel": "Cancel",
+      "kind": {
+        "PHOTO": "Profile photo",
+        "PAYSLIP": "Payslips",
+        "SALARY_CERTIFICATE": "Salary certificates"
+      },
+      "panel": {
+        "paths": "Paths by country",
+        "employees": "Employee mapping",
+        "diagnose": "Diagnostics"
+      },
+      "status": {
+        "FOUND": "Found",
+        "NO_CONFIG": "Not configured",
+        "FOLDER_MISSING": "Folder missing",
+        "AMBIGUOUS": "Ambiguous folder",
+        "AMBIGUOUS_EMPLOYEE": "Duplicate names",
+        "NO_NAME": "Missing name",
+        "UNAVAILABLE": "SharePoint unavailable",
+        "NEVER": "Never resolved"
+      },
+      "paths": {
+        "hint": "One path per country and document kind. The {employeeFolder} and {year} tokens are substituted at read time.",
+        "add": "New path",
+        "edit": "Edit",
+        "delete": "Delete",
+        "empty": "No path configured.",
+        "country": "Country",
+        "template": "Path",
+        "templateHint": "Pick the real folder, then append the tokens.",
+        "formTitle": "SharePoint path",
+        "paysId": "Country id",
+        "browse": "Browse",
+        "tokens": "Tokens:"
+      },
+      "employees": {
+        "hint": "Database only, no SharePoint call. \"Resolve all\" queries SharePoint for every employee — slow, and deliberately explicit.",
+        "resolveAll": "Resolve all",
+        "resolving": "Resolving…",
+        "empty": "No employees.",
+        "name": "Employee",
+        "status": "Status",
+        "folder": "Folder",
+        "manual": "manual",
+        "diagnose": "Diagnose",
+        "pin": "Pin folder",
+        "reset": "Reset"
+      },
+      "pin": {
+        "title": "Pin folder",
+        "hint": "For folders the convention cannot predict. Checked against the tree before saving: a folder that does not exist would be worse than no override.",
+        "segment": "Exact folder name",
+        "segmentHint": "No slash. Example: Bilel ZEDINI-CDI-ARX tunisie"
+      },
+      "diagnose": {
+        "hint": "Resolves one employee and shows the resulting path, why it failed, and what is actually in the folder.",
+        "profileId": "Profile id",
+        "run": "Diagnose",
+        "force": "Force",
+        "status": "Status",
+        "detail": "Detail",
+        "folder": "Employee folder",
+        "path": "Resolved path",
+        "years": "Years",
+        "files": "Files",
+        "noFiles": "Folder is empty",
+        "notConfigured": "SharePoint is not configured on this server (MS_GRAPH_* variables are blank)."
+      },
+      "picker": {
+        "title": "Choose a folder",
+        "root": "Root",
+        "loading": "Loading…",
+        "leaf": "No subfolders here.",
+        "error": "Could not list this folder.",
+        "selected": "Selected:",
+        "choose": "Choose",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "load": "Could not load.",
+        "save": "Could not save.",
+        "resolve": "Resolution failed."
       }
     },
     "docs": {
