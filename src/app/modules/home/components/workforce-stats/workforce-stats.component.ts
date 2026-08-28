@@ -16,18 +16,31 @@ interface CountryBar {
   imports: [TranslatePipe, CardComponent, ProgressBarComponent],
   template: `
     <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', fullHeight: true, hoverable: true }">
-      <div>
+      <!-- Container query, not viewport breakpoints. This card's width is a FRACTION of its
+           row (a quarter at xl, a half at md), so it is at its NARROWEST on a wide screen —
+           'lg:' / 'xl:' variants would fire exactly when the card gets smaller. It has to
+           respond to its own box. Same lesson as the calendar legend's 'min-width: 1600px'
+           rule, one component over.
+
+           Written as real CSS in 'styles' rather than Tailwind's container-query variants
+           because the breakpoints then live next to the reasoning that picked them, and the
+           narrow state can be the DEFAULT rather than a min-width override. -->
+      <div class="wf-body">
         <p class="text-[11px] text-outline uppercase tracking-wider mb-2">
           {{ 'HOME.WORKFORCE_STATS.LABEL' | translate }}
         </p>
-        <p class="text-[20px] font-bold text-on-surface leading-snug">
+        <!-- "101 Collaborateurs actifs" needs ~230px on one 20px line; below that the CSS
+             drops it to 18px rather than letting it wrap mid-phrase, which reads as a broken
+             layout instead of a deliberate one. -->
+        <p class="wf-total font-bold text-on-surface leading-snug">
           {{ totalActifs() }} {{ 'HOME.WORKFORCE_STATS.ACTIVE_EMPLOYEES' | translate }}
         </p>
-        <!-- Two even halves, each an illustration + its label/percentage,
-             split by a vertical rule matching the card's other separators. -->
-        <div class="mt-6 grid grid-cols-2 items-center">
-          <div class="flex items-center gap-3 pr-4">
-            <img src="/images/female.svg" alt="" class="w-12 h-12 shrink-0" />
+        <!-- Two even halves, each an illustration + its label/percentage. The vertical rule
+             matches the card's other separators — but a vertical rule only means anything
+             side by side, so when the halves stack it becomes a horizontal one. -->
+        <div class="wf-split mt-6 items-center">
+          <div class="wf-half flex items-center gap-3">
+            <img src="/images/female.svg" alt="" class="wf-icon shrink-0" />
             <div class="flex flex-col min-w-0">
               <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.FEMALE' | translate }}</p>
               <p class="text-[18px] font-bold text-teal">
@@ -35,8 +48,8 @@ interface CountryBar {
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
-            <img src="/images/male.svg" alt="" class="w-12 h-12 shrink-0" />
+          <div class="wf-half wf-half--second flex items-center gap-3">
+            <img src="/images/male.svg" alt="" class="wf-icon shrink-0" />
             <div class="flex flex-col min-w-0">
               <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.MALE' | translate }}</p>
               <p class="text-[18px] font-bold text-teal">
@@ -67,6 +80,44 @@ interface CountryBar {
       </div>
     </daf-card>
   `,
+  /*
+   * The card's own breakpoints. Everything here keys off the CARD's width, never the
+   * viewport's — see the template comment for why that distinction is the whole point.
+   *
+   * 15rem is where the two halves stop fitting side by side: a 48px illustration + a 12px
+   * uppercase label + an 18px percentage needs ~120px per half, and below 240px they start
+   * clipping into each other. 13rem is where the headline phrase stops fitting on one line.
+   */
+  styles: [`
+    .wf-body { container-type: inline-size; }
+
+    /* Defaults are the NARROW state, so a browser without container-query support (or a
+       zero-width container mid-layout) gets the stacked layout rather than a clipped one. */
+    .wf-total { font-size: 18px; }
+    .wf-icon  { width: 2.5rem; height: 2.5rem; }
+    .wf-split { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+    .wf-half--second {
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--color-outline-variant);
+    }
+
+    @container (min-width: 13rem) {
+      .wf-total { font-size: 20px; }
+    }
+
+    @container (min-width: 15rem) {
+      .wf-icon  { width: 3rem; height: 3rem; }
+      .wf-split { grid-template-columns: 1fr 1fr; gap: 0; }
+      .wf-half  { padding-right: 1rem; }
+      .wf-half--second {
+        padding-top: 0;
+        border-top: 0;
+        padding-left: 1rem;
+        padding-right: 0;
+        border-left: 1px solid var(--color-outline-variant);
+      }
+    }
+  `],
 })
 export class WorkforceStatsComponent {
   private translate = inject(TranslateService);

@@ -16,28 +16,36 @@ import { CountryHeadcount } from '../services/home.service';
   host: { class: 'block' },
   imports: [TranslatePipe, AlertCardComponent, WorkforceStatsComponent, ProfileCompletionComponent],
   template: `
-    <!-- Desktop / tablet — watchlist (½) + 2 cards (½) -->
-    <div class="hidden md:flex gap-6">
-      <div class="w-full flex-1">
+    <!-- Tablet and up — ONE grid, two shapes, driven by a single col-span.
+         md–lg (768–1279): 2 columns. The watchlist spans both, so it gets the full width
+                           and the two stat cards sit half-and-half beneath it.
+         xl and up:        4 columns. Watchlist spans 2 (½), each stat card takes 1 (¼) —
+                           the original three-across row.
+
+         The old markup was 'hidden md:flex' with a nested flex, i.e. ONE layout for every
+         width from 768px up: the watchlist took half and the two cards split the other
+         half, so at 768px each stat card had ~180px of box and ~130px of content after
+         'padding: lg'. That is what squashed the effectif card. A tablet is not a small
+         desktop, and this is the tier that was missing rather than a size to shrink into. -->
+    <div class="hidden md:grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div class="md:col-span-2">
         <rh-alert-card
           [probationAlerts]="probationAlerts()"
           [probationTotal]="probationTotal()"
           [missingDocsAlerts]="missingDocsAlerts()"
           [missingDocsTotal]="missingDocsTotal()" />
       </div>
-      <div class="w-full flex-1 flex gap-6">
-        <div class="flex-1 min-w-0">
-          <rh-workforce-stats
-            [totalActifs]="totalActifs()"
-            [pctFemmes]="pctFemmes()"
-            [pctHommes]="pctHommes()"
-            [byCountry]="byCountry()" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <rh-profile-completion
-            [tauxGlobalPct]="tauxGlobalPct()"
-            [dossiersIncomplets]="dossiersIncomplets()" />
-        </div>
+      <div class="min-w-0">
+        <rh-workforce-stats
+          [totalActifs]="totalActifs()"
+          [pctFemmes]="pctFemmes()"
+          [pctHommes]="pctHommes()"
+          [byCountry]="byCountry()" />
+      </div>
+      <div class="min-w-0">
+        <rh-profile-completion
+          [tauxGlobalPct]="tauxGlobalPct()"
+          [dossiersIncomplets]="dossiersIncomplets()" />
       </div>
     </div>
 

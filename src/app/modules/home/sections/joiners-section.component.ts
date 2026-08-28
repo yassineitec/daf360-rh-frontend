@@ -25,11 +25,15 @@ import { NewEmployeesWidgetComponent, NouveauItem } from '../components/new-empl
 
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div class="lg:col-span-3">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 2xl:grid-cols-3 — at 1536px+ this column is ~1100px, so two cards were 550px
+               each of mostly empty card. The third column is the width paying for itself. -->
+          <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
             @for (emp of employees(); track emp.profileId) {
               <rh-employee-card [employee]="emp" (viewProfile)="viewProfile.emit($event)" />
             } @empty {
-              <p class="text-body-sm text-outline col-span-2 py-8 text-center">
+              <!-- col-span-full, not col-span-2: the column count now varies by breakpoint,
+                   and a fixed span leaves the empty message off-centre at 1 and 3 columns. -->
+              <p class="text-body-sm text-outline col-span-full py-8 text-center">
                 {{ 'HOME.DIRECTORY.EMPTY' | translate }}
               </p>
             }
