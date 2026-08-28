@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  ButtonComponent, FileUploadComponent,
+  AccordionCardComponent, ButtonComponent, FileUploadComponent,
   SkeletonComponent, StatusBadgeComponent, UploadedFile,
 } from '@khalilrebhiitec/daf360';
 
@@ -36,7 +36,7 @@ const EXPIRY_WARNING_DAYS = 30;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    SectionCardComponent, ButtonComponent, FileUploadComponent,
+    SectionCardComponent, AccordionCardComponent, ButtonComponent, FileUploadComponent,
     SkeletonComponent, StatusBadgeComponent, TranslatePipe,
   ],
   host: { class: 'contents' },
@@ -58,24 +58,30 @@ const EXPIRY_WARNING_DAYS = 30;
           }
         </div>
       } @else {
-      <!-- One section per document TYPE, not one flat list.
+      <!-- One accordion section per document TYPE, not one flat list.
            The type is what decides the SharePoint folder, so grouping by it is what makes
            "where does this land" visible at all — and it puts the upload control next to the
            heading it files under, instead of a select that had to be set first and was easy to
-           forget. Sections with nothing in them start closed: sixteen empty headers would bury
-           the two types an employee actually has. -->
+           forget.
+           Exclusive: opening one closes the rest, so sixteen types stay a readable list rather
+           than a wall. The counts live in the header, which renders collapsed too, so nothing
+           has to be opened to find out where the documents are. -->
       <div class="flex flex-col gap-2">
         @for (t of types(); track t.code) {
-          <section class="rounded-xl border border-outline-variant">
-            <button type="button"
-                    class="flex w-full items-center gap-3 px-3 py-2.5 text-left"
-                    [attr.aria-expanded]="isOpen(t.code)"
-                    (click)="toggle(t.code)">
-              <span class="material-symbols-outlined text-[20px] text-outline transition-transform"
-                    [class.rotate-90]="isOpen(t.code)">chevron_right</span>
-              <span class="flex-1 truncate text-[13px] font-semibold text-on-surface">
-                {{ t.label }}
-              </span>
+          <!-- variant: 'outlined', not the default glass: sixteen glass cards inside this
+               panel's own glass card is a stack of blur, and every one of them would be another
+               target for the lib's unconditional .glass-card:hover lift. Outlined reads as a
+               list inside a panel, which is what this is. -->
+          <daf-accordion-card
+            [options]="{ title: t.label, icon: 'folder', variant: 'outlined', radius: 'lg' }"
+            [open]="openType() === t.code"
+            (openChange)="onSectionToggle(t.code, $event)">
+
+            <!-- headerAction is projected whether the card is open or closed, which is what
+                 makes an exclusive accordion usable: the counts stay readable on every
+                 collapsed section, so you can see WHERE the documents are without opening
+                 each one in turn. -->
+            <span headerAction class="flex items-center gap-2">
               @if (rowsFor(t.code).length) {
                 <daf-badge [label]="rowsFor(t.code).length + ''"
                            [options]="{ variant: 'neutral', pill: true, size: 'sm' }" />
@@ -84,10 +90,9 @@ const EXPIRY_WARNING_DAYS = 30;
                 <daf-badge [label]="'PROFILES.DOCUMENTS.IN_SHAREPOINT' | translate:{ count: remoteExtraCount(t.code) }"
                            [options]="{ variant: 'info', pill: true, size: 'sm' }" />
               }
-            </button>
+            </span>
 
-            @if (isOpen(t.code)) {
-            <div class="flex flex-col gap-3 border-t border-outline-variant p-3">
+            <div class="flex flex-col gap-3">
               @if (canEdit()) {
                 <daf-file-upload
                   [config]="{ accept: '.pdf,.jpg,.jpeg,.png',
@@ -101,7 +106,7 @@ const EXPIRY_WARNING_DAYS = 30;
                 }
               }
 
-        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+              <ul class="m-0 flex list-none flex-col gap-2 p-0">
           @for (doc of rowsFor(t.code); track doc.source + '-' + doc.id) {
             <li class="flex flex-wrap items-center gap-3 rounded-lg border border-outline-variant px-3 py-2.5"
                 [class.border-danger]="isExpired(doc)">
@@ -191,7 +196,7 @@ const EXPIRY_WARNING_DAYS = 30;
               </div>
             </li>
           }
-        </ul>
+              </ul>
 
               <!-- What is really in the SharePoint folder.
                    Fetched on expand, never on tab open: one Graph round trip per type per
@@ -240,8 +245,7 @@ const EXPIRY_WARNING_DAYS = 30;
                 </div>
               }
             </div>
-            }
-          </section>
+          </daf-accordion-card>
         }
       </div>
       }
@@ -281,32 +285,40 @@ export class DocumentsSectionComponent {
   protected readonly fmtDate = fmtDate;
 
   /**
-   * Which sections are open. Local UI state, not an input: the page has no reason to care, and
-   * the fetch it does care about is announced through `expand`.
+   * The single open section, or null.
+   *
+   * One code rather than a set: this is an accordion, so opening a section closes the previous
+   * one. Local UI state, not an input — the page has no reason to care which section is open,
+   * and the one thing it does care about (fetch this type's SharePoint listing) is announced
+   * through `expand`.
    */
-  private readonly opened = signal<ReadonlySet<string>>(new Set());
+  private readonly openedCode = signal<string | null>(null);
 
-  protected isOpen(code: string): boolean {
-    // A type that already has documents opens by default — the dossier's contents should be
-    // visible without hunting, while the empty types stay out of the way.
-    return this.opened().has(code) || (!this.touched().has(code) && this.rowsFor(code).length > 0);
-  }
+  /** Whether the user has picked a section yet — before that, the default below applies. */
+  private readonly touched = signal(false);
 
-  /** Codes the user has toggled, so a default-open section can be closed again. */
-  private readonly touched = signal<ReadonlySet<string>>(new Set());
+  /**
+   * The open section: the user's pick, or the first type that has documents.
+   *
+   * Defaulting to the first type WITH documents rather than the first type in the list: an
+   * employee whose only file is a CV would otherwise land on an empty CONTRACT section, which
+   * hides the one thing worth seeing. Null when the dossier is empty — nothing to open.
+   */
+  protected readonly openType = computed<string | null>(() => {
+    if (this.touched()) return this.openedCode();
+    return this.types().find(t => this.rowsFor(t.code).length > 0)?.code ?? null;
+  });
 
-  protected toggle(code: string): void {
-    const wasOpen = this.isOpen(code);
-    this.touched.update(s => new Set(s).add(code));
-    this.opened.update(s => {
-      const next = new Set(s);
-      if (wasOpen) next.delete(code);
-      else next.add(code);
-      return next;
-    });
+  /**
+   * `openChange` from one card. Exclusivity lives here: the accordion's `open` is a two-way
+   * model, so the parent decides, and setting one code is what closes every other section.
+   */
+  protected onSectionToggle(code: string, open: boolean): void {
+    this.touched.set(true);
+    this.openedCode.set(open ? code : null);
     // Announce only on open, and let the page decide whether it already has the listing —
     // re-fetching on every collapse would turn a chevron into Graph traffic.
-    if (!wasOpen) this.expand.emit(code);
+    if (open) this.expand.emit(code);
   }
 
   protected rowsFor(code: string): ProfileDocumentRow[] {

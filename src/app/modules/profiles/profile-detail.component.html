@@ -93,7 +93,12 @@
             <!-- Contact holds both cards: the employee's own details, then the
                  person to call. They were two tabs for three fields each. -->
             @case ('contact') {
-              <div class="flex flex-col gap-6">
+              <!-- Side by side, not stacked: both sections are short (three or four fields
+                   each), so stacking them left the tab mostly empty on the right and pushed the
+                   emergency contact below the fold. `items-start` so the shorter card keeps its
+                   own height instead of stretching to match its neighbour, and one column below
+                   `lg` because two columns of form fields do not fit a narrow viewport. -->
+              <div class="grid items-start gap-6 lg:grid-cols-2">
                 <rh-contact-section
                   [profile]="p" [editMode]="editMode()" [editForm]="editForm()"
                   (patch)="patch($event)" />

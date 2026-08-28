@@ -36,7 +36,7 @@ import {
 } from './models/profile.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
-import { profilePhotoUrl } from '../../shared/utils/avatar.utils';
+import { profilePhotoUrlFresh } from '../../shared/utils/avatar.utils';
 import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
@@ -327,10 +327,17 @@ export class ProfileDetailComponent implements OnInit {
     return pills;
   });
 
-  /** Same relative endpoint the list uses — see `profilePhotoUrl`. */
+  /**
+   * The detail page's avatar: full size, and re-read from SharePoint on every load.
+   *
+   *  is affordable here and only here — one employee, two Graph calls, on an image that
+   * loads asynchronously. It means this page can never show a photo that has since been replaced
+   * or deleted directly in SharePoint, which the 24-hour revalidation window otherwise allows.
+   * Lists stay on the plain URL and are kept current by the delta sync instead.
+   */
   readonly photoSrc = computed(() => {
     const p = this.profile();
-    return profilePhotoUrl(p?.id, p?.photoUrl);
+    return profilePhotoUrlFresh(p?.id, p?.photoUrl);
   });
 
   // ── Permissions ────────────────────────────────────────────────────────────

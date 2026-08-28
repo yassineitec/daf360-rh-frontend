@@ -17,7 +17,23 @@ import { CardAccent, CardComponent } from '@khalilrebhiitec/daf360';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CardComponent],
-  host: { class: 'block' },
+  /**
+   * `[&_.glass-card:hover]:transform-none` neutralises a lib rule this shell must not obey.
+   *
+   * The lib's `.glass-card:hover` (styles.css) applies `translateY(-4px) scale(1.02)` as plain
+   * CSS on the class — NOT through the `hover:` utilities `daf-card` adds only when `hoverable`
+   * is set. So every glass card lifts and grows on hover whether or not it asked to, and on a
+   * full-width tab panel that means ~10px of growth each side which slides over the `daf-tabs`
+   * strip directly above it: hovering the Documents panel hid the tabs.
+   *
+   * Scoped here rather than fixed in the lib on purpose — the lib fix changes behaviour for
+   * every consumer and needs its own release. A tab panel is a container, never a target, so
+   * suppressing the lift for THIS shell is correct independently of that.
+   *
+   * Only `transform` is dropped: the background and shadow shifts are harmless and still read
+   * as "you are over this panel".
+   */
+  host: { class: 'block [&_.glass-card:hover]:transform-none' },
   template: `
     <daf-card [options]="{ variant: 'glass', radius: 'xl', padding: 'md', accent: accent() }">
       @if (title()) {

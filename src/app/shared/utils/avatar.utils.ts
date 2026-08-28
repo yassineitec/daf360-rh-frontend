@@ -71,7 +71,36 @@ export function profilePhotoUrl(
   size?: PhotoSize,
 ): string | null {
   if (!photoUrl || !profileId) return null;
-  return `/api/hr/profiles/${profileId}/photo${size === 'sm' ? '?size=sm' : ''}`;
+  const params = [
+    size === 'sm' ? 'size=sm' : null,
+    versionOf(photoUrl),
+  ].filter(Boolean);
+  return `/api/hr/profiles/${profileId}/photo${params.length ? '?' + params.join('&') : ''}`;
+}
+
+/**
+ * The `v=…` token out of a stored `photo_url`, or null.
+ *
+ * **This is what makes a replaced photo appear.** The endpoint answers with a seven-day
+ * `Cache-Control`, and the backend's whole defence against that is rewriting `photo_url` with a
+ * fresh `?v={epochSeconds}` on every upload and on every revalidation that finds a new file
+ * (`EmployeeProfileService.photoUrlFor`). Rebuilding the URL from the profile id alone — which
+ * this function used to do — threw the token away, so the `<img>` src was byte-identical before
+ * and after an upload and the browser never refetched: the upload succeeded, SharePoint got the
+ * file, and the page kept showing the old face until the week elapsed.
+ *
+ * Read out of the stored value rather than generated here (e.g. `Date.now()`): a token that
+ * changes on every render would defeat the cache entirely and re-download every avatar on every
+ * navigation. The token must change exactly when the image does, and only the server knows that.
+ *
+ * Null-safe by design — rows stamped by hand (the `photo_url` backfill UPDATE) carry no token,
+ * and those simply keep the previous caching behaviour rather than breaking.
+ */
+function versionOf(photoUrl: string): string | null {
+  const at = photoUrl.indexOf('v=');
+  if (at < 0) return null;
+  const value = photoUrl.slice(at + 2).split('&')[0];
+  return /^[0-9]+$/.test(value) ? `v=${value}` : null;
 }
 
 /**
@@ -86,6 +115,27 @@ export function profilePhotoUrl(
 export type PhotoSize = 'sm' | 'full';
 
 /**
+ * The detail page's photo URL: full size, and re-read from SharePoint on load.
+ *
+ * `fresh=1` makes the backend ignore its 24-hour revalidation window for this one employee, so
+ * the profile you are looking at is never showing a photo that has since been replaced or deleted
+ * in SharePoint. Affordable precisely because it is ONE person — two Graph calls on an image
+ * request that loads asynchronously.
+ *
+ * Never use this for a list. Twelve avatars would be 24 Graph calls per page view, and a
+ * hundred-person annuaire 200; keeping lists fresh is the delta sync's job, which costs one call
+ * for the whole drive.
+ */
+export function profilePhotoUrlFresh(
+  profileId: number | null | undefined,
+  photoUrl: string | null | undefined,
+): string | null {
+  const base = profilePhotoUrl(profileId, photoUrl);
+  if (!base) return null;
+  return base + (base.includes('?') ? '&' : '?') + 'fresh=1';
+}
+
+/**
  * List-surface avatar: the small photo variant, then the gendered placeholder.
  *
  * Always `?size=sm` — every caller of this helper renders a table row or a card, never a
@@ -97,9 +147,10 @@ export function getAvatarUrl(
   photoUrl: string | null | undefined,
   gender: string | null | undefined,
 ): string {
-  if (photoUrl && profileId) return `/api/hr/profiles/${profileId}/photo?size=sm`;
-  if (isFemale(gender)) return '/images/avatars/female.png';
-  return '/images/avatars/male.png';
+  // Through profilePhotoUrl so the cache-busting token is carried here too: a photo replaced on
+  // the detail page has to change in the list as well, and this helper feeds every list.
+  return profilePhotoUrl(profileId, photoUrl, 'sm')
+    ?? (isFemale(gender) ? '/images/avatars/female.png' : '/images/avatars/male.png');
 }
 
 export function getInitials(fullName: string): string {

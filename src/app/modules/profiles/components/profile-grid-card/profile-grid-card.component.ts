@@ -2,7 +2,7 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { CardComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EmployeeListItem } from '../../models/profile.model';
-import { getInitials, isFemale } from '../../../../shared/utils/avatar.utils';
+import { getInitials, isFemale, profilePhotoUrl } from '../../../../shared/utils/avatar.utils';
 import {
   contractLabel, lifecycleDotColor, lifecycleDotGlow, lifecycleLabel,
 } from '../../profile-labels';
@@ -225,10 +225,11 @@ export class ProfileGridCardComponent {
   readonly photoSrc = computed((): string | null => {
     const emp = this.employee();
     const phase = this.imgPhase();
-    // ?size=sm: the circle is 112px and the cached master is 512px. Twelve of those was the
-    // bulk of what this page downloaded on first paint.
-    const photoUrl =
-      emp.photoUrl && emp.profileId ? `/api/hr/profiles/${emp.profileId}/photo?size=sm` : null;
+    // Through the shared helper, not built inline: it adds ?size=sm (the circle is 112px and the
+    // cached master 512px) AND carries the `v=` cache-busting token out of photo_url. Building
+    // the URL here by hand dropped that token, so a replaced photo kept showing the old face in
+    // the grid for the seven days the endpoint's Cache-Control advertises.
+    const photoUrl = profilePhotoUrl(emp.profileId, emp.photoUrl, 'sm');
     const genderUrl = emp.gender
       ? isFemale(emp.gender)
         ? '/images/avatars/female.png'
