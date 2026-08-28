@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  ButtonComponent, FileUploadComponent, SelectComponent, SelectOption,
+  ButtonComponent, FileUploadComponent,
   SkeletonComponent, StatusBadgeComponent, UploadedFile,
 } from '@khalilrebhiitec/daf360';
 
-import { ProfileDocumentRow } from '../models/profile.model';
+import { ProfileDocumentRow, RemoteDocument } from '../models/profile.model';
 import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 import { fmtDate } from './field-bridges';
 
@@ -36,7 +36,7 @@ const EXPIRY_WARNING_DAYS = 30;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    SectionCardComponent, ButtonComponent, FileUploadComponent, SelectComponent,
+    SectionCardComponent, ButtonComponent, FileUploadComponent,
     SkeletonComponent, StatusBadgeComponent, TranslatePipe,
   ],
   host: { class: 'contents' },
@@ -51,28 +51,6 @@ const EXPIRY_WARNING_DAYS = 30;
         </span>
       </div>
 
-      @if (canEdit()) {
-        <!-- Type first, then the file: the type is what the upload is POSTed with, and a
-             file dropped before a type was chosen used to be sent as whatever was default. -->
-        <div class="mb-5 flex flex-col gap-3 rounded-xl border border-outline-variant
-                    bg-surface-container-low p-4">
-          <div class="grid gap-4 sm:grid-cols-[minmax(200px,260px)_1fr] sm:items-start">
-            <daf-select [options]="docTypeOptions()"
-              [config]="{ label: ('PROFILES.DOCUMENTS.TYPE_LABEL' | translate), searchable: true }"
-              [selected]="[uploadType()]"
-              (selectedChange)="onTypeChange($event)" />
-            <daf-file-upload
-              [config]="{ accept: '.pdf,.jpg,.jpeg,.png',
-                          hint: ('PROFILES.DOCUMENTS.IMPORT_HINT' | translate) }"
-              [files]="uploadFiles()"
-              (filesChange)="filesChange.emit($event)" />
-          </div>
-          @if (uploading()) {
-            <span class="text-[12px] text-teal">{{ 'PROFILES.DOCUMENTS.UPLOADING' | translate }}</span>
-          }
-        </div>
-      }
-
       @if (loading()) {
         <div class="flex flex-col gap-2">
           @for (i of [0, 1, 2]; track i) {
@@ -80,8 +58,51 @@ const EXPIRY_WARNING_DAYS = 30;
           }
         </div>
       } @else {
+      <!-- One section per document TYPE, not one flat list.
+           The type is what decides the SharePoint folder, so grouping by it is what makes
+           "where does this land" visible at all — and it puts the upload control next to the
+           heading it files under, instead of a select that had to be set first and was easy to
+           forget. Sections with nothing in them start closed: sixteen empty headers would bury
+           the two types an employee actually has. -->
+      <div class="flex flex-col gap-2">
+        @for (t of types(); track t.code) {
+          <section class="rounded-xl border border-outline-variant">
+            <button type="button"
+                    class="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                    [attr.aria-expanded]="isOpen(t.code)"
+                    (click)="toggle(t.code)">
+              <span class="material-symbols-outlined text-[20px] text-outline transition-transform"
+                    [class.rotate-90]="isOpen(t.code)">chevron_right</span>
+              <span class="flex-1 truncate text-[13px] font-semibold text-on-surface">
+                {{ t.label }}
+              </span>
+              @if (rowsFor(t.code).length) {
+                <daf-badge [label]="rowsFor(t.code).length + ''"
+                           [options]="{ variant: 'neutral', pill: true, size: 'sm' }" />
+              }
+              @if (remoteExtraCount(t.code)) {
+                <daf-badge [label]="'PROFILES.DOCUMENTS.IN_SHAREPOINT' | translate:{ count: remoteExtraCount(t.code) }"
+                           [options]="{ variant: 'info', pill: true, size: 'sm' }" />
+              }
+            </button>
+
+            @if (isOpen(t.code)) {
+            <div class="flex flex-col gap-3 border-t border-outline-variant p-3">
+              @if (canEdit()) {
+                <daf-file-upload
+                  [config]="{ accept: '.pdf,.jpg,.jpeg,.png',
+                              hint: ('PROFILES.DOCUMENTS.IMPORT_HINT' | translate) }"
+                  [files]="filesFor(t.code)"
+                  (filesChange)="filesChange.emit({ type: t.code, files: $event })" />
+                @if (uploadingType() === t.code) {
+                  <span class="text-[12px] text-teal">
+                    {{ 'PROFILES.DOCUMENTS.UPLOADING' | translate }}
+                  </span>
+                }
+              }
+
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
-          @for (doc of rows(); track doc.source + '-' + doc.id) {
+          @for (doc of rowsFor(t.code); track doc.source + '-' + doc.id) {
             <li class="flex flex-wrap items-center gap-3 rounded-lg border border-outline-variant px-3 py-2.5"
                 [class.border-danger]="isExpired(doc)">
               <span class="material-symbols-outlined shrink-0 text-[20px]"
@@ -92,8 +113,12 @@ const EXPIRY_WARNING_DAYS = 30;
 
               <div class="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div class="flex flex-wrap items-center gap-2">
+                  <!-- The file name is the title here: the section heading already says the
+                       type, so repeating it would make every row inside a section read the
+                       same. Generated attestations have no user-chosen name, so they fall back
+                       to the type, which IS their name. -->
                   <span class="truncate text-[13px] font-semibold text-on-surface">
-                    {{ typeLabel(doc.documentType) }}
+                    {{ doc.fileName || typeLabel(doc.documentType) }}
                   </span>
                   @if (doc.source === 'GENERATED') {
                     <daf-badge [label]="'PROFILES.DOCUMENTS.SOURCE_GENERATED' | translate"
@@ -110,10 +135,6 @@ const EXPIRY_WARNING_DAYS = 30;
                                [options]="{ variant: 'warning', size: 'sm' }" />
                   }
                 </div>
-
-                @if (doc.fileName) {
-                  <span class="truncate text-[12px] text-on-surface-variant">{{ doc.fileName }}</span>
-                }
 
                 <div class="flex flex-wrap gap-3 text-[11px] text-outline">
                   <span>{{ 'PROFILES.DOCUMENTS.ON_DATE' | translate:{ date: fmtDate(doc.date) } }}</span>
@@ -169,15 +190,60 @@ const EXPIRY_WARNING_DAYS = 30;
                 }
               </div>
             </li>
-          } @empty {
-            <div class="flex flex-col items-center gap-2 py-6 text-center">
-              <span class="material-symbols-outlined text-[28px] text-outline">folder_off</span>
-              <p class="m-0 text-[13px] text-on-surface-variant">
-                {{ 'PROFILES.DOCUMENTS.NONE' | translate }}
-              </p>
-            </div>
           }
         </ul>
+
+              <!-- What is really in the SharePoint folder.
+                   Fetched on expand, never on tab open: one Graph round trip per type per
+                   profile view is how a page earns a 429. Files the app itself filed are
+                   already above, so only the rest is listed — HR's own drops, which the tab
+                   could not show at all before. -->
+              @if (remoteLoading()[t.code]) {
+                <daf-skeleton variant="block" radius="lg" width="100%" height="40px" />
+              } @else if (remoteExtras(t.code).length) {
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-[11px] font-semibold uppercase tracking-wider text-outline">
+                    {{ 'PROFILES.DOCUMENTS.SHAREPOINT_ONLY' | translate }}
+                  </span>
+                  @for (f of remoteExtras(t.code); track f.name) {
+                    <div class="flex flex-wrap items-center gap-3 rounded-lg border border-dashed
+                                border-outline-variant px-3 py-2">
+                      <span class="material-symbols-outlined shrink-0 text-[20px] text-info">
+                        cloud
+                      </span>
+                      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span class="truncate text-[13px] text-on-surface">{{ f.name }}</span>
+                        <div class="flex flex-wrap gap-3 text-[11px] text-outline">
+                          @if (f.lastModified) {
+                            <span>{{ 'PROFILES.DOCUMENTS.ON_DATE' | translate:{ date: fmtDate(f.lastModified) } }}</span>
+                          }
+                          @if (f.sizeBytes) {
+                            <span>{{ 'PROFILES.DOCUMENTS.SIZE_KB' | translate:{ size: kb(f.sizeBytes) } }}</span>
+                          }
+                        </div>
+                      </div>
+                      <!-- Retrieval on click, never on render: the bytes come from Graph, so
+                           listing a folder must not pull every file in it. -->
+                      <daf-button
+                        [options]="{ variant: 'ghost', size: 'sm', iconStart: 'download',
+                                     title: ('PROFILES.DOCUMENTS.OPEN' | translate) }"
+                        (onClick)="openRemote.emit({ type: t.code, file: f })" />
+                    </div>
+                  }
+                </div>
+              } @else if (!rowsFor(t.code).length) {
+                <div class="flex flex-col items-center gap-2 py-4 text-center">
+                  <span class="material-symbols-outlined text-[24px] text-outline">folder_off</span>
+                  <p class="m-0 text-[12px] text-on-surface-variant">
+                    {{ 'PROFILES.DOCUMENTS.NONE' | translate }}
+                  </p>
+                </div>
+              }
+            </div>
+            }
+          </section>
+        }
+      </div>
       }
     </rh-section-card>
   `,
@@ -188,24 +254,87 @@ export class DocumentsSectionComponent {
   /** Already merged and sorted by the page — this component does not know the two services. */
   readonly rows           = input<ProfileDocumentRow[]>([]);
   readonly loading        = input(false);
-  readonly uploading      = input(false);
   readonly canEdit        = input(false);
-  readonly uploadType     = input('CONTRACT');
-  readonly uploadFiles    = input<UploadedFile[]>([]);
-  readonly docTypeOptions = input<SelectOption[]>([]);
 
-  readonly uploadTypeChange = output<string>();
-  readonly filesChange      = output<UploadedFile[]>();
-  readonly open             = output<ProfileDocumentRow>();
-  readonly verify           = output<{ doc: ProfileDocumentRow; status: 'VERIFIED' | 'REJECTED' }>();
-  readonly edit             = output<ProfileDocumentRow>();
-  readonly remove           = output<ProfileDocumentRow>();
+  /** The type sections to render, in the order the backend gave them. */
+  readonly types          = input<{ code: string; label: string }[]>([]);
+
+  /** SharePoint contents per type code — only for types that have been expanded. */
+  readonly remote         = input<Record<string, RemoteDocument[]>>({});
+  readonly remoteLoading  = input<Record<string, boolean>>({});
+
+  /** Files staged in the upload control, per type: each section has its own. */
+  readonly uploadFiles    = input<Record<string, UploadedFile[]>>({});
+
+  /** Which type's upload is in flight, or null. One at a time is enough — the control is
+   *  disabled by its own busy state and nobody uploads into two sections at once. */
+  readonly uploadingType  = input<string | null>(null);
+
+  readonly filesChange = output<{ type: string; files: UploadedFile[] }>();
+  readonly expand      = output<string>();
+  readonly openRemote  = output<{ type: string; file: RemoteDocument }>();
+  readonly open        = output<ProfileDocumentRow>();
+  readonly verify      = output<{ doc: ProfileDocumentRow; status: 'VERIFIED' | 'REJECTED' }>();
+  readonly edit        = output<ProfileDocumentRow>();
+  readonly remove      = output<ProfileDocumentRow>();
 
   protected readonly fmtDate = fmtDate;
 
-  /** Clearing the select yields an empty array despite the `string[]` type. */
-  protected onTypeChange(values: string[]): void {
-    if (values[0]) this.uploadTypeChange.emit(values[0]);
+  /**
+   * Which sections are open. Local UI state, not an input: the page has no reason to care, and
+   * the fetch it does care about is announced through `expand`.
+   */
+  private readonly opened = signal<ReadonlySet<string>>(new Set());
+
+  protected isOpen(code: string): boolean {
+    // A type that already has documents opens by default — the dossier's contents should be
+    // visible without hunting, while the empty types stay out of the way.
+    return this.opened().has(code) || (!this.touched().has(code) && this.rowsFor(code).length > 0);
+  }
+
+  /** Codes the user has toggled, so a default-open section can be closed again. */
+  private readonly touched = signal<ReadonlySet<string>>(new Set());
+
+  protected toggle(code: string): void {
+    const wasOpen = this.isOpen(code);
+    this.touched.update(s => new Set(s).add(code));
+    this.opened.update(s => {
+      const next = new Set(s);
+      if (wasOpen) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+    // Announce only on open, and let the page decide whether it already has the listing —
+    // re-fetching on every collapse would turn a chevron into Graph traffic.
+    if (!wasOpen) this.expand.emit(code);
+  }
+
+  protected rowsFor(code: string): ProfileDocumentRow[] {
+    return this.rows().filter(r => r.documentType === code);
+  }
+
+  protected filesFor(code: string): UploadedFile[] {
+    return this.uploadFiles()[code] ?? [];
+  }
+
+  /**
+   * SharePoint files that are NOT already listed above.
+   *
+   * `filedByApp` marks the ones the upload itself put there (the `{docId}_` prefix), and those
+   * are the same documents the local rows describe — showing both would double every row that
+   * mirrored successfully.
+   */
+  protected remoteExtras(code: string): RemoteDocument[] {
+    return (this.remote()[code] ?? []).filter(f => !f.filedByApp);
+  }
+
+  /** For the header badge: how many SharePoint files this type has that the app does not know. */
+  protected remoteExtraCount(code: string): number {
+    return this.remoteExtras(code).length;
+  }
+
+  protected kb(bytes: number): number {
+    return Math.max(1, Math.round(bytes / 1024));
   }
 
   protected typeLabel(code: string): string {

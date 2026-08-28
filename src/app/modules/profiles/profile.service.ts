@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   DocumentMetadataRequest,
+  DocumentTypeOption,
   EmployeeDocument,
   EmployeeListItem,
   EmployeeProfile,
@@ -14,6 +15,7 @@ import {
   ProfileSummary,
   ProfileUpdateDto,
   RegimeAssignmentDto,
+  RemoteDocument,
   WorkingTimeRegime,
 } from './models/profile.model';
 
@@ -68,6 +70,22 @@ export class ProfileService {
     return this.http.get<EmployeeDocument[]>(`${this.base}/profiles/${profileId}/documents`);
   }
 
+  /**
+   * The document types this employee's COUNTRY accepts, with their labels.
+   *
+   * Scoped to the profile, not global: the vocabulary lives in `document_types` (V87) keyed by
+   * `(pays_id, code)`, because CNSS is Tunisian and Egypt has no equivalent. Offering a global
+   * list would let the form propose a type the upload then rejects.
+   *
+   * Labels come from the DB rather than `PROFILES.DOC_TYPES.*` — that is what makes adding a
+   * type a database row instead of a frontend release.
+   */
+  listDocumentTypes(profileId: number): Observable<DocumentTypeOption[]> {
+    return this.http.get<DocumentTypeOption[]>(
+      `${this.base}/profiles/${profileId}/documents/types`,
+    );
+  }
+
   /** The corbeille — soft-deleted rows, so the dossier can show what was withdrawn. */
   listDeletedDocuments(profileId: number): Observable<EmployeeDocument[]> {
     return this.http.get<EmployeeDocument[]>(
@@ -102,6 +120,31 @@ export class ProfileService {
     return this.http.get(
       `${this.base}/profiles/${profileId}/documents/${docId}/download`,
       { responseType: 'blob' });
+  }
+
+  /**
+   * What is really in the employee's SharePoint folder for one type.
+   *
+   * Per type, and called on expand rather than on load: this is a Microsoft Graph round trip
+   * behind the scenes, and listing every configured folder when the tab opens is how a page
+   * earns a 429.
+   */
+  listRemoteDocuments(profileId: number, type: string): Observable<RemoteDocument[]> {
+    return this.http.get<RemoteDocument[]>(
+      `${this.base}/profiles/${profileId}/documents/remote`, { params: { type } });
+  }
+
+  /**
+   * Bytes for a file that exists only in SharePoint.
+   *
+   * Sends a TYPE and a NAME — never a path. The folder is derived server-side from the profile
+   * and the type, because this reaches a site holding every employee's contracts and identity
+   * documents and a client-supplied path would be a traversal hole over exactly that.
+   */
+  downloadRemoteDocument(profileId: number, type: string, name: string): Observable<Blob> {
+    return this.http.get(
+      `${this.base}/profiles/${profileId}/documents/remote/download`,
+      { params: { type, name }, responseType: 'blob' });
   }
 
   updateDocument(profileId: number, docId: number,

@@ -55,6 +55,7 @@
              the per-tab lazy loading (contracts) in this component. -->
         <daf-tabs #tabsRef
           variant="underline"
+          style="--daf-tabs-fade: var(--color-background)"
           [tabs]="tabs()"
           [active]="activeTab()"
           (activeChange)="onTabChange($event)"
@@ -148,12 +149,14 @@
               <rh-documents-section
                 [rows]="documentRows()"
                 [loading]="docsLoading()"
-                [uploading]="docUploading()"
                 [canEdit]="canEdit()"
-                [uploadType]="uploadType()"
+                [types]="documentSections()"
+                [remote]="remoteDocs()"
+                [remoteLoading]="remoteLoading()"
                 [uploadFiles]="uploadFiles()"
-                [docTypeOptions]="docTypeOptions()"
-                (uploadTypeChange)="uploadType.set($event)"
+                [uploadingType]="uploadingType()"
+                (expand)="loadRemote($event)"
+                (openRemote)="openRemoteDocument($event)"
                 (filesChange)="onDocumentFilesChange($event)"
                 (open)="openDocument($event)"
                 (verify)="verifyDocument($event)"

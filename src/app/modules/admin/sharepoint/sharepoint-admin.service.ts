@@ -23,6 +23,24 @@ export interface DocKindInfo {
   code: string;
   /** Year-scoped kinds require `{year}` in their template and store one folder per year. */
   yearScoped: boolean;
+  /**
+   * True for a built-in kind (PHOTO, PAYSLIP, SALARY_CERTIFICATE) — those carry behaviour and
+   * cannot be created or deactivated here. False for a document type, which is just a row in
+   * `document_types` and is fully editable.
+   */
+  builtIn: boolean;
+  /** The enum name for a built-in kind, the configured French label for a document type. */
+  label: string;
+}
+
+/** One document type as the admin screen sees it — deactivated rows included. */
+export interface DocumentTypeRow {
+  id: number;
+  code: string;
+  labelFr: string;
+  labelEn: string | null;
+  active: boolean;
+  sortOrder: number;
 }
 
 export interface SharePointLocation {
@@ -86,8 +104,37 @@ export class SharePointAdminService {
   private http = inject(HttpClient);
   private base = `${environment.hrApiUrl}/api/hr/sharepoint`;
 
-  kinds(): Observable<DocKindInfo[]> {
-    return this.http.get<DocKindInfo[]>(`${this.base}/kinds`);
+  /**
+   * Configurable kinds. Pass a country to have its document types included — they are
+   * per-country, so without one only the three built-in kinds can be offered.
+   */
+  kinds(paysId?: number): Observable<DocKindInfo[]> {
+    const params = paysId == null ? {} : { params: { paysId } };
+    return this.http.get<DocKindInfo[]>(`${this.base}/kinds`, params);
+  }
+
+  // ── Document types (V87) ──────────────────────────────────────────────────
+
+  listDocumentTypes(paysId: number): Observable<DocumentTypeRow[]> {
+    return this.http.get<DocumentTypeRow[]>(`${this.base}/document-types`, { params: { paysId } });
+  }
+
+  /** Creates or updates one type. 422 carries the validation keys. */
+  saveDocumentType(body: {
+    paysId: number; code: string; labelFr: string;
+    labelEn?: string | null; active?: boolean; sortOrder?: number;
+  }): Observable<void> {
+    return this.http.put<void>(`${this.base}/document-types`, body);
+  }
+
+  /**
+   * Deactivates a type — there is no delete.
+   *
+   * Documents already filed store the code with no foreign key behind it, so removing the row
+   * would label them with something nothing can resolve.
+   */
+  deactivateDocumentType(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/document-types/${id}`);
   }
 
   // ── Paths ─────────────────────────────────────────────────────────────────

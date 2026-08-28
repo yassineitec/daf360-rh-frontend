@@ -1344,6 +1344,8 @@
       "SAVE_ERROR_TITLE": "Save failed"
     },
     "DOCUMENTS": {
+      "IN_SHAREPOINT": "{{count}} in SharePoint",
+      "SHAREPOINT_ONLY": "In SharePoint only",
       "TYPE_LABEL": "Document type",
       "IMPORT_HINT": "Import a document",
       "NONE": "No document recorded.",
@@ -1554,7 +1556,7 @@
         "ERR_SAVE": "Saving failed."
       }
     },
-    "DOC_TYPES": {
+      "DOC_TYPES": {
       "CONTRACT": "Employment contract",
       "CONTRACT_SIGNED": "Signed contract",
       "AMENDMENT": "Amendment",

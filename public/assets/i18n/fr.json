@@ -1344,6 +1344,8 @@
       "SAVE_ERROR_TITLE": "Échec de l'enregistrement"
     },
     "DOCUMENTS": {
+      "IN_SHAREPOINT": "{{count}} sur SharePoint",
+      "SHAREPOINT_ONLY": "Présents sur SharePoint uniquement",
       "TYPE_LABEL": "Type de document",
       "IMPORT_HINT": "Importer un document",
       "NONE": "Aucun document enregistré.",
@@ -1554,7 +1556,7 @@
         "ERR_SAVE": "L'enregistrement a échoué."
       }
     },
-    "DOC_TYPES": {
+      "DOC_TYPES": {
       "CONTRACT": "Contrat de travail",
       "CONTRACT_SIGNED": "Contrat signé",
       "AMENDMENT": "Avenant",

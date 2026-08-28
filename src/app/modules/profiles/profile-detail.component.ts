@@ -24,6 +24,8 @@ import {
 import { ProfileService } from './profile.service';
 import {
   DOCUMENT_TYPE_CODES,
+  DocumentTypeOption,
+  RemoteDocument,
   EmployeeDocument,
   EmployeeProfile,
   ProfileDocumentRow,
@@ -220,7 +222,10 @@ export class ProfileDetailComponent implements OnInit {
       // Count is what the employee holds TODAY, not the whole ledger: the badge answers
       // 'how much hardware is out with this person', which is the operational question.
       { id: 'materiel',   label: t('PROFILES.SECTIONS.IT_ASSETS'), count: this.currentAssetCount() || null },
-      { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documents().length || null },
+      // documentRows(), not documents(): the badge counted uploaded pieces only while the tab
+      // listed both sources, so a dossier with six attestations and no upload showed no badge
+      // and six rows.
+      { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documentRows().length || null },
     );
     return items;
   });
@@ -422,18 +427,62 @@ export class ProfileDetailComponent implements OnInit {
   readonly nogLevelOptions    = computed(() => this.refOptions(this.nogLevels()));
   readonly bankOptions        = computed(() => this.refOptions(this.banks()));
 
+  /**
+   * Types accepted for THIS employee's country, from the backend.
+   *
+   * Empty until the fetch lands (and after a failed one), which is when the computed below
+   * falls back to the compiled-in list — the dropdown must never be empty, or the upload
+   * control silently stops working.
+   */
+  private readonly docTypes = signal<DocumentTypeOption[]>([]);
+
+  /**
+   * The dropdown options: DB labels when the backend answered, i18n keys otherwise.
+   *
+   * The fallback is not cosmetic. `document_types` (V87) is applied by hand — rh-service has no
+   * Flyway — so on a server that missed it the endpoint returns the pre-V87 codes labelled by
+   * code, and here we relabel them through `PROFILES.DOC_TYPES.*` so the form reads the same as
+   * it did before. Once the table is in place its own labels win, which is what lets a new type
+   * appear without a frontend release.
+   */
   readonly docTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return DOCUMENT_TYPE_CODES.map(code => ({
-      value: code,
-      label: this.translate.instant('PROFILES.DOC_TYPES.' + code),
-    }));
+    const fromDb = this.docTypes();
+    if (!fromDb.length) {
+      return DOCUMENT_TYPE_CODES.map(code => ({
+        value: code,
+        label: this.translate.instant('PROFILES.DOC_TYPES.' + code),
+      }));
+    }
+    const english = this.translate.currentLang() === 'en';
+    return fromDb.map(t => {
+      // A DB label equal to the code is the backend's own fallback marker (see
+      // DocumentTypeService.fallback) — translate those, don't show a bare code.
+      const dbLabel = (english && t.labelEn) || t.labelFr;
+      const label = dbLabel === t.code
+        ? this.translate.instant('PROFILES.DOC_TYPES.' + t.code)
+        : dbLabel;
+      return { value: t.code, label };
+    });
   });
 
   // ── Photo / documents upload ───────────────────────────────────────────────
   readonly photoUploading = signal(false);
-  readonly uploadType     = signal('CONTRACT');
-  readonly uploadFiles    = signal<UploadedFile[]>([]);
+
+  /** Staged files per type code — each section owns its own upload control. */
+  readonly uploadFiles    = signal<Record<string, UploadedFile[]>>({});
+
+  /** Which type's upload is in flight, for the per-section busy line. */
+  readonly uploadingType  = signal<string | null>(null);
+
+  /** SharePoint listings, per type, filled on expand. An absent key means "never fetched",
+   *  which is what {@link loadRemote} tests — an empty array means "fetched, folder empty". */
+  readonly remoteDocs     = signal<Record<string, RemoteDocument[]>>({});
+  readonly remoteLoading  = signal<Record<string, boolean>>({});
+
+  /** Sections to render: the country's types, with the label the backend resolved. */
+  readonly documentSections = computed(() =>
+    this.docTypeOptions().map(o => ({ code: String(o.value), label: o.label })));
   readonly docUploading   = signal(false);
 
   /**
@@ -553,10 +602,16 @@ export class ProfileDetailComponent implements OnInit {
 
     // The documents call feeds both the drawer and the identity strip's n/3
     // tile, so it runs up front rather than on drawer open.
+    // Types are fetched with the documents, not on drawer open: the upload control lives in the
+    // tab itself, so an empty list at that moment would show a dropdown with nothing in it.
+    // A failure degrades to the compiled-in list (see docTypeOptions) rather than blocking.
     forkJoin({
       profile: this.svc.getById(this.profileId).pipe(catchError(() => of(null))),
       docs:    this.svc.listDocuments(this.profileId).pipe(catchError(() => of([] as EmployeeDocument[]))),
-    }).subscribe(({ profile, docs }) => {
+      types:   this.svc.listDocumentTypes(this.profileId)
+        .pipe(catchError(() => of([] as DocumentTypeOption[]))),
+    }).subscribe(({ profile, docs, types }) => {
+      this.docTypes.set(types);
       this.documents.set(docs);
       this.docsLoading.set(false);
       this.profile.set(profile);
@@ -807,12 +862,20 @@ export class ProfileDetailComponent implements OnInit {
    * Actually uploads. This used to set a signal and re-read the list, so the drop zone
    * accepted a file, showed it, and sent nothing — the document never existed.
    */
-  onDocumentFilesChange(files: UploadedFile[]): void {
-    this.uploadFiles.set(files);
+  /**
+   * A file dropped into one type's section.
+   *
+   * The type now comes from the section the control lives in, not from a separate select that
+   * had to be set first — which is what made it possible to file a contract as whatever the
+   * dropdown happened to be showing.
+   */
+  onDocumentFilesChange(event: { type: string; files: UploadedFile[] }): void {
+    const { type, files } = event;
+    this.uploadFiles.update(m => ({ ...m, [type]: files }));
     const pending = files.map(f => f.file).filter((f): f is File => !!f);
     if (!pending.length) return;
 
-    const type = this.uploadType();
+    this.uploadingType.set(type);
     this.docUploading.set(true);
     // One POST per file, in parallel, each with its OWN catchError: a file the server
     // rejects (wrong MIME, over 10 MB) reports itself and resolves to null instead of
@@ -825,12 +888,53 @@ export class ProfileDetailComponent implements OnInit {
       }),
     ))).subscribe(results => {
       this.docUploading.set(false);
-      this.uploadFiles.set([]);
+      this.uploadingType.set(null);
+      this.uploadFiles.update(m => ({ ...m, [type]: [] }));
       const ok = results.filter(r => r !== null).length;
       if (ok) {
         this.notify.success(this.translate.instant('PROFILES.DOCUMENTS.UPLOADED', { count: ok }));
       }
       this.reloadDocuments();
+      // The upload mirrors to SharePoint, so a listing already on screen is now one file
+      // behind. Refetch only the type that changed, and only if it was open.
+      if (this.remoteDocs()[type]) this.loadRemote(type, true);
+    });
+  }
+
+  /**
+   * Loads one type's SharePoint listing, once.
+   *
+   * <p>Cached per type for the life of the page: expanding, collapsing and expanding again is a
+   * chevron, and turning it into repeated Graph round trips is exactly the throttling the
+   * per-type design avoids. `force` is for after an upload, when the cached listing is stale.
+   */
+  loadRemote(type: string, force = false): void {
+    if (!force && this.remoteDocs()[type]) return;
+    this.remoteLoading.update(m => ({ ...m, [type]: true }));
+    this.svc.listRemoteDocuments(this.profileId, type)
+      .pipe(catchError(() => of([] as RemoteDocument[])))
+      .subscribe(files => {
+        this.remoteDocs.update(m => ({ ...m, [type]: files }));
+        this.remoteLoading.update(m => ({ ...m, [type]: false }));
+      });
+  }
+
+  /**
+   * Opens a file that exists only in SharePoint.
+   *
+   * Same blob-in-a-new-tab shape as {@link openDocument}: the bytes come through the app rather
+   * than a SharePoint link, so the permission check stays ours and the viewer needs no access to
+   * the HR site.
+   */
+  openRemoteDocument(event: { type: string; file: RemoteDocument }): void {
+    this.svc.downloadRemoteDocument(this.profileId, event.type, event.file.name).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: err => this.notify.error(this.extractErrorMessage(
+        err, this.translate.instant('PROFILES.DOCUMENTS.ERR_OPEN'))),
     });
   }
 

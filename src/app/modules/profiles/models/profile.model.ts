@@ -354,3 +354,41 @@ export interface EmployeeListItem {
   gender: string | null;
   hasProfile: boolean;
 }
+
+/**
+ * One selectable document type, from `GET /profiles/{id}/documents/types`.
+ *
+ * `labelFr`/`labelEn` come from the `document_types` table, not from `PROFILES.DOC_TYPES.*`:
+ * a new type has to be usable the moment its row exists, and an i18n key would put a frontend
+ * release back in that path. `labelEn` may be null — fall back to `labelFr`, then to `code`.
+ *
+ * {@link DOCUMENT_TYPE_CODES} stays as the offline fallback for a server without V87, where the
+ * endpoint answers with the pre-V87 list labelled by code.
+ */
+export interface DocumentTypeOption {
+  code: string;
+  labelFr: string;
+  labelEn: string | null;
+  sortOrder: number;
+}
+
+/**
+ * One file found in the employee's SharePoint folder, from
+ * `GET /profiles/{id}/documents/remote?type=CODE`.
+ *
+ * This is the half of the dossier the app never showed: before it, a document existed only if
+ * it had been uploaded THROUGH the app, while HR files most paperwork straight into SharePoint.
+ *
+ * `filedByApp` is true when the name carries the `{docId}_` prefix the upload writes — i.e. this
+ * file is the same one the local list already shows. The tab hides those to avoid double rows,
+ * rather than trying to match on the original filename, which collides as soon as two employees
+ * both file `contrat.pdf`.
+ */
+export interface RemoteDocument {
+  name: string;
+  lastModified: string | null;
+  sizeBytes: number | null;
+  webUrl: string | null;
+  filedByApp: boolean;
+  docId: number | null;
+}

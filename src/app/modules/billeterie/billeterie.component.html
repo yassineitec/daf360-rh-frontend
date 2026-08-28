@@ -36,6 +36,7 @@
        mode and paging in this component. -->
   <daf-tabs #tabsRef
     variant="underline"
+    style="--daf-tabs-fade: var(--color-background)"
     [tabs]="tabs()"
     [active]="activeTab()"
     (activeChange)="onTabChange($event)"

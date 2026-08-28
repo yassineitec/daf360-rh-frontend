@@ -250,6 +250,8 @@
       }
     },
     "DOCUMENTS": {
+      "IN_SHAREPOINT": "{{count}} في SharePoint",
+      "SHAREPOINT_ONLY": "في SharePoint فقط",
       "COUNT": "{{count}} وثيقة",
       "UPLOADING": "جاري الإرسال…",
       "UPLOADED": "تم إرسال {{count}} وثيقة.",
@@ -285,7 +287,7 @@
       "ERR_DELETE": "فشلت الإزالة.",
       "ERR_SAVE": "فشل الحفظ."
     },
-    "DOC_TYPES": {
+      "DOC_TYPES": {
       "CONTRACT": "عقد العمل",
       "CONTRACT_SIGNED": "عقد موقّع",
       "AMENDMENT": "ملحق العقد",

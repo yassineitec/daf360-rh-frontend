@@ -254,7 +254,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
             [options]="{ label: ('ADMIN.sharepoint.paths.paysId' | translate), type: 'number',
                          disabled: !!editingPath(), fullWidth: true }"
             [value]="formPaysId()"
-            (valueChange)="formPaysId.set($event === null || $event === '' ? null : +$event)" />
+            (valueChange)="onFormPaysChange($event)" />
 
           <daf-select
             [options]="kindOptions()"
@@ -438,24 +438,53 @@ export class SharePointAdminComponent implements OnInit {
   readonly diagnosing    = signal(false);
 
   ngOnInit(): void {
-    this.svc.kinds().subscribe({
+    this.loadKinds();
+    this.loadLocations();
+    this.loadEmployees();
+  }
+
+  /**
+   * Loads the configurable kinds for the current country.
+   *
+   * Re-run whenever the country changes: document types are per-country ({@code document_types},
+   * V87), so the list of things a path can be configured for is not constant. Without the
+   * country the endpoint returns only the three built-in kinds — which is what made document
+   * folders unconfigurable from this screen.
+   */
+  /**
+   * The country changed in the path form.
+   *
+   * Reloads the kinds, because document types belong to a country: keeping the previous
+   * country's list would offer a type this one does not have, and the save would then be
+   * rejected as an unknown kind with no clue why.
+   */
+  protected onFormPaysChange(value: string | number | null): void {
+    this.formPaysId.set(value === null || value === '' ? null : +value);
+    this.loadKinds();
+  }
+
+  private loadKinds(): void {
+    this.svc.kinds(this.formPaysId() ?? this.paysId ?? undefined).subscribe({
       next: k => {
         this.kinds.set(k);
         if (k.length && !k.some(x => x.code === this.docKind())) this.docKind.set(k[0].code);
       },
       error: () => this.fail('ADMIN.sharepoint.errors.load'),
     });
-    this.loadLocations();
-    this.loadEmployees();
   }
 
   // ── Shared ────────────────────────────────────────────────────────────────
 
   readonly kindOptions = computed<SelectOption[]>(() =>
-    this.kinds().map(k => ({
-      value: k.code,
-      label: this.i18n.instant('ADMIN.sharepoint.kind.' + k.code),
-    })));
+    this.kinds().map(k => {
+      // Built-in kinds keep their translated names; a document type carries its own configured
+      // label, which is the whole point of putting labels in the table — a new type has to be
+      // readable here without an i18n entry being added first.
+      if (!k.builtIn) return { value: k.code, label: k.label };
+      const key = 'ADMIN.sharepoint.kind.' + k.code;
+      const label = this.i18n.instant(key);
+      return { value: k.code, label: label === key ? k.code : label };
+    }));
 
   readonly selectedKindYearScoped = computed(() =>
     this.kinds().find(k => k.code === this.formKind())?.yearScoped ?? false);
