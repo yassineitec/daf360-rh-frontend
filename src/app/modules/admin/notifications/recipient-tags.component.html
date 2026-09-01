@@ -1,30 +1,81 @@
 <div class="rt-section">
   <p class="rt-title">{{ sectionTitle() }}</p>
+
   <div class="rt-tags">
     @for (r of recipients(); track r.id) {
+      <!-- The suffix is not decoration: "Responsable RH · tous" and "Responsable RH · manager"
+           are two different audiences, and without it the tags would look identical. -->
       <span class="rt-tag">
-        {{ r.roleName }}
-        <button class="rt-remove" type="button" (click)="onRemove(r.id)" [title]="'ADMIN.notifications.removeTitle' | translate">×</button>
+        {{ tagLabel(r) }}
+        <em class="rt-mode">· {{ tagSuffix(r) }}</em>
+        <button
+          class="rt-remove"
+          type="button"
+          (click)="onRemove(r.id)"
+          [title]="'ADMIN.notifications.removeTitle' | translate">×</button>
       </span>
     }
     @if (recipients().length === 0) {
       <span class="rt-empty">{{ 'ADMIN.notifications.emptyRoles' | translate }}</span>
     }
   </div>
+
   <div class="rt-add">
     @if (!showDropdown()) {
-      <daf-button [label]="'ADMIN.notifications.addRole' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(true)" />
+      <daf-button
+        [label]="'ADMIN.notifications.addRole' | translate"
+        variant="ghost"
+        [options]="{ size: 'sm' }"
+        (onClick)="showDropdown.set(true)" />
     } @else {
       <div class="rt-add-row">
+        <!-- Mode first: it decides whether the next control lists roles or permissions. -->
         <daf-select
           class="rt-select"
-          [selected]="selectedRoleValue()"
-          [options]="roleOptions()"
-          [config]="{ placeholder: ('ADMIN.notifications.selectRolePlaceholder' | translate) }"
-          (selectedChange)="onSelectRole($event[0])" />
-        <daf-button [label]="'ADMIN.notifications.add' | translate" variant="teal" [options]="{ size: 'sm', disabled: !selectedRoleId() }" (onClick)="onAdd()" />
-        <daf-button label="✕" variant="ghost" [options]="{ size: 'sm' }" (onClick)="showDropdown.set(false)" />
+          [selected]="modeValue()"
+          [options]="modeOptions"
+          [config]="{ label: ('ADMIN.notifications.recipientMode' | translate) }"
+          (selectedChange)="onModeChange($event[0])" />
+
+        @if (isContextMode()) {
+          <!-- Nothing to pick: the recipient comes from the event, not from configuration. -->
+        } @else if (isPermissionMode()) {
+          <daf-select
+            class="rt-select"
+            [selected]="selectedPermValue()"
+            [options]="permOptions()"
+            [config]="{ placeholder: ('ADMIN.notifications.selectPermissionPlaceholder' | translate) }"
+            (selectedChange)="onSelectPerm($event[0])" />
+        } @else {
+          <daf-select
+            class="rt-select"
+            [selected]="selectedRoleValue()"
+            [options]="roleOptions()"
+            [config]="{ placeholder: ('ADMIN.notifications.selectRolePlaceholder' | translate) }"
+            (selectedChange)="onSelectRole($event[0])" />
+        }
+
+        <daf-button
+          [label]="'ADMIN.notifications.add' | translate"
+          variant="teal"
+          [options]="{ size: 'sm', disabled: !canAdd() }"
+          (onClick)="onAdd()" />
+        <daf-button
+          label="✕"
+          variant="ghost"
+          [options]="{ size: 'sm' }"
+          (onClick)="reset()" />
       </div>
+
+      @if (mode() === 'MANAGER') {
+        <p class="rt-hint">{{ 'ADMIN.notifications.managerHint' | translate }}</p>
+      }
+      @if (mode() === 'SUBJECT') {
+        <p class="rt-hint">{{ 'ADMIN.notifications.subjectHint' | translate }}</p>
+      }
+      @if (mode() === 'MANAGER_OF_SUBJECT') {
+        <p class="rt-hint">{{ 'ADMIN.notifications.managerOfSubjectHint' | translate }}</p>
+      }
     }
   </div>
 </div>

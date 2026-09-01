@@ -32,6 +32,11 @@
     }
   </div>
 
+  <!-- Events are declared in code (a dispatch call must exist for one to ever fire), so this
+       screen configures BEHAVIOUR, not the catalogue. Saying so here prevents the reasonable
+       assumption that a missing "Ajouter" button is an oversight. -->
+  <p class="nr-intro">{{ 'ADMIN.notifications.intro' | translate }}</p>
+
   @if (error()) {
     <div class="nr-error">{{ error() }}</div>
   }

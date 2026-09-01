@@ -11,6 +11,24 @@
   }
 
   <!-- ─────────────────────────────────────────────────────────────────────
+       No rule yet — the only thing offered until one exists
+  ──────────────────────────────────────────────────────────────────────── -->
+  @if (needsRule()) {
+    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+      <div class="editor-section-body">
+        <h3 class="editor-section-title">{{ 'ADMIN.notifications.noRuleTitle' | translate }}</h3>
+        <p class="editor-hint">{{ 'ADMIN.notifications.noRuleHint' | translate }}</p>
+        <daf-button
+          [label]="'ADMIN.notifications.createRule' | translate"
+          variant="primary"
+          [options]="{ iconStart: 'add', loading: creating() }"
+          (onClick)="createRule()" />
+      </div>
+    </daf-card>
+  }
+
+  @if (!needsRule()) {
+  <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 1 — Paramètres généraux
   ──────────────────────────────────────────────────────────────────────── -->
   <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
@@ -35,6 +53,17 @@
           }"
           [checked]="sendEmail()"
           (checkedChange)="sendEmail.set($event)" />
+      </div>
+
+      <!-- Deep-link target: lives on the EVENT TYPE, saved immediately on change rather
+           than with the templates, because it is not part of the rule. -->
+      <div class="field-group">
+        <daf-select
+          [selected]="[entityType() ?? '']"
+          [options]="entityTypeOptions"
+          [config]="{ label: ('ADMIN.notifications.entityTypeLabel' | translate), fullWidth: true }"
+          (selectedChange)="onEntityTypeChange($event[0])" />
+        <p class="editor-hint">{{ 'ADMIN.notifications.entityTypeHint' | translate }}</p>
       </div>
     </div>
   </daf-card>
@@ -152,6 +181,7 @@
       <app-recipient-tags
         [recipients]="detail()!.inappRecipients"
         [availableRoles]="detail()!.availableRoles"
+        [availablePerms]="availablePerms()"
         [sectionTitle]="'ADMIN.notifications.sectionInapp' | translate"
         (addRecipient)="onInappRecipientAdded($event)"
         (removeRecipient)="onInappRecipientRemoved($event)"
@@ -173,8 +203,9 @@
         <app-recipient-tags
           [recipients]="detail()!.emailToRecipients"
           [availableRoles]="detail()!.availableRoles"
+          [availablePerms]="availablePerms()"
           [sectionTitle]="'ADMIN.notifications.sectionTo' | translate"
-          (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'TO' })"
+          (addRecipient)="onEmailRecipientAdded({ draft: $event, field: 'TO' })"
           (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'TO' })"
         />
         @if (detail()!.emailToRecipients.length === 0) {
@@ -189,8 +220,9 @@
         <app-recipient-tags
           [recipients]="detail()!.emailCcRecipients"
           [availableRoles]="detail()!.availableRoles"
+          [availablePerms]="availablePerms()"
           [sectionTitle]="'ADMIN.notifications.sectionCc' | translate"
-          (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'CC' })"
+          (addRecipient)="onEmailRecipientAdded({ draft: $event, field: 'CC' })"
           (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'CC' })"
         />
       </div>
@@ -200,8 +232,9 @@
         <app-recipient-tags
           [recipients]="detail()!.emailBccRecipients"
           [availableRoles]="detail()!.availableRoles"
+          [availablePerms]="availablePerms()"
           [sectionTitle]="'ADMIN.notifications.sectionBcc' | translate"
-          (addRecipient)="onEmailRecipientAdded({ roleId: $event, field: 'BCC' })"
+          (addRecipient)="onEmailRecipientAdded({ draft: $event, field: 'BCC' })"
           (removeRecipient)="onEmailRecipientRemoved({ id: $event, field: 'BCC' })"
         />
       </div>
@@ -233,6 +266,7 @@
       />
     </div>
     </daf-card>
+  }
   }
 
 </div>

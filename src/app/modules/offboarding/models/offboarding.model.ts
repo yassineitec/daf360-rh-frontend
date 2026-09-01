@@ -344,18 +344,6 @@ export interface OffboardingFilter {
   paysId?: number;
 }
 
-// ── Notifications ─────────────────────────────────────────────────────────────
-
-export interface HrNotification {
-  id:        number;
-  userId:    number;
-  module:    string;
-  title:     string;
-  message:   string;
-  isRead:    boolean;
-  createdAt: string;
-  readAt:    string | null;
-}
 
 // ── Generic page response ─────────────────────────────────────────────────────
 

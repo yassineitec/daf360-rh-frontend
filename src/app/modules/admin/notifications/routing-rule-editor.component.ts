@@ -3,11 +3,17 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent } from '@khalilrebhiitec/daf360';
+import {
+  ButtonComponent, CardComponent, FormFieldComponent, SelectComponent, ToggleComponent,
+  type SelectOption,
+} from '@khalilrebhiitec/daf360';
 import { NotificationRoutingService } from './notification-routing.service';
 import { UserStore } from '../../../core/user.store';
 import {
+  ENTITY_TYPES,
   NotificationEventTypeWithRule,
+  PermissionOption,
+  RecipientDraft,
   RoutingRuleDetail,
   TestDispatchResult,
   TEMPLATE_PLACEHOLDERS,
@@ -27,6 +33,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     FormFieldComponent,
     ToggleComponent,
     CardComponent,
+    SelectComponent,
     TranslatePipe,
   ],
   templateUrl: './routing-rule-editor.component.html',
@@ -66,30 +73,109 @@ export class RoutingRuleEditorComponent {
 
   // ── Effect: reload when eventType changes ───────────────────────────────
   constructor() {
+    this.svc.getAssignablePermissions().subscribe({
+      next: (perms) => this.availablePerms.set(perms),
+      // A failed catalogue must not break the editor: role-based recipients still work,
+      // the permission picker is simply empty.
+      error: () => this.availablePerms.set([]),
+    });
+
     effect(() => {
       const type = this.eventType();
+      this.entityType.set(type?.defaultEntityType ?? null);
       if (type?.ruleId != null) {
         // ruleId is the guard (null = no rule yet); pass event TYPE id to the backend
+        this.needsRule.set(false);
         this.loadDetail(type.id);
       } else {
+        // No rule: offer to create one instead of rendering an empty, unusable editor.
         this.detail.set(null);
+        this.needsRule.set(true);
       }
     });
   }
 
+  // ── Create rule / entity type ────────────────────────────────────────────
+
+  /** True when this event has no routing rule yet — nothing is configurable until it does. */
+  readonly needsRule = signal(false);
+  readonly creating  = signal(false);
+
+  /** Deep-link kind, edited independently of the rule (it lives on the event type). */
+  readonly entityType = signal<string | null>(null);
+  readonly savingEntityType = signal(false);
+  readonly ENTITY_TYPES = ENTITY_TYPES;
+
+  /**
+   * Permission codes for the PERMISSION recipient picker. Loaded once per editor: it is a
+   * static catalogue, not per-rule data.
+   */
+  readonly availablePerms = signal<PermissionOption[]>([]);
+
+  /** Select options: an explicit "none" entry, since clearing the kind is a real choice. */
+  readonly entityTypeOptions: SelectOption[] = [
+    { value: '', label: 'Aucun (non cliquable)' },
+    ...ENTITY_TYPES.map(code => ({ value: code, label: code })),
+  ];
+
+  /**
+   * Creates the missing rule, then drops straight into the editor for it.
+   *
+   * Without this an event type added to the catalogue was permanently unconfigurable from
+   * the UI: the editor shows nothing when ruleId is null, and rules could only be created
+   * with hand-written SQL.
+   */
+  createRule(): void {
+    const type = this.eventType();
+    if (!type || this.creating()) return;
+
+    this.creating.set(true);
+    this.error.set(null);
+    this.svc.createRoutingRule(type.id).subscribe({
+      next: (d) => {
+        this.applyDetail(d);
+        this.needsRule.set(false);
+        this.creating.set(false);
+        this.success.set(this.translate.instant('ADMIN.notifications.ruleCreated'));
+      },
+      error: (err) => {
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.ruleCreateError'));
+        this.creating.set(false);
+      },
+    });
+  }
+
+  onEntityTypeChange(value: string): void {
+    const next = value === '' ? null : value;
+    this.entityType.set(next);
+    this.savingEntityType.set(true);
+    this.svc.setDefaultEntityType(this.eventType().id, next).subscribe({
+      next: () => this.savingEntityType.set(false),
+      error: (err) => {
+        this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.entityTypeError'));
+        this.savingEntityType.set(false);
+      },
+    });
+  }
+
+
+  /** Single place that pushes a loaded/created rule into the edit signals. */
+  private applyDetail(d: RoutingRuleDetail): void {
+    this.detail.set(d);
+    this.sendInapp.set(d.sendInapp);
+    this.sendEmail.set(d.sendEmail);
+    this.inappTitle.set(d.inappTitleTemplate ?? '');
+    this.inappBody.set(d.inappBodyTemplate ?? '');
+    this.emailSubject.set(d.emailSubjectTemplate ?? '');
+    this.emailBody.set(d.emailBodyTemplate ?? '');
+  }
   // ── Data loading ─────────────────────────────────────────────────────────
   loadDetail(eventTypeId: number): void {
     this.loading.set(true);
     this.error.set(null);
     this.svc.getRoutingRule(eventTypeId).subscribe({
       next: (d) => {
-        this.detail.set(d);
-        this.sendInapp.set(d.sendInapp);
-        this.sendEmail.set(d.sendEmail);
-        this.inappTitle.set(d.inappTitleTemplate ?? '');
-        this.inappBody.set(d.inappBodyTemplate ?? '');
-        this.emailSubject.set(d.emailSubjectTemplate ?? '');
-        this.emailBody.set(d.emailBodyTemplate ?? '');
+        this.applyDetail(d);
         this.loading.set(false);
       },
       error: (err) => {
@@ -127,10 +213,10 @@ export class RoutingRuleEditorComponent {
   }
 
   // ── In-app recipients ────────────────────────────────────────────────────
-  onInappRecipientAdded(roleId: number): void {
+  onInappRecipientAdded(draft: RecipientDraft): void {
     const d = this.detail();
     if (!d) return;
-    this.svc.addInappRecipient(d.ruleId, roleId).subscribe({
+    this.svc.addInappRecipient(d.ruleId, draft).subscribe({
       next: (item) => {
         this.detail.set({ ...d, inappRecipients: [...d.inappRecipients, item] });
       },
@@ -153,10 +239,10 @@ export class RoutingRuleEditorComponent {
   }
 
   // ── Email recipients ─────────────────────────────────────────────────────
-  onEmailRecipientAdded(payload: { roleId: number; field: string }): void {
+  onEmailRecipientAdded(payload: { draft: RecipientDraft; field: string }): void {
     const d = this.detail();
     if (!d) return;
-    this.svc.addEmailRecipient(d.ruleId, payload.roleId, payload.field).subscribe({
+    this.svc.addEmailRecipient(d.ruleId, payload.field, payload.draft).subscribe({
       next: (item) => {
         const updated = { ...d };
         if (payload.field === 'TO')  updated.emailToRecipients  = [...d.emailToRecipients,  item];

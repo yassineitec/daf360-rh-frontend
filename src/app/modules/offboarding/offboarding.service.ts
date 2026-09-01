@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   CompleteTaskRequest, CreateAssetReturnRequest, CreateChecklistItemRequest, ExitInterview,
-  ExitInterviewRequest, HrNotification, HrValidationRequest, ManagerValidationRequest,
+  ExitInterviewRequest, HrValidationRequest, ManagerValidationRequest,
   OffboardingAssetReturn, OffboardingAuditEntry, OffboardingChecklistItem, OffboardingFilter,
   OffboardingSettlement, OffboardingTask, OffboardingWorkflowInstance,
   SaveSettlementLineRequest, ScheduleExitInterviewRequest, StartOffboardingRequest,
@@ -16,7 +16,6 @@ import {
 export class OffboardingService {
   private http      = inject(HttpClient);
   private base      = `${environment.hrApiUrl}/api/hr/offboarding`;
-  private notifBase = `${environment.hrApiUrl}/api/hr/notifications`;
   private profileBase = `${environment.hrApiUrl}/api/hr/profiles`;
 
   /**
@@ -214,22 +213,5 @@ export class OffboardingService {
       `${this.base}/assets/${assetId}/confirm-return`,
       { conditionOnReturn },
     );
-  }
-
-  // ── Notifications ──────────────────────────────────────────────────────────
-  listNotifications(): Observable<HrNotification[]> {
-    return this.http.get<HrNotification[]>(this.notifBase);
-  }
-
-  unreadCount(): Observable<{ count: number }> {
-    return this.http.get<{ count: number }>(`${this.notifBase}/unread-count`);
-  }
-
-  markRead(id: number): Observable<HrNotification> {
-    return this.http.patch<HrNotification>(`${this.notifBase}/${id}/read`, null);
-  }
-
-  markAllRead(): Observable<void> {
-    return this.http.post<void>(`${this.notifBase}/read-all`, null);
   }
 }

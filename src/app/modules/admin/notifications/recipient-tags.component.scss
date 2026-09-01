@@ -61,3 +61,21 @@
   max-width: 100%;
   flex: 1;
 }
+
+/* Targeting mode shown on the tag itself: "Responsable RH · manager" and
+   "Responsable RH · tous" are two different audiences and must not look identical. */
+.rt-mode {
+  margin-left: .25rem;
+  font-style: normal;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  opacity: .65;
+}
+
+.rt-hint {
+  margin: .5rem 0 0;
+  font-size: .75rem;
+  line-height: 1.45;
+  color: var(--color-on-surface-variant, #55606e);
+}

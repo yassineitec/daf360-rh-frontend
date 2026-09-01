@@ -68,3 +68,12 @@
 
   strong { color: var(--color-on-surface); }
 }
+
+/* Explains that the event catalogue is code-owned, so the absence of an "add" button
+   reads as intent rather than as a missing feature. */
+.nr-intro {
+  margin: 0 0 16px;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--color-on-surface-variant, #55606e);
+}

@@ -6,6 +6,8 @@ import {
   NotificationEventTypeWithRule,
   RoutingRuleDetail,
   UpdateRoutingRuleRequest,
+  PermissionOption,
+  RecipientDraft,
   RecipientItem,
   TestDispatchResult,
 } from './notification-routing.model';
@@ -18,6 +20,24 @@ export class NotificationRoutingService {
   getEventTypes(): Observable<NotificationEventTypeWithRule[]> {
     return this.http.get<NotificationEventTypeWithRule[]>(
       `${this.base}/notification-event-types`
+    );
+  }
+
+  /**
+   * Creates the (global) routing rule for an event type that has none yet.
+   * Returns the same detail payload getRoutingRule does, so the editor opens straight into it.
+   */
+  createRoutingRule(eventTypeId: number): Observable<RoutingRuleDetail> {
+    return this.http.post<RoutingRuleDetail>(
+      `${this.base}/notification-rules/event-type/${eventTypeId}`, {},
+    );
+  }
+
+  /** Sets (or clears, with null) the deep-link kind an event points at. */
+  setDefaultEntityType(eventTypeId: number, defaultEntityType: string | null): Observable<void> {
+    return this.http.patch<void>(
+      `${this.base}/notification-event-types/${eventTypeId}/entity-type`,
+      { defaultEntityType },
     );
   }
 
@@ -34,10 +54,10 @@ export class NotificationRoutingService {
     );
   }
 
-  addInappRecipient(ruleId: number, roleId: number): Observable<RecipientItem> {
+  addInappRecipient(ruleId: number, draft: RecipientDraft): Observable<RecipientItem> {
     return this.http.post<RecipientItem>(
       `${this.base}/notification-rules/${ruleId}/inapp-recipients`,
-      { roleId }
+      draft
     );
   }
 
@@ -47,11 +67,16 @@ export class NotificationRoutingService {
     );
   }
 
-  addEmailRecipient(ruleId: number, roleId: number, field: string): Observable<RecipientItem> {
+  addEmailRecipient(ruleId: number, field: string, draft: RecipientDraft): Observable<RecipientItem> {
     return this.http.post<RecipientItem>(
       `${this.base}/notification-rules/${ruleId}/email-recipients`,
-      { roleId, field }
+      { ...draft, field }
     );
+  }
+
+  /** Permission codes selectable for a PERMISSION recipient. */
+  getAssignablePermissions(): Observable<PermissionOption[]> {
+    return this.http.get<PermissionOption[]>(`${this.base}/notification-permissions`);
   }
 
   removeEmailRecipient(id: number): Observable<void> {
