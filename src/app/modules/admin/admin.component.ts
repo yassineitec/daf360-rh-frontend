@@ -3,6 +3,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { UserStore }   from '../../core/user.store';
 import { AdminTab }    from './models/admin.model';
 import { RolesAdminComponent }        from './roles-admin.component';
+import { UsersAdminComponent }        from './users/users-admin.component';
 import { ParametersAdminComponent }   from './parameters-admin.component';
 import { HolidaysAdminComponent }     from './holidays-admin.component';
 import { RequestTypesAdminComponent } from './request-types-admin.component';
@@ -19,6 +20,9 @@ import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.
 
 const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
   { key: 'roles',         labelKey: 'ADMIN.shell.tabs.roles',        permission: 'GET_ROLES' },
+  // The account register: the only screen that shows accounts WITHOUT an HR file, which
+  // every other list filters out on purpose.
+  { key: 'users',         labelKey: 'ADMIN.shell.tabs.users',        permission: 'GET_USERS' },
   { key: 'parameters',    labelKey: 'ADMIN.shell.tabs.parameters',   permission: 'GET_PAYS' },
   { key: 'holidays',      labelKey: 'ADMIN.shell.tabs.holidays',     permission: 'GET_HOLIDAYS' },
   { key: 'request-types', labelKey: 'ADMIN.shell.tabs.requestTypes', permission: 'GET_ROLES' },
@@ -42,6 +46,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
   standalone: true,
   imports: [
     RolesAdminComponent,
+    UsersAdminComponent,
     ParametersAdminComponent,
     HolidaysAdminComponent,
     RequestTypesAdminComponent,
@@ -88,6 +93,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
 
         <div class="tab-content">
           @if (activeTab() === 'roles')         { <app-roles-admin /> }
+          @if (activeTab() === 'users')         { <app-users-admin /> }
           @if (activeTab() === 'parameters')    { <app-parameters-admin [paysId]="paysId()" /> }
           @if (activeTab() === 'holidays')      { <app-holidays-admin [paysId]="paysId()" [paysLabel]="currentPays()" /> }
           @if (activeTab() === 'request-types') { <app-request-types-admin [paysId]="paysId()" /> }

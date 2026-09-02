@@ -2208,6 +2208,7 @@
       "entity": "Entité {{pays}}",
       "tabs": {
         "roles": "Rôles & Permissions",
+        "users": "Utilisateurs",
         "parameters": "Paramètres de paie",
         "holidays": "Jours fériés",
         "requestTypes": "Types de demandes",

@@ -2208,6 +2208,7 @@
       "entity": "Entity {{pays}}",
       "tabs": {
         "roles": "Roles & Permissions",
+        "users": "Users",
         "parameters": "Payroll settings",
         "holidays": "Public holidays",
         "requestTypes": "Request types",
