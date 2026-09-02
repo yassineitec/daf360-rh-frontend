@@ -9,6 +9,7 @@ import {
   PageHeaderComponent,
   TabItem,
   TabsComponent,
+  tabParam,
 } from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../core/user.store';
@@ -188,7 +189,22 @@ export class CandidateDetailComponent implements OnInit {
   });
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
-  readonly activeTab = signal<TabId>('profil');
+  /**
+   * Adossé au paramètre d'URL : survit au rechargement, au signet, au lien partagé et au
+   * bouton précédent.
+   *
+   * La liste d'ids est passée en SIGNAL, et c'est indispensable ici : les onglets sont
+   * filtrés par permission et par statut du candidat (voir `tabs` juste en dessous), donc
+   * elle n'est pas connue à la construction et elle change ensuite. Un lien vers
+   * `?tab=salaire` reçu par quelqu'un sans droit sur la rémunération retombe ainsi sur
+   * « profil » au lieu de laisser le bandeau sans onglet sélectionné — ce que faisait la
+   * restauration manuelle précédente, qui ne validait rien.
+   *
+   * Le `computed` est créé ici et non plus haut : son corps n'est évalué que
+   * paresseusement, donc `this.tabs` est déjà défini quand il s'exécute.
+   */
+  readonly activeTab = tabParam<TabId>(
+    computed(() => this.tabs().map(t => t.id as TabId)), 'profil');
 
   /**
    * Tabs are **filtered out**, never disabled: a greyed "Rémunération" tab still
@@ -207,22 +223,9 @@ export class CandidateDetailComponent implements OnInit {
     return items;
   });
 
-  onTabChange(id: string): void {
-    this.activeTab.set(id as TabId);
-    // Shareable + survives a refresh or a back navigation.
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab: id },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
-  }
-
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.candidateId = +(this.route.snapshot.paramMap.get('id') ?? 0);
-    const tab = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
-    if (tab) this.activeTab.set(tab); // daf-tabs falls back to the first tab if it isn't one
     this.loadCandidate();
   }
 

@@ -19,6 +19,7 @@ import {
   type ModalRef,
   type SelectOption,
   type UploadedFile,
+  tabParam,
 } from '@khalilrebhiitec/daf360';
 
 import { ProfileService } from './profile.service';
@@ -200,7 +201,17 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
-  readonly activeTab = signal<TabId>('emploi');
+  /**
+   * Adossé au paramètre d'URL — voir `tabParam`. `merge` préserve `?edit=true`, que cette
+   * page utilise aussi.
+   *
+   * La liste d'ids vient de `tabs()`, qui est construite conditionnellement : passer un
+   * signal plutôt qu'un tableau fait que la validation suit ces variations, et qu'un
+   * `?tab=` nommant un onglet absent retombe sur « emploi » au lieu de laisser le bandeau
+   * sans sélection.
+   */
+  readonly activeTab = tabParam<TabId>(
+    computed(() => this.tabs().map(t => t.id as TabId)), 'emploi');
 
   readonly tabs = computed<TabItem[]>(() => {
     this.translate.currentLang();
@@ -249,18 +260,6 @@ export class ProfileDetailComponent implements OnInit {
     }
     return out;
   });
-
-  onTabChange(id: string): void {
-    const tab = id as TabId;
-    this.activeTab.set(tab);
-    // Shareable + survives a refresh or a back navigation. `merge` keeps ?edit=true.
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
-  }
 
   // ── Header ─────────────────────────────────────────────────────────────────
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
@@ -604,8 +603,6 @@ export class ProfileDetailComponent implements OnInit {
     this.profileId = Number(this.route.snapshot.paramMap.get('id'));
     const qp = this.route.snapshot.queryParamMap;
     this.openInEditMode = qp.get('edit') === 'true';
-    const tab = qp.get('tab') as TabId | null;
-    if (tab) this.activeTab.set(tab); // daf-tabs falls back to the first tab if it isn't one
 
     // The documents call feeds both the drawer and the identity strip's n/3
     // tile, so it runs up front rather than on drawer open.

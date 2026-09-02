@@ -1,5 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
+import { tabParam } from '@khalilrebhiitec/daf360';
 import { UserStore }   from '../../core/user.store';
 import { AdminTab }    from './models/admin.model';
 import { RolesAdminComponent }        from './roles-admin.component';
@@ -180,7 +181,20 @@ const TABS: { key: AdminTab; labelKey: string; permission: string }[] = [
 export class AdminComponent {
   private userStore = inject(UserStore);
 
-  activeTab   = signal<AdminTab>('roles');
+  /**
+   * Adossé au paramètre d'URL — voir tabParam. Ce n'est pourtant pas un daf-tabs mais un
+   * bandeau fait main : tabParam rend un WritableSignal ordinaire, donc le
+   * `(click)="activeTab.set(tab.key)"` du gabarit fonctionne inchangé.
+   *
+   * Cette page était la plus exposée à la perte d'onglet : quinze sections derrière un
+   * même écran, et un rechargement renvoyait chaque fois sur « Rôles ».
+   *
+   * La liste vient de `visibleTabs`, filtrée par permission — un lien vers une section
+   * qu'on n'a pas le droit de voir retombe ainsi sur « Rôles » au lieu de n'afficher aucun
+   * panneau.
+   */
+  activeTab   = tabParam<AdminTab>(
+    computed(() => this.visibleTabs().map(t => t.key)), 'roles');
   isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager());
   paysId      = computed(() => this.userStore.currentUser()?.paysId ?? 52);
   currentPays = computed(() => this.userStore.currentUser()?.isoCode ?? '—');

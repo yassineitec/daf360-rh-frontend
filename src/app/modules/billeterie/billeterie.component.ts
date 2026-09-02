@@ -15,6 +15,7 @@ import {
   TabItem,
   TabsComponent,
   ToolbarToggleOption,
+  tabParam,
 } from '@khalilrebhiitec/daf360';
 
 import { MissionService } from '../missions/mission.service';
@@ -78,7 +79,15 @@ export class BilleterieComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   // ── View state ───────────────────────────────────────────────────────────
-  readonly activeTab = signal<TabKey>('queue');
+  /**
+   * Adossé au paramètre d'URL — voir tabParam : survit au rechargement, au signet et au
+   * bouton précédent.
+   *
+   * La validation contre la liste d'ids remplace le filtre qui vivait dans onTabChange
+   * (`if (id === 'queue' || id === 'requests')`) : elle couvre en plus les valeurs venues
+   * de l'URL, que ce filtre ne voyait pas.
+   */
+  readonly activeTab = tabParam<TabKey>(['queue', 'requests'], 'queue');
   readonly viewMode = signal<ViewMode>('grid');
   readonly search = signal('');
   readonly pricedFilter = signal<PricedFilter>('');
@@ -265,10 +274,6 @@ export class BilleterieComponent implements OnInit {
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  onTabChange(id: string): void {
-    if (id === 'queue' || id === 'requests') this.activeTab.set(id);
-  }
-
   onSearch(value: string): void {
     if (value === this.search()) return;   // daf-search-toolbar re-emits on blur
     this.search.set(value ?? '');

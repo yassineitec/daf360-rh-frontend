@@ -38,8 +38,7 @@
     variant="underline"
     style="--daf-tabs-fade: var(--color-background)"
     [tabs]="tabs()"
-    [active]="activeTab()"
-    (activeChange)="onTabChange($event)"
+    [(active)]="activeTab"
     idPrefix="billeterie" />
 
   <div role="tabpanel"
