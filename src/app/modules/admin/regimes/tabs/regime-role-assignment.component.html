@@ -22,26 +22,6 @@
       <span class="rra-notes" [title]="row['_source'].assignment?.notes ?? ''">{{ row['notes'] }}</span>
     </ng-template>
 
-    <ng-template dafCell="_actions" let-row>
-      <div class="rra-actions">
-        <daf-button
-          *dafHasPermission="'ADMIN_REGIMES'"
-          [label]="(row['_source'].assignment ? 'ADMIN.regimes.common.edit' : 'ADMIN.regimes.roleAssign.assign') | translate"
-          variant="secondary"
-          [options]="{ size: 'sm', iconStart: row['_source'].assignment ? 'edit' : 'add' }"
-          (onClick)="openAssignModal(row['_source'])" />
-        @if (row['_source'].assignment) {
-          <daf-button
-            *dafHasPermission="'ADMIN_REGIMES'"
-            class="icon-btn-delete"
-            [title]="'ADMIN.regimes.common.delete' | translate"
-            variant="danger"
-            [options]="{ size: 'sm', iconStart: 'delete' }"
-            (onClick)="openRemoveModal(row['_source'])" />
-        }
-      </div>
-    </ng-template>
-
   </daf-data-table>
   </div>
 
@@ -58,12 +38,8 @@
   </div>
 }
 
-<!-- Assign Modal -->
-<app-modal
-  [title]="'ADMIN.regimes.roleAssign.assignModalTitle' | translate"
-  [visible]="showAssignModal()"
-  [hasFooter]="true"
-  (closed)="showAssignModal.set(false)">
+<!-- Assign Modal body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTplAssign>
 
   <p class="rra-modal-subtitle">{{ 'ADMIN.regimes.roleAssign.roleLabel' | translate }} <strong class="rra-modal-role">{{ selectedRow()?.roleName }}</strong></p>
 
@@ -102,22 +78,18 @@
     </div>
   </div>
 
-  <div slot="footer">
-    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showAssignModal.set(false)" />
+  <div class="rra-modal-footer">
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" [options]="{ disabled: isAssigning() }" (onClick)="cancel()" />
     <daf-button
       [label]="'ADMIN.regimes.roleAssign.confirmAssign' | translate"
       variant="teal"
       [options]="{ disabled: isAssigning() || !formRegimeId || !formEffFrom, loading: isAssigning() }"
       (onClick)="confirmAssign()" />
   </div>
-</app-modal>
+</ng-template>
 
-<!-- Remove Modal -->
-<app-modal
-  [title]="'ADMIN.regimes.roleAssign.removeModalTitle' | translate"
-  [visible]="showRemoveModal()"
-  [hasFooter]="true"
-  (closed)="showRemoveModal.set(false)">
+<!-- Remove Modal body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTplRemove>
 
   <p class="rra-remove-text">{{ 'ADMIN.regimes.roleAssign.removeBefore' | translate }}"<strong>{{ selectedRow()?.assignment?.regimeLabelFr }}</strong>"{{ 'ADMIN.regimes.roleAssign.removeMid' | translate }}"<strong>{{ selectedRow()?.roleName }}</strong>"{{ 'ADMIN.regimes.roleAssign.removeAfter' | translate }}</p>
   <div class="rra-warning">
@@ -125,8 +97,10 @@
     <strong>{{ affectedCount() }}</strong>&nbsp;{{ 'ADMIN.regimes.roleAssign.revertWarning' | translate }}
   </div>
 
-  <div slot="footer">
-    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showRemoveModal.set(false)" />
+  @if (errorMsg()) { <div class="rra-msg-error">{{ errorMsg() }}</div> }
+
+  <div class="rra-modal-footer">
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="cancel()" />
     <daf-button [label]="'ADMIN.regimes.common.delete' | translate" variant="danger" (onClick)="confirmRemove()" />
   </div>
-</app-modal>
+</ng-template>

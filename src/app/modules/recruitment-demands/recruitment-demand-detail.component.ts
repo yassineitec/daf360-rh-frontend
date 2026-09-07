@@ -1,219 +1,312 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
+import {
+  BreadcrumbItem,
+  ButtonComponent,
+  CardAccent,
+  CardComponent,
+  FormFieldComponent,
+  PageComponent,
+  PageHeaderBadge,
+  PageHeaderComponent,
+  StatusBadgeComponent,
+} from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
-import {
-  RecruitmentDemandDetail,
-  RecruitmentDemandStatus,
-  DEMAND_STATUS_BADGE,
-} from './recruitment-demand.model';
+import { RecruitmentDemandDetail, RecruitmentDemandStatus } from './recruitment-demand.model';
+
+/** Same traffic-light mapping used on /rh/recruitment-demands and its validation queue. */
+const STATUS_VARIANT: Record<RecruitmentDemandStatus, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
+  EN_ATTENTE: 'warning',
+  APPROUVEE:  'success',
+  REJETEE:    'danger',
+  ANNULEE:    'neutral',
+  CLOTUREE:   'info',
+};
+
+/** `daf-card`'s left accent stripe has no 'neutral'/'info' step — 'secondary'/'teal'
+ *  are the closest tones already used for those meanings elsewhere on this page family. */
+const STATUS_ACCENT: Record<RecruitmentDemandStatus, CardAccent> = {
+  EN_ATTENTE: 'warning',
+  APPROUVEE:  'success',
+  REJETEE:    'danger',
+  ANNULEE:    'secondary',
+  CLOTUREE:   'teal',
+};
+
+/** Same icon language as the status KPI tiles on /rh/recruitment-demands, reused here for
+ *  the "Décision" card so a reviewed demand reads the same way everywhere it appears. */
+const STATUS_ICON: Record<RecruitmentDemandStatus, string> = {
+  EN_ATTENTE: 'hourglass_empty',
+  APPROUVEE:  'check_circle',
+  REJETEE:    'cancel',
+  ANNULEE:    'block',
+  CLOTUREE:   'task_alt',
+};
+
+/** Whole literal class strings, never `` `text-${variant}` `` — a runtime-built class
+ *  never appears as a literal in source, so Tailwind's scan never generates it and the
+ *  icon renders uncoloured. Same icon-colour choices as STATUS_KPI on the historique page. */
+const STATUS_ICON_COLOR: Record<RecruitmentDemandStatus, string> = {
+  EN_ATTENTE: 'text-warning',
+  APPROUVEE:  'text-success',
+  REJETEE:    'text-danger',
+  ANNULEE:    'text-outline',
+  CLOTUREE:   'text-teal',
+};
+
+interface DetailField {
+  key: string;
+  label: string;
+  value: string;
+  icon: string;
+  iconColor: string;
+  iconBg: string;
+}
+
+/** One icon + tone per field, so the KPI-style cards read as illustrated tiles rather
+ *  than a plain label/value list. */
+const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: string }> = {
+  EXACT_TITLE:        { icon: 'work',          iconColor: 'text-primary',   iconBg: 'bg-primary/10' },
+  RECRUITMENT_REASON: { icon: 'swap_horiz',    iconColor: 'text-teal',      iconBg: 'bg-teal/10' },
+  HEADCOUNT:          { icon: 'groups',        iconColor: 'text-secondary', iconBg: 'bg-secondary/10' },
+  URGENCY:            { icon: 'priority_high', iconColor: 'text-warning',   iconBg: 'bg-warning/10' },
+  CSP:                { icon: 'category',      iconColor: 'text-teal',      iconBg: 'bg-teal/10' },
+  EXPERIENCE:         { icon: 'trending_up',   iconColor: 'text-primary',   iconBg: 'bg-primary/10' },
+  EDUCATION:          { icon: 'school',        iconColor: 'text-secondary', iconBg: 'bg-secondary/10' },
+  TARGET_START:       { icon: 'event',         iconColor: 'text-warning',   iconBg: 'bg-warning/10' },
+  BUDGET:             { icon: 'payments',      iconColor: 'text-success',   iconBg: 'bg-success/10' },
+  LINKED_CANDIDATES:  { icon: 'group_add',     iconColor: 'text-primary',   iconBg: 'bg-primary/10' },
+};
 
 @Component({
   selector: 'app-recruitment-demand-detail',
   standalone: true,
-  imports: [RouterLink, DatePipe, FormsModule, TranslatePipe],
+  imports: [
+    ButtonComponent, CardComponent, FormFieldComponent, PageComponent, PageHeaderComponent,
+    StatusBadgeComponent, DatePipe, TranslatePipe,
+  ],
   template: `
-    <div class="detail-container">
-      <!-- Back link -->
-      <a routerLink="/requests" class="back-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        {{ 'RECRUITMENT_DEMANDS.DETAIL.BACK' | translate }}
-      </a>
+    <!-- Same daf-page/daf-page-header scaffold as the other detail pages (candidates,
+         profiles): breadcrumbs carry the "back to list" affordance, badges show status
+         on the title line — no hand-rolled header markup. -->
+    <daf-page [loading]="loading()" [kpis]="0" [breadcrumbs]="true">
 
-      @if (loading()) {
-        <div class="empty-state"><span class="spinner"></span> {{ 'RECRUITMENT_DEMANDS.DETAIL.LOADING' | translate }}</div>
-      } @else if (!demand()) {
-        <div class="empty-state">{{ 'RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate }}</div>
+      <daf-page-header
+        [title]="demand()?.jobTitle ?? ('RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate)"
+        [subtitle]="demand()?.department ?? undefined"
+        [badges]="headerBadges()"
+        [breadcrumbs]="breadcrumbs()"
+        [breadcrumbLabel]="'RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB_ARIA' | translate" />
+
+      @if (!demand()) {
+        <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+          <div class="flex flex-col items-center gap-3 py-8 text-center">
+            <span class="material-symbols-outlined text-[36px] text-outline-variant">search_off</span>
+            <p class="m-0 text-[14px] font-semibold text-on-surface">
+              {{ 'RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate }}
+            </p>
+            <daf-button
+              [options]="{ variant: 'ghost', size: 'sm', iconStart: 'arrow_back',
+                           label: ('RECRUITMENT_DEMANDS.DETAIL.BACK' | translate) }"
+              (onClick)="goBack()" />
+          </div>
+        </daf-card>
       } @else {
-        <div class="header-row">
-          <div>
-            <h1 class="page-title">{{ demand()!.jobTitle }}</h1>
-            @if (demand()!.department) {
-              <p class="page-sub">{{ demand()!.department }}</p>
+        <!-- Same scaffold as /rh/profiles/:id: a sticky reference card on the left (there,
+             identity; here, job details) and everything else flowing in the right column. -->
+        <div class="flex flex-col gap-6 lg:flex-row">
+
+          <!-- ── Left: job details, plus the Approve/Reject panel right below it,
+               always on screen ── -->
+          <div class="lg:w-[32%] lg:shrink-0">
+            <div class="flex flex-col gap-6 lg:sticky lg:top-6">
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-4 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.JOB_DETAILS' | translate }}
+                </h3>
+                <div class="flex flex-col gap-4">
+                  @for (f of jobDetailFields(); track f.key) {
+                    <div class="flex items-center gap-3">
+                      <div [class]="'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ' + f.iconBg + ' ' + f.iconColor">
+                        <span class="material-symbols-outlined text-[20px]">{{ f.icon }}</span>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="m-0 truncate text-[11px] font-medium uppercase tracking-wide text-on-surface-variant">{{ f.label }}</p>
+                        <p class="m-0 mt-0.5 truncate text-[14px] font-semibold text-on-surface">{{ f.value }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </daf-card>
+
+              <!-- Approve / Reject — the one decision this page exists for, right under
+                   the job details, so the buttons are large, full-width and
+                   solid-coloured rather than sharing a row with anything else. -->
+              @if (canApprove() && demand()!.statut === 'EN_ATTENTE') {
+                <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                  <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px] text-warning">gavel</span>
+                    {{ 'RECRUITMENT_DEMANDS.DETAIL.PROCESS' | translate }}
+                  </h3>
+                  <daf-form-field
+                    [options]="{ type: 'textarea', rows: 3, fullWidth: true,
+                                 label: ('RECRUITMENT_DEMANDS.DETAIL.COMMENT_OPTIONAL' | translate) }"
+                    [value]="reviewComment"
+                    (valueChange)="reviewComment = asText($event)" />
+                  @if (reviewError()) {
+                    <p class="m-0 mt-2 text-[12px] text-danger">{{ reviewError() }}</p>
+                  }
+                  <div class="mt-4 flex flex-col gap-2.5">
+                    <daf-button
+                      [options]="{ variant: 'teal', size: 'lg', fullWidth: true, iconStart: 'check_circle',
+                                   disabled: reviewing(), loading: reviewing(),
+                                   label: ('RECRUITMENT_DEMANDS.DETAIL.APPROVE' | translate) }"
+                      (onClick)="doReview(true)" />
+                    <daf-button
+                      [options]="{ variant: 'danger', size: 'lg', fullWidth: true, iconStart: 'cancel',
+                                   disabled: reviewing(), loading: reviewing(),
+                                   label: ('RECRUITMENT_DEMANDS.DETAIL.REJECT' | translate) }"
+                      (onClick)="doReview(false)" />
+                  </div>
+                </daf-card>
+              }
+
+              <!-- Cancel own demand — a distinct, quieter action from Approve/Reject
+                   above (a different audience: the requester, not the approver), so it
+                   stays ghost rather than competing for attention. -->
+              @if (canCancel()) {
+                <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                  <daf-button
+                    [options]="{ variant: 'ghost', iconStart: 'cancel', disabled: reviewing(), loading: reviewing(), fullWidth: true,
+                                 label: ('RECRUITMENT_DEMANDS.DETAIL.CANCEL_DEMAND' | translate) }"
+                    (onClick)="doCancel()" />
+                </daf-card>
+              }
+            </div>
+          </div>
+
+          <!-- ── Right: one flowing column — decision (if any), then the job's own
+               description/profile/scope/skills/notes. ── -->
+          <div class="flex min-w-0 flex-1 flex-col gap-6">
+            @if (demand()!.reviewedAt) {
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', accent: reviewAccent() }">
+                <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px]" [class]="statusIconColor()">{{ statusIcon() }}</span>
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.DECISION' | translate }}
+                </h3>
+                <daf-badge [label]="('RECRUITMENT_DEMANDS.STATUS.' + demand()!.statut) | translate"
+                           [options]="{ variant: statusVariant(demand()!.statut) }" />
+                @if (demand()!.reviewComment) {
+                  <p class="m-0 mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-on-surface">
+                    {{ demand()!.reviewComment }}
+                  </p>
+                }
+                <p class="m-0 mt-3 text-[12px] text-outline">
+                  {{ demand()!.reviewedAt | date:'dd/MM/yyyy HH:mm' }}
+                </p>
+              </daf-card>
+            }
+
+            @if (demand()!.needDescription) {
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">description</span>
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.NEED_DESC' | translate }}
+                </h3>
+                <p class="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-on-surface">{{ demand()!.needDescription }}</p>
+              </daf-card>
+            }
+
+            <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+              <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <span class="material-symbols-outlined text-[18px] text-teal">assignment_ind</span>
+                {{ 'RECRUITMENT_DEMANDS.DETAIL.REQUIRED_PROFILE' | translate }}
+              </h3>
+              <p class="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-on-surface">{{ demand()!.requiredProfile }}</p>
+            </daf-card>
+
+            <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+              <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <span class="material-symbols-outlined text-[18px] text-teal">map</span>
+                {{ 'RECRUITMENT_DEMANDS.DETAIL.SCOPE' | translate }}
+              </h3>
+              <p class="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-on-surface">{{ demand()!.scopeOfWork }}</p>
+            </daf-card>
+
+            @if (demand()!.technicalSkills.length) {
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">code</span>
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.TECH_SKILLS' | translate }}
+                </h3>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (s of demand()!.technicalSkills; track s) {
+                    <daf-badge [label]="s" [options]="{ variant: 'info', pill: true }" />
+                  }
+                </div>
+              </daf-card>
+            }
+
+            @if (demand()!.softSkills.length) {
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">psychology</span>
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.SOFT_SKILLS' | translate }}
+                </h3>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (s of demand()!.softSkills; track s) {
+                    <daf-badge [label]="s" [options]="{ variant: 'success', pill: true }" />
+                  }
+                </div>
+              </daf-card>
+            }
+
+            @if (demand()!.additionalNotes) {
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">sticky_note_2</span>
+                  {{ 'RECRUITMENT_DEMANDS.DETAIL.ADDITIONAL_NOTES' | translate }}
+                </h3>
+                <p class="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-on-surface">{{ demand()!.additionalNotes }}</p>
+              </daf-card>
             }
           </div>
-          <span [class]="'badge ' + badgeClass(demand()!.statut)">
-            {{ ('RECRUITMENT_DEMANDS.STATUS.' + demand()!.statut) | translate }}
-          </span>
-        </div>
 
-        <div class="card-grid">
-          <!-- Main info -->
-          <div class="card span-2">
-            <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.JOB_DETAILS' | translate }}</h3>
-            <dl class="detail-list">
-              @if (demand()!.jobExactTitle) {
-                <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.EXACT_TITLE' | translate }}</dt><dd>{{ demand()!.jobExactTitle }}</dd>
-              }
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.RECRUITMENT_REASON' | translate }}</dt><dd>{{ demand()!.recruitmentReasonLabel ?? '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.HEADCOUNT' | translate }}</dt><dd>{{ demand()!.headcount }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.URGENCY' | translate }}</dt><dd>{{ demand()!.urgencyLevelLabel ?? '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.CSP' | translate }}</dt><dd>{{ demand()!.cspCategoryLabel ?? '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.EXPERIENCE' | translate }}</dt><dd>{{ demand()!.experienceLevelLabel ?? '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.EDUCATION' | translate }}</dt><dd>{{ demand()!.educationLevelLabel ?? '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.TARGET_START' | translate }}</dt><dd>{{ demand()!.targetStartDate ? (demand()!.targetStartDate | date:'dd/MM/yyyy') : '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.BUDGET' | translate }}</dt><dd>{{ demand()!.budgetRange ?? '—' }}</dd>
-              <dt>{{ 'RECRUITMENT_DEMANDS.DETAIL.LINKED_CANDIDATES' | translate }}</dt><dd>{{ demand()!.candidateCount }}</dd>
-            </dl>
-          </div>
-
-          @if (demand()!.needDescription) {
-            <div class="card span-2">
-              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.NEED_DESC' | translate }}</h3>
-              <p class="text-body">{{ demand()!.needDescription }}</p>
-            </div>
-          }
-
-          <div class="card">
-            <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.REQUIRED_PROFILE' | translate }}</h3>
-            <p class="text-body">{{ demand()!.requiredProfile }}</p>
-          </div>
-
-          <div class="card">
-            <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.SCOPE' | translate }}</h3>
-            <p class="text-body">{{ demand()!.scopeOfWork }}</p>
-          </div>
-
-          @if (demand()!.technicalSkills.length) {
-            <div class="card">
-              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.TECH_SKILLS' | translate }}</h3>
-              <div class="skill-tags">
-                @for (s of demand()!.technicalSkills; track s) {
-                  <span class="skill-tag skill-tag--tech">{{ s }}</span>
-                }
-              </div>
-            </div>
-          }
-
-          @if (demand()!.softSkills.length) {
-            <div class="card">
-              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.SOFT_SKILLS' | translate }}</h3>
-              <div class="skill-tags">
-                @for (s of demand()!.softSkills; track s) {
-                  <span class="skill-tag skill-tag--soft">{{ s }}</span>
-                }
-              </div>
-            </div>
-          }
-
-          @if (demand()!.additionalNotes) {
-            <div class="card span-2">
-              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.ADDITIONAL_NOTES' | translate }}</h3>
-              <p class="text-body">{{ demand()!.additionalNotes }}</p>
-            </div>
-          }
-
-          <!-- Review block -->
-          @if (demand()!.reviewedAt) {
-            <div class="card span-2 review-card" [class.approved]="demand()!.statut === 'APPROUVEE'" [class.rejected]="demand()!.statut === 'REJETEE'">
-              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.DECISION' | translate }}</h3>
-              <p class="review-verdict">{{ ('RECRUITMENT_DEMANDS.STATUS.' + demand()!.statut) | translate }}</p>
-              @if (demand()!.reviewComment) {
-                <p class="text-body">{{ demand()!.reviewComment }}</p>
-              }
-              <p class="text-muted small">{{ demand()!.reviewedAt | date:'dd/MM/yyyy HH:mm' }}</p>
-            </div>
-          }
-
-          <!-- Approve / Reject panel -->
-          @if (canApprove() && demand()!.statut === 'EN_ATTENTE') {
-            <div class="card span-2 action-card">
-              <h3 class="section-title">{{ 'RECRUITMENT_DEMANDS.DETAIL.PROCESS' | translate }}</h3>
-              <textarea class="textarea" [(ngModel)]="reviewComment" [placeholder]="'RECRUITMENT_DEMANDS.DETAIL.COMMENT_OPTIONAL' | translate" rows="3"></textarea>
-              @if (reviewError()) {
-                <p class="error-msg">{{ reviewError() }}</p>
-              }
-              <div class="action-row">
-                <button class="btn-success" [disabled]="reviewing()" (click)="doReview(true)" type="button">
-                  {{ 'RECRUITMENT_DEMANDS.DETAIL.APPROVE' | translate }}
-                </button>
-                <button class="btn-danger" [disabled]="reviewing()" (click)="doReview(false)" type="button">
-                  {{ 'RECRUITMENT_DEMANDS.DETAIL.REJECT' | translate }}
-                </button>
-              </div>
-            </div>
-          }
-
-          <!-- Cancel own demand -->
-          @if (canCancel()) {
-            <div class="card span-2">
-              <button class="btn-ghost btn-danger-ghost" [disabled]="reviewing()" (click)="doCancel()" type="button">
-                {{ 'RECRUITMENT_DEMANDS.DETAIL.CANCEL_DEMAND' | translate }}
-              </button>
-            </div>
-          }
         </div>
       }
-    </div>
+    </daf-page>
   `,
   styles: [`
-    .detail-container { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
-    .back-link { display: inline-flex; align-items: center; gap: .375rem; color: var(--color-text-muted,#64748b); font-size:.875rem; text-decoration:none; margin-bottom:1.25rem; }
-    .back-link:hover { color: var(--color-primary,#3b82f6); }
-    .header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; }
-    .page-title { font-size:1.5rem; font-weight:700; margin:0; }
-    .page-sub   { color:var(--color-text-muted,#64748b); margin:.25rem 0 0; font-size:.875rem; }
-    .card-grid  { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-    .card { background:#fff; border:1px solid var(--color-border,#e2e8f0); border-radius:.5rem; padding:1.25rem; }
-    .span-2 { grid-column:span 2; }
-    .section-title { font-size:.875rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted,#64748b); margin:0 0 .875rem; }
-    .detail-list { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; margin:0; }
-    .detail-list dt { font-size:.8125rem; color:var(--color-text-muted,#64748b); font-weight:500; }
-    .detail-list dd { font-size:.875rem; font-weight:500; margin:0; }
-    .text-body  { font-size:.875rem; line-height:1.6; white-space:pre-wrap; margin:0; }
-    .text-muted { color:var(--color-text-muted,#64748b); }
-    .small      { font-size:.75rem; margin-top:.5rem; }
-    .badge { display:inline-flex; align-items:center; padding:.2rem .6rem; border-radius:9999px; font-size:.75rem; font-weight:600; }
-    .badge-warning { background:#fef3c7; color:#92400e; }
-    .badge-success { background:#d1fae5; color:#065f46; }
-    .badge-danger  { background:#fee2e2; color:#991b1b; }
-    .badge-neutral { background:#f1f5f9; color:#475569; }
-    .badge-info    { background:#dbeafe; color:#1e40af; }
-    .review-card { border-left:4px solid var(--color-border,#e2e8f0); }
-    .review-card.approved { border-left-color:#10b981; }
-    .review-card.rejected { border-left-color:#ef4444; }
-    .review-verdict { font-size:1rem; font-weight:600; margin:0 0 .5rem; }
-    .action-card { background:#f8fafc; }
-    .textarea  { width:100%; padding:.5rem .75rem; border:1px solid var(--color-border,#e2e8f0); border-radius:.375rem; font-size:.875rem; resize:vertical; box-sizing:border-box; }
-    .action-row { display:flex; gap:.75rem; margin-top:.875rem; }
-    .btn-success { padding:.5rem 1.25rem; background:#10b981; color:#fff; border:none; border-radius:.375rem; font-size:.875rem; font-weight:500; cursor:pointer; }
-    .btn-success:hover { background:#059669; }
-    .btn-success:disabled { opacity:.5; cursor:not-allowed; }
-    .btn-danger  { padding:.5rem 1.25rem; background:#ef4444; color:#fff; border:none; border-radius:.375rem; font-size:.875rem; font-weight:500; cursor:pointer; }
-    .btn-danger:hover { background:#dc2626; }
-    .btn-danger:disabled { opacity:.5; cursor:not-allowed; }
-    .btn-ghost   { padding:.4rem .875rem; background:transparent; border:1px solid var(--color-border,#e2e8f0); border-radius:.375rem; font-size:.875rem; cursor:pointer; }
-    .btn-danger-ghost { color:#ef4444; border-color:#fca5a5; }
-    .btn-danger-ghost:hover { background:#fee2e2; }
-    .error-msg   { color:#ef4444; font-size:.8125rem; margin:.5rem 0 0; }
-    .empty-state { display:flex; align-items:center; gap:.75rem; padding:4rem 2rem; color:var(--color-text-muted,#64748b); }
-    .spinner { display:inline-block; width:1.25rem; height:1.25rem; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin .7s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    .skill-tags  { display:flex; flex-wrap:wrap; gap:.375rem; }
-    .skill-tag   { display:inline-flex; align-items:center; padding:.2rem .6rem; border-radius:9999px; font-size:.75rem; font-weight:500; }
-    .skill-tag--tech { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
-    .skill-tag--soft { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
-    @media (max-width:640px) { .card-grid { grid-template-columns:1fr; } .span-2 { grid-column:span 1; } }
+    /* Airy, high-end feel: a very light grey canvas behind the white/glass cards, same
+       margin-cancelling trick as /rh/admin so the page still bleeds to the shell's edges. */
+    :host {
+      display: block;
+      background: var(--color-surface-container-low, #f2f4f6);
+      margin: -2rem;
+      padding: 2rem;
+    }
+    @media (max-width: 1024px) { :host { margin: -1.5rem; padding: 1.5rem; } }
+    @media (max-width: 768px)  { :host { margin: -0.75rem -1rem; padding: 1rem; } }
+    @media (max-width: 480px)  { :host { margin: -0.75rem; padding: 0.75rem; } }
   `],
 })
 export class RecruitmentDemandDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
+  private router    = inject(Router);
   private svc       = inject(RecruitmentDemandService);
   private userStore = inject(UserStore);
   private translate = inject(TranslateService);
 
-  demand       = signal<RecruitmentDemandDetail | null>(null);
-  loading      = signal(true);
-  reviewing    = signal(false);
+  demand        = signal<RecruitmentDemandDetail | null>(null);
+  loading       = signal(true);
+  reviewing     = signal(false);
   reviewComment = '';
-  reviewError  = signal<string | null>(null);
+  reviewError   = signal<string | null>(null);
 
   readonly canApprove = () => this.userStore.hasPermission('RH_APPROVE_RECRUITMENT_DEMAND');
   readonly canCancel  = () => {
@@ -222,7 +315,71 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     return d?.statut === 'EN_ATTENTE' && d?.createdByUserId === uid;
   };
 
-  badgeClass(s: RecruitmentDemandStatus): string  { return DEMAND_STATUS_BADGE[s]; }
+  readonly statusVariant = (s: RecruitmentDemandStatus) => STATUS_VARIANT[s];
+  readonly reviewAccent  = computed<CardAccent>(() => {
+    const d = this.demand();
+    return d ? STATUS_ACCENT[d.statut] : 'none';
+  });
+  readonly statusIcon      = computed(() => {
+    const d = this.demand();
+    return d ? STATUS_ICON[d.statut] : 'task_alt';
+  });
+  readonly statusIconColor = computed(() => {
+    const d = this.demand();
+    return d ? STATUS_ICON_COLOR[d.statut] : 'text-outline';
+  });
+
+  readonly headerBadges = computed<PageHeaderBadge[]>(() => {
+    this.translate.currentLang();
+    const d = this.demand();
+    if (!d) return [];
+    return [{
+      label: this.translate.instant('RECRUITMENT_DEMANDS.STATUS.' + d.statut),
+      variant: STATUS_VARIANT[d.statut],
+      pill: true,
+    }];
+  });
+
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    this.translate.currentLang();
+    const d = this.demand();
+    return [
+      { label: this.translate.instant('RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB'), link: '/requests' },
+      { label: d?.jobTitle ?? '' },
+    ];
+  });
+
+  readonly jobDetailFields = computed<DetailField[]>(() => {
+    this.translate.currentLang();
+    const d = this.demand();
+    if (!d) return [];
+    const t = (k: string) => this.translate.instant('RECRUITMENT_DEMANDS.DETAIL.' + k);
+    const field = (key: string, value: string): DetailField => ({ key, label: t(key), value, ...FIELD_ICON[key] });
+    const fields: DetailField[] = [];
+    if (d.jobExactTitle) fields.push(field('EXACT_TITLE', d.jobExactTitle));
+    fields.push(field('RECRUITMENT_REASON',  d.recruitmentReasonLabel ?? '—'));
+    fields.push(field('HEADCOUNT',           String(d.headcount)));
+    fields.push(field('URGENCY',             d.urgencyLevelLabel ?? '—'));
+    fields.push(field('CSP',                 d.cspCategoryLabel ?? '—'));
+    fields.push(field('EXPERIENCE',          d.experienceLevelLabel ?? '—'));
+    fields.push(field('EDUCATION',           d.educationLevelLabel ?? '—'));
+    fields.push(field('TARGET_START',        d.targetStartDate ? this.formatDate(d.targetStartDate) : '—'));
+    fields.push(field('BUDGET',              d.budgetRange ?? '—'));
+    fields.push(field('LINKED_CANDIDATES',   String(d.candidateCount)));
+    return fields;
+  });
+
+  /** `dd/MM/yyyy`, same format the old template's `date` pipe used — plain JS so this
+   *  computed doesn't need `DatePipe` injected as a service. */
+  private formatDate(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  }
+
+  goBack(): void {
+    this.router.navigate(['/requests']);
+  }
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -255,5 +412,9 @@ export class RecruitmentDemandDetailComponent implements OnInit {
         if (updated) { this.demand.set(updated); }
         this.reviewing.set(false);
       });
+  }
+
+  asText(v: string | number | null): string {
+    return v == null ? '' : String(v);
   }
 }

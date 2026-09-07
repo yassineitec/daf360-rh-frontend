@@ -1,5 +1,25 @@
 :host { display: block; height: 100%; }
 
+.nr-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.nr-detail { min-width: 0; }
+
+.nr-breadcrumb-header {
+  display: block;
+
+  // The rule's name is already the breadcrumb trail's last (current-page) crumb —
+  // the header's own title line under it would just repeat it.
+  ::ng-deep h1 { display: none; }
+
+  // Same size as the admin shell's own breadcrumb (.tab-breadcrumb-header) — the
+  // library default is 12px, which read smaller once the two sit one after the other.
+  ::ng-deep nav { font-size: 15px; line-height: 1.4; }
+}
+
 .nr-page {
   display: flex;
   flex-direction: column;

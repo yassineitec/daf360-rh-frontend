@@ -1,18 +1,22 @@
-import { Component, computed, effect, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, TemplateRef, computed, effect, inject, input, OnChanges, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { Holiday }          from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { ModalComponent }   from '../../shared/modal.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
+import { HolidayCalendarComponent } from './holiday-calendar.component';
+import { RefDataService } from '../../core/ref/ref-data.service';
+import { PaysTimezone } from '../../core/ref/ref-data.model';
+import { UserStore } from '../../core/user.store';
 import {
   MultiDatePickerComponent,
   FormFieldComponent,
   ToggleComponent,
   ButtonComponent,
+  SelectComponent, SelectOption,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig,
-  ModalService,
+  ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -22,8 +26,8 @@ const PAGE_SIZE = 10;
   selector: 'app-holidays-admin',
   standalone: true,
   imports: [
-    SpinnerComponent, ModalComponent, MultiDatePickerComponent,
-    FormFieldComponent, ToggleComponent, ButtonComponent,
+    SpinnerComponent, MultiDatePickerComponent, HolidayCalendarComponent,
+    FormFieldComponent, ToggleComponent, ButtonComponent, SelectComponent,
     DataTableComponent, DafCellDirective, PaginationComponent,
     RhSearchBarComponent,
     TranslatePipe,
@@ -36,6 +40,20 @@ const PAGE_SIZE = 10;
       </div>
       <div class="header-actions">
 
+        <!-- Table / Calendar view toggle — same daf-button pill-toggle pattern as regime-overview's source filters. -->
+        <div class="view-toggle">
+          <daf-button
+            [title]="'ADMIN.catalog.holidays.viewTable' | translate"
+            variant="toggle"
+            [options]="{ active: viewMode() === 'table', pill: true, size: 'sm', iconStart: 'table_rows' }"
+            (onClick)="viewMode.set('table')" />
+          <daf-button
+            [title]="'ADMIN.catalog.holidays.viewCalendar' | translate"
+            variant="toggle"
+            [options]="{ active: viewMode() === 'calendar', pill: true, size: 'sm', iconStart: 'calendar_month' }"
+            (onClick)="viewMode.set('calendar')" />
+        </div>
+
         <!-- Desktop/tablet: full search box + labeled button -->
         <div class="search-field desktop-only">
           <rh-search-bar
@@ -44,7 +62,7 @@ const PAGE_SIZE = 10;
             (valueChange)="searchQuery.set($event)"
           />
         </div>
-        <daf-button class="desktop-only" [label]="'ADMIN.catalog.holidays.add' | translate" variant="primary" (onClick)="openAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.catalog.holidays.add' | translate" variant="teal" (onClick)="openAdd()" />
 
         <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
         @if (mobileSearchOpen()) {
@@ -69,18 +87,31 @@ const PAGE_SIZE = 10;
           <daf-button
             class="icon-btn-toggle mobile-only"
             title="Ajouter"
-            [options]="{ iconStart: 'add', variant: 'primary', size: 'sm' }"
+            [options]="{ iconStart: 'add', variant: 'teal', size: 'sm' }"
             (onClick)="openAdd()" />
         }
       </div>
     </div>
 
     @if (loading()) { <div class="center"><app-spinner /></div> }
-    @else {
+    @else if (viewMode() === 'calendar') {
+      <!-- Calendar view — month-grid, same visual language as the portal's /home calendar.
+           Clicking an empty date opens "Ajouter" prefilled with that date; clicking an
+           already-marked day opens it directly for editing. -->
+      <div class="calendar-wrap">
+        <app-holiday-calendar
+          [holidays]="holidays()"
+          [paysIsoCode]="paysIsoCode()"
+          (dayClick)="onCalendarDayClick($event)"
+          (holidayClick)="openEdit($event)"
+        />
+      </div>
+    } @else {
       <!-- List -->
       @if (holidays().length === 0) {
         <div class="empty-state"><p>{{ 'ADMIN.catalog.holidays.empty' | translate:{ year: selectedYear } }}</p></div>
       } @else {
+        <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
         <div class="table-scroll">
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
           <ng-template dafCell="dateHoliday" let-row>
@@ -93,12 +124,6 @@ const PAGE_SIZE = 10;
             </span>
           </ng-template>
 
-          <ng-template dafCell="_actions" let-row>
-            <div class="actions-cell">
-              <daf-button class="icon-btn-edit" [title]="'ADMIN.catalog.holidays.actionEdit' | translate" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(row['_source'])" />
-              <daf-button class="icon-btn-delete" [title]="'ADMIN.catalog.holidays.actionDelete' | translate" variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
-            </div>
-          </ng-template>
         </daf-data-table>
         </div>
 
@@ -115,14 +140,22 @@ const PAGE_SIZE = 10;
       }
     }
 
-    <!-- Add/Edit Modal -->
-    <app-modal
-      [title]="(editTarget() ? 'ADMIN.catalog.holidays.modalTitleEdit' : 'ADMIN.catalog.holidays.modalTitleNew') | translate"
-      [visible]="showModal()"
-      [hasFooter]="true"
-      (closed)="showModal.set(false)"
-    >
+    <!-- Add/Edit Modal body — projected into the real daf-modal-host via ModalService.
+         Footer lives in here too since ModalConfig.buttons can't react to saving() / form. -->
+    <ng-template #bodyTpl>
       <div class="modal-form">
+        @if (isSuperAdmin()) {
+          <!-- Super admin only: pick which country this holiday belongs to, instead of the
+               connected admin's own pays. -->
+          <div class="field-row">
+            <daf-select
+              [selected]="selectedPaysSelected()"
+              [options]="paysOptions()"
+              [config]="{ label: ('ADMIN.catalog.holidays.colCountry' | translate), required: true, fullWidth: true }"
+              (selectedChange)="onPaysChange($event)"
+            />
+          </div>
+        }
         <div class="field-row">
           <daf-multi-date-picker
             [value]="holidayPickerValue"
@@ -151,24 +184,27 @@ const PAGE_SIZE = 10;
         />
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
-      <div slot="footer">
-        <daf-button [label]="'ADMIN.catalog.holidays.cancel' | translate" variant="secondary" (onClick)="showModal.set(false)" />
+      <div class="modal-footer">
+        <daf-button [label]="'ADMIN.catalog.holidays.cancel' | translate" variant="secondary" (onClick)="cancel()" />
         <daf-button
           [label]="(editTarget() ? 'ADMIN.catalog.holidays.save' : 'ADMIN.catalog.holidays.create') | translate"
           variant="teal"
-          [options]="{ disabled: !form.dateHoliday || !form.frenchLabel || saving(), loading: saving() }"
+          [options]="{ disabled: !form.dateHoliday || !form.frenchLabel || saving() || (isSuperAdmin() && !selectedPaysId()), loading: saving() }"
           (onClick)="save()"
         />
       </div>
-    </app-modal>
+    </ng-template>
   `,
   styles: [`
     .section-header { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
     .col-title { font-size:13px;font-weight:700;margin:0 }
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .header-actions { display:flex;flex-wrap:wrap;gap:8px;align-items:center }
+    .view-toggle    { display:flex;gap:4px }
     .search-field   { width:360px;max-width:100% }
     .center         { display:flex;justify-content:center;padding:24px }
+    .calendar-wrap  { width:100%;padding:8px 0 }
+
     .table-scroll   { overflow-x:auto }
 
     .mobile-only { display:none }
@@ -179,54 +215,55 @@ const PAGE_SIZE = 10;
       .header-actions { flex:1 }
     }
     .date-td   { font-weight:600;color:var(--color-primary);white-space:nowrap }
-    .cell-muted{ color:var(--color-text-muted) }
     .recur-badge { padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;background:var(--color-bg-secondary);color:var(--color-text-muted) }
     .recur-badge.yes { background:#dcfce7;color:var(--color-success) }
-    .actions-cell { display:flex;gap:6px }
     .empty-state { text-align:center;padding:36px;color:var(--color-text-muted) }
     .empty-state p { margin:0;font-size:13px }
     .modal-form { display:flex;flex-direction:column;gap:12px }
     .pagination-row { display:flex;justify-content:flex-end;padding:10px 0 }
     .field-row  { display:flex;flex-direction:column;gap:4px }
     .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
-
-    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
-       own build — force the centered Actions column ourselves. */
-    :host ::ng-deep daf-data-table {
-      th:last-child { text-align: center !important; }
-      td:last-child { display:flex;justify-content:center;align-items:center;gap:6px; }
-    }
+    .modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
   `],
 })
 export class HolidaysAdminComponent implements OnChanges {
-  private svc   = inject(AdminService);
-  private modal = inject(ModalService);
+  private svc      = inject(AdminService);
+  private modal    = inject(ModalService);
   private translate = inject(TranslateService);
+  private refData  = inject(RefDataService);
+  private userStore = inject(UserStore);
 
   paysId    = input(179);
   paysLabel = input('—');
+  paysIsoCode = input('');
+
+  readonly isSuperAdmin = this.userStore.isSuperAdmin;
+  availablePays = signal<PaysTimezone[]>([]);
+  selectedPaysId = signal<number | null>(null);
+
+  readonly paysOptions = computed<SelectOption[]>(() =>
+    this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel })));
+
+  selectedPaysSelected(): string[] {
+    return this.selectedPaysId() ? [String(this.selectedPaysId())] : [];
+  }
+
+  onPaysChange(value: string[]): void {
+    this.selectedPaysId.set(value[0] ? Number(value[0]) : null);
+  }
 
   loading    = signal(false);
   saving     = signal(false);
   holidays   = signal<Holiday[]>([]);
-  showModal  = signal(false);
   editTarget = signal<Holiday | null>(null);
   modalError = signal<string | null>(null);
+
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
   searchQuery = signal('');
   mobileSearchOpen = signal(false);
   selectedYear = new Date().getFullYear();
-
-  readonly columns = computed<TableColumn[]>(() => {
-    this.translate.currentLang();
-    return [
-      { key: 'id',           label: this.translate.instant('ADMIN.catalog.holidays.colId'),       width: '70px' },
-      { key: 'name',         label: this.translate.instant('ADMIN.catalog.holidays.colName') },
-      { key: 'pays',         label: this.translate.instant('ADMIN.catalog.holidays.colCountry') },
-      { key: 'dateHoliday',  label: this.translate.instant('ADMIN.catalog.holidays.colDate') },
-      { key: 'isRecurring',  label: this.translate.instant('ADMIN.catalog.holidays.colRecurring') },
-      { key: '_actions',     label: this.translate.instant('ADMIN.catalog.holidays.colActions'), align: 'right' },
-    ];
-  });
+  viewMode = signal<'table' | 'calendar'>('table');
 
   readonly filteredHolidays = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
@@ -245,12 +282,28 @@ export class HolidaysAdminComponent implements OnChanges {
     return this.filteredHolidays().slice(start, start + PAGE_SIZE);
   });
 
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'dateHoliday', label: this.translate.instant('ADMIN.catalog.holidays.colDate') },
+      { key: 'frenchLabel', label: this.translate.instant('ADMIN.catalog.holidays.colName') },
+      { key: 'pays',        label: this.translate.instant('ADMIN.catalog.holidays.colCountry') },
+      { key: 'isRecurring', label: this.translate.instant('ADMIN.catalog.holidays.colRecurring') },
+    ];
+  });
+
   readonly rows = computed<TableRow[]>(() =>
     this.pagedHolidays().map(h => ({
-      id:          h.id,
-      name:        h.frenchLabel,
-      pays:        this.paysLabel(),
       dateHoliday: h.dateHoliday,
+      frenchLabel: h.frenchLabel,
+      pays:        this.paysLabel(),
       isRecurring: h.isRecurring,
       _source:     h,
     })),
@@ -260,21 +313,31 @@ export class HolidaysAdminComponent implements OnChanges {
     this.translate.currentLang();
     return {
       hoverable: true,
-      emptyMessage: this.translate.instant('ADMIN.catalog.holidays.emptyMessage'),
+      actions: [
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.catalog.holidays.actionEdit'),
+          onClick: (row: TableRow) => this.openEdit(row['_source'] as Holiday),
+        },
+        {
+          id: 'delete', icon: 'delete', variant: 'danger',
+          tooltip: this.translate.instant('ADMIN.catalog.holidays.actionDelete'),
+          onClick: (row: TableRow) => this.del(row['_source'] as Holiday),
+        },
+      ],
     };
   });
-
-  readonly paginationConfig: PaginationConfig = {
-    showFirstLast: true,
-    showPrevNext:  true,
-    maxVisible:    5,
-    size:          'sm',
-  };
 
   private resetPageOnFilterChange = effect(() => {
     this.filteredHolidays();
     this.currentPage.set(0);
   });
+
+  constructor() {
+    if (this.isSuperAdmin()) {
+      this.refData.getPaysTimezones().subscribe(list => this.availablePays.set(list));
+    }
+  }
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
@@ -302,16 +365,49 @@ export class HolidaysAdminComponent implements OnChanges {
     return this.form.dateHoliday ? new Date(this.form.dateHoliday + 'T00:00:00') : null;
   }
 
-  onHolidayDateChange(v: Date | Date[] | null): void {
-    this.form.dateHoliday = v instanceof Date ? v.toISOString().substring(0, 10) : '';
+  /** `toISOString()` converts to UTC first, which shifts back a day in any timezone ahead
+      of UTC (e.g. picking Sept 2 in UTC+1 would save Sept 1) — build the ISO string from
+      the Date's own local fields instead. */
+  private toLocalIso(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  openAdd()  { this.editTarget.set(null); this.form = { dateHoliday: '', frenchLabel: '', englishLabel: '', isRecurring: false }; this.showModal.set(true); this.modalError.set(null); }
-  openEdit(h: Holiday) { this.editTarget.set(h); this.form = { dateHoliday: h.dateHoliday, frenchLabel: h.frenchLabel, englishLabel: h.englishLabel, isRecurring: h.isRecurring }; this.showModal.set(true); this.modalError.set(null); }
+  onHolidayDateChange(v: Date | Date[] | null): void {
+    this.form.dateHoliday = v instanceof Date ? this.toLocalIso(v) : '';
+  }
+
+  openAdd(prefillDate?: string) {
+    this.editTarget.set(null);
+    this.form = { dateHoliday: prefillDate ?? '', frenchLabel: '', englishLabel: '', isRecurring: false };
+    this.selectedPaysId.set(this.paysId());
+    this.modalError.set(null);
+    this.openModal(this.translate.instant('ADMIN.catalog.holidays.modalTitleNew'));
+  }
+
+  onCalendarDayClick(date: Date): void {
+    this.openAdd(this.toLocalIso(date));
+  }
+
+  openEdit(h: Holiday) {
+    this.editTarget.set(h);
+    this.form = { dateHoliday: h.dateHoliday, frenchLabel: h.frenchLabel, englishLabel: h.englishLabel, isRecurring: h.isRecurring };
+    this.selectedPaysId.set(h.paysId);
+    this.modalError.set(null);
+    this.openModal(this.translate.instant('ADMIN.catalog.holidays.modalTitleEdit'));
+  }
+
+  private openModal(title: string): void {
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), closeOnBackdrop: false });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
+  }
 
   save() {
     this.saving.set(true);
-    const dto = { paysId: this.paysId(), ...this.form };
+    const paysId = this.isSuperAdmin() ? (this.selectedPaysId() ?? this.paysId()) : this.paysId();
+    const dto = { paysId, ...this.form };
     const obs = this.editTarget()
       ? this.svc.updateHoliday(this.editTarget()!.id, dto)
       : this.svc.createHoliday(dto);
@@ -319,7 +415,7 @@ export class HolidaysAdminComponent implements OnChanges {
     obs.pipe(catchError(err => { this.modalError.set(err?.error?.message ?? this.translate.instant('ADMIN.catalog.holidays.error')); this.saving.set(false); return of(null); }))
       .subscribe(result => {
         this.saving.set(false);
-        if (result) { this.showModal.set(false); this.load(); }
+        if (result) { this.modalRef?.close(); this.load(); }
       });
   }
 

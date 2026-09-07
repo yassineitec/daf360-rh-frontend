@@ -1,8 +1,13 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
 .rit-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-width: 500px;
+  gap: 20px;
+  width: 100%;
 }
 
 .rit-user-count {

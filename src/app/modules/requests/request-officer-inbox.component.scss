@@ -7,8 +7,6 @@
 .filter-select  { padding:8px 12px;border:1px solid var(--color-outline-variant);border-radius:8px;background:var(--color-surface);font-size:13px;outline:none;min-width:160px;cursor:pointer;color:var(--color-on-surface) }
 .card           { background:var(--color-surface);border:1px solid var(--color-outline-variant);border-radius:12px }
 .table-card     { margin:0 24px 24px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08) }
-.action-link    { color:var(--color-teal);text-decoration:none;font-size:12px;font-weight:500;margin-right:10px }
-.action-link:hover { text-decoration:underline }
 .loading-rows   { padding:12px 16px;display:flex;flex-direction:column;gap:8px }
 .skeleton-row   { height:44px;border-radius:6px;background:linear-gradient(90deg,var(--color-surface-container-low) 25%,var(--color-surface-container) 50%,var(--color-surface-container-low) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite }
 @keyframes shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }

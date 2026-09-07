@@ -1,10 +1,10 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ModalComponent } from '../../shared/modal.component';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
 
@@ -14,7 +14,7 @@ const PAGE_SIZE = 5;
   selector: 'app-interview-types-admin',
   standalone: true,
   imports: [
-    ButtonComponent, FormFieldComponent, ModalComponent,
+    ButtonComponent, FormFieldComponent,
     StatusBadgeComponent, PaginationComponent, DataTableComponent, DafCellDirective,
     TranslatePipe,
   ],
@@ -46,13 +46,8 @@ const PAGE_SIZE = 5;
         <div class="ita-error">{{ error() }}</div>
       }
 
-      <!-- Add / Edit modal -->
-      <app-modal
-        [title]="(editTarget() ? 'ADMIN.docs.interviews.editTitle' : 'ADMIN.docs.interviews.newTypeTitle') | translate"
-        [visible]="showModal()"
-        [hasFooter]="true"
-        (closed)="closeModal()"
-      >
+      <!-- Add / Edit modal body — projected into the real daf-modal-host via ModalService. -->
+      <ng-template #bodyTpl>
         <div class="ita-form-grid">
           <daf-form-field
             [options]="{ label: ('ADMIN.docs.interviews.nameLabel' | translate), placeholder: ('ADMIN.docs.interviews.namePlaceholder' | translate), maxLength: 150, fullWidth: true }"
@@ -72,15 +67,15 @@ const PAGE_SIZE = 5;
         @if (modalError()) {
           <p class="ita-field-error">{{ modalError() }}</p>
         }
-        <div slot="footer">
-          <daf-button [label]="'ADMIN.docs.interviews.cancel' | translate" variant="secondary" (onClick)="closeModal()" />
+        <div class="ita-modal-footer">
+          <daf-button [label]="'ADMIN.docs.interviews.cancel' | translate" variant="secondary" (onClick)="cancel()" />
           <daf-button
             [label]="(saving() ? 'ADMIN.docs.interviews.saving' : (editTarget() ? 'ADMIN.docs.interviews.save' : 'ADMIN.docs.interviews.add')) | translate"
             variant="teal"
             [options]="{ disabled: saving() || !form.name.trim(), loading: saving() }"
             (onClick)="save()" />
         </div>
-      </app-modal>
+      </ng-template>
 
       <!-- List -->
       @if (types().length === 0 && !loading()) {
@@ -98,22 +93,6 @@ const PAGE_SIZE = 5;
             <daf-badge
               [label]="(row['isActive'] ? 'ADMIN.docs.interviews.active' : 'ADMIN.docs.interviews.inactive') | translate"
               [options]="{ variant: row['isActive'] ? 'success' : 'neutral', size: 'sm' }" />
-          </ng-template>
-          <ng-template dafCell="_actions" let-row>
-            <div class="ita-row-actions">
-              <daf-button
-                class="icon-btn-toggle"
-                variant="ghost"
-                [options]="{ iconStart: row['_source'].isActive ? 'toggle_on' : 'toggle_off', size: 'sm' }"
-                [title]="(row['_source'].isActive ? 'ADMIN.docs.interviews.deactivate' : 'ADMIN.docs.interviews.activate') | translate"
-                (onClick)="toggleActive(row['_source'])" />
-              <daf-button
-                class="icon-btn-edit"
-                variant="primary"
-                [options]="{ iconStart: 'edit', size: 'sm' }"
-                [title]="'ADMIN.docs.interviews.edit' | translate"
-                (onClick)="openEdit(row['_source'])" />
-            </div>
           </ng-template>
         </daf-data-table>
         </div>
@@ -141,6 +120,7 @@ const PAGE_SIZE = 5;
     .ita-sub    { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0 }
     .ita-form-grid  { display:grid;grid-template-columns:1fr 120px;gap:12px }
     .ita-field-error { font-size:var(--text-body-sm);color:var(--color-danger);margin:8px 0 0 }
+    .ita-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     .ita-error  { background:var(--color-error-container);border:1px solid var(--color-error-container);border-radius:8px;padding:10px 14px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:14px }
     .ita-row-name { font-size:var(--text-body-sm);font-weight:600;color:var(--color-on-surface) }
     .ita-row-desc { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin-top:1px }
@@ -161,17 +141,19 @@ const PAGE_SIZE = 5;
     }
   `],
 })
-export class InterviewTypesAdminComponent implements OnInit {
+export class InterviewTypesAdminComponent implements OnChanges {
   @Input() paysId!: number;
 
   private svc = inject(InterviewService);
   private translate = inject(TranslateService);
+  private modal = inject(ModalService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   types      = signal<InterviewType[]>([]);
   loading    = signal(false);
   error      = signal<string | null>(null);
 
-  showModal   = signal(false);
   editTarget  = signal<InterviewType | null>(null);
   saving      = signal(false);
   modalError  = signal<string | null>(null);
@@ -197,7 +179,6 @@ export class InterviewTypesAdminComponent implements OnInit {
       { key: 'orderIndex', label: this.translate.instant('ADMIN.docs.interviews.colOrder'), align: 'center', width: '70px' },
       { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colName') },
       { key: 'isActive', label: this.translate.instant('ADMIN.docs.interviews.colStatus'), align: 'center', width: '110px' },
-      { key: '_actions', label: this.translate.instant('ADMIN.docs.interviews.colActions'), align: 'right', width: '120px' },
     ];
   });
 
@@ -205,6 +186,25 @@ export class InterviewTypesAdminComponent implements OnInit {
     hoverable: true,
     loading: this.loading(),
     emptyMessage: this.translate.instant('ADMIN.docs.interviews.tableEmpty'),
+    actions: [
+      {
+        id: 'edit', icon: 'edit',
+        tooltip: this.translate.instant('ADMIN.docs.interviews.edit'),
+        onClick: (row: TableRow) => this.openEdit(row['_source'] as InterviewType),
+      },
+      {
+        id: 'deactivate', icon: 'toggle_on',
+        tooltip: this.translate.instant('ADMIN.docs.interviews.deactivate'),
+        hidden: (row: TableRow) => !(row['_source'] as InterviewType).isActive,
+        onClick: (row: TableRow) => this.toggleActive(row['_source'] as InterviewType),
+      },
+      {
+        id: 'activate', icon: 'toggle_off',
+        tooltip: this.translate.instant('ADMIN.docs.interviews.activate'),
+        hidden: (row: TableRow) => (row['_source'] as InterviewType).isActive,
+        onClick: (row: TableRow) => this.toggleActive(row['_source'] as InterviewType),
+      },
+    ],
   }));
 
   readonly rows = computed<TableRow[]>(() =>
@@ -217,7 +217,7 @@ export class InterviewTypesAdminComponent implements OnInit {
     })),
   );
 
-  ngOnInit(): void { this.load(); }
+  ngOnChanges(): void { this.load(); }
 
   private load(): void {
     this.loading.set(true);
@@ -233,17 +233,23 @@ export class InterviewTypesAdminComponent implements OnInit {
     this.editTarget.set(null);
     this.form = { name: '', description: '', orderIndex: maxOrder + 1 };
     this.modalError.set(null);
-    this.showModal.set(true);
+    this.openModal(this.translate.instant('ADMIN.docs.interviews.newTypeTitle'));
   }
 
   openEdit(t: InterviewType): void {
     this.editTarget.set(t);
     this.form = { name: t.name, description: t.description ?? '', orderIndex: t.orderIndex };
     this.modalError.set(null);
-    this.showModal.set(true);
+    this.openModal(this.translate.instant('ADMIN.docs.interviews.editTitle'));
   }
 
-  closeModal(): void { this.showModal.set(false); }
+  private openModal(title: string): void {
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), closeOnBackdrop: false });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
+  }
 
   save(): void {
     if (!this.form.name.trim()) { this.modalError.set(this.translate.instant('ADMIN.docs.interviews.nameRequired')); return; }
@@ -262,7 +268,7 @@ export class InterviewTypesAdminComponent implements OnInit {
       : this.svc.createType({ paysId: this.paysId, ...dto });
 
     obs.subscribe({
-      next:  () => { this.saving.set(false); this.showModal.set(false); this.load(); },
+      next:  () => { this.saving.set(false); this.modalRef?.close(); this.load(); },
       error: err => {
         this.saving.set(false);
         this.modalError.set(err?.error?.detail ?? this.translate.instant('ADMIN.docs.interviews.saveError'));

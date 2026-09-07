@@ -1,21 +1,18 @@
 <div class="re-container">
-  <div class="re-tabs">
-    <button class="re-tab" [class.re-tab-active]="activeTab() === 'info'"
-            (click)="activeTab.set('info')" type="button">
-      {{ 'ADMIN.roles.editor.TAB_INFO' | translate }}
-    </button>
-    <button class="re-tab" [class.re-tab-active]="activeTab() === 'permissions'"
-            (click)="activeTab.set('permissions')" type="button">
-      {{ 'ADMIN.roles.editor.TAB_PERMISSIONS' | translate }}
-    </button>
-    <button class="re-tab" [class.re-tab-active]="activeTab() === 'users'"
-            (click)="activeTab.set('users')" type="button">
-      {{ 'ADMIN.roles.editor.TAB_USERS' | translate }}
-      <span class="re-tab-count">{{ role().userCount }}</span>
-    </button>
-  </div>
+  <!-- Real daf-tabs strip, same convention as /rh/profiles/:id — [hidden] panels below
+       (rather than @switch) so tab state stays mounted across switches. -->
+  <daf-tabs #tabsRef
+    class="re-tabs"
+    variant="underline"
+    [tabs]="tabs()"
+    [active]="activeTab()"
+    (activeChange)="onTabChange($event)"
+    [tabsLabel]="'ADMIN.roles.editor.TABS_ARIA' | translate"
+    idPrefix="role-editor" />
 
-  <div class="re-content">
+  <div class="re-content" role="tabpanel"
+       [id]="tabsRef.panelId(activeTab())"
+       [attr.aria-labelledby]="tabsRef.tabId(activeTab())">
     <!-- Use [hidden] not @if so components stay mounted and preserve state between tab switches -->
     <div [hidden]="activeTab() !== 'info'">
       <app-role-info-tab

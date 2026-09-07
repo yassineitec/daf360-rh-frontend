@@ -1,13 +1,12 @@
-import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { ParameterSet }     from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { ModalComponent } from '../../shared/modal.component';
 import {
   FormFieldComponent, ButtonComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  PaginationComponent, PaginationConfig, ModalService,
+  PaginationComponent, PaginationConfig, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -18,7 +17,7 @@ const PAGE_SIZE = 10;
   standalone: true,
   imports: [
     SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective,
-    ModalComponent, PaginationComponent, TranslatePipe,
+    PaginationComponent, TranslatePipe,
   ],
   template: `
     <div class="section-header">
@@ -35,7 +34,7 @@ const PAGE_SIZE = 10;
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button class="desktop-only" [label]="'ADMIN.data.parameters.ADD' | translate" variant="primary" (onClick)="startAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.data.parameters.ADD' | translate" variant="teal" (onClick)="startAdd()" />
 
         <!-- Mobile: icon-only -->
         <daf-button
@@ -48,7 +47,7 @@ const PAGE_SIZE = 10;
         <daf-button
           class="icon-btn-toggle mobile-only"
           title="Ajouter"
-          variant="primary"
+          variant="teal"
           [options]="{ iconStart: 'add', size: 'sm' }"
           (onClick)="startAdd()"
         />
@@ -90,15 +89,6 @@ const PAGE_SIZE = 10;
           <span class="date-cell">{{ fmtDate(row['_source'].updatedAt) }}</span>
         </ng-template>
 
-        <ng-template dafCell="_actions" let-row>
-          @if (editingId() === row['_source'].id) {
-            <daf-button label="" variant="primary" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="saveEdit(row['_source'])" />
-            <daf-button label="" variant="secondary" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="editingId.set(null)" />
-          } @else {
-            <daf-button class="icon-btn-edit" [title]="'ADMIN.data.parameters.EDIT' | translate" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
-            <daf-button class="icon-btn-delete" [title]="'ADMIN.data.parameters.DELETE_SHORT' | translate" variant="danger" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="del(row['_source'])" />
-          }
-        </ng-template>
       </daf-data-table>
       </div>
 
@@ -116,13 +106,8 @@ const PAGE_SIZE = 10;
 
     @if (error()) { <div class="error-banner" role="alert">{{ error() }}</div> }
 
-    <!-- Add modal -->
-    <app-modal
-      [title]="'ADMIN.data.parameters.ADD_TITLE' | translate"
-      [visible]="addMode()"
-      [hasFooter]="true"
-      (closed)="addMode.set(false)"
-    >
+    <!-- Add modal body — projected into the real daf-modal-host via ModalService. -->
+    <ng-template #bodyTpl>
       <div class="modal-form">
         <daf-form-field
           [options]="{ label: ('ADMIN.data.parameters.KEY' | translate), placeholder: ('ADMIN.data.parameters.KEY_PLACEHOLDER' | translate), required: true, fullWidth: true }"
@@ -140,11 +125,15 @@ const PAGE_SIZE = 10;
           (valueChange)="newDesc = $any($event)"
         />
       </div>
-      <div slot="footer">
-        <daf-button [label]="'ADMIN.data.parameters.CANCEL' | translate" variant="secondary" (onClick)="addMode.set(false)" />
-        <daf-button [label]="'ADMIN.data.parameters.CREATE' | translate" variant="teal" [options]="{ disabled: !newCle.trim() || !newValeur.trim() }" (onClick)="add()" />
+      <div class="modal-footer">
+        <daf-button [label]="'ADMIN.data.parameters.CANCEL' | translate" variant="secondary" [options]="{ disabled: adding() }" (onClick)="cancel()" />
+        <daf-button
+          [label]="'ADMIN.data.parameters.CREATE' | translate"
+          variant="teal"
+          [options]="{ disabled: !newCle.trim() || !newValeur.trim() || adding(), loading: adding() }"
+          (onClick)="add()" />
       </div>
-    </app-modal>
+    </ng-template>
   `,
   styles: [`
     .section-header  { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
@@ -168,19 +157,15 @@ const PAGE_SIZE = 10;
     .modal-form      { display:flex;flex-direction:column;gap:14px }
     .pagination-row  { display:flex;justify-content:flex-end;padding:10px 0 }
     .error-banner { margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
-
-    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
-       own build — force the right-aligned Actions column ourselves. */
-    :host ::ng-deep daf-data-table {
-      th:last-child { text-align: right !important; }
-      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
-    }
+    .modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
   `],
 })
 export class ParametersAdminComponent implements OnChanges {
   private svc   = inject(AdminService);
   private modal = inject(ModalService);
   private t     = inject(TranslateService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   paysId = input(179);
 
@@ -192,7 +177,7 @@ export class ParametersAdminComponent implements OnChanges {
   editingId = signal<number | null>(null);
   editValeur = '';
 
-  addMode  = signal(false);
+  adding   = signal(false);
   newCle   = '';
   newValeur = '';
   newDesc  = '';
@@ -204,7 +189,6 @@ export class ParametersAdminComponent implements OnChanges {
       { key: 'valeur',      label: this.t.instant('ADMIN.data.parameters.VALUE') },
       { key: 'description', label: this.t.instant('ADMIN.data.parameters.DESCRIPTION') },
       { key: 'updatedAt',   label: this.t.instant('ADMIN.data.parameters.COL_UPDATED') },
-      { key: '_actions',    label: '', align: 'right' },
     ];
   });
 
@@ -227,9 +211,38 @@ export class ParametersAdminComponent implements OnChanges {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.t.currentLang();
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'save', icon: 'check',
+          tooltip: this.t.instant('ADMIN.data.parameters.SAVE'),
+          hidden: (row: TableRow) => this.editingId() !== (row['_source'] as ParameterSet).id,
+          onClick: (row: TableRow) => this.saveEdit(row['_source'] as ParameterSet),
+        },
+        {
+          id: 'cancel', icon: 'close',
+          tooltip: this.t.instant('ADMIN.data.parameters.CANCEL'),
+          hidden: (row: TableRow) => this.editingId() !== (row['_source'] as ParameterSet).id,
+          onClick: () => this.editingId.set(null),
+        },
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.t.instant('ADMIN.data.parameters.EDIT'),
+          hidden: (row: TableRow) => this.editingId() === (row['_source'] as ParameterSet).id,
+          onClick: (row: TableRow) => this.startEdit(row['_source'] as ParameterSet),
+        },
+        {
+          id: 'delete', icon: 'delete', variant: 'danger',
+          tooltip: this.t.instant('ADMIN.data.parameters.DELETE_SHORT'),
+          hidden: (row: TableRow) => this.editingId() === (row['_source'] as ParameterSet).id,
+          onClick: (row: TableRow) => this.del(row['_source'] as ParameterSet),
+        },
+      ],
+    };
+  });
 
   readonly paginationConfig: PaginationConfig = {
     showFirstLast: true,
@@ -280,13 +293,25 @@ export class ParametersAdminComponent implements OnChanges {
     });
   }
 
-  startAdd() { this.addMode.set(true); this.newCle = ''; this.newValeur = ''; this.newDesc = ''; }
+  startAdd() {
+    this.newCle = ''; this.newValeur = ''; this.newDesc = '';
+    this.modalRef = this.modal.open({
+      title: this.t.instant('ADMIN.data.parameters.ADD_TITLE'),
+      body: this.bodyTpl(),
+      closeOnBackdrop: false,
+    });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
+  }
 
   add() {
+    this.adding.set(true);
     this.svc.createParameter({ paysId: this.paysId(), cle: this.newCle.toUpperCase(), valeur: this.newValeur, description: this.newDesc || undefined })
-      .pipe(catchError(err => { this.error.set(err?.error?.message ?? this.t.instant('ADMIN.data.parameters.ERROR')); return of(null); }))
+      .pipe(catchError(err => { this.error.set(err?.error?.message ?? this.t.instant('ADMIN.data.parameters.ERROR')); this.adding.set(false); return of(null); }))
       .subscribe(created => {
-        if (created) { this.params.update(ps => [...ps, created]); this.addMode.set(false); }
+        if (created) { this.adding.set(false); this.params.update(ps => [...ps, created]); this.modalRef?.close(); }
       });
   }
 

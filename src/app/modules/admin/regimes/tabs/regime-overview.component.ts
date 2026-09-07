@@ -1,20 +1,18 @@
 import {
-  Component, OnChanges, SimpleChanges, computed, inject, input, signal,
+  Component, OnChanges, SimpleChanges, TemplateRef, computed, inject, input, signal, viewChild,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import {
   AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
   DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
-  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService,
+  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
+  PermissionService,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import {
   RegimeOverviewStats, EmployeeRegimeOverview, WorkingTimeRegime,
   AssignEmployeeOverrideRequest,
 } from '../regime.model';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../../../shared/modal.component';
-import { RhSearchBarComponent } from '../../../../shared/search-bar.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
@@ -23,9 +21,9 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   selector: 'app-regime-overview',
   standalone: true,
   imports: [
-    NgClass, DafHasPermissionDirective, DataTableComponent, DafCellDirective,
-    ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
-    PaginationComponent, RhSearchBarComponent, TranslatePipe,
+    NgClass, DataTableComponent, DafCellDirective,
+    ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
+    PaginationComponent, TranslatePipe,
   ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
@@ -34,6 +32,9 @@ export class RegimeOverviewComponent implements OnChanges {
   private svc   = inject(RegimeService);
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
+  private perms = inject(PermissionService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   readonly paysId = input<number>(179);
 
@@ -63,7 +64,6 @@ export class RegimeOverviewComponent implements OnChanges {
   }
 
   // Employee panel
-  showEmployeePanel = signal(false);
   showOverrideForm  = signal(false);
   selectedEmployee  = signal<EmployeeRegimeOverview | null>(null);
 
@@ -114,7 +114,6 @@ export class RegimeOverviewComponent implements OnChanges {
     { key: 'role', label: this.translate.instant('ADMIN.regimes.overview.columns.role') },
     { key: 'regime', label: this.translate.instant('ADMIN.regimes.overview.columns.regime') },
     { key: 'source', label: this.translate.instant('ADMIN.regimes.overview.columns.source'), type: 'badge' },
-    { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
   ];
 
   readonly totalElements = computed(() => this.filteredEmployees().length);
@@ -147,6 +146,12 @@ export class RegimeOverviewComponent implements OnChanges {
       loading: this.isLoadingTable(),
       skeletonRows: 5,
       emptyMessage: this.translate.instant('ADMIN.regimes.overview.empty'),
+      actions: [{
+        id: 'edit', icon: 'edit',
+        tooltip: this.translate.instant('ADMIN.regimes.common.edit'),
+        hidden: () => !this.perms.has('ADMIN_REGIMES'),
+        onClick: (row: TableRow) => this.openEmployeePanel(row['_source'] as EmployeeRegimeOverview),
+      }],
     };
   });
 
@@ -177,7 +182,11 @@ export class RegimeOverviewComponent implements OnChanges {
     this.overrideEffTo    = '';
     this.overrideReason   = '';
     this.noEndDate.set(true);
-    this.showEmployeePanel.set(true);
+    this.modalRef = this.modal.open({
+      title: emp.fullName ?? '',
+      body: this.bodyTpl(),
+      closeOnBackdrop: false,
+    });
   }
 
   confirmOverride(): void {
@@ -193,7 +202,7 @@ export class RegimeOverviewComponent implements OnChanges {
     this.svc.assignEmployeeOverride(emp.employeeProfileId, dto).subscribe({
       next: () => {
         this.isSaving.set(false);
-        this.showEmployeePanel.set(false);
+        this.modalRef?.close();
         this.loadAll();
       },
       error: err => {
@@ -218,7 +227,7 @@ export class RegimeOverviewComponent implements OnChanges {
 
   private doRemoveOverride(emp: EmployeeRegimeOverview): void {
     this.svc.removeEmployeeOverride(emp.employeeProfileId).subscribe({
-      next: () => { this.showEmployeePanel.set(false); this.loadAll(); },
+      next: () => { this.modalRef?.close(); this.loadAll(); },
       error: err => this.panelError.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.overview.errorGeneric')),
     });
   }

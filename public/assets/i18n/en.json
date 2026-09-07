@@ -610,29 +610,42 @@
   },
   "RECRUITMENT_VALIDATION": {
     "TITLE": "Hiring request approvals",
-    "SUBTITLE": "Headcount needs raised by managers. Your approval is what opens the position to recruitment.",
-    "SEE_ALL": "All requests",
-    "EMPTY": "No requests awaiting approval",
-    "EMPTY_HINT": "New manager requests will appear here.",
+    "SEARCH_PLACEHOLDER": "Search by position or department…",
+    "KPI_TOTAL": "Pending",
+    "KPI_HEADCOUNT": "Positions to fill",
+    "KPI_NO_CANDIDATES": "No candidate yet",
+    "KPI_OLD": "Pending 7+ days",
+    "EMPTY": "No pending hiring requests.",
     "OPEN": "Open",
     "APPROVE": "Approve",
     "REJECT": "Reject",
     "APPROVE_TITLE": "Approve the request",
     "REJECT_TITLE": "Reject the request",
+    "SUCCESS_TITLE": "Decision recorded",
+    "APPROVE_SUCCESS": "The request has been approved.",
+    "REJECT_SUCCESS": "The request has been rejected.",
     "POSITIONS": "{{n}} positions",
     "COMMENT_OPTIONAL": "Comment (optional)",
     "COMMENT_REQUIRED": "Reason for rejection",
     "CANCEL": "Cancel",
     "SAVING": "Saving…",
-    "COL_POSITION": "Position",
-    "COL_HEADCOUNT": "Positions",
-    "COL_REASON": "Reason",
-    "COL_URGENCY": "Urgency",
-    "COL_SUBMITTED": "Submitted",
     "ERR_LOAD": "Could not load the hiring requests.",
     "ERR_NO_PAYS": "Your account is not attached to an entity — the approval queue cannot be listed.",
     "ERR_COMMENT_REQUIRED": "Please give a reason for the rejection.",
-    "ERR_REVIEW": "Saving the decision failed. Please retry."
+    "ERR_REVIEW": "Saving the decision failed. Please retry.",
+    "FILTERS": {
+      "TITLE": "Filter requests",
+      "TRIGGER": "Filters",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "RESET": "Reset",
+      "STATUS_LABEL": "Status",
+      "CANDIDATES_LABEL": "Candidates",
+      "CANDIDATES_ALL": "All",
+      "CANDIDATES_SOME": "With a candidate",
+      "AGE_LABEL": "Age",
+      "AGE_ALL": "All"
+    }
   },
   "RECRUITMENT_DEMANDS": {
     "STATUS": {
@@ -643,12 +656,12 @@
       "CLOTUREE": "Closed"
     },
     "LIST": {
-      "TITLE": "Recruitment requests",
+      "TITLE": "Request history",
       "DEMAND_SINGULAR": "request",
       "DEMAND_PLURAL": "requests",
       "NEW_DEMAND": "New request",
       "LOADING": "Loading…",
-      "EMPTY": "No recruitment request found.",
+      "EMPTY": "No processed recruitment requests.",
       "CREATE_DEMAND": "Create a request",
       "VIEW": "View",
       "PREV": "‹ Prev.",
@@ -660,7 +673,30 @@
       "COL_HEADCOUNT": "Headcount",
       "COL_CANDIDATES": "Candidates",
       "COL_STATUS": "Status",
-      "COL_SUBMITTED": "Submitted on"
+      "COL_SUBMITTED": "Submitted on",
+      "SEARCH_PLACEHOLDER": "Search by position or department…",
+      "KPI_TOTAL": "Total",
+      "MAIN_TAB_RECRUITMENT": "Recruitment",
+      "MAIN_TAB_OTHER": "Request",
+      "MAIN_TABS_ARIA": "History type",
+      "OTHER_SEARCH_PLACEHOLDER": "Search by employee name…",
+      "OTHER_EMPTY": "No processed requests.",
+      "OTHER_KPI_TOTAL": "Total",
+      "OTHER_KPI_APPROVED": "Approved",
+      "OTHER_KPI_REJECTED": "Rejected",
+      "OTHER_KPI_CANCELLED": "Cancelled",
+      "OTHER_FILTER_ALL": "All ({{count}})",
+      "OTHER_FILTER_APPROVED": "Approved ({{count}})",
+      "OTHER_FILTER_REJECTED": "Rejected ({{count}})",
+      "OTHER_FILTER_CANCELLED": "Cancelled ({{count}})",
+      "FILTERS": {
+        "TITLE": "Filter requests",
+        "TRIGGER": "Filters",
+        "APPLY": "Apply",
+        "CANCEL": "Cancel",
+        "RESET": "Reset",
+        "STATUS_LABEL": "Status"
+      }
     },
     "FILTER": {
       "ALL": "All statuses",
@@ -672,6 +708,8 @@
     },
     "DETAIL": {
       "BACK": "Back to requests",
+      "BREADCRUMB": "Requests",
+      "BREADCRUMB_ARIA": "Breadcrumb",
       "LOADING": "Loading…",
       "NOT_FOUND": "Request not found.",
       "JOB_DETAILS": "Position details",
@@ -694,8 +732,8 @@
       "DECISION": "Decision",
       "PROCESS": "Process the request",
       "COMMENT_OPTIONAL": "Comment (optional)",
-      "APPROVE": "✓ Approve",
-      "REJECT": "✗ Reject",
+      "APPROVE": "Approve",
+      "REJECT": "Reject",
       "CANCEL_DEMAND": "Cancel this request",
       "ERR": "Error"
     },
@@ -2132,6 +2170,11 @@
         "SEARCH_PLACEHOLDER": "Search for a role…",
         "NEW_ROLE": "+ New role",
         "LOADING": "Loading…",
+        "COL_NAME": "Role",
+        "COL_DETAILS": "Details",
+        "COL_PARENT": "Parent role",
+        "COL_ACTIONS": "Actions",
+        "EMPTY": "No roles found",
         "PERMISSIONS": "{{count}} permissions",
         "USERS": "{{count}} users",
         "SHOW_ALL": "View all",
@@ -2142,7 +2185,8 @@
       "editor": {
         "TAB_INFO": "Information",
         "TAB_PERMISSIONS": "Permissions",
-        "TAB_USERS": "Users"
+        "TAB_USERS": "Users",
+        "TABS_ARIA": "Role sections"
       },
       "create": {
         "TITLE": "Create a new role",
@@ -2237,6 +2281,8 @@
       },
       "title": "Administration",
       "entity": "Entity {{pays}}",
+      "back": "Back",
+      "countryMenu": "Switch country",
       "tabs": {
         "roles": "Roles & Permissions",
         "parameters": "Payroll settings",
@@ -2514,6 +2560,7 @@
         "PH_DESC": "(optional)",
         "CANCEL": "Cancel",
         "CREATE": "Create",
+        "SAVE": "Save",
         "EDIT": "Edit",
         "DELETE_SHORT": "Del.",
         "DELETE_TITLE": "Delete parameter",
@@ -2698,7 +2745,8 @@
         "legalRules": "Legal rules",
         "catalog": "Catalog",
         "roleAssignment": "Role assignment",
-        "overview": "Overview"
+        "overview": "Overview",
+        "ariaLabel": "Working time regime sections"
       },
       "breaks": {
         "title": "Break templates",
@@ -2787,6 +2835,8 @@
         }
       },
       "catalog": {
+        "colName": "Regime",
+        "colSchedule": "Schedule",
         "updateSuccess": "Regime updated successfully.",
         "errorSave": "Error while saving.",
         "deleteTitle": "Delete regime",
@@ -3053,7 +3103,23 @@
         "error": "Error",
         "deleteTitle": "Delete public holiday",
         "deleteBody": "Do you really want to delete \"{{name}}\"? This action is irreversible.",
-        "deleteConfirm": "Delete"
+        "deleteConfirm": "Delete",
+        "viewTable": "Table",
+        "viewCalendar": "Calendar",
+        "calendar": {
+          "prevMonth": "Previous month",
+          "nextMonth": "Next month",
+          "abbrev": "PH",
+          "days": {
+            "SUN": "Sun",
+            "MON": "Mon",
+            "TUE": "Tue",
+            "WED": "Wed",
+            "THU": "Thu",
+            "FRI": "Fri",
+            "SAT": "Sat"
+          }
+        }
       }
     },
     "notifications": {
@@ -3132,7 +3198,19 @@
       "TITLE": "Cancel request",
       "MESSAGE": "Cancel this request?",
       "CONFIRM": "Cancel request",
-      "BACK": "Back"
+      "BACK": "Back",
+      "SUCCESS_TITLE": "Request cancelled",
+      "SUCCESS": "The request has been cancelled.",
+      "ERROR": "Unable to cancel the request. Please try again."
+    },
+    "APPROVE": {
+      "TITLE": "Approve request",
+      "MESSAGE": "Approve this request?",
+      "CONFIRM": "Approve",
+      "BACK": "Back",
+      "SUCCESS_TITLE": "Request approved",
+      "SUCCESS": "The request has been approved.",
+      "ERROR": "Unable to approve the request. Please try again."
     },
     "STATUS": {
       "SUBMITTED": "Submitted",
@@ -3144,28 +3222,62 @@
     },
     "LIST": {
       "TITLE": "My HR requests",
-      "INBOX_BTN": "Inbox",
       "NEW_BTN": "New request",
       "INTRO_EYEBROW": "Status of your requests",
       "INTRO_TITLE": "Real-time tracking of your administrative requests.",
-      "EMPTY_DONE": "No processed requests",
+      "KPI_TOTAL": "In progress",
+      "KPI_URGENT": "Urgent",
+      "KPI_SOON": "To handle soon",
+      "KPI_OK": "On track",
+      "EMPTY_ALL": "No requests",
       "EMPTY_ACTIVE": "No pending requests",
+      "EMPTY_APPROVED": "No approved requests",
+      "EMPTY_REJECTED": "No rejected requests",
       "EMPTY_HINT": "Your requests will appear here.",
+      "TAB_ALL": "All ({{count}})",
       "TAB_ACTIVE": "Active ({{count}})",
-      "TAB_DONE": "Processed ({{count}})",
+      "TAB_APPROVED": "Approved ({{count}})",
+      "TAB_REJECTED": "Rejected ({{count}})",
       "COL_TYPE": "Request type",
       "COL_SUBMITTED": "Submitted on",
       "COL_STATUS": "Status",
       "COL_SLA": "SLA",
       "COL_ACTIONS": "Actions",
       "VIEW": "View request",
-      "TABLE_EMPTY": "No requests."
+      "TABLE_EMPTY": "No requests.",
+      "MAIN_TAB_OTHER": "Request",
+      "MAIN_TAB_RECRUITMENT": "Hiring request",
+      "MAIN_TABS_ARIA": "Request type",
+      "SEARCH_PLACEHOLDER": "Search by employee name…",
+      "SEARCH_EMPTY": "No results for this search.",
+      "SEARCH_EMPTY_HINT": "Check the spelling or try another name.",
+      "VIEW_DETAIL": "View detail",
+      "CANCEL_REASON_PROCESSING": "This request is being processed and can no longer be cancelled.",
+      "CANCEL_REASON_CLOSED": "This request is already closed.",
+      "CANCEL_REASON_NOT_OWNER": "You can only cancel your own requests.",
+      "SLA_URGENT": "Urgent",
+      "SLA_TODAY": "Due today",
+      "SLA_SOON": "Due soon",
+      "SLA_OK": "On track",
+      "NEW_SUCCESS_TITLE": "Request sent",
+      "NEW_SUCCESS": "Your request has been submitted.",
+      "FILTERS": {
+        "TITLE": "Filter requests",
+        "TRIGGER": "Filters",
+        "APPLY": "Apply",
+        "CANCEL": "Cancel",
+        "RESET": "Reset",
+        "STATUS_LABEL": "Status",
+        "URGENCY_LABEL": "Urgency",
+        "URGENCY_ALL": "All"
+      }
     },
     "DETAIL": {
       "NOT_FOUND": "Request not found.",
       "BACK_TO_REQUESTS": "Back to requests",
       "BREADCRUMB": "Requests",
       "CANCEL_BTN": "Cancel request",
+      "APPROVE_BTN": "Approve request",
       "TAKE_CHARGE": "Take charge",
       "SUBMITTED_ON": "Submitted on {{date}}",
       "OFFICER_NUMBER": "Officer #{{id}}",
@@ -3186,6 +3298,7 @@
       "EMPLOYEE": "Employee",
       "PROFILE_KEY": "Profile",
       "COUNTRY_KEY": "Country",
+      "OFFICER_KEY": "Assigned officer",
       "VIEW_FULL_PROFILE": "View full profile →",
       "ACTION_TITLE": "Processing action",
       "COMMENT_LABEL": "Comment",
@@ -3435,6 +3548,7 @@
     "OFFBOARDING": "Offboarding",
     "OFFBOARDING_RESIGNATION": "Resignation",
     "REQUESTS": "Requests",
+    "REQUESTS_HISTORY": "Request history",
     "ADMIN": "Admin"
   }
 }

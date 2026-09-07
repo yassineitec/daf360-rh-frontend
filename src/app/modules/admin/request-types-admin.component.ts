@@ -1,15 +1,14 @@
-import { Component, computed, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }        from './admin.service';
 import { RequestTypeCatalog }  from './models/admin.model';
 import { SpinnerComponent }    from '../../shared/spinner.component';
-import { ModalComponent }      from '../../shared/modal.component';
 import {
   SelectComponent, SelectOption,
   FormFieldComponent,
   ButtonComponent,
   StatusBadgeComponent, DataTableComponent, DafCellDirective,
-  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService,
+  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -20,7 +19,7 @@ const PAGE_SIZE = 5;
   selector: 'app-request-types-admin',
   standalone: true,
   imports: [
-    SpinnerComponent, ModalComponent, SelectComponent, FormFieldComponent, ButtonComponent,
+    SpinnerComponent, SelectComponent, FormFieldComponent, ButtonComponent,
     StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent,
     TranslatePipe,
   ],
@@ -38,7 +37,7 @@ const PAGE_SIZE = 5;
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button class="desktop-only" [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="primary" (onClick)="openAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="teal" (onClick)="openAdd()" />
 
         <daf-button
           class="icon-btn-toggle mobile-only"
@@ -50,7 +49,7 @@ const PAGE_SIZE = 5;
         <daf-button
           class="icon-btn-toggle mobile-only"
           title="Ajouter"
-          variant="primary"
+          variant="teal"
           [options]="{ iconStart: 'add', size: 'sm' }"
           (onClick)="openAdd()"
         />
@@ -65,7 +64,7 @@ const PAGE_SIZE = 5;
       </div>
     } @else {
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig">
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
         <ng-template dafCell="category" let-row>
           <daf-badge [label]="row['category']" [options]="{ variant: 'neutral', size: 'sm' }" />
         </ng-template>
@@ -74,12 +73,6 @@ const PAGE_SIZE = 5;
         </ng-template>
         <ng-template dafCell="isActive" let-row>
           <daf-badge [label]="(row['_source'].isActive ? 'ADMIN.catalog.requestTypes.statusActive' : 'ADMIN.catalog.requestTypes.statusInactive') | translate" [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }" />
-        </ng-template>
-        <ng-template dafCell="_actions" let-row>
-          <daf-button [label]="'ADMIN.catalog.requestTypes.actionEdit' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="openEdit(row['_source'])" />
-          @if (row['_source'].isActive) {
-            <daf-button [label]="'ADMIN.catalog.requestTypes.actionDeactivate' | translate" variant="danger" [options]="{ size: 'sm' }" (onClick)="deactivate(row['_source'])" />
-          }
         </ng-template>
       </daf-data-table>
       </div>
@@ -97,13 +90,10 @@ const PAGE_SIZE = 5;
       </div>
     }
 
-    <!-- Add/Edit Modal -->
-    <app-modal
-      [title]="(editTarget() ? 'ADMIN.catalog.requestTypes.modalTitleEdit' : 'ADMIN.catalog.requestTypes.modalTitleNew') | translate"
-      [visible]="showModal()"
-      [hasFooter]="true"
-      (closed)="showModal.set(false)"
-    >
+    <!-- Add/Edit Modal body — projected into the real daf-modal-host via ModalService.
+         The footer lives in here too (not in ModalConfig.buttons), because that config is
+         a one-shot snapshot that can't react to saving() / form afterward. -->
+    <ng-template #bodyTpl>
       <div class="modal-form">
         <div class="field-row">
           <daf-form-field
@@ -160,8 +150,8 @@ const PAGE_SIZE = 5;
         </div>
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
-      <div slot="footer">
-        <daf-button [label]="'ADMIN.catalog.requestTypes.cancel' | translate" variant="secondary" (onClick)="showModal.set(false)" />
+      <div class="rta-modal-footer">
+        <daf-button [label]="'ADMIN.catalog.requestTypes.cancel' | translate" variant="secondary" (onClick)="cancel()" />
         <daf-button
           [label]="(editTarget() ? 'ADMIN.catalog.requestTypes.save' : 'ADMIN.catalog.requestTypes.create') | translate"
           variant="teal"
@@ -169,7 +159,7 @@ const PAGE_SIZE = 5;
           (onClick)="save()"
         />
       </div>
-    </app-modal>
+    </ng-template>
   `,
   styles: [`
     .section-header { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
@@ -186,6 +176,10 @@ const PAGE_SIZE = 5;
     .form-row   { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px }
     .field-row  { display:flex;flex-direction:column;gap:4px }
     .error-banner { margin-top:8px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
+
+    /* The footer lives inside the body template (see the component class), so it needs its
+       own separator — daf-modal-host only draws one around config.buttons. */
+    .rta-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
 
     @media (max-width: 560px) {
       .form-row { grid-template-columns:1fr }
@@ -209,9 +203,11 @@ export class RequestTypesAdminComponent implements OnChanges {
   seeding    = signal(false);
   saving     = signal(false);
   types      = signal<RequestTypeCatalog[]>([]);
-  showModal  = signal(false);
   editTarget = signal<RequestTypeCatalog | null>(null);
   modalError = signal<string | null>(null);
+
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   readonly categories = CATEGORIES;
   readonly categoryOptions: SelectOption[] = CATEGORIES.map(c => ({ value: c, label: c }));
@@ -234,11 +230,28 @@ export class RequestTypesAdminComponent implements OnChanges {
       { key: 'approvalLevel', label: this.translate.instant('ADMIN.catalog.requestTypes.colApproval') },
       { key: 'defaultSlaDays', label: this.translate.instant('ADMIN.catalog.requestTypes.colSla'), align: 'center' },
       { key: 'isActive', label: this.translate.instant('ADMIN.catalog.requestTypes.colActive'), align: 'center' },
-      { key: '_actions', label: this.translate.instant('ADMIN.catalog.requestTypes.colActions'), align: 'right' },
     ];
   });
 
-  readonly tableConfig: TableConfig = { hoverable: true };
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.catalog.requestTypes.actionEdit'),
+          onClick: (row: TableRow) => this.openEdit(row['_source'] as RequestTypeCatalog),
+        },
+        {
+          id: 'deactivate', icon: 'toggle_on',
+          tooltip: this.translate.instant('ADMIN.catalog.requestTypes.actionDeactivate'),
+          hidden: (row: TableRow) => !(row['_source'] as RequestTypeCatalog).isActive,
+          onClick: (row: TableRow) => this.deactivate(row['_source'] as RequestTypeCatalog),
+        },
+      ],
+    };
+  });
 
   // Pagination — 5 per page
   currentPage = signal(0);
@@ -283,15 +296,36 @@ export class RequestTypesAdminComponent implements OnChanges {
     this.form.approvalLevel = (value === 'L2' ? 'L2' : 'L1');
   }
 
-  openAdd()  { this.editTarget.set(null); this.form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1', defaultSlaDays:2 }; this.showModal.set(true); this.modalError.set(null); }
-  openEdit(t: RequestTypeCatalog) { this.editTarget.set(t); this.form = { typeCode:t.typeCode, displayNameFr:t.displayNameFr, displayNameEn:t.displayNameEn, description:t.description??'', category:t.category, approvalLevel:t.approvalLevel, defaultSlaDays:t.defaultSlaDays }; this.showModal.set(true); this.modalError.set(null); }
+  openAdd() {
+    this.editTarget.set(null);
+    this.form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1', defaultSlaDays:2 };
+    this.modalError.set(null);
+    this.openModal(this.translate.instant('ADMIN.catalog.requestTypes.modalTitleNew'));
+  }
+
+  openEdit(t: RequestTypeCatalog) {
+    this.editTarget.set(t);
+    this.form = { typeCode:t.typeCode, displayNameFr:t.displayNameFr, displayNameEn:t.displayNameEn, description:t.description??'', category:t.category, approvalLevel:t.approvalLevel, defaultSlaDays:t.defaultSlaDays };
+    this.modalError.set(null);
+    this.openModal(this.translate.instant('ADMIN.catalog.requestTypes.modalTitleEdit'));
+  }
+
+  private openModal(title: string): void {
+    // closeOnBackdrop: false — the form has unsaved input the moment it's open, unlike the
+    // plain confirm dialog `deactivate()` opens below.
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), size: 'md', closeOnBackdrop: false });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
+  }
 
   save() {
     this.saving.set(true);
     const dto = { paysId:this.paysId(), ...this.form };
     const obs = this.editTarget() ? this.svc.updateRequestType(this.editTarget()!.id, dto) : this.svc.createRequestType(dto);
     obs.pipe(catchError(err => { this.modalError.set(err?.error?.message ?? this.translate.instant('ADMIN.catalog.requestTypes.error')); this.saving.set(false); return of(null); }))
-       .subscribe(r => { this.saving.set(false); if (r) { this.showModal.set(false); this.load(); } });
+       .subscribe(r => { this.saving.set(false); if (r) { this.modalRef?.close(); this.load(); } });
   }
 
   deactivate(t: RequestTypeCatalog) {

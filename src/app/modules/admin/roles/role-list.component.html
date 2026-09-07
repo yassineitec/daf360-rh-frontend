@@ -1,25 +1,24 @@
 <div class="rl-wrap">
-  <daf-card class="rl-card" [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
-    <div class="rl-container">
+  <div class="rl-container">
       <div class="rl-header">
         <span class="rl-title">{{ 'ADMIN.roles.list.TITLE' | translate:{ count: roles().length } }}</span>
         <div class="rl-header-actions">
 
           <!-- Desktop/tablet: full search box -->
           <div class="rl-search rl-search--desktop">
-            <rh-search-bar
-              [placeholder]="'ADMIN.roles.list.SEARCH_PLACEHOLDER' | translate"
+            <daf-form-field
+              [options]="{ type: 'search', placeholder: ('ADMIN.roles.list.SEARCH_PLACEHOLDER' | translate), prefixIcon: 'search', fullWidth: true }"
               [value]="searchQuery()"
-              (valueChange)="searchQuery.set($event)" />
+              (valueChange)="searchQuery.set($any($event) ?? '')" />
           </div>
 
           <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
           @if (mobileSearchOpen()) {
             <div class="rl-search rl-search--mobile">
-              <rh-search-bar
-                placeholder="Rechercher un rôle…"
+              <daf-form-field
+                [options]="{ type: 'search', placeholder: ('ADMIN.roles.list.SEARCH_PLACEHOLDER' | translate), prefixIcon: 'search', fullWidth: true }"
                 [value]="searchQuery()"
-                (valueChange)="searchQuery.set($event)" />
+                (valueChange)="searchQuery.set($any($event) ?? '')" />
             </div>
             <daf-button
               class="icon-btn-toggle rl-mobile-only"
@@ -52,53 +51,42 @@
       @if (loading()) {
         <p class="rl-loading">{{ 'ADMIN.roles.list.LOADING' | translate }}</p>
       } @else {
-        <ul class="rl-list">
-          @for (r of pagedRoles(); track r.id) {
-            <li class="rl-item-wrap">
-              <daf-card
-                [options]="{ variant: 'glass', padding: 'md', radius: 'lg', clickable: true }"
-                [class.rl-active]="selectedRoleId() === r.id"
-                (cardClick)="roleSelected.emit(r)"
-              >
-                <div class="rl-item">
-                  <div class="rl-item-main">
-                    <span class="rl-item-name">{{ r.frenchName }}</span>
-                    <div class="rl-item-meta">
-                      <span class="rl-badge">{{ 'ADMIN.roles.list.PERMISSIONS' | translate:{ count: r.permissionCount } }}</span>
-                      <span class="rl-badge rl-badge-users">{{ 'ADMIN.roles.list.USERS' | translate:{ count: r.userCount } }}</span>
-                      @if (r.paysScopeMode === 'ALL' || (!r.paysScopeMode && r.showAll)) {
-                        <span class="rl-badge rl-badge-showall">{{ 'ADMIN.roles.list.SHOW_ALL' | translate }}</span>
-                      } @else if (r.paysScopeMode === 'LIST') {
-                        <span class="rl-badge rl-badge-scope">{{ 'ADMIN.roles.list.SCOPE_LIST' | translate:{ count: r.paysScope.length } }}</span>
-                      }
-                    </div>
-                    @if (r.parentRoleName) {
-                      <span class="rl-parent">↳ {{ r.parentRoleName }}</span>
-                    }
-                  </div>
-                  <div class="rl-item-actions" (click)="$event.stopPropagation()">
-                    <button class="rl-action-btn" type="button"
-                            [disabled]="r.userCount > 0"
-                            [title]="r.userCount > 0 ? ('ADMIN.roles.list.DELETE_DISABLED_TOOLTIP' | translate:{ count: r.userCount }) : ('ADMIN.roles.list.DELETE_TOOLTIP' | translate)"
-                            (click)="deleteClicked.emit(r)">🗑</button>
-                  </div>
-                </div>
-              </daf-card>
-            </li>
-          }
-        </ul>
+        <!-- Real daf-data-table, same as the "Utilisateurs" tab of this same module. -->
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+                         (rowClick)="roleSelected.emit($event['_source'])">
+          <ng-template dafCell="name" let-row>
+            <span class="rl-item-name" [class.rl-active]="selectedRoleId() === row['_source'].id">{{ row['name'] }}</span>
+          </ng-template>
+
+          <ng-template dafCell="details" let-row>
+            <div class="rl-item-meta">
+              <span class="rl-badge">{{ 'ADMIN.roles.list.PERMISSIONS' | translate:{ count: row['_source'].permissionCount } }}</span>
+              <span class="rl-badge rl-badge-users">{{ 'ADMIN.roles.list.USERS' | translate:{ count: row['_source'].userCount } }}</span>
+              @if (row['_source'].paysScopeMode === 'ALL' || (!row['_source'].paysScopeMode && row['_source'].showAll)) {
+                <span class="rl-badge rl-badge-showall">{{ 'ADMIN.roles.list.SHOW_ALL' | translate }}</span>
+              } @else if (row['_source'].paysScopeMode === 'LIST') {
+                <span class="rl-badge rl-badge-scope">{{ 'ADMIN.roles.list.SCOPE_LIST' | translate:{ count: row['_source'].paysScope.length } }}</span>
+              }
+            </div>
+          </ng-template>
+
+        </daf-data-table>
       }
     </div>
-  </daf-card>
 
-  @if (!loading() && totalPages() > 1) {
+  @if (!loading() && filteredRoles().length > 0) {
     <div class="rl-pagination">
+      <!-- Same daf-pagination configuration as /rh/profiles and /rh/requests -->
       <daf-pagination
         [currentPage]="currentPage()"
         [totalPages]="totalPages()"
         [totalElements]="filteredRoles().length"
-        [config]="paginationConfig"
-        (pageChange)="onPageChange($event)" />
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="pageSizeOptions"
+        [perPageLabel]="'PROFILES.LIST.PER_PAGE' | translate"
+        [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)" />
     </div>
   }
 </div>

@@ -1,3 +1,24 @@
+<div class="nr-layout">
+
+@if (selectedType()) {
+  <!-- Full-page rule editor. Breadcrumb replaces the popup, same daf-page/daf-page-header
+       convention as /rh/admin's own "Rôles et permissions" entry. -->
+  <div class="nr-detail">
+    <daf-page [kpis]="0" [breadcrumbs]="true">
+      <daf-page-header
+        class="nr-breadcrumb-header"
+        [title]="selectedType()!.labelFr"
+        [breadcrumbs]="[
+          { label: ('ADMIN.shell.title' | translate) },
+          { label: ('ADMIN.shell.tabs.notifications' | translate) },
+          { label: selectedType()!.labelFr }
+        ]"
+        (breadcrumbNavigate)="onBreadcrumbNavigate($event)" />
+      <app-routing-rule-editor [eventType]="selectedType()!" />
+    </daf-page>
+  </div>
+} @else {
+
 <div class="nr-page">
 
   <!-- Header -->
@@ -66,24 +87,23 @@
     <span class="nr-count">
       <strong>{{ totalElements() }}</strong> {{ 'ADMIN.notifications.countUnit' | translate }}
     </span>
-    @if (totalPages() > 1) {
+    @if (!loadingTypes() && totalElements() > 0) {
+      <!-- Same daf-pagination configuration as /rh/profiles and /rh/requests -->
       <daf-pagination
         [currentPage]="currentPage()"
         [totalPages]="totalPages()"
         [totalElements]="totalElements()"
-        (pageChange)="onPageChange($event)" />
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="pageSizeOptions"
+        [perPageLabel]="'PROFILES.LIST.PER_PAGE' | translate"
+        [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)" />
     }
   </div>
 
 </div>
 
-<!-- Routing rule editor modal -->
-<app-modal
-  [title]="selectedType()?.labelFr ?? ''"
-  [visible]="showModal()"
-  size="xl"
-  (closed)="closeModal()">
-  @if (selectedType()) {
-    <app-routing-rule-editor [eventType]="selectedType()!" />
-  }
-</app-modal>
+}
+
+</div>

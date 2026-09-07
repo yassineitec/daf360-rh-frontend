@@ -1,13 +1,12 @@
 import {
-  Component, OnChanges, SimpleChanges, inject, input, signal, computed,
+  Component, OnChanges, SimpleChanges, TemplateRef, inject, input, signal, computed, viewChild,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
-  TableColumn, TableConfig, TableRow, ModalService,
+  TableColumn, TableConfig, TableRow, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../../shared/modal.component';
 import { OvertimeService } from './overtime.service';
 import {
   ParametrageHSDto, CreateParametrageHSRequest,
@@ -20,7 +19,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   selector: 'app-overtime-admin',
   standalone: true,
   imports: [
-    DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent, ModalComponent,
+    DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent,
     StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
@@ -103,7 +102,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
   @if (!isLoading() && rules().length > 0) {
     <div class="table-scroll">
-    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig">
+    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
       <ng-template dafCell="paysIsoCode" let-row>
         <daf-badge [label]="row['paysIsoCode']" [options]="{ variant: 'teal' }" />
       </ng-template>
@@ -113,29 +112,14 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
       <ng-template dafCell="actif" let-row>
         <daf-badge [label]="(row['_source'].actif ? 'ADMIN.regimes.overtime.active' : 'ADMIN.regimes.overtime.inactive') | translate" [options]="{ variant: row['_source'].actif ? 'success' : 'neutral' }" />
       </ng-template>
-      <ng-template dafCell="_actions" let-row>
-        @if (row['_source'].actif) {
-          <daf-button
-            [label]="'ADMIN.regimes.common.edit' | translate" variant="secondary" [options]="{ size: 'sm' }"
-            (onClick)="openEditForm(row['_source'])" />
-          <daf-button
-            [label]="'ADMIN.regimes.overtime.deactivate' | translate" variant="danger" [options]="{ size: 'sm' }"
-            (onClick)="deactivate(row['_source'].idParametrage)" />
-        }
-      </ng-template>
     </daf-data-table>
     </div>
   }
 
 </div>
 
-<!-- Create / Edit modal -->
-<app-modal
-  [title]="(editingId() ? 'ADMIN.regimes.overtime.editRuleTitle' : 'ADMIN.regimes.overtime.newRuleTitle') | translate"
-  [visible]="showForm()"
-  [hasFooter]="true"
-  (closed)="showForm.set(false)"
->
+<!-- Create / Edit modal body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTpl>
   @if (formError()) {
     <div style="background:var(--color-error-container);border-radius:8px;padding:10px;font-size:var(--text-body-sm);color:var(--color-on-error-container);margin-bottom:12px;">{{ formError() }}</div>
   }
@@ -178,20 +162,21 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
       [config]="{ label: ('ADMIN.regimes.overtime.lastWorkDay' | translate), placeholder: ('ADMIN.regimes.overtime.optional' | translate), fullWidth: true }"
       (selectedChange)="formJourFin = $event[0]" />
   </div>
-  <div slot="footer">
-    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showForm.set(false)" />
+  <div class="ova-modal-footer">
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" [options]="{ disabled: isSaving() }" (onClick)="cancel()" />
     <daf-button
       [label]="(isSaving() ? 'ADMIN.regimes.common.saving' : (editingId() ? 'ADMIN.regimes.common.update' : 'ADMIN.regimes.common.save')) | translate" variant="teal"
       [options]="{ disabled: isSaving(), loading: isSaving() }"
       (onClick)="saveRule()" />
   </div>
-</app-modal>
+</ng-template>
   `,
   styles: [`
     @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
     .ova-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
     .ova-sim-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px }
     .ova-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
+    .ova-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     .table-scroll { overflow-x:auto }
 
     @media (max-width: 700px) {
@@ -214,12 +199,13 @@ export class OvertimeAdminComponent implements OnChanges {
   private userStore = inject(UserStore);
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   readonly paysId = input<number>(179);
 
   rules        = signal<ParametrageHSDto[]>([]);
   isLoading    = signal(true);
-  showForm     = signal(false);
   isSaving     = signal(false);
   formError    = signal<string | null>(null);
 
@@ -267,11 +253,29 @@ export class OvertimeAdminComponent implements OnChanges {
       { key: 'schedule', label: this.translate.instant('ADMIN.regimes.overtime.columns.schedule') },
       { key: 'week', label: this.translate.instant('ADMIN.regimes.overtime.columns.week') },
       { key: 'actif', label: this.translate.instant('ADMIN.regimes.overtime.columns.status') },
-      { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
     ];
   });
 
-  readonly tableConfig: TableConfig = { hoverable: true };
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.regimes.common.edit'),
+          hidden: (row: TableRow) => !(row['_source'] as ParametrageHSDto).actif,
+          onClick: (row: TableRow) => this.openEditForm(row['_source'] as ParametrageHSDto),
+        },
+        {
+          id: 'deactivate', icon: 'toggle_on', variant: 'danger',
+          tooltip: this.translate.instant('ADMIN.regimes.overtime.deactivate'),
+          hidden: (row: TableRow) => !(row['_source'] as ParametrageHSDto).actif,
+          onClick: (row: TableRow) => this.deactivate((row['_source'] as ParametrageHSDto).idParametrage),
+        },
+      ],
+    };
+  });
 
   rows = computed<TableRow[]>(() => {
     this.translate.currentLang();
@@ -322,7 +326,7 @@ export class OvertimeAdminComponent implements OnChanges {
     this.editingId.set(null);
     this.resetForm();
     this.formError.set(null);
-    this.showForm.set(true);
+    this.openModal(this.translate.instant('ADMIN.regimes.overtime.newRuleTitle'));
   }
 
   openEditForm(rule: ParametrageHSDto): void {
@@ -334,7 +338,15 @@ export class OvertimeAdminComponent implements OnChanges {
     this.formJourDebut  = rule.jourDebutSemaine  ?? '';
     this.formJourFin    = rule.jourFinSemaine    ?? '';
     this.formError.set(null);
-    this.showForm.set(true);
+    this.openModal(this.translate.instant('ADMIN.regimes.overtime.editRuleTitle'));
+  }
+
+  private openModal(title: string): void {
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), closeOnBackdrop: false });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
   }
 
   saveRule(): void {
@@ -362,7 +374,7 @@ export class OvertimeAdminComponent implements OnChanges {
             : rs.filter(x => x.paysId !== r.paysId || !x.actif);
           return [r, ...filtered];
         });
-        this.showForm.set(false);
+        this.modalRef?.close();
         this.isSaving.set(false);
         this.editingId.set(null);
         this.resetForm();

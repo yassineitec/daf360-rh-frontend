@@ -1,34 +1,41 @@
 <div class="rm-layout">
   @if (error()) { <div class="rm-error">{{ error() }}</div> }
-  <app-role-list
-    [roles]="roles()"
-    [selectedRoleId]="selectedRole()?.id ?? null"
-    [loading]="loading()"
-    (roleSelected)="onRoleSelected($event)"
-    (createClicked)="showCreateModal.set(true)"
-    (deleteClicked)="onRoleDeleted($event.id)"
-  />
-</div>
 
-<app-modal
-  [visible]="!!selectedRole()"
-  [title]="selectedRole()?.frenchName ?? ''"
-  size="lg"
-  (closed)="selectedRole.set(null)"
->
   @if (selectedRole()) {
-    <app-role-editor
-      [role]="selectedRole()!"
-      [allRoles]="roles()"
-      (onRoleUpdated)="onRoleUpdated($event)"
-      (onRoleDeleted)="onRoleDeleted($event)"
+    <!-- Full-page role editor. Breadcrumb replaces the back button, same
+         daf-page/daf-page-header convention as /rh/admin's own "Rôles et permissions" entry. -->
+    <div class="rm-detail">
+      <daf-page [kpis]="0" [breadcrumbs]="true">
+        <daf-page-header
+          class="rm-breadcrumb-header"
+          [title]="selectedRole()!.frenchName"
+          [breadcrumbs]="[
+            { label: ('ADMIN.shell.title' | translate) },
+            { label: ('ADMIN.shell.tabs.roles' | translate) },
+            { label: selectedRole()!.frenchName }
+          ]"
+          (breadcrumbNavigate)="onBreadcrumbNavigate($event)" />
+        <app-role-editor
+          [role]="selectedRole()!"
+          [allRoles]="roles()"
+          (onRoleUpdated)="onRoleUpdated($event)"
+          (onRoleDeleted)="onRoleDeleted($event)"
+        />
+      </daf-page>
+    </div>
+  } @else {
+    <app-role-list
+      [roles]="roles()"
+      [selectedRoleId]="null"
+      [loading]="loading()"
+      (roleSelected)="onRoleSelected($event)"
+      (createClicked)="createRoleModal.open()"
+      (deleteClicked)="onRoleDeleted($event.id)"
     />
   }
-</app-modal>
+</div>
 
-<app-create-role-modal
-  [visible]="showCreateModal()"
+<app-create-role-modal #createRoleModal
   [allRoles]="roles()"
-  (closed)="showCreateModal.set(false)"
   (roleCreated)="onRoleCreated($event)"
 />
