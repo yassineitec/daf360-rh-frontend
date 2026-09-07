@@ -1,8 +1,6 @@
 import {
-  Component, computed, inject, input, OnInit, signal,
+  Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { NgTemplateOutlet } from '@angular/common';
 import { catchError, Observable, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -10,12 +8,20 @@ import { AdminService } from './admin.service';
 import {
   CONTRACT_TYPES, OffboardingCatalogTask, Role, SaveCatalogTaskRequest,
 } from './models/admin.model';
-import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, SelectOption,
+  ToggleComponent, ModalService, ModalRef,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+} from '@khalilrebhiitec/daf360';
 
 @Component({
   selector: 'app-offboarding-catalog-admin',
   standalone: true,
-  imports: [FormsModule, NgTemplateOutlet, ButtonComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [
+    ButtonComponent, StatusBadgeComponent,
+    FormFieldComponent, SelectComponent, ToggleComponent,
+    DataTableComponent, DafCellDirective, TranslatePipe,
+  ],
   template: `
     <div class="cat-header">
       <div>
@@ -38,12 +44,13 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
         </div>
       </div>
       <div class="validator-row">
-        <select class="form-input" [(ngModel)]="validatorRoleId" [disabled]="savingValidator()">
-          <option [ngValue]="null">{{ 'ADMIN.docs.offboarding.validatorNone' | translate }}</option>
-          @for (role of roles(); track role.id) {
-            <option [ngValue]="role.id">{{ role.frenchName }}</option>
-          }
-        </select>
+        <div class="validator-select">
+          <daf-select
+            [selected]="validatorSelected()"
+            [options]="validatorOptions()"
+            [config]="{ disabled: savingValidator() }"
+            (selectedChange)="onValidatorChange($event)" />
+        </div>
         <daf-button
           [label]="'ADMIN.docs.offboarding.validatorSave' | translate"
           variant="teal"
@@ -58,20 +65,19 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
       }
     </div>
 
-    <!-- Filter bar -->
-    <div class="filter-bar">
-      <select class="filter-select" [(ngModel)]="filterContractType" (ngModelChange)="load()">
-        <option value="">{{ 'ADMIN.docs.offboarding.allContractTypes' | translate }}</option>
-        @for (ct of CONTRACT_TYPES; track ct) {
-          <option [value]="ct">{{ contractTypeLabel(ct) }}</option>
-        }
-      </select>
-      @if (filterContractType) {
-        <daf-button [label]="'ADMIN.docs.offboarding.reset' | translate" variant="ghost"
-          [options]="{ size: 'sm', iconStart: 'close' }"
-          (onClick)="filterContractType = ''; load()" />
+    <!-- Contract-type tabs, same convention as "Listes configurables": one window per
+         type, shown one after another, instead of a dropdown filter + grouped view. -->
+    <nav class="cat-tab-bar" role="tablist">
+      @for (ct of CONTRACT_TYPES; track ct) {
+        <button
+          class="cat-tab-btn"
+          [class.active]="filterContractType === ct"
+          (click)="selectContractType(ct)"
+          role="tab"
+          type="button"
+        >{{ contractTypeLabel(ct) }}</button>
       }
-    </div>
+    </nav>
 
     <!-- Loading / empty state -->
     @if (loading()) {
@@ -81,217 +87,135 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
     } @else if (rows().length === 0) {
       <div class="empty-state">
         <span class="material-symbols-outlined">list_alt</span>
-        <p>{{ 'ADMIN.docs.offboarding.empty' | translate }}{{ filterContractType ? (' ' + ('ADMIN.docs.offboarding.emptyForContract' | translate)) : '' }}.</p>
+        <p>{{ 'ADMIN.docs.offboarding.empty' | translate }} {{ 'ADMIN.docs.offboarding.emptyForContract' | translate }}.</p>
       </div>
     } @else {
+      <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
+      <div class="table-scroll">
+      <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
+        <ng-template dafCell="taskCode" let-row>
+          <code class="code-chip">{{ row['_source'].taskCode }}</code>
+        </ng-template>
 
-      <!-- Group by contract type when showing all -->
-      @if (!filterContractType) {
-        @for (group of groupedRows(); track group.contractType) {
-          <div class="group-header">
-            <span class="group-label">{{ contractTypeLabel(group.contractType) }}</span>
-            <span class="group-count">{{ group.tasks.length }} {{ (group.tasks.length !== 1 ? 'ADMIN.docs.offboarding.tasks' : 'ADMIN.docs.offboarding.task') | translate }}</span>
-          </div>
-          <ng-container *ngTemplateOutlet="taskTable; context: { $implicit: group.tasks }" />
-        }
-      } @else {
-        <ng-container *ngTemplateOutlet="taskTable; context: { $implicit: rows() }" />
-      }
-    }
-
-    <!-- Task table template -->
-    <ng-template #taskTable let-tasks>
-      <div class="cat-table">
-        <div class="cat-table-head">
-          <span class="col-order">#</span>
-          <span class="col-label">{{ 'ADMIN.docs.offboarding.colLabel' | translate }}</span>
-          <span class="col-code">{{ 'ADMIN.docs.offboarding.colCode' | translate }}</span>
-          <span class="col-role">{{ 'ADMIN.docs.offboarding.colRole' | translate }}</span>
-          <span class="col-sla">{{ 'ADMIN.docs.offboarding.colSla' | translate }}</span>
-          <span class="col-flags">{{ 'ADMIN.docs.offboarding.colOptions' | translate }}</span>
-          <span class="col-status">{{ 'ADMIN.docs.offboarding.colStatus' | translate }}</span>
-          <span class="col-actions"></span>
-        </div>
-        @for (task of tasks; track task.id) {
-          <div class="cat-row" [class.inactive]="!task.isActive">
-            <span class="col-order">{{ task.orderIndex }}</span>
-            <span class="col-label">{{ task.taskLabel }}</span>
-            <span class="col-code">
-              <code class="code-chip">{{ task.taskCode }}</code>
-            </span>
-            <span class="col-role">{{ task.ownerRole }}</span>
-            <span class="col-sla">{{ task.slaWorkingDays }}</span>
-            <span class="col-flags">
-              @if (task.isMandatory) {
-                <span class="flag-chip mandatory">{{ 'ADMIN.docs.offboarding.mandatory' | translate }}</span>
-              }
-              @if (task.isBlocking) {
-                <span class="flag-chip blocking">{{ 'ADMIN.docs.offboarding.blocking' | translate }}</span>
-              }
-            </span>
-            <span class="col-status">
-              <daf-badge
-                [label]="(task.isActive ? 'ADMIN.docs.offboarding.active' : 'ADMIN.docs.offboarding.inactive') | translate"
-                [options]="{ variant: task.isActive ? 'success' : 'neutral', size: 'sm' }"
-              />
-            </span>
-            <span class="col-actions">
-              <button class="icon-btn" [title]="'ADMIN.docs.offboarding.edit' | translate" (click)="openEdit(task)">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-              <button class="icon-btn" [title]="(task.isActive ? 'ADMIN.docs.offboarding.deactivate' : 'ADMIN.docs.offboarding.activate') | translate"
-                (click)="toggleActive(task)">
-                <span class="material-symbols-outlined">{{ task.isActive ? 'toggle_on' : 'toggle_off' }}</span>
-              </button>
-            </span>
-          </div>
-        }
-      </div>
-    </ng-template>
-
-    <!-- Add / Edit modal (inline) -->
-    @if (showForm()) {
-      <div class="modal-backdrop" (click)="closeForm()">
-        <div class="modal-panel" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h4>{{ (editingId() ? 'ADMIN.docs.offboarding.editTitle' : 'ADMIN.docs.offboarding.addTask') | translate }}</h4>
-            <button class="icon-btn" (click)="closeForm()">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <div class="modal-body">
-            <div class="form-grid">
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.offboarding.contractTypeLabel' | translate }}</label>
-                <select class="form-input" [(ngModel)]="form.contractType" [disabled]="!!editingId()">
-                  <option value="">{{ 'ADMIN.docs.offboarding.selectPlaceholder' | translate }}</option>
-                  @for (ct of CONTRACT_TYPES; track ct) {
-                    <option [value]="ct">{{ contractTypeLabel(ct) }}</option>
-                  }
-                </select>
-              </div>
-
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.offboarding.taskCodeLabel' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="form.taskCode"
-                  [placeholder]="'ADMIN.docs.offboarding.taskCodePlaceholder' | translate" [disabled]="!!editingId()"
-                  style="text-transform:uppercase" />
-              </div>
-
-              <div class="field-full">
-                <label class="form-label">{{ 'ADMIN.docs.offboarding.taskLabelLabel' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="form.taskLabel"
-                  [placeholder]="'ADMIN.docs.offboarding.taskLabelPlaceholder' | translate" />
-              </div>
-
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.offboarding.ownerRoleLabel' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="form.ownerRole"
-                  [placeholder]="'ADMIN.docs.offboarding.ownerRolePlaceholder' | translate" />
-              </div>
-
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.offboarding.slaLabel' | translate }}</label>
-                <input class="form-input" type="number" [(ngModel)]="form.slaWorkingDays" min="1" max="60" />
-              </div>
-
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.offboarding.orderLabel' | translate }}</label>
-                <input class="form-input" type="number" [(ngModel)]="form.orderIndex" min="0" />
-              </div>
-
-              <div class="field-full toggles-row">
-                <label class="toggle-label">
-                  <input type="checkbox" [(ngModel)]="form.isMandatory" />
-                  <span>{{ 'ADMIN.docs.offboarding.mandatory' | translate }}</span>
-                </label>
-                <label class="toggle-label">
-                  <input type="checkbox" [(ngModel)]="form.isBlocking" />
-                  <span>{{ 'ADMIN.docs.offboarding.blockingToggle' | translate }}</span>
-                </label>
-              </div>
-            </div>
-
-            @if (formError()) {
-              <div class="error-banner">{{ formError() }}</div>
+        <ng-template dafCell="flags" let-row>
+          <div class="flags-cell">
+            @if (row['_source'].isMandatory) {
+              <daf-badge [label]="'ADMIN.docs.offboarding.mandatory' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
+            }
+            @if (row['_source'].isBlocking) {
+              <daf-badge [label]="'ADMIN.docs.offboarding.blocking' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
             }
           </div>
+        </ng-template>
 
-          <div class="modal-footer">
-            <daf-button [label]="'ADMIN.docs.offboarding.cancel' | translate" variant="secondary" (onClick)="closeForm()" />
-            <daf-button
-              [label]="(editingId() ? 'ADMIN.docs.offboarding.save' : 'ADMIN.docs.offboarding.add') | translate"
-              variant="teal"
-              [options]="{ loading: saving(), disabled: !isFormValid() }"
-              (onClick)="save()"
-            />
-          </div>
-        </div>
+        <ng-template dafCell="isActive" let-row>
+          <daf-badge
+            [label]="(row['_source'].isActive ? 'ADMIN.docs.offboarding.active' : 'ADMIN.docs.offboarding.inactive') | translate"
+            [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }"
+          />
+        </ng-template>
+
+      </daf-data-table>
       </div>
     }
+
+    <!-- Add / Edit modal body — projected into the real daf-modal-host via ModalService,
+         same convention as the other admin catalog pages, instead of a hand-rolled overlay. -->
+    <ng-template #bodyTpl>
+      <div class="form-grid">
+        <daf-select
+          [selected]="formContractTypeSelected()"
+          [options]="contractTypeOptions()"
+          [config]="{ label: ('ADMIN.docs.offboarding.contractTypeLabel' | translate), placeholder: ('ADMIN.docs.offboarding.selectPlaceholder' | translate), disabled: !!editingId(), fullWidth: true }"
+          (selectedChange)="onFormContractTypeChange($event)" />
+
+        <daf-form-field
+          [options]="{ label: ('ADMIN.docs.offboarding.taskCodeLabel' | translate), placeholder: ('ADMIN.docs.offboarding.taskCodePlaceholder' | translate), disabled: !!editingId(), fullWidth: true }"
+          [value]="form.taskCode"
+          (valueChange)="form.taskCode = ($any($event) ?? '').toUpperCase()" />
+
+        <div class="field-full">
+          <daf-form-field
+            [options]="{ label: ('ADMIN.docs.offboarding.taskLabelLabel' | translate), placeholder: ('ADMIN.docs.offboarding.taskLabelPlaceholder' | translate), fullWidth: true }"
+            [value]="form.taskLabel"
+            (valueChange)="form.taskLabel = $any($event) ?? ''" />
+        </div>
+
+        <daf-form-field
+          [options]="{ label: ('ADMIN.docs.offboarding.ownerRoleLabel' | translate), placeholder: ('ADMIN.docs.offboarding.ownerRolePlaceholder' | translate), fullWidth: true }"
+          [value]="form.ownerRole"
+          (valueChange)="form.ownerRole = $any($event) ?? ''" />
+
+        <daf-form-field
+          [options]="{ label: ('ADMIN.docs.offboarding.slaLabel' | translate), type: 'number', fullWidth: true }"
+          [value]="form.slaWorkingDays"
+          (valueChange)="form.slaWorkingDays = $any($event) ?? 0" />
+
+        <daf-form-field
+          [options]="{ label: ('ADMIN.docs.offboarding.orderLabel' | translate), type: 'number', fullWidth: true }"
+          [value]="form.orderIndex"
+          (valueChange)="form.orderIndex = $any($event) ?? 0" />
+
+        <div class="field-full toggles-row">
+          <daf-toggle
+            [options]="{ label: ('ADMIN.docs.offboarding.mandatory' | translate) }"
+            [checked]="form.isMandatory"
+            (checkedChange)="form.isMandatory = $event" />
+          <daf-toggle
+            [options]="{ label: ('ADMIN.docs.offboarding.blockingToggle' | translate) }"
+            [checked]="form.isBlocking"
+            (checkedChange)="form.isBlocking = $event" />
+        </div>
+      </div>
+
+      @if (formError()) {
+        <div class="error-banner">{{ formError() }}</div>
+      }
+
+      <div class="offboarding-modal-footer">
+        <daf-button [label]="'ADMIN.docs.offboarding.cancel' | translate" variant="secondary" [options]="{ disabled: saving() }" (onClick)="cancel()" />
+        <daf-button
+          [label]="(editingId() ? 'ADMIN.docs.offboarding.save' : 'ADMIN.docs.offboarding.add') | translate"
+          variant="teal"
+          [options]="{ loading: saving(), disabled: !isFormValid() || saving() }"
+          (onClick)="save()"
+        />
+      </div>
+    </ng-template>
   `,
   styles: [`
     .cat-header    { display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap }
     .section-title { font-size:15px;font-weight:700;color:var(--color-text);margin:0 0 4px }
     .section-sub   { font-size:13px;color:var(--color-text-muted);margin:0 }
-    .filter-bar    { display:flex;align-items:center;gap:10px;margin-bottom:16px }
     .validator-card { border:1px solid var(--color-border);border-radius:10px;padding:14px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px }
     .validator-head { display:flex;align-items:flex-start;gap:10px }
     .validator-head .material-symbols-outlined { font-size:20px;color:var(--color-primary) }
     .validator-title { font-size:13px;font-weight:700;color:var(--color-text);margin:0 }
     .validator-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .validator-row   { display:flex;align-items:center;gap:10px;flex-wrap:wrap }
-    .validator-row .form-input { min-width:240px;flex:0 1 320px }
+    .validator-select { min-width:240px;flex:0 1 320px }
     .validator-hint  { font-size:11px;font-style:italic;color:var(--color-text-muted);margin:0 }
-    .filter-select { padding:7px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;background:var(--color-surface);color:var(--color-text);min-width:200px }
     .skeleton-wrap { display:flex;flex-direction:column;gap:8px }
     .skeleton-row  { height:44px;background:var(--color-bg-secondary,#F5F7F9);border-radius:6px;animation:pulse 1.4s ease-in-out infinite }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
     .empty-state   { display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px;color:var(--color-text-muted);text-align:center }
     .empty-state .material-symbols-outlined { font-size:40px;opacity:.4 }
     .empty-state p { font-size:13px;margin:0 }
-    .group-header  { display:flex;align-items:center;gap:10px;padding:10px 0 6px;border-bottom:2px solid var(--color-primary,#1C4E5C);margin-top:20px }
-    .group-label   { font-size:13px;font-weight:700;color:var(--color-primary);text-transform:uppercase;letter-spacing:.5px }
-    .group-count   { font-size:11px;color:var(--color-text-muted);background:var(--color-bg-secondary);padding:2px 8px;border-radius:999px }
-    .cat-table     { border:1px solid var(--color-border);border-radius:10px;overflow:hidden;margin-bottom:4px }
-    .cat-table-head{ display:grid;grid-template-columns:40px 1fr 150px 130px 90px 140px 80px 70px;gap:12px;padding:10px 14px;background:var(--color-bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted) }
-    .cat-row       { display:grid;grid-template-columns:40px 1fr 150px 130px 90px 140px 80px 70px;gap:12px;padding:10px 14px;align-items:center;border-top:1px solid var(--color-border);font-size:13px;transition:background .12s }
-    .cat-row:hover { background:var(--color-bg-secondary) }
-    .cat-row.inactive { opacity:.5 }
-    .col-order     { font-size:12px;color:var(--color-text-muted);font-variant-numeric:tabular-nums }
-    .col-label     { font-weight:500 }
-    .col-code, .col-role, .col-sla { color:var(--color-text-muted) }
+    .cat-tab-bar   { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--color-outline-variant);overflow-x:auto }
+    .cat-tab-btn   { padding:10px 16px;border:none;border-bottom:2px solid transparent;background:none;font-family:var(--font-sans);font-size:var(--text-label-md);font-weight:500;color:var(--color-on-surface-variant);cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:color var(--duration-normal) var(--ease-smooth),border-color var(--duration-normal) var(--ease-smooth) }
+    .cat-tab-btn:hover { color:var(--color-on-surface) }
+    .cat-tab-btn.active { color:var(--color-primary);border-bottom-color:var(--color-primary);font-weight:600 }
+    .table-scroll  { overflow-x:auto }
     .code-chip     { font-family:monospace;font-size:11px;background:var(--color-bg-secondary);padding:2px 6px;border-radius:4px;color:var(--color-primary) }
-    .flag-chip     { font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px }
-    .flag-chip.mandatory { background:#fef3c7;color:#92400e }
-    .flag-chip.blocking  { background:#fee2e2;color:#991b1b }
-    .col-flags     { display:flex;flex-direction:column;gap:3px }
+    .flags-cell    { display:flex;flex-wrap:wrap;gap:4px }
     .col-actions   { display:flex;gap:2px }
-    .icon-btn      { background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:var(--color-text-muted);display:flex;align-items:center;transition:background .12s }
-    .icon-btn:hover { background:var(--color-bg-secondary);color:var(--color-text) }
-    .icon-btn .material-symbols-outlined { font-size:18px }
 
-    /* Modal */
-    .modal-backdrop  { position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px }
-    .modal-panel     { background:var(--color-surface);border-radius:14px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;max-height:90vh;overflow:hidden }
-    .modal-header    { display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--color-border) }
-    .modal-header h4 { margin:0;font-size:15px;font-weight:700 }
-    .modal-body      { padding:20px;overflow-y:auto }
-    .modal-footer    { display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--color-border) }
+    /* Add/Edit modal body */
     .form-grid       { display:grid;grid-template-columns:1fr 1fr;gap:14px }
     .field-full      { grid-column:1/-1 }
-    .form-label      { display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted);margin-bottom:4px }
-    .form-input      { width:100%;padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--color-surface);color:var(--color-text);outline:none;box-sizing:border-box }
-    .form-input:focus { border-color:var(--color-primary) }
-    .form-input:disabled { opacity:.6;cursor:not-allowed }
     .toggles-row     { display:flex;gap:20px;align-items:center }
-    .toggle-label    { display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer }
     .error-banner    { margin-top:12px;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px }
-    @media(max-width:700px) {
-      .cat-table-head, .cat-row { grid-template-columns:40px 1fr 80px 70px }
-      .col-code, .col-role, .col-flags { display:none }
-    }
+    .offboarding-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     @media(max-width:500px) { .form-grid { grid-template-columns:1fr } }
 
     .mobile-only { display:none }
@@ -301,15 +225,18 @@ import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
     }
   `],
 })
-export class OffboardingCatalogAdminComponent implements OnInit {
+export class OffboardingCatalogAdminComponent implements OnChanges {
   private svc = inject(AdminService);
   private translate = inject(TranslateService);
+  private modal = inject(ModalService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   paysId = input.required<number>();
 
   protected readonly CONTRACT_TYPES = CONTRACT_TYPES;
 
-  filterContractType = '';
+  filterContractType: string = CONTRACT_TYPES[0];
   loading  = signal(false);
   rows     = signal<OffboardingCatalogTask[]>([]);
 
@@ -320,10 +247,85 @@ export class OffboardingCatalogAdminComponent implements OnInit {
   savingValidator = signal(false);
   validatorError  = signal<string | null>(null);
 
-  showForm  = signal(false);
   editingId = signal<number | null>(null);
   saving    = signal(false);
   formError = signal<string | null>(null);
+
+  readonly contractTypeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return CONTRACT_TYPES.map(ct => ({ value: ct, label: this.contractTypeLabel(ct) }));
+  });
+
+  readonly validatorOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: '', label: this.translate.instant('ADMIN.docs.offboarding.validatorNone') },
+      ...this.roles().map(r => ({ value: String(r.id), label: r.frenchName })),
+    ];
+  });
+
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'orderIndex',     label: '#', width: '50px' },
+      { key: 'taskLabel',      label: this.translate.instant('ADMIN.docs.offboarding.colLabel') },
+      { key: 'taskCode',       label: this.translate.instant('ADMIN.docs.offboarding.colCode') },
+      { key: 'ownerRole',      label: this.translate.instant('ADMIN.docs.offboarding.colRole') },
+      { key: 'slaWorkingDays', label: this.translate.instant('ADMIN.docs.offboarding.colSla'), align: 'center' },
+      { key: 'flags',          label: this.translate.instant('ADMIN.docs.offboarding.colOptions') },
+      { key: 'isActive',       label: this.translate.instant('ADMIN.docs.offboarding.colStatus') },
+    ];
+  });
+
+  readonly tableRows = computed<TableRow[]>(() =>
+    this.rows().map(t => ({
+      orderIndex:     t.orderIndex,
+      taskLabel:      t.taskLabel,
+      taskCode:       t.taskCode,
+      ownerRole:      t.ownerRole,
+      slaWorkingDays: t.slaWorkingDays,
+      flags:          null,
+      isActive:       t.isActive,
+      _source:        t,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.docs.offboarding.edit'),
+          onClick: (row: TableRow) => this.openEdit(row['_source'] as OffboardingCatalogTask),
+        },
+        {
+          id: 'deactivate', icon: 'toggle_on',
+          tooltip: this.translate.instant('ADMIN.docs.offboarding.deactivate'),
+          hidden: (row: TableRow) => !(row['_source'] as OffboardingCatalogTask).isActive,
+          onClick: (row: TableRow) => this.toggleActive(row['_source'] as OffboardingCatalogTask),
+        },
+        {
+          id: 'activate', icon: 'toggle_off',
+          tooltip: this.translate.instant('ADMIN.docs.offboarding.activate'),
+          hidden: (row: TableRow) => (row['_source'] as OffboardingCatalogTask).isActive,
+          onClick: (row: TableRow) => this.toggleActive(row['_source'] as OffboardingCatalogTask),
+        },
+      ],
+    };
+  });
+
+  selectContractType(ct: string): void {
+    this.filterContractType = ct;
+    this.load();
+  }
+
+  validatorSelected(): string[] { return [this.validatorRoleId !== null ? String(this.validatorRoleId) : '']; }
+  onValidatorChange(v: string[]): void { this.validatorRoleId = v[0] ? Number(v[0]) : null; }
+
+  formContractTypeSelected(): string[] { return [this.form.contractType]; }
+  onFormContractTypeChange(v: string[]): void { this.form.contractType = v[0] ?? ''; }
 
   form: SaveCatalogTaskRequest & { contractType: string; taskCode: string } = {
     paysId:         0,
@@ -337,19 +339,7 @@ export class OffboardingCatalogAdminComponent implements OnInit {
     orderIndex:     0,
   };
 
-  readonly groupedRows = computed(() => {
-    const map = new Map<string, OffboardingCatalogTask[]>();
-    for (const t of this.rows()) {
-      const list = map.get(t.contractType) ?? [];
-      list.push(t);
-      map.set(t.contractType, list);
-    }
-    return Array.from(map.entries())
-      .map(([contractType, tasks]) => ({ contractType, tasks }))
-      .sort((a, b) => a.contractType.localeCompare(b.contractType));
-  });
-
-  ngOnInit() {
+  ngOnChanges() {
     this.load();
     this.loadValidator();
   }
@@ -409,7 +399,7 @@ export class OffboardingCatalogAdminComponent implements OnInit {
       orderIndex:     this.rows().length,
     };
     this.formError.set(null);
-    this.showForm.set(true);
+    this.openModal(this.translate.instant('ADMIN.docs.offboarding.addTask'));
   }
 
   openEdit(task: OffboardingCatalogTask) {
@@ -426,10 +416,16 @@ export class OffboardingCatalogAdminComponent implements OnInit {
       orderIndex:     task.orderIndex,
     };
     this.formError.set(null);
-    this.showForm.set(true);
+    this.openModal(this.translate.instant('ADMIN.docs.offboarding.editTitle'));
   }
 
-  closeForm() { this.showForm.set(false); }
+  private openModal(title: string): void {
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), closeOnBackdrop: false });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
+  }
 
   isFormValid(): boolean {
     return !!(this.form.contractType && this.form.taskCode.trim() &&
@@ -460,7 +456,7 @@ export class OffboardingCatalogAdminComponent implements OnInit {
     ).subscribe(result => {
       this.saving.set(false);
       if (result) {
-        this.showForm.set(false);
+        this.modalRef?.close();
         this.load();
       }
     });

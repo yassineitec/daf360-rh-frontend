@@ -1,10 +1,11 @@
 import {
-  Component, effect, inject, input, signal,
+  Component, effect, inject, input, signal, TemplateRef, viewChild,
   WritableSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-  ButtonComponent, CardComponent, FormFieldComponent, SelectComponent, ToggleComponent,
+  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent,
+  ModalService, ModalRef, SelectComponent,
   type SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { NotificationRoutingService } from './notification-routing.service';
@@ -19,7 +20,6 @@ import {
   TEMPLATE_PLACEHOLDERS,
 } from './notification-routing.model';
 import { RecipientTagsComponent } from './recipient-tags.component';
-import { TestDispatchModalComponent } from './test-dispatch-modal.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -28,7 +28,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   imports: [
     FormsModule,
     RecipientTagsComponent,
-    TestDispatchModalComponent,
     ButtonComponent,
     FormFieldComponent,
     ToggleComponent,
@@ -47,6 +46,9 @@ export class RoutingRuleEditorComponent {
   private readonly svc = inject(NotificationRoutingService);
   private readonly userStore = inject(UserStore);
   private readonly translate = inject(TranslateService);
+  private readonly modal = inject(ModalService);
+  private testModalRef?: ModalRef;
+  testBodyTpl = viewChild.required<TemplateRef<unknown>>('testBodyTpl');
 
   // ── Server state ────────────────────────────────────────────────────────
   readonly detail     = signal<RoutingRuleDetail | null>(null);
@@ -56,9 +58,9 @@ export class RoutingRuleEditorComponent {
   readonly success    = signal<string | null>(null);
 
   // ── Test modal ──────────────────────────────────────────────────────────
-  readonly showTestModal = signal(false);
   readonly testResult    = signal<TestDispatchResult | null>(null);
   readonly testLoading   = signal(false);
+  readonly testActiveTab = signal<'inapp' | 'email'>('inapp');
 
   // ── Local edit signals ──────────────────────────────────────────────────
   readonly sendInapp     = signal(false);
@@ -278,8 +280,13 @@ export class RoutingRuleEditorComponent {
     this.svc.testDispatch(d.ruleId, user.paysId).subscribe({
       next: (result) => {
         this.testResult.set(result);
-        this.showTestModal.set(true);
+        this.testActiveTab.set('inapp');
         this.testLoading.set(false);
+        this.testModalRef = this.modal.open({
+          title: this.translate.instant('ADMIN.notifications.previewTitle', { name: this.eventType()?.labelFr ?? '' }),
+          body: this.testBodyTpl(),
+          size: 'lg',
+        });
       },
       error: (err) => {
         this.error.set(err?.error?.message ?? this.translate.instant('ADMIN.notifications.testError'));

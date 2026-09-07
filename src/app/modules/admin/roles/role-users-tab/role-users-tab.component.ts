@@ -4,7 +4,7 @@ import {
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow, AvatarCell,
+  DataTableComponent, TableColumn, TableConfig, TableRow, AvatarCell,
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
@@ -17,7 +17,7 @@ const PAGE_SIZE = 5;
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-    DataTableComponent, DafCellDirective, TranslatePipe,
+    DataTableComponent, TranslatePipe,
   ],
   templateUrl: './role-users-tab.component.html',
   styleUrl:    './role-users-tab.component.scss',
@@ -72,7 +72,6 @@ export class RoleUsersTabComponent {
     return [
       { key: 'user', label: this.translate.instant('ADMIN.roles.users.COL_USER'), type: 'avatar' },
       { key: 'pays', label: this.translate.instant('ADMIN.roles.users.COL_PAYS') },
-      { key: '_actions', label: this.translate.instant('ADMIN.roles.users.COL_ACTIONS'), align: 'right' },
     ];
   });
 
@@ -88,6 +87,11 @@ export class RoleUsersTabComponent {
     hoverable: true,
     loading: this.loading(),
     emptyMessage: this.translate.instant('ADMIN.roles.users.EMPTY'),
+    actions: [{
+      id: 'remove', icon: 'close',
+      tooltip: this.translate.instant('ADMIN.roles.users.REMOVE_TOOLTIP'),
+      onClick: (row: TableRow) => this.removeUser(row['_source'] as RoleUserItem),
+    }],
   }));
 
   onPageChange(page: number): void {

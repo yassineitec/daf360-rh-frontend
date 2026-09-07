@@ -83,16 +83,7 @@
   } @else if (filteredUsers().length === 0 && !loading()) {
     <p class="rut-no-results">{{ 'ADMIN.roles.users.NO_RESULTS' | translate:{ query: localSearch() } }}</p>
   } @else {
-    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
-      <ng-template dafCell="_actions" let-row>
-        <daf-button
-          label=""
-          variant="ghost"
-          [options]="{ size: 'sm', iconStart: 'close' }"
-          [title]="'ADMIN.roles.users.REMOVE_TOOLTIP' | translate"
-          (onClick)="removeUser(row['_source'])" />
-      </ng-template>
-    </daf-data-table>
+    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()" />
 
     <!-- Count + Pagination -->
     <div class="rut-footer">

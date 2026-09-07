@@ -582,7 +582,12 @@
       "ACCEPT": "Erreur lors de l'acceptation de l'offre.",
       "REFUSE": "Erreur lors du refus de l'offre."
     },
-    "FIT_SCORE": "{{score}}% Fit"
+    "FIT_SCORE": "{{score}}% Fit",
+    "OFFBOARDING": {
+      "COLUMN": "Offboarding",
+      "SLA": "SLA dépassé",
+      "EMPTY": "Aucun offboarding en cours"
+    }
   },
   "RECRUITMENT_PIPELINE": {
     "TITLE": "Pipeline Recrutement",
@@ -607,29 +612,50 @@
   },
   "RECRUITMENT_VALIDATION": {
     "TITLE": "Validation des demandes de recrutement",
-    "SUBTITLE": "Besoins en effectif remontés par les managers. Votre validation autorise l'ouverture du poste au recrutement.",
-    "SEE_ALL": "Toutes les demandes",
-    "EMPTY": "Aucune demande en attente",
-    "EMPTY_HINT": "Les nouvelles demandes des managers apparaîtront ici.",
+    "SEARCH_PLACEHOLDER": "Rechercher par poste ou département…",
+    "KPI_TOTAL": "En attente",
+    "KPI_HEADCOUNT": "Postes à pourvoir",
+    "KPI_NO_CANDIDATES": "Sans candidat",
+    "KPI_OLD": "En attente depuis + de 7j",
+    "EMPTY": "Aucune demande de recrutement en attente.",
     "OPEN": "Ouvrir",
     "APPROVE": "Approuver",
     "REJECT": "Refuser",
     "APPROVE_TITLE": "Approuver la demande",
     "REJECT_TITLE": "Refuser la demande",
+    "SUCCESS_TITLE": "Décision enregistrée",
+    "APPROVE_SUCCESS": "La demande a été approuvée.",
+    "REJECT_SUCCESS": "La demande a été refusée.",
     "POSITIONS": "{{n}} postes",
     "COMMENT_OPTIONAL": "Commentaire (optionnel)",
     "COMMENT_REQUIRED": "Motif du refus",
     "CANCEL": "Annuler",
     "SAVING": "Enregistrement…",
+    "ERR_LOAD": "Impossible de charger les demandes de recrutement.",
+    "ERR_NO_PAYS": "Votre compte n'est rattaché à aucune entité — impossible de lister les demandes à valider.",
+    "ERR_COMMENT_REQUIRED": "Indiquez le motif du refus.",
+    "ERR_REVIEW": "L'enregistrement de la décision a échoué. Réessayez.",
+    "FILTERS": {
+      "TITLE": "Filtrer les demandes",
+      "TRIGGER": "Filtres",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "RESET": "Réinitialiser",
+      "STATUS_LABEL": "Statut",
+      "CANDIDATES_LABEL": "Candidats",
+      "CANDIDATES_ALL": "Tous",
+      "CANDIDATES_SOME": "Avec candidat",
+      "AGE_LABEL": "Ancienneté",
+      "AGE_ALL": "Toutes"
+    },
+    "SUBTITLE": "Besoins en effectif remontés par les managers. Votre validation autorise l'ouverture du poste au recrutement.",
+    "SEE_ALL": "Toutes les demandes",
+    "EMPTY_HINT": "Les nouvelles demandes des managers apparaîtront ici.",
     "COL_POSITION": "Poste",
     "COL_HEADCOUNT": "Postes",
     "COL_REASON": "Motif",
     "COL_URGENCY": "Urgence",
-    "COL_SUBMITTED": "Soumise le",
-    "ERR_LOAD": "Impossible de charger les demandes de recrutement.",
-    "ERR_NO_PAYS": "Votre compte n'est rattaché à aucune entité — impossible de lister les demandes à valider.",
-    "ERR_COMMENT_REQUIRED": "Indiquez le motif du refus.",
-    "ERR_REVIEW": "L'enregistrement de la décision a échoué. Réessayez."
+    "COL_SUBMITTED": "Soumise le"
   },
   "RECRUITMENT_DEMANDS": {
     "STATUS": {
@@ -640,12 +666,12 @@
       "CLOTUREE": "Clôturée"
     },
     "LIST": {
-      "TITLE": "Demandes de recrutement",
+      "TITLE": "Historiques des demandes",
       "DEMAND_SINGULAR": "demande",
       "DEMAND_PLURAL": "demandes",
       "NEW_DEMAND": "Nouvelle demande",
       "LOADING": "Chargement…",
-      "EMPTY": "Aucune demande de recrutement trouvée.",
+      "EMPTY": "Aucune demande de recrutement traitée.",
       "CREATE_DEMAND": "Créer une demande",
       "VIEW": "Voir",
       "PREV": "‹ Préc.",
@@ -657,7 +683,30 @@
       "COL_HEADCOUNT": "Effectif",
       "COL_CANDIDATES": "Candidats",
       "COL_STATUS": "Statut",
-      "COL_SUBMITTED": "Soumise le"
+      "COL_SUBMITTED": "Soumise le",
+      "SEARCH_PLACEHOLDER": "Rechercher par poste ou département…",
+      "KPI_TOTAL": "Total",
+      "MAIN_TAB_RECRUITMENT": "Demande de recrutement",
+      "MAIN_TAB_OTHER": "Demande RH",
+      "MAIN_TABS_ARIA": "Type d'historique",
+      "OTHER_SEARCH_PLACEHOLDER": "Rechercher par nom d'employé…",
+      "OTHER_EMPTY": "Aucune demande traitée.",
+      "OTHER_KPI_TOTAL": "Total",
+      "OTHER_KPI_APPROVED": "Approuvé",
+      "OTHER_KPI_REJECTED": "Rejeté",
+      "OTHER_KPI_CANCELLED": "Annulé",
+      "OTHER_FILTER_ALL": "Tout ({{count}})",
+      "OTHER_FILTER_APPROVED": "Approuvé ({{count}})",
+      "OTHER_FILTER_REJECTED": "Rejeté ({{count}})",
+      "OTHER_FILTER_CANCELLED": "Annulé ({{count}})",
+      "FILTERS": {
+        "TITLE": "Filtrer les demandes",
+        "TRIGGER": "Filtres",
+        "APPLY": "Appliquer",
+        "CANCEL": "Annuler",
+        "RESET": "Réinitialiser",
+        "STATUS_LABEL": "Statut"
+      }
     },
     "FILTER": {
       "ALL": "Tous les statuts",
@@ -669,6 +718,8 @@
     },
     "DETAIL": {
       "BACK": "Retour aux demandes",
+      "BREADCRUMB": "Demandes",
+      "BREADCRUMB_ARIA": "Fil d'Ariane",
       "LOADING": "Chargement…",
       "NOT_FOUND": "Demande introuvable.",
       "JOB_DETAILS": "Détails du poste",
@@ -691,8 +742,8 @@
       "DECISION": "Décision",
       "PROCESS": "Traiter la demande",
       "COMMENT_OPTIONAL": "Commentaire (optionnel)",
-      "APPROVE": "✓ Approuver",
-      "REJECT": "✗ Rejeter",
+      "APPROVE": "Approuver",
+      "REJECT": "Rejeter",
       "CANCEL_DEMAND": "Annuler cette demande",
       "ERR": "Erreur"
     },
@@ -1556,7 +1607,7 @@
         "ERR_SAVE": "L'enregistrement a échoué."
       }
     },
-      "DOC_TYPES": {
+    "DOC_TYPES": {
       "CONTRACT": "Contrat de travail",
       "CONTRACT_SIGNED": "Contrat signé",
       "AMENDMENT": "Avenant",
@@ -1573,6 +1624,41 @@
       "RESIGNATION": "Lettre de démission",
       "DISCHARGE": "Décharge",
       "OTHER": "Autre"
+    },
+    "NEW": {
+      "BREADCRUMB_LIST": "Profils",
+      "BREADCRUMB_CURRENT": "Nouveau profil",
+      "STEPS_ARIA": "Étapes",
+      "STEP_IDENTITY": "Identité",
+      "STEP_EMPLOYMENT": "Emploi",
+      "STEP_POSITION": "Poste",
+      "STEP_REGIME": "Régime",
+      "STEP_REGIME_TITLE": "Régime horaire",
+      "REGIME_HINT": "Optionnel — peut être assigné ultérieurement.",
+      "USER_ID": "Utilisateur ID (Users.id) *",
+      "EMPLOYEE_ID": "Identifiant employé *",
+      "EMPLOYEE_ID_HINT": "Format: ENTITE-AA-NNNN (ex: ARX-26-0001)",
+      "PAYS": "Pays (ID) *",
+      "HIRE_DATE": "Date d'embauche *",
+      "CONTRACT_TYPE": "Type de contrat *",
+      "CONTRACT_END": "Date de fin de contrat *",
+      "PROBATION_END": "Fin de période d'essai",
+      "DEPARTMENT": "Département",
+      "GRADE": "Grade",
+      "DISCIPLINE": "Discipline",
+      "NOG_LEVEL": "Niveau NOG",
+      "REGIME_TEMPLATE_ID": "ID du modèle de régime",
+      "REGIME_TEMPLATE_PH": "Laisser vide pour le régime par défaut",
+      "REGIME_START": "Date de début d'application",
+      "REGIME_REASON": "Motif de changement de régime",
+      "PREV": "‹ Précédent",
+      "NEXT": "Suivant ›",
+      "SUBMIT": "Créer le profil",
+      "ERR_REQUIRED": "Requis",
+      "ERR_ID_FORMAT": "Format invalide — attendu: ENTITE-AA-NNNN",
+      "ERR_FUTURE_DATE": "La date ne peut pas être dans le futur",
+      "ERR_CDD_END": "Obligatoire pour un contrat CDD",
+      "ERR_CREATE": "Erreur lors de la création"
     }
   },
   "OFFBOARDING": {
@@ -2101,6 +2187,11 @@
         "SEARCH_PLACEHOLDER": "Rechercher un rôle…",
         "NEW_ROLE": "+ Nouveau rôle",
         "LOADING": "Chargement…",
+        "COL_NAME": "Rôle",
+        "COL_DETAILS": "Détails",
+        "COL_PARENT": "Rôle parent",
+        "COL_ACTIONS": "Actions",
+        "EMPTY": "Aucun rôle trouvé",
         "PERMISSIONS": "{{count}} permissions",
         "USERS": "{{count}} utilisateurs",
         "SHOW_ALL": "Voir tout",
@@ -2111,7 +2202,8 @@
       "editor": {
         "TAB_INFO": "Informations",
         "TAB_PERMISSIONS": "Permissions",
-        "TAB_USERS": "Utilisateurs"
+        "TAB_USERS": "Utilisateurs",
+        "TABS_ARIA": "Sections du rôle"
       },
       "create": {
         "TITLE": "Créer un nouveau rôle",
@@ -2206,6 +2298,8 @@
       },
       "title": "Administration",
       "entity": "Entité {{pays}}",
+      "back": "Retour",
+      "countryMenu": "Changer de pays",
       "tabs": {
         "roles": "Rôles & Permissions",
         "users": "Utilisateurs",
@@ -2574,6 +2668,7 @@
         "PH_DESC": "(optionnel)",
         "CANCEL": "Annuler",
         "CREATE": "Créer",
+        "SAVE": "Enregistrer",
         "EDIT": "Modifier",
         "DELETE_SHORT": "Suppr.",
         "DELETE_TITLE": "Supprimer le paramètre",
@@ -2758,7 +2853,8 @@
         "legalRules": "Règles légales",
         "catalog": "Catalogue",
         "roleAssignment": "Assignation rôles",
-        "overview": "Vue d'ensemble"
+        "overview": "Vue d'ensemble",
+        "ariaLabel": "Sections des régimes horaires"
       },
       "breaks": {
         "title": "Modèles de pause",
@@ -2847,6 +2943,8 @@
         }
       },
       "catalog": {
+        "colName": "Régime",
+        "colSchedule": "Horaires",
         "updateSuccess": "Régime mis à jour avec succès.",
         "errorSave": "Erreur lors de la sauvegarde.",
         "deleteTitle": "Supprimer le régime",
@@ -3113,7 +3211,23 @@
         "error": "Erreur",
         "deleteTitle": "Supprimer le jour férié",
         "deleteBody": "Voulez-vous vraiment supprimer \"{{name}}\" ? Cette action est irréversible.",
-        "deleteConfirm": "Supprimer"
+        "deleteConfirm": "Supprimer",
+        "viewTable": "Tableau",
+        "viewCalendar": "Calendrier",
+        "calendar": {
+          "prevMonth": "Mois précédent",
+          "nextMonth": "Mois suivant",
+          "abbrev": "JF",
+          "days": {
+            "SUN": "Dim",
+            "MON": "Lun",
+            "TUE": "Mar",
+            "WED": "Mer",
+            "THU": "Jeu",
+            "FRI": "Ven",
+            "SAT": "Sam"
+          }
+        }
       }
     },
     "notifications": {
@@ -3206,7 +3320,19 @@
       "TITLE": "Annuler la demande",
       "MESSAGE": "Annuler cette demande ?",
       "CONFIRM": "Annuler la demande",
-      "BACK": "Retour"
+      "BACK": "Retour",
+      "SUCCESS_TITLE": "Demande annulée",
+      "SUCCESS": "La demande a bien été annulée.",
+      "ERROR": "Impossible d'annuler la demande. Veuillez réessayer."
+    },
+    "APPROVE": {
+      "TITLE": "Approuver la demande",
+      "MESSAGE": "Approuver cette demande ?",
+      "CONFIRM": "Approuver",
+      "BACK": "Retour",
+      "SUCCESS_TITLE": "Demande approuvée",
+      "SUCCESS": "La demande a bien été approuvée.",
+      "ERROR": "Impossible d'approuver la demande. Veuillez réessayer."
     },
     "STATUS": {
       "SUBMITTED": "Soumis",
@@ -3217,29 +3343,66 @@
       "CANCELLED": "Annulée"
     },
     "LIST": {
-      "TITLE": "Mes demandes RH",
-      "INBOX_BTN": "Boîte de réception",
+      "TITLE": "Mes demandes",
       "NEW_BTN": "Nouvelle demande",
       "INTRO_EYEBROW": "Statut de vos requêtes",
       "INTRO_TITLE": "Suivi en temps réel de vos demandes administratives.",
-      "EMPTY_DONE": "Aucune demande traitée",
+      "KPI_TOTAL": "En cours",
+      "KPI_URGENT": "Urgentes",
+      "KPI_SOON": "À traiter bientôt",
+      "KPI_OK": "Dans les délais",
+      "EMPTY_ALL": "Aucune demande",
       "EMPTY_ACTIVE": "Aucune demande en cours",
+      "EMPTY_APPROVED": "Aucune demande approuvée",
+      "EMPTY_REJECTED": "Aucune demande rejetée",
       "EMPTY_HINT": "Vos demandes apparaîtront ici.",
+      "TAB_ALL": "Tout ({{count}})",
       "TAB_ACTIVE": "En cours ({{count}})",
-      "TAB_DONE": "Traitées ({{count}})",
+      "TAB_APPROVED": "Approuvé ({{count}})",
+      "TAB_REJECTED": "Rejeté ({{count}})",
       "COL_TYPE": "Type de demande",
       "COL_SUBMITTED": "Soumise le",
       "COL_STATUS": "Statut",
       "COL_SLA": "SLA",
       "COL_ACTIONS": "Actions",
       "VIEW": "Voir la demande",
-      "TABLE_EMPTY": "Aucune demande."
+      "TABLE_EMPTY": "Aucune demande.",
+      "MAIN_TAB_OTHER": "Demande RH",
+      "MAIN_TAB_RECRUITMENT": "Demande de recrutement",
+      "MAIN_TABS_ARIA": "Type de demandes",
+      "SEARCH_PLACEHOLDER": "Rechercher par nom d'employé…",
+      "SEARCH_EMPTY": "Aucun résultat pour cette recherche.",
+      "SEARCH_EMPTY_HINT": "Vérifiez l'orthographe ou essayez un autre nom.",
+      "VIEW_DETAIL": "Voir le détail",
+      "CANCEL_REASON_PROCESSING": "Cette demande est en cours de traitement et ne peut plus être annulée.",
+      "CANCEL_REASON_CLOSED": "Cette demande est déjà clôturée.",
+      "CANCEL_REASON_NOT_OWNER": "Vous ne pouvez annuler que vos propres demandes.",
+      "SLA_URGENT": "Urgent",
+      "SLA_TODAY": "À traiter aujourd'hui",
+      "SLA_SOON": "À traiter bientôt",
+      "SLA_OK": "Dans les délais",
+      "NEW_SUCCESS_TITLE": "Demande envoyée",
+      "NEW_SUCCESS": "Votre demande a bien été soumise.",
+      "FILTERS": {
+        "TITLE": "Filtrer les demandes",
+        "TRIGGER": "Filtres",
+        "APPLY": "Appliquer",
+        "CANCEL": "Annuler",
+        "RESET": "Réinitialiser",
+        "STATUS_LABEL": "Statut",
+        "URGENCY_LABEL": "Urgence",
+        "URGENCY_ALL": "Toutes"
+      },
+      "INBOX_BTN": "Boîte de réception",
+      "EMPTY_DONE": "Aucune demande traitée",
+      "TAB_DONE": "Traitées ({{count}})"
     },
     "DETAIL": {
       "NOT_FOUND": "Demande introuvable.",
       "BACK_TO_REQUESTS": "Retour aux demandes",
       "BREADCRUMB": "Demandes",
       "CANCEL_BTN": "Annuler la demande",
+      "APPROVE_BTN": "Approuver la demande",
       "TAKE_CHARGE": "Prendre en charge",
       "SUBMITTED_ON": "Soumis le {{date}}",
       "OFFICER_NUMBER": "Officier #{{id}}",
@@ -3260,6 +3423,7 @@
       "EMPLOYEE": "Employé",
       "PROFILE_KEY": "Profil",
       "COUNTRY_KEY": "Pays",
+      "OFFICER_KEY": "Officier assigné",
       "VIEW_FULL_PROFILE": "Voir le profil complet →",
       "ACTION_TITLE": "Action de traitement",
       "COMMENT_LABEL": "Commentaire",
@@ -3511,7 +3675,8 @@
     "REQUESTS": "Demandes",
     "ADMIN": "Admin",
     "MISSIONS": "Missions",
-    "BILLETERIE": "Billeterie"
+    "BILLETERIE": "Billeterie",
+    "REQUESTS_HISTORY": "Historique demande"
   },
   "MISSIONS": {
     "COMMON": {
@@ -3726,6 +3891,8 @@
     "SEARCH_PLACEHOLDER": "Rechercher un collaborateur, un objet, une ville…",
     "PRICED": "Frais renseignés",
     "COL_STATE": "Frais",
-    "COL_SUBMITTED": "Soumise le"
+    "COL_SUBMITTED": "Soumise le",
+    "REQUESTS_HISTORY": "Historique demande",
+    "ADMIN": "Admin"
   }
 }

@@ -1,19 +1,19 @@
 import {
-  Component, OnInit, inject, signal,
+  Component, OnInit, effect, inject, output, signal,
 } from '@angular/core';
+import { PageComponent, PageHeaderComponent, BreadcrumbItem } from '@khalilrebhiitec/daf360';
 
 import { RoleListComponent }        from './role-list.component';
 import { RoleEditorComponent }      from './role-editor/role-editor.component';
 import { CreateRoleModalComponent } from './create-role-modal/create-role-modal.component';
-import { ModalComponent }           from '../../../shared/modal.component';
 import { RoleManagementService }    from './role-management.service';
 import { RoleListItem }             from './role.model';
-import { TranslateService }         from '@ngx-translate/core';
+import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-role-management',
   standalone: true,
-  imports: [RoleListComponent, RoleEditorComponent, CreateRoleModalComponent, ModalComponent],
+  imports: [RoleListComponent, RoleEditorComponent, CreateRoleModalComponent, PageComponent, PageHeaderComponent, TranslatePipe],
   templateUrl: './role-management.component.html',
   styleUrl: './role-management.component.scss',
 })
@@ -21,11 +21,21 @@ export class RoleManagementComponent implements OnInit {
   private svc = inject(RoleManagementService);
   private translate = inject(TranslateService);
 
+  // Lets the admin shell's own "Administration" breadcrumb crumb jump back to its module grid.
+  backToAdmin = output<void>();
+
+  // Tells the admin shell to hide its own "Administration › Rôles et permissions" breadcrumb
+  // while a role is open — our own 3-level breadcrumb already includes both those crumbs.
+  roleDetailOpen = output<boolean>();
+
   roles         = signal<RoleListItem[]>([]);
   selectedRole  = signal<RoleListItem | null>(null);
   loading       = signal(true);
-  showCreateModal = signal(false);
   error         = signal<string | null>(null);
+
+  constructor() {
+    effect(() => this.roleDetailOpen.emit(!!this.selectedRole()));
+  }
 
   ngOnInit(): void {
     this.loadRoles();
@@ -40,6 +50,15 @@ export class RoleManagementComponent implements OnInit {
   }
 
   onRoleSelected(role: RoleListItem): void { this.selectedRole.set(role); }
+
+  /** The "Rôles et permissions" crumb goes back to the list; "Administration" goes up to the module grid. */
+  onBreadcrumbNavigate(crumb: BreadcrumbItem): void {
+    if (crumb.label === this.translate.instant('ADMIN.shell.tabs.roles')) {
+      this.selectedRole.set(null);
+    } else {
+      this.backToAdmin.emit();
+    }
+  }
 
   onRoleUpdated(updated: RoleListItem): void {
     this.roles.update(rs => rs.map(r => r.id === updated.id ? updated : r));

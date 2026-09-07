@@ -1,7 +1,7 @@
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 
@@ -69,19 +69,12 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
           <p>{{ 'REQUESTS.INBOX.EMPTY' | translate }}</p>
         </div>
       } @else {
-        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig">
+        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
           <ng-template dafCell="status" let-row>
             <daf-badge [label]="statusBadge(row['_source'].status).label" [options]="statusBadge(row['_source'].status).options" />
           </ng-template>
           <ng-template dafCell="sla" let-row>
             <daf-badge [label]="row['sla'].label" [options]="{ variant: slaVariant(row['sla'].level), size: 'sm' }" />
-          </ng-template>
-          <ng-template dafCell="_actions" let-row>
-            <a [routerLink]="['/rh/requests', row['_source'].id]" class="action-link">{{ 'REQUESTS.INBOX.DETAILS' | translate }}</a>
-            @if (canProcess(row['_source'].status)) {
-              <daf-button [label]="'REQUESTS.INBOX.APPROVE' | translate" variant="ghost" [options]="{ size: 'sm', iconStart: 'check' }" (onClick)="quickApprove(row['_source'])" />
-              <daf-button [label]="'REQUESTS.INBOX.REJECT' | translate" variant="danger" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="openRefuse(row['_source'])" />
-            }
           </ng-template>
         </daf-data-table>
 
@@ -134,6 +127,7 @@ export class RequestOfficerInboxComponent implements OnInit {
   private confirm = inject(ConfirmService);
   private userStore = inject(UserStore);
   private translate = inject(TranslateService);
+  private router     = inject(Router);
 
   loading    = signal(false);
   saving     = signal(false);
@@ -166,11 +160,34 @@ export class RequestOfficerInboxComponent implements OnInit {
       { key: 'submitted', label: this.translate.instant('REQUESTS.INBOX.COL_SUBMITTED') },
       { key: 'sla', label: this.translate.instant('REQUESTS.INBOX.COL_SLA') },
       { key: 'status', label: this.translate.instant('REQUESTS.INBOX.COL_STATUS') },
-      { key: '_actions', label: this.translate.instant('REQUESTS.INBOX.COL_ACTIONS'), align: 'right' },
     ];
   });
 
-  readonly tableConfig: TableConfig = { hoverable: true };
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'view',
+          tooltip: this.translate.instant('REQUESTS.INBOX.DETAILS'),
+          onClick: (row: TableRow) => this.router.navigate(['/rh/requests', (row['_source'] as EmployeeRequest).id]),
+        },
+        {
+          id: 'approve', icon: 'check',
+          tooltip: this.translate.instant('REQUESTS.INBOX.APPROVE'),
+          hidden: (row: TableRow) => !this.canProcess((row['_source'] as EmployeeRequest).status),
+          onClick: (row: TableRow) => this.quickApprove(row['_source'] as EmployeeRequest),
+        },
+        {
+          id: 'reject', icon: 'close', variant: 'danger',
+          tooltip: this.translate.instant('REQUESTS.INBOX.REJECT'),
+          hidden: (row: TableRow) => !this.canProcess((row['_source'] as EmployeeRequest).status),
+          onClick: (row: TableRow) => this.openRefuse(row['_source'] as EmployeeRequest),
+        },
+      ],
+    };
+  });
 
   readonly tableRows = computed<TableRow[]>(() => {
     this.translate.currentLang();

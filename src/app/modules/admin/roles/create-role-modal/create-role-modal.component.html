@@ -1,9 +1,4 @@
-<app-modal
-  [title]="'ADMIN.roles.create.TITLE' | translate"
-  [visible]="visible()"
-  [hasFooter]="true"
-  (closed)="closed.emit()"
->
+<ng-template #bodyTpl>
   <div class="crm-body">
     @if (error()) {
       <div class="crm-error">{{ error() }}</div>
@@ -52,19 +47,19 @@
           (selectedChange)="onPaysScopeChange($event)" />
       </div>
     }
-  </div>
 
-  <!-- Footer -->
-  <div slot="footer">
-    <daf-button
-      [label]="'ADMIN.roles.create.CANCEL' | translate"
-      variant="secondary"
-      [options]="{ disabled: saving() }"
-      (onClick)="closed.emit()" />
-    <daf-button
-      [label]="saving() ? ('ADMIN.roles.create.SAVING' | translate) : ('ADMIN.roles.create.SUBMIT' | translate)"
-      variant="teal"
-      [options]="{ disabled: saving() || !frenchName().trim(), loading: saving() }"
-      (onClick)="create()" />
+    <!-- Footer lives inside the template too — see the comment on `bodyTpl` for why. -->
+    <div class="crm-footer">
+      <daf-button
+        [label]="'ADMIN.roles.create.CANCEL' | translate"
+        variant="secondary"
+        [options]="{ disabled: saving() }"
+        (onClick)="cancel()" />
+      <daf-button
+        [label]="saving() ? ('ADMIN.roles.create.SAVING' | translate) : ('ADMIN.roles.create.SUBMIT' | translate)"
+        variant="teal"
+        [options]="{ disabled: saving() || !frenchName().trim(), loading: saving() }"
+        (onClick)="create()" />
+    </div>
   </div>
-</app-modal>
+</ng-template>

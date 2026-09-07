@@ -42,7 +42,7 @@
             <p class="lm-content-desc">{{ selectedType()!.description }}</p>
           }
         </div>
-        <daf-button class="desktop-only" [label]="'ADMIN.data.lists.ADD_VALUE' | translate" (onClick)="openAddForm()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.data.lists.ADD_VALUE' | translate" variant="teal" (onClick)="openAddForm()" />
         <daf-button
           class="icon-btn-toggle mobile-only"
           title="Ajouter une valeur"
@@ -110,26 +110,6 @@
             }
           </ng-template>
 
-          <ng-template dafCell="_actions" let-row>
-            @if (editingId() === row['_source'].id) {
-              <daf-button label="" variant="teal" [options]="{ size: 'sm', iconStart: 'check', disabled: editForm.invalid }" (onClick)="saveEdit(row['_source'])" />
-              <daf-button label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'close' }" (onClick)="cancelEdit()" />
-            } @else {
-              <daf-button class="icon-btn-edit" [title]="'ADMIN.data.lists.EDIT' | translate" label="" variant="primary" [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="startEdit(row['_source'])" />
-              @if (row['_source'].isSystem) {
-                <daf-button class="icon-btn-delete" [title]="'ADMIN.data.lists.DELETE' | translate" label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'delete', disabled: true }" />
-              } @else if (confirmDeleteId() === row['_source'].id) {
-                <span class="confirm-del">
-                  {{ 'ADMIN.data.lists.CONFIRM_Q' | translate }}
-                  <daf-button [label]="'ADMIN.data.lists.YES' | translate" variant="danger" [options]="{ size: 'sm' }" (onClick)="deleteValue(row['_source'].id, row['_source'].listTypeId)" />
-                  <daf-button [label]="'ADMIN.data.lists.NO' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="cancelDelete()" />
-                </span>
-              } @else {
-                <daf-button class="icon-btn-delete" [title]="'ADMIN.data.lists.DELETE' | translate" label="" variant="ghost" [options]="{ size: 'sm', iconStart: 'delete' }" (onClick)="confirmDelete(row['_source'].id)" />
-              }
-            }
-          </ng-template>
-
         </daf-data-table>
         </div>
 
@@ -148,13 +128,8 @@
   </main>
 </div>
 
-<!-- Add value modal -->
-<app-modal
-  [title]="'ADMIN.data.lists.MODAL_ADD_TITLE' | translate"
-  [visible]="showAddForm()"
-  [hasFooter]="true"
-  (closed)="showAddForm.set(false)"
->
+<!-- Add value modal body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTpl>
   <form [formGroup]="addForm" (ngSubmit)="addValue()">
     <div class="lm-add-grid">
       <daf-form-field
@@ -175,12 +150,12 @@
         (valueChange)="addForm.controls['sortOrder'].setValue($any($event))" />
     </div>
   </form>
-  <div slot="footer">
-    <daf-button [label]="'ADMIN.data.lists.CANCEL' | translate" variant="secondary" (onClick)="showAddForm.set(false)" />
+  <div class="lm-modal-footer">
+    <daf-button [label]="'ADMIN.data.lists.CANCEL' | translate" variant="secondary" [options]="{ disabled: adding() }" (onClick)="cancelAdd()" />
     <daf-button
       [label]="'ADMIN.data.lists.SAVE' | translate"
       variant="teal"
-      [options]="{ disabled: addForm.invalid }"
+      [options]="{ disabled: addForm.invalid || adding(), loading: adding() }"
       (onClick)="addValue()" />
   </div>
-</app-modal>
+</ng-template>

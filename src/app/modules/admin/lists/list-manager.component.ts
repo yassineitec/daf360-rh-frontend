@@ -1,12 +1,11 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, TemplateRef, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
-  PaginationComponent, PaginationConfig,
+  PaginationComponent, PaginationConfig, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../../shared/modal.component';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
   CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
@@ -21,7 +20,7 @@ const PAGE_SIZE = 10;
   standalone: true,
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
-    ButtonComponent, FormFieldComponent, CheckboxComponent, ModalComponent, StatusBadgeComponent,
+    ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
     PaginationComponent, TranslatePipe,
   ],
   templateUrl: './list-manager.component.html',
@@ -32,6 +31,10 @@ export class ListManagerComponent implements OnInit {
   private fb          = inject(FormBuilder);
   private userStore   = inject(UserStore);
   private translate   = inject(TranslateService);
+  private modal       = inject(ModalService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
+  adding  = signal(false);
 
   listTypes       = signal<ListType[]>([]);
   selectedType    = signal<ListType | null>(null);
@@ -40,10 +43,8 @@ export class ListManagerComponent implements OnInit {
   loadingValues   = signal(false);
   searchQuery     = signal('');
   editingId       = signal<number | null>(null);
-  showAddForm     = signal(false);
   error           = signal<string | null>(null);
   successMsg      = signal<string | null>(null);
-  confirmDeleteId = signal<number | null>(null);
 
   readonly filteredTypes = computed(() => {
     const q = this.searchQuery().toLowerCase();
@@ -60,7 +61,6 @@ export class ListManagerComponent implements OnInit {
       { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN') },
       { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE') },
       { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM') },
-      { key: '_actions', label: this.translate.instant('ADMIN.data.lists.COL_ACTIONS'), align: 'right', width: '120px' },
     ];
   });
 
@@ -86,10 +86,39 @@ export class ListManagerComponent implements OnInit {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    this.editingId();
     return {
       hoverable: false,
       showHeader: false,
       emptyMessage: this.translate.instant('ADMIN.data.lists.EMPTY_MESSAGE'),
+      actions: [
+        {
+          id: 'save', icon: 'check', variant: 'default',
+          tooltip: this.translate.instant('ADMIN.data.lists.SAVE'),
+          hidden: (row: TableRow) => this.editingId() !== (row['_source'] as ListValue).id,
+          disabled: () => this.editForm.invalid,
+          onClick: (row: TableRow) => this.saveEdit(row['_source'] as ListValue),
+        },
+        {
+          id: 'cancel', icon: 'close',
+          tooltip: this.translate.instant('ADMIN.data.lists.CANCEL'),
+          hidden: (row: TableRow) => this.editingId() !== (row['_source'] as ListValue).id,
+          onClick: () => this.cancelEdit(),
+        },
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.data.lists.EDIT'),
+          hidden: (row: TableRow) => this.editingId() === (row['_source'] as ListValue).id,
+          onClick: (row: TableRow) => this.startEdit(row['_source'] as ListValue),
+        },
+        {
+          id: 'delete', icon: 'delete', variant: 'danger',
+          tooltip: this.translate.instant('ADMIN.data.lists.DELETE'),
+          hidden: (row: TableRow) => this.editingId() === (row['_source'] as ListValue).id,
+          disabled: (row: TableRow) => (row['_source'] as ListValue).isSystem,
+          onClick: (row: TableRow) => this.confirmDeleteValue(row['_source'] as ListValue),
+        },
+      ],
     };
   });
 
@@ -131,14 +160,22 @@ export class ListManagerComponent implements OnInit {
 
   selectType(type: ListType): void {
     this.selectedType.set(type);
-    this.showAddForm.set(false);
+    this.modalRef?.close();
     this.editingId.set(null);
     this.loadValues(type.id);
   }
 
   openAddForm(): void {
     this.addForm.reset({ sortOrder: 0 });
-    this.showAddForm.set(true);
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.data.lists.MODAL_ADD_TITLE'),
+      body: this.bodyTpl(),
+      closeOnBackdrop: false,
+    });
+  }
+
+  cancelAdd(): void {
+    this.modalRef?.close();
   }
 
   loadValues(id: number): void {
@@ -169,14 +206,27 @@ export class ListManagerComponent implements OnInit {
     });
   }
 
-  confirmDelete(id: number): void { this.confirmDeleteId.set(id); }
-  cancelDelete(): void { this.confirmDeleteId.set(null); }
+  /** Same ModalService confirm-dialog convention as the other admin catalog pages. */
+  confirmDeleteValue(value: ListValue): void {
+    this.modal.open({
+      title: this.translate.instant('ADMIN.data.lists.DELETE'),
+      body: this.translate.instant('ADMIN.data.lists.CONFIRM_Q'),
+      size: 'sm',
+      closeOnBackdrop: false,
+      buttons: [
+        { label: this.translate.instant('ADMIN.data.lists.NO'), variant: 'secondary', action: r => r.close() },
+        {
+          label: this.translate.instant('ADMIN.data.lists.YES'), variant: 'primary', icon: 'delete',
+          action: r => { this.deleteValue(value.id, value.listTypeId); r.close(); },
+        },
+      ],
+    });
+  }
 
   deleteValue(id: number, listTypeId: number): void {
     this.listService.deleteValue(id).subscribe({
-      next: () => { this.confirmDeleteId.set(null); this.flash(this.translate.instant('ADMIN.data.lists.MSG_DELETED')); this.loadValues(listTypeId); },
+      next: () => { this.flash(this.translate.instant('ADMIN.data.lists.MSG_DELETED')); this.loadValues(listTypeId); },
       error: err => {
-        this.confirmDeleteId.set(null);
         this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_DELETE'));
       },
     });
@@ -185,10 +235,20 @@ export class ListManagerComponent implements OnInit {
   addValue(): void {
     if (this.addForm.invalid || !this.selectedType()) return;
     const type = this.selectedType()!;
+    this.adding.set(true);
     const dto: CreateListValueRequest = { listTypeId: type.id, paysId: null, ...this.addForm.value };
     this.listService.createValue(dto).subscribe({
-      next: () => { this.showAddForm.set(false); this.addForm.reset({ sortOrder: 0 }); this.flash(this.translate.instant('ADMIN.data.lists.MSG_ADDED')); this.loadValues(type.id); },
-      error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_CREATE')),
+      next: () => {
+        this.adding.set(false);
+        this.modalRef?.close();
+        this.addForm.reset({ sortOrder: 0 });
+        this.flash(this.translate.instant('ADMIN.data.lists.MSG_ADDED'));
+        this.loadValues(type.id);
+      },
+      error: err => {
+        this.adding.set(false);
+        this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_CREATE'));
+      },
     });
   }
 

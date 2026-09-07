@@ -1,17 +1,17 @@
 import {
-  Component, OnChanges, SimpleChanges, inject, input, signal, computed,
+  Component, OnChanges, SimpleChanges, TemplateRef, inject, input, signal, computed, viewChild,
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import {
-  ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent,
-  ModalService, SelectComponent, SelectOption,
+  ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
+  ModalService, ModalRef, SelectComponent, SelectOption,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
 import { RefDataService } from '../../../../core/ref/ref-data.service';
 import { PaysTimezone, TimezoneOption } from '../../../../core/ref/ref-data.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../../../shared/modal.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -19,8 +19,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   standalone: true,
   imports: [
     ReactiveFormsModule, DafHasPermissionDirective,
-    ButtonComponent, FormFieldComponent, ToggleComponent, CardComponent, StatusBadgeComponent,
-    ModalComponent, SelectComponent,
+    ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
+    SelectComponent, DataTableComponent, DafCellDirective,
     TranslatePipe,
   ],
   templateUrl: './regime-catalog.component.html',
@@ -32,6 +32,9 @@ export class RegimeCatalogComponent implements OnChanges {
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
   private refData   = inject(RefDataService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
+  creating = signal(false);
 
   readonly paysId = input<number>(179);
 
@@ -42,7 +45,6 @@ export class RegimeCatalogComponent implements OnChanges {
   loading      = signal(true);
   isSaving     = signal(false);
   isDeleting   = signal(false);
-  showCreateModal = signal(false);
   errorMsg     = signal<string | null>(null);
   successMsg   = signal<string | null>(null);
   skeletonRows = [1,2,3,4];
@@ -59,6 +61,26 @@ export class RegimeCatalogComponent implements OnChanges {
     const val = this.form.get('isDefault')?.value;
     return val === true && this.currentDefaultName() !== null;
   });
+
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'name',   label: this.translate.instant('ADMIN.regimes.catalog.colName') },
+      { key: 'meta',   label: this.translate.instant('ADMIN.regimes.catalog.colSchedule') },
+      { key: 'badges', label: '' },
+    ];
+  });
+
+  readonly rows = computed<TableRow[]>(() =>
+    this.regimes().map(r => ({
+      name:   r.labelFr,
+      meta:   `${r.hoursPerWeek}h · ${r.daysPerWeek}j`,
+      badges: null,
+      _source: r,
+    })),
+  );
+
+  readonly tableConfig: TableConfig = { hoverable: true };
 
   formTouched       = signal(false);
   createFormTouched = signal(false);
@@ -263,11 +285,24 @@ export class RegimeCatalogComponent implements OnChanges {
     });
   }
 
+  openCreateModal(): void {
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.regimes.catalog.createModalTitle'),
+      body: this.bodyTpl(),
+      closeOnBackdrop: false,
+    });
+  }
+
+  cancelCreate(): void {
+    this.modalRef?.close();
+  }
+
   createRegime(): void {
     if (this.createForm.invalid) {
       this.createFormTouched.set(true);
       return;
     }
+    this.creating.set(true);
     const v = this.createForm.value;
     const dto: CreateRegimeRequest = {
       code: v.code!, labelFr: v.labelFr!, labelEn: v.labelEn ?? '',
@@ -284,13 +319,17 @@ export class RegimeCatalogComponent implements OnChanges {
     };
     this.svc.createRegime(dto).subscribe({
       next: created => {
+        this.creating.set(false);
         this.regimes.update(rs => [...rs, created]);
-        this.showCreateModal.set(false);
+        this.modalRef?.close();
         this.createForm.reset({ hoursPerWeek: 40, daysPerWeek: 5, isFlexible: false, isDefault: false, breakDurationMin: 0, overtimeAllowed: false, timezone: '' });
         this.createTimezoneSelected.set(['']);
         this.selectRegime(created);
       },
-      error: err => this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate')),
+      error: err => {
+        this.creating.set(false);
+        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate'));
+      },
     });
   }
 

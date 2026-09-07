@@ -50,6 +50,9 @@ export class UserStore {
   readonly isAdmin = computed(() =>
     ADMIN_PERMS.some(p => this.permissions().includes(p)));
 
+  /** Cross-country override on admin screens that otherwise scope to the caller's own pays. */
+  readonly isSuperAdmin = computed(() => this.permissions().includes('RH_SUPER_ADMIN'));
+
   readonly userInitials = computed(() => {
     const name = this.currentUser()?.fullName ?? '';
     return name.split(' ').map(n => n[0] ?? '').slice(0, 2).join('').toUpperCase();

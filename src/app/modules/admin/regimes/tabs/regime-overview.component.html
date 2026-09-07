@@ -48,10 +48,10 @@
 <!-- Filters -->
 <div class="ro-filters">
   <div class="ro-search">
-    <rh-search-bar
-      [placeholder]="'ADMIN.regimes.overview.searchPlaceholder' | translate"
+    <daf-form-field
+      [options]="{ type: 'search', placeholder: ('ADMIN.regimes.overview.searchPlaceholder' | translate), prefixIcon: 'search', fullWidth: true }"
       [value]="searchTerm()"
-      (valueChange)="onSearch($event)" />
+      (valueChange)="onSearch($any($event) ?? '')" />
   </div>
   @for (f of sourceFilters; track f.value) {
     <daf-button
@@ -74,16 +74,6 @@
     }
   </ng-template>
 
-  <ng-template dafCell="_actions" let-row>
-    <daf-button
-      *dafHasPermission="'ADMIN_REGIMES'"
-      class="icon-btn-edit"
-      [title]="'ADMIN.regimes.common.edit' | translate"
-      variant="primary"
-      [options]="{ size: 'sm', iconStart: 'edit' }"
-      (onClick)="openEmployeePanel(row['_source'])" />
-  </ng-template>
-
 </daf-data-table>
 </div>
 
@@ -101,12 +91,8 @@
   }
 </div>
 
-<!-- Employee Panel Modal -->
-<app-modal
-  [title]="selectedEmployee()?.fullName ?? ''"
-  [visible]="showEmployeePanel()"
-  [hasFooter]="false"
-  (closed)="showEmployeePanel.set(false)">
+<!-- Employee Panel body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTpl>
 
   <p class="ro-panel-role">{{ 'ADMIN.regimes.overview.panelRole' | translate:{ role: (selectedEmployee()?.roleName ?? '—') } }}</p>
 
@@ -183,4 +169,4 @@
       </div>
     </div>
   }
-</app-modal>
+</ng-template>

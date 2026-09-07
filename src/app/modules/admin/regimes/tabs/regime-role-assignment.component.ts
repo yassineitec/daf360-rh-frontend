@@ -1,25 +1,23 @@
 import {
-  Component, OnChanges, SimpleChanges, computed, inject, input, signal,
+  Component, OnChanges, SimpleChanges, TemplateRef, computed, inject, input, signal, viewChild,
 } from '@angular/core';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SelectComponent, SelectOption, TableColumn, TableConfig, TableRow,
-  PaginationComponent,
+  PaginationComponent, ModalService, ModalRef, PermissionService,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../../../shared/modal.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-regime-role-assignment',
   standalone: true,
   imports: [
-    DafHasPermissionDirective, DataTableComponent, DafCellDirective,
-    ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent, ModalComponent,
+    DataTableComponent, DafCellDirective,
+    ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
     PaginationComponent, TranslatePipe,
   ],
   templateUrl: './regime-role-assignment.component.html',
@@ -29,6 +27,11 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   private svc      = inject(RegimeService);
   private roleSvc  = inject(RoleManagementService);
   private translate = inject(TranslateService);
+  private modal    = inject(ModalService);
+  private perms    = inject(PermissionService);
+  private modalRef?: ModalRef;
+  bodyTplAssign = viewChild.required<TemplateRef<unknown>>('bodyTplAssign');
+  bodyTplRemove = viewChild.required<TemplateRef<unknown>>('bodyTplRemove');
 
   readonly paysId = input<number>(179);
 
@@ -38,8 +41,6 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   allRoles       = signal<RoleListItem[]>([]);
   loading        = signal(true);
   isAssigning    = signal(false);
-  showAssignModal = signal(false);
-  showRemoveModal = signal(false);
   selectedRow    = signal<RoleRow | null>(null);
   errorMsg       = signal<string | null>(null);
   noEndDate      = signal(true);
@@ -99,7 +100,6 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom') },
     { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo') },
     { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes') },
-    { key: '_actions', label: this.translate.instant('ADMIN.regimes.roles.columns.actions'), align: 'right' },
   ];
 
   readonly totalElements = computed(() => this.allRolesWithAssignment().length);
@@ -123,9 +123,30 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const hasPerm = () => this.perms.has('ADMIN_REGIMES');
     return {
       hoverable: true,
       emptyMessage: this.translate.instant('ADMIN.regimes.roles.empty'),
+      actions: [
+        {
+          id: 'assign', icon: 'add',
+          tooltip: this.translate.instant('ADMIN.regimes.roleAssign.assign'),
+          hidden: (row: TableRow) => !hasPerm() || !!(row['_source'] as RoleRow).assignment,
+          onClick: (row: TableRow) => this.openAssignModal(row['_source'] as RoleRow),
+        },
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.regimes.common.edit'),
+          hidden: (row: TableRow) => !hasPerm() || !(row['_source'] as RoleRow).assignment,
+          onClick: (row: TableRow) => this.openAssignModal(row['_source'] as RoleRow),
+        },
+        {
+          id: 'delete', icon: 'delete', variant: 'danger',
+          tooltip: this.translate.instant('ADMIN.regimes.common.delete'),
+          hidden: (row: TableRow) => !hasPerm() || !(row['_source'] as RoleRow).assignment,
+          onClick: (row: TableRow) => this.openRemoveModal(row['_source'] as RoleRow),
+        },
+      ],
     };
   });
 
@@ -158,12 +179,25 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.formNotes    = row.assignment?.notes ?? '';
     this.noEndDate.set(!row.assignment?.effectiveTo);
     this.errorMsg.set(null);
-    this.showAssignModal.set(true);
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.regimes.roleAssign.assignModalTitle'),
+      body: this.bodyTplAssign(),
+      closeOnBackdrop: false,
+    });
   }
 
   openRemoveModal(row: RoleRow): void {
     this.selectedRow.set(row);
-    this.showRemoveModal.set(true);
+    this.errorMsg.set(null);
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.regimes.roleAssign.removeModalTitle'),
+      body: this.bodyTplRemove(),
+      closeOnBackdrop: false,
+    });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
   }
 
   confirmAssign(): void {
@@ -185,7 +219,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
           return [...filtered, a];
         });
         this.isAssigning.set(false);
-        this.showAssignModal.set(false);
+        this.modalRef?.close();
       },
       error: err => {
         this.isAssigning.set(false);
@@ -200,7 +234,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.svc.removeRoleAssignment(row.assignment.id).subscribe({
       next: () => {
         this.assignments.update(as => as.filter(a => a.id !== row.assignment!.id));
-        this.showRemoveModal.set(false);
+        this.modalRef?.close();
       },
       error: err => this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorDelete')),
     });

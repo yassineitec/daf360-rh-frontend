@@ -1,20 +1,20 @@
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SlicePipe } from '@angular/common';
 import { catchError, of } from 'rxjs';
 import {
-  ButtonComponent, CardComponent, FormFieldComponent, StatusBadgeComponent, BadgeOptions,
+  AvatarComponent, BadgeOptions, BreadcrumbItem, ButtonComponent, CardComponent,
+  FormFieldComponent, PageComponent, PageHeaderBadge, PageHeaderComponent,
 } from '@khalilrebhiitec/daf360';
 
 import { RequestsService }      from './requests.service';
 import { EmployeeRequest, GeneratedDocument } from './models/request.model';
-import { SpinnerComponent }          from '../../shared/spinner.component';
-import { UserStore }                 from '../../core/user.store';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
-import { ConfirmService } from '../../core/confirm.service';
+import { UserStore }       from '../../core/user.store';
+import { ConfirmService }  from '../../core/confirm.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const STATUS_VARIANTS: Record<string, BadgeOptions['variant']> = {
@@ -48,115 +48,171 @@ interface TimelineStep {
   selector: 'app-request-detail',
   standalone: true,
   imports: [
-    RouterLink, SlicePipe, SpinnerComponent, PdfDownloadButtonComponent,
-    ButtonComponent, CardComponent, FormFieldComponent, StatusBadgeComponent,
-    TranslatePipe,
+    RouterLink, SlicePipe, PdfDownloadButtonComponent,
+    AvatarComponent, ButtonComponent, CardComponent, FormFieldComponent, PageComponent,
+    PageHeaderComponent, TranslatePipe,
   ],
   template: `
-    @if (loading()) {
-      <div class="rd-loading-wrap"><app-spinner size="lg" /></div>
-    } @else if (!req()) {
-      <div class="rd-error-state">
-        <span class="material-symbols-outlined rd-error-icon">search_off</span>
-        <p>{{ 'REQUESTS.DETAIL.NOT_FOUND' | translate }}</p>
-        <a routerLink="/requests" class="rd-btn-ghost">{{ 'REQUESTS.DETAIL.BACK_TO_REQUESTS' | translate }}</a>
-      </div>
-    } @else {
+    <!-- Same daf-page/daf-page-header scaffold as the other detail pages (candidates,
+         profiles, recruitment demand): breadcrumbs carry the "back to list" affordance,
+         badges show status on the title line — no hand-rolled header markup. -->
+    <daf-page [loading]="loading()" [kpis]="0" [breadcrumbs]="true">
 
-      <div class="rd-page">
+      <daf-page-header
+        [title]="requestTypeLabel() || ('REQUESTS.DETAIL.NOT_FOUND' | translate)"
+        [subtitle]="headerSubtitle()"
+        [badges]="headerBadges()"
+        [breadcrumbs]="breadcrumbs()"
+        [breadcrumbLabel]="'REQUESTS.DETAIL.BREADCRUMB' | translate">
+        <ng-container pageActions>
+          @if (req()?.status === 'SUBMITTED' && !isOfficer()) {
+            <daf-button
+              [options]="{ variant: 'ghost', size: 'sm', label: ('REQUESTS.DETAIL.CANCEL_BTN' | translate) }"
+              (onClick)="cancelRequest()" />
+          }
+          @if (canProcess()) {
+            <daf-button
+              [options]="{ variant: 'teal', size: 'sm', iconStart: 'task_alt',
+                           label: ('REQUESTS.DETAIL.TAKE_CHARGE' | translate) }"
+              (onClick)="scrollToAction()" />
+          }
+        </ng-container>
+      </daf-page-header>
 
-        <!-- ── Top bar ──────────────────────────────────────── -->
-        <div class="rd-topbar">
-          <div class="rd-nav">
-            <nav class="rd-breadcrumb">
-              <a routerLink="/requests" class="rd-bc-link">{{ 'REQUESTS.DETAIL.BREADCRUMB' | translate }}</a>
-              <span class="material-symbols-outlined rd-bc-sep">chevron_right</span>
-              <span class="rd-bc-current">{{ 'REQUESTS.COMMON.REQUEST_NUMBER' | translate:{ id: requestId } }}</span>
-            </nav>
-            <a routerLink="/requests" class="rd-back">
-              <span class="material-symbols-outlined">arrow_back</span>
-              {{ 'REQUESTS.DETAIL.BACK_TO_REQUESTS' | translate }}
-            </a>
+      @if (!req()) {
+        <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+          <div class="flex flex-col items-center gap-3 py-8 text-center">
+            <span class="material-symbols-outlined text-[36px] text-outline-variant">search_off</span>
+            <p class="m-0 text-[14px] font-semibold text-on-surface">
+              {{ 'REQUESTS.DETAIL.NOT_FOUND' | translate }}
+            </p>
+            <daf-button
+              [options]="{ variant: 'ghost', size: 'sm', iconStart: 'arrow_back',
+                           label: ('REQUESTS.DETAIL.BACK_TO_REQUESTS' | translate) }"
+              (onClick)="goBack()" />
           </div>
-          <div class="rd-topbar-actions">
-            @if (req()!.status === 'SUBMITTED' && !isOfficer()) {
-              <daf-button [label]="'REQUESTS.DETAIL.CANCEL_BTN' | translate" variant="ghost" [options]="{ size: 'sm' }" (onClick)="cancelRequest()" />
-            }
-            @if (canProcess()) {
-              <daf-button [label]="'REQUESTS.DETAIL.TAKE_CHARGE' | translate" variant="teal" [options]="{ size: 'sm', iconStart: 'task_alt' }" (onClick)="scrollToAction()" />
-            }
-          </div>
-        </div>
+        </daf-card>
+      } @else {
+        <!-- Same scaffold as /rh/profiles/:id and /rh/recruitment-demands/:id: a sticky
+             reference card on the left (there, identity/job details; here, the requester)
+             and everything else flowing in the right column. -->
+        <div class="flex flex-col gap-6 lg:flex-row">
 
-        <!-- ── Page title ───────────────────────────────────── -->
-        <div class="rd-title-area">
-          <div class="rd-title-row">
-            <h1 class="rd-title">
-              {{ req()!.typeDisplayNameFr ?? ('REQUESTS.COMMON.REQUEST_NUMBER' | translate:{ id: req()!.requestTypeId }) }}
-            </h1>
-            <daf-badge [label]="statusLabel(req()!.status)" [options]="statusBadgeOptions(req()!.status)" />
-          </div>
-          <div class="rd-meta">
-            <span class="rd-meta-chip">
-              <span class="material-symbols-outlined">account_circle</span>
-              {{ req()!.employeeName ?? ('REQUESTS.COMMON.PROFILE_NUMBER' | translate:{ id: req()!.employeeProfileId }) }}
-            </span>
-            <span class="rd-meta-chip">
-              <span class="material-symbols-outlined">calendar_today</span>
-              {{ 'REQUESTS.DETAIL.SUBMITTED_ON' | translate:{ date: fmtDate(req()!.submissionDate) } }}
-            </span>
-            @if (req()!.assignedOfficerId) {
-              <span class="rd-meta-chip">
-                <span class="material-symbols-outlined">badge</span>
-                {{ 'REQUESTS.DETAIL.OFFICER_NUMBER' | translate:{ id: req()!.assignedOfficerId } }}
-              </span>
-            }
-          </div>
-        </div>
+          <!-- ── Left: who this request is about, plus the officer's action panel right
+               below it, always on screen ── -->
+          <div class="lg:w-[32%] lg:shrink-0">
+            <div class="flex flex-col gap-6 lg:sticky lg:top-6">
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  {{ 'REQUESTS.DETAIL.REQUESTER' | translate }}
+                </h3>
+                <div class="flex items-center gap-3">
+                  <!-- Real photo, same daf-avatar + endpoint as /rh/profiles and the
+                       request card lists — falls back to initials on its own if it 404s. -->
+                  <daf-avatar [data]="{ name: employeeLabel(), avatarUrl: employeeAvatarUrl() }" size="lg" />
+                  <div class="min-w-0">
+                    <p class="m-0 truncate text-[14px] font-semibold text-on-surface">{{ employeeLabel() }}</p>
+                    <p class="m-0 text-[12px] text-on-surface-variant">{{ 'REQUESTS.DETAIL.EMPLOYEE' | translate }}</p>
+                  </div>
+                </div>
+                <div class="mt-4 flex flex-col gap-2 border-t border-outline-variant/30 pt-4">
+                  <div class="flex items-center justify-between gap-3 text-[13px]">
+                    <span class="text-on-surface-variant">{{ 'REQUESTS.DETAIL.PROFILE_KEY' | translate }}</span>
+                    <span class="truncate font-medium text-on-surface">{{ employeeLabel() }}</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-3 text-[13px]">
+                    <span class="text-on-surface-variant">{{ 'REQUESTS.DETAIL.COUNTRY_KEY' | translate }}</span>
+                    <span class="font-medium text-on-surface">{{ req()!.paysName ?? ('#' + req()!.paysId) }}</span>
+                  </div>
+                  @if (req()!.assignedOfficerId) {
+                    <div class="flex items-center justify-between gap-3 text-[13px]">
+                      <span class="text-on-surface-variant">{{ 'REQUESTS.DETAIL.OFFICER_KEY' | translate }}</span>
+                      <span class="font-medium text-on-surface">
+                        {{ 'REQUESTS.DETAIL.OFFICER_NUMBER' | translate:{ id: req()!.assignedOfficerId } }}
+                      </span>
+                    </div>
+                  }
+                </div>
+                @if (isOfficer()) {
+                  <a [routerLink]="['/profiles', req()!.employeeProfileId]"
+                     class="mt-4 inline-block w-fit cursor-pointer text-[13px] font-medium text-tertiary underline underline-offset-2 hover:text-teal">
+                    {{ 'REQUESTS.DETAIL.VIEW_FULL_PROFILE' | translate }}
+                  </a>
+                }
+                <!-- Extra bottom space — the card otherwise ends right at the last row,
+                     which read as too short next to the tall right column. -->
+                <div class="h-8"></div>
+              </daf-card>
 
-        <!-- ── Grid ─────────────────────────────────────────── -->
-        <div class="rd-grid">
+              <!-- Action panel (officer, processable) — right under the Requérant card. -->
+              @if (canProcess()) {
+                <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" id="rd-action-panel">
+                  <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px] text-warning">gavel</span>
+                    {{ 'REQUESTS.DETAIL.ACTION_TITLE' | translate }}
+                  </h3>
+                  <daf-form-field
+                    [options]="{ label: ('REQUESTS.DETAIL.COMMENT_LABEL' | translate), required: true, type: 'textarea', rows: 3,
+                                 placeholder: ('REQUESTS.DETAIL.COMMENT_PLACEHOLDER' | translate), fullWidth: true }"
+                    [value]="actionComment"
+                    (valueChange)="actionComment = $any($event) ?? ''" />
+                  @if (errorMsg()) {
+                    <p class="m-0 mt-2 text-[12px] text-danger">{{ errorMsg() }}</p>
+                  }
+                  <div class="mt-4 flex flex-col gap-2.5">
+                    <daf-button
+                      [options]="{ variant: 'teal', size: 'lg', fullWidth: true, iconStart: 'check_circle',
+                                   disabled: !actionComment.trim() || saving(), loading: saving(),
+                                   label: ('REQUESTS.DETAIL.APPROVE' | translate) }"
+                      (onClick)="process('APPROVED')" />
+                    <daf-button
+                      [options]="{ variant: 'danger', size: 'lg', fullWidth: true, iconStart: 'cancel',
+                                   disabled: !actionComment.trim() || saving(),
+                                   label: ('REQUESTS.DETAIL.REJECT' | translate) }"
+                      (onClick)="process('REJECTED')" />
+                  </div>
+                </daf-card>
+              }
+            </div>
+          </div>
 
-          <!-- Left column -->
-          <div class="rd-left">
+          <!-- ── Right: reason, documents, timeline. ── -->
+          <div class="flex min-w-0 flex-1 flex-col gap-6">
 
             <!-- Motif de la demande -->
-            <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-              <div class="rd-card-hd">
-                <h3 class="rd-section-title">
-                  <span class="material-symbols-outlined">chat_bubble</span>
-                  {{ 'REQUESTS.DETAIL.REASON_TITLE' | translate }}
-                </h3>
-              </div>
-              <div class="rd-comment-box">
-                <p class="rd-comment-text">
-                  @if (req()!.closureComment) {
-                    "{{ req()!.closureComment }}"
-                  } @else {
-                    {{ 'REQUESTS.DETAIL.NO_COMMENT' | translate }}
-                  }
-                </p>
-              </div>
+            <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+              <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <span class="material-symbols-outlined text-[18px] text-teal">chat_bubble</span>
+                {{ 'REQUESTS.DETAIL.REASON_TITLE' | translate }}
+              </h3>
+              <p class="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-on-surface">
+                @if (req()!.closureComment) {
+                  "{{ req()!.closureComment }}"
+                } @else {
+                  {{ 'REQUESTS.DETAIL.NO_COMMENT' | translate }}
+                }
+              </p>
             </daf-card>
 
             <!-- Documents joints -->
             @if (req()!.attachmentUrl) {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-                <h3 class="rd-section-title">
-                  <span class="material-symbols-outlined">attachment</span>
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">attachment</span>
                   {{ 'REQUESTS.DETAIL.ATTACHMENTS_TITLE' | translate }}
                 </h3>
-                <div class="rd-doc-item">
-                  <div class="rd-doc-icon">
-                    <span class="material-symbols-outlined">picture_as_pdf</span>
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal/10 text-teal">
+                    <span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
                   </div>
-                  <div class="rd-doc-meta">
-                    <p class="rd-doc-name">{{ 'REQUESTS.DETAIL.ATTACHMENT_NAME' | translate }}</p>
-                    <p class="rd-doc-size">{{ fmtDate(req()!.submissionDate) }}</p>
+                  <div class="min-w-0 flex-1">
+                    <p class="m-0 truncate text-[14px] font-medium text-on-surface">{{ 'REQUESTS.DETAIL.ATTACHMENT_NAME' | translate }}</p>
+                    <p class="m-0 text-[12px] text-outline">{{ fmtDate(req()!.submissionDate) }}</p>
                   </div>
                   <a [href]="req()!.attachmentUrl" target="_blank" download
-                     class="rd-doc-download" [title]="'REQUESTS.DETAIL.DOWNLOAD' | translate">
-                    <span class="material-symbols-outlined">download</span>
+                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+                     [title]="'REQUESTS.DETAIL.DOWNLOAD' | translate">
+                    <span class="material-symbols-outlined text-[20px]">download</span>
                   </a>
                 </div>
               </daf-card>
@@ -164,21 +220,21 @@ interface TimelineStep {
 
             <!-- Documents générés (after approval) -->
             @if (req()!.status === 'APPROVED' && documents().length > 0) {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-                <h3 class="rd-section-title">
-                  <span class="material-symbols-outlined">file_present</span>
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">file_present</span>
                   {{ 'REQUESTS.DETAIL.GENERATED_DOCS_TITLE' | translate }}
                 </h3>
-                <div class="rd-docs-list">
+                <div class="flex flex-col gap-3">
                   @for (doc of documents(); track doc.id) {
-                    <div class="rd-doc-item">
-                      <div class="rd-doc-icon">
-                        <span class="material-symbols-outlined">description</span>
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal/10 text-teal">
+                        <span class="material-symbols-outlined text-[20px]">description</span>
                       </div>
-                      <div class="rd-doc-meta">
-                        <p class="rd-doc-name">{{ doc.documentType }}</p>
+                      <div class="min-w-0 flex-1">
+                        <p class="m-0 truncate text-[14px] font-medium text-on-surface">{{ doc.documentType }}</p>
                         @if (doc.verificationCode) {
-                          <p class="rd-doc-size">{{ 'REQUESTS.DETAIL.CODE' | translate:{ code: doc.verificationCode } }}</p>
+                          <p class="m-0 text-[12px] text-outline">{{ 'REQUESTS.DETAIL.CODE' | translate:{ code: doc.verificationCode } }}</p>
                         }
                       </div>
                       <!-- Stream via the Spring endpoint (blob). doc.fileUrl is a
@@ -197,80 +253,79 @@ interface TimelineStep {
 
             <!-- PDF doc section (document-type requests, approved) -->
             @if (isDocumentRequest() && req()!.status === 'APPROVED') {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-                <h3 class="rd-section-title">
-                  <span class="material-symbols-outlined">picture_as_pdf</span>
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">picture_as_pdf</span>
                   {{ 'REQUESTS.DETAIL.OFFICIAL_DOC_TITLE' | translate }}
                 </h3>
                 @if (generatedDoc()) {
-                  <div class="rd-doc-ready">
-                    <span class="material-symbols-outlined">check_circle</span>
-                    <p>{{ 'REQUESTS.DETAIL.DOC_GENERATED_ON' | translate:{ date: (generatedDoc()!.generatedAt | slice:0:10) } }}</p>
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span class="material-symbols-outlined text-[20px] text-success">check_circle</span>
+                    <p class="m-0 flex-1 text-[14px] text-on-surface">
+                      {{ 'REQUESTS.DETAIL.DOC_GENERATED_ON' | translate:{ date: (generatedDoc()!.generatedAt | slice:0:10) } }}
+                    </p>
                     <app-pdf-download-button
                       [label]="'REQUESTS.DETAIL.DOWNLOAD' | translate"
                       [docId]="generatedDoc()!.id"
                       [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
-                      variant="outline"
-                    />
+                      variant="outline" />
                   </div>
                 } @else {
-                  <div class="rd-doc-warn">
-                    <span class="material-symbols-outlined">warning</span>
-                    <p>{{ 'REQUESTS.DETAIL.DOC_NOT_GENERATED' | translate }}</p>
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span class="material-symbols-outlined text-[20px] text-warning">warning</span>
+                    <p class="m-0 flex-1 text-[14px] text-on-surface">{{ 'REQUESTS.DETAIL.DOC_NOT_GENERATED' | translate }}</p>
                     <app-pdf-download-button
                       [label]="'REQUESTS.DETAIL.GENERATE_NOW' | translate"
                       [endpoint]="getDocEndpoint(req()!.typeCode ?? '')"
                       [body]="{ employeeProfileId: req()!.employeeProfileId, requestId: req()!.id }"
                       [filename]="(req()!.typeCode ?? 'document').toLowerCase() + '.pdf'"
-                      variant="primary"
-                    />
+                      variant="primary" />
                   </div>
                 }
               </daf-card>
             }
 
-          </div><!-- /rd-left -->
-
-          <!-- Right column -->
-          <div class="rd-right">
-
-            <!-- Timeline / Historique -->
-            <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-              <h3 class="rd-section-title-plain">{{ 'REQUESTS.DETAIL.HISTORY_TITLE' | translate }}</h3>
-              <div class="rd-timeline">
+            <!-- Historique -->
+            <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+              <h3 class="m-0 mb-4 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <span class="material-symbols-outlined text-[18px] text-teal">history</span>
+                {{ 'REQUESTS.DETAIL.HISTORY_TITLE' | translate }}
+              </h3>
+              <div class="flex flex-col">
                 @for (step of timelineSteps(); track step.label; let last = $last) {
-                  <div class="rd-tl-item" [class.rd-tl-item--last]="last">
-                    <div class="rd-tl-dot-col">
-                      <div class="rd-tl-dot"
-                           [class.rd-tl-dot--done]="step.done && !step.rejected"
-                           [class.rd-tl-dot--rejected]="step.rejected">
+                  <div class="flex gap-3">
+                    <div class="flex flex-col items-center">
+                      <div [class]="'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[14px] ' +
+                                    (step.rejected ? 'bg-danger text-on-primary' : step.done ? 'bg-teal text-on-primary' : 'bg-surface-container text-outline')">
                         @if (step.done && !step.rejected) {
-                          <span class="material-symbols-outlined">check</span>
+                          <span class="material-symbols-outlined text-[16px]">check</span>
                         } @else if (step.rejected) {
-                          <span class="material-symbols-outlined">close</span>
+                          <span class="material-symbols-outlined text-[16px]">close</span>
                         } @else {
-                          <div class="rd-tl-inner-dot"></div>
+                          <div class="h-2 w-2 rounded-full bg-outline-variant"></div>
                         }
                       </div>
-                      @if (!last) { <div class="rd-tl-line"></div> }
+                      @if (!last) { <div class="my-1 w-px flex-1 bg-outline-variant/50"></div> }
                     </div>
-                    <div class="rd-tl-content">
-                      <div class="rd-tl-header">
-                        <span class="rd-tl-label" [class.rd-tl-label--pending]="!step.done">
+                    <div class="min-w-0 flex-1 pb-5">
+                      <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <span [class]="'text-[14px] font-semibold ' + (step.done ? 'text-on-surface' : 'text-outline')">
                           {{ step.label }}
                         </span>
                         @if (step.date) {
-                          <span class="rd-tl-date">{{ fmtDateTime(step.date) }}</span>
+                          <span class="text-[12px] text-outline">{{ fmtDateTime(step.date) }}</span>
                         }
                       </div>
                       @if (step.msg) {
-                        <div class="rd-tl-bubble">{{ step.msg }}</div>
+                        <p class="m-0 mt-1 rounded-lg bg-surface-container-low px-3 py-2 text-[13px] text-on-surface-variant">
+                          {{ step.msg }}
+                        </p>
                       }
                       @if (step.estimatedDelay) {
-                        <div class="rd-tl-delay">
-                          <span class="material-symbols-outlined">schedule</span>
+                        <p class="m-0 mt-1 flex items-center gap-1.5 text-[12px] text-warning">
+                          <span class="material-symbols-outlined text-[14px]">schedule</span>
                           {{ 'REQUESTS.DETAIL.ESTIMATED_DELAY' | translate:{ delay: step.estimatedDelay } }}
-                        </div>
+                        </p>
                       }
                     </div>
                   </div>
@@ -278,88 +333,34 @@ interface TimelineStep {
               </div>
             </daf-card>
 
-            <!-- Requérant glass card -->
-            <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-              <h3 class="rd-eyebrow">{{ 'REQUESTS.DETAIL.REQUESTER' | translate }}</h3>
-              <div class="rd-requester-row">
-                <div class="rd-requester-avatar">
-                  <span class="material-symbols-outlined">account_circle</span>
-                </div>
-                <div>
-                  <p class="rd-requester-name">{{ req()!.employeeName ?? ('REQUESTS.COMMON.PROFILE_NUMBER' | translate:{ id: req()!.employeeProfileId }) }}</p>
-                  <p class="rd-requester-sub">{{ 'REQUESTS.DETAIL.EMPLOYEE' | translate }}</p>
-                </div>
-              </div>
-              <div class="rd-requester-details">
-                <div class="rd-detail-row">
-                  <span class="rd-detail-key">{{ 'REQUESTS.DETAIL.PROFILE_KEY' | translate }}</span>
-                  <span class="rd-detail-val">{{ req()!.employeeName ?? ('REQUESTS.COMMON.PROFILE_NUMBER' | translate:{ id: req()!.employeeProfileId }) }}</span>
-                </div>
-                <div class="rd-detail-row">
-                  <span class="rd-detail-key">{{ 'REQUESTS.DETAIL.COUNTRY_KEY' | translate }}</span>
-                  <span class="rd-detail-val">{{ req()!.paysName ?? ('#' + req()!.paysId) }}</span>
-                </div>
-              </div>
-              @if (isOfficer()) {
-                <a [routerLink]="['/profiles', req()!.employeeProfileId]"
-                   class="rd-profile-link">
-                  {{ 'REQUESTS.DETAIL.VIEW_FULL_PROFILE' | translate }}
-                </a>
-              }
-            </daf-card>
-
-            <!-- Action panel (officer, processable) -->
-            @if (canProcess()) {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" id="rd-action-panel">
-                <h3 class="rd-section-title-plain">{{ 'REQUESTS.DETAIL.ACTION_TITLE' | translate }}</h3>
-                <daf-form-field
-                  [options]="{ label: ('REQUESTS.DETAIL.COMMENT_LABEL' | translate), required: true, type: 'textarea', rows: 3, placeholder: ('REQUESTS.DETAIL.COMMENT_PLACEHOLDER' | translate), fullWidth: true }"
-                  [value]="actionComment"
-                  (valueChange)="actionComment = $any($event) ?? ''" />
-                <div class="rd-action-btns">
-                  <daf-button
-                    [label]="'REQUESTS.DETAIL.APPROVE' | translate"
-                    variant="teal"
-                    [options]="{ iconStart: 'check_circle', disabled: !actionComment.trim() || saving(), loading: saving() }"
-                    (onClick)="process('APPROVED')" />
-                  <daf-button
-                    [label]="'REQUESTS.DETAIL.REJECT' | translate"
-                    variant="danger"
-                    [options]="{ iconStart: 'cancel', disabled: !actionComment.trim() || saving() }"
-                    (onClick)="process('REJECTED')" />
-                </div>
-                @if (errorMsg()) {
-                  <div class="rd-error-banner" role="alert">{{ errorMsg() }}</div>
-                }
-              </daf-card>
-            }
-
             <!-- Generate document (officer + approved + document type) -->
             @if (isDocumentType() && req()!.status === 'APPROVED' && isOfficer()) {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-                <h3 class="rd-section-title-plain">{{ 'REQUESTS.DETAIL.DOC_GEN_TITLE' | translate }}</h3>
-                <p class="rd-section-desc">
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">picture_as_pdf</span>
+                  {{ 'REQUESTS.DETAIL.DOC_GEN_TITLE' | translate }}
+                </h3>
+                <p class="m-0 mb-3 text-[13px] text-on-surface-variant">
                   {{ 'REQUESTS.DETAIL.DOC_GEN_DESC' | translate }}
                 </p>
                 <daf-button
-                  [label]="'REQUESTS.DETAIL.GENERATE_DOC' | translate"
-                  variant="teal"
-                  [options]="{ iconStart: 'picture_as_pdf', disabled: generating(), loading: generating() }"
+                  [options]="{ variant: 'teal', iconStart: 'picture_as_pdf', disabled: generating(), loading: generating(),
+                               label: ('REQUESTS.DETAIL.GENERATE_DOC' | translate) }"
                   (onClick)="generateDocument()" />
               </daf-card>
             }
 
-          </div><!-- /rd-right -->
-        </div><!-- /rd-grid -->
-      </div><!-- /rd-page -->
+          </div>
 
-    }
+        </div>
+      }
+    </daf-page>
   `,
-  styleUrl: './request-detail.component.scss',
 })
 export class RequestDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
-  private confirm = inject(ConfirmService);
+  private router    = inject(Router);
+  private confirm   = inject(ConfirmService);
   private svc       = inject(RequestsService);
   private userStore = inject(UserStore);
   private pdfSvc    = inject(PdfDownloadService);
@@ -402,6 +403,52 @@ export class RequestDetailComponent implements OnInit {
   });
 
   private officerId = computed(() => this.userStore.currentUser()?.userId ?? 0);
+
+  /** Falls back to "Profil #N" until the backend enriches `employeeName`. */
+  readonly employeeLabel = computed(() => {
+    const r = this.req();
+    if (!r) return '';
+    return r.employeeName
+      ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId });
+  });
+
+  /** Same photo endpoint as /rh/profiles and the request card lists — daf-avatar falls
+   *  back to initials on its own if it 404s. */
+  readonly employeeAvatarUrl = computed(() => {
+    const r = this.req();
+    return r ? `/api/hr/profiles/${r.employeeProfileId}/photo` : '';
+  });
+
+  /** Falls back to "Demande #N" until the backend enriches `typeDisplayNameFr` — doubles
+   *  as the page title and the current breadcrumb, so the two never drift. */
+  readonly requestTypeLabel = computed(() => {
+    this.translate.currentLang();
+    const r = this.req();
+    if (!r) return '';
+    return r.typeDisplayNameFr
+      ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId });
+  });
+
+  readonly headerSubtitle = computed(() => {
+    this.translate.currentLang();
+    const r = this.req();
+    return r ? this.translate.instant('REQUESTS.DETAIL.SUBMITTED_ON', { date: this.fmtDate(r.submissionDate) }) : undefined;
+  });
+
+  readonly headerBadges = computed<PageHeaderBadge[]>(() => {
+    this.translate.currentLang();
+    const r = this.req();
+    if (!r) return [];
+    return [{ label: this.statusLabel(r.status), variant: this.statusBadgeOptions(r.status).variant, pill: true }];
+  });
+
+  readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    this.translate.currentLang();
+    return [
+      { label: this.translate.instant('REQUESTS.DETAIL.BREADCRUMB'), link: '/requests' },
+      { label: this.requestTypeLabel() },
+    ];
+  });
 
   timelineSteps = computed((): TimelineStep[] => {
     this.translate.currentLang();
@@ -463,6 +510,10 @@ export class RequestDetailComponent implements OnInit {
       'ATTESTATION_DOMICILIATION_SALAIRE': '/api/hr/documents/attestation-domiciliation-salaire',
     };
     return map[typeCode] ?? '/api/hr/documents/generate';
+  }
+
+  goBack(): void {
+    this.router.navigate(['/requests']);
   }
 
   ngOnInit() {

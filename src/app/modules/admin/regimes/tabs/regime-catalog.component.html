@@ -10,42 +10,36 @@
       }
     }
 
-    <!-- Regime cards -->
+    <!-- Regime list — real daf-data-table, same convention as the other admin catalog
+         pages, instead of a hand-rolled card list. Row click selects, same as role-list. -->
     @if (!loading()) {
-      @for (r of regimes(); track r.id) {
-        <daf-card
-          [options]="{ variant: 'glass', padding: 'md', radius: 'lg', clickable: true }"
-          [class.rc-card-active]="selectedId() === r.id"
-          (cardClick)="selectRegime(r)">
-          <div class="rc-card-head">
-            <div>
-              <p class="rc-card-title">{{ r.labelFr }}</p>
-              <p class="rc-card-code">{{ r.code }}</p>
-            </div>
-            <div class="rc-card-badges">
-              @if (r.isDefault) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeDefault' | translate" [options]="{ variant: 'teal' }" /> }
-              <!-- A currently-active seasonal window overrides every other assignment,
-                   so it must be obvious at a glance which regime is in force. -->
-              @if (isSeasonalActive(r)) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonalActive' | translate" [options]="{ variant: 'warning' }" /> }
-              @else if (r.seasonalFrom) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonal' | translate" [options]="{ variant: 'neutral' }" /> }
-              @if (r.isFlexible) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeFlexible' | translate" [options]="{ variant: 'info' }" /> }
-              @if (!r.isActive) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeInactive' | translate" [options]="{ variant: 'neutral' }" /> }
-            </div>
-          </div>
-          <div class="rc-card-meta">
-            <span><span class="material-symbols-outlined rc-meta-icon">schedule</span> {{ 'ADMIN.regimes.catalog.hoursPerWeek' | translate:{ h: r.hoursPerWeek } }}</span>
-            <span><span class="material-symbols-outlined rc-meta-icon">calendar_view_week</span> {{ 'ADMIN.regimes.catalog.daysPerWeek' | translate:{ d: r.daysPerWeek } }}</span>
-          </div>
-          @if (detail() && selectedId() === r.id) {
-            <div class="rc-card-usage">
-              <span>{{ 'ADMIN.regimes.catalog.employeeCount' | translate:{ count: detail()!.employeeCount } }}</span>
-              <span>{{ 'ADMIN.regimes.catalog.roleCount' | translate:{ count: detail()!.roleCount } }}</span>
-            </div>
-          }
-        </daf-card>
-      }
       @if (regimes().length === 0) {
         <div class="rc-empty">{{ 'ADMIN.regimes.catalog.emptyList' | translate }}</div>
+      } @else {
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig"
+                         (rowClick)="selectRegime($event['_source'])">
+          <ng-template dafCell="name" let-row>
+            <span class="rc-row-title" [class.rc-row-active]="selectedId() === row['_source'].id">{{ row['_source'].labelFr }}</span>
+            <span class="rc-row-code">{{ row['_source'].code }}</span>
+          </ng-template>
+
+          <ng-template dafCell="meta" let-row>
+            <span class="rc-row-meta">{{ 'ADMIN.regimes.catalog.hoursPerWeek' | translate:{ h: row['_source'].hoursPerWeek } }}</span>
+            <span class="rc-row-meta">{{ 'ADMIN.regimes.catalog.daysPerWeek' | translate:{ d: row['_source'].daysPerWeek } }}</span>
+          </ng-template>
+
+          <ng-template dafCell="badges" let-row>
+            <div class="rc-card-badges">
+              @if (row['_source'].isDefault) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeDefault' | translate" [options]="{ variant: 'teal', size: 'sm' }" /> }
+              <!-- A currently-active seasonal window overrides every other assignment,
+                   so it must be obvious at a glance which regime is in force. -->
+              @if (isSeasonalActive(row['_source'])) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonalActive' | translate" [options]="{ variant: 'warning', size: 'sm' }" /> }
+              @else if (row['_source'].seasonalFrom) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonal' | translate" [options]="{ variant: 'neutral', size: 'sm' }" /> }
+              @if (row['_source'].isFlexible) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeFlexible' | translate" [options]="{ variant: 'info', size: 'sm' }" /> }
+              @if (!row['_source'].isActive) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeInactive' | translate" [options]="{ variant: 'neutral', size: 'sm' }" /> }
+            </div>
+          </ng-template>
+        </daf-data-table>
       }
     }
 
@@ -53,9 +47,9 @@
     <daf-button
       *dafHasPermission="'ADMIN_REGIMES'"
       [label]="'ADMIN.regimes.catalog.newRegime' | translate"
-      variant="secondary"
+      variant="teal"
       [options]="{ fullWidth: true, iconStart: 'add' }"
-      (onClick)="showCreateModal.set(true)" />
+      (onClick)="openCreateModal()" />
   </div>
 
   <!-- RIGHT PANEL: Editor -->
@@ -202,12 +196,8 @@
   </div>
 </div>
 
-<!-- Create Modal -->
-<app-modal
-  [title]="'ADMIN.regimes.catalog.createModalTitle' | translate"
-  [visible]="showCreateModal()"
-  [hasFooter]="true"
-  (closed)="showCreateModal.set(false)">
+<!-- Create Modal body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTpl>
 
   <form [formGroup]="createForm">
     <div class="rc-form-row rc-form-row-2">
@@ -251,12 +241,12 @@
 
   @if (errorMsg()) { <div class="rc-msg rc-msg-error">{{ errorMsg() }}</div> }
 
-  <div slot="footer">
-    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" (onClick)="showCreateModal.set(false)" />
+  <div class="rc-modal-footer">
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" [options]="{ disabled: creating() }" (onClick)="cancelCreate()" />
     <daf-button
       [label]="'ADMIN.regimes.catalog.createSubmit' | translate"
       variant="teal"
-      [options]="{ disabled: createForm.invalid }"
+      [options]="{ disabled: createForm.invalid || creating(), loading: creating() }"
       (onClick)="createRegime()" />
   </div>
-</app-modal>
+</ng-template>

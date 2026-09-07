@@ -1,24 +1,22 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PageComponent, PageHeaderComponent, BreadcrumbItem,
 } from '@khalilrebhiitec/daf360';
 import { NotificationEventTypeWithRule } from './notification-routing.model';
 import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
-import { ModalComponent } from '../../../shared/modal.component';
 import { RhSearchBarComponent } from '../../../shared/search-bar.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-
-const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-notification-routing',
   standalone: true,
   imports: [
     FormsModule, RoutingRuleEditorComponent, ButtonComponent,
-    StatusBadgeComponent, PaginationComponent, ModalComponent,
+    StatusBadgeComponent, PaginationComponent, PageComponent, PageHeaderComponent,
     DataTableComponent, DafCellDirective, RhSearchBarComponent,
     TranslatePipe,
   ],
@@ -29,16 +27,27 @@ export class NotificationRoutingComponent implements OnInit {
   private svc = inject(NotificationRoutingService);
   private translate = inject(TranslateService);
 
+  // Lets the admin shell's own "Administration" breadcrumb crumb jump back to its module grid.
+  backToAdmin = output<void>();
+
+  // Tells the admin shell to hide its own "Administration › Notifications & Emails" breadcrumb
+  // while a rule is open — our own 3-level breadcrumb already includes both those crumbs.
+  detailOpen = output<boolean>();
+
   eventTypes = signal<NotificationEventTypeWithRule[]>([]);
   selectedType = signal<NotificationEventTypeWithRule | null>(null);
-  showModal = signal(false);
   loadingTypes = signal(true);
   error = signal<string | null>(null);
   searchQuery = signal('');
   mobileSearchOpen = signal(false);
 
-  readonly PAGE_SIZE = PAGE_SIZE;
   currentPage = signal(0);
+  pageSize = signal(10);
+  readonly pageSizeOptions = [10, 20, 50];
+
+  constructor() {
+    effect(() => this.detailOpen.emit(!!this.selectedType()));
+  }
 
   filteredTypes = computed(() => {
     const q = this.searchQuery().toLowerCase();
@@ -51,11 +60,11 @@ export class NotificationRoutingComponent implements OnInit {
   });
 
   readonly totalElements = computed(() => this.filteredTypes().length);
-  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
+  readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedTypes = computed(() => {
-    const start = this.currentPage() * PAGE_SIZE;
-    return this.filteredTypes().slice(start, start + PAGE_SIZE);
+    const start = this.currentPage() * this.pageSize();
+    return this.filteredTypes().slice(start, start + this.pageSize());
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -106,12 +115,22 @@ export class NotificationRoutingComponent implements OnInit {
     this.currentPage.set(page);
   }
 
-  selectType(type: NotificationEventTypeWithRule): void {
-    this.selectedType.set(type);
-    this.showModal.set(true);
+  /** `pageSizeChange` fires alone — go back to page 0 with the new size (same as /rh/profiles). */
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.currentPage.set(0);
   }
 
-  closeModal(): void {
-    this.showModal.set(false);
+  selectType(type: NotificationEventTypeWithRule): void {
+    this.selectedType.set(type);
+  }
+
+  /** The "Notifications & Emails" crumb goes back to the list; "Administration" goes up to the module grid. */
+  onBreadcrumbNavigate(crumb: BreadcrumbItem): void {
+    if (crumb.label === this.translate.instant('ADMIN.shell.tabs.notifications')) {
+      this.selectedType.set(null);
+    } else {
+      this.backToAdmin.emit();
+    }
   }
 }

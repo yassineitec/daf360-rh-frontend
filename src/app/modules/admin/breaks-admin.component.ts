@@ -5,6 +5,7 @@ import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
   TableColumn, TableConfig, TableRow, ModalService,
+  FilterComponent, FilterField, FilterResult, PermissionService,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './breaks/break.service';
 import { PointageStatusService, PointageStatusOption } from './breaks/pointage-status.service';
@@ -15,6 +16,9 @@ import {
 } from './breaks/break.model';
 import { WorkingTimeRegime } from './regimes/regime.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
+import { RefDataService } from '../../core/ref/ref-data.service';
+import { PaysTimezone } from '../../core/ref/ref-data.model';
+import { UserStore } from '../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 type BreakTab = 'templates' | 'legal-rules';
@@ -23,7 +27,7 @@ type BreakTab = 'templates' | 'legal-rules';
   selector: 'app-breaks-admin',
   standalone: true,
   imports: [
-    ButtonComponent, FormFieldComponent, SelectComponent,
+    ButtonComponent, FormFieldComponent, SelectComponent, FilterComponent,
     LegalRulesAdminComponent, DafHasPermissionDirective, StatusBadgeComponent,
     DataTableComponent, DafCellDirective, TranslatePipe,
   ],
@@ -48,14 +52,26 @@ type BreakTab = 'templates' | 'legal-rules';
           <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.breaks.title' | translate }}</h2>
           <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.breaks.subtitle' | translate }}</p>
         </div>
-        <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="desktop-only"
-          [label]="(showCreateForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.breaks.newTemplate') | translate" variant="teal"
-          [options]="{ iconStart: showCreateForm() ? 'close' : 'add' }"
-          (onClick)="showCreateForm.set(!showCreateForm())" />
-        <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="icon-btn-toggle mobile-only"
-          [title]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
-          [options]="{ iconStart: showCreateForm() ? 'close' : 'add', size: 'sm' }"
-          (onClick)="showCreateForm.set(!showCreateForm())" />
+        <div class="ba-header-actions">
+          <!-- Régime filter — one table shown at a time instead of every régime's
+               table stacked one below the other. daf-filter is a button that opens a
+               panel holding the field (a searchable select here), instead of a bare
+               daf-select sitting directly in the header. -->
+          <daf-filter
+            [fields]="filterFields()"
+            [initialValues]="filterInitialValues()"
+            triggerVariant="ghost"
+            [showReset]="false"
+            (apply)="onFilterApply($event)" />
+          <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="desktop-only"
+            [label]="(showCreateForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.breaks.newTemplate') | translate" variant="teal"
+            [options]="{ iconStart: showCreateForm() ? 'close' : 'add' }"
+            (onClick)="toggleCreateForm()" />
+          <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="icon-btn-toggle mobile-only"
+            [title]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
+            [options]="{ iconStart: showCreateForm() ? 'close' : 'add', size: 'sm' }"
+            (onClick)="toggleCreateForm()" />
+        </div>
       </div>
 
       <!-- Create form -->
@@ -142,37 +158,22 @@ type BreakTab = 'templates' | 'legal-rules';
       }
 
       @if (!isLoading()) {
-        @if (groupedTemplates().length === 0) {
+        @if (regimes().length === 0) {
           <div style="text-align:center;padding:56px;color:var(--color-outline);">
             <span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:12px;opacity:.4;">list_alt</span>
             <p style="font-size:var(--text-body-sm);margin:0;">{{ 'ADMIN.regimes.breaks.emptyTitle' | translate }}</p>
             <p style="font-size:var(--text-body-sm);margin:6px 0 0;color:var(--color-outline);">{{ 'ADMIN.regimes.breaks.emptyHint' | translate }}</p>
           </div>
-        }
-
-        @for (group of groupedTemplates(); track group.regimeId) {
-          <div style="margin-bottom:20px;">
-            <p style="font-size:var(--text-body-sm);font-weight:700;color:var(--color-on-surface-variant);text-transform:uppercase;letter-spacing:.4px;margin:0 0 8px;display:flex;align-items:center;gap:6px;">
-              <span class="material-symbols-outlined" style="font-size:14px;color:var(--color-teal);">schedule</span>
-              {{ group.regimeName }}
-            </p>
-            <div class="table-scroll">
-            <daf-data-table [columns]="columns()" [rows]="rowsFor(group.templates)" [config]="tableConfig">
-              <ng-template dafCell="deductionType" let-row>
-                <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
-              </ng-template>
-              <ng-template dafCell="durationMin" let-row>
-                <daf-badge [label]="row['durationMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
-              </ng-template>
-              <ng-template dafCell="_actions" let-row>
-                <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-                  class="icon-btn-delete" [title]="'ADMIN.regimes.common.delete' | translate"
-                  label="" variant="danger"
-                  [options]="{ iconStart: 'delete', size: 'sm' }"
-                  (onClick)="removeTemplate(row['_source'].id)" />
-              </ng-template>
-            </daf-data-table>
-            </div>
+        } @else {
+          <div class="table-scroll">
+          <daf-data-table [columns]="columns()" [rows]="filteredRows()" [config]="tableConfig()">
+            <ng-template dafCell="deductionType" let-row>
+              <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
+            </ng-template>
+            <ng-template dafCell="durationMin" let-row>
+              <daf-badge [label]="row['durationMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
+            </ng-template>
+          </daf-data-table>
           </div>
         }
       }
@@ -181,7 +182,7 @@ type BreakTab = 'templates' | 'legal-rules';
 
   <!-- Legal rules tab -->
   @if (activeTab() === 'legal-rules') {
-    <app-legal-rules-admin [paysId]="paysId()" />
+    <app-legal-rules-admin [paysId]="effectivePaysId()" />
   }
 </div>
   `,
@@ -193,6 +194,7 @@ type BreakTab = 'templates' | 'legal-rules';
     .ba-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
     .ba-tab-icon { font-size:18px }
     .ba-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
+    .ba-header-actions { display:flex;flex-wrap:nowrap;align-items:center;gap:12px }
     .ba-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
     .ba-form-span2 { grid-column:span 2 }
     .table-scroll { overflow-x:auto }
@@ -215,8 +217,20 @@ export class BreaksAdminComponent implements OnChanges {
   private regimeSvc = inject(RegimeService);
   private modal     = inject(ModalService);
   private translate = inject(TranslateService);
+  private perms     = inject(PermissionService);
+  private refData   = inject(RefDataService);
+  private userStore = inject(UserStore);
 
   readonly paysId = input<number>(179);
+
+  readonly isSuperAdmin = this.userStore.isSuperAdmin;
+  availablePays = signal<PaysTimezone[]>([]);
+  /** Super admin's pick from the "Pays" filter field — null falls back to the input. */
+  overridePaysId = signal<number | null>(null);
+  readonly effectivePaysId = computed(() => this.overridePaysId() ?? this.paysId());
+
+  readonly paysOptions = computed<SelectOption[]>(() =>
+    this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel })));
 
   activeTab     = signal<BreakTab>('templates');
   templates     = signal<BreakTemplateDto[]>([]);
@@ -225,6 +239,53 @@ export class BreaksAdminComponent implements OnChanges {
   showCreateForm = signal(false);
   isSaving      = signal(false);
   formError     = signal<string | null>(null);
+
+  /** Which régime's templates are shown — one table at a time, not every régime stacked. */
+  filterRegimeId = signal<number | null>(null);
+
+  readonly filterFields = computed<FilterField[]>(() => {
+    const fields: FilterField[] = [
+      {
+        name: 'regimeId',
+        label: this.translate.instant('ADMIN.regimes.breaks.regime'),
+        type: 'select',
+        options: this.regimeOptions(),
+        searchable: true,
+        placeholder: this.translate.instant('ADMIN.regimes.breaks.regimePlaceholder'),
+      },
+    ];
+    // Super admin only: browse another country's break configuration instead of just
+    // the one the connected admin is scoped to.
+    if (this.isSuperAdmin()) {
+      fields.push({
+        name: 'paysId',
+        label: this.translate.instant('ADMIN.catalog.holidays.colCountry'),
+        type: 'select',
+        options: this.paysOptions(),
+        searchable: true,
+      });
+    }
+    return fields;
+  });
+
+  readonly filterInitialValues = computed<FilterResult>(() => ({
+    regimeId: this.filterRegimeId() ? String(this.filterRegimeId()) : null,
+    paysId: this.overridePaysId() ? String(this.overridePaysId()) : null,
+  }));
+
+  onFilterApply(result: FilterResult): void {
+    const regime = result['regimeId'];
+    this.filterRegimeId.set(typeof regime === 'string' && regime ? Number(regime) : null);
+
+    if (this.isSuperAdmin()) {
+      const pays = result['paysId'];
+      const nextPaysId = typeof pays === 'string' && pays ? Number(pays) : null;
+      if (nextPaysId !== this.overridePaysId()) {
+        this.overridePaysId.set(nextPaysId);
+        this.loadAll();
+      }
+    }
+  }
 
   readonly typeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
@@ -258,11 +319,21 @@ export class BreaksAdminComponent implements OnChanges {
       { key: 'schedule', label: this.translate.instant('ADMIN.regimes.breaks.columns.schedule') },
       { key: 'trigger', label: this.translate.instant('ADMIN.regimes.breaks.columns.trigger') },
       { key: 'statusCode', label: this.translate.instant('ADMIN.regimes.breaks.columns.statusCode') },
-      { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
     ];
   });
 
-  readonly tableConfig: TableConfig = { hoverable: true };
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      actions: [{
+        id: 'delete', icon: 'delete', variant: 'danger',
+        tooltip: this.translate.instant('ADMIN.regimes.common.delete'),
+        hidden: () => !this.perms.has('ADMIN_BREAKS'),
+        onClick: (row: TableRow) => this.removeTemplate((row['_source'] as BreakTemplateDto).id),
+      }],
+    };
+  });
 
   rowsFor(templates: BreakTemplateDto[]): TableRow[] {
     return templates.map(t => ({
@@ -316,17 +387,19 @@ export class BreaksAdminComponent implements OnChanges {
   readonly Number = Number;
   readonly String = String;
 
-  groupedTemplates = computed(() => {
-    this.translate.currentLang();
-    const groups = new Map<number, { regimeId: number; regimeName: string; templates: BreakTemplateDto[] }>();
-    for (const t of this.templates()) {
-      const regime = this.regimes().find(r => r.id === t.regimeId);
-      const name   = regime?.labelFr ?? this.translate.instant('ADMIN.regimes.breaks.regimeFallback', { id: t.regimeId });
-      if (!groups.has(t.regimeId)) groups.set(t.regimeId, { regimeId: t.regimeId, regimeName: name, templates: [] });
-      groups.get(t.regimeId)!.templates.push(t);
-    }
-    return Array.from(groups.values());
+  readonly filteredTemplates = computed(() => {
+    const regimeId = this.filterRegimeId();
+    if (regimeId === null) return this.templates();
+    return this.templates().filter(t => t.regimeId === regimeId);
   });
+
+  readonly filteredRows = computed<TableRow[]>(() => this.rowsFor(this.filteredTemplates()));
+
+  constructor() {
+    if (this.isSuperAdmin()) {
+      this.refData.getPaysTimezones().subscribe(list => this.availablePays.set(list));
+    }
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['paysId']) this.loadAll();
@@ -334,11 +407,25 @@ export class BreaksAdminComponent implements OnChanges {
 
   loadAll(): void {
     this.isLoading.set(true);
-    this.regimeSvc.getRegimes(this.paysId()).subscribe({ next: rs => this.regimes.set(rs) });
-    this.breakSvc.getTemplatesForPays(this.paysId()).subscribe({
+    this.filterRegimeId.set(null);
+    this.regimeSvc.getRegimes(this.effectivePaysId()).subscribe({
+      next: rs => {
+        this.regimes.set(rs);
+        if (rs.length) this.filterRegimeId.set(rs[0].id);
+      },
+    });
+    this.breakSvc.getTemplatesForPays(this.effectivePaysId()).subscribe({
       next: ts => { this.templates.set(ts); this.isLoading.set(false); },
       error: () => this.isLoading.set(false),
     });
+  }
+
+  toggleCreateForm(): void {
+    const opening = !this.showCreateForm();
+    this.showCreateForm.set(opening);
+    // Defaults the create form to whichever régime is currently filtered, since that's
+    // the table the new row will actually show up in.
+    if (opening) this.formRegimeId = this.filterRegimeId() ?? 0;
   }
 
   saveTemplate(): void {
@@ -349,7 +436,7 @@ export class BreaksAdminComponent implements OnChanges {
     this.isSaving.set(true);
     this.formError.set(null);
     const req: CreateBreakTemplateRequest = {
-      paysId: this.paysId(),
+      paysId: this.effectivePaysId(),
       regimeId: this.formRegimeId,
       labelFr: this.formLabelFr,
       labelEn: this.formLabelEn || undefined,
@@ -364,6 +451,7 @@ export class BreaksAdminComponent implements OnChanges {
     this.breakSvc.createTemplate(req).subscribe({
       next: t => {
         this.templates.update(ts => [...ts, t]);
+        this.filterRegimeId.set(t.regimeId);
         this.showCreateForm.set(false);
         this.isSaving.set(false);
         this.resetForm();

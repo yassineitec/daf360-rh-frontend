@@ -1,41 +1,41 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
 import {
-  BadgeCell,
+  AvatarComponent,
   ButtonComponent,
-  ChipGroupComponent,
-  DafCellDirective,
-  DataTableComponent,
+  CardComponent,
+  FilterField,
+  FilterResult,
+  MetricCardComponent,
   PageComponent,
   PageHeaderComponent,
-  PageHeaderBadge,
   PaginationComponent,
+  SearchToolbarComponent,
+  SearchToolbarFilterConfig,
   StatusBadgeComponent,
-  TableColumn,
-  TableConfig,
-  TableRow,
+  TabItem,
+  TabsComponent,
 } from '@khalilrebhiitec/daf360';
 
 import { RequestsService } from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
-import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
+import { SlaCountdownPipe, SlaLevel, SlaResult } from '../../shared/sla-countdown.pipe';
+import { RelativeDatePipe } from '../../shared/relative-date.pipe';
 import { UserStore } from '../../core/user.store';
 import { NewRequestComponent } from './new-request.component';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { TableActionComponent } from '../../shared/table-action.component';
 import { ConfirmService } from '../../core/confirm.service';
+import { NotificationService } from '../../core/notification.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   RecruitmentValidationSectionComponent,
   RECRUITMENT_APPROVE_PERMISSION,
 } from '../recruitment-demands/recruitment-validation-section.component';
+import { RecruitmentDemandFormComponent } from '../recruitment-demands/recruitment-demand-form.component';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
-const DONE_STATUSES: RequestStatus[] = ['APPROVED', 'REJECTED', 'CANCELLED'];
-
-type TabKey = 'active' | 'done';
 
 const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -44,134 +44,262 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
   none: 'neutral',
 };
 
+/** Card-ready view model — one per visible request row. */
+interface RequestCard {
+  id: number;
+  employeeLabel: string;
+  /** Real photo endpoint — daf-avatar falls back to initials on its own if it 404s. */
+  avatarUrl: string;
+  type: string;
+  status: ReturnType<typeof statusBadge>;
+  isActive: boolean;
+  sla: SlaResult | null;
+  slaLabel: string;
+  slaVariant: 'success' | 'warning' | 'danger' | 'neutral';
+  submissionDate: string;
+  /** null when the request can be cancelled; otherwise the reason to show as a tooltip. */
+  cancelDisabledReason: string | null;
+  source: EmployeeRequest;
+}
+
 @Component({
   selector: 'app-request-list',
   standalone: true,
   imports: [
+    AvatarComponent,
     ButtonComponent,
-    ChipGroupComponent,
+    CardComponent,
+    MetricCardComponent,
     StatusBadgeComponent,
-    DataTableComponent,
-    DafCellDirective,
     PageComponent,
     PageHeaderComponent,
     PaginationComponent,
-    SlaCountdownPipe,
-    TableActionComponent,
+    SearchToolbarComponent,
     NewRequestComponent,
+    RecruitmentDemandFormComponent,
     RecruitmentValidationSectionComponent,
+    TabsComponent,
+    RelativeDatePipe,
     TranslatePipe,
   ],
   template: `
     <!-- Canonical page per UI-PLAYBOOK §1: daf-page owns the 32px rhythm, so there are no
-         space-y-* / mb-* between sections, and the title is the header's single h1.
-         kpis="0" — this page has no KPI row, so the skeleton must not draw one. -->
-    <daf-page [loading]="firstLoad()" [kpis]="0">
+         space-y-* / mb-* between sections, and the title is the header's single h1. -->
+    <daf-page [loading]="firstLoad()" [kpis]="4">
 
       <daf-page-header
         [title]="'REQUESTS.LIST.TITLE' | translate"
-        [subtitle]="'REQUESTS.LIST.INTRO_TITLE' | translate"
-        [badges]="headerBadges()">
-        @if (canViewInbox()) {
-          <daf-button pageActions
-            [options]="{ variant: 'ghost', label: ('REQUESTS.LIST.INBOX_BTN' | translate), iconStart: 'inbox' }"
-            (onClick)="goToInbox()" />
-        }
+        [subtitle]="'REQUESTS.LIST.INTRO_TITLE' | translate">
         <daf-button pageActions
           [options]="{ variant: 'teal', label: ('REQUESTS.LIST.NEW_BTN' | translate), iconStart: 'add' }"
           (onClick)="showNew.set(true)" />
       </daf-page-header>
 
-      <!-- ── Validation des demandes de recrutement ─────────────────────
-           Its own section, not a third tab: the tabs below page through
-           \`employee_requests\`, and recruitment demands are a different table with a
-           different approval chain. Rendered only for RH_APPROVE_RECRUITMENT_DEMAND —
-           the same permission the review endpoint enforces. -->
+      <!-- ── Two top-level tabs, buttons above the content below — same daf-tabs
+           pattern as the Affaires detail page and the recruitment popup, but as the
+           page's own organizing structure this time: "Demande de recrutement" is a
+           different table with a different approval chain than \`employee_requests\`,
+           so it earns its own tab rather than living inside the other one.
+           Only shown at all for RH_APPROVE_RECRUITMENT_DEMAND holders — everyone else
+           has nothing to switch to, so they go straight to their own requests below. -->
       @if (canValidateRecruitment()) {
-        <app-recruitment-validation-section />
+        <daf-tabs
+          variant="underline"
+          [tabs]="mainTabs()"
+          [active]="mainTab()"
+          (activeChange)="onMainTabChange($event)"
+          [tabsLabel]="'REQUESTS.LIST.MAIN_TABS_ARIA' | translate" />
       }
 
-      <!-- Tabs sit free in the page. They used to be the header row of a container card
-           wrapping the table, which double-bordered it (§6b rule 1). -->
-      <daf-chip-group
-        [options]="tabOptions()"
-        [selected]="[activeTab()]"
-        (selectedChange)="onTabChange($event)" />
+      <!-- KPI row — mounted once, right under the tabs, and stays in place across a tab
+           switch: only the four values (and what they mean) swap, read straight off the
+           "Demande de recrutement" section via viewChild when that tab is active, so the
+           cards never disappear/reappear the way a per-tab block would. -->
+      <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+        @if (canValidateRecruitment() && mainTab() === 'recruitment') {
+          <daf-metric-card
+            [label]="'RECRUITMENT_VALIDATION.KPI_TOTAL' | translate"
+            [value]="(recruitmentSection()?.total() ?? 0).toString()"
+            [options]="{ icon: 'hourglass_empty', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+          <daf-metric-card
+            [label]="'RECRUITMENT_VALIDATION.KPI_HEADCOUNT' | translate"
+            [value]="(recruitmentSection()?.demandKpis()?.headcount ?? 0).toString()"
+            [options]="{ icon: 'groups', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+          <daf-metric-card
+            [label]="'RECRUITMENT_VALIDATION.KPI_NO_CANDIDATES' | translate"
+            [value]="(recruitmentSection()?.demandKpis()?.noCandidates ?? 0).toString()"
+            [options]="{ icon: 'person_search', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+          <daf-metric-card
+            [label]="'RECRUITMENT_VALIDATION.KPI_OLD' | translate"
+            [value]="(recruitmentSection()?.demandKpis()?.old ?? 0).toString()"
+            [options]="{ icon: 'schedule', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+        } @else {
+          <daf-metric-card
+            [label]="'REQUESTS.LIST.KPI_TOTAL' | translate"
+            [value]="totalActive().toString()"
+            [options]="{ icon: 'inbox', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+          <daf-metric-card
+            [label]="'REQUESTS.LIST.KPI_URGENT' | translate"
+            [value]="slaCounts().critical.toString()"
+            [options]="{ icon: 'priority_high', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+          <daf-metric-card
+            [label]="'REQUESTS.LIST.KPI_SOON' | translate"
+            [value]="slaCounts().warning.toString()"
+            [options]="{ icon: 'schedule', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+          <daf-metric-card
+            [label]="'REQUESTS.LIST.KPI_OK' | translate"
+            [value]="slaCounts().ok.toString()"
+            [options]="{ icon: 'check_circle', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
+        }
+      </section>
 
-      <!-- No wrapper, no outer card, no overflow div — daf-data-table draws its own
-           chrome and owns its horizontal scroll. The empty state is the table's
-           \`emptyMessage\`, so empty and populated share the same chrome (§6b rule 3). -->
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
-        <ng-template dafCell="type" let-row>
-          <div class="flex items-center gap-3">
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal/10 text-teal">
-              <span class="material-symbols-outlined text-[18px]">description</span>
-            </div>
-            <span class="font-semibold text-on-surface">{{ row['type'] }}</span>
-          </div>
-        </ng-template>
+      @if (canValidateRecruitment() && mainTab() === 'recruitment') {
+        <app-recruitment-validation-section />
+      } @else {
+        <!-- Always-on search by employee name — a non-technical user should never need to
+             scan a long list by eye to find one person. No status filter here: this list is
+             the "en cours" view only (not yet answered) — a request that already has a
+             response (approuvée/rejetée/annulée) moves to the /rh/recruitment-demands
+             historique instead. The "Filtres" panel narrows by urgency instead, same
+             breakdown as the KPI row above. -->
+        <daf-search-toolbar
+          [placeholder]="'REQUESTS.LIST.SEARCH_PLACEHOLDER' | translate"
+          [(value)]="searchQuery"
+          [debounce]="200"
+          [filterFields]="filterFields()"
+          [filterConfig]="filterConfig()"
+          (filterApply)="onFilterApply($event)" />
 
-        <ng-template dafCell="sla" let-row>
-          @if (row['isActive']) {
-            @let sla = row['slaDeadline'] | slaCountdown;
-            <daf-badge
-              [label]="sla.label"
-              [options]="{ variant: slaVariant(sla.level), size: 'sm', dot: true }" />
-          } @else {
-            <span class="text-outline">—</span>
-          }
-        </ng-template>
-
-        <!-- Projected rather than config.actions because "cancel" is conditional on the
-             row's status, and TableAction has no row predicate. rh-table-action gives the
-             lib's own icon-only rendering and stops propagation itself (§6b rule 4). -->
-        <ng-template dafCell="_actions" let-row>
-          <div class="flex items-center justify-end gap-2">
-            <rh-table-action id="view"
-              [tooltip]="'REQUESTS.LIST.VIEW' | translate"
-              (action)="viewDetail(row['_source'].id)" />
-            @if (row['_source'].status === 'SUBMITTED') {
-              <rh-table-action id="delete" variant="danger"
-                [tooltip]="'REQUESTS.CANCEL.CONFIRM' | translate"
-                (action)="cancel(row['_source'])" />
+        <!-- Card list replaces the technical data table: each request is its own daf-card,
+             avatar + name first, so a non-technical reader recognises "who" before "what". -->
+        @if (loading()) {
+          <div class="flex flex-col gap-3">
+            @for (i of skeletonPlaceholders(); track i) {
+              <div class="h-20 animate-pulse rounded-xl bg-surface-container"></div>
             }
           </div>
-        </ng-template>
-      </daf-data-table>
+        } @else if (cards().length === 0) {
+          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+            <div class="flex flex-col items-center gap-2 py-8 text-center">
+              <span class="material-symbols-outlined text-[36px] text-outline-variant">
+                {{ isNarrowedEmpty() ? 'search_off' : 'task_alt' }}
+              </span>
+              <p class="m-0 text-[14px] font-semibold text-on-surface">{{ emptyMessage() }}</p>
+              <p class="m-0 text-[12px] text-outline">{{ emptyHint() }}</p>
+            </div>
+          </daf-card>
+        } @else {
+          <div class="flex flex-col gap-3">
+            @for (card of cards(); track card.id) {
+              <!-- Same glass/xl recipe as request-detail's own daf-card sections, so the list
+                   and the detail page a click away read as one feature, not two designs. -->
+              <daf-card class="block" [options]="{ variant: 'glass', padding: 'md', radius: 'xl', hoverable: true }">
+                <div class="flex flex-wrap items-center gap-4">
+                  <daf-avatar [data]="{ name: card.employeeLabel, avatarUrl: card.avatarUrl }" size="md" />
 
-      @if (totalPages() > 1) {
+                  <div class="min-w-[180px] flex-1">
+                    <p class="m-0 text-[15px] font-semibold text-on-surface">{{ card.employeeLabel }}</p>
+                    <div class="mt-1 flex items-center gap-1.5 text-[13px] text-on-surface-variant">
+                      <span class="material-symbols-outlined text-[16px] text-teal">description</span>
+                      <span>{{ card.type }}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col items-start gap-1.5 sm:items-end">
+                    <daf-badge [label]="card.status.label" [options]="card.status.options" />
+                    @if (card.isActive) {
+                      <daf-badge [label]="card.slaLabel" [options]="{ variant: card.slaVariant, size: 'sm', dot: true }" />
+                    }
+                  </div>
+
+                  <div class="text-[12px] text-outline sm:w-32 sm:text-right">
+                    {{ card.submissionDate | relativeDate }}
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <!-- Real daf-button icon buttons, same convention as /rh/admin's own
+                         edit/delete action icons. -->
+                    <daf-button
+                      variant="ghost"
+                      [title]="'REQUESTS.LIST.VIEW_DETAIL' | translate"
+                      [options]="{ iconStart: 'visibility', size: 'sm' }"
+                      (onClick)="viewDetail(card.id)" />
+                    @if (canViewInbox() && card.isActive) {
+                      <daf-button
+                        variant="ghost"
+                        [title]="'REQUESTS.DETAIL.APPROVE_BTN' | translate"
+                        [options]="{ iconStart: 'check_circle', size: 'sm' }"
+                        (onClick)="approve(card.source)" />
+                    }
+                    @if (card.cancelDisabledReason) {
+                      <daf-button
+                        variant="danger"
+                        [title]="card.cancelDisabledReason"
+                        [options]="{ iconStart: 'cancel', size: 'sm', disabled: true }" />
+                    } @else {
+                      <daf-button
+                        variant="danger"
+                        [title]="'REQUESTS.DETAIL.CANCEL_BTN' | translate"
+                        [options]="{ iconStart: 'cancel', size: 'sm' }"
+                        (onClick)="cancel(card.source)" />
+                    }
+                  </div>
+                </div>
+              </daf-card>
+            }
+          </div>
+        }
+
+        <!-- Same daf-pagination configuration as /rh/profiles — page-size selector +
+             "1–20 sur 137" summary, always shown, not just past a first page. -->
         <daf-pagination
           [currentPage]="page()"
           [totalPages]="totalPages()"
           [totalElements]="total()"
-          (pageChange)="goPage($event)" />
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="pageSizeOptions"
+          [perPageLabel]="'PROFILES.LIST.PER_PAGE' | translate"
+          [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
+          (pageChange)="goPage($event)"
+          (pageSizeChange)="onPageSizeChange($event)" />
       }
 
     </daf-page>
 
     <!-- ── New request modal ─────────────────────────────── -->
+    <!-- The header's "Nouvelle demande" button opens whichever form matches the active
+         tab — an employee request normally, a recruitment demand while on "Demande de
+         recrutement" — so the one button always creates what the visible list is a list of. -->
     <app-new-request
-      [visible]="showNew()"
+      [visible]="showNew() && mainTab() !== 'recruitment'"
       [profileId]="currentProfileId()"
       [paysId]="currentPaysId()"
       (closed)="showNew.set(false)"
       (submitted)="onSubmitted()"
+    />
+
+    <app-recruitment-demand-form
+      [visible]="showNew() && mainTab() === 'recruitment'"
+      (closed)="showNew.set(false)"
+      (saved)="onRecruitmentDemandSaved()"
     />
   `,
 })
 export class RequestListComponent implements OnInit {
   private svc = inject(RequestsService);
   private confirm = inject(ConfirmService);
+  private notification = inject(NotificationService);
   private userStore = inject(UserStore);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private translate = inject(TranslateService);
+  private slaPipe = new SlaCountdownPipe();
 
   /**
    * Whole-page skeleton, first load only — `daf-page [loading]`.
    *
-   * Separate from `loading` on purpose (UI-PLAYBOOK §5): `loading` drives the table's own
-   * skeleton rows on every refetch, so a tab switch or a page change never blanks the
+   * Separate from `loading` on purpose (UI-PLAYBOOK §5): `loading` drives the card list's own
+   * skeleton on every refetch, so a tab switch or a page change never blanks the
    * header and the toolbar the way a single flag would.
    */
   firstLoad = signal(true);
@@ -180,21 +308,23 @@ export class RequestListComponent implements OnInit {
   total = signal(0);
   totalPages = signal(1);
   page = signal(0);
+  pageSize = signal(100);
+  readonly pageSizeOptions = [20, 50, 100];
   showNew = signal(false);
-  activeTab = signal<TabKey>('active');
+  searchQuery = signal('');
+  /** The one filter dimension left once status no longer applies here — same three levels
+   *  as the KPI row above ('all' shows everything, matching the unfiltered KPI total). */
+  urgencyFilter = signal<'all' | 'critical' | 'warning' | 'ok'>('all');
+
+  /** Which of the two top-level tabs is showing — defaults to the employee's own
+   *  requests, the reason most visitors land on this page. */
+  mainTab = signal<'other' | 'recruitment'>('other');
+
+  /** Reactive reference to the child section, present only while its tab is active —
+   *  read by the shared KPI row above so the cards don't need their own copy of its data. */
+  readonly recruitmentSection = viewChild(RecruitmentValidationSectionComponent);
 
   protected readonly statusBadge = statusBadge;
-  protected readonly slaVariant = (level: SlaLevel) => SLA_BADGE_VARIANT[level];
-
-  /**
-   * The total count, on the title line — where the hand-rolled `daf-badge` next to the old
-   * h1 used to sit. Hidden at zero rather than showing "0": an empty page already says so
-   * through the table's own empty state.
-   */
-  readonly headerBadges = computed<PageHeaderBadge[]>(() =>
-    this.total() > 0
-      ? [{ label: this.total().toString(), variant: 'teal', pill: true }]
-      : []);
 
   canViewInbox = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
 
@@ -205,7 +335,23 @@ export class RequestListComponent implements OnInit {
    */
   canValidateRecruitment = computed(() =>
     this.userStore.hasPermission(RECRUITMENT_APPROVE_PERMISSION));
+
+  readonly mainTabs = computed<TabItem[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'other',       label: this.translate.instant('REQUESTS.LIST.MAIN_TAB_OTHER') },
+      { id: 'recruitment', label: this.translate.instant('REQUESTS.LIST.MAIN_TAB_RECRUITMENT') },
+    ];
+  });
+
+  onMainTabChange(id: string): void {
+    if (id === 'other' || id === 'recruitment') this.mainTab.set(id);
+  }
+
   currentPaysId = computed(() => this.userStore.currentUser()?.paysId ?? 1);
+  /** Officer id for `processRequest` — same field the officer inbox uses, distinct from
+   *  `currentProfileId` (the employee-side id used for ownership checks and cancelling). */
+  currentUserId = computed(() => this.userStore.currentUser()?.userId ?? 0);
   currentProfileId = computed(() => {
     const u = this.userStore.currentUser();
     if (!u) return 0;
@@ -213,86 +359,161 @@ export class RequestListComponent implements OnInit {
     return isNaN(fromEmployee) ? u.userId : fromEmployee;
   });
 
-  readonly tabOptions = computed(() => {
+  /** Only "en cours" requests ever show on this page — one that already has a response
+   *  (approuvée/rejetée/annulée) belongs to the /rh/recruitment-demands historique instead,
+   *  so there is no status filter here, just this one fixed rule. */
+  private readonly activeRows = computed(() =>
+    this.allRows().filter((r) => ACTIVE_STATUSES.includes(r.status)));
+
+  /** The i18n keys already used for the KPI labels double as the filter's option labels,
+   *  so the two never drift out of sync ("Urgentes" means the same thing in both). */
+  readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [
-      { value: 'active', label: this.translate.instant('REQUESTS.LIST.TAB_ACTIVE', { count: this.activeCount() }) },
-      { value: 'done', label: this.translate.instant('REQUESTS.LIST.TAB_DONE', { count: this.doneCount() }) },
-    ];
+    return [{
+      name: 'urgency',
+      label: this.translate.instant('REQUESTS.LIST.FILTERS.URGENCY_LABEL'),
+      type: 'select',
+      options: [
+        { value: 'all',      label: this.translate.instant('REQUESTS.LIST.FILTERS.URGENCY_ALL') },
+        { value: 'critical', label: this.translate.instant('REQUESTS.LIST.KPI_URGENT') },
+        { value: 'warning',  label: this.translate.instant('REQUESTS.LIST.KPI_SOON') },
+        { value: 'ok',       label: this.translate.instant('REQUESTS.LIST.KPI_OK') },
+      ],
+    }];
   });
 
-  visibleRows = computed(() => {
-    const all = this.allRows();
-    return this.activeTab() === 'active'
-      ? all.filter((r) => ACTIVE_STATUSES.includes(r.status))
-      : all.filter((r) => DONE_STATUSES.includes(r.status));
-  });
-
-  activeCount = computed(
-    () => this.allRows().filter((r) => ACTIVE_STATUSES.includes(r.status)).length,
-  );
-  doneCount = computed(() => this.allRows().filter((r) => DONE_STATUSES.includes(r.status)).length);
-
-  readonly columns = computed<TableColumn[]>(() => {
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
     this.translate.currentLang();
-    return [
-      { key: 'type', label: this.translate.instant('REQUESTS.LIST.COL_TYPE') },
-      { key: 'submissionDate', label: this.translate.instant('REQUESTS.LIST.COL_SUBMITTED') },
-      { key: 'status', label: this.translate.instant('REQUESTS.LIST.COL_STATUS'), type: 'badge' },
-      { key: 'sla', label: this.translate.instant('REQUESTS.LIST.COL_SLA') },
-      // §6b: an actions column carries no label and takes the minimum width. Never
-      // `clickable: true` — that styles the whole cell as a row target.
-      { key: '_actions', label: '', align: 'right', width: '1%' },
-    ];
-  });
-
-  readonly rows = computed<TableRow[]>(() => {
-    this.translate.currentLang();
-    return this.visibleRows().map((r) => ({
-      type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
-      submissionDate: this.fmtDate(r.submissionDate),
-      status: {
-        label: this.statusBadge(r.status).label,
-        options: this.statusBadge(r.status).options,
-      } as BadgeCell,
-      isActive: this.isActive(r.status),
-      slaDeadline: this.slaDeadline(r),
-      _source: r,
-    }));
-  });
-
-  readonly tableConfig = computed<TableConfig>(() => {
-    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant('REQUESTS.LIST.FILTERS.' + k);
     return {
-      // The page-header is the only h1; without this the table draws a second, EMPTY
-      // title bar above the rows (§6b rule 2).
-      showHeader:   false,
-      hoverable:    true,
-      loading:      this.loading(),
-      // Matches the rows we expect so the skeleton does not jump when data lands.
-      skeletonRows: Math.min(Math.max(this.visibleRows().length, 5), 20),
-      // Per-tab wording: "no active requests" and "no closed requests" are different
-      // statements, and the tab you are on decides which one is true.
-      emptyMessage: this.translate.instant(
-        this.activeTab() === 'done' ? 'REQUESTS.LIST.EMPTY_DONE' : 'REQUESTS.LIST.EMPTY_ACTIVE'),
+      title:        t('TITLE'),
+      triggerLabel: t('TRIGGER'),
+      applyLabel:   t('APPLY'),
+      cancelLabel:  t('CANCEL'),
+      resetLabel:   t('RESET'),
+      align:        'right',
+      initialValues: { urgency: [this.urgencyFilter()] },
     };
   });
 
-  goToInbox(): void {
-    this.router.navigate(['inbox'], { relativeTo: this.route });
+  onFilterApply(result: FilterResult): void {
+    const value = result['urgency'];
+    if (value === 'all' || value === 'critical' || value === 'warning' || value === 'ok') {
+      this.urgencyFilter.set(value);
+    }
   }
+
+  /** Active rows further filtered by urgency, then by the employee-name search. */
+  visibleRows = computed(() => {
+    const q = this.searchQuery().trim().toLowerCase();
+    const urgency = this.urgencyFilter();
+    let rows = this.activeRows();
+    if (urgency !== 'all') {
+      rows = rows.filter((r) => this.slaPipe.transform(this.slaDeadline(r))?.level === urgency);
+    }
+    if (q) {
+      rows = rows.filter((r) => (r.employeeName ?? '').toLowerCase().includes(q));
+    }
+    return rows;
+  });
+
+  /** Counted from the fetched batch (like the Historique page's own KPI tiles), not the
+   *  search-narrowed `visibleRows` — the KPI row describes the whole "en cours" queue. */
+  readonly totalActive = computed(() => this.activeRows().length);
+
+  /** SLA breakdown of the "en cours" queue — this page's one meaningful KPI split now
+   *  that status (approuvée/rejetée/annulée) no longer applies to anything shown here. */
+  readonly slaCounts = computed(() => {
+    const counts = { critical: 0, warning: 0, ok: 0 };
+    for (const r of this.activeRows()) {
+      const level = this.slaPipe.transform(this.slaDeadline(r))?.level;
+      if (level === 'critical' || level === 'warning' || level === 'ok') counts[level]++;
+    }
+    return counts;
+  });
+
+  readonly skeletonPlaceholders = computed(() =>
+    Array.from({ length: Math.min(Math.max(this.visibleRows().length, 5), 20) }, (_, i) => i));
+
+  /** True once search or the urgency filter has narrowed a non-empty queue down to
+   *  nothing — as opposed to the queue itself being empty, which needs different wording. */
+  readonly isNarrowedEmpty = computed(() =>
+    this.activeRows().length > 0 && (!!this.searchQuery().trim() || this.urgencyFilter() !== 'all'));
+
+  readonly emptyMessage = computed(() => this.translate.instant(
+    this.isNarrowedEmpty() ? 'REQUESTS.LIST.SEARCH_EMPTY' : 'REQUESTS.LIST.EMPTY_ACTIVE'));
+
+  readonly emptyHint = computed(() => this.translate.instant(
+    this.isNarrowedEmpty() ? 'REQUESTS.LIST.SEARCH_EMPTY_HINT' : 'REQUESTS.LIST.EMPTY_HINT'));
+
+  readonly cards = computed<RequestCard[]>(() => {
+    this.translate.currentLang();
+    return this.visibleRows().map((r) => {
+      const isActive = this.isActive(r.status);
+      const sla = isActive ? this.slaPipe.transform(this.slaDeadline(r)) : null;
+      return {
+        id: r.id,
+        employeeLabel: r.employeeName
+          ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
+        avatarUrl: `/api/hr/profiles/${r.employeeProfileId}/photo`,
+        type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
+        status: this.statusBadge(r.status),
+        isActive,
+        sla,
+        slaLabel: sla ? this.slaHumanLabel(sla) : '',
+        slaVariant: sla ? SLA_BADGE_VARIANT[sla.level] : 'neutral',
+        submissionDate: r.submissionDate,
+        cancelDisabledReason: this.cancelDisabledReason(r),
+        source: r,
+      };
+    });
+  });
 
   viewDetail(id: number): void {
     this.router.navigate([id], { relativeTo: this.route });
   }
 
-  onTabChange(values: string[]): void {
-    const value = values[0];
-    if (value === 'active' || value === 'done') this.activeTab.set(value);
-  }
-
   isActive(status: string): boolean {
     return ACTIVE_STATUSES.includes(status as RequestStatus);
+  }
+
+  /**
+   * Human-readable replacement for the raw SLA countdown ("2h restantes"): a non-technical
+   * reader needs to know whether to act now, today, or not yet — not a duration.
+   */
+  slaHumanLabel(sla: SlaResult): string {
+    switch (sla.level) {
+      case 'critical':
+        return this.translate.instant('REQUESTS.LIST.SLA_URGENT');
+      case 'warning':
+        return this.translate.instant(
+          (sla.hours ?? 999) <= 24 ? 'REQUESTS.LIST.SLA_TODAY' : 'REQUESTS.LIST.SLA_SOON');
+      case 'ok':
+        return this.translate.instant('REQUESTS.LIST.SLA_OK');
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Null when the request can be cancelled (only while SUBMITTED, unchanged business rule).
+   * Otherwise the reason shown on the disabled cancel button's tooltip, so the action stays
+   * visible rather than disappearing — a non-technical user shouldn't have to wonder why a
+   * button they expect isn't there.
+   *
+   * Ownership matters now that HR managers/admins can see everyone's requests here
+   * (`canViewInbox`): cancelling submits the CURRENT user's profileId as the actor, so a
+   * manager must never be able to cancel someone else's request from this list.
+   */
+  cancelDisabledReason(r: EmployeeRequest): string | null {
+    if (r.employeeProfileId !== this.currentProfileId()) {
+      return this.translate.instant('REQUESTS.LIST.CANCEL_REASON_NOT_OWNER');
+    }
+    if (r.status === 'SUBMITTED') return null;
+    if (r.status === 'IN_REVIEW' || r.status === 'PENDING_L2') {
+      return this.translate.instant('REQUESTS.LIST.CANCEL_REASON_PROCESSING');
+    }
+    return this.translate.instant('REQUESTS.LIST.CANCEL_REASON_CLOSED');
   }
 
   ngOnInit() {
@@ -302,12 +523,15 @@ export class RequestListComponent implements OnInit {
   reload(resetPage = true) {
     if (resetPage) this.page.set(0);
     this.loading.set(true);
+    // Same permission-gated "own vs everyone" split as /rh/recruitment-demands
+    // (canViewAll there, canViewInbox here): HR managers and admins already see
+    // every pending request through the inbox, so the same role sees every
+    // request here too — everyone else still sees only their own.
+    const filter = this.canViewInbox()
+      ? { paysId: this.currentPaysId(), page: this.page(), size: this.pageSize() }
+      : { profileId: this.currentProfileId() || undefined, page: this.page(), size: this.pageSize() };
     this.svc
-      .listRequests({
-        profileId: this.currentProfileId() || undefined,
-        page: this.page(),
-        size: 100,
-      })
+      .listRequests(filter)
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
         this.loading.set(false);
@@ -327,6 +551,12 @@ export class RequestListComponent implements OnInit {
     this.reload(false);
   }
 
+  /** `pageSizeChange` fires alone — go back to page 0 with the new size (same as /rh/profiles). */
+  onPageSizeChange(size: number) {
+    this.pageSize.set(size);
+    this.reload();
+  }
+
   async cancel(row: EmployeeRequest) {
     if (!(await this.confirm.ask({
       title: this.translate.instant('REQUESTS.CANCEL.TITLE'),
@@ -338,14 +568,54 @@ export class RequestListComponent implements OnInit {
       .cancelRequest(row.id, this.currentProfileId())
       .pipe(catchError(() => of(null)))
       .subscribe((updated) => {
-        if (updated)
+        if (updated) {
           this.allRows.update((rs) => rs.map((r) => (r.id === updated.id ? updated : r)));
+          this.notification.success(
+            this.translate.instant('REQUESTS.CANCEL.SUCCESS'),
+            this.translate.instant('REQUESTS.CANCEL.SUCCESS_TITLE'));
+        } else {
+          this.notification.error(this.translate.instant('REQUESTS.CANCEL.ERROR'));
+        }
+      });
+  }
+
+  /** Same processRequest flow as the officer inbox's quickApprove — available here too,
+   *  gated by `canViewInbox` since it's the same manager/admin audience. */
+  async approve(row: EmployeeRequest) {
+    if (!(await this.confirm.ask({
+      title: this.translate.instant('REQUESTS.APPROVE.TITLE'),
+      message: this.translate.instant('REQUESTS.APPROVE.MESSAGE'),
+      confirmLabel: this.translate.instant('REQUESTS.APPROVE.CONFIRM'),
+      cancelLabel: this.translate.instant('REQUESTS.APPROVE.BACK'),
+    }))) return;
+    this.svc
+      .processRequest(row.id, this.currentUserId(), 'APPROVED', 'Approuvé')
+      .pipe(catchError(() => of(null)))
+      .subscribe((updated) => {
+        if (updated) {
+          this.allRows.update((rs) => rs.map((r) => (r.id === updated.id ? updated : r)));
+          this.notification.success(
+            this.translate.instant('REQUESTS.APPROVE.SUCCESS'),
+            this.translate.instant('REQUESTS.APPROVE.SUCCESS_TITLE'));
+        } else {
+          this.notification.error(this.translate.instant('REQUESTS.APPROVE.ERROR'));
+        }
       });
   }
 
   onSubmitted() {
     this.showNew.set(false);
     this.reload();
+    this.notification.success(
+      this.translate.instant('REQUESTS.LIST.NEW_SUCCESS'),
+      this.translate.instant('REQUESTS.LIST.NEW_SUCCESS_TITLE'));
+  }
+
+  /** Refreshes the "Demande de recrutement" queue in place — the section stays mounted
+   *  while its tab is active, so its own `ngOnInit` never refires on its own. */
+  onRecruitmentDemandSaved(): void {
+    this.showNew.set(false);
+    this.recruitmentSection()?.load();
   }
 
   /** New requests are created on the shell's self-service page (a different app),
@@ -360,14 +630,5 @@ export class RequestListComponent implements OnInit {
     const d = new Date(row.submissionDate);
     d.setDate(d.getDate() + 3);
     return d.toISOString();
-  }
-
-  fmtDate(iso: string | null): string {
-    if (!iso) return '—';
-    try {
-      return new Date(iso).toLocaleDateString('fr-FR');
-    } catch {
-      return iso;
-    }
   }
 }

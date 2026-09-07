@@ -4,7 +4,7 @@ import {
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption,
   StatusBadgeComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  ModalService,
+  ModalService, PermissionService,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
@@ -84,13 +84,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     <ng-template dafCell="deductionMin" let-row>
       <daf-badge [label]="row['deductionMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
     </ng-template>
-    <ng-template dafCell="_actions" let-row>
-      <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-        class="icon-btn-delete" [title]="'ADMIN.regimes.common.delete' | translate"
-        label="" variant="danger"
-        [options]="{ iconStart: 'delete', size: 'sm' }"
-        (onClick)="removeRule(row['_source'].id)" />
-    </ng-template>
   </daf-data-table>
 </div>
   `,
@@ -99,6 +92,7 @@ export class LegalRulesAdminComponent implements OnChanges {
   private svc   = inject(BreakService);
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
+  private perms = inject(PermissionService);
 
   readonly paysId = input<number>(179);
 
@@ -127,7 +121,6 @@ export class LegalRulesAdminComponent implements OnChanges {
       { key: 'deductionMin', label: this.translate.instant('ADMIN.regimes.legal.columns.deduction') },
       { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.legal.columns.days') },
       { key: 'effective', label: this.translate.instant('ADMIN.regimes.legal.columns.effective') },
-      { key: '_actions', label: this.translate.instant('ADMIN.regimes.common.action'), align: 'right' },
     ];
   });
 
@@ -148,6 +141,12 @@ export class LegalRulesAdminComponent implements OnChanges {
       hoverable: true,
       loading: this.isLoading(),
       emptyMessage: this.translate.instant('ADMIN.regimes.legal.empty'),
+      actions: [{
+        id: 'delete', icon: 'delete', variant: 'danger',
+        tooltip: this.translate.instant('ADMIN.regimes.common.delete'),
+        hidden: () => !this.perms.has('ADMIN_BREAKS'),
+        onClick: (row: TableRow) => this.removeRule((row['_source'] as BreakLegalRuleDto).id),
+      }],
     };
   });
 

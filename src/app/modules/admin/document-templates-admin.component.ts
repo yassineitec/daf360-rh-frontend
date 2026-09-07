@@ -1,5 +1,5 @@
 import {
-  Component, computed, ElementRef, inject, input, OnInit, signal, ViewChild,
+  Component, computed, ElementRef, inject, input, OnChanges, OnInit, signal, TemplateRef, ViewChild, viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
@@ -10,7 +10,11 @@ import {
   DocumentTemplate, SaveDocumentTemplateRequest,
   TEMPLATE_CATEGORIES, VariableDef,
 } from './models/admin.model';
-import { ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  ButtonComponent, StatusBadgeComponent,
+  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  ModalService, ModalRef,
+} from '@khalilrebhiitec/daf360';
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="fr">
@@ -52,7 +56,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 @Component({
   selector: 'app-document-templates-admin',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, TranslatePipe],
+  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe],
   template: `
     <!-- Header -->
     <div class="tmpl-header">
@@ -89,167 +93,140 @@ const DEFAULT_HTML = `<!DOCTYPE html>
         <p>{{ 'ADMIN.docs.templates.empty' | translate }}</p>
       </div>
     } @else {
-      <div class="tmpl-table">
-        <div class="tmpl-head">
-          <span class="col-name">{{ 'ADMIN.docs.templates.colName' | translate }}</span>
-          <span class="col-cat">{{ 'ADMIN.docs.templates.colCategory' | translate }}</span>
-          <span class="col-vars">{{ 'ADMIN.docs.templates.colVariables' | translate }}</span>
-          <span class="col-status">{{ 'ADMIN.docs.templates.colStatus' | translate }}</span>
-          <span class="col-actions"></span>
-        </div>
-        @for (t of rows(); track t.id) {
-          <div class="tmpl-row" [class.inactive]="!t.isActive">
-            <span class="col-name">
-              <span class="tmpl-name">{{ t.name }}</span>
-              @if (t.description) { <span class="tmpl-desc">{{ t.description }}</span> }
-              @if (t.sharepointLocation) {
-                <span class="tmpl-sharepoint">
-                  <span class="material-symbols-outlined">folder</span>{{ t.sharepointLocation }}
-                </span>
-              }
+      <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
+      <div class="table-scroll">
+      <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
+        <ng-template dafCell="name" let-row>
+          <span class="tmpl-name">{{ row['_source'].name }}</span>
+          @if (row['_source'].description) { <span class="tmpl-desc">{{ row['_source'].description }}</span> }
+          @if (row['_source'].sharepointLocation) {
+            <span class="tmpl-sharepoint">
+              <span class="material-symbols-outlined">folder</span>{{ row['_source'].sharepointLocation }}
             </span>
-            <span class="col-cat">
-              <span class="cat-badge cat-{{ t.category.toLowerCase() }}">{{ categoryLabel(t.category) }}</span>
-            </span>
-            <span class="col-vars">
-              @if (t.variables?.length) {
-                <span class="var-count">{{ t.variables!.length }} {{ (t.variables!.length > 1 ? 'ADMIN.docs.templates.variablePlural' : 'ADMIN.docs.templates.variableSingular') | translate }}</span>
-              } @else {
-                <span class="no-vars">—</span>
-              }
-            </span>
-            <span class="col-status">
-              <daf-badge [label]="(t.isActive ? 'ADMIN.docs.templates.active' : 'ADMIN.docs.templates.inactive') | translate"
-                [options]="{ variant: t.isActive ? 'success' : 'neutral', size: 'sm' }" />
-            </span>
-            <span class="col-actions">
-              <button class="icon-btn" [title]="'ADMIN.docs.templates.edit' | translate" (click)="openEdit(t)">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-              <button class="icon-btn" [title]="(t.isActive ? 'ADMIN.docs.templates.deactivate' : 'ADMIN.docs.templates.activate') | translate" (click)="toggleActive(t)">
-                <span class="material-symbols-outlined">{{ t.isActive ? 'toggle_on' : 'toggle_off' }}</span>
-              </button>
-            </span>
-          </div>
-        }
+          }
+        </ng-template>
+
+        <ng-template dafCell="category" let-row>
+          <span class="cat-badge cat-{{ row['_source'].category.toLowerCase() }}">{{ categoryLabel(row['_source'].category) }}</span>
+        </ng-template>
+
+        <ng-template dafCell="variables" let-row>
+          @if (row['_source'].variables?.length) {
+            <span class="var-count">{{ row['_source'].variables.length }} {{ (row['_source'].variables.length > 1 ? 'ADMIN.docs.templates.variablePlural' : 'ADMIN.docs.templates.variableSingular') | translate }}</span>
+          } @else {
+            <span class="no-vars">—</span>
+          }
+        </ng-template>
+
+        <ng-template dafCell="isActive" let-row>
+          <daf-badge [label]="(row['_source'].isActive ? 'ADMIN.docs.templates.active' : 'ADMIN.docs.templates.inactive') | translate"
+            [options]="{ variant: row['_source'].isActive ? 'success' : 'neutral', size: 'sm' }" />
+        </ng-template>
+      </daf-data-table>
       </div>
     }
 
-    <!-- Create / Edit modal -->
-    @if (showForm()) {
-      <div class="modal-backdrop" (click)="closeForm()">
-        <div class="modal-panel modal-xl" (click)="$event.stopPropagation()">
+    <!-- Create / Edit modal body — projected into the real daf-modal-host via ModalService. -->
+    <ng-template #bodyTpl>
+      <!-- Meta fields -->
+      <div class="meta-grid">
+        <div>
+          <label class="form-label">{{ 'ADMIN.docs.templates.nameLabel' | translate }}</label>
+          <input class="form-input" type="text" [(ngModel)]="form.name"
+            [placeholder]="'ADMIN.docs.templates.namePlaceholder' | translate" />
+        </div>
+        <div>
+          <label class="form-label">{{ 'ADMIN.docs.templates.categoryLabel' | translate }}</label>
+          <select class="form-input" [(ngModel)]="form.category">
+            <option value="">{{ 'ADMIN.docs.templates.selectPlaceholder' | translate }}</option>
+            @for (c of TEMPLATE_CATEGORIES; track c) {
+              <option [value]="c">{{ categoryLabel(c) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field-full">
+          <label class="form-label">{{ 'ADMIN.docs.templates.descriptionLabel' | translate }}</label>
+          <input class="form-input" type="text" [(ngModel)]="form.description"
+            [placeholder]="'ADMIN.docs.templates.descriptionPlaceholder' | translate" />
+        </div>
+        <div class="field-full">
+          <label class="form-label">{{ 'ADMIN.docs.templates.sharepointLocationLabel' | translate }}</label>
+          <input class="form-input" type="text" [(ngModel)]="form.sharepointLocation"
+            [placeholder]="'ADMIN.docs.templates.sharepointLocationPlaceholder' | translate" />
+          <p class="field-hint">{{ 'ADMIN.docs.templates.sharepointLocationHint' | translate }}</p>
+        </div>
+      </div>
 
-          <div class="modal-header">
-            <h4>{{ (editingId() ? 'ADMIN.docs.templates.editTitle' : 'ADMIN.docs.templates.newTemplate') | translate }}</h4>
-            <button class="icon-btn" (click)="closeForm()">
-              <span class="material-symbols-outlined">close</span>
+      <!-- Editor + Variable picker -->
+      <div class="editor-layout">
+        <!-- Left: HTML editor -->
+        <div class="editor-pane">
+          <div class="editor-toolbar">
+            <label class="form-label" style="margin:0">{{ 'ADMIN.docs.templates.htmlLabel' | translate }}</label>
+            <button class="toolbar-btn" [title]="'ADMIN.docs.templates.insertDefaultTooltip' | translate"
+              (click)="insertDefaultTemplate()">
+              <span class="material-symbols-outlined">restart_alt</span> {{ 'ADMIN.docs.templates.templateBtn' | translate }}
             </button>
           </div>
+          <textarea
+            #htmlEditor
+            id="html-editor"
+            class="html-textarea"
+            [(ngModel)]="form.htmlContent"
+            rows="22"
+            spellcheck="false"
+            [placeholder]="'ADMIN.docs.templates.htmlPlaceholder' | translate"
+          ></textarea>
+        </div>
 
-          <div class="modal-body">
-            <!-- Meta fields -->
-            <div class="meta-grid">
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.templates.nameLabel' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="form.name"
-                  [placeholder]="'ADMIN.docs.templates.namePlaceholder' | translate" />
-              </div>
-              <div>
-                <label class="form-label">{{ 'ADMIN.docs.templates.categoryLabel' | translate }}</label>
-                <select class="form-input" [(ngModel)]="form.category">
-                  <option value="">{{ 'ADMIN.docs.templates.selectPlaceholder' | translate }}</option>
-                  @for (c of TEMPLATE_CATEGORIES; track c) {
-                    <option [value]="c">{{ categoryLabel(c) }}</option>
-                  }
-                </select>
-              </div>
-              <div class="field-full">
-                <label class="form-label">{{ 'ADMIN.docs.templates.descriptionLabel' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="form.description"
-                  [placeholder]="'ADMIN.docs.templates.descriptionPlaceholder' | translate" />
-              </div>
-              <div class="field-full">
-                <label class="form-label">{{ 'ADMIN.docs.templates.sharepointLocationLabel' | translate }}</label>
-                <input class="form-input" type="text" [(ngModel)]="form.sharepointLocation"
-                  [placeholder]="'ADMIN.docs.templates.sharepointLocationPlaceholder' | translate" />
-                <p class="field-hint">{{ 'ADMIN.docs.templates.sharepointLocationHint' | translate }}</p>
-              </div>
-            </div>
+        <!-- Right: Variable picker -->
+        <div class="var-panel">
+          <div class="var-panel-title">{{ 'ADMIN.docs.templates.availableVariables' | translate }}</div>
+          <p class="var-hint">{{ 'ADMIN.docs.templates.variableHint' | translate }}</p>
 
-            <!-- Editor + Variable picker -->
-            <div class="editor-layout">
-              <!-- Left: HTML editor -->
-              <div class="editor-pane">
-                <div class="editor-toolbar">
-                  <label class="form-label" style="margin:0">{{ 'ADMIN.docs.templates.htmlLabel' | translate }}</label>
-                  <button class="toolbar-btn" [title]="'ADMIN.docs.templates.insertDefaultTooltip' | translate"
-                    (click)="insertDefaultTemplate()">
-                    <span class="material-symbols-outlined">restart_alt</span> {{ 'ADMIN.docs.templates.templateBtn' | translate }}
+          @if (variableGroups().length === 0) {
+            <div class="var-loading">{{ 'ADMIN.docs.templates.loading' | translate }}</div>
+          } @else {
+            @for (group of variableGroups(); track group.name) {
+              <div class="var-group">
+                <div class="var-group-label">{{ group.name }}</div>
+                @for (v of group.vars; track v.key) {
+                  <button class="var-chip" (click)="insertVariable(v.key)">
+                    <code class="var-code">{{ '{{' + v.key + '}}' }}</code>
+                    <span class="var-label-text">{{ v.labelFr }}</span>
                   </button>
-                </div>
-                <textarea
-                  #htmlEditor
-                  id="html-editor"
-                  class="html-textarea"
-                  [(ngModel)]="form.htmlContent"
-                  rows="22"
-                  spellcheck="false"
-                  [placeholder]="'ADMIN.docs.templates.htmlPlaceholder' | translate"
-                ></textarea>
-              </div>
-
-              <!-- Right: Variable picker -->
-              <div class="var-panel">
-                <div class="var-panel-title">{{ 'ADMIN.docs.templates.availableVariables' | translate }}</div>
-                <p class="var-hint">{{ 'ADMIN.docs.templates.variableHint' | translate }}</p>
-
-                @if (variableGroups().length === 0) {
-                  <div class="var-loading">{{ 'ADMIN.docs.templates.loading' | translate }}</div>
-                } @else {
-                  @for (group of variableGroups(); track group.name) {
-                    <div class="var-group">
-                      <div class="var-group-label">{{ group.name }}</div>
-                      @for (v of group.vars; track v.key) {
-                        <button class="var-chip" (click)="insertVariable(v.key)">
-                          <code class="var-code">{{ '{{' + v.key + '}}' }}</code>
-                          <span class="var-label-text">{{ v.labelFr }}</span>
-                        </button>
-                      }
-                    </div>
-                  }
                 }
-
-                <!-- Preview profile ID -->
-                <div class="preview-section">
-                  <div class="var-group-label" style="margin-top:16px">{{ 'ADMIN.docs.templates.preview' | translate }}</div>
-                  <label class="form-label" style="margin-top:8px">{{ 'ADMIN.docs.templates.previewProfileLabel' | translate }}</label>
-                  <input class="form-input" type="number" [(ngModel)]="previewProfileId"
-                    [placeholder]="'ADMIN.docs.templates.previewProfilePlaceholder' | translate" />
-                  <daf-button [label]="'ADMIN.docs.templates.previewPdf' | translate" variant="ghost"
-                    [options]="{ iconStart: 'visibility', loading: previewing(), size: 'sm' }"
-                    (onClick)="preview()" style="margin-top:8px;display:block" />
-                </div>
               </div>
-            </div>
-
-            @if (formError()) {
-              <div class="error-banner">{{ formError() }}</div>
             }
-          </div>
+          }
 
-          <div class="modal-footer">
-            <daf-button [label]="'ADMIN.docs.templates.cancel' | translate" variant="secondary" (onClick)="closeForm()" />
-            <daf-button
-              [label]="(editingId() ? 'ADMIN.docs.templates.save' : 'ADMIN.docs.templates.create') | translate"
-              variant="teal"
-              [options]="{ loading: saving(), disabled: !isFormValid() }"
-              (onClick)="save()"
-            />
+          <!-- Preview profile ID -->
+          <div class="preview-section">
+            <div class="var-group-label" style="margin-top:16px">{{ 'ADMIN.docs.templates.preview' | translate }}</div>
+            <label class="form-label" style="margin-top:8px">{{ 'ADMIN.docs.templates.previewProfileLabel' | translate }}</label>
+            <input class="form-input" type="number" [(ngModel)]="previewProfileId"
+              [placeholder]="'ADMIN.docs.templates.previewProfilePlaceholder' | translate" />
+            <daf-button [label]="'ADMIN.docs.templates.previewPdf' | translate" variant="ghost"
+              [options]="{ iconStart: 'visibility', loading: previewing(), size: 'sm' }"
+              (onClick)="preview()" style="margin-top:8px;display:block" />
           </div>
         </div>
       </div>
-    }
+
+      @if (formError()) {
+        <div class="error-banner">{{ formError() }}</div>
+      }
+
+      <div class="modal-footer">
+        <daf-button [label]="'ADMIN.docs.templates.cancel' | translate" variant="secondary" (onClick)="closeForm()" />
+        <daf-button
+          [label]="(editingId() ? 'ADMIN.docs.templates.save' : 'ADMIN.docs.templates.create') | translate"
+          variant="teal"
+          [options]="{ loading: saving(), disabled: !isFormValid() }"
+          (onClick)="save()"
+        />
+      </div>
+    </ng-template>
   `,
   styles: [`
     .tmpl-header    { display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap }
@@ -268,11 +245,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .empty-state .material-symbols-outlined { font-size:40px;opacity:.4 }
     .empty-state p  { font-size:13px;margin:0 }
 
-    .tmpl-table     { border:1px solid var(--color-border);border-radius:10px;overflow:hidden }
-    .tmpl-head      { display:grid;grid-template-columns:1fr 130px 90px 80px 60px;gap:12px;padding:10px 16px;background:var(--color-bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--color-text-muted) }
-    .tmpl-row       { display:grid;grid-template-columns:1fr 130px 90px 80px 60px;gap:12px;padding:12px 16px;align-items:center;border-top:1px solid var(--color-border);transition:background .12s }
-    .tmpl-row:hover { background:var(--color-bg-secondary) }
-    .tmpl-row.inactive { opacity:.5 }
+    .table-scroll   { overflow-x:auto }
     .tmpl-name      { display:block;font-weight:600;font-size:13px }
     .tmpl-desc      { display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px }
     .tmpl-sharepoint{ display:flex;align-items:center;gap:3px;font-size:10.5px;color:var(--color-text-muted);margin-top:2px;font-family:monospace }
@@ -289,14 +262,8 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     .icon-btn:hover { background:var(--color-bg-secondary);color:var(--color-text) }
     .icon-btn .material-symbols-outlined { font-size:18px }
 
-    /* Modal */
-    .modal-backdrop { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto }
-    .modal-panel    { background:var(--color-surface);border-radius:14px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column }
-    .modal-xl       { max-width:1100px }
-    .modal-header   { display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--color-border) }
-    .modal-header h4{ margin:0;font-size:15px;font-weight:700 }
-    .modal-body     { padding:20px 22px;overflow-y:auto }
-    .modal-footer   { display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--color-border) }
+    /* Modal body */
+    .modal-footer   { display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border) }
 
     .meta-grid      { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px }
     .field-full     { grid-column:1/-1 }
@@ -335,8 +302,6 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     @media(max-width:800px) {
       .editor-layout   { grid-template-columns:1fr }
       .var-panel       { max-height:250px }
-      .tmpl-head, .tmpl-row { grid-template-columns:1fr 90px 70px }
-      .col-vars        { display:none }
     }
     @media(max-width:500px) { .meta-grid { grid-template-columns:1fr } }
 
@@ -347,9 +312,12 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     }
   `],
 })
-export class DocumentTemplatesAdminComponent implements OnInit {
+export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
   private svc = inject(AdminService);
   private translate = inject(TranslateService);
+  private modal = inject(ModalService);
+  private modalRef?: ModalRef;
+  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   paysId = input.required<number>();
 
@@ -364,7 +332,6 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   rows           = signal<DocumentTemplate[]>([]);
   variables      = signal<VariableDef[]>([]);
 
-  showForm  = signal(false);
   editingId = signal<number | null>(null);
   saving    = signal(false);
   previewing = signal(false);
@@ -381,6 +348,52 @@ export class DocumentTemplatesAdminComponent implements OnInit {
     sharepointLocation: '',
   };
 
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'name',      label: this.translate.instant('ADMIN.docs.templates.colName') },
+      { key: 'category',  label: this.translate.instant('ADMIN.docs.templates.colCategory') },
+      { key: 'variables', label: this.translate.instant('ADMIN.docs.templates.colVariables') },
+      { key: 'isActive',  label: this.translate.instant('ADMIN.docs.templates.colStatus') },
+    ];
+  });
+
+  readonly tableRows = computed<TableRow[]>(() =>
+    this.rows().map(t => ({
+      name:      t.name,
+      category:  t.category,
+      variables: t.variables?.length ?? 0,
+      isActive:  t.isActive,
+      _source:   t,
+    })),
+  );
+
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'edit', icon: 'edit',
+          tooltip: this.translate.instant('ADMIN.docs.templates.edit'),
+          onClick: (row: TableRow) => this.openEdit(row['_source'] as DocumentTemplate),
+        },
+        {
+          id: 'deactivate', icon: 'toggle_on',
+          tooltip: this.translate.instant('ADMIN.docs.templates.deactivate'),
+          hidden: (row: TableRow) => !(row['_source'] as DocumentTemplate).isActive,
+          onClick: (row: TableRow) => this.toggleActive(row['_source'] as DocumentTemplate),
+        },
+        {
+          id: 'activate', icon: 'toggle_off',
+          tooltip: this.translate.instant('ADMIN.docs.templates.activate'),
+          hidden: (row: TableRow) => (row['_source'] as DocumentTemplate).isActive,
+          onClick: (row: TableRow) => this.toggleActive(row['_source'] as DocumentTemplate),
+        },
+      ],
+    };
+  });
+
   readonly variableGroups = computed(() => {
     const map = new Map<string, VariableDef[]>();
     for (const v of this.variables()) {
@@ -392,11 +405,13 @@ export class DocumentTemplatesAdminComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.load();
+    // Not paysId-dependent — the variable catalog is global, fetched once.
     this.svc.getTemplateVariables()
       .pipe(catchError(() => of([])))
       .subscribe(v => this.variables.set(v));
   }
+
+  ngOnChanges() { this.load(); }
 
   load() {
     this.loading.set(true);
@@ -417,7 +432,12 @@ export class DocumentTemplatesAdminComponent implements OnInit {
     };
     this.previewProfileId = null;
     this.formError.set(null);
-    this.showForm.set(true);
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.docs.templates.newTemplate'),
+      body: this.bodyTpl(),
+      size: 'xl',
+      closeOnBackdrop: false,
+    });
   }
 
   openEdit(t: DocumentTemplate) {
@@ -432,10 +452,15 @@ export class DocumentTemplatesAdminComponent implements OnInit {
     };
     this.previewProfileId = null;
     this.formError.set(null);
-    this.showForm.set(true);
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.docs.templates.editTitle'),
+      body: this.bodyTpl(),
+      size: 'xl',
+      closeOnBackdrop: false,
+    });
   }
 
-  closeForm() { this.showForm.set(false); }
+  closeForm() { this.modalRef?.close(); }
 
   isFormValid(): boolean {
     return !!(this.form.category && this.form.name.trim() && this.form.htmlContent.trim());
@@ -486,7 +511,7 @@ export class DocumentTemplatesAdminComponent implements OnInit {
       }),
     ).subscribe(result => {
       this.saving.set(false);
-      if (result) { this.showForm.set(false); this.load(); }
+      if (result) { this.modalRef?.close(); this.load(); }
     });
   }
 

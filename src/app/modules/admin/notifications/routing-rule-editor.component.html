@@ -258,15 +258,58 @@
         [options]="{ disabled: testLoading(), loading: testLoading() }"
         (onClick)="runTest()" />
 
-      <app-test-dispatch-modal
-        [visible]="showTestModal()"
-        [result]="testResult()"
-        [eventType]="eventType()"
-        (closed)="showTestModal.set(false)"
-      />
     </div>
     </daf-card>
   }
   }
 
 </div>
+
+<!-- Test-dispatch preview body — projected into the real daf-modal-host via ModalService. -->
+<ng-template #testBodyTpl>
+  @if (testResult()) {
+    <div class="tdm-tabs">
+      <daf-button [label]="'ADMIN.notifications.tabInapp' | translate" variant="toggle" [options]="{ active: testActiveTab()==='inapp' }" (onClick)="testActiveTab.set('inapp')" />
+      @if (eventType().supportsEmail) {
+        <daf-button [label]="'ADMIN.notifications.tabEmail' | translate" variant="toggle" [options]="{ active: testActiveTab()==='email' }" (onClick)="testActiveTab.set('email')" />
+      }
+    </div>
+
+    @if (testActiveTab() === 'inapp') {
+      <div class="tdm-section">
+        <p class="tdm-label">{{ 'ADMIN.notifications.resolvedTitle' | translate }}</p>
+        <p class="tdm-value">{{ testResult()!.resolvedTitle }}</p>
+        <p class="tdm-label">{{ 'ADMIN.notifications.resolvedMessage' | translate }}</p>
+        <p class="tdm-value">{{ testResult()!.resolvedBody }}</p>
+        <p class="tdm-label">{{ 'ADMIN.notifications.recipientsCount' | translate:{ count: testResult()!.inappRecipients.length } }}</p>
+        @for (u of testResult()!.inappRecipients; track u.userId) {
+          <div class="tdm-recipient">{{ u.fullName }} — {{ u.email }}</div>
+        }
+        @if (testResult()!.inappRecipients.length === 0) {
+          <p class="tdm-empty">{{ 'ADMIN.notifications.noRecipient' | translate }}</p>
+        }
+      </div>
+    }
+
+    @if (testActiveTab() === 'email') {
+      <div class="tdm-section">
+        <p class="tdm-label">{{ 'ADMIN.notifications.subject' | translate }}</p>
+        <p class="tdm-value">{{ testResult()!.resolvedSubject }}</p>
+        <p class="tdm-label">{{ 'ADMIN.notifications.toCount' | translate:{ count: testResult()!.emailTo.length } }}</p>
+        @for (e of testResult()!.emailTo; track e.email) {
+          <div class="tdm-recipient">{{ e.email }} ({{ e.roleName }})</div>
+        }
+        @if (testResult()!.emailCc.length) {
+          <p class="tdm-label">{{ 'ADMIN.notifications.ccCount' | translate:{ count: testResult()!.emailCc.length } }}</p>
+          @for (e of testResult()!.emailCc; track e.email) {
+            <div class="tdm-recipient">{{ e.email }}</div>
+          }
+        }
+        <p class="tdm-label">{{ 'ADMIN.notifications.emailBodyLabel' | translate }}</p>
+        <div class="tdm-html-preview" [innerHTML]="testResult()!.resolvedEmailBody"></div>
+      </div>
+    }
+  } @else {
+    <p class="tdm-loading">{{ 'ADMIN.notifications.loadingTest' | translate }}</p>
+  }
+</ng-template>

@@ -28,6 +28,12 @@ interface AppNavDef {
    * so it holds several segments where a top-level entry holds one.
    */
   children?: AppNavDef[];
+  /**
+   * Mobile bottom bar only (see `NavItem.expandInlineOnMobile` in the lib): tapping this
+   * item navigates AND reveals its children as a second row below the bar instead of the
+   * default popover, staying open across child taps. Desktop rail is unaffected.
+   */
+  expandInlineOnMobile?: boolean;
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
@@ -67,6 +73,9 @@ const APP_NAV_DEFS: AppNavDef[] = [
     icon: 'logout',
     route: 'offboarding',
     permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
+    // Mobile only: tapping "Offboarding" navigates AND reveals "Démission" as a second
+    // row under the bottom bar, instead of the default popover. Desktop rail is untouched.
+    expandInlineOnMobile: true,
     // One child per departure reason. Only RESIGNATION for now, by request; the other
     // six codes of `DEPARTURE_REASONS` are added here, one line each, when wanted.
     // The parent entry stays and keeps showing every reason.
@@ -98,7 +107,21 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'billeterie',
     permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
   },
-  { id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests', permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'] },
+  {
+    id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests',
+    permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'],
+    children: [
+      {
+        id: 'requests-history',
+        labelKey: 'NAV.REQUESTS_HISTORY',
+        icon: 'history',
+        // Temporary target: the recruitment-demands list — the same page the "Toutes les
+        // demandes" button already opens — until a dedicated request-history page exists.
+        route: 'recruitment-demands',
+        permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'],
+      },
+    ],
+  },
   {
     id: 'admin',
     labelKey: 'NAV.ADMIN',
@@ -191,6 +214,7 @@ export class HrShellComponent implements OnInit {
         // Omitted when empty: `children: []` would still make the lib treat the item as
         // an expandable group, so it would render a chevron that opens nothing.
         ...(children.length ? { children } : {}),
+        ...(def.expandInlineOnMobile ? { expandInlineOnMobile: true } : {}),
         ...(def.id === 'onboarding' && this.onboardingCount() > 0
           ? { badge: this.onboardingCount() }
           : {}),

@@ -24,3 +24,14 @@
   color: var(--color-on-error-container);
   font-size: var(--text-body-sm);
 }
+
+// The footer lives inside the body template (see create-role-modal.component.ts), so it
+// needs its own separator — daf-modal-host only draws one around `config.buttons`.
+.crm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-outline-variant);
+}

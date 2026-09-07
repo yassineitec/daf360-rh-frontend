@@ -1,12 +1,11 @@
 import {
-  Component, OnChanges, SimpleChanges, inject, input, signal, computed,
+  Component, OnChanges, SimpleChanges, TemplateRef, inject, input, signal, computed, viewChild,
 } from '@angular/core';
 import {
   ButtonComponent, FormFieldComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  PaginationComponent, PaginationConfig, ModalService,
+  PaginationComponent, PaginationConfig, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
-import { ModalComponent } from '../../shared/modal.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 10;
@@ -39,7 +38,7 @@ const TABS: TabConfig[] = [
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, ModalComponent, PaginationComponent, TranslatePipe],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe],
   template: `
 <div>
   <!-- Sub-tab bar -->
@@ -74,14 +73,13 @@ const TABS: TabConfig[] = [
       [label]="'ADMIN.data.refData.ADD' | translate"
       class="desktop-only"
       variant="teal"
-      [options]="{ iconStart: 'add' }"
-      (onClick)="showForm.set(true)" />
+      (onClick)="openAddModal()" />
     <daf-button
       class="icon-btn-toggle mobile-only"
       title="Ajouter"
       variant="teal"
       [options]="{ iconStart: 'add', size: 'sm' }"
-      (onClick)="showForm.set(true)" />
+      (onClick)="openAddModal()" />
   </div>
 
   <!-- Table — generic ref data -->
@@ -108,21 +106,6 @@ const TABS: TabConfig[] = [
               {{ 'ADMIN.data.refData.NOTICE_DAYS' | translate: { days: row['_source'].noticePeriodDays } }}
             </span>
           }
-        </ng-template>
-        <ng-template dafCell="_actions" let-row>
-          @if (isGradesTab()) {
-            <daf-button
-              [title]="'ADMIN.data.refData.EDIT_NOTICE_PERIOD' | translate"
-              variant="secondary"
-              [options]="{ size: 'sm', iconStart: 'timelapse' }"
-              (onClick)="openNoticePeriodModal(row['_source'])" />
-          }
-          <daf-button
-            class="icon-btn-delete"
-            [title]="'ADMIN.data.refData.DELETE' | translate"
-            variant="danger"
-            [options]="{ size: 'sm', iconStart: 'delete' }"
-            (onClick)="deleteItem(row['_source'])" />
         </ng-template>
       </daf-data-table>
       </div>
@@ -154,14 +137,6 @@ const TABS: TabConfig[] = [
             <span class="rda-badge rda-badge-no">{{ 'ADMIN.data.refData.NO' | translate }}</span>
           }
         </ng-template>
-        <ng-template dafCell="_actions" let-row>
-          <daf-button
-            class="icon-btn-delete"
-            [title]="'ADMIN.data.refData.DELETE' | translate"
-            variant="danger"
-            [options]="{ size: 'sm', iconStart: 'delete' }"
-            (onClick)="deleteTypeContrat(row['_source'])" />
-        </ng-template>
       </daf-data-table>
       </div>
 
@@ -179,14 +154,8 @@ const TABS: TabConfig[] = [
   }
 </div>
 
-<!-- Add modal — generic ref data -->
-@if (!isTypeContratTab()) {
-  <app-modal
-    [title]="'ADMIN.data.refData.MODAL_ADD_ENTRY' | translate"
-    [visible]="showForm()"
-    [hasFooter]="true"
-    (closed)="showForm.set(false)"
-  >
+<!-- Add modal body — generic ref data. Projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTplGeneric>
     <div class="rda-form-grid">
       <daf-form-field
         [options]="{ label: ('ADMIN.data.refData.FIELD_LABEL_FR' | translate), placeholder: ('ADMIN.data.refData.PH_LABEL_FR' | translate), required: true, fullWidth: true }"
@@ -211,25 +180,18 @@ const TABS: TabConfig[] = [
           (valueChange)="createForm.noticePeriodDays = $event === null || $event === '' ? null : +$event" />
       }
     </div>
-    <div slot="footer">
-      <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="showForm.set(false)" />
+    <div class="rda-modal-footer">
+      <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" [options]="{ disabled: saving() }" (onClick)="cancel()" />
       <daf-button
         [label]="saving() ? ('ADMIN.data.refData.SAVING' | translate) : ('ADMIN.data.refData.ADD_SHORT' | translate)"
         variant="teal"
         [options]="{ disabled: saving() || !createForm.labelFr.trim(), loading: saving() }"
         (onClick)="onCreate()" />
     </div>
-  </app-modal>
-}
+</ng-template>
 
-<!-- Add modal — type contrat -->
-@if (isTypeContratTab()) {
-  <app-modal
-    [title]="'ADMIN.data.refData.MODAL_ADD_TC' | translate"
-    [visible]="showForm()"
-    [hasFooter]="true"
-    (closed)="showForm.set(false)"
-  >
+<!-- Add modal body — type contrat. Projected into the real daf-modal-host via ModalService. -->
+<ng-template #bodyTplTypeContrat>
     <div class="rda-form-grid">
       <daf-form-field
         [options]="{ label: ('ADMIN.data.refData.TC_FIELD_CODE' | translate), placeholder: ('ADMIN.data.refData.TC_PH_CODE' | translate), required: true, fullWidth: true }"
@@ -244,24 +206,18 @@ const TABS: TabConfig[] = [
         [value]="tcCreateLabelEn"
         (valueChange)="tcCreateLabelEn = $any($event) ?? ''" />
     </div>
-    <div slot="footer">
-      <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="showForm.set(false)" />
+    <div class="rda-modal-footer">
+      <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" [options]="{ disabled: saving() }" (onClick)="cancel()" />
       <daf-button
         [label]="saving() ? ('ADMIN.data.refData.SAVING' | translate) : ('ADMIN.data.refData.ADD_SHORT' | translate)"
         variant="teal"
         [options]="{ disabled: saving() || !tcCreateLabelFr.trim() || !tcCreateCode.trim(), loading: saving() }"
         (onClick)="onCreateTypeContrat()" />
     </div>
-  </app-modal>
-}
+</ng-template>
 
-<!-- Préavis par défaut — grades only (V64) -->
-<app-modal
-  [title]="'ADMIN.data.refData.MODAL_NOTICE_PERIOD' | translate"
-  [visible]="noticeTarget() !== null"
-  [hasFooter]="true"
-  (closed)="closeNoticePeriodModal()"
->
+<!-- Préavis par défaut — grades only (V64). Projected into the real daf-modal-host. -->
+<ng-template #bodyTplNotice>
   @if (noticeTarget(); as g) {
     <p class="rda-notice-hint">
       {{ 'ADMIN.data.refData.MODAL_NOTICE_HELP' | translate: { grade: g.labelFr } }}
@@ -271,15 +227,15 @@ const TABS: TabConfig[] = [
       [value]="noticeDays"
       (valueChange)="noticeDays = $event === null || $event === '' ? null : +$event" />
   }
-  <div slot="footer">
-    <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" (onClick)="closeNoticePeriodModal()" />
+  <div class="rda-modal-footer">
+    <daf-button [label]="'ADMIN.data.refData.CANCEL' | translate" variant="secondary" [options]="{ disabled: saving() }" (onClick)="closeNoticePeriodModal()" />
     <daf-button
       [label]="saving() ? ('ADMIN.data.refData.SAVING' | translate) : ('ADMIN.data.refData.SAVE' | translate)"
       variant="teal"
       [options]="{ disabled: saving(), loading: saving() }"
       (onClick)="saveNoticePeriod()" />
   </div>
-</app-modal>
+</ng-template>
   `,
   styles: [`
     .rda-tab-bar { display:flex;gap:4px;flex-wrap:wrap;margin-bottom:24px;border-bottom:1px solid var(--color-outline-variant);overflow-x:auto }
@@ -296,6 +252,7 @@ const TABS: TabConfig[] = [
     .rda-notice-unset { font-size:12px;font-weight:700;color:var(--color-error) }
     .rda-notice-set   { font-size:13px;color:var(--color-on-surface) }
     .rda-notice-hint  { font-size:12px;color:var(--color-on-surface-variant);margin:0 0 12px }
+    .rda-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     .table-scroll  { overflow-x:auto }
 
     @media (max-width: 480px) {
@@ -308,12 +265,6 @@ const TABS: TabConfig[] = [
       .mobile-only  { display:inline-flex }
     }
 
-    /* daf-data-table purges the dynamically-computed text-right Tailwind class from its
-       own build — force the right-aligned Actions column ourselves. */
-    :host ::ng-deep daf-data-table {
-      th:last-child { text-align: right !important; }
-      td:last-child { display:flex;justify-content:flex-end;align-items:center;gap:6px; }
-    }
   `],
 })
 export class RefDataAdminComponent implements OnChanges {
@@ -321,6 +272,10 @@ export class RefDataAdminComponent implements OnChanges {
   private contractSvc = inject(ContractHistoryService);
   private modal       = inject(ModalService);
   private translate   = inject(TranslateService);
+  private modalRef?: ModalRef;
+  bodyTplGeneric     = viewChild.required<TemplateRef<unknown>>('bodyTplGeneric');
+  bodyTplTypeContrat = viewChild.required<TemplateRef<unknown>>('bodyTplTypeContrat');
+  bodyTplNotice      = viewChild.required<TemplateRef<unknown>>('bodyTplNotice');
 
   paysId = input<number>(179);
 
@@ -338,7 +293,6 @@ export class RefDataAdminComponent implements OnChanges {
   items     = signal<RefDataItem[]>([]);
   loading   = signal(false);
   saving    = signal(false);
-  showForm  = signal(false);
   error     = signal<string | null>(null);
   successMsg = signal<string | null>(null);
 
@@ -356,11 +310,17 @@ export class RefDataAdminComponent implements OnChanges {
   openNoticePeriodModal(g: RefDataItem): void {
     this.noticeDays = g.noticePeriodDays ?? null;
     this.noticeTarget.set(g);
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('ADMIN.data.refData.MODAL_NOTICE_PERIOD'),
+      body: this.bodyTplNotice(),
+      closeOnBackdrop: false,
+    });
   }
 
   closeNoticePeriodModal(): void {
     this.noticeTarget.set(null);
     this.noticeDays = null;
+    this.modalRef?.close();
   }
 
   saveNoticePeriod(): void {
@@ -375,7 +335,9 @@ export class RefDataAdminComponent implements OnChanges {
     this.refSvc.setGradeNoticePeriod(g.id, this.noticeDays).subscribe({
       next: () => {
         this.saving.set(false);
-        this.closeNoticePeriodModal();
+        this.noticeTarget.set(null);
+        this.noticeDays = null;
+        this.modalRef?.close();
         this.flash(this.translate.instant('ADMIN.data.refData.OK_NOTICE_SAVED'));
         this.loadItems();
       },
@@ -401,7 +363,6 @@ export class RefDataAdminComponent implements OnChanges {
     }
     cols.push(
       { key: 'isActive',  label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
-      { key: '_actions',  label: '', align: 'right' },
     );
     return cols;
   });
@@ -450,7 +411,6 @@ export class RefDataAdminComponent implements OnChanges {
       { key: 'labelFr',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR') },
       { key: 'labelEn',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN') },
       { key: 'isActive', label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
-      { key: '_actions', label: '', align: 'right' },
     ];
   });
 
@@ -469,9 +429,35 @@ export class RefDataAdminComponent implements OnChanges {
     })),
   );
 
-  readonly itemTableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-  }));
+  readonly itemTableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    if (this.isTypeContratTab()) {
+      return {
+        hoverable: true,
+        actions: [{
+          id: 'delete', icon: 'delete', variant: 'danger',
+          tooltip: this.translate.instant('ADMIN.data.refData.DELETE'),
+          onClick: (row: TableRow) => this.deleteTypeContrat(row['_source'] as TypeContratDto),
+        }],
+      };
+    }
+    return {
+      hoverable: true,
+      actions: [
+        {
+          id: 'notice-period', icon: 'timelapse',
+          tooltip: this.translate.instant('ADMIN.data.refData.EDIT_NOTICE_PERIOD'),
+          hidden: () => !this.isGradesTab(),
+          onClick: (row: TableRow) => this.openNoticePeriodModal(row['_source'] as RefDataItem),
+        },
+        {
+          id: 'delete', icon: 'delete', variant: 'danger',
+          tooltip: this.translate.instant('ADMIN.data.refData.DELETE'),
+          onClick: (row: TableRow) => this.deleteItem(row['_source'] as RefDataItem),
+        },
+      ],
+    };
+  });
 
   ngOnChanges(changes: SimpleChanges): void {
     this.loadItems();
@@ -479,10 +465,22 @@ export class RefDataAdminComponent implements OnChanges {
 
   selectTab(tab: TabConfig): void {
     this.activeTab.set(tab);
-    this.showForm.set(false);
+    this.modalRef?.close();
     this.currentPage.set(0);
     this.resetForm();
     this.loadItems();
+  }
+
+  openAddModal(): void {
+    this.modalRef = this.modal.open({
+      title: this.translate.instant(this.isTypeContratTab() ? 'ADMIN.data.refData.MODAL_ADD_TC' : 'ADMIN.data.refData.MODAL_ADD_ENTRY'),
+      body: this.isTypeContratTab() ? this.bodyTplTypeContrat() : this.bodyTplGeneric(),
+      closeOnBackdrop: false,
+    });
+  }
+
+  cancel(): void {
+    this.modalRef?.close();
   }
 
   loadItems(): void {
@@ -546,7 +544,7 @@ export class RefDataAdminComponent implements OnChanges {
       next: () => {
         this.saving.set(false);
         this.resetForm();
-        this.showForm.set(false);
+        this.modalRef?.close();
         this.flash(this.translate.instant('ADMIN.data.refData.MSG_CREATED'));
         this.loadItems();
       },
@@ -589,7 +587,7 @@ export class RefDataAdminComponent implements OnChanges {
       next: () => {
         this.saving.set(false);
         this.tcCreateCode = ''; this.tcCreateLabelFr = ''; this.tcCreateLabelEn = '';
-        this.showForm.set(false);
+        this.modalRef?.close();
         this.flash(this.translate.instant('ADMIN.data.refData.MSG_TC_CREATED'));
         this.loadItems();
       },
