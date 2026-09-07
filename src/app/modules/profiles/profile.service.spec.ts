@@ -12,16 +12,24 @@ const BASE = `${environment.hrApiUrl}/api/hr`;
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const MOCK_PROFILE: EmployeeProfile = {
-  id: 1, userId: 42, paysId: 179, lifecycleStatus: 'ACTIVE',
+  id: 1, userId: 42, paysId: 179, paysLabel: 'Tunisie', lifecycleStatus: 'ACTIVE',
+  matricule: 'DUPPIE042', fullName: 'Alice DUPONT',
   hireDate: '2024-01-15', contractType: 'CDI', contractEndDate: null,
   probationEndDate: null, isOnProbation: false,
   dateOfBirth: '1990-05-10', gender: 'MALE', nationality: 'Tunisienne',
+  nationalityId: null,
   nationalId: null, passportNumber: null, photoUrl: null,
-  personalEmail: 'alice@example.com', phone: '+21611111111', personalAddress: null,
+  personalEmail: 'alice@example.com', phone: '+21611111111',
+  homeAddress: null, personalAddress: null,
   emergencyContactName: null, emergencyContactRelation: null, emergencyContactPhone: null,
   department: 'ENGINEER', grade: 'SENIOR', discipline: null, nogLevel: null,
+  departmentId: null, gradeId: null, disciplineId: null, nogLevelId: null,
   regimeTemplateId: null, regimeStartDate: null, regimeEndDate: null, regimeReason: null,
-  bankName: null, iban: null, bankAccountNumber: null, rib: null,
+  cnssNumber: null, cnssAffiliationDate: null, maritalStatus: null, numberOfChildren: null,
+  onboardingCompleted: false, onboardingCompletedAt: null,
+  salaireNetCandidat: null, salaireNetRh: null,
+  candidateId: null,
+  bankName: null, bankId: null, iban: null, bankAccountNumber: null, rib: null,
   socialSecurityNumber: null, taxId: null,
   createdAt: '2024-01-15T00:00:00Z', updatedAt: null,
 };
