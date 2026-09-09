@@ -19,7 +19,12 @@ interface AppNavDef {
   /** i18n key under NAV.*, resolved in `navItems` — never a literal label. */
   labelKey: string;
   icon: string;
-  route: string;
+  /**
+   * Absent sur une entrée à ENFANTS : un parent ne navigue pas, il ouvre sa liste, et
+   * seuls les enfants changent l'URL. La page qu'il ouvrait devient son premier enfant —
+   * sinon le même clic navigue et déplie, et l'écran change sous une liste qui s'ouvre.
+   */
+  route?: string;
   /** Any-of gate; empty = visible to every authenticated user. */
   permissions: string[];
   /**
@@ -28,12 +33,6 @@ interface AppNavDef {
    * so it holds several segments where a top-level entry holds one.
    */
   children?: AppNavDef[];
-  /**
-   * Mobile bottom bar only (see `NavItem.expandInlineOnMobile` in the lib): tapping this
-   * item navigates AND reveals its children as a second row below the bar instead of the
-   * default popover, staying open across child taps. Desktop rail is unaffected.
-   */
-  expandInlineOnMobile?: boolean;
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
@@ -71,14 +70,15 @@ const APP_NAV_DEFS: AppNavDef[] = [
     id: 'offboarding',
     labelKey: 'NAV.OFFBOARDING',
     icon: 'logout',
-    route: 'offboarding',
     permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
-    // Mobile only: tapping "Offboarding" navigates AND reveals "Démission" as a second
-    // row under the bottom bar, instead of the default popover. Desktop rail is untouched.
-    expandInlineOnMobile: true,
-    // One child per departure reason. Only RESIGNATION for now, by request; the other
-    // six codes of `DEPARTURE_REASONS` are added here, one line each, when wanted.
-    // The parent entry stays and keeps showing every reason.
+    // Une entrée par RAISON DE DÉPART, et rien d'autre : ce groupe est une
+    // catégorisation, pas un raccourci vers la liste. Seule RESIGNATION existe pour
+    // l'instant, sur demande ; les six autres codes de `DEPARTURE_REASONS` s'ajoutent
+    // ici, une ligne chacun.
+    //
+    // Pas d'entrée « tous les départs » : elle a été retirée volontairement. La liste
+    // complète (`offboarding`) reste servie par la route et par les liens internes des
+    // écrans, elle n'a simplement plus de porte dans la barre.
     children: [
       {
         id: 'offboarding-resignation',
@@ -108,9 +108,17 @@ const APP_NAV_DEFS: AppNavDef[] = [
     permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
   },
   {
-    id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox', route: 'requests',
+    id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox',
     permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'],
     children: [
+      {
+        // L'écran que « Demandes » ouvrait avant de devenir un groupe.
+        id: 'requests-inbox',
+        labelKey: 'NAV.REQUESTS_INBOX',
+        icon: 'inbox',
+        route: 'requests',
+        permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'],
+      },
       {
         id: 'requests-history',
         labelKey: 'NAV.REQUESTS_HISTORY',
@@ -189,6 +197,9 @@ export class HrShellComponent implements OnInit {
   readonly activeRoute = computed(() => {
     const url = (this.rawUrl() ?? '').split(/[?#]/)[0];
     const match = APP_NAV_DEFS.flatMap((d) => [d, ...(d.children ?? [])])
+      // Les groupes n'ont plus de route : sans ce filtre, `(^|/)(/|$)` correspondrait à
+      // n'importe quelle URL et le premier groupe rencontré éteindrait toute la barre.
+      .filter((d): d is AppNavDef & { route: string } => !!d.route)
       .sort((a, b) => b.route.length - a.route.length)
       .find((d) => new RegExp(`(^|/)${d.route}(/|$)`).test(url));
     return match ? match.route : '';
@@ -210,11 +221,11 @@ export class HrShellComponent implements OnInit {
         id: def.id,
         label: this.translate.instant(def.labelKey),
         icon: def.icon,
-        route: def.route,
+        // Jamais de route sur un groupe — le clic ne doit que déplier.
+        ...(children.length ? {} : { route: def.route }),
         // Omitted when empty: `children: []` would still make the lib treat the item as
         // an expandable group, so it would render a chevron that opens nothing.
         ...(children.length ? { children } : {}),
-        ...(def.expandInlineOnMobile ? { expandInlineOnMobile: true } : {}),
         ...(def.id === 'onboarding' && this.onboardingCount() > 0
           ? { badge: this.onboardingCount() }
           : {}),
@@ -251,6 +262,9 @@ export class HrShellComponent implements OnInit {
   }
 
   onNavClick(item: NavItem): void {
+    // Seules des feuilles arrivent ici : depuis la lib 4.27.0, un item à enfants n'émet
+    // plus `itemClick`, son clic ne fait que déplier. Le garde sur `children` est donc
+    // parti avec la montée de version.
     if (item.route) {
       // Split: a sub-entry's route is multi-segment ('offboarding/type/RESIGNATION'),
       // and one array element per segment is unambiguous where a single slash-bearing
