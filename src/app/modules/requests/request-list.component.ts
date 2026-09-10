@@ -216,32 +216,37 @@ interface RequestCard {
                     {{ card.submissionDate | relativeDate }}
                   </div>
 
-                  <div class="flex items-center gap-2">
-                    <!-- Real daf-button icon buttons, same convention as /rh/admin's own
-                         edit/delete action icons. -->
-                    <daf-button
-                      variant="ghost"
+                  <div class="flex items-center justify-end gap-2">
+                    <!-- Icon buttons styled exactly like daf-data-table's own trailing
+                         actions column (same classes as its actionBtnClasses()), so this
+                         card list's actions read as the same control as /rh/admin's tables. -->
+                    <button type="button"
                       [title]="'REQUESTS.LIST.VIEW_DETAIL' | translate"
-                      [options]="{ iconStart: 'visibility', size: 'sm' }"
-                      (onClick)="viewDetail(card.id)" />
+                      class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-on-surface-variant hover:opacity-70 cursor-pointer"
+                      (click)="viewDetail(card.id)">
+                      <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24">visibility</span>
+                    </button>
                     @if (canViewInbox() && card.isActive) {
-                      <daf-button
-                        variant="ghost"
+                      <button type="button"
                         [title]="'REQUESTS.DETAIL.APPROVE_BTN' | translate"
-                        [options]="{ iconStart: 'check_circle', size: 'sm' }"
-                        (onClick)="approve(card.source)" />
+                        class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-on-surface-variant hover:opacity-70 cursor-pointer"
+                        (click)="approve(card.source)">
+                        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24">check_circle</span>
+                      </button>
                     }
                     @if (card.cancelDisabledReason) {
-                      <daf-button
-                        variant="danger"
+                      <button type="button" disabled
                         [title]="card.cancelDisabledReason"
-                        [options]="{ iconStart: 'cancel', size: 'sm', disabled: true }" />
+                        class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-outline opacity-40 cursor-not-allowed">
+                        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24">cancel</span>
+                      </button>
                     } @else {
-                      <daf-button
-                        variant="danger"
+                      <button type="button"
                         [title]="'REQUESTS.DETAIL.CANCEL_BTN' | translate"
-                        [options]="{ iconStart: 'cancel', size: 'sm' }"
-                        (onClick)="cancel(card.source)" />
+                        class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-danger hover:bg-error-container/40 hover:text-danger active:scale-95 cursor-pointer"
+                        (click)="cancel(card.source)">
+                        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24">cancel</span>
+                      </button>
                     }
                   </div>
                 </div>

@@ -8,7 +8,7 @@ import { catchError, of } from 'rxjs';
 import { RequestsService }  from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
 import {
-  StatusBadgeComponent, BadgeOptions, ButtonComponent,
+  StatusBadgeComponent, BadgeOptions, ButtonComponent, CardComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow, PaginationComponent,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
@@ -26,7 +26,7 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   selector: 'app-request-officer-inbox',
   standalone: true,
   imports: [
-    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, ModalComponent,
+    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, ModalComponent, CardComponent,
     DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe,
   ],
   template: `
@@ -56,7 +56,7 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
     }
 
     <!-- Table -->
-    <div class="card table-card">
+    <daf-card class="table-card" [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
       @if (loading()) {
         <div class="loading-rows">
           @for (_ of [1,2,3,4]; track $index) { <div class="skeleton-row"></div> }
@@ -88,7 +88,7 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
           </div>
         }
       }
-    </div>
+    </daf-card>
 
     <!-- Refuse modal -->
     <app-modal
