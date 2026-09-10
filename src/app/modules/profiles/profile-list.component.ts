@@ -23,7 +23,7 @@ const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
 type ViewMode = 'grid' | 'list';
 
 /** The filter panel's field names, which are also the query-param names. */
-type FilterKey = 'pays' | 'department' | 'grade' | 'status' | 'contract' | 'hireDate';
+type FilterKey = 'pays' | 'department' | 'grade' | 'status' | 'contract' | 'hireDate' | 'includeInactive';
 
 const EMPTY_OPTIONS: FilterOptions = {
   departments: [], grades: [], pays: [], contractTypes: [],
@@ -108,8 +108,17 @@ export class ProfileListComponent implements OnInit {
         options: opt.grades,
       },
       {
+        /*
+         * Les SEPT statuts restent proposés, alors que la liste n'en montre que trois par
+         * défaut (ACTIVE / ON_LEAVE / ON_MISSION — le serveur applique ce défaut).
+         *
+         * Retirer les quatre autres de cette liste rendrait un profil TERMINATED
+         * introuvable depuis l'application : plus de moyen de rouvrir un offboarding
+         * validé, ni de consulter une archive. Demander explicitement TERMINATED, c'est
+         * le vouloir — et le serveur honore alors ce choix plutôt que son défaut.
+         */
         name: 'status', label: t('PROFILES.FILTERS.STATUS'), type: 'select',
-        placeholder: t('PROFILES.FILTERS.ALL'),
+        placeholder: t('PROFILES.FILTERS.ALL_IN_SERVICE'),
         options: LIFECYCLE_CODES.map(code => ({
           value: code, label: lifecycleLabel(code, this.translate),
         })),
@@ -126,6 +135,19 @@ export class ProfileListComponent implements OnInit {
       {
         name: 'hireDate', label: t('PROFILES.FILTERS.HIRE_DATE'), type: 'daterange',
         hint: t('PROFILES.FILTERS.HIRE_DATE_HINT'),
+      },
+      {
+        /*
+         * La porte vers les profils sortis.
+         *
+         * La liste montre l'effectif présent — ACTIVE, ON_LEAVE, ON_MISSION. Sans ce
+         * commutateur, un profil TERMINATED ou ARCHIVED n'aurait plus aucune entrée dans
+         * l'application : ni pour rouvrir un offboarding validé, ni pour consulter une
+         * archive, ni pour retrouver quelqu'un qui revient.
+         */
+        name: 'includeInactive', label: t('PROFILES.FILTERS.INCLUDE_INACTIVE'),
+        type: 'checkbox',
+        hint: t('PROFILES.FILTERS.INCLUDE_INACTIVE_HINT'),
       },
     ];
   });
@@ -162,6 +184,7 @@ export class ProfileListComponent implements OnInit {
         status:     sel(f.status),
         contract:   sel(f.contract),
         hireDate:   this.hireDateRangeValue(f),
+        includeInactive: f.includeInactive === 'true',
       },
     };
   });
@@ -228,6 +251,7 @@ export class ProfileListComponent implements OnInit {
       contract:     f.contract,
       hireDateFrom: f.hireDate ? f.hireDate.split('..')[0] || undefined : undefined,
       hireDateTo:   f.hireDate ? f.hireDate.split('..')[1] || undefined : undefined,
+      includeInactive: f.includeInactive === 'true' ? true : undefined,
     };
   }
 
@@ -256,6 +280,9 @@ export class ProfileListComponent implements OnInit {
       status:     this.asString(result['status']),
       contract:   this.asString(result['contract']),
       hireDate:   this.asDateRange(result['hireDate']),
+      // Un booléen rangé dans un Record<FilterKey, string> : `undefined` vaut « non
+      // coché », donc le paramètre n'est envoyé que lorsqu'il est vrai.
+      includeInactive: result['includeInactive'] === true ? 'true' : undefined,
     });
     this.resetToFirstPage();
   }

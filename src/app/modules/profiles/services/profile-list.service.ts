@@ -17,6 +17,15 @@ export interface EmployeeListParams {
   /** ISO `yyyy-MM-dd`; the backend parses with @DateTimeFormat(ISO.DATE). */
   hireDateFrom?: string;
   hireDateTo?:   string;
+  /**
+   * Inclut les statuts hors service. Par défaut le backend ne renvoie que les
+   * personnes EN service — ACTIVE / ON_LEAVE / ON_MISSION, plus les comptes sans
+   * fiche RH — donc sans ce drapeau un partant est introuvable dans la liste.
+   *
+   * Sans effet quand `status` est renseigné : demander un statut, c'est déjà dire
+   * lequel on veut voir.
+   */
+  includeInactive?: boolean;
   sort?:         string;
 }
 
@@ -59,6 +68,7 @@ export class ProfileListService {
     if (params.contract)     p = p.set('contract',     params.contract);
     if (params.hireDateFrom) p = p.set('hireDateFrom', params.hireDateFrom);
     if (params.hireDateTo)   p = p.set('hireDateTo',   params.hireDateTo);
+    if (params.includeInactive) p = p.set('includeInactive', true);
     if (params.sort)         p = p.set('sort',         params.sort);
     return this.http.get<PageResponse<EmployeeListItem>>(
       `${this.base}/profiles/employees`, { params: p });

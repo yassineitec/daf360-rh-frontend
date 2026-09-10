@@ -34,6 +34,12 @@ export class ProfileService {
     if (filter.grade)     params = params.set('grade',     filter.grade);
     if (filter.contract)  params = params.set('contract',  filter.contract);
     if (filter.search)    params = params.set('search',    filter.search);
+    // Ces trois-là étaient perdus en route : l'écran les construisait, `ProfileFilter` ne
+    // les déclarait pas, et le contrôleur ne les acceptait pas. Régler une période
+    // d'embauche ne filtrait donc rien, sans le moindre signe à l'écran.
+    if (filter.hireDateFrom) params = params.set('hireDateFrom', filter.hireDateFrom);
+    if (filter.hireDateTo)   params = params.set('hireDateTo',   filter.hireDateTo);
+    if (filter.includeInactive) params = params.set('includeInactive', true);
     if (filter.page != null) params = params.set('page',  filter.page);
     if (filter.size != null) params = params.set('size',  filter.size ?? 20);
     return this.http.get<PageResponse<ProfileSummary>>(`${this.base}/profiles`, { params });

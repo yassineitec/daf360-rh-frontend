@@ -316,6 +316,25 @@ export interface ProfileFilter {
   grade?: string;
   contract?: string;
   search?: string;
+
+  /**
+   * Période d'embauche. L'écran construisait déjà ces deux valeurs, mais elles ne
+   * figuraient nulle part ailleurs : ni ici, ni dans `ProfileService.list()`, ni sur
+   * le contrôleur. Le filtre existait donc à l'écran sans rien filtrer.
+   */
+  hireDateFrom?: string;
+  hireDateTo?: string;
+
+  /**
+   * Inclut les statuts hors service (PRE_ONBOARDING, OFFBOARDING, TERMINATED,
+   * ARCHIVED). Par défaut la liste ne montre que les personnes EN service —
+   * ACTIVE / ON_LEAVE / ON_MISSION — pour que « les employés » veuille dire les
+   * employés. Sans cette case, un partant devient introuvable, d'où l'option.
+   *
+   * Ignoré quand `status` est renseigné : demander un statut précis, c'est déjà
+   * dire lequel on veut voir.
+   */
+  includeInactive?: boolean;
   page?: number;
   size?: number;
 }
