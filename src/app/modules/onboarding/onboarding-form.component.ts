@@ -100,15 +100,21 @@ export class OnboardingFormComponent implements OnInit {
    * done once you are past it — which is the lib's default inference. Setting the
    * flag on any step would switch that off for the whole rail (§10g).
    */
+  /**
+   * The rail's steps. Each carries its icon, as on `/rh/offboarding/:id` and
+   * `/rh/candidates/:id` — eight steps at this width give each label about 80px, and an
+   * icon is what makes a step recognisable once its name is truncated or quiet.
+   */
   readonly stepperSteps = computed<StepperStep[]>(() =>
-    this.STEPS().map(s => ({ title: s.label })),
+    this.STEPS().map((s, i) => ({ title: s.label, icon: this.STEP_ICONS[i] })),
   );
 
   /**
-   * Heading of the section card holding the step content, so the step reads like a
-   * section of the record on `/rh/profiles/:id` rather than a bare panel. Indexed
-   * by `STEPS` order: identité · poste · contrat · régime · personnel · banque ·
-   * urgence · récapitulatif — keep it the same length as STEPS.
+   * One Material Symbol per step, shared by the rail and by the heading of the section
+   * card holding the step content — so the step reads like a section of the record on
+   * `/rh/profiles/:id` rather than a bare panel. Indexed by `STEPS` order: identité ·
+   * poste · contrat · régime · personnel · banque · urgence · récapitulatif — keep it
+   * the same length as STEPS.
    */
   private readonly STEP_ICONS = [
     'badge', 'work', 'description', 'schedule', 'person', 'account_balance',
@@ -117,11 +123,20 @@ export class OnboardingFormComponent implements OnInit {
   readonly currentStepLabel = computed(() => this.STEPS()[this.currentStep() - 1]?.label ?? '');
   readonly currentStepIcon  = computed(() => this.STEP_ICONS[this.currentStep() - 1] ?? '');
 
-  /** `header-only`: the page keeps its own Précédent / Suivant / Soumettre bar. */
+  /**
+   * `header-only`: the page keeps its own Précédent / Suivant / Soumettre bar.
+   *
+   * `labelDensity: 'quiet'` because the step's name is ALREADY printed,
+   * as the heading of the section card immediately below the rail. In `strong`
+   * (11px bold uppercase, tracked) eight labels competed with that heading and, at
+   * roughly 80px per step, wrapped onto two and three lines at uneven heights — which
+   * is what pulled the circles off the progress track.
+   */
   readonly stepperConfig = computed<StepperConfig>(() => {
     this.translate.currentLang();
     return {
       chrome:         'header-only',
+      labelDensity:   'quiet',
       clickableSteps: true,
       stepperLabel:   this.translate.instant('ONBOARDING.STEPPER_ARIA'),
     };

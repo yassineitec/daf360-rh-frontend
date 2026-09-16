@@ -255,12 +255,25 @@
              this page keeps its own Précédent / Suivant / Soumettre bar below.
              `currentStep` is 0-BASED here while the wizard counts from 1, hence the
              −1 / +1. No `completed` flag: progress IS positional (a step is done
-             once you're past it), which is the lib's default inference. -->
-        <daf-stepper
-          [steps]="stepperSteps()"
-          [currentStep]="currentStep() - 1"
-          [config]="stepperConfig()"
-          (stepClick)="goToStep($event + 1)" />
+             once you're past it), which is the lib's default inference.
+
+             In a card and behind a scroller, like the rails on /rh/offboarding/:id and
+             /rh/candidates/:id. The lib gives every step `flex-1`, so eight of them
+             divided this column into ~60px slices and the labels wrapped onto two and
+             three lines — which is what knocked the circles off the progress track.
+             `min-w-[640px]` is 8 × 80px, the same per-step budget those two rails get;
+             below that the rail scrolls instead of crushing itself. -->
+        <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
+          <div class="overflow-x-auto">
+            <div class="min-w-[640px]">
+              <daf-stepper
+                [steps]="stepperSteps()"
+                [currentStep]="currentStep() - 1"
+                [config]="stepperConfig()"
+                (stepClick)="goToStep($event + 1)" />
+            </div>
+          </div>
+        </daf-card>
 
         <!-- Step content in the same shell every profile tab panel uses, so the two
              pages can't drift apart on padding, heading size or icon placement.
