@@ -1274,6 +1274,8 @@
       "DISCIPLINE": "Discipline",
       "NOG_LEVEL": "NOG Level",
       "PERSONAL_EMAIL": "Personal email",
+      "PERSONAL_PHONE": "Personal phone",
+      "PRO_PHONE": "Work phone",
       "PHONE": "Phone",
       "ADDRESS": "Address",
       "NAME": "Name",

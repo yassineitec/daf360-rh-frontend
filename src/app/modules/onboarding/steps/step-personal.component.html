@@ -45,8 +45,8 @@
       <label class="form-label">{{ 'ONBOARDING.STEP_PERSONAL.PHONE' | translate }}</label>
       <daf-form-field
         [options]="{ placeholder: ('ONBOARDING.STEP_PERSONAL.PHONE_PH' | translate), prefixIcon: 'phone' }"
-        [value]="phone()"
-        (valueChange)="phone.set($any($event) ?? ''); emit()" />
+        [value]="personalPhone()"
+        (valueChange)="personalPhone.set($any($event) ?? ''); emit()" />
     </div>
 
     <div class="form-field form-empty"></div>

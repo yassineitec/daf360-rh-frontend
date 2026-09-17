@@ -64,9 +64,11 @@ export interface EmployeeProfile {
   paysLabel: string;
   lifecycleStatus: LifecycleStatus;
 
-  // ── Depuis Users (enrichi par le service) ────────────────────────────────
-  matricule: string | null; // format [NOM3][PRE3][userId] ex: DUPPIE125
-  fullName: string | null; // Users.fullName
+  // ── Identité ─────────────────────────────────────────────────────────────
+  /** employee_profiles.payroll_matricule — registre paie, décimal zéro-padé ("01", "206").
+   *  Attribué à l'activation, jamais régénéré. */
+  matricule: string | null;
+  fullName: string | null; // Users.fullName (enrichi par le service)
 
   // ── Employment ──────────────────────────────────────────────
   hireDate: string | null;
@@ -84,7 +86,10 @@ export interface EmployeeProfile {
   passportNumber: string | null;
   photoUrl: string | null;
   personalEmail: string | null;
+  /** Ligne professionnelle. Saisie par RH après l'activation — vide pendant l'onboarding. */
   phone: string | null;
+  /** Ligne personnelle, reprise du candidat à l'onboarding. */
+  personalPhone: string | null;
   homeAddress: string | null;
 
   // ── Emergency contact ────────────────────────────────────────
@@ -183,7 +188,8 @@ export interface ProfileUpdateDto {
   nogLevelId?: number | null;
   // Contact
   personalEmail?: string;
-  phone?: string;
+  phone?: string;          // professionnel
+  personalPhone?: string;
   personalAddress?: string;
   // Contact d'urgence
   emergencyContactName?: string;

@@ -34,7 +34,7 @@ export class StepPersonalComponent implements OnInit {
   maritalStatus       = signal('');
   numberOfChildren    = signal<number | null>(null);
   personalAddress     = signal('');
-  phone               = signal('');
+  personalPhone       = signal('');
 
   protected readonly isoToDate = isoToDate;
   protected readonly dateToIso = dateToIso;
@@ -48,7 +48,7 @@ export class StepPersonalComponent implements OnInit {
     this.maritalStatus.set(d.maritalStatus ?? fi?.maritalStatus ?? '');
     this.numberOfChildren.set(d.numberOfChildren ?? fi?.numberOfChildren ?? null);
     this.personalAddress.set(d.personalAddress ?? fi?.personalAddress ?? '');
-    this.phone.set(d.phone ?? fi?.phone ?? '');
+    this.personalPhone.set(d.personalPhone ?? fi?.personalPhone ?? '');
   }
 
   emit(): void {
@@ -58,7 +58,7 @@ export class StepPersonalComponent implements OnInit {
       maritalStatus:       this.maritalStatus() || null,
       numberOfChildren:    this.numberOfChildren(),
       personalAddress:     this.personalAddress() || null,
-      phone:               this.phone() || null,
+      personalPhone:       this.personalPhone() || null,
     });
   }
 }

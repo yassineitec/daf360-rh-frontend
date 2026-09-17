@@ -1274,6 +1274,8 @@
       "DISCIPLINE": "Discipline",
       "NOG_LEVEL": "Niveau NOG",
       "PERSONAL_EMAIL": "Email personnel",
+      "PERSONAL_PHONE": "Téléphone personnel",
+      "PRO_PHONE": "Téléphone professionnel",
       "PHONE": "Téléphone",
       "ADDRESS": "Adresse",
       "NAME": "Nom",

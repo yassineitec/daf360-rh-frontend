@@ -212,7 +212,7 @@ export class OnboardingFormComponent implements OnInit {
           nationalId:              data.nationalId              ?? undefined,
           gender:                  data.gender                  ?? undefined,
           passportNumber:          data.passportNumber          ?? undefined,
-          phone:                   data.phone                   ?? undefined,
+          personalPhone:           data.personalPhone           ?? undefined,
           // Employment
           contractType:            data.contractType            ?? undefined,
           hireDate:                data.hireDate                ?? undefined,

@@ -43,7 +43,7 @@ export interface OnboardingFormData {
   firstName:         string;
   lastName:          string;
   emailPersonal:     string;
-  phone:             string | null;
+  personalPhone:     string | null;   // candidate.phone — le wizard n'a pas de ligne pro
   dateOfBirth:       string | null;
   nationality:       string | null;
   nationalityId:     number | null;
@@ -194,7 +194,8 @@ export interface OnboardingProfileDto {
   maritalStatus?: string | null;
   numberOfChildren?: number | null;
   personalAddress?: string | null;
-  phone?: string | null;
+  /** Renommé de `phone` : le backend ne lisait pas ce champ, la saisie était perdue. */
+  personalPhone?: string | null;
   // Step 5 — Bank
   bankName?: string;
   bankId?: number | null;
