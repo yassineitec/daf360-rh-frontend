@@ -95,7 +95,8 @@
       "EDIT": "Modifier",
       "SAVE": "Enregistrer",
       "REMOVE": "Retirer",
-      "COMMENT_PLACEHOLDER": "Commentaire…"
+      "COMMENT_PLACEHOLDER": "Commentaire…",
+      "SAVING": "Enregistrement…"
     },
     "STATUS": {
       "PENDING": "En attente",
@@ -296,7 +297,18 @@
       "END_DATE": "Date de fin prévue",
       "MANAGER_PROFILE": "Profil manager (période d’essai étendue)",
       "COMMENT_OPTIONAL": "Commentaire (optionnel)…",
-      "CONFIRM_HIRE": "Confirmer le recrutement"
+      "CONFIRM_HIRE": "Confirmer le recrutement",
+      "FIRST_NAME": "Prénom",
+      "LAST_NAME": "Nom",
+      "EXPERIENCE_YEARS": "Années d'expérience",
+      "EXPERIENCE_HINT": "Entre 0 et 60 ans",
+      "NOTES_PLACEHOLDER": "Notes sur la candidature…",
+      "EDIT_HINT": "Modifications en attente — enregistrez pour les appliquer.",
+      "EDIT_SAVED": "Candidat mis à jour.",
+      "VACANCY": "Poste ouvert (demande)",
+      "VACANCY_NONE": "— Candidature spontanée —",
+      "VACANCY_SPONTANEOUS": "Candidature spontanée",
+      "VACANCY_NUM": "Demande #{{id}}"
     },
     "DETAIL_ERRORS": {
       "HIRE_DATE_REQUIRED": "La date d'embauche est obligatoire.",
@@ -306,7 +318,9 @@
       "CV_SIZE": "Fichier trop volumineux — max 10 Mo",
       "CV_UPLOAD_SUCCESS": "CV \"{{name}}\" téléversé avec succès.",
       "CV_UPLOAD": "Erreur lors du téléversement.",
-      "SALARY_SAVE": "Erreur lors de la sauvegarde."
+      "SALARY_SAVE": "Erreur lors de la sauvegarde.",
+      "EDIT_REQUIRED": "Prénom, nom et email sont obligatoires.",
+      "EDIT_SAVE": "Erreur lors de la mise à jour du candidat."
     },
     "REJECT": {
       "TITLE": "Rejeter le candidat",
@@ -1260,6 +1274,8 @@
       "DISCIPLINE": "Discipline",
       "NOG_LEVEL": "Niveau NOG",
       "PERSONAL_EMAIL": "Email personnel",
+      "PERSONAL_PHONE": "Téléphone personnel",
+      "PRO_PHONE": "Téléphone professionnel",
       "PHONE": "Téléphone",
       "ADDRESS": "Adresse",
       "NAME": "Nom",

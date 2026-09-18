@@ -95,7 +95,8 @@
       "EDIT": "Edit",
       "SAVE": "Save",
       "REMOVE": "Remove",
-      "COMMENT_PLACEHOLDER": "Comment…"
+      "COMMENT_PLACEHOLDER": "Comment…",
+      "SAVING": "Saving…"
     },
     "STATUS": {
       "PENDING": "Pending",
@@ -296,7 +297,18 @@
       "END_DATE": "Expected end date",
       "MANAGER_PROFILE": "Manager profile (extended probation)",
       "COMMENT_OPTIONAL": "Comment (optional)…",
-      "CONFIRM_HIRE": "Confirm hire"
+      "CONFIRM_HIRE": "Confirm hire",
+      "FIRST_NAME": "First name",
+      "LAST_NAME": "Last name",
+      "EXPERIENCE_YEARS": "Years of experience",
+      "EXPERIENCE_HINT": "Between 0 and 60 years",
+      "NOTES_PLACEHOLDER": "Notes about the application…",
+      "EDIT_HINT": "Pending changes — save to apply them.",
+      "EDIT_SAVED": "Candidate updated.",
+      "VACANCY": "Open position (demand)",
+      "VACANCY_NONE": "— Spontaneous application —",
+      "VACANCY_SPONTANEOUS": "Spontaneous application",
+      "VACANCY_NUM": "Demand #{{id}}"
     },
     "DETAIL_ERRORS": {
       "HIRE_DATE_REQUIRED": "The hire date is required.",
@@ -306,7 +318,9 @@
       "CV_SIZE": "File too large — max 10 MB",
       "CV_UPLOAD_SUCCESS": "CV \"{{name}}\" uploaded successfully.",
       "CV_UPLOAD": "Error while uploading.",
-      "SALARY_SAVE": "Error while saving."
+      "SALARY_SAVE": "Error while saving.",
+      "EDIT_REQUIRED": "First name, last name and email are required.",
+      "EDIT_SAVE": "Error while updating the candidate."
     },
     "REJECT": {
       "TITLE": "Reject the candidate",
@@ -1260,6 +1274,8 @@
       "DISCIPLINE": "Discipline",
       "NOG_LEVEL": "NOG Level",
       "PERSONAL_EMAIL": "Personal email",
+      "PERSONAL_PHONE": "Personal phone",
+      "PRO_PHONE": "Work phone",
       "PHONE": "Phone",
       "ADDRESS": "Address",
       "NAME": "Name",

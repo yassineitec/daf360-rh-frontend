@@ -13,42 +13,50 @@
 
     <!-- Unlike the profile page, the workflow actions stay in `pageActions`:
          there are up to four of them and they drive the recruitment state, so
-         they belong with the title rather than at the foot of a 32%-wide card. -->
+         they belong with the title rather than at the foot of a 32%-wide card.
+         (The edit toggle does sit at the foot of that card, as on the profile
+         page — it belongs with the fields it opens, not with the workflow.)
+
+         All of them are hidden while editing: each reloads the candidate on
+         success, which would leave the open editor holding pre-reload values.
+         The one way out of edit mode is the card's Annuler or the save bar. -->
     <ng-container pageActions>
       @if (candidate(); as c) {
-        @if (canAcceptReject() && c.status === 'PENDING') {
-          <daf-button
-            [options]="{ variant: 'teal', iconStart: 'check_circle',
-                         label: ('CANDIDATES.ACTIONS.ACCEPT' | translate) }"
-            (onClick)="onAccept()" />
-          <daf-button
-            [options]="{ variant: 'danger', iconStart: 'cancel',
-                         label: ('CANDIDATES.ACTIONS.REJECT' | translate) }"
-            (onClick)="showReject.set(true)" />
-        }
-        @if (c.itProvisioning && ['ACCEPTED','IT_IN_PROGRESS','EMAIL_CREATED'].includes(c.status)) {
-          <daf-button
-            [options]="{ variant: 'secondary', iconStart: 'computer',
-                         label: ('CANDIDATES.DETAIL.IT_PROVISIONING_LINK' | translate) }"
-            (onClick)="goToProvisioning(c.itProvisioning!.id)" />
-        }
-        @if (canOnboard() && ['EMAIL_RECEIVED','HR_IN_PROGRESS'].includes(c.status)) {
-          <daf-button
-            [options]="{ variant: 'teal', iconStart: 'assignment_turned_in',
-                         label: ('CANDIDATES.DETAIL.COMPLETE_ONBOARDING' | translate) }"
-            (onClick)="goToOnboarding()" />
-        }
-        @if (canHireThisCandidate()) {
-          <daf-button
-            [options]="{ variant: 'teal', iconStart: 'how_to_reg',
-                         label: ('CANDIDATES.DETAIL.HIRE' | translate) }"
-            (onClick)="openHireModal()" />
-        }
-        @if (c.status === 'HIRED') {
-          <daf-button
-            [options]="{ variant: 'secondary', iconStart: 'badge',
-                         label: ('CANDIDATES.DETAIL.VIEW_PROFILE_LINK' | translate) }"
-            (onClick)="navigateToProfiles()" />
+        @if (!editMode()) {
+          @if (canAcceptReject() && c.status === 'PENDING') {
+            <daf-button
+              [options]="{ variant: 'teal', iconStart: 'check_circle',
+                           label: ('CANDIDATES.ACTIONS.ACCEPT' | translate) }"
+              (onClick)="onAccept()" />
+            <daf-button
+              [options]="{ variant: 'danger', iconStart: 'cancel',
+                           label: ('CANDIDATES.ACTIONS.REJECT' | translate) }"
+              (onClick)="showReject.set(true)" />
+          }
+          @if (c.itProvisioning && ['ACCEPTED','IT_IN_PROGRESS','EMAIL_CREATED'].includes(c.status)) {
+            <daf-button
+              [options]="{ variant: 'secondary', iconStart: 'computer',
+                           label: ('CANDIDATES.DETAIL.IT_PROVISIONING_LINK' | translate) }"
+              (onClick)="goToProvisioning(c.itProvisioning!.id)" />
+          }
+          @if (canOnboard() && ['EMAIL_RECEIVED','HR_IN_PROGRESS'].includes(c.status)) {
+            <daf-button
+              [options]="{ variant: 'teal', iconStart: 'assignment_turned_in',
+                           label: ('CANDIDATES.DETAIL.COMPLETE_ONBOARDING' | translate) }"
+              (onClick)="goToOnboarding()" />
+          }
+          @if (canHireThisCandidate()) {
+            <daf-button
+              [options]="{ variant: 'teal', iconStart: 'how_to_reg',
+                           label: ('CANDIDATES.DETAIL.HIRE' | translate) }"
+              (onClick)="openHireModal()" />
+          }
+          @if (c.status === 'HIRED') {
+            <daf-button
+              [options]="{ variant: 'secondary', iconStart: 'badge',
+                           label: ('CANDIDATES.DETAIL.VIEW_PROFILE_LINK' | translate) }"
+              (onClick)="navigateToProfiles()" />
+          }
         }
       }
     </ng-container>
@@ -66,18 +74,33 @@
   }
 
   @if (candidate(); as c) {
-    <div class="flex flex-col gap-8 lg:flex-row">
+    <!-- pb-32 in edit mode clears the fixed save bar, so the last field of a tab
+         and the card's own button stay reachable. -->
+    <div class="flex flex-col gap-8 lg:flex-row" [class.pb-32]="editMode()">
 
       <!-- ── Left: identity + where the candidate stands, always on screen ── -->
       <div class="lg:w-[32%] lg:shrink-0">
         <div class="flex flex-col gap-6 lg:sticky lg:top-6">
-          <rh-candidate-identity-card [candidate]="c" [pills]="identityPills()" />
-          <rh-candidate-pipeline-card [status]="c.status" />
+          <rh-candidate-identity-card
+            [candidate]="c"
+            [pills]="identityPills()"
+            [editMode]="editMode()"
+            [editForm]="editForm()"
+            [canEdit]="canEdit()"
+            [genderOptions]="genderOptions()"
+            [nationalityOptions]="nationalityOptions()"
+            (toggleEdit)="toggleEdit()"
+            (patch)="patch($event)" />
         </div>
       </div>
 
-      <!-- ── Right: one tab per section of the record ── -->
+      <!-- ── Right: the recruitment rail, then one tab per section of the record ── -->
       <div class="flex min-w-0 flex-1 flex-col gap-6">
+
+        <!-- The rail sits above the tabs, as on /rh/offboarding/:id — it describes the
+             whole file, not one tab, and it used to be vertical in the left column where
+             there was no room for its dates, progress or next step. -->
+        <rh-candidate-pipeline-card [status]="c.status" [history]="history()" />
 
         <!-- daf-tabs is strip-only; the panel below is ours, which is what keeps
              the offer and interview panels owning their own fetching. -->
@@ -95,7 +118,16 @@
           @switch (activeTab()) {
 
             @case ('profil') {
-              <rh-candidate-profile-section [candidate]="c" />
+              <rh-candidate-profile-section
+                [candidate]="c"
+                [editMode]="editMode()"
+                [editForm]="editForm()"
+                [departmentOptions]="departmentOptions()"
+                [gradeOptions]="gradeOptions()"
+                [disciplineOptions]="disciplineOptions()"
+                [employmentTypeOptions]="employmentTypeOptions()"
+                [demandOptions]="demandOptions()"
+                (patch)="patch($event)" />
             }
 
             <!-- Rémunération: the negotiated figures, then the employer-cost
@@ -153,6 +185,46 @@
   }
 
 </daf-page>
+
+<!-- ── Save bar — edit mode only ─────────────────────────────────────────────
+     `left-0` rather than the mockup's `left-64`: the shell owns the sidebar
+     width, so the bar is anchored to the viewport and centred on the same
+     max-width as the page content.
+
+     No "motif" field, unlike `/rh/profiles/:id`: the candidate update endpoint
+     takes no audited reason — the candidate audit log records the actor and the
+     diff on its own. -->
+@if (editMode() && canEdit()) {
+  <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
+    <div class="pointer-events-auto mx-auto flex max-w-5xl flex-col gap-3 rounded-xl
+                border border-outline-variant bg-surface-container-lowest p-4
+                shadow-[0_-4px_24px_rgba(0,0,0,0.12)] sm:flex-row sm:items-center">
+      <div class="flex min-w-0 flex-1 items-center gap-2 text-[13px]">
+        @if (editSaveError(); as err) {
+          <span class="material-symbols-outlined shrink-0 text-[18px] text-danger">error</span>
+          <span class="min-w-0 wrap-break-word text-danger">{{ err }}</span>
+        } @else {
+          <span class="material-symbols-outlined shrink-0 text-[18px] text-on-surface-variant">edit</span>
+          <span class="min-w-0 text-on-surface-variant">{{ 'CANDIDATES.DETAIL.EDIT_HINT' | translate }}</span>
+        }
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        <daf-button
+          [options]="{ variant: 'ghost', label: ('CANDIDATES.COMMON.CANCEL' | translate) }"
+          (onClick)="toggleEdit()" />
+        <daf-button
+          [options]="{
+            variant: 'teal',
+            label: (saving() ? 'CANDIDATES.COMMON.SAVING' : 'CANDIDATES.COMMON.SAVE') | translate,
+            iconStart: 'save',
+            disabled: saving(),
+            loading: saving()
+          }"
+          (onClick)="saveCandidate()" />
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Modals live at the page root: the overlay is `position: fixed`, and an
      ancestor carrying transform / filter / backdrop-filter — daf-card's glass

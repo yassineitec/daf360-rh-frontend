@@ -13,13 +13,14 @@ const BASE = `${environment.hrApiUrl}/api/hr`;
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const MOCK_PROFILE: EmployeeProfile = {
   id: 1, userId: 42, paysId: 179, paysLabel: 'Tunisie', lifecycleStatus: 'ACTIVE',
-  matricule: 'DUPPIE042', fullName: 'Alice DUPONT',
+  matricule: '206', fullName: 'Alice DUPONT',
   hireDate: '2024-01-15', contractType: 'CDI', contractEndDate: null,
   probationEndDate: null, isOnProbation: false,
   dateOfBirth: '1990-05-10', gender: 'MALE', nationality: 'Tunisienne',
   nationalityId: null,
   nationalId: null, passportNumber: null, photoUrl: null,
-  personalEmail: 'alice@example.com', phone: '+21611111111',
+  personalEmail: 'alice@example.com',
+  phone: '+21671000000', personalPhone: '+21611111111',
   homeAddress: null, personalAddress: null,
   emergencyContactName: null, emergencyContactRelation: null, emergencyContactPhone: null,
   department: 'ENGINEER', grade: 'SENIOR', discipline: null, nogLevel: null,

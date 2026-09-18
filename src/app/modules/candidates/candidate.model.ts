@@ -127,6 +127,20 @@ export interface CreateCandidateRequest {
   salaireNetRh?: number | null;
 }
 
+/**
+ * What `PUT /api/hr/candidates/{id}` accepts — mirrors the backend
+ * `UpdateCandidateRequest` field for field.
+ *
+ * `status` and `rejectionReason` are deliberately absent: those move through
+ * accept / reject / hire, not through a dossier edit.
+ *
+ * Absent (or null) means "leave unchanged", never "clear": the service maps with
+ * `NullValuePropertyMappingStrategy.IGNORE`, and `applyDimensionFks` /
+ * `applyEmploymentType` only write when an id is present. So a dimension already
+ * set cannot be emptied here.
+ *
+ * `recruitmentDemandId` is the one exception — see its own note below.
+ */
 export interface UpdateCandidateRequest {
   firstName?: string;
   lastName?: string;
@@ -134,12 +148,26 @@ export interface UpdateCandidateRequest {
   phone?: string | null;
   dateOfBirth?: string | null;
   gender?: string | null;
+  /** CIN / passport number — `candidates.national_id`. */
+  nationalId?: string | null;
   appliedPosition?: string | null;
   appliedGradeId?: number | null;
   appliedDisciplineId?: number | null;
   departmentId?: number | null;
   nationalityId?: number | null;
-  contractType?: string | null;
+  /**
+   * Contract type — an EMPLOYMENT_TYPE list-value id. Validated server-side against
+   * the active values of the candidate's own entity, and refused once the candidate
+   * is HIRED (a contract has been written from it by then).
+   */
+  employmentTypeId?: number | null;
+  /**
+   * The vacancy this candidature answers — the ONE field where `null` is an
+   * instruction rather than a no-op: the backend tracks whether the key was present
+   * at all, so sending `null` DETACHES the candidature from its vacancy while
+   * omitting the key leaves the link alone. Always send it explicitly.
+   */
+  recruitmentDemandId?: number | null;
   expectedStartDate?: string | null;
   notes?: string | null;
   experienceYears?: number | null;

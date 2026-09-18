@@ -111,7 +111,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   emploi:   ['hireDate', 'contractType', 'contractEndDate', 'probationEndDate', 'isOnProbation',
              'salaireNetCandidat', 'salaireNetRh', 'departmentId', 'gradeId', 'disciplineId', 'nogLevelId'],
   // Contact holds both the employee's own details and the emergency contact.
-  contact:  ['personalEmail', 'phone', 'personalAddress',
+  contact:  ['personalEmail', 'personalPhone', 'phone', 'personalAddress',
              'emergencyContactName', 'emergencyContactRelation', 'emergencyContactPhone'],
   bancaire: ['bankId', 'iban', 'bankAccountNumber', 'rib', 'socialSecurityNumber', 'taxId', 'cnssNumber', 'cnssAffiliationDate'],
 };
@@ -679,7 +679,8 @@ export class ProfileDetailComponent implements OnInit {
       isOnProbation: p.isOnProbation ?? false,
       departmentId: p.departmentId ?? null, gradeId: p.gradeId ?? null,
       disciplineId: p.disciplineId ?? null, nogLevelId: p.nogLevelId ?? null,
-      personalEmail: p.personalEmail ?? '', phone: p.phone ?? '', personalAddress: p.personalAddress ?? '',
+      personalEmail: p.personalEmail ?? '', personalPhone: p.personalPhone ?? '',
+      phone: p.phone ?? '', personalAddress: p.personalAddress ?? '',
       emergencyContactName: p.emergencyContactName ?? '',
       emergencyContactRelation: p.emergencyContactRelation ?? '',
       emergencyContactPhone: p.emergencyContactPhone ?? '',
