@@ -1,0 +1,93 @@
+<!-- /rh/missions/historique — canonical page shape (UI-PLAYBOOK §1). -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
+
+  <daf-page-header
+    [title]="'MISSIONS.HISTORY.TITLE' | translate"
+    [subtitle]="'MISSIONS.HISTORY.SUBTITLE' | translate" />
+
+  <!-- KPIs — one row at every width, 24px gaps (§1). Counted on the whole closed set,
+       never on the current page or search filter. -->
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'MISSIONS.HISTORY.KPI.TOTAL' | translate"
+      [value]="stats().total"
+      [options]="{ icon: 'history', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
+    <daf-metric-card
+      [label]="'MISSIONS.HISTORY.KPI.APPROVED_COUNT' | translate"
+      [value]="stats().approved"
+      [options]="{ icon: 'check_circle', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
+
+    <daf-metric-card
+      [label]="'MISSIONS.HISTORY.KPI.REJECTED_COUNT' | translate"
+      [value]="stats().rejected"
+      [options]="{ icon: 'cancel', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+
+    <daf-metric-card
+      [label]="'MISSIONS.HISTORY.KPI.CANCELLED_COUNT' | translate"
+      [value]="stats().cancelled"
+      [options]="{ icon: 'block', iconColor: 'text-outline', iconBg: 'bg-surface-container' }" />
+  </section>
+
+  <!-- Search + status filter + view toggle: both are client-side projections — the
+       endpoint returns the manager's whole list in one call. -->
+  <daf-search-toolbar
+    [placeholder]="'MISSIONS.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)" />
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
+       `allowCancel="false"`: a closed mission cannot be cancelled, only reviewed. -->
+  @if (viewMode() === 'grid') {
+    <rh-missions-cards-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonCount]="pageSize()"
+      [emptyMessage]="emptyMessage()"
+      [allowCancel]="false"
+      (open)="openDetail($event)" />
+  } @else {
+    <rh-missions-table-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      [emptyMessage]="emptyMessage()"
+      [allowCancel]="false"
+      (open)="openDetail($event)" />
+  }
+
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      [perPageLabel]="'PROFILES.LIST.PER_PAGE' | translate"
+      [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
+
+</daf-page>
+
+<!-- Drawer at the PAGE ROOT, outside daf-page: it is position:fixed and daf-card's glass
+     variant would otherwise become its containing block (§10e). -->
+<rh-mission-detail-drawer
+  [mission]="selected()"
+  [open]="!!selected()"
+  (closed)="selected.set(null)" />

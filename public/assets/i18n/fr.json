@@ -3679,6 +3679,8 @@
     "REQUESTS_INBOX": "Boîte de réception",
     "ADMIN": "Admin",
     "MISSIONS": "Missions",
+    "MISSIONS_CURRENT": "Missions en cours",
+    "MISSIONS_HISTORY": "Historique des missions",
     "BILLETERIE": "Billeterie",
     "REQUESTS_HISTORY": "Historique demande"
   },
@@ -3749,6 +3751,16 @@
         "TRIGGER": "Filtrer"
       },
       "EMPTY": "Aucune mission planifiée pour le moment"
+    },
+    "HISTORY": {
+      "TITLE": "Historique des missions",
+      "SUBTITLE": "Missions déjà traitées : validées, refusées ou annulées",
+      "KPI": {
+        "TOTAL": "Missions clôturées",
+        "APPROVED_COUNT": "Validées",
+        "REJECTED_COUNT": "Refusées",
+        "CANCELLED_COUNT": "Annulées"
+      }
     },
     "FORM": {
       "TITLE_NEW": "Planifier une mission",

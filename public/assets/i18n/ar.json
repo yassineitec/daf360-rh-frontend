@@ -1462,6 +1462,8 @@
     "REQUESTS_INBOX": "صندوق الطلبات",
     "ADMIN": "الإدارة",
     "MISSIONS": "المهام",
+    "MISSIONS_CURRENT": "المهام الجارية",
+    "MISSIONS_HISTORY": "سجل المهام",
     "BILLETERIE": "التذاكر",
     "REQUESTS_HISTORY": "سجل الطلبات"
   },
@@ -1532,6 +1534,16 @@
         "TRIGGER": "تصفية"
       },
       "EMPTY": "لا توجد مهمة مخططة بعد"
+    },
+    "HISTORY": {
+      "TITLE": "سجل المهام",
+      "SUBTITLE": "المهام التي تمت معالجتها: مصادق عليها أو مرفوضة أو ملغاة",
+      "KPI": {
+        "TOTAL": "المهام المغلقة",
+        "APPROVED_COUNT": "مصادق عليها",
+        "REJECTED_COUNT": "مرفوضة",
+        "CANCELLED_COUNT": "ملغاة"
+      }
     },
     "FORM": {
       "TITLE_NEW": "تخطيط مهمة",

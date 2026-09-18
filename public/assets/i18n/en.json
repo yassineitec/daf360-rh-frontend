@@ -3679,6 +3679,8 @@
     "REQUESTS_INBOX": "Inbox",
     "ADMIN": "Admin",
     "MISSIONS": "Missions",
+    "MISSIONS_CURRENT": "Current missions",
+    "MISSIONS_HISTORY": "Mission history",
     "BILLETERIE": "Ticketing",
     "REQUESTS_HISTORY": "Request history"
   },
@@ -3749,6 +3751,16 @@
         "TRIGGER": "Filter"
       },
       "EMPTY": "No mission planned yet"
+    },
+    "HISTORY": {
+      "TITLE": "Mission history",
+      "SUBTITLE": "Missions already decided: approved, rejected or cancelled",
+      "KPI": {
+        "TOTAL": "Closed missions",
+        "APPROVED_COUNT": "Approved",
+        "REJECTED_COUNT": "Rejected",
+        "CANCELLED_COUNT": "Cancelled"
+      }
     },
     "FORM": {
       "TITLE_NEW": "Plan a mission",

@@ -1,11 +1,11 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
 import {
   ButtonComponent, DataTableComponent, DafCellDirective, FormFieldComponent,
-  SelectComponent, StatusBadgeComponent, TableColumn, TableConfig, TableRow,
+  ModalRef, ModalService, PaginationComponent, PaginationConfig, SelectComponent,
+  StatusBadgeComponent, TableColumn, TableConfig, TableRow, TabItem, TabsComponent,
 } from '@khalilrebhiitec/daf360';
 import type { BadgeVariant, SelectOption } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ModalComponent } from '../../../shared/modal.component';
 import { FolderPickerComponent } from './folder-picker.component';
 import {
   Diagnosis, DocKindInfo, EmployeeFolderRow, SharePointAdminService,
@@ -13,6 +13,10 @@ import {
 } from './sharepoint-admin.service';
 
 type Panel = 'paths' | 'employees' | 'diagnose';
+
+/** Same client-side page size as the other admin catalog tables (ref-data-admin,
+ * request-types-admin) — both lists here are fetched whole from the backend. */
+const PAGE_SIZE = 10;
 
 /**
  * Status → badge colour. `null` (never looked up) is deliberately its own, neutral state:
@@ -34,7 +38,8 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent, StatusBadgeComponent,
-    DataTableComponent, DafCellDirective, ModalComponent, FolderPickerComponent, TranslatePipe,
+    DataTableComponent, DafCellDirective, FolderPickerComponent, TabsComponent,
+    PaginationComponent, TranslatePipe,
   ],
   template: `
     <div class="spa-wrap">
@@ -55,17 +60,15 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
 
       @if (error()) { <div class="spa-error">{{ error() }}</div> }
 
-      <!-- Panels. A segmented control rather than three stacked sections: the three
-           answer different questions and only one is ever being read at a time. -->
-      <div class="spa-tabs" role="tablist">
-        @for (p of panels; track p) {
-          <button type="button" role="tab" class="spa-tab"
-                  [class.spa-tab--active]="panel() === p"
-                  (click)="panel.set(p)">
-            {{ ('ADMIN.sharepoint.panel.' + p) | translate }}
-          </button>
-        }
-      </div>
+      <!-- Real daf-tabs strip, same convention as regimes-admin / role-editor — not three
+           stacked sections: the three answer different questions and only one is ever
+           being read at a time. -->
+      <daf-tabs
+        class="spa-tabs"
+        variant="underline"
+        [tabs]="panelTabs()"
+        [active]="panel()"
+        (activeChange)="panel.set($any($event))" />
 
       <!-- ══ Panel 1: configured paths ══════════════════════════════════════ -->
       @if (panel() === 'paths') {
@@ -77,9 +80,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         </div>
 
         <div class="table-scroll">
-          <daf-data-table [columns]="pathColumns()" [rows]="pathRows()"
-                          [config]="{ hoverable: true, loading: loadingPaths(),
-                                      emptyMessage: ('ADMIN.sharepoint.paths.empty' | translate) }">
+          <daf-data-table [columns]="pathColumns()" [rows]="pathRows()" [config]="pathTableConfig()">
             <ng-template dafCell="pathTemplate" let-row>
               <code class="spa-path">{{ row['pathTemplate'] }}</code>
               @if (row['_source'].problems.length) {
@@ -90,18 +91,19 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
                 </div>
               }
             </ng-template>
-            <ng-template dafCell="_actions" let-row>
-              <div class="spa-row-actions">
-                <daf-button variant="primary" [options]="{ iconStart: 'edit', size: 'sm' }"
-                            [title]="'ADMIN.sharepoint.paths.edit' | translate"
-                            (onClick)="openPathForm(row['_source'])" />
-                <daf-button variant="ghost" [options]="{ iconStart: 'delete', size: 'sm' }"
-                            [title]="'ADMIN.sharepoint.paths.delete' | translate"
-                            (onClick)="deletePath(row['_source'])" />
-              </div>
-            </ng-template>
           </daf-data-table>
         </div>
+
+        @if (pathsTotalPages() > 1) {
+          <div class="spa-pagination">
+            <daf-pagination
+              [currentPage]="pathsCurrentPage()"
+              [totalPages]="pathsTotalPages()"
+              [totalElements]="locations().length"
+              [config]="paginationConfig"
+              (pageChange)="onPathsPageChange($event)" />
+          </div>
+        }
       }
 
       <!-- ══ Panel 2: who resolves, who does not ════════════════════════════ -->
@@ -130,9 +132,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         }
 
         <div class="table-scroll">
-          <daf-data-table [columns]="employeeColumns()" [rows]="employeeRows()"
-                          [config]="{ hoverable: true, loading: loadingEmployees(),
-                                      emptyMessage: ('ADMIN.sharepoint.employees.empty' | translate) }">
+          <daf-data-table [columns]="employeeColumns()" [rows]="employeeRows()" [config]="employeeTableConfig()">
             <ng-template dafCell="status" let-row>
               @if (row['_source'].status) {
                 <daf-badge [label]="('ADMIN.sharepoint.status.' + row['_source'].status) | translate"
@@ -154,21 +154,19 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
                 <span class="spa-detail">—</span>
               }
             </ng-template>
-            <ng-template dafCell="_actions" let-row>
-              <div class="spa-row-actions">
-                <daf-button variant="ghost" [options]="{ iconStart: 'troubleshoot', size: 'sm' }"
-                            [title]="'ADMIN.sharepoint.employees.diagnose' | translate"
-                            (onClick)="diagnoseFrom(row['_source'])" />
-                <daf-button variant="primary" [options]="{ iconStart: 'edit_note', size: 'sm' }"
-                            [title]="'ADMIN.sharepoint.employees.pin' | translate"
-                            (onClick)="openPinForm(row['_source'])" />
-                <daf-button variant="ghost" [options]="{ iconStart: 'restart_alt', size: 'sm' }"
-                            [title]="'ADMIN.sharepoint.employees.reset' | translate"
-                            (onClick)="resetEmployee(row['_source'])" />
-              </div>
-            </ng-template>
           </daf-data-table>
         </div>
+
+        @if (employeesTotalPages() > 1) {
+          <div class="spa-pagination">
+            <daf-pagination
+              [currentPage]="employeesCurrentPage()"
+              [totalPages]="employeesTotalPages()"
+              [totalElements]="employees().length"
+              [config]="paginationConfig"
+              (pageChange)="onEmployeesPageChange($event)" />
+          </div>
+        }
       }
 
       <!-- ══ Panel 3: diagnosis ═════════════════════════════════════════════ -->
@@ -243,12 +241,9 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         }
       }
 
-      <!-- ══ Path form ══════════════════════════════════════════════════════ -->
-      <app-modal
-        [title]="'ADMIN.sharepoint.paths.formTitle' | translate"
-        [visible]="showPathForm()"
-        [hasFooter]="true"
-        (closed)="showPathForm.set(false)">
+      <!-- ══ Path form. Projected into the real daf-modal-host via ModalService, same
+           convention as the other admin catalog pages. ═══════════════════════════ -->
+      <ng-template #pathFormTpl>
         <div class="spa-form">
           <daf-form-field
             [options]="{ label: ('ADMIN.sharepoint.paths.paysId' | translate), type: 'number',
@@ -297,22 +292,18 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
             </div>
           }
         </div>
-        <div slot="footer">
+        <div class="spa-form-footer">
           <daf-button [label]="'ADMIN.sharepoint.cancel' | translate"
-                      variant="secondary" (onClick)="showPathForm.set(false)" />
+                      variant="secondary" (onClick)="closePathForm()" />
           <daf-button [label]="'ADMIN.sharepoint.save' | translate"
                       variant="teal"
                       [options]="{ disabled: !canSavePath() || savingPath(), loading: savingPath() }"
                       (onClick)="savePath()" />
         </div>
-      </app-modal>
+      </ng-template>
 
       <!-- ══ Manual override form ═══════════════════════════════════════════ -->
-      <app-modal
-        [title]="'ADMIN.sharepoint.pin.title' | translate"
-        [visible]="showPinForm()"
-        [hasFooter]="true"
-        (closed)="showPinForm.set(false)">
+      <ng-template #pinFormTpl>
         <p class="spa-pin-who">{{ pinTarget()?.fullName }}</p>
         <p class="spa-panel-hint">{{ 'ADMIN.sharepoint.pin.hint' | translate }}</p>
         <daf-form-field
@@ -323,15 +314,15 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         @if (pinProblem()) {
           <p class="spa-problem">{{ pinProblem()! | translate }}</p>
         }
-        <div slot="footer">
+        <div class="spa-form-footer">
           <daf-button [label]="'ADMIN.sharepoint.cancel' | translate"
-                      variant="secondary" (onClick)="showPinForm.set(false)" />
+                      variant="secondary" (onClick)="closePinForm()" />
           <daf-button [label]="'ADMIN.sharepoint.save' | translate"
                       variant="teal"
                       [options]="{ disabled: !pinSegment().trim() || pinning(), loading: pinning() }"
                       (onClick)="savePin()" />
         </div>
-      </app-modal>
+      </ng-template>
 
       <app-folder-picker
         [visible]="showPicker()"
@@ -347,12 +338,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
     .spa-sub   { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;max-width:62ch }
     .spa-kind  { min-width:220px }
 
-    .spa-tabs { display:flex;gap:4px;border-bottom:1px solid var(--color-outline-variant);margin-bottom:16px }
-    .spa-tab  { background:none;border:0;padding:9px 14px;cursor:pointer;font-family:inherit;
-                font-size:var(--text-body-md);color:var(--color-on-surface-variant);
-                border-bottom:2px solid transparent;margin-bottom:-1px }
-    .spa-tab:hover { color:var(--color-on-surface) }
-    .spa-tab--active { color:var(--color-primary);font-weight:600;border-bottom-color:var(--color-primary) }
+    .spa-tabs { margin-bottom:16px }
 
     .spa-panel-head { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px }
     .spa-panel-hint { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:0;max-width:70ch }
@@ -366,7 +352,6 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
                 background:var(--color-surface-container);padding:2px 7px;border-radius:6px;word-break:break-all }
     .spa-manual { font-size:var(--text-label-sm);color:var(--color-warning);margin-left:7px;text-transform:uppercase;letter-spacing:.04em }
     .spa-detail { font-size:var(--text-body-sm);color:var(--color-on-surface-variant) }
-    .spa-row-actions { display:flex;align-items:center;gap:6px;justify-content:flex-end }
 
     .spa-problems { display:flex;flex-wrap:wrap;gap:6px;margin-top:6px }
     .spa-problem  { font-size:var(--text-body-sm);color:var(--color-danger) }
@@ -383,6 +368,8 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
     .spa-token { background:var(--color-secondary-container);border:0;border-radius:6px;
                  padding:3px 9px;cursor:pointer;font-family:inherit;font-size:var(--text-body-sm);
                  color:var(--color-on-secondary-container) }
+    .spa-form-footer { display:flex;justify-content:flex-end;gap:10px;margin-top:16px;
+                        padding-top:14px;border-top:1px solid var(--color-outline-variant) }
 
     .spa-diag-form { display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:16px }
     .spa-diag-result { display:flex;flex-direction:column;gap:10px;padding:14px 16px;
@@ -393,27 +380,47 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
 
     .spa-pin-who { font-size:var(--text-body-md);font-weight:600;color:var(--color-on-surface);margin:0 0 4px }
 
+    .spa-pagination { display:flex;justify-content:flex-end;padding:10px 0 }
+
     .table-scroll { overflow-x:auto }
   `],
 })
 export class SharePointAdminComponent implements OnInit {
   private readonly svc = inject(SharePointAdminService);
   private readonly i18n = inject(TranslateService);
+  private readonly modal = inject(ModalService);
 
   /** The admin shell's current country, used as the default when adding a path. */
   @Input() paysId: number | null = null;
 
-  readonly panels: Panel[] = ['paths', 'employees', 'diagnose'];
+  readonly pathFormTpl = viewChild.required<TemplateRef<unknown>>('pathFormTpl');
+  readonly pinFormTpl  = viewChild.required<TemplateRef<unknown>>('pinFormTpl');
+  private pathModalRef: ModalRef | null = null;
+  private pinModalRef:  ModalRef | null = null;
+
   readonly panel = signal<Panel>('paths');
+
+  readonly panelTabs = computed<TabItem[]>(() => [
+    { id: 'paths',     label: this.i18n.instant('ADMIN.sharepoint.panel.paths'),     icon: 'folder_open' },
+    { id: 'employees', label: this.i18n.instant('ADMIN.sharepoint.panel.employees'), icon: 'group' },
+    { id: 'diagnose',  label: this.i18n.instant('ADMIN.sharepoint.panel.diagnose'),  icon: 'troubleshoot' },
+  ]);
 
   readonly kinds    = signal<DocKindInfo[]>([]);
   readonly docKind  = signal('PHOTO');
   readonly error    = signal<string | null>(null);
 
+  /** Same client-side pagination config as the other admin catalog tables. */
+  readonly paginationConfig: PaginationConfig = {
+    showFirstLast: true,
+    showPrevNext:  true,
+    maxVisible:    5,
+    size:          'sm',
+  };
+
   // Panel 1
   readonly locations    = signal<SharePointLocation[]>([]);
   readonly loadingPaths = signal(false);
-  readonly showPathForm = signal(false);
   readonly editingPath  = signal<SharePointLocation | null>(null);
   readonly formPaysId   = signal<number | null>(null);
   readonly formKind     = signal('');
@@ -421,16 +428,17 @@ export class SharePointAdminComponent implements OnInit {
   readonly formProblems = signal<string[]>([]);
   readonly savingPath   = signal(false);
   readonly showPicker   = signal(false);
+  readonly pathsCurrentPage = signal(0);
 
   // Panel 2
   readonly employees        = signal<EmployeeFolderRow[]>([]);
   readonly loadingEmployees = signal(false);
   readonly resolving        = signal(false);
-  readonly showPinForm      = signal(false);
   readonly pinTarget        = signal<EmployeeFolderRow | null>(null);
   readonly pinSegment       = signal('');
   readonly pinProblem       = signal<string | null>(null);
   readonly pinning          = signal(false);
+  readonly employeesCurrentPage = signal(0);
 
   // Panel 3
   readonly diagProfileId = signal<number | null>(null);
@@ -498,6 +506,7 @@ export class SharePointAdminComponent implements OnInit {
     if (!next || next === this.docKind()) return;
     this.docKind.set(next);
     this.diagnosis.set(null);
+    this.employeesCurrentPage.set(0);
     this.loadEmployees();
   }
 
@@ -519,11 +528,42 @@ export class SharePointAdminComponent implements OnInit {
     { key: 'isoCode',      label: this.i18n.instant('ADMIN.sharepoint.paths.country'), width: '90px' },
     { key: 'docKind',      label: this.i18n.instant('ADMIN.sharepoint.kindLabel'),     width: '190px' },
     { key: 'pathTemplate', label: this.i18n.instant('ADMIN.sharepoint.paths.template') },
-    { key: '_actions',     label: '', width: '110px', align: 'right' },
   ]);
 
+  /** Native `TableConfig.actions`, not a hand-placed `_actions` column — same convention
+   * as the other admin catalog tables (see document-templates-admin.component.ts). */
+  readonly pathTableConfig = computed<TableConfig>(() => ({
+    hoverable:    true,
+    loading:      this.loadingPaths(),
+    emptyMessage: this.i18n.instant('ADMIN.sharepoint.paths.empty'),
+    actions: [
+      {
+        id: 'edit', icon: 'edit',
+        tooltip: this.i18n.instant('ADMIN.sharepoint.paths.edit'),
+        onClick: (row: TableRow) => this.openPathForm(row['_source'] as SharePointLocation),
+      },
+      {
+        id: 'delete', icon: 'delete', variant: 'danger',
+        tooltip: this.i18n.instant('ADMIN.sharepoint.paths.delete'),
+        onClick: (row: TableRow) => this.deletePath(row['_source'] as SharePointLocation),
+      },
+    ],
+  }));
+
+  readonly pathsTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.locations().length / PAGE_SIZE)));
+
+  onPathsPageChange(page: number): void {
+    this.pathsCurrentPage.set(page);
+  }
+
+  private readonly pagedLocations = computed(() => {
+    const start = this.pathsCurrentPage() * PAGE_SIZE;
+    return this.locations().slice(start, start + PAGE_SIZE);
+  });
+
   readonly pathRows = computed<TableRow[]>(() =>
-    this.locations().map(l => ({
+    this.pagedLocations().map(l => ({
       isoCode: l.isoCode ?? '—',
       docKind: l.docKind ? this.i18n.instant('ADMIN.sharepoint.kind.' + l.docKind) : '—',
       pathTemplate: l.pathTemplate,
@@ -542,7 +582,16 @@ export class SharePointAdminComponent implements OnInit {
     this.formPaysId.set(existing?.paysId ?? this.paysId ?? null);
     this.formKind.set(existing?.docKind ?? this.docKind());
     this.formTemplate.set(existing?.pathTemplate ?? '');
-    this.showPathForm.set(true);
+    this.pathModalRef = this.modal.open({
+      title: this.i18n.instant('ADMIN.sharepoint.paths.formTitle'),
+      body: this.pathFormTpl(),
+      size: 'md',
+      closeOnBackdrop: false,
+    });
+  }
+
+  closePathForm(): void {
+    this.pathModalRef?.close();
   }
 
   appendToken(token: string): void {
@@ -568,7 +617,7 @@ export class SharePointAdminComponent implements OnInit {
     this.svc.saveLocation(paysId, this.formKind(), this.formTemplate().trim()).subscribe({
       next: () => {
         this.savingPath.set(false);
-        this.showPathForm.set(false);
+        this.pathModalRef?.close();
         this.loadLocations();
       },
       error: err => {
@@ -602,11 +651,47 @@ export class SharePointAdminComponent implements OnInit {
     { key: 'fullName',      label: this.i18n.instant('ADMIN.sharepoint.employees.name') },
     { key: 'status',        label: this.i18n.instant('ADMIN.sharepoint.employees.status'), width: '150px' },
     { key: 'folderSegment', label: this.i18n.instant('ADMIN.sharepoint.employees.folder') },
-    { key: '_actions',      label: '', width: '140px', align: 'right' },
   ]);
 
+  /** Native `TableConfig.actions`, not a hand-placed `_actions` column — same convention
+   * as the paths table above and the other admin catalog tables. */
+  readonly employeeTableConfig = computed<TableConfig>(() => ({
+    hoverable:    true,
+    loading:      this.loadingEmployees(),
+    emptyMessage: this.i18n.instant('ADMIN.sharepoint.employees.empty'),
+    actions: [
+      {
+        id: 'diagnose', icon: 'troubleshoot',
+        tooltip: this.i18n.instant('ADMIN.sharepoint.employees.diagnose'),
+        onClick: (row: TableRow) => this.diagnoseFrom(row['_source'] as EmployeeFolderRow),
+      },
+      {
+        id: 'pin', icon: 'edit_note',
+        tooltip: this.i18n.instant('ADMIN.sharepoint.employees.pin'),
+        onClick: (row: TableRow) => this.openPinForm(row['_source'] as EmployeeFolderRow),
+      },
+      {
+        id: 'reset', icon: 'restart_alt',
+        tooltip: this.i18n.instant('ADMIN.sharepoint.employees.reset'),
+        onClick: (row: TableRow) => this.resetEmployee(row['_source'] as EmployeeFolderRow),
+      },
+    ],
+  }));
+
+  readonly employeesTotalPages = computed(() =>
+    Math.max(1, Math.ceil(this.employees().length / PAGE_SIZE)));
+
+  onEmployeesPageChange(page: number): void {
+    this.employeesCurrentPage.set(page);
+  }
+
+  private readonly pagedEmployees = computed(() => {
+    const start = this.employeesCurrentPage() * PAGE_SIZE;
+    return this.employees().slice(start, start + PAGE_SIZE);
+  });
+
   readonly employeeRows = computed<TableRow[]>(() =>
-    this.employees().map(e => ({
+    this.pagedEmployees().map(e => ({
       fullName: e.fullName,
       status: e.status ?? '',
       folderSegment: e.folderSegment ?? '',
@@ -640,7 +725,16 @@ export class SharePointAdminComponent implements OnInit {
     this.pinTarget.set(row);
     this.pinSegment.set(row.folderSegment ?? row.fullName);
     this.pinProblem.set(null);
-    this.showPinForm.set(true);
+    this.pinModalRef = this.modal.open({
+      title: this.i18n.instant('ADMIN.sharepoint.pin.title'),
+      body: this.pinFormTpl(),
+      size: 'md',
+      closeOnBackdrop: false,
+    });
+  }
+
+  closePinForm(): void {
+    this.pinModalRef?.close();
   }
 
   savePin(): void {
@@ -649,7 +743,7 @@ export class SharePointAdminComponent implements OnInit {
     this.pinning.set(true);
     this.pinProblem.set(null);
     this.svc.pinFolder(target.profileId, this.docKind(), this.pinSegment().trim()).subscribe({
-      next: () => { this.pinning.set(false); this.showPinForm.set(false); this.loadEmployees(); },
+      next: () => { this.pinning.set(false); this.pinModalRef?.close(); this.loadEmployees(); },
       error: err => {
         this.pinning.set(false);
         // The backend refuses an override pointing at a folder that does not exist — one that

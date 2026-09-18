@@ -7,4 +7,9 @@ export const MISSIONS_ROUTES: Routes = [
     loadComponent: () =>
       import('./missions-list.component').then(m => m.MissionsListComponent),
   },
+  {
+    path: 'historique',
+    loadComponent: () =>
+      import('./missions-history.component').then(m => m.MissionsHistoryComponent),
+  },
 ];

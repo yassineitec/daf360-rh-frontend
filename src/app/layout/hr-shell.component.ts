@@ -89,16 +89,35 @@ const APP_NAV_DEFS: AppNavDef[] = [
       },
     ],
   },
-  // Two entries, two desks: `missions` is the manager planning for their team,
-  // `billeterie` is RH pricing and validating what was planned. Deliberately NOT one
-  // entry with two children — a manager holds only the first permission and would see a
-  // group holding a single child, and RH only the second.
+  // `missions` is the manager planning for their team; `billeterie` (below) is RH
+  // pricing and validating what was planned — two different desks, deliberately kept as
+  // two separate top-level entries rather than one group, since a manager holds only the
+  // first permission and would see a group with a single child.
+  //
+  // Within the manager's own desk, current and past missions ARE one group with two
+  // children — same shape as `requests` below — since both live under the one
+  // `RH_CREATE_MISSION` permission and only the two lists (not the desk) tell them apart.
   {
     id: 'missions',
     labelKey: 'NAV.MISSIONS',
     icon: 'flight_takeoff',
-    route: 'missions',
     permissions: ['RH_CREATE_MISSION'],
+    children: [
+      {
+        id: 'missions-current',
+        labelKey: 'NAV.MISSIONS_CURRENT',
+        icon: 'flight_takeoff',
+        route: 'missions',
+        permissions: ['RH_CREATE_MISSION'],
+      },
+      {
+        id: 'missions-history',
+        labelKey: 'NAV.MISSIONS_HISTORY',
+        icon: 'history',
+        route: 'missions/historique',
+        permissions: ['RH_CREATE_MISSION'],
+      },
+    ],
   },
   {
     id: 'billeterie',
