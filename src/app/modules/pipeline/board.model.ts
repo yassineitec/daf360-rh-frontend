@@ -3,6 +3,13 @@ import { KanbanCandidate } from './services/pipeline.service';
 /** The four board stages, in workflow order. REJETE is intentionally not a column. */
 export type BoardStageKey = 'SCREENING' | 'ENTRETIEN' | 'OFFRE' | 'RECRUTE';
 
+/**
+ * Which offer action a card emitted. Both now route to the candidate's Offre tab
+ * (see `PipelineComponent.openOfferModal`), but the two emitters stay distinct on
+ * the card so the buttons keep their own labels and permissions.
+ */
+export type OfferMode = 'send' | 'renegotiate';
+
 /** Static stage definition; `label` is resolved through i18n at render time. */
 export interface BoardStageDef {
   key: BoardStageKey;

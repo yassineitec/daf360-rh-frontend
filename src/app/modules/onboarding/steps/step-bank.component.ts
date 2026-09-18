@@ -2,6 +2,7 @@ import { Component, OnInit, input, output, signal, inject, computed } from '@ang
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
+import { UserStore } from '../../../core/user.store';
 import { FormFieldComponent, SelectComponent, SelectOption, FileUploadComponent, type UploadedFile } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { NotificationService } from '../../../core/notification.service';
@@ -22,6 +23,7 @@ export class StepBankComponent implements OnInit {
   certificationSelected = output<File | null>();
 
   private refSvc = inject(RefDataService);
+  private userStore = inject(UserStore);
   private notify = inject(NotificationService);
   private translate = inject(TranslateService);
 
@@ -59,8 +61,10 @@ export class StepBankComponent implements OnInit {
     this.socialSecurityNumber.set(d.socialSecurityNumber ?? '');
     this.taxId.set(d.taxId ?? '');
 
-    // No paysId → all active banks (see step-contract rationale).
-    this.refSvc.getBanks().subscribe(r => this.banks.set(r));
+    // Scoped to the RH officer's own entity (see step-contract rationale). Unscoped, this
+    // listed every country's banks — and a bank is the one list where picking the wrong
+    // country's row is not just noise, it is an unusable RIB.
+    this.refSvc.getBanks(this.userStore.currentUser()?.paysId).subscribe(r => this.banks.set(r));
   }
 
   emit(): void {

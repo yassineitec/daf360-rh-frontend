@@ -6,9 +6,15 @@
        `ng-content select` never matches it and it falls into the default slot. -->
   <div sectionAction>
     @if (offer(); as o) {
+      <!-- Round number alongside the status: with renegotiation creating rounds, "Offre
+           envoyée" alone no longer says which offer is on screen. -->
+      @if (o.roundNumber > 1) {
+        <daf-badge [label]="('CANDIDATES.OFFER.ROUND' | translate) + ' ' + o.roundNumber"
+                   [options]="{ variant: 'neutral', size: 'sm' }" />
+      }
       <daf-badge
-        [label]="(o.status === 'ACCEPTED' ? 'CANDIDATES.OFFER.STATUS_ACCEPTED' : (o.status === 'REJECTED' ? 'CANDIDATES.OFFER.STATUS_REJECTED' : (o.status === 'EXPIRED' ? 'CANDIDATES.OFFER.STATUS_EXPIRED' : 'CANDIDATES.OFFER.STATUS_SENT'))) | translate"
-        [options]="{ variant: o.status === 'ACCEPTED' ? 'success' : (o.status === 'REJECTED' ? 'danger' : 'warning'), size: 'sm' }" />
+        [label]="(o.status === 'ACCEPTED' ? 'CANDIDATES.OFFER.STATUS_ACCEPTED' : (o.status === 'REJECTED' ? 'CANDIDATES.OFFER.STATUS_REJECTED' : (o.status === 'EXPIRED' ? 'CANDIDATES.OFFER.STATUS_EXPIRED' : (o.status === 'DRAFT' ? 'CANDIDATES.OFFER.STATUS_DRAFT' : 'CANDIDATES.OFFER.STATUS_SENT')))) | translate"
+        [options]="{ variant: o.status === 'ACCEPTED' ? 'success' : (o.status === 'REJECTED' ? 'danger' : (o.status === 'DRAFT' ? 'secondary' : 'warning')), size: 'sm' }" />
     }
   </div>
 
@@ -58,11 +64,49 @@
       </div>
     }
 
+    <!-- ── The budget decision on THIS round ─────────────────────────────────
+         Approval is per round, so this banner always describes the figure shown
+         above it, never an earlier one. -->
+    @if (approvalStatus(); as st) {
+      <div class="mt-4 flex items-start gap-2 rounded-lg px-3 py-2 text-[12.5px]"
+           [style.background]="st === 'APPROVED' ? 'rgba(0,193,173,0.08)' : (st === 'REJECTED' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)')"
+           [style.color]="st === 'APPROVED' ? '#00877a' : (st === 'REJECTED' ? '#dc2626' : '#b45309')">
+        <span class="material-symbols-outlined text-body-lg">
+          {{ st === 'APPROVED' ? 'check_circle' : (st === 'REJECTED' ? 'cancel' : 'hourglass_empty') }}
+        </span>
+        <span class="min-w-0">
+          <strong>{{ ('CANDIDATES.OFFER.APPROVAL_' + st) | translate }}</strong>
+          @if (currentApproval()?.approvalNotes) {
+            <span class="block opacity-80">{{ currentApproval()!.approvalNotes }}</span>
+          }
+          @if (currentApproval()?.contrePropSalaire; as cp) {
+            <span class="block opacity-80">
+              {{ 'CANDIDATES.OFFER.COUNTER_PROPOSAL' | translate }} {{ formatSalary(cp) }}
+            </span>
+          }
+        </span>
+      </div>
+    }
+
     @if (actionError()) {
       <p class="text-[12px] text-danger mt-3">{{ actionError() }}</p>
     }
 
-    <!-- Actions while the offer is still open -->
+    <!-- Costed, awaiting or carrying the finance decision — not yet with the candidate. -->
+    @if (isDraft) {
+      <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-outline-variant">
+        <daf-button [label]="'CANDIDATES.OFFER.SEND_TO_CANDIDATE' | translate" variant="teal"
+          [options]="{ iconStart: 'send', size: 'sm',
+                       loading: actioning(), disabled: actioning() || !canSendToCandidate() }"
+          [title]="canSendToCandidate() ? '' : ('CANDIDATES.OFFER.SEND_BLOCKED' | translate)"
+          (onClick)="sendToCandidate()" />
+        <daf-button [label]="'CANDIDATES.OFFER.REVISE' | translate" variant="secondary"
+          [options]="{ iconStart: 'sync', size: 'sm' }"
+          (onClick)="openOfferModal('renegotiate')" />
+      </div>
+    }
+
+    <!-- Actions while the offer is with the candidate -->
     @if (isPending) {
       <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-outline-variant">
         <daf-button [label]="'CANDIDATES.OFFER.ACCEPT' | translate" variant="teal"
@@ -77,13 +121,36 @@
       </div>
     }
 
+    <!-- ── Rounds ────────────────────────────────────────────────────────────
+         The negotiation history, which did not exist before: renegotiation used to
+         overwrite the offer and leave only an audit line. -->
+    @if (rounds().length > 1) {
+      <div class="mt-5 pt-4 border-t border-outline-variant">
+        <p class="text-label-caps text-outline mb-2">{{ 'CANDIDATES.OFFER.HISTORY' | translate }}</p>
+        <div class="flex flex-col">
+          @for (r of rounds(); track r.id) {
+            <div class="flex items-center justify-between gap-3 py-1.5 text-[12.5px]"
+                 [class.opacity-60]="r.supersededAt !== null">
+              <span class="text-on-surface-variant">
+                {{ 'CANDIDATES.OFFER.ROUND' | translate }} {{ r.roundNumber }}
+              </span>
+              <span class="font-semibold text-on-surface">{{ formatSalary(r.proposedSalary) }}</span>
+              <span class="text-outline">{{ formatDate(r.sentAt ?? r.supersededAt) }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
   } @else if (canSend) {
     <!-- No offer yet, candidate accepted → can extend one -->
     <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-dashed border-outline-variant"
          style="background:var(--color-surface-container-low)">
       <p class="text-[13px] text-outline">{{ 'CANDIDATES.OFFER.NONE_READY' | translate }}</p>
-      <daf-button [label]="'CANDIDATES.OFFER.SEND' | translate" variant="teal"
-        [options]="{ iconStart: 'send', size: 'sm' }"
+      <!-- "Préparer", not "Envoyer": this opens the costing, and the candidate hears
+           nothing until finance has approved the round. -->
+      <daf-button [label]="'CANDIDATES.OFFER.PREPARE' | translate" variant="teal"
+        [options]="{ iconStart: 'calculate', size: 'sm' }"
         (onClick)="openOfferModal('send')" />
     </div>
   } @else {
@@ -113,12 +180,50 @@
     </div>
   </div>
 
-  <!-- Salary simulator (future module) -->
-  <div class="mt-2">
-    <daf-button [label]="'CANDIDATES.OFFER.SIMULATOR' | translate" variant="ghost"
-      [options]="{ iconStart: 'calculate', size: 'sm', disabled: true }"
-      [title]="'CANDIDATES.OFFER.SIMULATOR_SOON_TITLE' | translate" />
-    <span class="text-[11px] text-outline ml-1">{{ 'CANDIDATES.OFFER.SOON' | translate }}</span>
+  <!-- ── Chiffrage ────────────────────────────────────────────────────────────
+       No longer the disabled "bientôt" placeholder: this IS the gate. The round
+       cannot be saved without a result, and changing the proposed salary clears it,
+       so the cost finance approves always belongs to the figure being offered. -->
+  <div class="mt-3 rounded-xl border border-outline-variant p-3"
+       style="background:var(--color-surface-container-low)">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <p class="text-[12px] font-semibold text-on-surface">
+        {{ 'CANDIDATES.OFFER.SIMULATOR' | translate }}
+      </p>
+      <daf-button [label]="'CANDIDATES.OFFER.SIMULATE' | translate" variant="secondary"
+        [options]="{ iconStart: 'calculate', size: 'sm',
+                     loading: simulating(),
+                     disabled: simulating() || (offerForm.proposedSalary ?? null) === null }"
+        (onClick)="simulate()" />
+    </div>
+
+    @if (simError()) {
+      <p class="text-[12px] text-danger mt-2">{{ simError() }}</p>
+    } @else if (simResult(); as r) {
+      <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+        <div>
+          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_GROSS' | translate }}</p>
+          <p class="text-[13px] font-semibold text-on-surface">{{ formatSalary(r.gross) }}</p>
+        </div>
+        <div>
+          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_EMPLOYEE_CHARGES' | translate }}</p>
+          <p class="text-[13px] font-semibold text-on-surface">{{ formatSalary(r.employeeCharges) }}</p>
+        </div>
+        <div>
+          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_EMPLOYER_CHARGES' | translate }}</p>
+          <p class="text-[13px] font-semibold text-on-surface">{{ formatSalary(r.employerCharges) }}</p>
+        </div>
+        <div>
+          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_LOADED_COST' | translate }}</p>
+          <p class="text-[13px] font-bold" style="color:var(--color-teal)">{{ formatSalary(r.loadedCost) }}</p>
+        </div>
+      </div>
+      @if (!r.convergenceOk) {
+        <p class="text-[11px] text-warning mt-2">{{ 'CANDIDATES.OFFER.SIM_NO_CONVERGENCE' | translate }}</p>
+      }
+    } @else {
+      <p class="text-[11px] text-outline mt-2">{{ 'CANDIDATES.OFFER.SIMULATE_HINT' | translate }}</p>
+    }
   </div>
 
   <div class="flex flex-col gap-1 mt-3">
@@ -143,10 +248,13 @@
 
   <div slot="footer">
     <daf-button [label]="'CANDIDATES.OFFER.CANCEL' | translate" variant="secondary" (onClick)="showOfferModal.set(false)" />
+    <!-- Disabled until the round is costed: the backend refuses it anyway, and the
+         button is where that rule is easiest to understand. -->
     <daf-button
-      [label]="(offerSubmitting() ? 'CANDIDATES.OFFER.SENDING' : (offerMode() === 'renegotiate' ? 'CANDIDATES.OFFER.RENEGOTIATE' : 'CANDIDATES.OFFER.SEND_SUBMIT')) | translate"
+      [label]="(offerSubmitting() ? 'CANDIDATES.OFFER.SAVING' : 'CANDIDATES.OFFER.SAVE_FOR_APPROVAL') | translate"
       variant="teal"
-      [options]="{ iconStart: 'send', disabled: offerSubmitting(), loading: offerSubmitting() }"
+      [options]="{ iconStart: 'fact_check', disabled: offerSubmitting() || !canSave(), loading: offerSubmitting() }"
+      [title]="canSave() ? '' : ('CANDIDATES.OFFER.SAVE_BLOCKED' | translate)"
       (onClick)="submitOffer()" />
   </div>
 </app-modal>
