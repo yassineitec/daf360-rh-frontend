@@ -34,10 +34,12 @@ import { ConfirmService } from '../../core/confirm.service';
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-/** Mission statuses in workflow order, for the status filter. */
-const STATUS_CODES: MissionStatus[] = [
-  'PENDING_HR', 'PENDING_FINANCE', 'APPROVED', 'REJECTED_HR', 'REJECTED_FINANCE', 'CANCELLED',
-];
+/**
+ * Still awaiting a decision — what "en cours" means on this page. The complement of
+ * missions-history's `CLOSED_STATUS_CODES`: once HR or Finance answers, the mission
+ * belongs to the history screen instead.
+ */
+const OPEN_STATUS_CODES: MissionStatus[] = ['PENDING_HR', 'PENDING_FINANCE'];
 
 type ViewMode = 'grid' | 'list';
 
@@ -48,8 +50,9 @@ type ViewMode = 'grid' | 'list';
  * `/rh/onboarding`.
  *
  * The endpoint returns the whole list in one call, so the search, the status filter and
- * the paging are all client-side projections of `missions`. No tabs: the status filter in
- * the toolbar panel is what narrows the list, exactly as on it-provisioning.
+ * the paging are all client-side projections of `missions`. The list itself always drops
+ * to `OPEN_STATUS_CODES` first — this page is "en cours", the mirror of missions-history's
+ * closed set — and the status filter in the toolbar panel only narrows within that.
  *
  * All view state lives here and both sections are stateless input/output shells, which is
  * what makes flipping between cards and list lossless.
@@ -128,6 +131,7 @@ export class MissionsListComponent implements OnInit {
     const term = this.search().trim().toLowerCase();
     const status = this.statusFilter();
     return this.missions().filter(m => {
+      if (!OPEN_STATUS_CODES.includes(m.status)) return false;
       const matchesTerm = !term
         || (m.employeeName ?? '').toLowerCase().includes(term)
         || m.title.toLowerCase().includes(term)
@@ -214,7 +218,7 @@ export class MissionsListComponent implements OnInit {
       label: this.translate.instant('MISSIONS.LIST.COL_STATUS'),
       type: 'select',
       placeholder: this.translate.instant('MISSIONS.LIST.FILTER_ALL'),
-      options: STATUS_CODES.map(code => ({
+      options: OPEN_STATUS_CODES.map(code => ({
         value: code,
         label: this.translate.instant('MISSIONS.STATUS.' + code),
       })),
