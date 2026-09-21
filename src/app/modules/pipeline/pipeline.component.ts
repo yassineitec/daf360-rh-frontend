@@ -21,14 +21,14 @@ import {
   BOARD_STAGES,
   BoardColumn,
   BoardStageKey,
+  OfferMode,
   byFitScoreDesc,
 } from './board.model';
-import { OfferModalComponent, OfferMode } from './components/offer-modal.component';
 import { RefuseOfferModalComponent } from './components/refuse-offer-modal.component';
 import { PipelineBoardSectionComponent } from './sections/pipeline-board-section.component';
 import { PipelineMobileSectionComponent, MobilePipelineItem } from './sections/pipeline-mobile-section.component';
 import { PipelineTableSectionComponent } from './sections/pipeline-table-section.component';
-import { CreateOfferRequest, OfferService } from './services/offer.service';
+import { OfferService } from './services/offer.service';
 import { KanbanCandidate, KanbanColumn, PipelineService, PipelineStats } from './services/pipeline.service';
 
 /** Board or flat list. The choice survives search, filtering and a re-fetch. */
@@ -66,7 +66,6 @@ type ViewMode = 'kanban' | 'list';
     PipelineBoardSectionComponent,
     PipelineTableSectionComponent,
     PipelineMobileSectionComponent,
-    OfferModalComponent,
     RefuseOfferModalComponent,
     TranslatePipe,
   ],
@@ -81,7 +80,8 @@ export class PipelineComponent implements OnInit {
 
   // ── Data ───────────────────────────────────────────────────────────────────
   private readonly rawColumns = signal<KanbanColumn[]>([]);
-  readonly stats              = signal<PipelineStats | null>(null);
+  /** Feeds the KPI row; null until `/pipeline/stats` answers (it is allowed to fail alone). */
+  readonly stats = signal<PipelineStats | null>(null);
 
   /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
   readonly firstLoad = signal(true);
@@ -92,12 +92,20 @@ export class PipelineComponent implements OnInit {
   readonly viewMode          = signal<ViewMode>('kanban');
   readonly search            = signal('');
   readonly stageFilter       = signal('');
-  readonly mobileStageFilter = signal<string | null>(null);
   readonly columnSortDirs    = signal<Record<string, 'asc' | 'desc'>>({});
+  /**
+   * The mobile chip row filters independently of the toolbar's stage filter:
+   * the chips are the mobile navigation, not a copy of the desktop control.
+   * `null` = "Tous".
+   */
+  readonly mobileStageFilter = signal<string | null>(null);
 
   // ── Feedback ───────────────────────────────────────────────────────────────
+  /** Success banner after accept/refuse; dismissible, cleared on a view switch. */
   readonly notice      = signal<string | null>(null);
+  /** Failure banner for the card actions (the refuse modal has its own). */
   readonly actionError = signal<string | null>(null);
+  /** Candidate id whose card action is in flight — drives the per-card spinner. */
   readonly actioningId = signal<number | null>(null);
 
   // ── Board ──────────────────────────────────────────────────────────────────
@@ -300,61 +308,24 @@ export class PipelineComponent implements OnInit {
   onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
   onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
 
-  // ── Offer modal ────────────────────────────────────────────────────────────
-  readonly offerTarget     = signal<KanbanCandidate | null>(null);
-  readonly offerMode       = signal<OfferMode>('send');
-  readonly offerInitial    = signal<CreateOfferRequest | null>(null);
-  readonly offerSubmitting = signal(false);
-  readonly offerError      = signal<string | null>(null);
-
-  openOfferModal({ candidate, event }: { candidate: KanbanCandidate; event: Event }, mode: OfferMode): void {
+  // ── Offer ──────────────────────────────────────────────────────────────────
+  /**
+   * Both card actions — "Envoyer une offre" and "Renégocier" — now OPEN THE CANDIDATE
+   * instead of a modal on the card, which is why `mode` is accepted and ignored: the two
+   * emitters stay distinct on the card, and both land in the same place.
+   *
+   * An offer stopped being two numbers the moment it had to be costed by the payroll engine
+   * and approved by finance (V98). The card's modal had no simulator, so anything it
+   * submitted would be refused by the backend for want of a costing — and a popover over a
+   * kanban column is the wrong place to settle an employer cost anyway. The Offre tab has the
+   * simulator, the approval state and the round history.
+   *
+   * `rh-offer-modal` and its `offerTarget` / `offerInitial` / `offerSubmitting` /
+   * `offerError` signals went with it.
+   */
+  openOfferModal({ candidate, event }: { candidate: KanbanCandidate; event: Event }, _mode: OfferMode): void {
     event.stopPropagation();
-    this.offerError.set(null);
-    this.offerMode.set(mode);
-    this.offerInitial.set(null);
-    this.offerTarget.set(candidate);
-    // Renegotiation: seed the form with the current offer once it lands.
-    if (mode === 'renegotiate') {
-      this.offerService.getOffer(candidate.id).subscribe({
-        next: o => this.offerInitial.set({
-          askedSalary: o.askedSalary, proposedSalary: o.proposedSalary, salaryNote: o.salaryNote,
-          noticePeriodDays: o.noticePeriodDays, noticePeriodNote: o.noticePeriodNote,
-          expectedHireDate: o.expectedHireDate, expiryDate: o.expiryDate,
-        }),
-        error: () => { /* keep the blank form if the offer can't be loaded */ },
-      });
-    }
-  }
-
-  closeOfferModal(): void {
-    this.offerTarget.set(null);
-    this.offerInitial.set(null);
-  }
-
-  submitOffer(body: CreateOfferRequest): void {
-    const target = this.offerTarget();
-    if (!target) return;
-    const renegotiate = this.offerMode() === 'renegotiate';
-    this.offerSubmitting.set(true);
-    this.offerError.set(null);
-    const call = renegotiate
-      ? this.offerService.renegotiateOffer(target.id, body)
-      : this.offerService.sendOffer(target.id, body);
-    call.subscribe({
-      next: () => {
-        this.offerSubmitting.set(false);
-        this.closeOfferModal();
-        this.notice.set(this.translate.instant(
-          renegotiate ? 'PIPELINE.NOTICE.RENEGOTIATED' : 'PIPELINE.NOTICE.SENT',
-          { name: target.fullName },
-        ));
-        this.reload();
-      },
-      error: err => {
-        this.offerSubmitting.set(false);
-        this.offerError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('PIPELINE.ERRORS.SEND'));
-      },
-    });
+    this.router.navigate(['/rh/candidates', candidate.id], { queryParams: { tab: 'offre' } });
   }
 
   // ── Accept ─────────────────────────────────────────────────────────────────
@@ -377,8 +348,10 @@ export class PipelineComponent implements OnInit {
   }
 
   // ── Refuse modal ───────────────────────────────────────────────────────────
+  /** Non-null drives `[visible]` — the modal target IS the open state. */
   readonly refuseTarget     = signal<KanbanCandidate | null>(null);
   readonly refuseSubmitting = signal(false);
+  /** Shown inside the modal, so a failed refuse does not close it. */
   readonly refuseError      = signal<string | null>(null);
 
   openRefuseModal({ candidate, event }: { candidate: KanbanCandidate; event: Event }): void {

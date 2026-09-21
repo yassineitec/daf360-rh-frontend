@@ -111,15 +111,10 @@
 <!-- Modals live at the page root, outside `daf-page`: the overlay is
      `position: fixed`, and an ancestor carrying transform / filter /
      backdrop-filter would become its containing block. -->
-<rh-offer-modal
-  [visible]="offerTarget() !== null"
-  [candidate]="offerTarget()"
-  [mode]="offerMode()"
-  [initial]="offerInitial()"
-  [submitting]="offerSubmitting()"
-  [error]="offerError()"
-  (closed)="closeOfferModal()"
-  (submit)="submitOffer($event)" />
+<!-- rh-offer-modal is gone. An offer must be costed by the payroll engine and approved by
+     finance before it reaches a candidate (V98), and this modal had no simulator — anything
+     it submitted would be refused for want of a costing. Both card actions now open the
+     candidate's Offre tab, which has the simulator, the approval state and the rounds. -->
 
 <rh-refuse-offer-modal
   [visible]="refuseTarget() !== null"

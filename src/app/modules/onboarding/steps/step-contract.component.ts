@@ -2,6 +2,7 @@ import { Component, output, signal, OnInit, inject, computed } from '@angular/co
 import { OnboardingProfileDto, OnboardingFormData, CONTRACT_OPTIONS } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
+import { UserStore } from '../../../core/user.store';
 import { input } from '@angular/core';
 import {
   SelectComponent,
@@ -31,6 +32,7 @@ export class StepContractComponent implements OnInit {
   changed  = output<Partial<OnboardingProfileDto>>();
 
   private refSvc = inject(RefDataService);
+  private userStore = inject(UserStore);
   private translate = inject(TranslateService);
 
   readonly contractOptions = computed<SelectOption[]>(() => {
@@ -77,13 +79,16 @@ export class StepContractComponent implements OnInit {
     this.isOnProbation.set(d.isOnProbation ?? false);
     this.probationEndDate.set(d.probationEndDate ?? '');
 
-    // No paysId → backend returns ALL active ref data (matches the candidate form).
+    // Scoped to the RH officer's own entity. These four used to pass nothing, and the
+    // endpoints answered with every entity's rows — the same defect the create-candidate
+    // wizard had, and the reason the lists read as duplicated.
     // Re-emit after each list loads so prefilled ids resolve to their labels
     // (the summary/recap displays labels, not ids).
-    this.refSvc.getGrades().subscribe(r => { this.grades.set(r); this.emit(); });
-    this.refSvc.getDisciplines().subscribe(r => { this.disciplines.set(r); this.emit(); });
-    this.refSvc.getNogLevels().subscribe(r => { this.nogLevels.set(r); this.emit(); });
-    this.refSvc.getDepartments().subscribe(r => { this.departments.set(r); this.emit(); });
+    const paysId = this.userStore.currentUser()?.paysId;
+    this.refSvc.getGrades(paysId).subscribe(r => { this.grades.set(r); this.emit(); });
+    this.refSvc.getDisciplines(paysId).subscribe(r => { this.disciplines.set(r); this.emit(); });
+    this.refSvc.getNogLevels(paysId).subscribe(r => { this.nogLevels.set(r); this.emit(); });
+    this.refSvc.getDepartments(paysId).subscribe(r => { this.departments.set(r); this.emit(); });
 
     this.emit();
   }

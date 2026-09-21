@@ -10,6 +10,7 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue }               from '../../core/lists/configurable-list.model';
+import { PayrollSimulationService } from './payroll-simulation.service';
 import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
 import { ApprovedDemandOption }     from '../recruitment-demands/recruitment-demand.model';
 import { catchError, of }           from 'rxjs';
@@ -56,6 +57,7 @@ export class CandidateFormComponent implements OnInit {
   private userStore        = inject(UserStore);
   private refSvc           = inject(RefDataService);
   private listSvc          = inject(ConfigurableListService);
+  private simulationSvc    = inject(PayrollSimulationService);
   private demandSvc        = inject(RecruitmentDemandService);
   private router           = inject(Router);
   private translate        = inject(TranslateService);
@@ -300,9 +302,15 @@ export class CandidateFormComponent implements OnInit {
         .pipe(catchError(() => of([] as ApprovedDemandOption[])))
         .subscribe(d => this.demands.set(d));
     }
-    this.refSvc.getGrades().subscribe(r => this.grades.set(r));
-    this.refSvc.getDisciplines().subscribe(r => this.disciplines.set(r));
-    this.refSvc.getDepartments().subscribe(r => this.departments.set(r));
+    // Scoped to the user's OWN entity, and that is not a detail: onSubmit stamps the new
+    // candidate with exactly this paysId, so offering grades or departments from anywhere
+    // else would let the form write a candidate pointing at another entity's structure.
+    // These three calls used to pass nothing at all, and the endpoints answered with every
+    // entity's rows — which is what made the lists look duplicated.
+    // Nationalities are global (no paysId) and stay unscoped.
+    this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
+    this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
+    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
     this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
     this.listSvc.getListValues('EMPLOYMENT_TYPE', paysId).subscribe(v => this.employmentTypes.set(v));
   }
@@ -439,7 +447,52 @@ export class CandidateFormComponent implements OnInit {
     });
   }
 
+  /**
+   * Budget PRE-VALIDATION for a brand-new candidate.
+   *
+   * <p>The two salary figures typed in step 2 used to be stored and then sit there: nothing
+   * costed them, and finance only ever saw a candidature once RH remembered to run the
+   * simulation from the Rémunération tab. Here the engine is asked straight away and the
+   * result goes to `/finance/cost/approval`, so a recruitment is budget-visible from the day
+   * it is opened.
+   *
+   * <p>It is NOT an offer, and carries no `jobOfferId`. A brand-new candidate is PENDING with
+   * no interviews, and an offer needs both ACCEPTED and a passed interview — so this gates
+   * nothing; it tells finance what is coming. The offer, when it comes, is costed and
+   * approved on its own.
+   *
+   * <p>Entirely non-fatal: the candidate exists either way, and the simulation can be re-run
+   * from the Rémunération tab. A payroll engine that is down, or an entity with no parameter
+   * set, must not cost the recruiter the record they just typed.
+   */
+  private submitBudgetPreValidation(candidateId: number): void {
+    const paysId = this.userStore.currentUser()?.paysId;
+    const net    = this.positionGroup.get('salaireNetRh')?.value as number | null;
+    if (!paysId || net == null || net <= 0) return;
+
+    const typeId = this.positionGroup.get('employmentTypeId')?.value as number | null;
+    const code   = this.employmentTypes().find(t => t.id === typeId)?.payrollContractCode ?? 'CDI';
+
+    this.simulationSvc.simulateFromNet({ paysId, inputNet: net, contractType: code })
+      .pipe(catchError(() => of(null)))
+      .subscribe(result => {
+        if (!result) return;
+        this.simulationSvc.submitForApproval({
+          candidateId,
+          paysId,
+          fiscalYear:         new Date().getFullYear(),
+          salaireNetRh:       net,
+          salaireNetCandidat: (this.positionGroup.get('salaireNetCandidat')?.value as number | null) ?? undefined,
+          contractTypeCode:   code,
+          simulationSnapshot: JSON.stringify(result),
+        }).pipe(catchError(() => of(null))).subscribe();
+      });
+  }
+
   private afterSave(candidateId: number): void {
+    // Fire-and-forget, before the navigation: it must not delay landing on the candidate.
+    this.submitBudgetPreValidation(candidateId);
+
     const file = this.cvFiles().find(f => !f.error)?.file ?? null;
     if (!file) {
       this.saving.set(false);

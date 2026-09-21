@@ -19,11 +19,12 @@ export const candidatesRoutes: Routes = [
     loadComponent: () =>
       import('./candidate-form.component').then(m => m.CandidateFormComponent),
   },
-  {
-    path: 'hiring-approvals',
-    loadComponent: () =>
-      import('./hiring-approval-inbox.component').then(m => m.HiringApprovalInboxComponent),
-  },
+  /*
+   * 'hiring-approvals' is gone. It was a second inbox over the SAME endpoints as
+   * /finance/cost/approval, no navigation ever linked to it, and it was the weaker of the
+   * two — it could approve or reject but never send the counter-proposal, which the finance
+   * queue does. Hiring costs are decided in one place now.
+   */
   {
     path: ':id',
     loadComponent: () =>

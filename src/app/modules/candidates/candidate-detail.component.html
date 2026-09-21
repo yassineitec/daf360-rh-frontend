@@ -155,10 +155,15 @@
             }
 
             @case ('offre') {
+              <!-- paysId and employmentTypeId are what the panel needs to cost a round
+                   through the payroll engine: the parameter set is per entity, and the
+                   engine speaks contract codes the EMPLOYMENT_TYPE list resolves. -->
               <app-offer-section
                 [candidateId]="c.id"
                 [status]="c.status"
                 [candidateName]="c.firstName + ' ' + c.lastName"
+                [paysId]="c.paysId"
+                [employmentTypeId]="c.employmentTypeId"
                 (changed)="onOfferChanged()" />
             }
 

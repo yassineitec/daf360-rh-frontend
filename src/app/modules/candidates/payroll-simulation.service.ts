@@ -39,6 +39,14 @@ export interface PayrollSimulationResult {
 export interface CandidateCostApprovalDto {
   id: number;
   candidateId: number;
+  /**
+   * The offer round this decision gates, or null for a standalone budget pre-validation
+   * (the creation wizard's, or one run from the Rémunération tab). A round cannot be sent
+   * to the candidate until its own approval reads APPROVED.
+   */
+  jobOfferId?: number | null;
+  /** The figure offered on that round — null on a pre-validation, which offers nothing yet. */
+  proposedSalary?: number | null;
   candidateFirstName?: string;
   candidateLastName?: string;
   paysId: number;
@@ -53,6 +61,11 @@ export interface CandidateCostApprovalDto {
   approvedBy?: number;
   approvedAt?: string;
   approvalNotes?: string;
+  /**
+   * The salary finance said it WOULD approve, set when rejecting. It is what the next
+   * round opens on — the whole point of a counter-proposal is to be the starting figure.
+   */
+  contrePropSalaire?: number | null;
 }
 
 export interface SubmitCostApprovalRequest {
