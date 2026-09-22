@@ -1,0 +1,207 @@
+<!-- /rh/profiles/user/:userId — the dossier of someone who has none yet.
+
+     Deliberately the SAME scaffold as /rh/profiles/:id (UI-PLAYBOOK §10f), because it is
+     the same record at an earlier moment: `daf-page` + `daf-page-header` with breadcrumbs,
+     a sticky identity card in a `lg:w-[32%] lg:shrink-0` left column, `rh-section-card`
+     panels in the right one, and the fixed save bar at the page root.
+
+     `kpis="0"` (a record page has no KPI row) and `[breadcrumbs]="true"` so the first-load
+     skeleton draws the crumb row the header shows. No spacing utilities between the page's
+     direct children — `daf-page` owns the 32px rhythm (§1). -->
+<daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
+
+  <!-- No `icon` — page headers carry none (§1). -->
+  <daf-page-header
+    [title]="headerTitle()"
+    [subtitle]="'PROFILES.CREATE.SUBTITLE' | translate"
+    [badges]="headerBadges()"
+    [breadcrumbs]="breadcrumbs()"
+    [breadcrumbLabel]="'PROFILES.COMMON.BREADCRUMB_ARIA' | translate" />
+
+  @if (loadFailed()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ 'PROFILES.CREATE.LOAD_ERROR' | translate }}
+    </div>
+  } @else if (user(); as u) {
+
+    <!-- pb-32 clears the fixed save bar, so the last section and the card's own controls
+         stay reachable — same trick as the dossier's edit mode. -->
+    <div class="flex flex-col gap-8 pb-32 lg:flex-row">
+
+      <!-- ── Left: identity, always on screen ── -->
+      <div class="lg:w-[32%] lg:shrink-0">
+        <div class="lg:sticky lg:top-6">
+          <rh-new-profile-identity-card
+            [user]="u"
+            [fullName]="fullName()"
+            [photoPreview]="photoPreview()"
+            [nameError]="nameError()"
+            [canEdit]="canCreate()"
+            (fullNameChange)="fullName.set($event)"
+            (photoPicked)="onPhotoPicked($event)" />
+        </div>
+      </div>
+
+      <!-- ── Right: the record to be created — one rh-section-card per block ── -->
+      <div class="flex min-w-0 flex-1 flex-col gap-6">
+
+        @if (!canCreate()) {
+          <!-- A read-only dead end rather than a form that 403s on submit. The identity
+               card still renders everything the application knows about this person. -->
+          <rh-section-card [title]="'PROFILES.CREATE.SECTION_REQUIRED' | translate"
+                           icon="lock" tone="text-primary" accent="primary">
+            <p class="text-[13px] text-on-surface-variant">
+              {{ 'PROFILES.CREATE.NO_PERMISSION' | translate }}
+            </p>
+          </rh-section-card>
+        } @else {
+
+          @if (formError()) {
+            <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
+              <span class="material-symbols-outlined text-[18px]">error</span>
+              {{ formError() }}
+            </div>
+          }
+
+          <!-- ── Required by the backend ─────────────────────────────────────
+               `EmployeeProfileCreateDto` rejects the record without these; the end date
+               is required for FIXED_TERM only (@ValidFixedTermContract). -->
+          <rh-section-card
+            [title]="'PROFILES.CREATE.SECTION_REQUIRED' | translate"
+            icon="badge" tone="text-primary" accent="primary">
+            <div class="grid gap-4 sm:grid-cols-2">
+
+              <daf-select
+                [options]="paysOptions()"
+                [config]="{ label: ('PROFILES.NEW.PAYS' | translate), searchable: true, required: true }"
+                [selected]="toSelected(paysId())"
+                (selectedChange)="onPaysChange($event)" />
+
+              <daf-select
+                [options]="contractTypeOptions()"
+                [config]="{ label: ('PROFILES.NEW.CONTRACT_TYPE' | translate), required: true }"
+                [selected]="contractType() ? [contractType()] : []"
+                (selectedChange)="contractType.set($event[0] || '')" />
+
+              <daf-multi-date-picker
+                [config]="{ label: ('PROFILES.NEW.HIRE_DATE' | translate), selectionMode: 'single' }"
+                [value]="toDate(hireDate())"
+                (valueChange)="hireDate.set(fromDate($event))" />
+
+              @if (needsEndDate()) {
+                <daf-multi-date-picker
+                  [config]="{ label: ('PROFILES.NEW.CONTRACT_END' | translate), selectionMode: 'single' }"
+                  [value]="toDate(contractEndDate())"
+                  (valueChange)="contractEndDate.set(fromDate($event))" />
+              }
+            </div>
+
+            <!-- Said up front, not discovered afterwards: a new profile is PRE_ONBOARDING,
+                 and the directory's default view is the in-service headcount — so the
+                 person drops out of the list that led here.
+                 Neutral surface, not `bg-info/10`: the lib registers no `--color-info`, so
+                 an info-coloured utility renders uncoloured (§4, and styles.css). -->
+            <div class="mt-5 flex items-start gap-2 rounded-xl bg-surface-container px-4 py-3">
+              <span class="material-symbols-outlined shrink-0 text-[18px] text-outline">info</span>
+              <p class="text-[12px] leading-snug text-on-surface-variant">
+                {{ 'PROFILES.CREATE.PRE_ONBOARDING_NOTE' | translate }}
+              </p>
+            </div>
+          </rh-section-card>
+
+          <!-- ── Optional: the tedious part to fill in afterwards ───────────── -->
+          <rh-section-card
+            [title]="'PROFILES.SECTIONS.POSITION' | translate"
+            icon="work" tone="text-primary" accent="primary">
+            <!-- `rh-section-card` has no `hint` input (title/icon/tone/accent/collapsible
+                 only) — the note is a plain line above the grid. -->
+            <p class="mb-4 text-[12px] text-outline">
+              {{ 'PROFILES.CREATE.SECTION_OPTIONAL_HINT' | translate }}
+            </p>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <daf-select
+                [options]="departmentOptions()"
+                [config]="{ label: ('PROFILES.NEW.DEPARTMENT' | translate), searchable: true }"
+                [selected]="toSelected(departmentId())"
+                (selectedChange)="departmentId.set(fromSelected($event))" />
+
+              <daf-select
+                [options]="gradeOptions()"
+                [config]="{ label: ('PROFILES.NEW.GRADE' | translate), searchable: true }"
+                [selected]="toSelected(gradeId())"
+                (selectedChange)="gradeId.set(fromSelected($event))" />
+
+              <daf-select
+                [options]="disciplineOptions()"
+                [config]="{ label: ('PROFILES.NEW.DISCIPLINE' | translate), searchable: true }"
+                [selected]="toSelected(disciplineId())"
+                (selectedChange)="disciplineId.set(fromSelected($event))" />
+
+              <daf-select
+                [options]="nogLevelOptions()"
+                [config]="{ label: ('PROFILES.NEW.NOG_LEVEL' | translate), searchable: true }"
+                [selected]="toSelected(nogLevelId())"
+                (selectedChange)="nogLevelId.set(fromSelected($event))" />
+            </div>
+          </rh-section-card>
+
+          <rh-section-card
+            [title]="'PROFILES.SECTIONS.CONTACT' | translate"
+            icon="contact_mail" tone="text-primary" accent="primary">
+            <p class="mb-4 text-[12px] text-outline">
+              {{ 'PROFILES.CREATE.SECTION_OPTIONAL_HINT' | translate }}
+            </p>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <daf-form-field
+                [options]="{ label: ('PROFILES.FIELDS.PERSONAL_EMAIL' | translate), type: 'email' }"
+                [value]="personalEmail()"
+                (valueChange)="personalEmail.set(asText($event))" />
+
+              <daf-form-field
+                [options]="{ label: ('PROFILES.FIELDS.PERSONAL_PHONE' | translate) }"
+                [value]="personalPhone()"
+                (valueChange)="personalPhone.set(asText($event))" />
+
+              <daf-form-field class="sm:col-span-2"
+                [options]="{ label: ('PROFILES.FIELDS.ADDRESS' | translate), type: 'textarea', rows: 2 }"
+                [value]="personalAddress()"
+                (valueChange)="personalAddress.set(asText($event))" />
+            </div>
+          </rh-section-card>
+        }
+      </div>
+    </div>
+  }
+
+</daf-page>
+
+<!-- ── Save bar ──────────────────────────────────────────────────────────────
+     At the page ROOT, outside `daf-page`: it is `position: fixed`, and a `daf-card`
+     glass ancestor's backdrop-filter would become its containing block (§10e).
+     Same geometry as the dossier's edit bar, so the two pages feel like one. -->
+@if (user() && canCreate() && !loadFailed()) {
+  <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
+    <div class="pointer-events-auto mx-auto flex max-w-5xl flex-col gap-3 rounded-xl
+                border border-outline-variant bg-surface-container-lowest p-4
+                shadow-[0_-4px_24px_rgba(0,0,0,0.12)] sm:flex-row sm:items-center">
+      <p class="flex-1 text-[12px] leading-snug text-on-surface-variant">
+        {{ 'PROFILES.CREATE.SAVE_BAR_HINT' | translate }}
+      </p>
+      <div class="flex shrink-0 items-center gap-2">
+        <daf-button
+          [options]="{ variant: 'ghost', label: ('PROFILES.COMMON.CANCEL' | translate), disabled: saving() }"
+          (onClick)="cancel()" />
+        <daf-button
+          [options]="{
+            variant: 'teal',
+            label: (saving() ? 'PROFILES.COMMON.SAVING' : 'PROFILES.CREATE.SUBMIT') | translate,
+            iconStart: 'person_add',
+            disabled: saving(),
+            loading: saving()
+          }"
+          (onClick)="submit()" />
+      </div>
+    </div>
+  </div>
+}

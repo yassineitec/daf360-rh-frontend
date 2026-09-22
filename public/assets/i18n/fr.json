@@ -1212,7 +1212,8 @@
       "CONTRACT_TYPE": "TYPE DE CONTRAT",
       "STATUS": "STATUT",
       "HIRE_DATE": "DATE D'EMBAUCHE",
-      "VIEW_PROFILE": "Voir profil"
+      "VIEW_PROFILE": "Voir profil",
+      "CREATE_PROFILE": "Créer le profil RH"
     },
     "LIFECYCLE": {
       "PRE_ONBOARDING": "Pré-onboarding",
@@ -1699,6 +1700,39 @@
       "ERR_FUTURE_DATE": "La date ne peut pas être dans le futur",
       "ERR_CDD_END": "Obligatoire pour un contrat CDD",
       "ERR_CREATE": "Erreur lors de la création"
+    },
+    "CREATE": {
+      "TITLE": "Nouveau profil RH",
+      "SUBTITLE": "Cet utilisateur n'a pas encore de fiche RH.",
+      "NO_PROFILE_BADGE": "Aucune fiche RH",
+      "INTRO": "Renseignez le minimum ci-dessous pour ouvrir le dossier. Tout le reste — identité, contact, bancaire, documents — se complète ensuite sur la fiche, qui s'ouvre directement en modification.",
+      "SECTION_REQUIRED": "Informations obligatoires",
+      "SECTION_REQUIRED_HINT": "Sans ces champs, le dossier ne peut pas être créé.",
+      "SECTION_POSITION": "Poste",
+      "SECTION_OPTIONAL_HINT": "Optionnel — modifiable à tout moment sur la fiche.",
+      "SUBMIT": "Créer le dossier",
+      "SUCCESS": "Dossier créé. Complétez les informations restantes.",
+      "LOAD_ERROR": "Utilisateur introuvable.",
+      "NO_PERMISSION": "Vous n'avez pas la permission de créer un dossier RH (HR_CREATE_PROFILE). Contactez un administrateur RH.",
+      "ERR_PAYS": "Le pays est obligatoire.",
+      "ERR_HIRE_DATE": "La date d'embauche est obligatoire.",
+      "ERR_CONTRACT_TYPE": "Le type de contrat est obligatoire.",
+      "ERR_CONTRACT_END": "La date de fin est obligatoire pour un contrat à durée déterminée.",
+      "ERR_CREATE": "Erreur lors de la création du dossier.",
+      "PRE_ONBOARDING_NOTE": "À la création, le dossier est en « Pré-onboarding » : il n'apparaît plus dans la liste par défaut, qui montre l'effectif en service. Cochez « Inclure les inactifs » pour le retrouver, ou passez-le à « Actif » depuis la fiche.",
+      "FULL_NAME": "Nom complet",
+      "FULL_NAME_PH": "Prénom NOM",
+      "PHOTO_PICK": "Choisir une photo",
+      "PHOTO_PENDING": "La photo sera envoyée à la création du dossier.",
+      "SECTION_ACCOUNT": "Compte",
+      "ACCOUNT_EMAIL": "Email professionnel",
+      "ACCOUNT_ROLE": "Rôle",
+      "ACCOUNT_USER_ID": "Identifiant utilisateur",
+      "ACCOUNT_HINT": "Email et rôle appartiennent au compte, pas au dossier RH : ils se modifient depuis l'administration des utilisateurs.",
+      "SAVE_BAR_HINT": "Le dossier s'ouvrira ensuite en modification pour compléter le reste.",
+      "ERR_NAME": "Le nom complet est obligatoire.",
+      "WARN_NAME": "Le dossier est créé, mais le nom n'a pas pu être mis à jour.",
+      "WARN_PHOTO": "Le dossier est créé, mais la photo n'a pas pu être envoyée."
     }
   },
   "OFFBOARDING": {

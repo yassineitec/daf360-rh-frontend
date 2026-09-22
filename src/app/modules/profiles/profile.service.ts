@@ -206,6 +206,18 @@ export class ProfileService {
     );
   }
 
+  /**
+   * GET /api/hr/profiles/employees/{userId} — one directory row, by user id.
+   *
+   * The only read that answers for a user with NO employee profile, which is exactly who
+   * `/rh/profiles/user/:userId` is opened for: the full profile endpoint has nothing to
+   * return for them, and the admin users API is gated on `GET_USERS`, which a reader of
+   * the directory is not required to hold. 404 when the user is unknown or out of scope.
+   */
+  getEmployeeByUserId(userId: number): Observable<EmployeeListItem> {
+    return this.http.get<EmployeeListItem>(`${this.base}/profiles/employees/${userId}`);
+  }
+
   /** PATCH /api/hr/profiles/users/{userId} — update lightweight user fields */
   updateUserFields(userId: number, body: Record<string, unknown>): Observable<void> {
     return this.http.patch<void>(`${this.base}/profiles/users/${userId}`, body);

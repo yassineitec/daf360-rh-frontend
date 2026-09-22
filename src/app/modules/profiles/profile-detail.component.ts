@@ -340,7 +340,15 @@ export class ProfileDetailComponent implements OnInit {
   });
 
   // ── Permissions ────────────────────────────────────────────────────────────
-  readonly canEdit          = signal(true);
+  /**
+   * What `PATCH /api/hr/profiles/{id}` enforces.
+   *
+   * Was a hardcoded `signal(true)`, so every reader of the annuaire — the page needs no
+   * permission to open — got the edit toggle, the document upload and the sticky save bar,
+   * all of which could only end in a 403 on submit.
+   */
+  readonly canEdit          = computed(() =>
+    this.userStore.hasPermission('HR_UPDATE_PROFILE') || this.userStore.isAdmin());
   readonly canViewSensitive = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
   readonly canTransition    = computed(() =>
     this.profile() !== null && this.allowedTransitions().length > 0 && this.userStore.isHrManager(),
@@ -634,6 +642,7 @@ export class ProfileDetailComponent implements OnInit {
     });
   }
 
+  /** Re-reads the uploaded pieces only; the generated ones have their own endpoint. */
   private reloadDocuments(): void {
     this.svc.listDocuments(this.profileId)
       .pipe(catchError(() => of([] as EmployeeDocument[])))
@@ -667,7 +676,9 @@ export class ProfileDetailComponent implements OnInit {
 
   startEdit(): void {
     const p = this.profile();
-    if (!p) return;
+    // canEdit as well as the profile: this is reachable from `?edit=true`, which is just a
+    // URL anyone can type — the check on the button is not the only way in.
+    if (!p || !this.canEdit()) return;
     this.editForm.set({
       reason: '',
       dateOfBirth: p.dateOfBirth ?? '', gender: p.gender ?? '',

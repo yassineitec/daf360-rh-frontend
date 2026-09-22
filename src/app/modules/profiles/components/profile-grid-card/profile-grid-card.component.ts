@@ -40,33 +40,48 @@ import {
           />
         </div>
 
-        <!-- Hover actions -->
-        <div
-          class="absolute top-3 right-3 flex gap-1 z-10
-             bg-white/90 backdrop-blur-sm p-1 rounded-lg
-             border border-outline-variant shadow-sm
-             transition-opacity duration-200"
-          [class.opacity-0]="!hovered()"
-          [class.opacity-100]="hovered()"
-          [class.pointer-events-none]="!hovered()"
-        >
-          <button
-            type="button"
-            class="p-1.5 text-outline rounded hover:text-[#3a6567]
-               hover:bg-surface-container transition-colors"
-            (click)="$event.stopPropagation(); viewProfile.emit(employee().profileId)"
+        <!-- Hover actions.
+             Both are gated — see canConsult/canModify. The wrapper itself is dropped when
+             neither survives, so a read-only user gets no empty floating panel on hover. -->
+        @if (canConsult() || canModify()) {
+          <div
+            class="absolute top-3 right-3 flex gap-1 z-10
+               bg-white/90 backdrop-blur-sm p-1 rounded-lg
+               border border-outline-variant shadow-sm
+               transition-opacity duration-200"
+            [class.opacity-0]="!hovered()"
+            [class.opacity-100]="hovered()"
+            [class.pointer-events-none]="!hovered()"
           >
-            <span class="material-symbols-outlined text-[18px]">visibility</span>
-          </button>
-          <button
-            type="button"
-            class="p-1.5 text-outline rounded hover:text-[#3a6567]
-               hover:bg-surface-container transition-colors"
-            (click)="$event.stopPropagation(); emitEdit()"
-          >
-            <span class="material-symbols-outlined text-[18px]">edit</span>
-          </button>
-        </div>
+            @if (canConsult()) {
+              <button
+                type="button"
+                class="p-1.5 text-outline rounded hover:text-[#3a6567]
+                   hover:bg-surface-container transition-colors"
+                [title]="consultTitle()"
+                [attr.aria-label]="consultTitle()"
+                (click)="$event.stopPropagation(); viewProfile.emit(employee())"
+              >
+                <!-- person_add, not visibility, when there is no dossier: the button leads to
+                     a form, and an eye would promise a record that does not exist. -->
+                <span class="material-symbols-outlined text-[18px]">{{
+                  hasProfile() ? 'visibility' : 'person_add' }}</span>
+              </button>
+            }
+            @if (canModify()) {
+              <button
+                type="button"
+                class="p-1.5 text-outline rounded hover:text-[#3a6567]
+                   hover:bg-surface-container transition-colors"
+                [title]="'PROFILES.COMMON.EDIT' | translate"
+                [attr.aria-label]="'PROFILES.COMMON.EDIT' | translate"
+                (click)="$event.stopPropagation(); onEdit.emit(employee())"
+              >
+                <span class="material-symbols-outlined text-[18px]">edit</span>
+              </button>
+            }
+          </div>
+        }
 
         <!-- Body row -->
         <div class="flex gap-5 flex-1 min-h-0 mt-4">
@@ -200,13 +215,37 @@ import {
 export class ProfileGridCardComponent {
   readonly employee = input.required<EmployeeListItem>();
   readonly selected = input<boolean>(false);
-  readonly viewProfile = output<number | null>();
+  /** `HR_UPDATE_PROFILE` / `HR_CREATE_PROFILE`, resolved once by the page. */
+  readonly canEdit = input<boolean>(false);
+  readonly canCreateProfile = input<boolean>(false);
+  /** The row itself — a card with no `profileId` still routes, on its `userId`. */
+  readonly viewProfile = output<EmployeeListItem>();
   readonly onSelect = output<{ userId: number; checked: boolean }>();
-  readonly onEdit = output<number>();
+  readonly onEdit = output<EmployeeListItem>();
 
+  /** Drives the fade of the action panel above; the panel is only rendered when non-empty. */
   hovered = signal(false);
 
   private translate = inject(TranslateService);
+
+  readonly hasProfile = computed(() => this.employee().profileId != null);
+
+  /**
+   * Consulter. With a dossier it is a plain read, open to anyone who can see the annuaire.
+   * Without one the same button *creates* the dossier, so it needs `HR_CREATE_PROFILE` —
+   * showing it otherwise would be the same dead click this whole change is about, only
+   * ending in a 403 instead of silence.
+   */
+  readonly canConsult = computed(() => this.hasProfile() || this.canCreateProfile());
+
+  /** Modifier. Nothing to modify without a dossier — creating one is Consulter's job. */
+  readonly canModify = computed(() => this.hasProfile() && this.canEdit());
+
+  readonly consultTitle = computed(() => {
+    this.translate.currentLang();
+    return this.translate.instant(
+      this.hasProfile() ? 'PROFILES.CARD.VIEW_PROFILE' : 'PROFILES.CARD.CREATE_PROFILE');
+  });
 
   readonly contractLabel = computed((): string => {
     this.translate.currentLang();
@@ -274,10 +313,5 @@ export class ProfileGridCardComponent {
    */
   toggleSelected(): void {
     this.handleSelect(!this.selected());
-  }
-
-  emitEdit(): void {
-    const id = this.employee().profileId;
-    if (id != null) this.onEdit.emit(id);
   }
 }

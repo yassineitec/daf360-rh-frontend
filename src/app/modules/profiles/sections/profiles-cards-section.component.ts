@@ -36,6 +36,8 @@ import { ProfileGridCardComponent } from '../components/profile-grid-card/profil
           <rh-profile-grid-card
             [employee]="emp"
             [selected]="selIds.has(emp.userId)"
+            [canEdit]="canEdit()"
+            [canCreateProfile]="canCreateProfile()"
             (viewProfile)="viewProfile.emit($event)"
             (onSelect)="toggleSelect.emit($event)"
             (onEdit)="edit.emit($event)" />
@@ -52,9 +54,14 @@ export class ProfilesCardsSectionComponent {
   /** How many placeholder cards to show; the page passes the current page size. */
   readonly skeletonCount = input<number>(6);
 
-  readonly viewProfile  = output<number | null>();
+  /** `HR_UPDATE_PROFILE` / `HR_CREATE_PROFILE`, resolved by the page — see its comment. */
+  readonly canEdit          = input<boolean>(false);
+  readonly canCreateProfile = input<boolean>(false);
+
+  /** The whole row, not an id: a row with no `profileId` still has a `userId` to route on. */
+  readonly viewProfile  = output<EmployeeListItem>();
   readonly toggleSelect = output<{ userId: number; checked: boolean }>();
-  readonly edit         = output<number>();
+  readonly edit         = output<EmployeeListItem>();
 
   protected readonly skeletons = computed(() =>
     Array.from({ length: Math.min(this.skeletonCount(), 12) }, (_, i) => i),

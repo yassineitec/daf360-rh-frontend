@@ -16,6 +16,14 @@ export const PROFILES_ROUTES: Routes = [
     pathMatch: 'full',
   },
   {
+    // Keyed by USER id, not profile id — the point is the people who have no profile id.
+    // Must stay above ':id': that pattern would otherwise swallow 'user' and ask the
+    // backend for a profile named "user".
+    path: 'user/:userId',
+    loadComponent: () =>
+      import('./profile-create.component').then(m => m.ProfileCreateComponent),
+  },
+  {
     path: ':id',
     loadComponent: () =>
       import('./profile-detail.component').then(m => m.ProfileDetailComponent),

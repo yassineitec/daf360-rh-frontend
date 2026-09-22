@@ -42,6 +42,8 @@
       [selectedIds]="selectedIds()"
       [loading]="loading()"
       [skeletonCount]="pageSize()"
+      [canEdit]="canEdit()"
+      [canCreateProfile]="canCreateProfile()"
       (viewProfile)="onViewProfile($event)"
       (toggleSelect)="toggleSelect($event)"
       (edit)="onEdit($event)" />
@@ -51,6 +53,8 @@
       [selectedIds]="selectedIds()"
       [loading]="loading()"
       [skeletonCount]="pageSize()"
+      [canEdit]="canEdit()"
+      [canCreateProfile]="canCreateProfile()"
       (viewProfile)="onViewProfile($event)"
       (toggleSelect)="toggleSelect($event)"
       (edit)="onEdit($event)" />

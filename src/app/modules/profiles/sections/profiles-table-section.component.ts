@@ -54,9 +54,14 @@ export class ProfilesTableSectionComponent {
   readonly loading     = input<boolean>(false);
   readonly skeletonCount = input<number>(10);
 
-  readonly viewProfile  = output<number | null>();
+  /** `HR_UPDATE_PROFILE` / `HR_CREATE_PROFILE`, resolved once by the page. */
+  readonly canEdit          = input<boolean>(false);
+  readonly canCreateProfile = input<boolean>(false);
+
+  /** The whole row, not an id: a row with no `profileId` still routes, on its `userId`. */
+  readonly viewProfile  = output<EmployeeListItem>();
   readonly toggleSelect = output<{ userId: number; checked: boolean }>();
-  readonly edit         = output<number>();
+  readonly edit         = output<EmployeeListItem>();
 
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -86,18 +91,31 @@ export class ProfilesTableSectionComponent {
       loading:      this.loading(),
       skeletonRows: Math.min(this.skeletonCount(), 20),
       emptyMessage: this.translate.instant('PROFILES.LIST.NO_EMPLOYEES'),
+      // Both actions are conditional now — see the card view's canConsult/canModify for
+      // the reasoning, which is the same on both surfaces.
       actions: [
         {
           id: 'view',
+          // `person_add` for a row with no dossier: that button opens a creation form, and
+          // the default eye would promise a record that does not exist.
+          icon: 'visibility',
           tooltip: this.translate.instant('PROFILES.CARD.VIEW_PROFILE'),
-          onClick: (row: TableRow) => this.viewProfile.emit(row['profileId'] ?? null),
+          hidden: (row: TableRow) => row['profileId'] == null,
+          onClick: (row: TableRow) => this.viewProfile.emit(row['employeeItem'] as EmployeeListItem),
+        },
+        {
+          id: 'create',
+          icon: 'person_add',
+          tooltip: this.translate.instant('PROFILES.CARD.CREATE_PROFILE'),
+          hidden: (row: TableRow) => row['profileId'] != null || !this.canCreateProfile(),
+          onClick: (row: TableRow) => this.viewProfile.emit(row['employeeItem'] as EmployeeListItem),
         },
         {
           id: 'edit',
           tooltip: this.translate.instant('PROFILES.TABLE.EDIT'),
-          onClick: (row: TableRow) => {
-            if (row['profileId'] != null) this.edit.emit(row['profileId']);
-          },
+          // Nothing to modify without a dossier — creating one is the action above.
+          hidden: (row: TableRow) => row['profileId'] == null || !this.canEdit(),
+          onClick: (row: TableRow) => this.edit.emit(row['employeeItem'] as EmployeeListItem),
         },
       ],
     };
@@ -120,6 +138,9 @@ export class ProfilesTableSectionComponent {
         // Carried for the row handlers, not rendered — no matching column.
         userId:      emp.userId,
         profileId:   emp.profileId,
+        // The source row, so an action can emit it whole. `profileId` above stays because
+        // the `hidden` predicates read it directly.
+        employeeItem: emp,
         selectLabel: this.translate.instant('PROFILES.TABLE.SELECT_ROW', {
           name: emp.fullName || '—',
         }),
@@ -150,6 +171,7 @@ export class ProfilesTableSectionComponent {
     if (userId != null) this.toggleSelect.emit({ userId, checked });
   }
 
+  /** `null` and an unparseable string both render as the em dash, never as 'Invalid Date'. */
   private formatDate(iso: string | null): string {
     if (!iso) return '—';
     const d = new Date(iso);

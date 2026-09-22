@@ -1212,7 +1212,8 @@
       "CONTRACT_TYPE": "CONTRACT TYPE",
       "STATUS": "STATUS",
       "HIRE_DATE": "HIRE DATE",
-      "VIEW_PROFILE": "View profile"
+      "VIEW_PROFILE": "View profile",
+      "CREATE_PROFILE": "Create HR profile"
     },
     "LIFECYCLE": {
       "PRE_ONBOARDING": "Pre-onboarding",
@@ -1699,6 +1700,39 @@
       "ERR_FUTURE_DATE": "The date cannot be in the future",
       "ERR_CDD_END": "Required for a CDD contract",
       "ERR_CREATE": "Error while creating"
+    },
+    "CREATE": {
+      "TITLE": "New HR profile",
+      "SUBTITLE": "This user has no HR record yet.",
+      "NO_PROFILE_BADGE": "No HR record",
+      "INTRO": "Fill in the minimum below to open the record. Everything else — identity, contact, banking, documents — is completed afterwards on the profile, which opens straight in edit mode.",
+      "SECTION_REQUIRED": "Required information",
+      "SECTION_REQUIRED_HINT": "The record cannot be created without these fields.",
+      "SECTION_POSITION": "Position",
+      "SECTION_OPTIONAL_HINT": "Optional — editable at any time on the profile.",
+      "SUBMIT": "Create record",
+      "SUCCESS": "Record created. Complete the remaining information.",
+      "LOAD_ERROR": "User not found.",
+      "NO_PERMISSION": "You do not have permission to create an HR record (HR_CREATE_PROFILE). Contact an HR administrator.",
+      "ERR_PAYS": "Country is required.",
+      "ERR_HIRE_DATE": "Hire date is required.",
+      "ERR_CONTRACT_TYPE": "Contract type is required.",
+      "ERR_CONTRACT_END": "An end date is required for a fixed-term contract.",
+      "ERR_CREATE": "Error while creating the record.",
+      "PRE_ONBOARDING_NOTE": "On creation the record is in \"Pre-onboarding\": it no longer shows in the default list, which lists people in service. Tick \"Include inactive\" to find it again, or move it to \"Active\" from the profile.",
+      "FULL_NAME": "Full name",
+      "FULL_NAME_PH": "First LASTNAME",
+      "PHOTO_PICK": "Choose a photo",
+      "PHOTO_PENDING": "The photo will be uploaded when the record is created.",
+      "SECTION_ACCOUNT": "Account",
+      "ACCOUNT_EMAIL": "Work email",
+      "ACCOUNT_ROLE": "Role",
+      "ACCOUNT_USER_ID": "User ID",
+      "ACCOUNT_HINT": "Email and role belong to the account, not to the HR record: change them from the users administration screen.",
+      "SAVE_BAR_HINT": "The record then opens in edit mode so you can complete the rest.",
+      "ERR_NAME": "Full name is required.",
+      "WARN_NAME": "The record was created, but the name could not be updated.",
+      "WARN_PHOTO": "The record was created, but the photo could not be uploaded."
     }
   },
   "OFFBOARDING": {

@@ -16,6 +16,7 @@ import { EmployeeListItem } from './models/profile.model';
 import { ProfilesCardsSectionComponent } from './sections/profiles-cards-section.component';
 import { ProfilesTableSectionComponent } from './sections/profiles-table-section.component';
 import { CONTRACT_CODES, LIFECYCLE_CODES, contractLabel, lifecycleLabel } from './profile-labels';
+import { UserStore } from '../../core/user.store';
 
 const DEFAULT_PAGE_SIZE = 12;
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
@@ -60,6 +61,7 @@ export class ProfileListComponent implements OnInit {
   private svc       = inject(ProfileListService);
   private router    = inject(Router);
   private translate = inject(TranslateService);
+  private userStore = inject(UserStore);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly employees     = signal<EmployeeListItem[]>([]);
@@ -85,6 +87,7 @@ export class ProfileListComponent implements OnInit {
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
   readonly selectedCount = computed(() => this.selectedIds().size);
+
 
   // ── Filter panel ───────────────────────────────────────────────────────────
   readonly filterFields = computed<FilterField[]>(() => {
@@ -363,13 +366,49 @@ export class ProfileListComponent implements OnInit {
     this.clearSelection();
   }
 
+  // ── Permissions ────────────────────────────────────────────────────────────
+  //
+  // The page itself carries no route guard on purpose — `/rh/profiles` is the annuaire,
+  // and every authenticated user may read it (the backend's `/employees` endpoint agrees).
+  // What the row ACTIONS do is another matter: both of them write, and both were rendered
+  // unconditionally, so a reader saw a Modifier button that could only ever end in a 403.
+  //
+  // The two codes are exactly what the endpoints behind the buttons enforce —
+  // `PATCH /api/hr/profiles/{id}` and `POST /api/hr/profiles`.
+
+  /** Opens `/rh/profiles/:id?edit=true`, i.e. `PATCH /api/hr/profiles/{id}`. */
+  readonly canEdit = computed(() =>
+    this.userStore.hasPermission('HR_UPDATE_PROFILE') || this.userStore.isAdmin());
+
+  /** Opens `/rh/profiles/user/:userId`, i.e. `POST /api/hr/profiles`. */
+  readonly canCreateProfile = computed(() =>
+    this.userStore.hasPermission('HR_CREATE_PROFILE') || this.userStore.isAdmin());
+
   // ── Navigation ─────────────────────────────────────────────────────────────
-  onViewProfile(profileId: number | null): void {
-    if (profileId != null) this.router.navigate(['/rh/profiles', profileId]);
+  /**
+   * Consulter.
+   *
+   * A row with no `profileId` is a user with no HR dossier — which is a normal thing to
+   * be here, since this list is `Users LEFT JOIN employee_profiles`. That case used to
+   * fall through a `!= null` check and the click simply did nothing; it now opens the
+   * page that creates the dossier, keyed by user id.
+   */
+  onViewProfile(employee: EmployeeListItem): void {
+    if (employee.profileId != null) {
+      this.router.navigate(['/rh/profiles', employee.profileId]);
+    } else {
+      this.router.navigate(['/rh/profiles/user', employee.userId]);
+    }
   }
 
-  onEdit(profileId: number): void {
-    this.router.navigate(['/rh/profiles', profileId], { queryParams: { edit: 'true' } });
+  onEdit(employee: EmployeeListItem): void {
+    if (employee.profileId != null) {
+      this.router.navigate(['/rh/profiles', employee.profileId], { queryParams: { edit: 'true' } });
+    } else {
+      // Nothing to edit yet — same destination as Consulter for this row, and the only
+      // thing "modifier" can mean for someone without a dossier.
+      this.router.navigate(['/rh/profiles/user', employee.userId]);
+    }
   }
 
   // ── FilterResult coercion ──────────────────────────────────────────────────
