@@ -22,6 +22,18 @@ const VERIFICATION_CONFIG: Record<string, { key: string; variant: BadgeVariant }
 const EXPIRY_WARNING_DAYS = 30;
 
 /**
+ * Types that get no section of their own; their documents are listed in the target's section.
+ *
+ * CONTRACT_SIGNED is still a valid type — onboarding files every signed contract under it
+ * (OnboardingSideEffects) — but as a separate section it duplicated "Contrat": same SharePoint
+ * folder (Employment Contracts & Amendments), so the same remote files were listed twice.
+ * Folding keeps those documents visible, tagged with their own type, without the second section.
+ */
+const FOLDED_INTO: Record<string, string> = {
+  CONTRACT_SIGNED: 'CONTRACT',
+};
+
+/**
  * Documents tab — the employee's dossier.
  *
  * Shows BOTH sources: uploaded pieces (`employee_documents`, verifiable and removable) and
@@ -67,7 +79,7 @@ const EXPIRY_WARNING_DAYS = 30;
            than a wall. The counts live in the header, which renders collapsed too, so nothing
            has to be opened to find out where the documents are. -->
       <div class="flex flex-col gap-2">
-        @for (t of types(); track t.code) {
+        @for (t of visibleTypes(); track t.code) {
           <!-- variant: 'outlined', not the default glass: sixteen glass cards inside this
                panel's own glass card is a stack of blur, and every one of them would be another
                target for the lib's unconditional .glass-card:hover lift. Outlined reads as a
@@ -125,6 +137,12 @@ const EXPIRY_WARNING_DAYS = 30;
                   <span class="truncate text-[13px] font-semibold text-on-surface">
                     {{ doc.fileName || typeLabel(doc.documentType) }}
                   </span>
+                  <!-- A row regrouped from a folded type (CONTRACT_SIGNED under Contrat) says
+                       what it really is, since the section heading no longer does. -->
+                  @if (doc.documentType !== t.code) {
+                    <daf-badge [label]="typeLabel(doc.documentType)"
+                               [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
+                  }
                   @if (doc.source === 'GENERATED') {
                     <daf-badge [label]="'PROFILES.DOCUMENTS.SOURCE_GENERATED' | translate"
                                [options]="{ variant: 'info', pill: true, size: 'sm' }" />
@@ -306,7 +324,21 @@ export class DocumentsSectionComponent {
    */
   protected readonly openType = computed<string | null>(() => {
     if (this.touched()) return this.openedCode();
-    return this.types().find(t => this.rowsFor(t.code).length > 0)?.code ?? null;
+    return this.visibleTypes().find(t => this.rowsFor(t.code).length > 0)?.code ?? null;
+  });
+
+  /**
+   * The sections actually rendered: `types()` minus the ones folded into another section.
+   *
+   * A type is only hidden when its target is in the list — if a country had no CONTRACT type,
+   * hiding CONTRACT_SIGNED would make its documents unreachable instead of merely regrouped.
+   */
+  protected readonly visibleTypes = computed(() => {
+    const codes = new Set(this.types().map(t => t.code));
+    return this.types().filter(t => {
+      const target = FOLDED_INTO[t.code];
+      return !target || !codes.has(target);
+    });
   });
 
   /**
@@ -321,8 +353,12 @@ export class DocumentsSectionComponent {
     if (open) this.expand.emit(code);
   }
 
+  /** A section's rows, plus the rows of every type folded into it (see {@link FOLDED_INTO}). */
   protected rowsFor(code: string): ProfileDocumentRow[] {
-    return this.rows().filter(r => r.documentType === code);
+    return this.rows().filter(r =>
+      r.documentType === code
+      || (FOLDED_INTO[r.documentType] === code
+          && !this.visibleTypes().some(t => t.code === r.documentType)));
   }
 
   protected filesFor(code: string): UploadedFile[] {

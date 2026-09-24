@@ -73,6 +73,7 @@ import { DocumentsSectionComponent } from './detail-sections/documents-section.c
 import { ItAssetsSectionComponent } from './detail-sections/it-assets-section.component';
 import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
 import { RemunerationSectionComponent } from './detail-sections/remuneration-section.component';
+import { DocumentHistorySectionComponent } from './detail-sections/document-history-section.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
 
 /**
@@ -87,6 +88,8 @@ type TabId =
   // only way to change an employee's frozen préavis, plus trial validation / CDD renewal /
   // CDI conversion — stay reachable from one place.
   | 'historique'
+  // The whole SharePoint dossier, every tree (rh-document-history-section). Sensitive-only.
+  | 'docs-history'
   // The IT equipment ledger (it_asset_assignments, V76) — what the employee holds and
   // what they held before. Not part of 'documents': it is inventory, not paperwork.
   | 'materiel' | 'documents'
@@ -155,7 +158,9 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
     DocumentsSectionComponent, DocumentsDrawerComponent, ItAssetsSectionComponent,
     NewContractFormComponent, AssetAssignFormComponent, AssetReturnFormComponent,
-    DocumentEditFormComponent, RemunerationSectionComponent,
+    DocumentEditFormComponent,
+    DocumentHistorySectionComponent,
+    RemunerationSectionComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -248,6 +253,10 @@ export class ProfileDetailComponent implements OnInit {
       // header comment).
       { id: 'remuneration', label: t('PROFILES.SECTIONS.REMUNERATION') },
     );
+    // Same gate as 'bancaire': the SharePoint dossier includes the payroll tree.
+    if (this.canViewSensitive()) {
+      items.push({ id: 'docs-history', label: t('PROFILES.DOC_HISTORY.TAB') });
+    }
     return items;
   });
 
