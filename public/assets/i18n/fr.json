@@ -1477,6 +1477,34 @@
       "ERR_DELETE": "Le retrait a échoué.",
       "ERR_SAVE": "L'enregistrement a échoué."
     },
+    "DOC_HISTORY": {
+      "TAB": "Historique documents",
+      "TITLE": "Historique SharePoint",
+      "REFRESH": "Actualiser",
+      "SEARCH": "Rechercher un document…",
+      "FILTER_TREE": "Arborescence",
+      "FILTER_CATEGORY": "Dossier",
+      "COUNT": "{{shown}} sur {{total}} documents",
+      "FETCHED_AT": "lu à {{time}}",
+      "TRUNCATED": "Le dossier est très volumineux : la liste a été limitée. Affinez avec la recherche ou vérifiez directement dans SharePoint.",
+      "ROOT_MISSING": "Dossier introuvable dans SharePoint :",
+      "ROOT_FILES": "Racine du dossier",
+      "NO_DATE": "Sans date",
+      "FILED_BY_APP": "Déposé via CORE360",
+      "MODIFIED": "Modifié le {{date}}",
+      "CREATED": "créé le {{date}}",
+      "OPEN": "Ouvrir",
+      "OPEN_SHAREPOINT": "Ouvrir dans SharePoint",
+      "EMPTY": "Aucun document dans le dossier SharePoint de cet employé.",
+      "NO_MATCH": "Aucun document ne correspond aux filtres.",
+      "ERR_LOAD": "Impossible de charger l'historique SharePoint.",
+      "ERR_OPEN": "Impossible d'ouvrir le document.",
+      "STATUS": {
+        "NO_CONFIG": "Aucun dossier SharePoint n'est configuré pour cet employé (pays sans chemin, ou nom d'employé inutilisable ou partagé par un homonyme).",
+        "FOLDER_MISSING": "Le dossier SharePoint de cet employé est introuvable.",
+        "UNAVAILABLE": "L'intégration SharePoint n'est pas activée sur ce serveur."
+      }
+    },
     "HR_DOCS": {
       "TITLE": "Documents RH",
       "DOWNLOAD": "Telecharger",

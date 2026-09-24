@@ -1477,6 +1477,34 @@
       "ERR_DELETE": "Removal failed.",
       "ERR_SAVE": "Saving failed."
     },
+    "DOC_HISTORY": {
+      "TAB": "Document history",
+      "TITLE": "SharePoint history",
+      "REFRESH": "Refresh",
+      "SEARCH": "Search a document…",
+      "FILTER_TREE": "Tree",
+      "FILTER_CATEGORY": "Folder",
+      "COUNT": "{{shown}} of {{total}} documents",
+      "FETCHED_AT": "read at {{time}}",
+      "TRUNCATED": "This folder is very large, so the list was capped. Narrow it with the search or check SharePoint directly.",
+      "ROOT_MISSING": "Folder not found in SharePoint:",
+      "ROOT_FILES": "Folder root",
+      "NO_DATE": "No date",
+      "FILED_BY_APP": "Filed via CORE360",
+      "MODIFIED": "Modified {{date}}",
+      "CREATED": "created {{date}}",
+      "OPEN": "Open",
+      "OPEN_SHAREPOINT": "Open in SharePoint",
+      "EMPTY": "No documents in this employee's SharePoint folder.",
+      "NO_MATCH": "No document matches the filters.",
+      "ERR_LOAD": "Could not load the SharePoint history.",
+      "ERR_OPEN": "Could not open the document.",
+      "STATUS": {
+        "NO_CONFIG": "No SharePoint folder is configured for this employee (country without a path, or an unusable or shared employee name).",
+        "FOLDER_MISSING": "This employee's SharePoint folder could not be found.",
+        "UNAVAILABLE": "The SharePoint integration is not enabled on this server."
+      }
+    },
     "HR_DOCS": {
       "TITLE": "HR Documents",
       "DOWNLOAD": "Download",

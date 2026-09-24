@@ -72,6 +72,7 @@ import { LifecycleSectionComponent } from './detail-sections/lifecycle-section.c
 import { DocumentsSectionComponent } from './detail-sections/documents-section.component';
 import { ItAssetsSectionComponent } from './detail-sections/it-assets-section.component';
 import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
+import { DocumentHistorySectionComponent } from './detail-sections/document-history-section.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
 
 /**
@@ -86,6 +87,8 @@ type TabId =
   // only way to change an employee's frozen préavis, plus trial validation / CDD renewal /
   // CDI conversion — stay reachable from one place.
   | 'historique'
+  // The whole SharePoint dossier, every tree (rh-document-history-section). Sensitive-only.
+  | 'docs-history'
   // The IT equipment ledger (it_asset_assignments, V76) — what the employee holds and
   // what they held before. Not part of 'documents': it is inventory, not paperwork.
   | 'materiel' | 'documents';
@@ -150,6 +153,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
     DocumentsSectionComponent, DocumentsDrawerComponent, ItAssetsSectionComponent,
     NewContractFormComponent, AssetAssignFormComponent, AssetReturnFormComponent,
     DocumentEditFormComponent,
+    DocumentHistorySectionComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -238,6 +242,10 @@ export class ProfileDetailComponent implements OnInit {
       // and six rows.
       { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documentRows().length || null },
     );
+    // Same gate as 'bancaire': the SharePoint dossier includes the payroll tree.
+    if (this.canViewSensitive()) {
+      items.push({ id: 'docs-history', label: t('PROFILES.DOC_HISTORY.TAB') });
+    }
     return items;
   });
 

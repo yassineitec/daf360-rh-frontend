@@ -291,6 +291,34 @@
       "ERR_DELETE": "فشلت الإزالة.",
       "ERR_SAVE": "فشل الحفظ."
     },
+    "DOC_HISTORY": {
+      "TAB": "سجل الوثائق",
+      "TITLE": "سجل SharePoint",
+      "REFRESH": "تحديث",
+      "SEARCH": "البحث عن وثيقة…",
+      "FILTER_TREE": "الشجرة",
+      "FILTER_CATEGORY": "المجلد",
+      "COUNT": "{{shown}} من {{total}} وثيقة",
+      "FETCHED_AT": "قُرئ على الساعة {{time}}",
+      "TRUNCATED": "المجلد كبير جدًا، لذلك تم تقليص القائمة. استخدم البحث أو تحقق مباشرة في SharePoint.",
+      "ROOT_MISSING": "المجلد غير موجود في SharePoint:",
+      "ROOT_FILES": "جذر المجلد",
+      "NO_DATE": "بدون تاريخ",
+      "FILED_BY_APP": "أودع عبر CORE360",
+      "MODIFIED": "عُدّل في {{date}}",
+      "CREATED": "أُنشئ في {{date}}",
+      "OPEN": "فتح",
+      "OPEN_SHAREPOINT": "فتح في SharePoint",
+      "EMPTY": "لا توجد وثائق في مجلد SharePoint لهذا الموظف.",
+      "NO_MATCH": "لا توجد وثيقة مطابقة للمرشحات.",
+      "ERR_LOAD": "تعذر تحميل سجل SharePoint.",
+      "ERR_OPEN": "تعذر فتح الوثيقة.",
+      "STATUS": {
+        "NO_CONFIG": "لم يتم إعداد أي مجلد SharePoint لهذا الموظف (بلد بدون مسار، أو اسم موظف غير صالح أو مشترك).",
+        "FOLDER_MISSING": "تعذر العثور على مجلد SharePoint لهذا الموظف.",
+        "UNAVAILABLE": "تكامل SharePoint غير مفعّل على هذا الخادم."
+      }
+    },
     "DOC_TYPES": {
       "CONTRACT": "عقد العمل",
       "CONTRACT_SIGNED": "عقد موقّع",

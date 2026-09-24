@@ -167,6 +167,12 @@
                 (edit)="openEditDocument($event)"
                 (remove)="removeDocument($event)" />
             }
+
+            <!-- Historique documents — the whole SharePoint dossier. Self-loading: it owns its
+                 fetch, filters and download, so the page only passes the id. -->
+            @case ('docs-history') {
+              <rh-document-history-section [profileId]="profileId" />
+            }
           }
         </div>
       </div>
