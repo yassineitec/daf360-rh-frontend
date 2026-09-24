@@ -43,6 +43,12 @@ export class RefDataService {
     return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
   }
 
+  getContractTypes(paysId?: number): Observable<RefDataItem[]> {
+    const key = paysId ? `contract_types_${paysId}` : 'contract_types_all';
+    const url = paysId ? `${this.base}/contract-types?paysId=${paysId}` : `${this.base}/contract-types`;
+    return this.cached(key, this.http.get<RefDataItem[]>(url).pipe(catchError(() => of([]))));
+  }
+
   getNationalities(): Observable<RefDataItem[]> {
     return this.cached('nationalities',
       this.http.get<RefDataItem[]>(`${this.base}/nationalities`).pipe(catchError(() => of([]))));

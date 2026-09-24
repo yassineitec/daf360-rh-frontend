@@ -72,6 +72,7 @@ import { LifecycleSectionComponent } from './detail-sections/lifecycle-section.c
 import { DocumentsSectionComponent } from './detail-sections/documents-section.component';
 import { ItAssetsSectionComponent } from './detail-sections/it-assets-section.component';
 import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
+import { RemunerationSectionComponent } from './detail-sections/remuneration-section.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
 
 /**
@@ -88,7 +89,12 @@ type TabId =
   | 'historique'
   // The IT equipment ledger (it_asset_assignments, V76) — what the employee holds and
   // what they held before. Not part of 'documents': it is inventory, not paperwork.
-  | 'materiel' | 'documents';
+  | 'materiel' | 'documents'
+  // Payroll-backed configuration (country, contract type, benefits, current net salary) —
+  // lives in daf360-payroll-service, not this service's own ProfileUpdateDto, so it is
+  // self-contained like 'historique'/'materiel', not part of TAB_FIELDS/editForm below. See
+  // docs/superpowers/specs/2026-09-22-employee-payroll-config-design.md.
+  | 'remuneration';
 
 /**
  * Departure types offered by the profile's "Démarrer l'offboarding" action.
@@ -109,7 +115,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   // Emploi & poste is one tab, so its marker covers the contract, the pay and
   // the affectation blocks together.
   emploi:   ['hireDate', 'contractType', 'contractEndDate', 'probationEndDate', 'isOnProbation',
-             'salaireNetCandidat', 'salaireNetRh', 'departmentId', 'gradeId', 'disciplineId', 'nogLevelId'],
+             'salaireNetCandidat', 'departmentId', 'gradeId', 'disciplineId', 'nogLevelId'],
   // Contact holds both the employee's own details and the emergency contact.
   contact:  ['personalEmail', 'personalPhone', 'phone', 'personalAddress',
              'emergencyContactName', 'emergencyContactRelation', 'emergencyContactPhone'],
@@ -149,7 +155,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
     DocumentsSectionComponent, DocumentsDrawerComponent, ItAssetsSectionComponent,
     NewContractFormComponent, AssetAssignFormComponent, AssetReturnFormComponent,
-    DocumentEditFormComponent,
+    DocumentEditFormComponent, RemunerationSectionComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -237,6 +243,10 @@ export class ProfileDetailComponent implements OnInit {
       // listed both sources, so a dossier with six attestations and no upload showed no badge
       // and six rows.
       { id: 'documents',  label: t('PROFILES.SECTIONS.DOCUMENTS'), count: this.documentRows().length || null },
+      // Payroll-backed, self-contained like 'historique'/'materiel' — no dirty marker, since
+      // it never touches editForm/TAB_FIELDS (see the RemunerationSectionComponent's own
+      // header comment).
+      { id: 'remuneration', label: t('PROFILES.SECTIONS.REMUNERATION') },
     );
     return items;
   });

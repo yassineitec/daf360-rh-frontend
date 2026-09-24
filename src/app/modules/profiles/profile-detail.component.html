@@ -167,6 +167,10 @@
                 (edit)="openEditDocument($event)"
                 (remove)="removeDocument($event)" />
             }
+
+            @case ('remuneration') {
+              <rh-remuneration-section [profile]="p" />
+            }
           }
         </div>
       </div>

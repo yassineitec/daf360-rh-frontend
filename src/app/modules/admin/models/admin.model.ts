@@ -164,8 +164,12 @@ export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | '
 // ─────────────────────────────────────────────────────────────────────────────
 // Offboarding task catalog
 // ─────────────────────────────────────────────────────────────────────────────
-export const CONTRACT_TYPES = ['CDI', 'CDD', 'STAGE', 'FREELANCE', 'CIVP'] as const;
-export type ContractType = typeof CONTRACT_TYPES[number];
+// Was a hardcoded literal union backed by a fixed array; now sourced per-country from
+// RefDataService.getContractTypes() (backend-driven reference data). Widened to plain
+// `string` — the narrower union is gone, but every existing consumer (employee.model.ts's
+// `contractType` field, employee-form.component.ts's literal array) still type-checks fine
+// against `string`, so this is a safe, non-breaking widening for the two untouched callers.
+export type ContractType = string;
 
 export interface OffboardingCatalogTask {
   id:             number;

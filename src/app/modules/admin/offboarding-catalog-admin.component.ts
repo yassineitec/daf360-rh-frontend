@@ -6,8 +6,10 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { AdminService } from './admin.service';
 import {
-  CONTRACT_TYPES, OffboardingCatalogTask, Role, SaveCatalogTaskRequest,
+  OffboardingCatalogTask, Role, SaveCatalogTaskRequest,
 } from './models/admin.model';
+import { RefDataService } from '../../core/ref/ref-data.service';
+import { RefDataItem } from '../../core/ref/ref-data.model';
 import {
   ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, SelectOption,
   ToggleComponent, ModalService, ModalRef,
@@ -68,14 +70,14 @@ import {
     <!-- Contract-type tabs, same convention as "Listes configurables": one window per
          type, shown one after another, instead of a dropdown filter + grouped view. -->
     <nav class="cat-tab-bar" role="tablist">
-      @for (ct of CONTRACT_TYPES; track ct) {
+      @for (ct of contractTypes(); track ct.code) {
         <button
           class="cat-tab-btn"
-          [class.active]="filterContractType === ct"
-          (click)="selectContractType(ct)"
+          [class.active]="filterContractType === ct.code"
+          (click)="selectContractType(ct.code ?? '')"
           role="tab"
           type="button"
-        >{{ contractTypeLabel(ct) }}</button>
+        >{{ contractTypeLabel(ct.code ?? '') }}</button>
       }
     </nav>
 
@@ -227,6 +229,7 @@ import {
 })
 export class OffboardingCatalogAdminComponent implements OnChanges {
   private svc = inject(AdminService);
+  private refData = inject(RefDataService);
   private translate = inject(TranslateService);
   private modal = inject(ModalService);
   private modalRef?: ModalRef;
@@ -234,9 +237,11 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   paysId = input.required<number>();
 
-  protected readonly CONTRACT_TYPES = CONTRACT_TYPES;
+  readonly contractTypes = signal<RefDataItem[]>([]);
 
-  filterContractType: string = CONTRACT_TYPES[0];
+  // Empty until the first ngOnChanges resolves contractTypes() for this pays — see
+  // loadContractTypes(), which picks the first available code once the fetch lands.
+  filterContractType: string = '';
   loading  = signal(false);
   rows     = signal<OffboardingCatalogTask[]>([]);
 
@@ -253,7 +258,7 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return CONTRACT_TYPES.map(ct => ({ value: ct, label: this.contractTypeLabel(ct) }));
+    return this.contractTypes().map(ct => ({ value: ct.code ?? '', label: this.contractTypeLabel(ct.code ?? '') }));
   });
 
   readonly validatorOptions = computed<SelectOption[]>(() => {
@@ -340,8 +345,23 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
   };
 
   ngOnChanges() {
-    this.load();
+    this.loadContractTypes();
     this.loadValidator();
+  }
+
+  /**
+   * Contract types are per-country, so this refetches on every paysId change (ngOnChanges
+   * fires on any input change, not just the first). load() only runs once the fetch resolves,
+   * because it depends on filterContractType being a valid code for THIS country.
+   */
+  private loadContractTypes(): void {
+    this.refData.getContractTypes(this.paysId()).subscribe(types => {
+      this.contractTypes.set(types);
+      if (!types.some(t => t.code === this.filterContractType)) {
+        this.filterContractType = types[0]?.code ?? '';
+      }
+      this.load();
+    });
   }
 
   /**

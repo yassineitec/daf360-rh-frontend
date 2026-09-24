@@ -105,11 +105,15 @@ import { asNumber, fmtDate, fromDate, toDate } from './field-bridges';
                            placeholder: ('PROFILES.PLACEHOLDERS.SALARY_CANDIDATE' | translate) }"
               [value]="editForm().salaireNetCandidat ?? null"
               (valueChange)="patch.emit({ salaireNetCandidat: asNumber($event) })" />
-            <daf-form-field
-              [options]="{ label: ('PROFILES.FIELDS.SALARY_RH_INPUT' | translate), type: 'number',
-                           placeholder: ('PROFILES.PLACEHOLDERS.SALARY_RH' | translate) }"
-              [value]="editForm().salaireNetRh ?? null"
-              (valueChange)="patch.emit({ salaireNetRh: asNumber($event) })" />
+            <!-- salaireNetRh is no longer editable here — it's superseded by the payroll-backed
+                 current salary on the Rémunération tab (see
+                 docs/superpowers/specs/2026-09-22-employee-payroll-config-design.md §5). The
+                 historical value stays visible, read-only, so nothing looks like it vanished. -->
+            <rh-profile-field variant="row"
+              [label]="'PROFILES.FIELDS.SALARY_RH' | translate" [value]="amount(profile().salaireNetRh)" />
+            <p class="text-[11px] text-on-surface-variant -mt-2">
+              {{ 'PROFILES.FIELDS.SALARY_RH_MOVED_HINT' | translate }}
+            </p>
             <rh-profile-field variant="row"
               [label]="'PROFILES.FIELDS.CURRENCY' | translate" [value]="CURRENCY" />
             <rh-profile-field variant="row" [last]="true"
