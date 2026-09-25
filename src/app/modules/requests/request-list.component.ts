@@ -34,6 +34,7 @@ import {
   RECRUITMENT_APPROVE_PERMISSION,
 } from '../recruitment-demands/recruitment-validation-section.component';
 import { RecruitmentDemandFormComponent } from '../recruitment-demands/recruitment-demand-form.component';
+type MainTab = 'other' | 'recruitment';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
 
@@ -102,7 +103,7 @@ interface RequestCard {
            so it earns its own tab rather than living inside the other one.
            Only shown at all for RH_APPROVE_RECRUITMENT_DEMAND holders — everyone else
            has nothing to switch to, so they go straight to their own requests below. -->
-      @if (canValidateRecruitment()) {
+      @if (mainTabs().length > 1) {
         <daf-tabs
           variant="underline"
           [tabs]="mainTabs()"
@@ -323,7 +324,7 @@ export class RequestListComponent implements OnInit {
 
   /** Which of the two top-level tabs is showing — defaults to the employee's own
    *  requests, the reason most visitors land on this page. */
-  mainTab = signal<'other' | 'recruitment'>('other');
+  mainTab = signal<MainTab>('other');
 
   /** Reactive reference to the child section, present only while its tab is active —
    *  read by the shared KPI row above so the cards don't need their own copy of its data. */
@@ -341,12 +342,16 @@ export class RequestListComponent implements OnInit {
   canValidateRecruitment = computed(() =>
     this.userStore.hasPermission(RECRUITMENT_APPROVE_PERMISSION));
 
+  /** Only the tabs the caller may open; the strip is hidden when that leaves just one. */
   readonly mainTabs = computed<TabItem[]>(() => {
     this.translate.currentLang();
-    return [
-      { id: 'other',       label: this.translate.instant('REQUESTS.LIST.MAIN_TAB_OTHER') },
-      { id: 'recruitment', label: this.translate.instant('REQUESTS.LIST.MAIN_TAB_RECRUITMENT') },
+    const tabs: TabItem[] = [
+      { id: 'other', label: this.translate.instant('REQUESTS.LIST.MAIN_TAB_OTHER') },
     ];
+    if (this.canValidateRecruitment()) {
+      tabs.push({ id: 'recruitment', label: this.translate.instant('REQUESTS.LIST.MAIN_TAB_RECRUITMENT') });
+    }
+    return tabs;
   });
 
   onMainTabChange(id: string): void {
