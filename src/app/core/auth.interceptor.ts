@@ -31,15 +31,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   const isPortal  = req.url.startsWith(environment.portalUrl);
   const isHrApi   = req.url.startsWith(environment.hrApiUrl);
+  // The Rémunération tab and the candidate simulation call payroll-service directly.
+  const isPayroll = req.url.startsWith(environment.payrollApiUrl);
 
   // Attach credentials to all our backends
-  let authReq = (isPortal || isHrApi)
+  let authReq = (isPortal || isHrApi || isPayroll)
     ? req.clone({ withCredentials: true })
     : req;
 
-  // For rh-service: also send the HMAC token as Bearer so the service can validate it
-  // without relying on cross-port cookie delivery.
-  if (isHrApi) {
+  // For rh-service and payroll-service: also send the HMAC token as Bearer. Beyond
+  // cross-port cookie delivery, it is the only token carrying the user's permissions —
+  // the portal's `daf360_access` cookie no longer does (it outgrew the browser's 4096 B
+  // cookie cap). Loaded through the shell, the shell's interceptor does this instead.
+  if (isHrApi || isPayroll) {
     const rhToken = userStore.currentUser()?.rhToken;
     if (rhToken) {
       authReq = authReq.clone({
