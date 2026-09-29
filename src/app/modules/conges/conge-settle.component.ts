@@ -1,28 +1,29 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Component, OnInit, computed, inject, signal, TemplateRef, viewChild } from '@angular/core';
+import { Observable } from 'rxjs';
+import { TranslatePipe } from '@ngx-translate/core';
 import {
-  PageComponent, PageHeaderComponent, DataTableComponent, ButtonComponent,
-  FormFieldComponent, SelectComponent, ToggleComponent, ModalService,
-  type TableColumn, type TableConfig, type TableRow, type SelectOption, type BadgeVariant,
+  ButtonComponent,
+  FormFieldComponent, MetricCardComponent, ModalRef, ModalService, PageComponent,
+  MultiDatePickerComponent,
+  PageHeaderComponent, PaginationComponent, SearchToolbarComponent, SelectComponent,
+  SelectOption, ToggleComponent, ToolbarAction,
 } from '@khalilrebhiitec/daf360';
 
 import { NotificationService } from '../../core/notification.service';
 import { ProfileService } from '../profiles/profile.service';
-import { CongesService } from './conges.service';
+import { CongeListBase } from './conge-list-base';
 import {
-  CongeRow, DemandeEtat, LeaveCategoryCode, LeaveHeaders, LeaveTypeOption, SettleRequest,
+  CongeCounts, CongeFilter, CongePage, CongeRow, LeaveCategoryCode, LeaveHeaders,
+  LeaveTypeOption, SettleRequest,
 } from './models/conge.model';
-
-/** The four states, for the filter on the list below the form. */
-const ETATS: { value: DemandeEtat; labelKey: string }[] = [
-  { value: 'EN_ATTENTE', labelKey: 'CONGES.ETAT.EN_ATTENTE' },
-  { value: 'VALIDE',     labelKey: 'CONGES.ETAT.VALIDE' },
-  { value: 'REFUSE',     labelKey: 'CONGES.ETAT.REFUSE' },
-  { value: 'ARCHIVE',    labelKey: 'CONGES.ETAT.ARCHIVE' },
-];
+import { errorMessage, formatDays, localeOf } from './conge-display';
+import { CongesTableSectionComponent } from './sections/conges-table-section.component';
+import { CongesCardsSectionComponent } from './sections/conges-cards-section.component';
+import { CongeDetailComponent } from './sections/conge-detail.component';
 
 /**
- * Régularisations — HR filing a congé on someone else's behalf.
+ * `/rh/conges/settle` — régularisations: HR filing a congé on someone else's behalf, and the
+ * record of those already filed. Canonical page shape (UI-PLAYBOOK §1).
  *
  * WHAT THIS REPLACES
  * -----------------------------------------------------------------------------
@@ -30,21 +31,19 @@ const ETATS: { value: DemandeEtat; labelKey: string }[] = [
  * autorisation and télétravail tabs; those modules have not moved yet, so this screen is
  * congés only rather than a three-tab shell with two empty tabs.
  *
+ * THE FORM IS A MODAL, NOT A PANEL ABOVE THE LIST
+ * -----------------------------------------------------------------------------
+ * Filing a régularisation is occasional; reading what has already been filed is why the page
+ * is usually open. A permanent form pushed the list below the fold and made the common case
+ * pay for the rare one, so it moved behind a toolbar button.
+ *
  * WHY IT IS NOT THE SELF-SERVICE FORM WITH AN EMPLOYEE PICKER
  * -----------------------------------------------------------------------------
  * It very nearly is, and deliberately so: it reads the SAME `/headers/{id}` payload the
  * employee's own modal reads, so the day caps, the justification rule, the approver roles and
  * the balance gate are identical. What differs is that everything depends on WHICH employee,
- * and none of it can be answered until one is chosen — so the form stays disabled until then
- * rather than showing an empty type list that looks broken.
- *
- * THE BALANCE IS SHOWN, NOT ENFORCED DIFFERENTLY
- * -----------------------------------------------------------------------------
- * A régularisation records leave that was already taken, so it must be possible to file one
- * that pushes a balance negative — that is the normal case when someone has been off without
- * asking. The server allows it down to the -3 day tolerance and refuses beyond; this screen
- * shows the balance and what the request costs so the decision is made with the figures in
- * view, and lets the server be the one that says no.
+ * and none of it can be answered until one is chosen — so the rest of the form stays hidden
+ * until then rather than showing empty dropdowns that look broken.
  *
  * IT LANDS EN_ATTENTE, IT DOES NOT SELF-APPROVE
  * -----------------------------------------------------------------------------
@@ -57,211 +56,225 @@ const ETATS: { value: DemandeEtat; labelKey: string }[] = [
   selector: 'app-conge-settle',
   standalone: true,
   imports: [
-    PageComponent, PageHeaderComponent, DataTableComponent, ButtonComponent,
-    SelectComponent, FormFieldComponent, ToggleComponent, TranslatePipe,
+    PageComponent, PageHeaderComponent, MetricCardComponent, SearchToolbarComponent,
+    PaginationComponent, SelectComponent, FormFieldComponent, ToggleComponent,
+    MultiDatePickerComponent, ButtonComponent, CongesTableSectionComponent,
+    CongesCardsSectionComponent, CongeDetailComponent, TranslatePipe,
   ],
   template: `
-    <daf-page [loading]="loading()">
-      <!-- No icon on the page header: platform convention. -->
+    <daf-page [loading]="firstLoad()" [kpis]="4">
+
+      <!-- No icon on the page header: platform convention.
+           The primary action lives in the header's own pageActions slot — the page's one
+           creating act belongs beside its title, not among the filters that only narrow what
+           is already there. -->
       <daf-page-header
         [title]="'CONGES.SETTLE.TITLE' | translate"
-        [subtitle]="'CONGES.SETTLE.SUBTITLE' | translate" />
+        [subtitle]="'CONGES.SETTLE.SUBTITLE' | translate">
+        <ng-container pageActions>
+          <daf-button
+            [options]="{ variant: 'primary', iconStart: 'post_add',
+                         label: ('CONGES.SETTLE.NEW' | translate),
+                         disabled: working() }"
+            (onClick)="openForm()" />
+        </ng-container>
+      </daf-page-header>
 
-      <!-- ── The form ─────────────────────────────────────────────────────── -->
-      <section class="cs-form">
-        <daf-select
-          [options]="employeeOptions()"
-          [selected]="sel(employeeId())"
-          [config]="{ label: ('CONGES.SETTLE.EMPLOYEE' | translate), required: true, fullWidth: true,
-                      searchable: true,
-                      placeholder: ('CONGES.SETTLE.EMPLOYEE_PLACEHOLDER' | translate) }"
-          (selectedChange)="onEmployee($event[0])" />
+      <section class="grid grid-cols-4 gap-2 sm:gap-6">
+        <daf-metric-card
+          [label]="'CONGES.SETTLE.KPI.TOTAL' | translate" [value]="kpi().total"
+          [options]="{ icon: 'sync', iconColor: 'text-primary', iconBg: 'bg-primary/10',
+                       help: ('CONGES.SETTLE.KPI.TOTAL_HELP' | translate) }" />
+        <daf-metric-card
+          [label]="'CONGES.KPI.PENDING' | translate" [value]="kpi().pending"
+          [options]="{ icon: 'hourglass_top', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+        <daf-metric-card
+          [label]="'CONGES.KPI.APPROVED' | translate" [value]="kpi().approved"
+          [options]="{ icon: 'check_circle', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
+        <daf-metric-card
+          [label]="'CONGES.KPI.REFUSED' | translate" [value]="kpi().refused"
+          [options]="{ icon: 'cancel', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
+      </section>
 
-        @if (employeeId() && headers()) {
-          <!-- Balances first: they are what the decision is made against. -->
-          <div class="cs-balances">
-            @for (b of balanceCards(); track b.key) {
-              <div class="cs-balance">
-                <span class="cs-balance-label">{{ b.label }}</span>
-                <span class="cs-balance-value">{{ b.value }}</span>
-              </div>
-            }
-          </div>
+      <daf-search-toolbar
+        [placeholder]="'CONGES.SEARCH_PLACEHOLDER' | translate"
+        [value]="search()"
+        [debounce]="300"
+        (valueChange)="onSearch($event)"
+        [actions]="toolbarActions()"
+        (action)="onToolbarAction($event)"
+        [filterFields]="filterFields()"
+        [filterConfig]="filterConfig()"
+        (filterApply)="applyFilters($event)"
+        [views]="viewOptions()"
+        [view]="viewMode()"
+        (viewChange)="setView($event)" />
 
-          <div class="cs-grid">
-            <daf-select
-              [options]="typeOptions()"
-              [selected]="sel(type())"
-              [config]="{ label: ('CONGES.SETTLE.TYPE' | translate), required: true, fullWidth: true,
-                          error: showErrors() && !type() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
-              (selectedChange)="onType($event[0])" />
+      @if (error()) {
+        <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+          <span class="material-symbols-outlined text-[18px]">error</span>
+          {{ error() }}
+        </div>
+      }
 
-            <daf-select
-              [options]="categoryOptions()"
-              [selected]="sel(category())"
-              [config]="{ label: ('CONGES.SETTLE.CATEGORY' | translate), required: true, fullWidth: true }"
-              (selectedChange)="onCategory($event[0])" />
+      @if (viewMode() === 'grid') {
+        <rh-conges-cards-section
+          [items]="rows()" [loading]="loading()" [skeletonCount]="pageSize()"
+          [emptyMessage]="emptyMessage()" [showFiledBy]="true"
+          (open)="openDetail($event)" />
+      } @else {
+        <rh-conges-table-section
+          [items]="rows()" [loading]="loading()" [skeletonRows]="pageSize()"
+          [emptyMessage]="emptyMessage()" [showFiledBy]="true" [busy]="working()"
+          [sortKey]="sortKey()" [sortDir]="sortDir()"
+          (open)="openDetail($event)" (sortChange)="onSort($event)" />
+      }
 
-            <daf-form-field
-              [options]="{ label: ('CONGES.SETTLE.FROM' | translate), type: 'date', required: true, fullWidth: true,
-                           error: showErrors() && !dateDebut() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
-              [value]="dateDebut()"
-              (valueChange)="dateDebut.set(str($event))" />
+      @if (totalPages() > 0) {
+        <daf-pagination
+          [currentPage]="currentPage()" [totalPages]="totalPages()"
+          [totalElements]="totalElements()" [pageSize]="pageSize()"
+          [pageSizeOptions]="pageSizeOptions"
+          [perPageLabel]="'PROFILES.LIST.PER_PAGE' | translate"
+          [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
+          (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" />
+      }
 
-            <!-- Only a multi-day request has an end date; the others ARE one day, and
-                 offering a second date would invite a range the server would collapse. -->
-            @if (isRange()) {
-              <daf-form-field
-                [options]="{ label: ('CONGES.SETTLE.TO' | translate), type: 'date', required: true, fullWidth: true,
-                             error: showErrors() && !dateFin() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
-                [value]="dateFin()"
-                (valueChange)="dateFin.set(str($event))" />
-            }
+      <!-- Same body as the queue's consult modal. -->
+      <ng-template #detailTpl>
+        <rh-conge-detail [row]="detailRow()" />
+      </ng-template>
 
-            @if (approverOptions().length > 0) {
+      <!-- ── The régularisation form, opened from the page header ──────────── -->
+      <ng-template #formTpl>
+        <div class="flex flex-col gap-4">
+
+          <daf-select
+            [options]="employeeOptions()"
+            [selected]="sel(employeeId())"
+            [config]="{ label: ('CONGES.SETTLE.EMPLOYEE' | translate), required: true, fullWidth: true,
+                        searchable: true,
+                        placeholder: ('CONGES.SETTLE.EMPLOYEE_PLACEHOLDER' | translate),
+                        error: showErrors() && !employeeId() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
+            (selectedChange)="onEmployee($event[0])" />
+
+          @if (!employeeId()) {
+            <p class="text-body-sm text-on-surface-variant">
+              {{ 'CONGES.SETTLE.PICK_EMPLOYEE_FIRST' | translate }}
+            </p>
+          }
+
+          @if (employeeId() && headers()) {
+            <!-- Balances first: they are what the decision is made against. -->
+            <div class="flex flex-wrap gap-3">
+              @for (b of balanceCards(); track b.key) {
+                <div class="flex flex-1 basis-32 flex-col gap-0.5 rounded-xl bg-surface-container-low px-4 py-2.5">
+                  <span class="text-body-sm text-on-surface-variant">{{ b.label }}</span>
+                  <span class="text-headline-sm font-semibold tabular-nums">{{ b.value }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <daf-select
-                [options]="approverOptions()"
-                [selected]="sel(responsableId())"
-                [config]="{ label: ('CONGES.SETTLE.APPROVER' | translate), required: true, fullWidth: true,
-                            disabled: autoAssigned(),
-                            hint: autoAssigned() ? ('CONGES.SETTLE.APPROVER_AUTO' | translate) : '',
-                            error: showErrors() && !responsableId() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
-                (selectedChange)="responsableId.set(str($event[0]))" />
+                [options]="typeOptions()"
+                [selected]="sel(formType())"
+                [config]="{ label: ('CONGES.SETTLE.TYPE' | translate), required: true, fullWidth: true,
+                            searchable: true,
+                            error: showErrors() && !formType() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
+                (selectedChange)="onType($event[0])" />
+
+              <daf-select
+                [options]="categoryOptions()"
+                [selected]="sel(category())"
+                [config]="{ label: ('CONGES.SETTLE.CATEGORY' | translate), required: true, fullWidth: true }"
+                (selectedChange)="onCategory($event[0])" />
+
+              <!-- ONE picker, not two date inputs.
+                   selectionMode follows the category: a multi-day congé picks a range, every
+                   other category IS one day and a second field would invite a range the server
+                   would collapse anyway. It also renders that employee's own holidays and
+                   weekend rules from /headers, so the calendar greys out the days the server
+                   will not charge for — the native input could show none of that. -->
+              <daf-multi-date-picker
+                class="sm:col-span-2"
+                [config]="datePickerConfig()"
+                [value]="dateValue()"
+                (valueChange)="onDateChange($event)" />
+
+              @if (approverOptions().length > 0) {
+                <daf-select
+                  [options]="approverOptions()"
+                  [selected]="sel(responsableId())"
+                  [config]="{ label: ('CONGES.SETTLE.APPROVER' | translate), required: true, fullWidth: true,
+                              disabled: autoAssigned(),
+                              hint: autoAssigned() ? ('CONGES.SETTLE.APPROVER_AUTO' | translate) : '',
+                              error: showErrors() && !responsableId() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
+                  (selectedChange)="responsableId.set(str($event[0]))" />
+              }
+            </div>
+
+            <!-- The type names approver roles, but nobody above this employee holds one.
+                 Reported rather than papered over: filing against the wrong approver would
+                 put the request in a queue its owner cannot act on. -->
+            @if (noEligibleApprover()) {
+              <p class="rounded-lg bg-warning/10 px-3 py-2 text-body-sm">
+                {{ 'CONGES.SETTLE.NO_APPROVER' | translate }}
+              </p>
             }
-          </div>
 
-          <!-- The type names approver roles, but nobody above this employee holds one.
-               Reported rather than papered over: filing against the wrong approver would
-               put the request in a queue its owner cannot act on. -->
-          @if (noEligibleApprover()) {
-            <p class="cs-warn">{{ 'CONGES.SETTLE.NO_APPROVER' | translate }}</p>
-          }
-
-          @if (selectedType(); as t) {
-            @if (t.maxDays != null) {
-              <p class="cs-hint">{{ 'CONGES.SETTLE.MAX_DAYS' | translate: { days: t.maxDays } }}</p>
+            @if (selectedType(); as t) {
+              @if (t.maxDays != null) {
+                <p class="text-body-sm text-on-surface-variant">
+                  {{ 'CONGES.SETTLE.MAX_DAYS' | translate: { days: t.maxDays } }}
+                </p>
+              }
             }
-          }
 
-          <div class="cs-grid">
             <daf-toggle
               [checked]="justificatif()"
               [options]="{ label: ('CONGES.SETTLE.JUSTIFICATIF' | translate) }"
               (checkedChange)="justificatif.set($event)" />
-          </div>
 
-          @if (justificationMissing()) {
-            <p class="cs-warn">{{ 'CONGES.SETTLE.JUSTIFICATION_REQUIRED' | translate }}</p>
+            @if (justificationMissing()) {
+              <p class="rounded-lg bg-warning/10 px-3 py-2 text-body-sm">
+                {{ 'CONGES.SETTLE.JUSTIFICATION_REQUIRED' | translate }}
+              </p>
+            }
+
+            <daf-form-field
+              [options]="{ label: ('CONGES.SETTLE.REASON' | translate), type: 'textarea', rows: 3,
+                           required: true, fullWidth: true,
+                           hint: ('CONGES.SETTLE.REASON_HINT' | translate),
+                           error: showErrors() && !reason().trim() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
+              [value]="reason()"
+              (valueChange)="reason.set(str($event) ?? '')" />
           }
-
-          <daf-form-field
-            [options]="{ label: ('CONGES.SETTLE.REASON' | translate), type: 'textarea', rows: 3, required: true, fullWidth: true,
-                         hint: ('CONGES.SETTLE.REASON_HINT' | translate),
-                         error: showErrors() && !reason().trim() ? ('CONGES.SETTLE.REQUIRED' | translate) : '' }"
-            [value]="reason()"
-            (valueChange)="reason.set(str($event) ?? '')" />
-
-          <div class="cs-submit">
-            <daf-button
-              [options]="{ label: ('CONGES.SETTLE.RESET' | translate), variant: 'ghost', disabled: working() }"
-              (onClick)="resetForm()" />
-            <daf-button
-              [options]="{ label: ('CONGES.SETTLE.SUBMIT' | translate), variant: 'primary', iconStart: 'post_add', disabled: working() }"
-              (onClick)="submit()" />
-          </div>
-        }
-      </section>
-
-      <!-- ── What has already been filed ──────────────────────────────────── -->
-      <h3 class="cs-section">{{ 'CONGES.SETTLE.HISTORY' | translate }}</h3>
-
-      <div class="cs-filters">
-        <daf-select
-          [options]="etatOptions()"
-          [selected]="sel(etat())"
-          [config]="{ label: ('CONGES.FILTER.ETAT' | translate), placeholder: ('CONGES.FILTER.ALL' | translate), fullWidth: true }"
-          (selectedChange)="onEtat($event[0])" />
-
-        <daf-form-field
-          [options]="{ label: ('CONGES.FILTER.FROM' | translate), type: 'date', fullWidth: true }"
-          [value]="filterFrom()"
-          (valueChange)="filterFrom.set(str($event)); reload()" />
-
-        <daf-form-field
-          [options]="{ label: ('CONGES.FILTER.TO' | translate), type: 'date', fullWidth: true }"
-          [value]="filterTo()"
-          (valueChange)="filterTo.set(str($event)); reload()" />
-
-        <!-- Off by default: the screen opens on what THIS person filed. Everyone's is an
-             audit view, and one someone should have to ask for. -->
-        <daf-toggle
-          [checked]="!mineOnly()"
-          [options]="{ label: ('CONGES.SETTLE.ALL_FILERS' | translate) }"
-          (checkedChange)="onScope($event)" />
-      </div>
-
-      <daf-data-table
-        [columns]="columns()"
-        [rows]="tableRows()"
-        [config]="tableConfig()" />
-
-      @if (totalPages() > 1) {
-        <div class="cs-pager">
-          <daf-button
-            [options]="{ label: ('CONGES.PREV' | translate), variant: 'ghost', iconStart: 'chevron_left', disabled: page() === 0 }"
-            (onClick)="goto(page() - 1)" />
-          <span class="cs-pager-info">{{ page() + 1 }} / {{ totalPages() }}</span>
-          <daf-button
-            [options]="{ label: ('CONGES.NEXT' | translate), variant: 'ghost', iconStart: 'chevron_right', disabled: page() + 1 >= totalPages() }"
-            (onClick)="goto(page() + 1)" />
         </div>
-      }
+      </ng-template>
+
     </daf-page>
   `,
-  styles: [`
-    .cs-form { margin-bottom: 28px; padding: 18px; border-radius: 12px;
-               background: var(--color-surface-container-low); }
-
-    .cs-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-top: 14px; }
-    @media (max-width: 720px) { .cs-grid { grid-template-columns: 1fr; } }
-
-    .cs-balances { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
-    .cs-balance { flex: 1 1 140px; padding: 10px 14px; border-radius: 10px;
-                  background: var(--color-surface); display: flex; flex-direction: column; gap: 2px; }
-    .cs-balance-label { font-size: .75rem; color: var(--color-on-surface-variant); }
-    .cs-balance-value { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-    .cs-hint { margin: 10px 0 0; font-size: .8125rem; color: var(--color-on-surface-variant); }
-    .cs-warn { margin: 10px 0 0; font-size: .8125rem; padding: 8px 12px; border-radius: 8px;
-               background: color-mix(in srgb, var(--color-warning) 14%, transparent);
-               color: var(--color-on-surface); }
-
-    .cs-submit { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-
-    .cs-section { margin: 0 0 12px; font-size: 1rem; font-weight: 600; }
-
-    .cs-filters { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)) auto; gap: 12px;
-                  align-items: end; margin-bottom: 18px; }
-    @media (max-width: 900px) { .cs-filters { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 560px) { .cs-filters { grid-template-columns: 1fr; } }
-
-    .cs-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
-    .cs-pager-info { font-variant-numeric: tabular-nums; color: var(--color-on-surface-variant); font-size: .875rem; }
-  `],
 })
-export class CongeSettleComponent implements OnInit {
-  private readonly svc = inject(CongesService);
+export class CongeSettleComponent extends CongeListBase implements OnInit {
   private readonly profiles = inject(ProfileService);
   private readonly modal = inject(ModalService);
   private readonly notify = inject(NotificationService);
-  private readonly translate = inject(TranslateService);
+
+  private readonly formTpl = viewChild.required<TemplateRef<unknown>>('formTpl');
+  private readonly detailTpl = viewChild.required<TemplateRef<unknown>>('detailTpl');
+  private formRef: ModalRef | null = null;
+
+  /** The row the consult modal is about — see CongeInboxComponent for why it is a signal. */
+  readonly detailRow = signal<CongeRow | null>(null);
 
   // ── Form state ────────────────────────────────────────────────────────────
   readonly employees = signal<{ userId: number; fullName: string }[]>([]);
   readonly employeeId = signal<string | null>(null);
   readonly headers = signal<LeaveHeaders | null>(null);
 
-  readonly type = signal<string | null>(null);
+  /** Named `formType` so it cannot collide with the base class's list `type` filter. */
+  readonly formType = signal<string | null>(null);
   readonly category = signal<LeaveCategoryCode | null>('MULTIPLE_DAYS');
   readonly dateDebut = signal<string | null>(null);
   readonly dateFin = signal<string | null>(null);
@@ -270,18 +283,77 @@ export class CongeSettleComponent implements OnInit {
   readonly reason = signal('');
   readonly showErrors = signal(false);
 
-  // ── List state ────────────────────────────────────────────────────────────
-  readonly rows = signal<CongeRow[]>([]);
-  readonly loading = signal(false);
-  readonly working = signal(false);
-  readonly page = signal(0);
-  readonly totalPages = signal(0);
-  readonly etat = signal<DemandeEtat | null>(null);
-  readonly filterFrom = signal<string | null>(null);
-  readonly filterTo = signal<string | null>(null);
+  /** Off by default: the screen opens on what THIS person filed, not on an audit of everyone. */
   readonly mineOnly = signal(true);
 
-  // ── Derived ───────────────────────────────────────────────────────────────
+  protected fetch(filter: CongeFilter): Observable<CongePage> {
+    return this.svc.settled(
+      { ...filter, mine: this.mineOnly() }, this.translate.currentLang() ?? 'fr');
+  }
+  protected fetchCounts(): Observable<CongeCounts> {
+    return this.svc.settledCounts(this.mineOnly());
+  }
+  protected scopeKey(): string { return 'CONGES.SETTLE'; }
+
+  ngOnInit(): void {
+    this.loadEmployees();
+    this.loadTypes();
+    this.refreshAll();
+  }
+
+  // ── Toolbar ───────────────────────────────────────────────────────────────
+
+  readonly toolbarActions = computed<ToolbarAction[]>(() => {
+    this.translate.currentLang();
+    // "Nouvelle régularisation" is NOT here — it sits in the page header, beside the title.
+    // The toolbar holds what narrows the list; the header holds what creates a record.
+    return [
+      {
+        // A toggle rather than a filter field: it changes WHOSE records are listed, which is
+        // a different question from which of them to show.
+        id: 'scope',
+        label: this.translate.instant(
+          this.mineOnly() ? 'CONGES.SETTLE.SHOW_ALL' : 'CONGES.SETTLE.SHOW_MINE'),
+        icon: this.mineOnly() ? 'groups' : 'person',
+        position: 'right',
+      },
+    ];
+  });
+
+  onToolbarAction(id: string): void {
+    if (id === 'scope') {
+      this.mineOnly.update((v) => !v);
+      this.currentPage.set(0);
+      this.refreshAll();
+    }
+  }
+
+  // ── The form ──────────────────────────────────────────────────────────────
+
+  /** Bound in the template's page-header slot, so public rather than private. */
+  openForm(): void {
+    this.resetForm();
+    this.employeeId.set(null);
+    this.headers.set(null);
+    this.formRef = this.modal.open({
+      title: this.translate.instant('CONGES.SETTLE.NEW'),
+      subtitle: this.translate.instant('CONGES.SETTLE.NEW_SUB'),
+      body: this.formTpl(),
+      size: 'lg',
+      closeOnBackdrop: false,
+      buttons: [
+        { label: this.translate.instant('CONGES.CANCEL'), variant: 'secondary', action: (r) => r.close() },
+        {
+          label: this.translate.instant('CONGES.SETTLE.SUBMIT'),
+          variant: 'primary',
+          icon: 'post_add',
+          // Does NOT close on its own: the submit validates, and a modal that vanished before
+          // the server answered would hide the very error the user has to act on.
+          action: () => this.submit(),
+        },
+      ],
+    });
+  }
 
   readonly employeeOptions = computed<SelectOption[]>(() =>
     this.employees().map((e) => ({ value: String(e.userId), label: e.fullName })));
@@ -293,7 +365,7 @@ export class CongeSettleComponent implements OnInit {
     (this.headers()?.categories ?? []).map((c) => ({ value: c.value, label: c.label })));
 
   readonly selectedType = computed<LeaveTypeOption | null>(() =>
-    (this.headers()?.types ?? []).find((t) => t.code === this.type()) ?? null);
+    (this.headers()?.types ?? []).find((t) => t.code === this.formType()) ?? null);
 
   /**
    * Who may approve THIS type for THIS employee.
@@ -314,10 +386,63 @@ export class CongeSettleComponent implements OnInit {
   });
 
   /** One configured approver means there is nothing to ask — the field shows it, locked. */
-  readonly autoAssigned = computed(() => (this.selectedType()?.autoAssign ?? false)
-    && this.approverOptions().length === 1);
+  readonly autoAssigned = computed(() =>
+    (this.selectedType()?.autoAssign ?? false) && this.approverOptions().length === 1);
 
   readonly isRange = computed(() => this.category() === 'MULTIPLE_DAYS');
+
+  /**
+   * The calendar's own configuration, rebuilt when the category or the employee changes.
+   *
+   * `holidays` and the weekend rules come from THIS employee's `/headers` payload, so an
+   * Egyptian employee's Friday/Saturday is greyed out rather than Tunisia's Saturday/Sunday —
+   * the server has always costed it that way and the picker now agrees.
+   *
+   * `allowPastDays` is TRUE and that is the point of the screen: a régularisation records
+   * leave already taken, so a picker that refused past dates would refuse every real case.
+   */
+  readonly datePickerConfig = computed(() => {
+    this.translate.currentLang();
+    const h = this.headers();
+    return {
+      label: this.translate.instant(this.isRange() ? 'CONGES.SETTLE.PERIOD' : 'CONGES.SETTLE.DATE'),
+      placeholder: this.translate.instant('CONGES.SETTLE.PICK_DATE'),
+      selectionMode: (this.isRange() ? 'range' : 'single') as 'range' | 'single',
+      required: true,
+      fullWidth: true,
+      allowPastDays: true,
+      holidays: h?.holidays ?? {},
+      maxDays: this.selectedType()?.maxDays ?? undefined,
+      error: this.showErrors() && !this.dateDebut()
+        ? this.translate.instant('CONGES.SETTLE.REQUIRED') : '',
+    };
+  });
+
+  /** The picker's value, rebuilt from the two ISO signals the payload is actually built from. */
+  readonly dateValue = computed<Date | Date[] | null>(() => {
+    const from = this.dateDebut();
+    if (!from) return null;
+    if (!this.isRange()) return this.parseIso(from);
+    const to = this.dateFin();
+    return to ? [this.parseIso(from), this.parseIso(to)] : [this.parseIso(from)];
+  });
+
+  /**
+   * Back to the two ISO signals. A range mid-selection emits a one-element array, which is a
+   * start with no end yet — stored as the start, with `dateFin` left null so the submit guard
+   * still catches an unfinished range.
+   */
+  onDateChange(v: Date | Date[] | null): void {
+    if (v == null) { this.dateDebut.set(null); this.dateFin.set(null); return; }
+    if (Array.isArray(v)) {
+      this.dateDebut.set(v[0] ? this.toIso(v[0]) : null);
+      this.dateFin.set(v[1] ? this.toIso(v[1]) : null);
+    } else {
+      this.dateDebut.set(this.toIso(v));
+      this.dateFin.set(null);
+    }
+  }
+
 
   readonly justificationMissing = computed(() =>
     (this.selectedType()?.requiresJustification ?? false) && !this.justificatif());
@@ -326,116 +451,13 @@ export class CongeSettleComponent implements OnInit {
   readonly balanceCards = computed(() => {
     this.translate.currentLang();
     const b = this.headers()?.balances;
-    const fmt = (v: number | null | undefined) => (v == null ? '—' : String(v));
+    const loc = localeOf(this.translate.currentLang());
     return [
-      { key: 'CONGE',      label: this.translate.instant('CONGES.BALANCE.CONGE'),      value: fmt(b?.soldeConge) },
-      { key: 'MALADIE',    label: this.translate.instant('CONGES.BALANCE.MALADIE'),    value: fmt(b?.soldeMaladie) },
-      { key: 'TELETRAVAIL', label: this.translate.instant('CONGES.BALANCE.TELETRAVAIL'), value: fmt(b?.soldeTeletravail) },
+      { key: 'CONGE', label: this.translate.instant('CONGES.BALANCE.CONGE'), value: formatDays(b?.soldeConge, loc) },
+      { key: 'MALADIE', label: this.translate.instant('CONGES.BALANCE.MALADIE'), value: formatDays(b?.soldeMaladie, loc) },
+      { key: 'TELETRAVAIL', label: this.translate.instant('CONGES.BALANCE.TELETRAVAIL'), value: formatDays(b?.soldeTeletravail, loc) },
     ];
   });
-
-  readonly etatOptions = computed<SelectOption[]>(() => {
-    this.translate.currentLang();
-    return ETATS.map((e) => ({ value: e.value, label: this.translate.instant(e.labelKey) }));
-  });
-
-  readonly columns = computed<TableColumn[]>(() => {
-    this.translate.currentLang();
-    return [
-      { key: 'collaborateurName', label: this.translate.instant('CONGES.COL.EMPLOYEE'), sortable: true },
-      { key: 'typeLabel',         label: this.translate.instant('CONGES.COL.TYPE') },
-      { key: 'periode',           label: this.translate.instant('CONGES.COL.PERIOD') },
-      { key: 'totalJours',        label: this.translate.instant('CONGES.COL.DAYS'), type: 'number', align: 'right',
-        format: { maximumFractionDigits: 1 } },
-      { key: 'etatBadge',         label: this.translate.instant('CONGES.COL.STATE'), type: 'badge' },
-      // The point of this list: who filed it. Only meaningful once the scope is widened,
-      // but kept always so the column set does not shift under the reader.
-      { key: 'createdByName',     label: this.translate.instant('CONGES.COL.FILED_BY') },
-      { key: 'createdAt',         label: this.translate.instant('CONGES.COL.SUBMITTED'), type: 'date',
-        format: { dateStyle: 'short' }, sortable: true },
-    ];
-  });
-
-  readonly tableConfig = computed<TableConfig>(() => {
-    this.translate.currentLang();
-    return {
-      hoverable: true,
-      loading: this.loading(),
-      emptyMessage: this.translate.instant('CONGES.SETTLE.EMPTY'),
-      manualSort: true,
-    };
-  });
-
-  readonly tableRows = computed<TableRow[]>(() =>
-    this.rows().map((r) => ({
-      ...r,
-      periode: r.dateDebut === r.dateFin
-        ? this.fmt(r.dateDebut)
-        : `${this.fmt(r.dateDebut)} → ${this.fmt(r.dateFin)}`,
-      etatBadge: this.badge(r.etatDemande),
-      createdByName: r.createdByName ?? '—',
-    })));
-
-  ngOnInit(): void {
-    this.loadEmployees();
-    this.reload();
-  }
-
-  // ── Loading ───────────────────────────────────────────────────────────────
-
-  /**
-   * The employee directory for the picker.
-   *
-   * One page of 500 rather than a paged picker: the company is in the hundreds, and a
-   * régularisation is typed against a name the user already knows, so searching inside the
-   * select beats paging through a list.
-   */
-  private loadEmployees(): void {
-    // listAllEmployees, not the profile list: it INCLUDES users with no employee profile,
-    // and a régularisation is filed for a person, not for a completed HR file.
-    this.profiles.listAllEmployees({}, 0, 500).subscribe({
-      next: (p) => this.employees.set(
-        (p.content ?? []).map((e) => ({ userId: e.userId, fullName: e.fullName }))),
-      error: () => this.notify.warning(this.translate.instant('CONGES.SETTLE.ERR_EMPLOYEES')),
-    });
-  }
-
-  reload(): void {
-    this.loading.set(true);
-    this.svc.settled({
-      mine: this.mineOnly(),
-      etat: this.etat(), from: this.filterFrom(), to: this.filterTo(),
-      page: this.page(), size: 20,
-    }, this.translate.currentLang() ?? 'fr').subscribe({
-      next: (p) => {
-        this.rows.set(p.content ?? []);
-        this.totalPages.set(p.totalPages ?? 0);
-        this.loading.set(false);
-      },
-      // Not swallowed into an empty table: "none filed" and "the call failed" must not look
-      // the same to someone checking whether a correction went in.
-      error: () => {
-        this.rows.set([]); this.totalPages.set(0); this.loading.set(false);
-        this.notify.error(this.translate.instant('CONGES.SETTLE.ERR_LOAD'));
-      },
-    });
-  }
-
-  goto(p: number): void { this.page.set(Math.max(0, p)); this.reload(); }
-
-  onEtat(v: unknown): void {
-    this.etat.set((v == null || v === '' ? null : String(v)) as DemandeEtat | null);
-    this.page.set(0);
-    this.reload();
-  }
-
-  onScope(allFilers: boolean): void {
-    this.mineOnly.set(!allFilers);
-    this.page.set(0);
-    this.reload();
-  }
-
-  // ── The form ──────────────────────────────────────────────────────────────
 
   /**
    * Choosing an employee reloads everything downstream.
@@ -448,7 +470,7 @@ export class CongeSettleComponent implements OnInit {
     const id = this.str(v);
     this.employeeId.set(id);
     this.headers.set(null);
-    this.type.set(null);
+    this.formType.set(null);
     this.responsableId.set(null);
     this.showErrors.set(false);
     if (!id) return;
@@ -460,11 +482,11 @@ export class CongeSettleComponent implements OnInit {
   }
 
   onType(v: unknown): void {
-    this.type.set(this.str(v));
+    this.formType.set(this.str(v));
     // A type with exactly one configured approver has nothing to ask about, so the field is
     // filled and locked rather than presented as a choice of one.
     const opts = this.approverOptions();
-    this.responsableId.set(this.autoAssigned() && opts.length === 1 ? opts[0].value as string : null);
+    this.responsableId.set(this.autoAssigned() && opts.length === 1 ? String(opts[0].value) : null);
   }
 
   onCategory(v: unknown): void {
@@ -473,10 +495,10 @@ export class CongeSettleComponent implements OnInit {
     if (!this.isRange()) this.dateFin.set(null);
   }
 
-  submit(): void {
+  private submit(): void {
     this.showErrors.set(true);
 
-    if (!this.employeeId() || !this.type() || !this.category() || !this.dateDebut()
+    if (!this.employeeId() || !this.formType() || !this.category() || !this.dateDebut()
         || !this.responsableId() || !this.reason().trim()
         || (this.isRange() && !this.dateFin())) {
       this.notify.warning(this.translate.instant('CONGES.SETTLE.INCOMPLETE'));
@@ -488,7 +510,7 @@ export class CongeSettleComponent implements OnInit {
     }
 
     const body: SettleRequest = {
-      type: this.type()!,
+      type: this.formType()!,
       category: this.category()!,
       dateDebut: this.dateDebut()!,
       dateFin: this.isRange() ? this.dateFin() : null,
@@ -501,32 +523,23 @@ export class CongeSettleComponent implements OnInit {
     this.svc.settle(Number(this.employeeId()), body, this.translate.currentLang() ?? 'fr').subscribe({
       next: () => {
         this.working.set(false);
+        this.formRef?.close();
+        this.formRef = null;
         this.notify.success(this.translate.instant('CONGES.SETTLE.CREATED'));
-        this.resetForm();
-        this.page.set(0);
-        this.reload();
+        this.currentPage.set(0);
+        this.refreshAll();
       },
       error: (e) => {
         this.working.set(false);
         // rh-service names the rule that blocked it — an overlap, a cap, a spent balance.
-        // Shown in a modal rather than a toast: it is the answer to what was just attempted,
-        // and it should not disappear on a timer while being read.
-        this.modal.open({
-          title: this.translate.instant('CONGES.ERROR'),
-          subtitle: e?.error?.message ?? this.translate.instant('CONGES.SETTLE.ERR_CREATE'),
-          size: 'sm',
-          buttons: [{
-            label: this.translate.instant('CONGES.CLOSE'), variant: 'secondary',
-            action: (r) => r.close(),
-          }],
-        });
+        // The modal stays open so the form can be corrected rather than retyped.
+        this.notify.error(errorMessage(e, this.translate.instant('CONGES.SETTLE.ERR_CREATE')));
       },
     });
   }
 
-  /** Keeps the chosen employee: filing two corrections for one person is the common case. */
-  resetForm(): void {
-    this.type.set(null);
+  private resetForm(): void {
+    this.formType.set(null);
     this.category.set('MULTIPLE_DAYS');
     this.dateDebut.set(null);
     this.dateFin.set(null);
@@ -536,21 +549,36 @@ export class CongeSettleComponent implements OnInit {
     this.showErrors.set(false);
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Data ──────────────────────────────────────────────────────────────────
 
-  /** BadgeCell is { label, options } — the variant lives inside options, not beside it. */
-  private badge(etat: DemandeEtat): { label: string; options: { variant: BadgeVariant } } {
-    const map: Record<DemandeEtat, BadgeVariant> = {
-      EN_ATTENTE: 'warning', VALIDE: 'success', REFUSE: 'danger', ARCHIVE: 'neutral',
-    };
-    return { label: this.translate.instant('CONGES.ETAT.' + etat), options: { variant: map[etat] } };
+  /**
+   * The employee directory for the picker.
+   *
+   * `listAllEmployees`, not the profile list: it INCLUDES users with no employee profile, and
+   * a régularisation is filed for a person, not for a completed HR file. One page of 500
+   * rather than a paged picker — the company is in the hundreds and the select searches.
+   */
+  private loadEmployees(): void {
+    this.profiles.listAllEmployees({}, 0, 500).subscribe({
+      next: (p) => this.employees.set(
+        (p.content ?? []).map((e) => ({ userId: e.userId, fullName: e.fullName }))),
+      error: () => this.notify.warning(this.translate.instant('CONGES.SETTLE.ERR_EMPLOYEES')),
+    });
   }
 
-  private fmt(iso: string): string {
-    // Split rather than new Date(): an ISO date parsed as UTC then rendered locally can show
-    // the previous day, which is the exact class of bug this module just moved away from.
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
+  openDetail(row: CongeRow): void {
+    this.detailRow.set(row);
+    this.modal.open({
+      title: this.translate.instant('CONGES.DETAIL.TITLE'),
+      subtitle: this.translate.instant('CONGES.DETAIL.SUBTITLE'),
+      icon: 'beach_access',
+      body: this.detailTpl(),
+      size: 'md',
+      buttons: [{
+        label: this.translate.instant('CONGES.CLOSE'), variant: 'secondary',
+        action: (r) => r.close(),
+      }],
+    });
   }
 
   protected sel(v: string | null): string[] { return v == null ? [] : [v]; }

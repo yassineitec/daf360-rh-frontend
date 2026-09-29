@@ -29,6 +29,13 @@ export interface CongeRow {
   id: number;
   collaborateurId: number;
   collaborateurName: string | null;
+  /**
+   * The three inputs `getAvatarUrl` needs. All null for a user with no employee profile —
+   * a real case, and the reason the avatar falls back to initials rather than a broken image.
+   */
+  collaborateurProfileId: number | null;
+  collaborateurPhotoUrl: string | null;
+  collaborateurGender: string | null;
   responsableId: number | null;
   responsableName: string | null;
   paysId: number | null;
@@ -170,9 +177,21 @@ export interface CongeFilter {
   to?: string | null;
   collaborateurId?: number | null;
   paysId?: number | null;
+  /** Matches the employee's name or the request's reason, server-side. */
+  search?: string | null;
+  /**
+   * Server-side sort. The key must be one of `LeaveRequestController.SORTABLE` — anything
+   * else is ignored by the server and falls back to that endpoint's default, rather than
+   * erroring, so a stale key degrades instead of breaking the page.
+   */
+  sort?: string | null;
+  dir?: 'asc' | 'desc' | null;
   page?: number;
   size?: number;
 }
+
+/** Counts per state, zero-filled by the server so the KPI row never loses a tile. */
+export type CongeCounts = Record<DemandeEtat, number>;
 
 export interface LeaveBalances {
   /** Nullable throughout: "not recorded" is not "none left". 135 of 260 users have no congé balance. */
