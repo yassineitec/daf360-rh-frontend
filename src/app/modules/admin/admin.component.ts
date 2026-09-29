@@ -24,6 +24,7 @@ import { InterviewTypesAdminComponent }      from './interview-types-admin.compo
 import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.component';
 import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
 import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
+import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -108,6 +109,11 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // every employee folder on the HR SharePoint site, which is a different capability from
   // editing roles even though the same people hold both today.
   { key: 'sharepoint',            labelKey: 'ADMIN.shell.tabs.sharepoint',          permission: 'ADMIN_SHAREPOINT',           icon: 'folder_shared',         tone: 'primary' },
+  // The leave-type catalogue: what a congé IS, as opposed to the congés themselves, which
+  // live under /rh/conges. It belongs with the other configurable lists and not in its own
+  // nav group — someone adding a leave type is doing the same thing as someone adding a
+  // holiday or a request type, and looks in the same place for it.
+  { key: 'absence-types',         labelKey: 'ADMIN.shell.tabs.absenceTypes',        permission: 'CREATE_ABSENCE_TYPE',        icon: 'beach_access',          tone: 'teal' },
 ];
 
 @Component({
@@ -132,6 +138,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     OffboardingCatalogAdminComponent,
     DocumentTemplatesAdminComponent,
     SharePointAdminComponent,
+    AbsenceTypesAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -199,6 +206,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             @if (activeTab() === 'offboarding-catalog')  { <app-offboarding-catalog-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'document-templates')   { <app-document-templates-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'sharepoint')            { <app-sharepoint-admin [paysId]="paysId()" /> }
+            <!-- No [paysId]: the leave-type catalogue is company-wide, not per-country. -->
+            @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
           </daf-page>
         </div>
       }

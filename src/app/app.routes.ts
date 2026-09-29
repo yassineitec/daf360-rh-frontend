@@ -147,6 +147,24 @@ export const routes: Routes = [
           import('./modules/requests/requests.routes').then(m => m.REQUESTS_ROUTES),
       },
       {
+        /**
+         * Congés — moved here from the timesheet application (2026-09-28).
+         *
+         * Separate from `requests` on purpose: those are `employee_requests`, whose whole
+         * payload is a free-text comment. A congé has structured dates, is approved by the
+         * employee's responsable rather than an HR officer, and debits a balance on approval.
+         * Sharing a route tree would have implied a shared model they do not have.
+         *
+         * The employee's own request form is NOT here — it is a card on the shell's
+         * self-service page, which is where employees look for things they do.
+         */
+        path: 'conges',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        loadChildren: () =>
+          import('./modules/conges/conges.routes').then(m => m.CONGES_ROUTES),
+      },
+      {
         path: 'recruitment-demands',
         canActivate: [permissionGuard],
         data: { permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'] },
@@ -156,7 +174,9 @@ export const routes: Routes = [
       {
         path: 'admin',
         canActivate: [permissionGuard],
-        data: { permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS'] },
+        // CREATE_ABSENCE_TYPE: the leave-type catalogue is an Administration tab, so whoever
+        // may configure it must be able to reach this page even holding no other admin code.
+        data: { permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE'] },
         loadChildren: () =>
           import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),
       },

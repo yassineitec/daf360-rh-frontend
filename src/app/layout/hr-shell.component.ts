@@ -126,6 +126,53 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'billeterie',
     permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
   },
+  // Congés — un groupe et non une entrée simple, parce que les trois écrans répondent à
+  // trois questions différentes (ce que je dois traiter / ce que mon équipe a pris / ce que
+  // le pays a pris) et se gagnent par trois permissions distinctes. Un responsable ne verra
+  // que « À traiter » : le groupe se réduit tout seul, `navItems` masquant les enfants sans
+  // droit.
+  //
+  // Deux écrans n'ont DÉLIBÉRÉMENT pas leur porte ici : la demande de l'employé, qui est une
+  // carte du self-service du shell, et le catalogue des types, qui est un onglet
+  // d'Administration avec les autres listes configurables.
+  {
+    id: 'conges',
+    labelKey: 'NAV.CONGES',
+    icon: 'beach_access',
+    permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
+    children: [
+      {
+        id: 'conges-inbox',
+        labelKey: 'NAV.CONGES_INBOX',
+        icon: 'inbox',
+        route: 'conges/inbox',
+        permissions: ['GET_LEAVES', 'RESPONSE_LEAVE'],
+      },
+      {
+        // Régularisations: filing a congé for someone else. Sits next to the queue because
+        // it is the other half of the same desk — what to do when nobody asked in time.
+        id: 'conges-settle',
+        labelKey: 'NAV.CONGES_SETTLE',
+        icon: 'sync',
+        route: 'conges/settle',
+        permissions: ['SETTLE_LEAVES'],
+      },
+      {
+        id: 'conges-team',
+        labelKey: 'NAV.CONGES_TEAM',
+        icon: 'groups',
+        route: 'conges/team',
+        permissions: ['GET_EMPLOYEES_LEAVES'],
+      },
+      {
+        id: 'conges-global',
+        labelKey: 'NAV.CONGES_GLOBAL',
+        icon: 'public',
+        route: 'conges/global',
+        permissions: ['GET_GLOBAL_LEAVES'],
+      },
+    ],
+  },
   {
     id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox',
     permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'],
