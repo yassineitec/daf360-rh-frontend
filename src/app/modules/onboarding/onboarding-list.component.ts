@@ -28,6 +28,16 @@ const STATUS_CODES: CandidateOnboardingStatus[] = ['EMAIL_RECEIVED', 'HR_IN_PROG
 
 type ViewMode = 'grid' | 'list';
 
+/** Draft filter: the wizard already started (a draft is saved) or not yet opened. */
+type DraftFilter = '' | 'WITH_DRAFT' | 'NO_DRAFT';
+const DRAFT_CODES: Exclude<DraftFilter, ''>[] = ['WITH_DRAFT', 'NO_DRAFT'];
+
+/** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /**
  * /rh/onboarding — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
@@ -73,6 +83,13 @@ export class OnboardingListComponent implements OnInit {
   readonly viewMode     = signal<ViewMode>('grid');
   readonly search       = signal('');
   readonly statusFilter = signal('');
+  readonly draftFilter  = signal<DraftFilter>('');
+  /** Expected-start-date range from the panel: one day or [from, to]; null = no bound. */
+  readonly startRange   = signal<Date[] | null>(null);
+  /** Entity id as a string ('' = all) — only offered when the list spans several entities. */
+  readonly entityFilter = signal('');
+  /** Only files whose expected start date is already past — the employee is waiting. */
+  readonly startPassedOnly = signal(false);
   readonly currentPage  = signal(0);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -80,13 +97,39 @@ export class OnboardingListComponent implements OnInit {
   readonly filteredItems = computed(() => {
     const term   = this.search().trim().toLowerCase();
     const status = this.statusFilter();
+    const draft  = this.draftFilter();
+    const entity = this.entityFilter();
+    const range  = this.startRange();
+    const from = range?.[0] ? toIsoDay(range[0]) : null;
+    const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
+    const today = toIsoDay(new Date());
+    const startPassedOnly = this.startPassedOnly();
     return this.items().filter(r => {
       const matchesTerm = !term
         || r.candidateFullName.toLowerCase().includes(term)
         || (r.ms365Email ?? '').toLowerCase().includes(term)
         || (r.appliedPosition ?? '').toLowerCase().includes(term);
-      return matchesTerm && (!status || r.candidateStatus === status);
+      // `expectedStartDate` is an ISO date, so string comparison is date order.
+      const start = r.expectedStartDate?.slice(0, 10) ?? null;
+      return matchesTerm
+        && (!status || r.candidateStatus === status)
+        && (!draft || (draft === 'WITH_DRAFT') === !!r.hasDraft)
+        && (!entity || String(r.paysId) === entity)
+        && (!from || (!!start && start >= from && start <= to!))
+        && (!startPassedOnly || (!!start && start < today));
     });
+  });
+
+  /** The entities present in the list; the filter is hidden when there is only one. */
+  private readonly entityOptions = computed(() => {
+    const byId = new Map<string, string>();
+    for (const r of this.items()) {
+      if (r.paysId != null && !byId.has(String(r.paysId))) {
+        byId.set(String(r.paysId), r.paysLabel || `#${r.paysId}`);
+      }
+    }
+    return [...byId].map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   });
 
   readonly totalElements = computed(() => this.filteredItems().length);
@@ -151,16 +194,47 @@ export class OnboardingListComponent implements OnInit {
   /** The status dropdown belongs *inside* the filter panel, not loose beside the search. */
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('ONBOARDING.LIST.COL_STATUS'),
-      type: 'select',
-      placeholder: this.translate.instant('ONBOARDING.LIST.FILTER_ALL'),
-      options: STATUS_CODES.map(code => ({
-        value: code,
-        label: this.translate.instant('CANDIDATES.STATUS.' + code),
-      })),
-    }];
+    const t = (k: string) => this.translate.instant(k);
+    const fields: FilterField[] = [
+      {
+        name: 'status',
+        label: t('ONBOARDING.LIST.COL_STATUS'),
+        type: 'select',
+        placeholder: t('ONBOARDING.LIST.FILTER_ALL'),
+        options: STATUS_CODES.map(code => ({
+          value: code,
+          label: t('CANDIDATES.STATUS.' + code),
+        })),
+      },
+      {
+        name: 'draft',
+        label: t('ONBOARDING.LIST.FILTERS.DRAFT'),
+        type: 'select',
+        placeholder: t('ONBOARDING.LIST.FILTERS.DRAFT_ANY'),
+        options: DRAFT_CODES.map(code => ({ value: code, label: t('ONBOARDING.LIST.FILTERS.' + code) })),
+      },
+      {
+        name: 'startDate',
+        label: t('ONBOARDING.LIST.COL_START'),
+        type: 'daterange',
+      },
+      {
+        name: 'startPassed',
+        label: t('ONBOARDING.LIST.FILTERS.START_PASSED'),
+        type: 'checkbox',
+      },
+    ];
+    if (this.entityOptions().length > 1) {
+      fields.push({
+        name: 'entity',
+        label: t('ONBOARDING.LIST.COL_ENTITY'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('ONBOARDING.LIST.FILTERS.ALL_ENTITIES'),
+        options: this.entityOptions(),
+      });
+    }
+    return fields;
   });
 
   /**
@@ -177,7 +251,13 @@ export class OnboardingListComponent implements OnInit {
       resetLabel:   t('ONBOARDING.LIST.FILTERS.RESET'),
       triggerLabel: t('ONBOARDING.LIST.FILTERS.TRIGGER'),
       align:        'right',
-      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+      initialValues: {
+        status:    this.statusFilter() ? [this.statusFilter()] : [],
+        draft:     this.draftFilter()  ? [this.draftFilter()]  : [],
+        startDate: this.startRange(),
+        entity:    this.entityFilter() ? [this.entityFilter()] : [],
+        startPassed: this.startPassedOnly(),
+      },
     };
   });
 
@@ -223,7 +303,13 @@ export class OnboardingListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    const range = result['startDate'];
+    this.statusFilter.set(str('status'));
+    this.draftFilter.set(str('draft') as DraftFilter);
+    this.startRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
+    this.entityFilter.set(str('entity'));
+    this.startPassedOnly.set(result['startPassed'] === true);
     this.currentPage.set(0);
   }
 

@@ -1,7 +1,7 @@
 import { Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
-import { ParameterSet }     from './models/admin.model';
+import { HOLIDAY_CALENDAR_CONFIG_KEY, ParameterSet } from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import {
   FormFieldComponent, ButtonComponent,
@@ -58,6 +58,10 @@ const PAGE_SIZE = 10;
     @else if (params().length === 0) {
       <div class="empty-state">
         <p>{{ 'ADMIN.data.parameters.EMPTY' | translate }}</p>
+        @if (hasHiddenCalendarConfig()) {
+          <!-- The backend seed skips any pays holding at least one row — including this hidden one. -->
+          <p class="seed-blocked">{{ 'ADMIN.data.parameters.SEED_BLOCKED_BY_CALENDAR' | translate }}</p>
+        }
         <daf-button [label]="'ADMIN.data.parameters.INIT_DEFAULT_VALUES' | translate" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
@@ -154,6 +158,7 @@ const PAGE_SIZE = 10;
     .date-cell       { font-size:11px;color:var(--color-text-muted);white-space:nowrap }
     .empty-state     { text-align:center;padding:36px;color:var(--color-text-muted);display:flex;flex-direction:column;align-items:center;gap:12px }
     .empty-state p   { margin:0;font-size:13px }
+    .empty-state .seed-blocked { max-width:520px;font-size:12px;color:#92400e }
     .modal-form      { display:flex;flex-direction:column;gap:14px }
     .pagination-row  { display:flex;justify-content:flex-end;padding:10px 0 }
     .error-banner { margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--color-error-container);color:var(--color-on-error-container);font-size:12px }
@@ -172,6 +177,8 @@ export class ParametersAdminComponent implements OnChanges {
   loading  = signal(false);
   seeding  = signal(false);
   params   = signal<ParameterSet[]>([]);
+  /** The pays holds a HOLIDAY_CALENDAR_CONFIG row, filtered out of `params` above. */
+  hasHiddenCalendarConfig = signal(false);
   error    = signal<string | null>(null);
 
   editingId = signal<number | null>(null);
@@ -261,7 +268,11 @@ export class ParametersAdminComponent implements OnChanges {
     this.loading.set(true);
     this.currentPage.set(0);
     this.svc.listParameters(this.paysId()).pipe(catchError(() => of([]))).subscribe(ps => {
-      this.params.set(ps);
+      // The holiday calendar's display settings share this table but are edited from the
+      // "Jours fériés" page (HolidayCalendarConfigService) — keep them out of payroll.
+      const isCalendarConfig = (p: ParameterSet) => p.cle?.toUpperCase() === HOLIDAY_CALENDAR_CONFIG_KEY;
+      this.params.set(ps.filter(p => !isCalendarConfig(p)));
+      this.hasHiddenCalendarConfig.set(ps.some(isCalendarConfig));
       this.loading.set(false);
     });
   }

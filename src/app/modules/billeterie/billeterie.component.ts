@@ -23,7 +23,9 @@ import {
   Mission, MissionChangeRequest, MissionExpensePayload,
 } from '../missions/mission.model';
 import { MissionDetailDrawerComponent } from '../missions/mission-detail-drawer.component';
-import { errorMessage, isLate } from '../missions/mission-display';
+import {
+  countryOptions, employeeOptions, errorMessage, isLate, matchesPeriod,
+} from '../missions/mission-display';
 import { MissionExpenseModalComponent } from './mission-expense-modal.component';
 import { MissionDecision, MissionDecisionModalComponent } from './mission-decision-modal.component';
 import {
@@ -39,7 +41,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 type TabKey = 'queue' | 'requests';
 type ViewMode = 'grid' | 'list';
-/** The pricing filter — the only axis that means anything on a single-status queue. */
+/** The pricing filter — replaces a status filter, meaningless on a single-status queue. */
 type PricedFilter = '' | 'priced' | 'unpriced';
 
 /**
@@ -91,6 +93,12 @@ export class BilleterieComponent implements OnInit {
   readonly viewMode = signal<ViewMode>('grid');
   readonly search = signal('');
   readonly pricedFilter = signal<PricedFilter>('');
+  /** Employee user id as a string ('' = everyone) — the panel's select value. */
+  readonly employeeFilter = signal('');
+  /** Destination country label ('' = all) — only international missions carry one. */
+  readonly countryFilter = signal('');
+  /** Picked period (one day or [from, to]) — keeps missions overlapping it. */
+  readonly periodFilter = signal<Date[] | null>(null);
   readonly currentPage = signal(0);
   readonly pageSize = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -143,6 +151,9 @@ export class BilleterieComponent implements OnInit {
   readonly filteredItems = computed(() => {
     const term = this.search().trim().toLowerCase();
     const priced = this.pricedFilter();
+    const employee = this.employeeFilter();
+    const country = this.countryFilter();
+    const period = this.periodFilter();
     return this.missions().filter(m => {
       const matchesTerm = !term
         || (m.employeeName ?? '').toLowerCase().includes(term)
@@ -151,7 +162,10 @@ export class BilleterieComponent implements OnInit {
         || (m.countryLabel ?? '').toLowerCase().includes(term);
       const matchesPriced = !priced
         || (priced === 'priced' ? !!m.expenses : !m.expenses);
-      return matchesTerm && matchesPriced;
+      return matchesTerm && matchesPriced
+        && (!employee || String(m.employeeUserId) === employee)
+        && (!country || m.countryLabel === country)
+        && matchesPeriod(m, period);
     });
   });
 
@@ -165,7 +179,8 @@ export class BilleterieComponent implements OnInit {
 
   readonly queueEmptyMessage = computed(() => {
     this.translate.currentLang();
-    const filtered = !!this.search().trim() || !!this.pricedFilter();
+    const filtered = !!this.search().trim() || !!this.pricedFilter() || !!this.employeeFilter()
+      || !!this.countryFilter() || !!this.periodFilter();
     return this.translate.instant(filtered
       ? 'MISSIONS.LIST.EMPTY_FILTERED'
       : 'BILLETERIE.EMPTY_QUEUE');
@@ -238,16 +253,39 @@ export class BilleterieComponent implements OnInit {
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
-    return [{
-      name: 'priced',
-      label: t('BILLETERIE.COL_STATE'),
-      type: 'select',
-      placeholder: t('MISSIONS.LIST.FILTER_ALL'),
-      options: [
-        { value: 'unpriced', label: t('BILLETERIE.NOT_PRICED') },
-        { value: 'priced', label: t('BILLETERIE.PRICED') },
-      ],
-    }];
+    return [
+      {
+        name: 'priced',
+        label: t('BILLETERIE.COL_STATE'),
+        type: 'select',
+        placeholder: t('MISSIONS.LIST.FILTER_ALL'),
+        options: [
+          { value: 'unpriced', label: t('BILLETERIE.NOT_PRICED') },
+          { value: 'priced', label: t('BILLETERIE.PRICED') },
+        ],
+      },
+      {
+        name: 'employee',
+        label: t('MISSIONS.LIST.COL_EMPLOYEE'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('MISSIONS.LIST.FILTERS.ALL_EMPLOYEES'),
+        options: employeeOptions(this.missions()),
+      },
+      {
+        name: 'country',
+        label: t('MISSIONS.LIST.FILTERS.COUNTRY'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('MISSIONS.LIST.FILTERS.ALL_COUNTRIES'),
+        options: countryOptions(this.missions()),
+      },
+      {
+        name: 'period',
+        label: t('MISSIONS.LIST.COL_PERIOD'),
+        type: 'daterange',
+      },
+    ];
   });
 
   readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
@@ -261,7 +299,12 @@ export class BilleterieComponent implements OnInit {
       triggerLabel: t('MISSIONS.LIST.FILTERS.TRIGGER'),
       align: 'right',
       // A `select` needs the panel's internal shape — a string[], not a bare string (§10b).
-      initialValues: { priced: this.pricedFilter() ? [this.pricedFilter()] : [] },
+      initialValues: {
+        priced:   this.pricedFilter()   ? [this.pricedFilter()]   : [],
+        employee: this.employeeFilter() ? [this.employeeFilter()] : [],
+        country:  this.countryFilter()  ? [this.countryFilter()]  : [],
+        period:   this.periodFilter(),
+      },
     };
   });
 
@@ -281,8 +324,13 @@ export class BilleterieComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    const value = typeof result['priced'] === 'string' ? result['priced'] : '';
-    this.pricedFilter.set(value === 'priced' || value === 'unpriced' ? value : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    const priced = str('priced');
+    const period = result['period'];
+    this.pricedFilter.set(priced === 'priced' || priced === 'unpriced' ? priced : '');
+    this.employeeFilter.set(str('employee'));
+    this.countryFilter.set(str('country'));
+    this.periodFilter.set(Array.isArray(period) && period.length ? period as Date[] : null);
     this.currentPage.set(0);
   }
 

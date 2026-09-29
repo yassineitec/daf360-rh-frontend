@@ -113,6 +113,12 @@
       "SHOW": "Filters",
       "HIDE": "Hide filters",
       "ALL_STATUSES": "All statuses",
+      "DEMAND": "Position (recruitment demand)",
+      "ALL_DEMANDS": "All positions",
+      "SPONTANEOUS": "Spontaneous application",
+      "DEPARTMENT": "Department",
+      "ALL_DEPARTMENTS": "All departments",
+      "APPLIED_ON": "Application date",
       "TITLE": "Filter candidates",
       "TRIGGER": "Filters",
       "APPLY": "Apply",
@@ -549,7 +555,14 @@
       "APPLY": "Apply",
       "CANCEL": "Cancel",
       "RESET": "Reset",
-      "ALL_STAGES": "All stages"
+      "ALL_STAGES": "All stages",
+      "DEMAND": "Position (recruitment demand)",
+      "ALL_DEMANDS": "All positions",
+      "SPONTANEOUS": "Spontaneous application",
+      "MIN_FIT": "Minimum fit score",
+      "ANY_FIT": "Any score",
+      "FIT_AT_LEAST": "≥ {{value}}%",
+      "URGENT_ONLY": "Urgent only (start date soon)"
     },
     "DELTA": {
       "CLOSURE_RATE": "{{pct}}% closure rate",
@@ -681,7 +694,8 @@
       "CANDIDATES_ALL": "All",
       "CANDIDATES_SOME": "With a candidate",
       "AGE_LABEL": "Age",
-      "AGE_ALL": "All"
+      "AGE_ALL": "All",
+      "DEPARTMENT_ALL": "All departments"
     },
     "SUBTITLE": "Headcount needs raised by managers. Your approval is what opens the position to recruitment.",
     "SEE_ALL": "All requests",
@@ -740,7 +754,9 @@
         "APPLY": "Apply",
         "CANCEL": "Cancel",
         "RESET": "Reset",
-        "STATUS_LABEL": "Status"
+        "STATUS_LABEL": "Status",
+        "DEPARTMENT_ALL": "All departments",
+        "REASON_ALL": "All reasons"
       }
     },
     "FILTER": {
@@ -856,7 +872,13 @@
         "TRIGGER": "Filters",
         "APPLY": "Apply",
         "CANCEL": "Cancel",
-        "RESET": "Reset"
+        "RESET": "Reset",
+        "DRAFT": "Draft",
+        "DRAFT_ANY": "All files",
+        "WITH_DRAFT": "Started (draft saved)",
+        "NO_DRAFT": "Not started yet",
+        "START_PASSED": "Start date passed",
+        "ALL_ENTITIES": "All entities"
       },
       "DELTA_ALL_ON_TRACK": "All on track",
       "DELTA_INCOMPLETE_ATTENTION": "{{count}} incomplete requiring attention",
@@ -1828,7 +1850,9 @@
         "TRIGGER": "Filters",
         "APPLY": "Apply",
         "CANCEL": "Cancel",
-        "RESET": "Reset"
+        "RESET": "Reset",
+        "ALL_REASONS": "All reasons",
+        "LATE_ONLY": "Late or SLA breached only"
       },
       "DELTA_ON_TRACK": "No overdue task",
       "DELTA_OVERDUE_TASKS": "{{count}} overdue task(s)",
@@ -1839,7 +1863,8 @@
       "COL_STAGE": "Current stage",
       "STEP_OF": "step {{step}}/{{total}}",
       "NO_HANDOVER": "No successor",
-      "NO_LAST_DAY": "Date TBD"
+      "NO_LAST_DAY": "Date TBD",
+      "EMPTY_NO_MATCH": "No offboarding case matches these filters"
     },
     "BADGE": {
       "SLA_BREACHED": "SLA breached",
@@ -2812,7 +2837,8 @@
         "VALUE": "Value",
         "DESCRIPTION": "Description",
         "OPTIONAL": "(optional)",
-        "DELETE_BODY": "Delete \"{{cle}}\"?"
+        "DELETE_BODY": "Delete \"{{cle}}\"?",
+        "SEED_BLOCKED_BY_CALENDAR": "This country already has public holiday calendar settings: \"Initialize defaults\" will not add anything to it. Add the payroll parameters manually with \"+ Add\"."
       },
       "requestTypes": {
         "TITLE": "HR request types",
@@ -3356,6 +3382,24 @@
             "FRI": "Fri",
             "SAT": "Sat"
           }
+        },
+        "settings": {
+          "open": "Calendar settings",
+          "title": "Calendar settings",
+          "subtitle": "How public holidays look in the {{pays}} calendar",
+          "showFlag": "Show the flag",
+          "flag": "Flag",
+          "flagDefault": "Entity's country (default)",
+          "abbrev": "Abbreviation",
+          "abbrevHint": "{{max}} characters max — empty = \"{{default}}\"",
+          "color": "Badge colour",
+          "colorDefault": "Default colour",
+          "preview": "Preview",
+          "seedWarning": "This country has no payroll parameters yet. Once this is saved, \"Initialize defaults\" in Payroll settings will no longer fill it: initialize payroll first, or add its parameters manually.",
+          "reset": "Reset",
+          "cancel": "Cancel",
+          "save": "Save",
+          "error": "Could not save. Check that you have the \"HR roles administration\" permission."
         }
       }
     },
@@ -3520,7 +3564,11 @@
         "RESET": "Reset",
         "STATUS_LABEL": "Status",
         "URGENCY_LABEL": "Urgency",
-        "URGENCY_ALL": "All"
+        "URGENCY_ALL": "All",
+        "TYPE_ALL": "All types",
+        "DECIDED_LABEL": "Decision date",
+        "ALL_TYPES": "All types",
+        "ALL_STATUSES": "All statuses"
       },
       "INBOX_BTN": "Inbox",
       "EMPTY_DONE": "No processed requests",
@@ -3642,7 +3690,15 @@
         "TRIGGER": "Filters",
         "APPLY": "Apply",
         "CANCEL": "Cancel",
-        "RESET": "Reset"
+        "RESET": "Reset",
+        "MISSING": "Missing items",
+        "MISSING_ANY": "No criterion",
+        "MISSING_HINT": "Files missing at least one of the selected items",
+        "MISSING_HARDWARE": "Hardware",
+        "MISSING_LICENCES": "Licences",
+        "MISSING_EMAIL": "MS365 email",
+        "START_DATE": "Expected start date",
+        "OVERDUE_ONLY": "Overdue only"
       },
       "DELTA_COMPLETE": "{{pct}}% complete",
       "DELTA_OVERDUE": "{{count}} past deadline",
@@ -3874,7 +3930,12 @@
         "APPLY": "Apply",
         "CANCEL": "Cancel",
         "RESET": "Reset",
-        "TRIGGER": "Filter"
+        "TRIGGER": "Filter",
+        "ALL_EMPLOYEES": "All employees",
+        "SCOPE": "Scope",
+        "ALL_SCOPES": "National and international",
+        "COUNTRY": "Destination country",
+        "ALL_COUNTRIES": "All countries"
       },
       "EMPTY": "No mission planned yet"
     },

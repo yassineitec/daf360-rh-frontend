@@ -23,17 +23,37 @@ import {
 
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
-import { RecruitmentDemandSummary, RecruitmentDemandStatus } from './recruitment-demand.model';
+import { RECRUITMENT_REASONS, RecruitmentDemandSummary, RecruitmentDemandStatus } from './recruitment-demand.model';
 import { RecruitmentDemandFormComponent } from './recruitment-demand-form.component';
 import { RequestsService } from '../requests/requests.service';
 import { NewRequestComponent } from '../requests/new-request.component';
-import { EmployeeRequest, RequestStatus } from '../requests/models/request.model';
+import { EmployeeRequest, RequestStatus, RequestType } from '../requests/models/request.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { RelativeDatePipe } from '../../shared/relative-date.pipe';
 
 /** "En cours" (no response yet) belongs to /rh/requests — this page's "Demande" tab is
  *  the historique, so every other (decided) status shows here instead. */
 const OTHER_ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
+
+/** Local-time YYYY-MM-DD — never `toISOString()`, which shifts the day across time zones. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Inclusive [from, to] ISO-day bounds of a daterange value — one day = one-day range. */
+function dayBounds(range: Date[] | null): { from: string; to: string } | null {
+  if (!range?.[0]) return null;
+  return { from: toIsoDay(range[0]), to: toIsoDay(range[1] ?? range[0]) };
+}
+
+/** Whether an ISO datetime's local day falls inside `bounds` (no bounds = always true). */
+function inDayBounds(iso: string | null | undefined, bounds: { from: string; to: string } | null): boolean {
+  if (!bounds) return true;
+  if (!iso) return false;
+  const day = toIsoDay(new Date(iso));
+  return day >= bounds.from && day <= bounds.to;
+}
 
 /** Card-ready view model for the "Recrutement" tab. */
 interface RecruitmentCard {
@@ -400,6 +420,12 @@ export class RecruitmentDemandListComponent implements OnInit {
   showForm    = signal(false);
   filterStatut = signal('');
   searchQuery  = signal('');
+  /** Department label ('' = all) — client-side, on the current page only (backend takes `statut` only). */
+  filterDepartment = signal('');
+  /** Recruitment reason code ('' = all) — client-side, on the current page only. */
+  filterReason = signal('');
+  /** Submission date range: one day or [from, to]; null = no bound — client-side, current page only. */
+  filterSubmitted = signal<Date[] | null>(null);
 
   /** One count per decided status, independent of the current filter — feeds the KPI row. */
   private readonly statusCounts = signal<Record<DecidedStatus, number>>({
@@ -432,14 +458,48 @@ export class RecruitmentDemandListComponent implements OnInit {
     }));
   });
 
+  /** Departments present in the fetched page (plus the selected one, so it never vanishes). */
+  private readonly departmentOptions = computed(() => {
+    const labels = new Set<string>();
+    for (const d of this.items()) if (d.department) labels.add(d.department);
+    if (this.filterDepartment()) labels.add(this.filterDepartment());
+    return [...labels].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }));
+  });
+
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.FILTERS.STATUS_LABEL'),
-      type: 'select',
-      options: STATUS_FILTER_OPTS.map((o) => ({ value: o.value, label: this.translate.instant(o.labelKey) })),
-    }];
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      {
+        name: 'status',
+        label: t('RECRUITMENT_DEMANDS.LIST.FILTERS.STATUS_LABEL'),
+        type: 'select',
+        options: STATUS_FILTER_OPTS.map((o) => ({ value: o.value, label: t(o.labelKey) })),
+      },
+      {
+        name: 'department',
+        label: t('RECRUITMENT_DEMANDS.FORM.DEPARTMENT'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('RECRUITMENT_DEMANDS.LIST.FILTERS.DEPARTMENT_ALL'),
+        options: this.departmentOptions(),
+      },
+      {
+        name: 'reason',
+        label: t('RECRUITMENT_DEMANDS.LIST.COL_REASON'),
+        type: 'select',
+        placeholder: t('RECRUITMENT_DEMANDS.LIST.FILTERS.REASON_ALL'),
+        options: RECRUITMENT_REASONS.map((r) => ({
+          value: r.value,
+          label: t('RECRUITMENT_DEMANDS.FORM.REASON.' + r.value + '_LABEL'),
+        })),
+      },
+      {
+        name: 'submitted',
+        label: t('RECRUITMENT_DEMANDS.LIST.COL_SUBMITTED'),
+        type: 'daterange',
+      },
+    ];
   });
 
   readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
@@ -452,7 +512,12 @@ export class RecruitmentDemandListComponent implements OnInit {
       cancelLabel:  t('CANCEL'),
       resetLabel:   t('RESET'),
       align:        'right',
-      initialValues: { status: [this.filterStatut()] },
+      initialValues: {
+        status:     [this.filterStatut()],
+        department: this.filterDepartment() ? [this.filterDepartment()] : [],
+        reason:     this.filterReason() ? [this.filterReason()] : [],
+        submitted:  this.filterSubmitted(),
+      },
     };
   });
 
@@ -463,13 +528,21 @@ export class RecruitmentDemandListComponent implements OnInit {
    *  excluded here too: the "Tous" filter option fetches every status from the backend (it
    *  has no "everything decided" filter of its own), so this is what actually keeps the
    *  "en cours" ones out of the historique when no more specific status is selected. */
+  /** Department / reason / submission-date filters work the same way — on the fetched page
+   *  only, since the backend list endpoints accept no parameter besides `statut`. */
   readonly visibleItems = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
-    const decided = this.items().filter((d) => d.statut !== 'EN_ATTENTE');
-    if (!q) return decided;
-    return decided.filter((d) =>
-      (d.jobExactTitle ?? d.jobTitle).toLowerCase().includes(q)
-      || (d.department ?? '').toLowerCase().includes(q));
+    const department = this.filterDepartment();
+    const reason = this.filterReason();
+    const submitted = dayBounds(this.filterSubmitted());
+    return this.items().filter((d) =>
+      d.statut !== 'EN_ATTENTE'
+      && (!department || d.department === department)
+      && (!reason || d.recruitmentReason === reason)
+      && inDayBounds(d.submittedAt, submitted)
+      && (!q
+        || (d.jobExactTitle ?? d.jobTitle).toLowerCase().includes(q)
+        || (d.department ?? '').toLowerCase().includes(q)));
   });
 
   readonly recruitmentCards = computed<RecruitmentCard[]>(() => {
@@ -496,11 +569,20 @@ export class RecruitmentDemandListComponent implements OnInit {
   otherLoading    = signal(false);
   otherSearchQuery = signal('');
   otherStatusFilter = signal<'all' | 'approved' | 'rejected' | 'cancelled'>('all');
+  /** Request type id as a string ('' = all) — server-side, sent as `typeId`. */
+  otherTypeFilter = signal('');
+  /** Submission date range: one day or [from, to]; null = no bound — client-side, on the fetched batch. */
+  otherSubmittedFilter = signal<Date[] | null>(null);
+  /** Decision date range (resolution date, or last update for cancelled ones) — client-side, fetched batch. */
+  otherDecidedFilter = signal<Date[] | null>(null);
+  /** Request type catalogue of the current pays — feeds the "Type de demande" filter. */
+  private readonly requestTypes = signal<RequestType[]>([]);
 
   /** "En cours" never appears in this filter — that status lives on /rh/requests only.
    *  "Tout" here means every decided request, not literally every status. */
   readonly otherFilterFields = computed<FilterField[]>(() => {
-    this.translate.currentLang();
+    const lang = this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return [{
       name: 'status',
       label: this.translate.instant('REQUESTS.LIST.FILTERS.STATUS_LABEL'),
@@ -511,6 +593,24 @@ export class RecruitmentDemandListComponent implements OnInit {
         { value: 'rejected',  label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.OTHER_FILTER_REJECTED', { count: this.otherRejectedCount() }) },
         { value: 'cancelled', label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.OTHER_FILTER_CANCELLED', { count: this.otherCancelledCount() }) },
       ],
+    }, {
+      name: 'type',
+      label: t('REQUESTS.LIST.COL_TYPE'),
+      type: 'select',
+      searchable: true,
+      placeholder: t('REQUESTS.LIST.FILTERS.TYPE_ALL'),
+      options: this.requestTypes().map((rt) => ({
+        value: String(rt.id),
+        label: (lang === 'en' ? rt.displayNameEn : rt.displayNameFr) || rt.displayNameFr || rt.typeCode,
+      })),
+    }, {
+      name: 'submitted',
+      label: t('REQUESTS.LIST.COL_SUBMITTED'),
+      type: 'daterange',
+    }, {
+      name: 'decided',
+      label: t('REQUESTS.LIST.FILTERS.DECIDED_LABEL'),
+      type: 'daterange',
     }];
   });
 
@@ -524,15 +624,29 @@ export class RecruitmentDemandListComponent implements OnInit {
       cancelLabel:  t('CANCEL'),
       resetLabel:   t('RESET'),
       align:        'right',
-      initialValues: { status: [this.otherStatusFilter()] },
+      initialValues: {
+        status:    [this.otherStatusFilter()],
+        type:      this.otherTypeFilter() ? [this.otherTypeFilter()] : [],
+        submitted: this.otherSubmittedFilter(),
+        decided:   this.otherDecidedFilter(),
+      },
     };
   });
 
   onOtherFilterApply(result: FilterResult): void {
     const value = result['status'];
-    if (value === 'all' || value === 'approved' || value === 'rejected' || value === 'cancelled') {
-      this.otherStatusFilter.set(value);
-    }
+    // A reset clears the select — fall back to "all" rather than keeping the old status.
+    this.otherStatusFilter.set(
+      value === 'approved' || value === 'rejected' || value === 'cancelled' ? value : 'all');
+    const type = result['type'];
+    this.otherTypeFilter.set(typeof type === 'string' ? type : '');
+    const submitted = result['submitted'];
+    this.otherSubmittedFilter.set(Array.isArray(submitted) && submitted.length ? submitted as Date[] : null);
+    const decided = result['decided'];
+    this.otherDecidedFilter.set(Array.isArray(decided) && decided.length ? decided as Date[] : null);
+    // `typeId` is a real backend filter, so the batch itself changes — back to page 0.
+    this.otherPage.set(0);
+    this.loadOther();
   }
 
   /** Only decided requests (already have a response) ever reach this tab — "en cours" ones
@@ -553,9 +667,13 @@ export class RecruitmentDemandListComponent implements OnInit {
    *  already fetched rather than reaching into pages not yet loaded. */
   readonly otherVisibleItems = computed(() => {
     const q = this.otherSearchQuery().trim().toLowerCase();
-    const base = this.otherStatusFilteredItems();
-    if (!q) return base;
-    return base.filter((r) => (r.employeeName ?? '').toLowerCase().includes(q));
+    const submitted = dayBounds(this.otherSubmittedFilter());
+    const decided = dayBounds(this.otherDecidedFilter());
+    return this.otherStatusFilteredItems().filter((r) =>
+      inDayBounds(r.submissionDate, submitted)
+      // Cancelling never sets `resolutionDate` backend-side — `updatedAt` is when it happened.
+      && inDayBounds(r.resolutionDate ?? r.updatedAt, decided)
+      && (!q || (r.employeeName ?? '').toLowerCase().includes(q)));
   });
 
   /**
@@ -620,9 +738,10 @@ export class RecruitmentDemandListComponent implements OnInit {
     const paysId = this.userStore.currentUser()?.paysId;
     // Size 100, same as the Demandes page's own "Demande" tab: large enough that the KPI
     // tiles above can be counted straight from this batch, no separate count-per-status call.
+    const typeId = this.otherTypeFilter() ? Number(this.otherTypeFilter()) : undefined;
     const filter = this.canViewAllRequests()
-      ? { paysId: paysId ?? undefined, page: this.otherPage(), size: this.otherPageSize() }
-      : { profileId: this.currentProfileId() || undefined, page: this.otherPage(), size: this.otherPageSize() };
+      ? { paysId: paysId ?? undefined, typeId, page: this.otherPage(), size: this.otherPageSize() }
+      : { profileId: this.currentProfileId() || undefined, typeId, page: this.otherPage(), size: this.otherPageSize() };
 
     this.requestsSvc.listRequests(filter)
       .pipe(catchError(() => of(null)))
@@ -641,6 +760,9 @@ export class RecruitmentDemandListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadOther();
+    this.requestsSvc.listTypes(this.currentPaysId())
+      .pipe(catchError(() => of([] as RequestType[])))
+      .subscribe((types) => this.requestTypes.set(types));
   }
 
   reload(): void {
@@ -663,6 +785,12 @@ export class RecruitmentDemandListComponent implements OnInit {
   onFilterApply(result: FilterResult): void {
     const value = result['status'];
     this.filterStatut.set(typeof value === 'string' ? value : '');
+    const department = result['department'];
+    this.filterDepartment.set(typeof department === 'string' ? department : '');
+    const reason = result['reason'];
+    this.filterReason.set(typeof reason === 'string' ? reason : '');
+    const submitted = result['submitted'];
+    this.filterSubmitted.set(Array.isArray(submitted) && submitted.length ? submitted as Date[] : null);
     this.reload();
   }
 

@@ -28,6 +28,24 @@ const STATUS_CODES: ItProvisioningStatus[] = ['PENDING', 'IN_PROGRESS', 'EMAIL_C
 
 type ViewMode = 'grid' | 'list';
 
+/** What a file can still be missing — the "Éléments manquants" multiselect. */
+type MissingItem = 'HARDWARE' | 'LICENCES' | 'EMAIL';
+const MISSING_ITEMS: MissingItem[] = ['HARDWARE', 'LICENCES', 'EMAIL'];
+
+function isMissing(item: ProvisioningListItem, what: MissingItem): boolean {
+  switch (what) {
+    case 'HARDWARE': return !hardwareComplete(item);
+    case 'LICENCES': return !licencesComplete(item);
+    case 'EMAIL':    return !item.ms365Email;
+  }
+}
+
+/** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /**
  * /rh/it-provisioning — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
@@ -70,6 +88,12 @@ export class ItProvisioningListComponent implements OnInit {
   readonly viewMode     = signal<ViewMode>('grid');
   readonly search       = signal('');
   readonly statusFilter = signal('');
+  /** Only files past their expected start date and not completed (`isOverdue`). */
+  readonly overdueOnly  = signal(false);
+  /** Files missing ANY of these (empty = no constraint). */
+  readonly missingFilter = signal<MissingItem[]>([]);
+  /** Expected-start-date range from the panel: one day or [from, to]; null = no bound. */
+  readonly startRange   = signal<Date[] | null>(null);
   readonly currentPage  = signal(0);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -77,12 +101,23 @@ export class ItProvisioningListComponent implements OnInit {
   readonly filteredItems = computed(() => {
     const term   = this.search().trim().toLowerCase();
     const status = this.statusFilter();
+    const overdueOnly = this.overdueOnly();
+    const missing = this.missingFilter();
+    const range = this.startRange();
+    const from = range?.[0] ? toIsoDay(range[0]) : null;
+    const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
     return this.items().filter(r => {
       const matchesTerm = !term
         || r.candidateFullName.toLowerCase().includes(term)
         || (r.ms365Email ?? '').toLowerCase().includes(term)
         || (r.appliedPosition ?? '').toLowerCase().includes(term);
-      return matchesTerm && (!status || r.status === status);
+      // `expectedStartDate` is an ISO date, so string comparison is date order.
+      const start = r.expectedStartDate?.slice(0, 10) ?? null;
+      return matchesTerm
+        && (!status || r.status === status)
+        && (!overdueOnly || isOverdue(r))
+        && (!missing.length || missing.some(m => isMissing(r, m)))
+        && (!from || (!!start && start >= from && start <= to!));
     });
   });
 
@@ -153,16 +188,40 @@ export class ItProvisioningListComponent implements OnInit {
   /** The status dropdown belongs *inside* the filter panel, not loose beside the search. */
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('IT_PROVISIONING.LIST.COL_STATUS'),
-      type: 'select',
-      placeholder: this.translate.instant('IT_PROVISIONING.LIST.FILTER_ALL'),
-      options: STATUS_CODES.map(code => ({
-        value: code,
-        label: this.translate.instant('IT_PROVISIONING.STATUS.' + code),
-      })),
-    }];
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      {
+        name: 'status',
+        label: t('IT_PROVISIONING.LIST.COL_STATUS'),
+        type: 'select',
+        placeholder: t('IT_PROVISIONING.LIST.FILTER_ALL'),
+        options: STATUS_CODES.map(code => ({
+          value: code,
+          label: t('IT_PROVISIONING.STATUS.' + code),
+        })),
+      },
+      {
+        name: 'missing',
+        label: t('IT_PROVISIONING.LIST.FILTERS.MISSING'),
+        type: 'multiselect',
+        placeholder: t('IT_PROVISIONING.LIST.FILTERS.MISSING_ANY'),
+        hint: t('IT_PROVISIONING.LIST.FILTERS.MISSING_HINT'),
+        options: MISSING_ITEMS.map(code => ({
+          value: code,
+          label: t('IT_PROVISIONING.LIST.FILTERS.MISSING_' + code),
+        })),
+      },
+      {
+        name: 'startDate',
+        label: t('IT_PROVISIONING.LIST.FILTERS.START_DATE'),
+        type: 'daterange',
+      },
+      {
+        name: 'overdue',
+        label: t('IT_PROVISIONING.LIST.FILTERS.OVERDUE_ONLY'),
+        type: 'checkbox',
+      },
+    ];
   });
 
   /**
@@ -179,7 +238,12 @@ export class ItProvisioningListComponent implements OnInit {
       resetLabel:   t('IT_PROVISIONING.LIST.FILTERS.RESET'),
       triggerLabel: t('IT_PROVISIONING.LIST.FILTERS.TRIGGER'),
       align:        'right',
-      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+      initialValues: {
+        status:    this.statusFilter() ? [this.statusFilter()] : [],
+        missing:   this.missingFilter(),
+        startDate: this.startRange(),
+        overdue:   this.overdueOnly(),
+      },
     };
   });
 
@@ -221,7 +285,12 @@ export class ItProvisioningListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
+    const missing = result['missing'];
+    const range = result['startDate'];
     this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    this.overdueOnly.set(result['overdue'] === true);
+    this.missingFilter.set(Array.isArray(missing) ? missing as MissingItem[] : []);
+    this.startRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
     this.currentPage.set(0);
   }
 

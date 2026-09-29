@@ -34,6 +34,12 @@ import { KanbanCandidate, KanbanColumn, PipelineService, PipelineStats } from '.
 /** Board or flat list. The choice survives search, filtering and a re-fetch. */
 type ViewMode = 'kanban' | 'list';
 
+/** Demand filter value for "no recruitment demand" — never a real demand id. */
+const SPONTANEOUS = 'SPONTANEOUS';
+
+/** Minimum fit-score choices of the filter panel (percent). */
+const MIN_FIT_OPTIONS = [50, 70, 85];
+
 /**
  * /rh/candidates — the recruitment board (Préqualification / Entretien / Offre /
  * Recruté), fed by `/api/hr/pipeline/kanban`.
@@ -92,7 +98,13 @@ export class PipelineComponent implements OnInit {
   readonly viewMode          = signal<ViewMode>('kanban');
   readonly search            = signal('');
   readonly stageFilter       = signal('');
-  readonly columnSortDirs    = signal<Record<string, 'asc' | 'desc'>>({});
+  /** Demand id as a string, `SPONTANEOUS`, or '' = all. */
+  readonly demandFilter      = signal('');
+  /** Minimum fit score as a string ('' = no minimum) — the panel's select value. */
+  readonly minFitFilter      = signal('');
+  /** Only cards flagged urgent (start date inside the backend's urgent window). */
+  readonly urgentOnly        = signal(false);
+  readonly columnSortDirs   = signal<Record<string, 'asc' | 'desc'>>({});
   /**
    * The mobile chip row filters independently of the toolbar's stage filter:
    * the chips are the mobile navigation, not a copy of the desktop control.
@@ -122,12 +134,19 @@ export class PipelineComponent implements OnInit {
     const term  = this.search().trim().toLowerCase();
     const stage = this.stageFilter();
     const dirs  = this.columnSortDirs();
+    const demand = this.demandFilter();
+    const minFit = this.minFitFilter() ? Number(this.minFitFilter()) : null;
+    const urgentOnly = this.urgentOnly();
 
-    // Free-text match over the fields a card actually shows.
+    // Free-text match over the fields a card actually shows, then the panel filters.
     const matches = (c: KanbanCandidate) =>
-      !term ||
-      [c.fullName, c.poste, c.email, c.location, ...(c.skills ?? [])]
-        .some(v => (v ?? '').toString().toLowerCase().includes(term));
+      (!term ||
+        [c.fullName, c.poste, c.email, c.location, ...(c.skills ?? [])]
+          .some(v => (v ?? '').toString().toLowerCase().includes(term))) &&
+      (!demand ||
+        (demand === SPONTANEOUS ? c.demandId == null : String(c.demandId ?? '') === demand)) &&
+      (minFit == null || (c.fitScore ?? 0) >= minFit) &&
+      (!urgentOnly || c.isUrgent);
 
     const stageOf = (key: string) =>
       (cols.find(c => (c.stage ?? '').toUpperCase() === key)?.candidates ?? []).filter(matches);
@@ -182,13 +201,53 @@ export class PipelineComponent implements OnInit {
   /** The stage dropdown belongs *inside* the filter panel, not loose beside the search. */
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'stage',
-      label: this.translate.instant('PIPELINE.COL_STAGE'),
-      type: 'select',
-      placeholder: this.translate.instant('PIPELINE.FILTERS.ALL_STAGES'),
-      options: BOARD_STAGES.map(s => ({ value: s.key, label: this.translate.instant(s.labelKey) })),
-    }];
+    const t = (k: string, p?: object) => this.translate.instant(k, p);
+    return [
+      {
+        name: 'stage',
+        label: t('PIPELINE.COL_STAGE'),
+        type: 'select',
+        placeholder: t('PIPELINE.FILTERS.ALL_STAGES'),
+        options: BOARD_STAGES.map(s => ({ value: s.key, label: t(s.labelKey) })),
+      },
+      {
+        name: 'demand',
+        label: t('PIPELINE.FILTERS.DEMAND'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('PIPELINE.FILTERS.ALL_DEMANDS'),
+        options: [
+          { value: SPONTANEOUS, label: t('PIPELINE.FILTERS.SPONTANEOUS') },
+          ...this.demandOptions(),
+        ],
+      },
+      {
+        name: 'minFit',
+        label: t('PIPELINE.FILTERS.MIN_FIT'),
+        type: 'select',
+        placeholder: t('PIPELINE.FILTERS.ANY_FIT'),
+        options: MIN_FIT_OPTIONS.map(v => ({ value: String(v), label: t('PIPELINE.FILTERS.FIT_AT_LEAST', { value: v }) })),
+      },
+      {
+        name: 'urgent',
+        label: t('PIPELINE.FILTERS.URGENT_ONLY'),
+        type: 'checkbox',
+      },
+    ];
+  });
+
+  /** The demands present on the board — the panel only offers choices that match a card. */
+  private readonly demandOptions = computed(() => {
+    const byId = new Map<string, string>();
+    for (const col of this.rawColumns()) {
+      for (const c of col.candidates ?? []) {
+        if (c.demandId != null && !byId.has(String(c.demandId))) {
+          byId.set(String(c.demandId), c.demandTitle || c.poste || `#${c.demandId}`);
+        }
+      }
+    }
+    return [...byId].map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   });
 
   /**
@@ -205,7 +264,12 @@ export class PipelineComponent implements OnInit {
       resetLabel:   t('PIPELINE.FILTERS.RESET'),
       triggerLabel: t('PIPELINE.FILTERS.TRIGGER'),
       align:        'right',
-      initialValues: { stage: this.stageFilter() ? [this.stageFilter()] : [] },
+      initialValues: {
+        stage:  this.stageFilter()  ? [this.stageFilter()]  : [],
+        demand: this.demandFilter() ? [this.demandFilter()] : [],
+        minFit: this.minFitFilter() ? [this.minFitFilter()] : [],
+        urgent: this.urgentOnly(),
+      },
     };
   });
 
@@ -223,7 +287,11 @@ export class PipelineComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    this.stageFilter.set(typeof result['stage'] === 'string' ? result['stage'] : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    this.stageFilter.set(str('stage'));
+    this.demandFilter.set(str('demand'));
+    this.minFitFilter.set(str('minFit'));
+    this.urgentOnly.set(result['urgent'] === true);
   }
 
   setView(mode: string): void {

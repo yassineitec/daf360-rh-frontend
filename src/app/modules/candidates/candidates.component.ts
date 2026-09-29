@@ -27,6 +27,7 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import {
   CandidateListItem,
   CandidateDashboardStats,
+  CandidateListQuery,
   CandidateStatus,
   PageResponse,
 } from './candidate.model';
@@ -35,6 +36,10 @@ import { PipelineService, PipelineActivity, PipelineObjective } from '../pipelin
 import { OffboardingService } from '../offboarding/offboarding.service';
 import { OffboardingWorkflowInstance, isTerminal } from '../offboarding/models/offboarding.model';
 import { OFFBOARDING_COLUMN_KEY } from '../offboarding/offboarding-kanban.model';
+import { RefDataService } from '../../core/ref/ref-data.service';
+import { RefDataItem } from '../../core/ref/ref-data.model';
+import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
+import { ApprovedDemandOption } from '../recruitment-demands/recruitment-demand.model';
 import { CandidatesBoardSectionComponent } from './sections/candidates-board-section.component';
 import { CandidatesTableSectionComponent } from './sections/candidates-table-section.component';
 import { CandidatesMobileSectionComponent } from './sections/candidates-mobile-section.component';
@@ -53,6 +58,20 @@ const STATUS_CODES: CandidateStatus[] = [
 ];
 
 type ViewMode = 'list' | 'kanban';
+
+/** Demand filter value for "no recruitment demand" — never a real demand id. */
+const SPONTANEOUS = 'SPONTANEOUS';
+
+/** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function sameRange(a: Date[] | null, b: Date[] | null): boolean {
+  const key = (r: Date[] | null) => (r ?? []).map(toIsoDay).join('/');
+  return key(a) === key(b);
+}
 
 /**
  * /rh/recrutement — the single, canonical candidate board.
@@ -105,6 +124,8 @@ export class CandidatesComponent implements OnInit {
   private router      = inject(Router);
   readonly userStore  = inject(UserStore);
   private translate   = inject(TranslateService);
+  private refData     = inject(RefDataService);
+  private demandSvc   = inject(RecruitmentDemandService);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly page      = signal<PageResponse<CandidateListItem> | null>(null);
@@ -117,6 +138,9 @@ export class CandidatesComponent implements OnInit {
   readonly activities  = signal<PipelineActivity[]>([]);
   readonly objectives  = signal<PipelineObjective[]>([]);
   private readonly offboardingItems = signal<OffboardingWorkflowInstance[]>([]);
+  /** Filter-panel option sources, loaded once for the user's entity. */
+  private readonly departments   = signal<RefDataItem[]>([]);
+  private readonly demandOptions = signal<ApprovedDemandOption[]>([]);
 
   /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
   readonly firstLoad     = signal(true);
@@ -130,6 +154,12 @@ export class CandidatesComponent implements OnInit {
   readonly viewMode     = signal<ViewMode>('kanban');
   readonly search       = signal('');
   readonly statusFilter = signal('');
+  /** Department id as a string ('' = all) — the filter panel's select value. */
+  readonly departmentFilter = signal('');
+  /** Demand id as a string, `SPONTANEOUS`, or '' = all. */
+  readonly demandFilter     = signal('');
+  /** Application-date range from the panel: one day or [from, to]; null = no bound. */
+  readonly createdRange     = signal<Date[] | null>(null);
   readonly currentPage  = signal(0);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -257,17 +287,47 @@ export class CandidatesComponent implements OnInit {
    * renders no free-standing selects next to the search box.
    */
   readonly filterFields = computed<FilterField[]>(() => {
-    this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('CANDIDATES.LIST.COL_STATUS'),
-      type: 'select',
-      placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES'),
-      options: STATUS_CODES.map(code => ({
-        value: code,
-        label: this.translate.instant('CANDIDATES.STATUS.' + code),
-      })),
-    }];
+    const lang = this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      {
+        name: 'status',
+        label: t('CANDIDATES.LIST.COL_STATUS'),
+        type: 'select',
+        placeholder: t('CANDIDATES.FILTERS.ALL_STATUSES'),
+        options: STATUS_CODES.map(code => ({
+          value: code,
+          label: t('CANDIDATES.STATUS.' + code),
+        })),
+      },
+      {
+        name: 'demand',
+        label: t('CANDIDATES.FILTERS.DEMAND'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('CANDIDATES.FILTERS.ALL_DEMANDS'),
+        options: [
+          { value: SPONTANEOUS, label: t('CANDIDATES.FILTERS.SPONTANEOUS') },
+          ...this.demandOptions().map(d => ({ value: String(d.id), label: d.label })),
+        ],
+      },
+      {
+        name: 'department',
+        label: t('CANDIDATES.FILTERS.DEPARTMENT'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('CANDIDATES.FILTERS.ALL_DEPARTMENTS'),
+        options: this.departments().map(d => ({
+          value: String(d.id),
+          label: (lang === 'en' ? d.labelEn : d.labelFr) || d.labelFr || d.labelEn,
+        })),
+      },
+      {
+        name: 'createdAt',
+        label: t('CANDIDATES.FILTERS.APPLIED_ON'),
+        type: 'daterange',
+      },
+    ];
   });
 
   /**
@@ -284,7 +344,12 @@ export class CandidatesComponent implements OnInit {
       resetLabel:   t('CANDIDATES.FILTERS.RESET'),
       triggerLabel: t('CANDIDATES.FILTERS.TRIGGER'),
       align:        'right',
-      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+      initialValues: {
+        status:     this.statusFilter()     ? [this.statusFilter()]     : [],
+        demand:     this.demandFilter()     ? [this.demandFilter()]     : [],
+        department: this.departmentFilter() ? [this.departmentFilter()] : [],
+        createdAt:  this.createdRange(),
+      },
     };
   });
 
@@ -333,6 +398,8 @@ export class CandidatesComponent implements OnInit {
       this.firstLoad.set(false);
     });
 
+    this.loadFilterOptions();
+
     // The drawer's two feeds are independent — they must never hold up the board.
     forkJoin({
       activity:   this.pipelineSvc.getActivity().pipe(catchError(() => of([] as PipelineActivity[]))),
@@ -357,21 +424,50 @@ export class CandidatesComponent implements OnInit {
     this.svc.getDashboardStats().subscribe({ next: s => this.dashStats.set(s), error: () => {} });
   }
 
-  private kanbanQuery() {
+  /**
+   * Demand / department / date filters, shared by the board and the list — unlike
+   * status, they are applied server-side for both views.
+   */
+  private panelFilterQuery(): CandidateListQuery {
+    const demand = this.demandFilter();
+    const range  = this.createdRange();
     return {
-      paysId: this.userStore.currentUser()?.paysId,
-      search: this.search() || undefined,
+      paysId:       this.userStore.currentUser()?.paysId,
+      search:       this.search() || undefined,
+      departmentId: this.departmentFilter() ? Number(this.departmentFilter()) : undefined,
+      spontaneous:  demand === SPONTANEOUS || undefined,
+      demandId:     demand && demand !== SPONTANEOUS ? Number(demand) : undefined,
+      createdFrom:  range?.[0] ? toIsoDay(range[0]) : undefined,
+      // A single picked day is a one-day range.
+      createdTo:    range?.[0] ? toIsoDay(range[1] ?? range[0]) : undefined,
+    };
+  }
+
+  private kanbanQuery(): CandidateListQuery {
+    return {
+      ...this.panelFilterQuery(),
       page:   0,
       size:   KANBAN_FETCH_SIZE,
     };
   }
 
+  /** Once per page: the demand and department options of the filter panel. */
+  private loadFilterOptions(): void {
+    const paysId = this.userStore.currentUser()?.paysId;
+    this.refData.getDepartments(paysId).subscribe(items =>
+      this.departments.set((items ?? []).filter(d => d.isActive !== false)));
+    if (paysId) {
+      this.demandSvc.getApprovedOptions(paysId)
+        .pipe(catchError(() => of([] as ApprovedDemandOption[])))
+        .subscribe(opts => this.demandOptions.set(opts ?? []));
+    }
+  }
+
   private loadCandidates(): void {
     this.loading.set(true);
     this.svc.getCandidates({
-      paysId: this.userStore.currentUser()?.paysId,
+      ...this.panelFilterQuery(),
       status: this.statusFilter() || undefined,
-      search: this.search()       || undefined,
       page:   this.currentPage(),
       size:   this.pageSize(),
     }).subscribe({
@@ -417,10 +513,24 @@ export class CandidatesComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    const status = typeof result['status'] === 'string' ? result['status'] : '';
-    this.statusFilter.set(status);
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    const range = result['createdAt'];
+    const nextRange = Array.isArray(range) && range.length ? range as Date[] : null;
+
+    // Status narrows the board client-side; the other filters are server-side, so
+    // the board only needs a re-fetch when one of those actually changed.
+    const boardChanged =
+      str('demand') !== this.demandFilter() ||
+      str('department') !== this.departmentFilter() ||
+      !sameRange(nextRange, this.createdRange());
+
+    this.statusFilter.set(str('status'));
+    this.demandFilter.set(str('demand'));
+    this.departmentFilter.set(str('department'));
+    this.createdRange.set(nextRange);
     this.currentPage.set(0);
-    // The board filters `kanbanItems` client-side, so only the list needs a re-fetch.
+
+    if (boardChanged && this.kanbanLoaded()) this.loadKanban();
     if (this.page() || this.viewMode() === 'list') this.loadCandidates();
   }
 

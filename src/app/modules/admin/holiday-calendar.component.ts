@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Holiday } from './models/admin.model';
-import { FLAG_SVGS } from './flag-svgs';
+import { DEFAULT_HOLIDAY_CALENDAR_CONFIG, Holiday, HolidayCalendarConfig } from './models/admin.model';
+import { flagDataUri } from './flag-svgs';
 
 interface HolidayCalendarDay {
   date: Date;
@@ -56,11 +56,11 @@ const WEEKDAY_KEYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
                 } @else {
                   <span class="hc-daynum" [class.hc-daynum-today]="day.isToday">{{ day.dayNumber }}</span>
                   @if (day.holiday) {
-                    <span class="hc-holiday-bar" [title]="day.holiday.frenchLabel">
-                      @if (flagDataUri(); as uri) {
+                    <span class="hc-holiday-bar" [title]="day.holiday.frenchLabel" [style]="badgeStyle()">
+                      @if (flagUri(); as uri) {
                         <img class="hc-holiday-flag" [src]="uri" [alt]="flagCode()" />
                       }
-                      <span class="hc-holiday-abbrev">{{ 'ADMIN.catalog.holidays.calendar.abbrev' | translate }}</span>
+                      <span class="hc-holiday-abbrev">{{ config().abbrev ?? ('ADMIN.catalog.holidays.calendar.abbrev' | translate) }}</span>
                     </span>
                   }
                 }
@@ -126,11 +126,13 @@ const WEEKDAY_KEYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
     /* Bottom bar of the day frame — flag on the left, "JF"/"PH" abbreviation on the right.
        Flags come from FLAG_SVGS (flag-svgs.ts) as inline data URIs, not a static asset
-       path or CSS/font dependency — see that file for why. */
+       path or CSS/font dependency — see that file for why. Flag, text and colour are all
+       overridable per pays (HolidayCalendarConfig); the badge colour arrives as the
+       --hc-badge / --hc-badge-bg custom properties, unset = the original amber. */
     .hc-holiday-bar    { position:absolute;left:6px;right:6px;bottom:5px;display:flex;align-items:center;justify-content:space-between;gap:4px;transition:transform .15s ease }
     .hc-holiday-bar:hover { transform:scale(1.04) }
     .hc-holiday-flag   { width:16px;height:12px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.08);flex-shrink:0 }
-    .hc-holiday-abbrev { font-size:10px;font-weight:700;letter-spacing:.03em;color:#b45309;background:rgba(217,119,6,.12);padding:1px 5px;border-radius:5px }
+    .hc-holiday-abbrev { font-size:10px;font-weight:700;letter-spacing:.03em;color:var(--hc-badge, #b45309);background:var(--hc-badge-bg, rgba(217,119,6,.12));padding:1px 5px;border-radius:5px }
 
     @media (max-width: 700px) {
       .hc-cell         { min-height:56px;padding:5px }
@@ -144,6 +146,8 @@ export class HolidayCalendarComponent {
 
   holidays = input<Holiday[]>([]);
   paysIsoCode = input('');
+  /** Per-pays badge settings; the default reproduces the original fixed display. */
+  config = input<HolidayCalendarConfig>(DEFAULT_HOLIDAY_CALENDAR_CONFIG);
 
   /** Empty day clicked — parent opens "Ajouter" prefilled with this date. */
   dayClick = output<Date>();
@@ -174,16 +178,22 @@ export class HolidayCalendarComponent {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  /** Lowercase ISO 3166-1 alpha-2 — key into FLAG_SVGS. */
-  flagCode(): string {
-    return this.paysIsoCode().toLowerCase();
-  }
+  /** Lowercase ISO 3166-1 alpha-2 — the configured flag, else the entity's own pays. */
+  readonly flagCode = computed(() => (this.config().flagIsoCode ?? this.paysIsoCode()).toLowerCase());
 
-  /** Inline data URI for the current country's flag, or '' if not in FLAG_SVGS. */
-  flagDataUri(): string {
-    const svg = FLAG_SVGS[this.flagCode()];
-    return svg ? `data:image/svg+xml;utf8,${encodeURIComponent(svg)}` : '';
-  }
+  /** Inline data URI for the flag, or '' when hidden by config or not in FLAG_SVGS. */
+  readonly flagUri = computed(() => this.config().showFlag ? flagDataUri(this.flagCode()) : '');
+
+  /** Custom badge colour as CSS variables; empty = the stylesheet's default amber. */
+  readonly badgeStyle = computed(() => {
+    const c = this.config().color;
+    const style: Record<string, string> = {};
+    if (c) {
+      style['--hc-badge'] = c;
+      style['--hc-badge-bg'] = `color-mix(in srgb, ${c} 12%, transparent)`;
+    }
+    return style;
+  });
 
   private buildDay(date: Date, isCurrentMonth: boolean, todayIso: string): HolidayCalendarDay {
     const iso = this.toIso(date);
