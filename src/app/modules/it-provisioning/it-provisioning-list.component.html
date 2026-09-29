@@ -71,6 +71,8 @@
       [items]="pagedItems()"
       [loading]="loading()"
       [skeletonRows]="pageSize()"
+      [sort]="sort()"
+      (sortChange)="onSortChange($event)"
       (open)="open($event)" />
   }
 

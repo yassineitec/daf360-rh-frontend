@@ -1218,7 +1218,8 @@
       "STATUS": "Statut",
       "HIRE_DATE": "Date d'embauche",
       "EDIT": "Modifier",
-      "SELECT_ROW": "Sélectionner {{name}}"
+      "SELECT_ROW": "Sélectionner {{name}}",
+      "SELECT_ROW_LABEL": "Sélectionner la ligne"
     },
     "BULK": {
       "EXPORT": "Exporter Excel",
@@ -3572,7 +3573,16 @@
       },
       "INBOX_BTN": "Boîte de réception",
       "EMPTY_DONE": "Aucune demande traitée",
-      "TAB_DONE": "Traitées ({{count}})"
+      "TAB_DONE": "Traitées ({{count}})",
+      "COL_EMPLOYEE": "Collaborateur",
+      "COL_TYPE_OBJECT": "Type & objet",
+      "COL_STATUS_SLA": "Statut & SLA",
+      "CHIP_ALL": "Toutes ({{count}})",
+      "SELECT_ALL_ARIA": "Sélectionner toutes les demandes affichées",
+      "SELECT_ROW_ARIA": "Sélectionner la demande {{ref}}",
+      "VIEW_GRID": "Vue cartes",
+      "VIEW_TABLE": "Vue tableau",
+      "VIEW_ARIA": "Mode d'affichage"
     },
     "DETAIL": {
       "NOT_FOUND": "Demande introuvable.",
@@ -3667,6 +3677,59 @@
       "SUBMIT": "Soumettre la demande",
       "FILE_REQUIRED": "Veuillez joindre le fichier requis : {{label}}",
       "ERROR_SUBMIT": "Erreur lors de la soumission"
+    },
+    "CATEGORY": {
+      "DOCUMENT": "Documents officiels",
+      "PERSONAL_DATA_CHANGE": "Données personnelles",
+      "BANK_DETAILS": "Coordonnées bancaires",
+      "CAREER": "Carrière & formation",
+      "OTHER": "Autres"
+    },
+    "BULK": {
+      "COUNT_LABEL": "sélectionnée(s)",
+      "SELECT_ALL": "Tout sélectionner",
+      "ALL_SELECTED": "Toutes sélectionnées",
+      "CANCEL": "Annuler la sélection",
+      "APPROVE": "Valider la sélection ({{count}})",
+      "EXPORT": "Exporter CSV / Excel",
+      "CSV_HEADER": "Référence;Collaborateur;Type;Catégorie;Statut;Urgence;Soumise le",
+      "CONFIRM_TITLE": "Valider {{count}} demande(s) ?",
+      "CONFIRM_MESSAGE": "Les demandes sélectionnées seront approuvées et le demandeur en sera notifié.",
+      "CONFIRM": "Valider la sélection",
+      "SUCCESS": "{{count}} demande(s) validée(s).",
+      "PARTIAL": "{{count}} demande(s) n'ont pas pu être validées."
+    },
+    "DRAWER": {
+      "TITLE": "Consultation de la demande",
+      "CLOSE": "Fermer",
+      "MATRICULE": "Matricule",
+      "DEPARTMENT": "Département",
+      "LOCATION": "Localisation",
+      "CIRCUIT_TITLE": "Circuit d'approbation",
+      "STEP_SUBMITTED": "Demande soumise",
+      "STEP_L1": "Validation niveau 1",
+      "STEP_L2": "Validation niveau 2",
+      "STEP_FINAL": "Validation RH finale",
+      "STEP_CURRENT": "En cours",
+      "NO_ATTACHMENT": "Aucune pièce jointe.",
+      "COMMENT_PLACEHOLDER": "Motiver la décision…",
+      "COMMENT_HINT": "Obligatoire pour rejeter.",
+      "APPROVE": "Valider la requête",
+      "OPEN_FULL": "Page complète",
+      "DEFAULT_APPROVE_COMMENT": "Approuvé",
+      "REJECT_SUCCESS": "La demande a été rejetée."
+    },
+    "CARDS": {
+      "REF_LABEL": "Référence",
+      "CATEGORY_LABEL": "Catégorie",
+      "URGENCY_LABEL": "Urgence",
+      "VIEW": "Consulter",
+      "DECIDED_LABEL": "Décidée"
+    },
+    "TABLE": {
+      "COLUMN_PICKER": "Choisir les colonnes",
+      "RESET": "Réinitialiser l'affichage du tableau",
+      "SORT_BY": "Trier par {column}"
     }
   },
   "IT_PROVISIONING": {

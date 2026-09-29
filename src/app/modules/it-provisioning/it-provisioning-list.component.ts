@@ -16,9 +16,11 @@ import {
 
 import { ItProvisioningService } from './it-provisioning.service';
 import { ItProvisioningStatus, ProvisioningListItem } from './it-provisioning.model';
-import { hardwareComplete, isOverdue, licencesComplete } from './it-provisioning-display';
+import { hardwareComplete, isOverdue, licCount, licencesComplete } from './it-provisioning-display';
 import { ItProvisioningCardsSectionComponent } from './sections/it-provisioning-cards-section.component';
-import { ItProvisioningTableSectionComponent } from './sections/it-provisioning-table-section.component';
+import {
+  ItProvisioningTableSectionComponent, ProvisioningSort,
+} from './sections/it-provisioning-table-section.component';
 
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -38,6 +40,34 @@ function isMissing(item: ProvisioningListItem, what: MissingItem): boolean {
     case 'LICENCES': return !licencesComplete(item);
     case 'EMAIL':    return !item.ms365Email;
   }
+}
+
+/** What each table column sorts on — keyed by the table's column keys. */
+const SORT_VALUE: Record<string, (r: ProvisioningListItem) => string | number | null> = {
+  candidat:          r => r.candidateFullName,
+  ms365Email:        r => r.ms365Email || null,
+  status:            r => STATUS_CODES.indexOf(r.status), // workflow order, not the label
+  expectedStartDate: r => r.expectedStartDate?.slice(0, 10) || null, // ISO: string order = date order
+  hwLabel:           r => r.assetsProvided ?? 0,
+  licLabel:          r => licCount(r),
+};
+
+/**
+ * Sorts the whole filtered list (the table is `manualSort`, see its section).
+ * Missing values sort last in both directions, like the library's own comparator.
+ */
+function sortProvisioning(items: ProvisioningListItem[], sort: ProvisioningSort | null): ProvisioningListItem[] {
+  const value = sort && SORT_VALUE[sort.key];
+  if (!sort || !value) return items;
+  const sign = sort.dir === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const va = value(a), vb = value(b);
+    if (va === null || vb === null) return va === vb ? 0 : va === null ? 1 : -1;
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true });
+    return cmp * sign;
+  });
 }
 
 /** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
@@ -121,12 +151,16 @@ export class ItProvisioningListComponent implements OnInit {
     });
   });
 
+  /** Table header sort — applied to the whole filtered set, before paging. Kept across views. */
+  readonly sort = signal<ProvisioningSort | null>(null);
+  readonly sortedItems = computed(() => sortProvisioning(this.filteredItems(), this.sort()));
+
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
+    return this.sortedItems().slice(start, start + this.pageSize());
   });
 
   // ── KPIs ───────────────────────────────────────────────────────────────────
@@ -291,6 +325,12 @@ export class ItProvisioningListComponent implements OnInit {
     this.overdueOnly.set(result['overdue'] === true);
     this.missingFilter.set(Array.isArray(missing) ? missing as MissingItem[] : []);
     this.startRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
+    this.currentPage.set(0);
+  }
+
+  /** A new order makes the current page meaningless — back to the first one. */
+  onSortChange(sort: ProvisioningSort | null): void {
+    this.sort.set(sort);
     this.currentPage.set(0);
   }
 

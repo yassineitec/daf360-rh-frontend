@@ -28,7 +28,9 @@ import {
 import {
   MissionCardAction, MissionsCardsSectionComponent,
 } from './sections/missions-cards-section.component';
-import { MissionsTableSectionComponent } from './sections/missions-table-section.component';
+import {
+  MissionSort, MissionsTableSectionComponent, sortMissions,
+} from './sections/missions-table-section.component';
 import { ConfirmService } from '../../core/confirm.service';
 
 const PAGE_SIZE = 10;
@@ -159,12 +161,16 @@ export class MissionsListComponent implements OnInit {
   private readonly openMissions = computed(() =>
     this.missions().filter(m => OPEN_STATUS_CODES.includes(m.status)));
 
+  /** Table header sort — applied to the whole filtered set, before paging. Kept across views. */
+  readonly sort = signal<MissionSort | null>(null);
+  readonly sortedItems = computed(() => sortMissions(this.filteredItems(), this.sort()));
+
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
+    return this.sortedItems().slice(start, start + this.pageSize());
   });
 
   /**
@@ -317,6 +323,12 @@ export class MissionsListComponent implements OnInit {
 
   setView(mode: string): void {
     this.viewMode.set(mode as ViewMode);
+  }
+
+  /** A new order makes the current page meaningless — back to the first one. */
+  onSortChange(sort: MissionSort | null): void {
+    this.sort.set(sort);
+    this.currentPage.set(0);
   }
 
   onPageChange(page: number): void {

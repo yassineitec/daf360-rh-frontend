@@ -31,7 +31,9 @@ import { MissionDecision, MissionDecisionModalComponent } from './mission-decisi
 import {
   BilleterieAction, BilleterieCardsSectionComponent,
 } from './sections/billeterie-cards-section.component';
-import { BilleterieTableSectionComponent } from './sections/billeterie-table-section.component';
+import {
+  BilleterieSort, BilleterieTableSectionComponent, sortBilleterie,
+} from './sections/billeterie-table-section.component';
 import {
   ChangeRequestAction, ChangeRequestsTableSectionComponent,
 } from './sections/change-requests-table-section.component';
@@ -169,12 +171,16 @@ export class BilleterieComponent implements OnInit {
     });
   });
 
+  /** Queue-table header sort — applied to the whole filtered queue, before paging. Kept across views. */
+  readonly sort = signal<BilleterieSort | null>(null);
+  readonly sortedItems = computed(() => sortBilleterie(this.filteredItems(), this.sort()));
+
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
+    return this.sortedItems().slice(start, start + this.pageSize());
   });
 
   readonly queueEmptyMessage = computed(() => {
@@ -336,6 +342,12 @@ export class BilleterieComponent implements OnInit {
 
   setView(mode: string): void {
     this.viewMode.set(mode as ViewMode);
+  }
+
+  /** A new order makes the current page meaningless — back to the first one. */
+  onSortChange(sort: BilleterieSort | null): void {
+    this.sort.set(sort);
+    this.currentPage.set(0);
   }
 
   onPageChange(page: number): void {

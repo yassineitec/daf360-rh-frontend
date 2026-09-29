@@ -18,7 +18,7 @@ import {
 import { OnboardingService } from './onboarding.service';
 import { CandidateOnboardingStatus, OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
 import { OnboardingCardsSectionComponent } from './sections/onboarding-cards-section.component';
-import { OnboardingTableSectionComponent } from './sections/onboarding-table-section.component';
+import { OnboardingSort, OnboardingTableSectionComponent } from './sections/onboarding-table-section.component';
 
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -32,6 +32,37 @@ type ViewMode = 'grid' | 'list';
 type DraftFilter = '' | 'WITH_DRAFT' | 'NO_DRAFT';
 const DRAFT_CODES: Exclude<DraftFilter, ''>[] = ['WITH_DRAFT', 'NO_DRAFT'];
 
+/** Workflow order of the IT provisioning status, for the "Statut IT" sort. */
+const IT_STATUS_ORDER = ['PENDING', 'IN_PROGRESS', 'EMAIL_CREATED', 'COMPLETED'];
+
+/** What each table column sorts on — keyed by the table's column keys. */
+const SORT_VALUE: Record<string, (r: OnboardingListItem) => string | number | null> = {
+  employe:           r => r.candidateFullName,
+  ms365Email:        r => r.ms365Email || null,
+  itStatus:          r => { const i = IT_STATUS_ORDER.indexOf(r.itProvisioningStatus); return i < 0 ? null : i; },
+  expectedStartDate: r => r.expectedStartDate?.slice(0, 10) || null, // ISO: string order = date order
+  status:            r => STATUS_CODES.indexOf(r.candidateStatus),   // workflow order, not the label
+  maj:               r => r.draftSavedAt ?? r.ms365EmailCreatedAt ?? null, // same rule as lastUpdated()
+};
+
+/**
+ * Sorts the whole filtered list (the table is `manualSort`, see its section).
+ * Missing values sort last in both directions, like the library's own comparator.
+ */
+function sortOnboarding(items: OnboardingListItem[], sort: OnboardingSort | null): OnboardingListItem[] {
+  const value = sort && SORT_VALUE[sort.key];
+  if (!sort || !value) return items;
+  const sign = sort.dir === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const va = value(a), vb = value(b);
+    if (va === null || vb === null) return va === vb ? 0 : va === null ? 1 : -1;
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true });
+    return cmp * sign;
+  });
+}
+
 /** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
 function toIsoDay(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -44,7 +75,7 @@ function toIsoDay(d: Date): string {
  * `daf-pagination`.
  *
  * The endpoint returns the whole pending list in one call, so search, the status
- * filter and paging are all client-side projections of `items`.
+ * filter, the table sort and paging are all client-side projections of `items`.
  *
  * All view state lives here and both sections are stateless input/output shells,
  * which is what makes flipping between cards and list lossless.
@@ -132,12 +163,16 @@ export class OnboardingListComponent implements OnInit {
       .sort((a, b) => a.label.localeCompare(b.label));
   });
 
+  /** Table header sort — applied to the whole filtered set, before paging. Kept across views. */
+  readonly sort = signal<OnboardingSort | null>(null);
+  readonly sortedItems = computed(() => sortOnboarding(this.filteredItems(), this.sort()));
+
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
+    return this.sortedItems().slice(start, start + this.pageSize());
   });
 
   // ── KPIs ───────────────────────────────────────────────────────────────────
@@ -310,6 +345,12 @@ export class OnboardingListComponent implements OnInit {
     this.startRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
     this.entityFilter.set(str('entity'));
     this.startPassedOnly.set(result['startPassed'] === true);
+    this.currentPage.set(0);
+  }
+
+  /** A new order makes the current page meaningless — back to the first one. */
+  onSortChange(sort: OnboardingSort | null): void {
+    this.sort.set(sort);
     this.currentPage.set(0);
   }
 

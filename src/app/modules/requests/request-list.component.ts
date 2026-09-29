@@ -3,9 +3,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
 import {
-  AvatarComponent,
-  ButtonComponent,
-  CardComponent,
   FilterField,
   FilterResult,
   MetricCardComponent,
@@ -14,17 +11,20 @@ import {
   PaginationComponent,
   SearchToolbarComponent,
   SearchToolbarFilterConfig,
-  StatusBadgeComponent,
   TabItem,
   TabsComponent,
+  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 
 import { RequestsService } from './requests.service';
-import { EmployeeRequest, RequestStatus } from './models/request.model';
+import { EmployeeRequest, RequestStatus, RequestType } from './models/request.model';
 import { SlaCountdownPipe, SlaLevel, SlaResult } from '../../shared/sla-countdown.pipe';
-import { RelativeDatePipe } from '../../shared/relative-date.pipe';
+import {
+  RequestCardAction, RequestCardItem, RequestCardsSectionComponent, requestRef,
+} from './request-cards-section.component';
+import { RequestTableSectionComponent } from './request-table-section.component';
+import { ListViewMode, readStoredView, storeView, ViewToggleComponent } from '../../shared/view-toggle.component';
 import { UserStore } from '../../core/user.store';
-import { NewRequestComponent } from './new-request.component';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { ConfirmService } from '../../core/confirm.service';
 import { NotificationService } from '../../core/notification.service';
@@ -33,7 +33,6 @@ import {
   RecruitmentValidationSectionComponent,
   RECRUITMENT_APPROVE_PERMISSION,
 } from '../recruitment-demands/recruitment-validation-section.component';
-import { RecruitmentDemandFormComponent } from '../recruitment-demands/recruitment-demand-form.component';
 type MainTab = 'other' | 'recruitment';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
@@ -44,6 +43,8 @@ function toIsoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+const VIEW_STORAGE_KEY = 'rh.requests.view';
+
 const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
   warning: 'warning',
@@ -51,13 +52,15 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
   none: 'neutral',
 };
 
-/** Card-ready view model — one per visible request row. */
+/** Card/row-ready view model — one per visible request, shared by both views. */
 interface RequestCard {
   id: number;
+  /** Display reference, e.g. `REQ-2026-000123`. */
+  ref: string;
   employeeLabel: string;
-  /** Real photo endpoint — daf-avatar falls back to initials on its own if it 404s. */
-  avatarUrl: string;
   type: string;
+  /** `RequestType.category`, translated — '' until the type catalog has loaded. */
+  categoryLabel: string;
   status: ReturnType<typeof statusBadge>;
   isActive: boolean;
   sla: SlaResult | null;
@@ -73,20 +76,16 @@ interface RequestCard {
   selector: 'app-request-list',
   standalone: true,
   imports: [
-    AvatarComponent,
-    ButtonComponent,
-    CardComponent,
     MetricCardComponent,
-    StatusBadgeComponent,
     PageComponent,
     PageHeaderComponent,
     PaginationComponent,
     SearchToolbarComponent,
-    NewRequestComponent,
-    RecruitmentDemandFormComponent,
     RecruitmentValidationSectionComponent,
+    RequestCardsSectionComponent,
+    RequestTableSectionComponent,
     TabsComponent,
-    RelativeDatePipe,
+    ViewToggleComponent,
     TranslatePipe,
   ],
   template: `
@@ -94,34 +93,16 @@ interface RequestCard {
          space-y-* / mb-* between sections, and the title is the header's single h1. -->
     <daf-page [loading]="firstLoad()" [kpis]="4">
 
+      <!-- No "Nouvelle demande" button here: requests are raised from the shell's
+           self-service page — this page is where they are processed. -->
       <daf-page-header
         [title]="'REQUESTS.LIST.TITLE' | translate"
-        [subtitle]="'REQUESTS.LIST.INTRO_TITLE' | translate">
-        <daf-button pageActions
-          [options]="{ variant: 'teal', label: ('REQUESTS.LIST.NEW_BTN' | translate), iconStart: 'add' }"
-          (onClick)="showNew.set(true)" />
-      </daf-page-header>
+        [subtitle]="'REQUESTS.LIST.INTRO_TITLE' | translate" />
 
-      <!-- ── Two top-level tabs, buttons above the content below — same daf-tabs
-           pattern as the Affaires detail page and the recruitment popup, but as the
-           page's own organizing structure this time: "Demande de recrutement" is a
-           different table with a different approval chain than \`employee_requests\`,
-           so it earns its own tab rather than living inside the other one.
-           Only shown at all for RH_APPROVE_RECRUITMENT_DEMAND holders — everyone else
-           has nothing to switch to, so they go straight to their own requests below. -->
-      @if (mainTabs().length > 1) {
-        <daf-tabs
-          variant="underline"
-          [tabs]="mainTabs()"
-          [active]="mainTab()"
-          (activeChange)="onMainTabChange($event)"
-          [tabsLabel]="'REQUESTS.LIST.MAIN_TABS_ARIA' | translate" />
-      }
-
-      <!-- KPI row — mounted once, right under the tabs, and stays in place across a tab
-           switch: only the four values (and what they mean) swap, read straight off the
-           "Demande de recrutement" section via viewChild when that tab is active, so the
-           cards never disappear/reappear the way a per-tab block would. -->
+      <!-- KPI row — mounted once, above the tabs, and stays in place across a tab switch:
+           only the four values (and what they mean) swap with the active tab, read straight
+           off the "Demande de recrutement" section via viewChild when that tab is active, so
+           the cards never disappear/reappear the way a per-tab block would. -->
       <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
         @if (canValidateRecruitment() && mainTab() === 'recruitment') {
           <daf-metric-card
@@ -160,13 +141,29 @@ interface RequestCard {
         }
       </section>
 
+      <!-- ── Two top-level tabs, buttons above the content below — same daf-tabs
+           pattern as the Affaires detail page and the recruitment popup, but as the
+           page's own organizing structure this time: "Demande de recrutement" is a
+           different table with a different approval chain than \`employee_requests\`,
+           so it earns its own tab rather than living inside the other one.
+           Only shown at all for RH_APPROVE_RECRUITMENT_DEMAND holders — everyone else
+           has nothing to switch to, so they go straight to their own requests below. -->
+      @if (mainTabs().length > 1) {
+        <daf-tabs
+          variant="underline"
+          [tabs]="mainTabs()"
+          [active]="mainTab()"
+          (activeChange)="onMainTabChange($event)"
+          [tabsLabel]="'REQUESTS.LIST.MAIN_TABS_ARIA' | translate" />
+      }
+
       @if (canValidateRecruitment() && mainTab() === 'recruitment') {
         <app-recruitment-validation-section />
       } @else {
         <!-- Always-on search by employee name — a non-technical user should never need to
              scan a long list by eye to find one person. No status filter here: this list is
              the "en cours" view only (not yet answered) — a request that already has a
-             response (approuvée/rejetée/annulée) moves to the /rh/recruitment-demands
+             response (approuvée/rejetée/annulée) moves to the /rh/requests-history
              historique instead. The "Filtres" panel narrows by urgency instead, same
              breakdown as the KPI row above. -->
         <daf-search-toolbar
@@ -175,91 +172,37 @@ interface RequestCard {
           [debounce]="200"
           [filterFields]="filterFields()"
           [filterConfig]="filterConfig()"
-          (filterApply)="onFilterApply($event)" />
+          (filterApply)="onFilterApply($event)">
+          <!-- Cards / table switch, projected so it sits just before "Filtres". -->
+          <app-view-toggle
+            [options]="viewOptions()"
+            [value]="viewMode()"
+            (valueChange)="setView($event)"
+            [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
+        </daf-search-toolbar>
 
-        <!-- Card list replaces the technical data table: each request is its own daf-card,
-             avatar + name first, so a non-technical reader recognises "who" before "what". -->
-        @if (loading()) {
-          <div class="flex flex-col gap-3">
-            @for (i of skeletonPlaceholders(); track i) {
-              <div class="h-20 animate-pulse rounded-xl bg-surface-container"></div>
-            }
-          </div>
-        } @else if (cards().length === 0) {
-          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-            <div class="flex flex-col items-center gap-2 py-8 text-center">
-              <span class="material-symbols-outlined text-[36px] text-outline-variant">
-                {{ isNarrowedEmpty() ? 'search_off' : 'task_alt' }}
-              </span>
-              <p class="m-0 text-[14px] font-semibold text-on-surface">{{ emptyMessage() }}</p>
-              <p class="m-0 text-[12px] text-outline">{{ emptyHint() }}</p>
-            </div>
-          </daf-card>
+        <!-- Both views render at every width: the card grid goes 1 → 2 → 3 columns, the
+             table scrolls horizontally inside daf-data-table (same as /rh/it-provisioning). -->
+        @if (viewMode() === 'grid') {
+          <app-request-cards-section
+            [items]="cards()"
+            [loading]="loading()"
+            [canApprove]="canViewInbox()"
+            [emptyIcon]="isNarrowedEmpty() ? 'search_off' : 'task_alt'"
+            [emptyMessage]="emptyMessage()"
+            [emptyHint]="emptyHint()"
+            (action)="onItemAction($event.action, $event.item)" />
         } @else {
-          <div class="flex flex-col gap-3">
-            @for (card of cards(); track card.id) {
-              <!-- Same glass/xl recipe as request-detail's own daf-card sections, so the list
-                   and the detail page a click away read as one feature, not two designs. -->
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'md', radius: 'xl', hoverable: true }">
-                <div class="flex flex-wrap items-center gap-4">
-                  <daf-avatar [data]="{ name: card.employeeLabel, avatarUrl: card.avatarUrl }" size="md" />
-
-                  <div class="min-w-[180px] flex-1">
-                    <p class="m-0 text-[15px] font-semibold text-on-surface">{{ card.employeeLabel }}</p>
-                    <div class="mt-1 flex items-center gap-1.5 text-[13px] text-on-surface-variant">
-                      <span class="material-symbols-outlined text-[16px] text-teal">description</span>
-                      <span>{{ card.type }}</span>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col items-start gap-1.5 sm:items-end">
-                    <daf-badge [label]="card.status.label" [options]="card.status.options" />
-                    @if (card.isActive) {
-                      <daf-badge [label]="card.slaLabel" [options]="{ variant: card.slaVariant, size: 'sm', dot: true }" />
-                    }
-                  </div>
-
-                  <div class="text-[12px] text-outline sm:w-32 sm:text-right">
-                    {{ card.submissionDate | relativeDate }}
-                  </div>
-
-                  <div class="flex items-center justify-end gap-2">
-                    <!-- Icon buttons styled exactly like daf-data-table's own trailing
-                         actions column (same classes as its actionBtnClasses()), so this
-                         card list's actions read as the same control as /rh/admin's tables. -->
-                    <button type="button"
-                      [title]="'REQUESTS.LIST.VIEW_DETAIL' | translate"
-                      class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-on-surface-variant hover:opacity-70 cursor-pointer"
-                      (click)="viewDetail(card.id)">
-                      <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24">visibility</span>
-                    </button>
-                    @if (canViewInbox() && card.isActive) {
-                      <button type="button"
-                        [title]="'REQUESTS.DETAIL.APPROVE_BTN' | translate"
-                        class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-on-surface-variant hover:opacity-70 cursor-pointer"
-                        (click)="approve(card.source)">
-                        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24">check_circle</span>
-                      </button>
-                    }
-                    @if (card.cancelDisabledReason) {
-                      <button type="button" disabled
-                        [title]="card.cancelDisabledReason"
-                        class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-outline opacity-40 cursor-not-allowed">
-                        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24">cancel</span>
-                      </button>
-                    } @else {
-                      <button type="button"
-                        [title]="'REQUESTS.DETAIL.CANCEL_BTN' | translate"
-                        class="flex items-center justify-center p-1 rounded-md transition-all duration-150 text-danger hover:bg-error-container/40 hover:text-danger active:scale-95 cursor-pointer"
-                        (click)="cancel(card.source)">
-                        <span class="material-symbols-outlined" style="font-size:20px; font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24">cancel</span>
-                      </button>
-                    }
-                  </div>
-                </div>
-              </daf-card>
-            }
-          </div>
+          <app-request-table-section
+            [items]="cards()"
+            [loading]="loading()"
+            [skeletonRows]="pageSize()"
+            [canApprove]="canViewInbox()"
+            [tools]="true"
+            [serverSort]="true"
+            (serverSortChange)="onSortChange($event)"
+            [emptyMessage]="emptyMessage()"
+            (action)="onItemAction($event.action, $event.item)" />
         }
 
         <!-- Same daf-pagination configuration as /rh/profiles — page-size selector +
@@ -277,24 +220,6 @@ interface RequestCard {
       }
 
     </daf-page>
-
-    <!-- ── New request modal ─────────────────────────────── -->
-    <!-- The header's "Nouvelle demande" button opens whichever form matches the active
-         tab — an employee request normally, a recruitment demand while on "Demande de
-         recrutement" — so the one button always creates what the visible list is a list of. -->
-    <app-new-request
-      [visible]="showNew() && mainTab() !== 'recruitment'"
-      [profileId]="currentProfileId()"
-      [paysId]="currentPaysId()"
-      (closed)="showNew.set(false)"
-      (submitted)="onSubmitted()"
-    />
-
-    <app-recruitment-demand-form
-      [visible]="showNew() && mainTab() === 'recruitment'"
-      (closed)="showNew.set(false)"
-      (saved)="onRecruitmentDemandSaved()"
-    />
   `,
 })
 export class RequestListComponent implements OnInit {
@@ -322,7 +247,8 @@ export class RequestListComponent implements OnInit {
   page = signal(0);
   pageSize = signal(100);
   readonly pageSizeOptions = [20, 50, 100];
-  showNew = signal(false);
+  /** Spring `sort` from the table header (e.g. `submissionDate,asc`); null = server default. */
+  sort = signal<string | null>(null);
   searchQuery = signal('');
   /** The one filter dimension left once status no longer applies here — same three levels
    *  as the KPI row above ('all' shows everything, matching the unfiltered KPI total). */
@@ -333,6 +259,19 @@ export class RequestListComponent implements OnInit {
   statusFilter = signal('');
   /** Submission-date range from the panel: one day or [from, to]; null = no bound. */
   submittedRange = signal<Date[] | null>(null);
+
+  /** Cards or table — both views take the same `cards()`; the choice is remembered per browser. */
+  viewMode = signal<ListViewMode>(readStoredView(VIEW_STORAGE_KEY));
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'grid',  icon: 'grid_view', tooltip: this.translate.instant('REQUESTS.LIST.VIEW_GRID') },
+      { id: 'table', icon: 'view_list', tooltip: this.translate.instant('REQUESTS.LIST.VIEW_TABLE') },
+    ];
+  });
+
+  /** Request type catalog by id — gives each card its category. */
+  private readonly typesById = signal(new Map<number, RequestType>());
 
   /** Which of the two top-level tabs is showing — defaults to the employee's own
    *  requests, the reason most visitors land on this page. */
@@ -382,7 +321,7 @@ export class RequestListComponent implements OnInit {
   });
 
   /** Only "en cours" requests ever show on this page — one that already has a response
-   *  (approuvée/rejetée/annulée) belongs to the /rh/recruitment-demands historique instead,
+   *  (approuvée/rejetée/annulée) belongs to the /rh/requests-history historique instead,
    *  so there is no status filter here, just this one fixed rule. */
   private readonly activeRows = computed(() =>
     this.allRows().filter((r) => ACTIVE_STATUSES.includes(r.status)));
@@ -544,12 +483,14 @@ export class RequestListComponent implements OnInit {
     return this.visibleRows().map((r) => {
       const isActive = this.isActive(r.status);
       const sla = isActive ? this.slaPipe.transform(this.slaDeadline(r)) : null;
+      const category = this.typesById().get(r.requestTypeId)?.category;
       return {
         id: r.id,
+        ref: requestRef(r),
         employeeLabel: r.employeeName
           ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
-        avatarUrl: `/api/hr/profiles/${r.employeeProfileId}/photo`,
         type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
+        categoryLabel: category ? this.translate.instant('REQUESTS.CATEGORY.' + category) : '',
         status: this.statusBadge(r.status),
         isActive,
         sla,
@@ -564,6 +505,24 @@ export class RequestListComponent implements OnInit {
 
   viewDetail(id: number): void {
     this.router.navigate([id], { relativeTo: this.route });
+  }
+
+  /** One handler for both views — the card grid and the table emit the same actions. */
+  onItemAction(action: RequestCardAction, item: RequestCardItem): void {
+    switch (action) {
+      case 'view':    this.viewDetail(item.id); break;
+      case 'approve': this.approve(item.source); break;
+      case 'cancel':
+        // The table greys the button out; this guard also covers a stale click.
+        if (!item.cancelDisabledReason) this.cancel(item.source);
+        break;
+    }
+  }
+
+  setView(id: string): void {
+    if (id !== 'grid' && id !== 'table') return;
+    this.viewMode.set(id);
+    storeView(VIEW_STORAGE_KEY, id);
   }
 
   isActive(status: string): boolean {
@@ -611,18 +570,22 @@ export class RequestListComponent implements OnInit {
 
   ngOnInit() {
     this.reload();
+    this.svc.listTypes(this.currentPaysId())
+      .pipe(catchError(() => of([] as RequestType[])))
+      .subscribe((types) => this.typesById.set(new Map(types.map((t) => [t.id, t]))));
   }
 
   reload(resetPage = true) {
     if (resetPage) this.page.set(0);
     this.loading.set(true);
-    // Same permission-gated "own vs everyone" split as /rh/recruitment-demands
+    // Same permission-gated "own vs everyone" split as /rh/requests-history
     // (canViewAll there, canViewInbox here): HR managers and admins already see
     // every pending request through the inbox, so the same role sees every
     // request here too — everyone else still sees only their own.
+    const sort = this.sort() ?? undefined;
     const filter = this.canViewInbox()
-      ? { paysId: this.currentPaysId(), page: this.page(), size: this.pageSize() }
-      : { profileId: this.currentProfileId() || undefined, page: this.page(), size: this.pageSize() };
+      ? { paysId: this.currentPaysId(), sort, page: this.page(), size: this.pageSize() }
+      : { profileId: this.currentProfileId() || undefined, sort, page: this.page(), size: this.pageSize() };
     this.svc
       .listRequests(filter)
       .pipe(catchError(() => of(null)))
@@ -637,6 +600,12 @@ export class RequestListComponent implements OnInit {
           this.totalPages.set(res.totalPages);
         }
       });
+  }
+
+  /** Server-side sort from the table (`manualSort`): the backend orders every page, so re-fetch from page 0. */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.reload();
   }
 
   goPage(p: number) {
@@ -694,27 +663,6 @@ export class RequestListComponent implements OnInit {
           this.notification.error(this.translate.instant('REQUESTS.APPROVE.ERROR'));
         }
       });
-  }
-
-  onSubmitted() {
-    this.showNew.set(false);
-    this.reload();
-    this.notification.success(
-      this.translate.instant('REQUESTS.LIST.NEW_SUCCESS'),
-      this.translate.instant('REQUESTS.LIST.NEW_SUCCESS_TITLE'));
-  }
-
-  /** Refreshes the "Demande de recrutement" queue in place — the section stays mounted
-   *  while its tab is active, so its own `ngOnInit` never refires on its own. */
-  onRecruitmentDemandSaved(): void {
-    this.showNew.set(false);
-    this.recruitmentSection()?.load();
-  }
-
-  /** New requests are created on the shell's self-service page (a different app),
-   *  so navigate the top-level window rather than the remote's router. */
-  goToSelfService() {
-    window.location.href = '/home/self-service';
   }
 
   /** Computes a pseudo SLA deadline from submission + defaultSlaDays (we use 3 days as default). */

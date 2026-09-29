@@ -69,6 +69,7 @@ export class CandidateService {
     if (filter.spontaneous)     params['spontaneous']  = true;
     if (filter.createdFrom)     params['createdFrom']  = filter.createdFrom;
     if (filter.createdTo)       params['createdTo']    = filter.createdTo;
+    if (filter.sort)            params['sort']    = filter.sort;
     if (filter.page != null)    params['page']    = filter.page;
     if (filter.size != null)    params['size']    = filter.size;
     return this.http.get<PageResponse<CandidateListItem>>(this.base, { params });

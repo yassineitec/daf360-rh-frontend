@@ -9,7 +9,8 @@ import { RequestsService }  from './requests.service';
 import { EmployeeRequest, RequestStatus } from './models/request.model';
 import {
   StatusBadgeComponent, BadgeOptions, ButtonComponent, CardComponent,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow, PaginationComponent,
+  DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
+  PaginationComponent,
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
@@ -20,6 +21,20 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   ok: 'success', warning: 'warning', critical: 'danger', none: 'neutral',
+};
+
+/**
+ * Table column → EmployeeRequest entity field, for the server-side sort (`manualSort`):
+ * the inbox is server-paginated, so a client-side sort would only reorder the visible page.
+ * The employee name and the type label are computed after the query and cannot sort. The
+ * SLA deadline is submission + 3 days, so it sorts on the submission date (oldest = most
+ * urgent); `status` sorts on the stored enum name (alphabetical).
+ */
+const SERVER_SORT_FIELD: Record<string, string> = {
+  id:        'id',
+  submitted: 'submissionDate',
+  sla:       'submissionDate',
+  status:    'status',
 };
 
 @Component({
@@ -69,7 +84,9 @@ const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
           <p>{{ 'REQUESTS.INBOX.EMPTY' | translate }}</p>
         </div>
       } @else {
-        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
+        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()"
+                        (sortChange)="onSortChange($event.key, $event.dir)"
+                        (resetClick)="onSortChange('', null)">
           <ng-template dafCell="status" let-row>
             <daf-badge [label]="statusBadge(row['_source'].status).label" [options]="statusBadge(row['_source'].status).options" />
           </ng-template>
@@ -137,6 +154,10 @@ export class RequestOfficerInboxComponent implements OnInit {
   page       = signal(0);
 
   filterStatus  = '';
+  /** Spring `sort` from the table header (e.g. `submissionDate,asc`); null = server default. */
+  sort          = signal<string | null>(null);
+  /** The header state the table re-mounts with — it is rebuilt by the loading `@if` on every fetch. */
+  private tableSortSeed = signal<{ key: string; dir: 'asc' | 'desc' } | null>(null);
   refuseTarget  = signal<EmployeeRequest | null>(null);
   refuseMotif   = '';
   errorMsg      = signal('');
@@ -153,20 +174,35 @@ export class RequestOfficerInboxComponent implements OnInit {
 
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const sortable = (key: string) => key in SERVER_SORT_FIELD;
     return [
-      { key: 'id', label: this.translate.instant('REQUESTS.INBOX.COL_ID') },
+      { key: 'id', label: this.translate.instant('REQUESTS.INBOX.COL_ID'), sortable: sortable('id') },
       { key: 'employee', label: this.translate.instant('REQUESTS.INBOX.COL_EMPLOYEE') },
       { key: 'type', label: this.translate.instant('REQUESTS.INBOX.COL_TYPE') },
-      { key: 'submitted', label: this.translate.instant('REQUESTS.INBOX.COL_SUBMITTED') },
-      { key: 'sla', label: this.translate.instant('REQUESTS.INBOX.COL_SLA') },
-      { key: 'status', label: this.translate.instant('REQUESTS.INBOX.COL_STATUS') },
+      { key: 'submitted', label: this.translate.instant('REQUESTS.INBOX.COL_SUBMITTED'), sortable: sortable('submitted') },
+      { key: 'sla', label: this.translate.instant('REQUESTS.INBOX.COL_SLA'), sortable: sortable('sla') },
+      { key: 'status', label: this.translate.instant('REQUESTS.INBOX.COL_STATUS'), sortable: sortable('status') },
     ];
   });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const seed = this.tableSortSeed();
     return {
       hoverable: true,
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as EmployeeRequest).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      // Rows are rendered in the order the server returned; sortChange still fires.
+      manualSort:        true,
+      ...(seed ? { defaultSort: seed } : {}),
       actions: [
         {
           id: 'view',
@@ -214,6 +250,7 @@ export class RequestOfficerInboxComponent implements OnInit {
     this.svc.listRequests({
       paysId:  this.paysId(),
       status:  (this.filterStatus || undefined) as RequestStatus | undefined,
+      sort:    this.sort() ?? undefined,
       page:    this.page(),
       size:    30,
     }).pipe(catchError(() => of(null))).subscribe(res => {
@@ -227,6 +264,17 @@ export class RequestOfficerInboxComponent implements OnInit {
   }
 
   goPage(p: number) { this.page.set(p); this.reload(false); }
+
+  /**
+   * Header click (or the reset icon): the backend orders every page, so re-fetch page 0.
+   * The table is re-created by the loading `@if`, so the arrow is re-seeded as `defaultSort`.
+   */
+  onSortChange(key: string, dir: SortDirection): void {
+    const field = SERVER_SORT_FIELD[key];
+    this.sort.set(field && dir ? `${field},${dir}` : null);
+    this.tableSortSeed.set(field && dir ? { key, dir } : null);
+    this.reload();
+  }
 
   async quickApprove(row: EmployeeRequest) {
     if (!(await this.confirm.ask({

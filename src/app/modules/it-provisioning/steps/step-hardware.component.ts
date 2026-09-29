@@ -27,6 +27,11 @@ export interface AssetFieldChange {
  *
  * The detail fields stay disabled until "Fourni" is ticked — that gate is why an
  * empty `it_asset_types` catalog reads as "I can't assign any material".
+ *
+ * Of the library table tools used elsewhere in RH, only the layout ones are on here:
+ * resizable columns and rows, and the reset icon. This is a form, not a list — no sort
+ * (rows follow the catalog order and must not move under the user's cursor while typing)
+ * and no column picker (hiding a column would hide inputs, "Fourni" included).
  */
 @Component({
   selector: 'rh-step-hardware',
@@ -123,6 +128,12 @@ export class StepHardwareComponent {
       showHeader:   false,
       hoverable:    false,
       emptyMessage: this.translate.instant('IT_PROVISIONING.form.assetEmpty'),
+      // Stable row identity: a dragged row height stays on its asset type.
+      rowId:        (row: TableRow) => row['assetTypeCode'],
+      resizableColumns: true,
+      resizableRows:    true,
+      showReset:        true,
+      resetLabel:       this.translate.instant('REQUESTS.TABLE.RESET'),
     };
   });
 

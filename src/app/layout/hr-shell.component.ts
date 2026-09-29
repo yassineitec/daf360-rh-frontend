@@ -142,9 +142,8 @@ const APP_NAV_DEFS: AppNavDef[] = [
         id: 'requests-history',
         labelKey: 'NAV.REQUESTS_HISTORY',
         icon: 'history',
-        // Temporary target: the recruitment-demands list — the same page the "Toutes les
-        // demandes" button already opens — until a dedicated request-history page exists.
-        route: 'recruitment-demands',
+        // The historique page: decided HR requests + recruitment demands, one tab each.
+        route: 'requests-history',
         permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'],
       },
     ],

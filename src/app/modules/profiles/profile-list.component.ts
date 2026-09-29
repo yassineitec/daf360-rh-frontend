@@ -78,6 +78,8 @@ export class ProfileListComponent implements OnInit {
   readonly searchText  = signal('');
   readonly filters     = signal<Partial<Record<FilterKey, string>>>({});
   readonly selectedIds = signal<Set<number>>(new Set());
+  /** Server-side sort from the table header (Spring `sort`, e.g. `hireDate,asc`); null = newest hire first. */
+  readonly sort        = signal<string | null>(null);
 
   // ── Paging ─────────────────────────────────────────────────────────────────
   readonly currentPage   = signal(0);
@@ -255,6 +257,7 @@ export class ProfileListComponent implements OnInit {
       hireDateFrom: f.hireDate ? f.hireDate.split('..')[0] || undefined : undefined,
       hireDateTo:   f.hireDate ? f.hireDate.split('..')[1] || undefined : undefined,
       includeInactive: f.includeInactive === 'true' ? true : undefined,
+      sort:         this.sort() ?? undefined,
     };
   }
 
@@ -290,6 +293,12 @@ export class ProfileListComponent implements OnInit {
     this.resetToFirstPage();
   }
 
+  /** A new order is a new result set — back to page 0, selection cleared (like a filter). */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.resetToFirstPage();
+  }
+
   onPageChange(page: number): void {
     this.currentPage.set(page);
     this.clearSelection();
@@ -319,6 +328,11 @@ export class ProfileListComponent implements OnInit {
    */
   selectAll(): void {
     this.selectedIds.set(new Set(this.employees().map(e => e.userId)));
+  }
+
+  /** The table's own selection column (checkbox, header "select all", reset) sends the whole set. */
+  setSelection(ids: number[]): void {
+    this.selectedIds.set(new Set(ids));
   }
 
   clearSelection(): void {

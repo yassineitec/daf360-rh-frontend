@@ -79,6 +79,8 @@ export interface RequestFilter {
   status?:    RequestStatus;
   typeId?:    number;
   paysId?:    number;
+  /** Spring `sort` param, e.g. `submissionDate,desc` — entity fields only. */
+  sort?:      string;
   page?:      number;
   size?:      number;
 }

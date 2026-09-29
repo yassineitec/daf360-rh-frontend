@@ -1218,7 +1218,8 @@
       "STATUS": "Status",
       "HIRE_DATE": "Hire date",
       "EDIT": "Edit",
-      "SELECT_ROW": "Select {{name}}"
+      "SELECT_ROW": "Select {{name}}",
+      "SELECT_ROW_LABEL": "Select row"
     },
     "BULK": {
       "EXPORT": "Export Excel",
@@ -3572,7 +3573,16 @@
       },
       "INBOX_BTN": "Inbox",
       "EMPTY_DONE": "No processed requests",
-      "TAB_DONE": "Processed ({{count}})"
+      "TAB_DONE": "Processed ({{count}})",
+      "COL_EMPLOYEE": "Employee",
+      "COL_TYPE_OBJECT": "Type & subject",
+      "COL_STATUS_SLA": "Status & SLA",
+      "CHIP_ALL": "All ({{count}})",
+      "SELECT_ALL_ARIA": "Select all displayed requests",
+      "SELECT_ROW_ARIA": "Select request {{ref}}",
+      "VIEW_GRID": "Card view",
+      "VIEW_TABLE": "Table view",
+      "VIEW_ARIA": "Display mode"
     },
     "DETAIL": {
       "NOT_FOUND": "Request not found.",
@@ -3667,6 +3677,59 @@
       "SUBMIT": "Submit request",
       "FILE_REQUIRED": "Please attach the required file: {{label}}",
       "ERROR_SUBMIT": "Error during submission"
+    },
+    "CATEGORY": {
+      "DOCUMENT": "Official documents",
+      "PERSONAL_DATA_CHANGE": "Personal data",
+      "BANK_DETAILS": "Bank details",
+      "CAREER": "Career & training",
+      "OTHER": "Other"
+    },
+    "BULK": {
+      "COUNT_LABEL": "selected",
+      "SELECT_ALL": "Select all",
+      "ALL_SELECTED": "All selected",
+      "CANCEL": "Clear selection",
+      "APPROVE": "Approve selection ({{count}})",
+      "EXPORT": "Export CSV / Excel",
+      "CSV_HEADER": "Reference;Employee;Type;Category;Status;Urgency;Submitted on",
+      "CONFIRM_TITLE": "Approve {{count}} request(s)?",
+      "CONFIRM_MESSAGE": "The selected requests will be approved and the requesters notified.",
+      "CONFIRM": "Approve selection",
+      "SUCCESS": "{{count}} request(s) approved.",
+      "PARTIAL": "{{count}} request(s) could not be approved."
+    },
+    "DRAWER": {
+      "TITLE": "Request overview",
+      "CLOSE": "Close",
+      "MATRICULE": "Employee ID",
+      "DEPARTMENT": "Department",
+      "LOCATION": "Location",
+      "CIRCUIT_TITLE": "Approval flow",
+      "STEP_SUBMITTED": "Request submitted",
+      "STEP_L1": "Level 1 approval",
+      "STEP_L2": "Level 2 approval",
+      "STEP_FINAL": "Final HR approval",
+      "STEP_CURRENT": "In progress",
+      "NO_ATTACHMENT": "No attachment.",
+      "COMMENT_PLACEHOLDER": "Explain the decision…",
+      "COMMENT_HINT": "Required to reject.",
+      "APPROVE": "Approve request",
+      "OPEN_FULL": "Full page",
+      "DEFAULT_APPROVE_COMMENT": "Approved",
+      "REJECT_SUCCESS": "The request was rejected."
+    },
+    "CARDS": {
+      "REF_LABEL": "Reference",
+      "CATEGORY_LABEL": "Category",
+      "URGENCY_LABEL": "Urgency",
+      "VIEW": "View",
+      "DECIDED_LABEL": "Decided"
+    },
+    "TABLE": {
+      "COLUMN_PICKER": "Choose columns",
+      "RESET": "Reset table layout",
+      "SORT_BY": "Sort by {column}"
     }
   },
   "IT_PROVISIONING": {

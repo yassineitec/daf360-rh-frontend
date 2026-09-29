@@ -18,7 +18,9 @@ import { Mission, MissionScope, MissionStatus } from './mission.model';
 import { MissionDetailDrawerComponent } from './mission-detail-drawer.component';
 import { countryOptions, employeeOptions, errorMessage, matchesPeriod } from './mission-display';
 import { MissionsCardsSectionComponent } from './sections/missions-cards-section.component';
-import { MissionsTableSectionComponent } from './sections/missions-table-section.component';
+import {
+  MissionSort, MissionsTableSectionComponent, sortMissions,
+} from './sections/missions-table-section.component';
 
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -123,12 +125,16 @@ export class MissionsHistoryComponent implements OnInit {
     });
   });
 
+  /** Table header sort — applied to the whole filtered set, before paging. Kept across views. */
+  readonly sort = signal<MissionSort | null>(null);
+  readonly sortedItems = computed(() => sortMissions(this.filteredItems(), this.sort()));
+
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
+    return this.sortedItems().slice(start, start + this.pageSize());
   });
 
   readonly emptyMessage = computed(() => {
@@ -247,6 +253,12 @@ export class MissionsHistoryComponent implements OnInit {
 
   setView(mode: string): void {
     this.viewMode.set(mode as ViewMode);
+  }
+
+  /** A new order makes the current page meaningless — back to the first one. */
+  onSortChange(sort: MissionSort | null): void {
+    this.sort.set(sort);
+    this.currentPage.set(0);
   }
 
   onPageChange(page: number): void {

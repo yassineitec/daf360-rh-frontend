@@ -57,6 +57,8 @@
       [canCreateProfile]="canCreateProfile()"
       (viewProfile)="onViewProfile($event)"
       (toggleSelect)="toggleSelect($event)"
+      (selectionChange)="setSelection($event)"
+      (sortChange)="onSortChange($event)"
       (edit)="onEdit($event)" />
   }
 

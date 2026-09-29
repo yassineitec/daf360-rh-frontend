@@ -1,12 +1,10 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  AvatarComponent, ButtonComponent, CardComponent, PaginationComponent,
-  FormFieldComponent, StatusBadgeComponent, SearchToolbarComponent,
-  type FilterField, type FilterResult, type SearchToolbarFilterConfig,
+  ButtonComponent, PaginationComponent, FormFieldComponent, SearchToolbarComponent,
+  type FilterField, type FilterResult, type SearchToolbarFilterConfig, type ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 
 import { ModalComponent } from '../../shared/modal.component';
@@ -14,11 +12,16 @@ import { NotificationService } from '../../core/notification.service';
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
 import { RecruitmentDemandSummary, RecruitmentDemandStatus } from './recruitment-demand.model';
+import {
+  RecruitmentDemandAction, RecruitmentDemandCardsSectionComponent,
+} from './sections/recruitment-demand-cards-section.component';
+import { RecruitmentDemandTableSectionComponent } from './sections/recruitment-demand-table-section.component';
+import { ListViewMode, readStoredView, storeView, ViewToggleComponent } from '../../shared/view-toggle.component';
 
 /** The permission that owns this queue — the same code the review endpoint enforces. */
 export const RECRUITMENT_APPROVE_PERMISSION = 'RH_APPROVE_RECRUITMENT_DEMAND';
 
-/** Same traffic-light mapping used on /rh/recruitment-demands. */
+/** Same traffic-light mapping used on /rh/requests-history. */
 const STATUS_VARIANT: Record<RecruitmentDemandStatus, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
   EN_ATTENTE: 'warning',
   APPROUVEE:  'success',
@@ -40,16 +43,7 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
   return [...set].sort((a, b) => a.localeCompare(b)).map(l => ({ value: l, label: l }));
 }
 
-/** Card-ready view model — same shape as the Historique page's own "Recrutement" cards. */
-interface DemandCard {
-  id: number;
-  poste: string;
-  subtitle: string;
-  status: { label: string; options: { variant: 'success' | 'warning' | 'danger' | 'neutral' | 'info' } };
-  urgencyLabel: string | null;
-  submittedAt: string;
-  source: RecruitmentDemandSummary;
-}
+const VIEW_STORAGE_KEY = 'rh.requests.recruitment.view';
 
 /**
  * Recruitment validation queue — a section of the RH Demandes page.
@@ -65,15 +59,15 @@ interface DemandCard {
  *
  * Only EN_ATTENTE demands ever show here — the "en cours" queue that still needs a decision.
  * One a manager has decided (approuvée/rejetée/annulée/clôturée), it moves to the
- * /rh/recruitment-demands historique instead, same split as the "Demande" tab next to it.
+ * /rh/requests-history historique instead, same split as the "Demande" tab next to it.
  */
 @Component({
   selector: 'app-recruitment-validation-section',
   standalone: true,
   imports: [
-    AvatarComponent, ButtonComponent, CardComponent, PaginationComponent,
-    FormFieldComponent, StatusBadgeComponent, SearchToolbarComponent, ModalComponent,
-    DatePipe, TranslatePipe,
+    ButtonComponent, PaginationComponent, FormFieldComponent, SearchToolbarComponent, ModalComponent,
+    RecruitmentDemandCardsSectionComponent, RecruitmentDemandTableSectionComponent, ViewToggleComponent,
+    TranslatePipe,
   ],
   template: `
     <!-- flex-col + gap-8: same 32px rhythm as daf-page's own — this section sits inside the
@@ -107,72 +101,36 @@ interface DemandCard {
       [debounce]="200"
       [filterFields]="filterFields()"
       [filterConfig]="filterConfig()"
-      (filterApply)="onFilterApply($event)" />
+      (filterApply)="onFilterApply($event)">
+      <!-- Cards / table switch, projected so it sits just before "Filtres". -->
+      <app-view-toggle
+        [options]="viewOptions()"
+        [value]="viewMode()"
+        (valueChange)="setView($event)"
+        [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
+    </daf-search-toolbar>
 
-    <!-- Same daf-card recipe as the Historique page's "Recrutement" tab — icon box, title/
-         subtitle, status + urgency badges, date, actions. One design for a recruitment
-         demand everywhere it appears. -->
-    @if (demandCards().length === 0 && !loading()) {
-      <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-        <div class="flex flex-col items-center gap-2 py-8 text-center">
-          <span class="material-symbols-outlined text-[36px] text-outline-variant">task_alt</span>
-          <p class="m-0 text-[14px] font-semibold text-on-surface">
-            {{ 'RECRUITMENT_VALIDATION.EMPTY' | translate }}
-          </p>
-        </div>
-      </daf-card>
+    <!-- Same two views as the "Demande" tab next to it and /rh/it-provisioning:
+         daf-entity-card grid or daf-data-table. Every demand here is EN_ATTENTE, so
+         approve / reject always show. -->
+    @if (viewMode() === 'grid') {
+      <app-recruitment-demand-cards-section
+        [items]="visibleDemands()"
+        [loading]="loading()"
+        [decisions]="true"
+        [emptyMessage]="'RECRUITMENT_VALIDATION.EMPTY' | translate"
+        (action)="onDemandAction($event.action, $event.demand)" />
     } @else {
-      <div class="flex flex-col gap-3">
-        @for (card of demandCards(); track card.id) {
-          <daf-card class="block" [options]="{ variant: 'glass', padding: 'md', radius: 'xl', hoverable: true }">
-            <div class="flex flex-wrap items-center gap-4">
-              <!-- Same daf-avatar rendering as the "Demande" card lists — no photo for a
-                   recruitment demand, so it falls back to initials derived from the poste. -->
-              <daf-avatar [data]="{ name: card.poste }" size="md" badgeBg="bg-teal" />
-
-              <div class="min-w-[180px] flex-1">
-                <p class="m-0 text-[15px] font-semibold text-on-surface">{{ card.poste }}</p>
-                <div class="mt-1 flex items-center gap-1.5 text-[13px] text-on-surface-variant">
-                  <span class="material-symbols-outlined text-[16px] text-teal">description</span>
-                  <span>{{ card.subtitle }}</span>
-                </div>
-              </div>
-
-              <div class="flex flex-col items-start gap-1.5 sm:items-end">
-                <daf-badge [label]="card.status.label" [options]="card.status.options" />
-                @if (card.urgencyLabel) {
-                  <daf-badge [label]="card.urgencyLabel" [options]="{ variant: 'warning', pill: true, size: 'sm' }" />
-                }
-              </div>
-
-              <div class="text-[12px] text-outline sm:w-32 sm:text-right">
-                {{ card.submittedAt | date:'dd/MM/yyyy' }}
-              </div>
-
-              <div class="flex items-center gap-2">
-                <!-- Real daf-button icon buttons, same convention as /rh/admin's own
-                     edit/delete action icons. Approve/Reject always show — every card
-                     here is EN_ATTENTE. -->
-                <daf-button
-                  variant="ghost"
-                  [title]="'RECRUITMENT_VALIDATION.OPEN' | translate"
-                  [options]="{ iconStart: 'visibility', size: 'sm' }"
-                  (onClick)="openDemand(card.id)" />
-                <daf-button
-                  variant="ghost"
-                  [title]="'RECRUITMENT_VALIDATION.APPROVE' | translate"
-                  [options]="{ iconStart: 'check_circle', size: 'sm' }"
-                  (onClick)="askVerdict(card.source, true)" />
-                <daf-button
-                  variant="danger"
-                  [title]="'RECRUITMENT_VALIDATION.REJECT' | translate"
-                  [options]="{ iconStart: 'cancel', size: 'sm' }"
-                  (onClick)="askVerdict(card.source, false)" />
-              </div>
-            </div>
-          </daf-card>
-        }
-      </div>
+      <app-recruitment-demand-table-section
+        [items]="visibleDemands()"
+        [loading]="loading()"
+        [skeletonRows]="pageSize()"
+        [decisions]="true"
+        [tools]="true"
+        [serverSort]="true"
+        (serverSortChange)="onSortChange($event)"
+        [emptyMessage]="'RECRUITMENT_VALIDATION.EMPTY' | translate"
+        (action)="onDemandAction($event.action, $event.demand)" />
     }
 
     <!-- Same daf-pagination configuration as /rh/profiles — page-size selector + "1–20 sur
@@ -244,9 +202,33 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   readonly totalPages = signal(0);
   readonly total      = signal(0);
   readonly pageSize   = signal(100);
+  /** Spring `sort` from the table header (e.g. `candidateCount,desc`); null = server default. */
+  readonly sort       = signal<string | null>(null);
   readonly pageSizeOptions = [20, 50, 100];
 
   readonly searchQuery   = signal('');
+
+  /** Cards or table — remembered per browser, separately from the "Demande" tab next to it. */
+  readonly viewMode = signal<ListViewMode>(readStoredView(VIEW_STORAGE_KEY));
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'grid',  icon: 'grid_view', tooltip: this.translate.instant('REQUESTS.LIST.VIEW_GRID') },
+      { id: 'table', icon: 'view_list', tooltip: this.translate.instant('REQUESTS.LIST.VIEW_TABLE') },
+    ];
+  });
+
+  setView(id: string): void {
+    if (id !== 'grid' && id !== 'table') return;
+    this.viewMode.set(id);
+    storeView(VIEW_STORAGE_KEY, id);
+  }
+
+  /** One handler for both views. */
+  onDemandAction(action: RecruitmentDemandAction, d: RecruitmentDemandSummary): void {
+    if (action === 'view') this.openDemand(d.id);
+    else this.askVerdict(d, action === 'approve');
+  }
   /** The two filter dimensions that match the KPI row — status has nothing left to
    *  break down since every card here is already EN_ATTENTE. */
   readonly candidateFilter = signal<'all' | 'none' | 'some'>('all');
@@ -402,28 +384,11 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     };
   });
 
-  readonly demandCards = computed<DemandCard[]>(() => {
-    this.translate.currentLang();
-    return this.visibleDemands().map(d => ({
-      id: d.id,
-      poste: d.jobTitle,
-      subtitle: [d.department, d.recruitmentReasonLabel].filter(Boolean).join(' • ') || '—',
-      status: {
-        label: this.translate.instant('RECRUITMENT_DEMANDS.STATUS.' + d.statut),
-        options: { variant: this.statusVariant(d.statut) },
-      },
-      urgencyLabel: d.urgencyLevelLabel ?? null,
-      submittedAt: d.submittedAt,
-      source: d,
-    }));
-  });
-
   ngOnInit(): void {
     this.load();
   }
 
-  /** Public so the parent Demandes page can refresh this queue after creating a new
-   *  recruitment demand from its own "Nouvelle demande" button. */
+  /** Fetches the EN_ATTENTE queue — on init, and again on a page or page-size change. */
   load(): void {
     const paysId = this.userStore.currentUser()?.paysId;
     if (!paysId) {
@@ -438,7 +403,7 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     // Filtered server-side to EN_ATTENTE — the backend takes one exact status, and that's
     // exactly what this queue needs, so page/total/totalPages are all real counts here,
     // unlike the client-side approximation the multi-status "Demande" tabs fall back to.
-    this.svc.listByPays(paysId, 'EN_ATTENTE', this.page(), this.pageSize())
+    this.svc.listByPays(paysId, 'EN_ATTENTE', this.page(), this.pageSize(), this.sort())
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
         this.loading.set(false);
@@ -450,6 +415,13 @@ export class RecruitmentValidationSectionComponent implements OnInit {
         this.total.set(res.totalElements);
         this.totalPages.set(res.totalPages);
       });
+  }
+
+  /** Server-side sort from the table (`manualSort`): the backend orders every page, so re-fetch from page 0. */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.page.set(0);
+    this.load();
   }
 
   changePage(p: number): void {
@@ -496,7 +468,7 @@ export class RecruitmentValidationSectionComponent implements OnInit {
       next: () => {
         this.submitting.set(false);
         // Removed rather than updated in place: a decided demand no longer belongs to this
-        // "en cours" queue — it moves to the /rh/recruitment-demands historique instead.
+        // "en cours" queue — it moves to the /rh/requests-history historique instead.
         this.demands.update(list => list.filter(x => x.id !== d.id));
         this.total.update(n => Math.max(0, n - 1));
         this.notification.success(
@@ -515,7 +487,7 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   }
 
   openDemand(id: number): void {
-    this.router.navigate(['/rh/recruitment-demands', id]);
+    this.router.navigate(['/rh/requests-history', id]);
   }
 
   asText(v: string | number | null): string {

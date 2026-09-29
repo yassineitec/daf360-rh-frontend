@@ -82,6 +82,8 @@
       [loading]="loading()"
       [skeletonRows]="pageSize()"
       [emptyMessage]="emptyMessage()"
+      [sort]="tableSort()"
+      (sortChange)="onTableSortChange($event)"
       (open)="open($event)" />
   }
 

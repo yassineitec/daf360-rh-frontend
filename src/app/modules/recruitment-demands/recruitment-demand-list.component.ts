@@ -1,13 +1,9 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import {
-  AvatarComponent,
-  ButtonComponent,
-  CardComponent,
   FilterField,
   FilterResult,
   MetricCardComponent,
@@ -16,20 +12,22 @@ import {
   PaginationComponent,
   SearchToolbarComponent,
   SearchToolbarFilterConfig,
-  StatusBadgeComponent,
   TabItem,
   TabsComponent,
+  ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
 import { RECRUITMENT_REASONS, RecruitmentDemandSummary, RecruitmentDemandStatus } from './recruitment-demand.model';
-import { RecruitmentDemandFormComponent } from './recruitment-demand-form.component';
 import { RequestsService } from '../requests/requests.service';
-import { NewRequestComponent } from '../requests/new-request.component';
 import { EmployeeRequest, RequestStatus, RequestType } from '../requests/models/request.model';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { RelativeDatePipe } from '../../shared/relative-date.pipe';
+import { ListViewMode, readStoredView, storeView, ViewToggleComponent } from '../../shared/view-toggle.component';
+import { RequestCardItem, RequestCardsSectionComponent, requestRef } from '../requests/request-cards-section.component';
+import { RequestTableSectionComponent } from '../requests/request-table-section.component';
+import { RecruitmentDemandCardsSectionComponent } from './sections/recruitment-demand-cards-section.component';
+import { RecruitmentDemandTableSectionComponent } from './sections/recruitment-demand-table-section.component';
 
 /** "En cours" (no response yet) belongs to /rh/requests — this page's "Demande" tab is
  *  the historique, so every other (decided) status shows here instead. */
@@ -55,28 +53,7 @@ function inDayBounds(iso: string | null | undefined, bounds: { from: string; to:
   return day >= bounds.from && day <= bounds.to;
 }
 
-/** Card-ready view model for the "Recrutement" tab. */
-interface RecruitmentCard {
-  id: number;
-  poste: string;
-  subtitle: string;
-  status: { label: string; options: { variant: 'success' | 'warning' | 'danger' | 'neutral' | 'info' } };
-  urgencyLabel: string | null;
-  submittedAt: string;
-}
-
-/** Card-ready view model for the "Demande" tab — a decided request has no SLA to show and
- *  can no longer be cancelled, so this carries neither (unlike the /rh/requests card). */
-interface OtherRequestCard {
-  id: number;
-  employeeLabel: string;
-  /** Real photo endpoint — daf-avatar falls back to initials on its own if it 404s. */
-  avatarUrl: string;
-  type: string;
-  status: ReturnType<typeof statusBadge>;
-  submissionDate: string;
-  source: EmployeeRequest;
-}
+const VIEW_STORAGE_KEY = 'rh.recruitment-demands.view';
 
 /** "En cours" (no decision yet) belongs to the /rh/requests validation queue — this tab is
  *  the historique, so EN_ATTENTE is excluded from every filter/KPI/fetch below. */
@@ -112,53 +89,33 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
   selector: 'app-recruitment-demand-list',
   standalone: true,
   imports: [
-    AvatarComponent,
-    ButtonComponent,
-    CardComponent,
     MetricCardComponent,
     PageComponent,
     PageHeaderComponent,
     PaginationComponent,
     SearchToolbarComponent,
-    StatusBadgeComponent,
     TabsComponent,
-    DatePipe,
-    RelativeDatePipe,
     TranslatePipe,
-    RecruitmentDemandFormComponent,
-    NewRequestComponent,
+    ViewToggleComponent,
+    RecruitmentDemandCardsSectionComponent,
+    RecruitmentDemandTableSectionComponent,
+    RequestCardsSectionComponent,
+    RequestTableSectionComponent,
   ],
   template: `
     <daf-page [loading]="firstLoad()" [kpis]="0">
 
+      <!-- No "Nouvelle demande" button, same as /rh/requests: requests and recruitment
+           demands are raised from the shell's self-service page — this is the historique. -->
       <daf-page-header
-        [title]="'RECRUITMENT_DEMANDS.LIST.TITLE' | translate">
-        <!-- Same principle as /rh/requests: one button, opening whichever form matches
-             the active tab — an HR request on "Demande" (open to everyone, same as the
-             self-service page), a recruitment demand on "Recrutement" (permission-gated). -->
-        @if (mainTab() === 'other' || canCreate()) {
-          <daf-button pageActions
-            [options]="{ variant: 'teal', iconStart: 'add', label: ('RECRUITMENT_DEMANDS.LIST.NEW_DEMAND' | translate) }"
-            (onClick)="showForm.set(true)" />
-        }
-      </daf-page-header>
+        [title]="'RECRUITMENT_DEMANDS.LIST.TITLE' | translate" />
 
-      <!-- Two tabs: this page is "Historique de demande" now, not just recruitment —
-           its history must cover both demand types, same daf-tabs pattern as the
-           Demandes page's own "Demande" / "Demande de recrutement" split. -->
-      <daf-tabs
-        variant="underline"
-        [tabs]="mainTabs()"
-        [active]="mainTab()"
-        (activeChange)="onMainTabChange($event)"
-        [tabsLabel]="'RECRUITMENT_DEMANDS.LIST.MAIN_TABS_ARIA' | translate" />
-
+      <!-- KPI row above the tabs, same place as on /rh/requests: it swaps with the active
+           tab — one tile per decided status (EN_ATTENTE lives on the /rh/requests
+           validation queue instead), so the whole historique's shape is visible before
+           scrolling to any single card below. Purely informational: filtering still
+           happens through the "Filtres" toolbar underneath. -->
       @if (mainTab() === 'recruitment') {
-        <!-- Status KPI row — same daf-metric-card tiles as the Pipeline RH page (§ KPIs),
-             one per decided status (EN_ATTENTE lives on the /rh/requests validation queue
-             instead), so the whole historique's shape is visible before scrolling to any
-             single card below. Purely informational: filtering still happens through the
-             "Filtres" toolbar underneath. -->
         <section class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
           <daf-metric-card
             [label]="'RECRUITMENT_DEMANDS.LIST.KPI_TOTAL' | translate"
@@ -171,75 +128,66 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
               [options]="{ icon: kpi.icon, iconColor: kpi.iconColor, iconBg: kpi.iconBg }" />
           }
         </section>
+      } @else {
+        <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+          <daf-metric-card
+            [label]="'RECRUITMENT_DEMANDS.LIST.OTHER_KPI_TOTAL' | translate"
+            [value]="otherDecidedCount().toString()"
+            [options]="{ icon: 'inbox', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+          @for (kpi of otherStatusKpis(); track kpi.key) {
+            <daf-metric-card
+              [label]="kpi.label"
+              [value]="kpi.count.toString()"
+              [options]="{ icon: kpi.icon, iconColor: kpi.iconColor, iconBg: kpi.iconBg }" />
+          }
+        </section>
+      }
 
+      <!-- Two tabs: this page is "Historique de demande" now, not just recruitment —
+           its history must cover both demand types, same daf-tabs pattern as the
+           Demandes page's own "Demande" / "Demande de recrutement" split. -->
+      <daf-tabs
+        variant="underline"
+        [tabs]="mainTabs()"
+        [active]="mainTab()"
+        (activeChange)="onMainTabChange($event)"
+        [tabsLabel]="'RECRUITMENT_DEMANDS.LIST.MAIN_TABS_ARIA' | translate" />
+
+      @if (mainTab() === 'recruitment') {
         <!-- Same daf-search-toolbar as the "Demande de recrutement" tab on the Demandes
-             page — search on the left, the "Filtres" button (daf-filter) folded into it. -->
+             page — search on the left, the cards/table switch then "Filtres" on the right. -->
         <daf-search-toolbar
           [placeholder]="'RECRUITMENT_DEMANDS.LIST.SEARCH_PLACEHOLDER' | translate"
           [(value)]="searchQuery"
           [debounce]="200"
           [filterFields]="filterFields()"
           [filterConfig]="filterConfig()"
-          (filterApply)="onFilterApply($event)" />
+          (filterApply)="onFilterApply($event)">
+          <app-view-toggle
+            [options]="viewOptions()"
+            [value]="viewMode()"
+            (valueChange)="setView($event)"
+            [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
+        </daf-search-toolbar>
 
-        <!-- Same daf-card recipe as the "Demande" tab — icon box instead of an avatar
-             (a recruitment demand has no single person to show), same badges/date/action
-             layout, so the two tabs read as one page instead of two designs. -->
-        @if (visibleItems().length === 0 && !loading()) {
-          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-            <div class="flex flex-col items-center gap-3 py-8 text-center">
-              <span class="material-symbols-outlined text-[36px] text-outline-variant">work_off</span>
-              <p class="m-0 text-[14px] font-semibold text-on-surface">
-                {{ 'RECRUITMENT_DEMANDS.LIST.EMPTY' | translate }}
-              </p>
-              @if (canCreate()) {
-                <daf-button
-                  [options]="{ variant: 'teal', label: ('RECRUITMENT_DEMANDS.LIST.CREATE_DEMAND' | translate) }"
-                  (onClick)="showForm.set(true)" />
-              }
-            </div>
-          </daf-card>
+        <!-- daf-entity-card grid or daf-data-table — same two views as /rh/it-provisioning. -->
+        @if (viewMode() === 'grid') {
+          <app-recruitment-demand-cards-section
+            [items]="visibleItems()"
+            [loading]="loading()"
+            emptyIcon="work_off"
+            [emptyMessage]="'RECRUITMENT_DEMANDS.LIST.EMPTY' | translate"
+            (action)="viewDetail($event.demand.id)" />
         } @else {
-          <div class="flex flex-col gap-3">
-            @for (card of recruitmentCards(); track card.id) {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'md', radius: 'xl', hoverable: true }">
-                <div class="flex flex-wrap items-center gap-4">
-                  <!-- Same daf-avatar rendering as the "Demande" card list — no photo for a
-                       recruitment demand, so it falls back to initials derived from the poste. -->
-                  <daf-avatar [data]="{ name: card.poste }" size="md" badgeBg="bg-teal" />
-
-                  <div class="min-w-[180px] flex-1">
-                    <p class="m-0 text-[15px] font-semibold text-on-surface">{{ card.poste }}</p>
-                    <div class="mt-1 flex items-center gap-1.5 text-[13px] text-on-surface-variant">
-                      <span class="material-symbols-outlined text-[16px] text-teal">description</span>
-                      <span>{{ card.subtitle }}</span>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col items-start gap-1.5 sm:items-end">
-                    <daf-badge [label]="card.status.label" [options]="card.status.options" />
-                    @if (card.urgencyLabel) {
-                      <daf-badge [label]="card.urgencyLabel" [options]="{ variant: 'warning', pill: true, size: 'sm' }" />
-                    }
-                  </div>
-
-                  <div class="text-[12px] text-outline sm:w-32 sm:text-right">
-                    {{ card.submittedAt | date:'dd/MM/yyyy' }}
-                  </div>
-
-                  <div class="flex items-center gap-2">
-                    <!-- Real daf-button icon button, same convention as /rh/admin's own
-                         edit/delete action icons. -->
-                    <daf-button
-                      variant="ghost"
-                      [title]="'RECRUITMENT_DEMANDS.LIST.VIEW' | translate"
-                      [options]="{ iconStart: 'visibility', size: 'sm' }"
-                      (onClick)="viewDetail(card.id)" />
-                  </div>
-                </div>
-              </daf-card>
-            }
-          </div>
+          <app-recruitment-demand-table-section
+            [items]="visibleItems()"
+            [loading]="loading()"
+            [skeletonRows]="pageSize()"
+            [tools]="true"
+            [serverSort]="true"
+            (serverSortChange)="onSortChange($event)"
+            [emptyMessage]="'RECRUITMENT_DEMANDS.LIST.EMPTY' | translate"
+            (action)="viewDetail($event.demand.id)" />
         }
 
         <!-- Same daf-pagination configuration as /rh/profiles — page-size selector +
@@ -255,79 +203,46 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           (pageChange)="changePage($event)"
           (pageSizeChange)="onPageSizeChange($event)" />
       } @else {
-        <!-- "Demande" — the employee_requests history, same daf-card recipe as the Demandes
-             page's own "Demande" tab (avatar + name first, status/SLA badges, relative date,
-             Voir/Annuler). Same permission split too: HR managers/admins see everyone's
-             requests here, everyone else sees only their own. -->
-        <!-- Same KPI row shape as the "Recrutement" tab, one tile per status group. -->
-        <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-          <daf-metric-card
-            [label]="'RECRUITMENT_DEMANDS.LIST.OTHER_KPI_TOTAL' | translate"
-            [value]="otherDecidedCount().toString()"
-            [options]="{ icon: 'inbox', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
-          @for (kpi of otherStatusKpis(); track kpi.key) {
-            <daf-metric-card
-              [label]="kpi.label"
-              [value]="kpi.count.toString()"
-              [options]="{ icon: kpi.icon, iconColor: kpi.iconColor, iconBg: kpi.iconBg }" />
-          }
-        </section>
-
+        <!-- "Demande" — the employee_requests history, same card / table sections as the
+             Demandes page's own "Demande" tab. Same permission split too: HR managers/admins
+             see everyone's requests here, everyone else sees only their own. -->
         <!-- Same "Filtres" button folded into the toolbar as everywhere else on this page
-             (and on the Demandes page's own "Demande" tab). -->
+             (and on the Demandes page's own "Demande" tab), with the same view switch. -->
         <daf-search-toolbar
           [placeholder]="'RECRUITMENT_DEMANDS.LIST.OTHER_SEARCH_PLACEHOLDER' | translate"
           [(value)]="otherSearchQuery"
           [debounce]="200"
           [filterFields]="otherFilterFields()"
           [filterConfig]="otherFilterConfig()"
-          (filterApply)="onOtherFilterApply($event)" />
+          (filterApply)="onOtherFilterApply($event)">
+          <app-view-toggle
+            [options]="viewOptions()"
+            [value]="viewMode()"
+            (valueChange)="setView($event)"
+            [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
+        </daf-search-toolbar>
 
-        @if (otherCards().length === 0 && !otherLoading()) {
-          <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
-            <div class="flex flex-col items-center gap-3 py-8 text-center">
-              <span class="material-symbols-outlined text-[36px] text-outline-variant">inbox</span>
-              <p class="m-0 text-[14px] font-semibold text-on-surface">
-                {{ 'RECRUITMENT_DEMANDS.LIST.OTHER_EMPTY' | translate }}
-              </p>
-            </div>
-          </daf-card>
+        <!-- Same card / table sections as /rh/requests, in history mode: no cancel action
+             (a decided request has nothing left to cancel), decision date instead of SLA. -->
+        @if (viewMode() === 'grid') {
+          <app-request-cards-section
+            [items]="otherCards()"
+            [loading]="otherLoading()"
+            [history]="true"
+            emptyIcon="inbox"
+            [emptyMessage]="'RECRUITMENT_DEMANDS.LIST.OTHER_EMPTY' | translate"
+            (action)="viewOtherDemand($event.item.id)" />
         } @else {
-          <div class="flex flex-col gap-3">
-            @for (card of otherCards(); track card.id) {
-              <daf-card class="block" [options]="{ variant: 'glass', padding: 'md', radius: 'xl', hoverable: true }">
-                <div class="flex flex-wrap items-center gap-4">
-                  <daf-avatar [data]="{ name: card.employeeLabel, avatarUrl: card.avatarUrl }" size="md" />
-
-                  <div class="min-w-[180px] flex-1">
-                    <p class="m-0 text-[15px] font-semibold text-on-surface">{{ card.employeeLabel }}</p>
-                    <div class="mt-1 flex items-center gap-1.5 text-[13px] text-on-surface-variant">
-                      <span class="material-symbols-outlined text-[16px] text-teal">description</span>
-                      <span>{{ card.type }}</span>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col items-start gap-1.5 sm:items-end">
-                    <daf-badge [label]="card.status.label" [options]="card.status.options" />
-                  </div>
-
-                  <div class="text-[12px] text-outline sm:w-32 sm:text-right">
-                    {{ card.submissionDate | relativeDate }}
-                  </div>
-
-                  <div class="flex items-center gap-2">
-                    <!-- View only — a decided request has no cancel action left, unlike the
-                         "en cours" cards on /rh/requests. -->
-                    <daf-button
-                      variant="ghost"
-                      [title]="'REQUESTS.LIST.VIEW_DETAIL' | translate"
-                      [options]="{ iconStart: 'visibility', size: 'sm' }"
-                      (onClick)="viewOtherDemand(card.id)" />
-                  </div>
-                </div>
-              </daf-card>
-            }
-          </div>
+          <app-request-table-section
+            [items]="otherCards()"
+            [loading]="otherLoading()"
+            [skeletonRows]="otherPageSize()"
+            [history]="true"
+            [tools]="true"
+            [serverSort]="true"
+            (serverSortChange)="onOtherSortChange($event)"
+            [emptyMessage]="'RECRUITMENT_DEMANDS.LIST.OTHER_EMPTY' | translate"
+            (action)="viewOtherDemand($event.item.id)" />
         }
 
         <!-- Same daf-pagination configuration as /rh/profiles — page-size selector +
@@ -345,21 +260,6 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
       }
 
     </daf-page>
-
-    <!-- ── Create form modal — whichever form matches the active tab ─────────────── -->
-    <app-recruitment-demand-form
-      [visible]="showForm() && mainTab() === 'recruitment'"
-      (closed)="showForm.set(false)"
-      (saved)="onDemandSaved()"
-    />
-
-    <app-new-request
-      [visible]="showForm() && mainTab() === 'other'"
-      [profileId]="currentProfileId()"
-      [paysId]="currentPaysId()"
-      (closed)="showForm.set(false)"
-      (submitted)="onEmployeeRequestSubmitted()"
-    />
   `,
 })
 export class RecruitmentDemandListComponent implements OnInit {
@@ -370,7 +270,6 @@ export class RecruitmentDemandListComponent implements OnInit {
   private route        = inject(ActivatedRoute);
   private translate    = inject(TranslateService);
 
-  readonly canCreate  = () => this.userStore.hasPermission('RH_CREATE_RECRUITMENT_DEMAND');
   readonly canViewAll = () => this.userStore.hasPermission('RH_VIEW_RECRUITMENT_DEMAND');
   /** Same gate as the Demandes page's own "Demande" tab — HR managers/admins see
    *  every employee's request history here too, not just their own. */
@@ -388,6 +287,22 @@ export class RecruitmentDemandListComponent implements OnInit {
   /** Which of the two tabs is showing — "Demande" first and by default, same order and
    *  default as the Demandes page itself; "Recrutement" is one tab away. */
   mainTab = signal<'recruitment' | 'other'>('other');
+
+  /** Cards or table — one choice for both tabs, remembered per browser. */
+  readonly viewMode = signal<ListViewMode>(readStoredView(VIEW_STORAGE_KEY));
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'grid',  icon: 'grid_view', tooltip: this.translate.instant('REQUESTS.LIST.VIEW_GRID') },
+      { id: 'table', icon: 'view_list', tooltip: this.translate.instant('REQUESTS.LIST.VIEW_TABLE') },
+    ];
+  });
+
+  setView(id: string): void {
+    if (id !== 'grid' && id !== 'table') return;
+    this.viewMode.set(id);
+    storeView(VIEW_STORAGE_KEY, id);
+  }
   private recruitmentLoaded = false;
 
   readonly mainTabs = computed<TabItem[]>(() => {
@@ -414,10 +329,11 @@ export class RecruitmentDemandListComponent implements OnInit {
   totalPages  = signal(0);
   page        = signal(0);
   pageSize    = signal(20);
+  /** Spring `sort` from the "Recrutement" table header (e.g. `submittedAt,asc`); null = server default. */
+  sort        = signal<string | null>(null);
   readonly pageSizeOptions = [10, 20, 50, 100];
   firstLoad   = signal(true);
   loading     = signal(false);
-  showForm    = signal(false);
   filterStatut = signal('');
   searchQuery  = signal('');
   /** Department label ('' = all) — client-side, on the current page only (backend takes `statut` only). */
@@ -545,21 +461,6 @@ export class RecruitmentDemandListComponent implements OnInit {
         || (d.department ?? '').toLowerCase().includes(q)));
   });
 
-  readonly recruitmentCards = computed<RecruitmentCard[]>(() => {
-    this.translate.currentLang();
-    return this.visibleItems().map((d) => ({
-      id: d.id,
-      poste: d.jobExactTitle ?? d.jobTitle,
-      subtitle: [d.department, d.recruitmentReasonLabel].filter(Boolean).join(' • ') || '—',
-      status: {
-        label: this.translate.instant('RECRUITMENT_DEMANDS.STATUS.' + d.statut),
-        options: { variant: this.statusVariant(d.statut) },
-      },
-      urgencyLabel: d.urgencyLevelLabel ?? null,
-      submittedAt: d.submittedAt,
-    }));
-  });
-
   // ── "Autres demandes" tab (employee_requests history) ─────────────────────
   otherItems      = signal<EmployeeRequest[]>([]);
   otherTotal      = signal(0);
@@ -575,6 +476,8 @@ export class RecruitmentDemandListComponent implements OnInit {
   otherSubmittedFilter = signal<Date[] | null>(null);
   /** Decision date range (resolution date, or last update for cancelled ones) — client-side, fetched batch. */
   otherDecidedFilter = signal<Date[] | null>(null);
+  /** Server-side sort of the "Demande" table (Spring `sort`, e.g. `resolutionDate,desc`) — test of `manualSort`. */
+  otherSort = signal<string | null>(null);
   /** Request type catalogue of the current pays — feeds the "Type de demande" filter. */
   private readonly requestTypes = signal<RequestType[]>([]);
 
@@ -701,21 +604,37 @@ export class RecruitmentDemandListComponent implements OnInit {
     ];
   });
 
-  /** No SLA and no cancel action here — a decided request has neither a countdown left to
-   *  show nor a state left to cancel out of (unlike the /rh/requests card). */
-  readonly otherCards = computed<OtherRequestCard[]>(() => {
+  /** Same view model as the /rh/requests cards, flagged as decided: no SLA, no cancel. */
+  readonly otherCards = computed<RequestCardItem[]>(() => {
     this.translate.currentLang();
-    return this.otherVisibleItems().map((r) => ({
-      id: r.id,
-      employeeLabel: r.employeeName
-        ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
-      avatarUrl: `/api/hr/profiles/${r.employeeProfileId}/photo`,
-      type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
-      status: statusBadge(r.status),
-      submissionDate: r.submissionDate,
-      source: r,
-    }));
+    const categories = new Map(this.requestTypes().map((t) => [t.id, t.category]));
+    return this.otherVisibleItems().map((r) => {
+      const category = categories.get(r.requestTypeId);
+      return {
+        id: r.id,
+        ref: requestRef(r),
+        employeeLabel: r.employeeName
+          ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
+        type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
+        categoryLabel: category ? this.translate.instant('REQUESTS.CATEGORY.' + category) : '',
+        status: statusBadge(r.status),
+        isActive: false,
+        sla: null,
+        slaLabel: '',
+        slaVariant: 'neutral',
+        submissionDate: r.submissionDate,
+        cancelDisabledReason: this.translate.instant('REQUESTS.LIST.CANCEL_REASON_CLOSED'),
+        source: r,
+      };
+    });
   });
+
+  /** A header click in the table: the backend sorts, so re-fetch from page 0 in the new order. */
+  onOtherSortChange(sort: string | null): void {
+    this.otherSort.set(sort);
+    this.otherPage.set(0);
+    this.loadOther();
+  }
 
   changeOtherPage(p: number): void {
     this.otherPage.set(p);
@@ -742,8 +661,9 @@ export class RecruitmentDemandListComponent implements OnInit {
     const filter = this.canViewAllRequests()
       ? { paysId: paysId ?? undefined, typeId, page: this.otherPage(), size: this.otherPageSize() }
       : { profileId: this.currentProfileId() || undefined, typeId, page: this.otherPage(), size: this.otherPageSize() };
+    const sort = this.otherSort() ?? undefined;
 
-    this.requestsSvc.listRequests(filter)
+    this.requestsSvc.listRequests({ ...filter, sort })
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
         this.otherLoading.set(false);
@@ -770,18 +690,6 @@ export class RecruitmentDemandListComponent implements OnInit {
     this.load();
   }
 
-  /** Called after a demand is created — the list AND the KPI counts are both stale. */
-  onDemandSaved(): void {
-    this.reload();
-    this.loadCounts();
-  }
-
-  /** Called after an HR request is submitted from the "Demande" tab's own button. */
-  onEmployeeRequestSubmitted(): void {
-    this.showForm.set(false);
-    this.loadOther();
-  }
-
   onFilterApply(result: FilterResult): void {
     const value = result['status'];
     this.filterStatut.set(typeof value === 'string' ? value : '');
@@ -792,6 +700,13 @@ export class RecruitmentDemandListComponent implements OnInit {
     const submitted = result['submitted'];
     this.filterSubmitted.set(Array.isArray(submitted) && submitted.length ? submitted as Date[] : null);
     this.reload();
+  }
+
+  /** Server-side sort from the table (`manualSort`): the backend orders every page, so re-fetch from page 0. */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.page.set(0);
+    this.load();
   }
 
   changePage(p: number): void {
@@ -816,8 +731,8 @@ export class RecruitmentDemandListComponent implements OnInit {
     const statut = this.filterStatut() as RecruitmentDemandStatus | '';
 
     const obs$ = (paysId && this.canViewAll())
-      ? this.svc.listByPays(paysId, statut, this.page(), this.pageSize())
-      : this.svc.listMine(statut, this.page(), this.pageSize());
+      ? this.svc.listByPays(paysId, statut, this.page(), this.pageSize(), this.sort())
+      : this.svc.listMine(statut, this.page(), this.pageSize(), this.sort());
 
     obs$.pipe(catchError(() => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: this.pageSize() })))
       .subscribe((r) => {

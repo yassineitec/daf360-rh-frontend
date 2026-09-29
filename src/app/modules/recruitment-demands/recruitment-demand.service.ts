@@ -29,15 +29,18 @@ export class RecruitmentDemandService {
     return this.http.post<RecruitmentDemandDetail>(this.base, dto, { withCredentials: true });
   }
 
-  listByPays(paysId: number, statut?: RecruitmentDemandStatus | '', page = 0, size = 20): Observable<PageResponse<RecruitmentDemandSummary>> {
+  /** `sort`: Spring sort param, e.g. `submittedAt,desc` — omitted = newest first (server default). */
+  listByPays(paysId: number, statut?: RecruitmentDemandStatus | '', page = 0, size = 20, sort?: string | null): Observable<PageResponse<RecruitmentDemandSummary>> {
     let params = new HttpParams().set('paysId', paysId).set('page', page).set('size', size);
     if (statut) params = params.set('statut', statut);
+    if (sort)   params = params.set('sort', sort);
     return this.http.get<PageResponse<RecruitmentDemandSummary>>(this.base, { params, withCredentials: true });
   }
 
-  listMine(statut?: RecruitmentDemandStatus | '', page = 0, size = 20): Observable<PageResponse<RecruitmentDemandSummary>> {
+  listMine(statut?: RecruitmentDemandStatus | '', page = 0, size = 20, sort?: string | null): Observable<PageResponse<RecruitmentDemandSummary>> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (statut) params = params.set('statut', statut);
+    if (sort)   params = params.set('sort', sort);
     return this.http.get<PageResponse<RecruitmentDemandSummary>>(`${this.base}/mine`, { params, withCredentials: true });
   }
 

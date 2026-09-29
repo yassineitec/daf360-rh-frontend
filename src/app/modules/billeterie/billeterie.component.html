@@ -79,6 +79,8 @@
           [loading]="loading()"
           [skeletonRows]="pageSize()"
           [emptyMessage]="queueEmptyMessage()"
+          [sort]="sort()"
+          (sortChange)="onSortChange($event)"
           (act)="onQueueAction($event)" />
       }
 
