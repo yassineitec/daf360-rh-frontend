@@ -184,6 +184,23 @@ export interface CandidateFilter {
   size?: number;
 }
 
+/** Query of the paged `GET /api/hr/candidates` (the recruitment board / list). */
+export interface CandidateListQuery {
+  paysId?: number;
+  status?: string;
+  search?: string;
+  departmentId?: number;
+  demandId?: number;
+  /** Only candidatures answering no recruitment demand — wins over `demandId`. */
+  spontaneous?: boolean;
+  /** `yyyy-MM-dd`, inclusive. */
+  createdFrom?: string;
+  /** `yyyy-MM-dd`, inclusive. */
+  createdTo?: string;
+  page?: number;
+  size?: number;
+}
+
 export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
   PENDING: 'En attente',
   ACCEPTED: 'Accepté',

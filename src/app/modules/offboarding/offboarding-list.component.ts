@@ -38,6 +38,12 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
  */
 type ViewMode = 'kanban' | 'list';
 
+/** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /**
  * /rh/offboarding — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
@@ -89,6 +95,12 @@ export class OffboardingListComponent implements OnInit {
   readonly viewMode     = signal<ViewMode>('kanban');
   readonly search       = signal('');
   readonly statusFilter = signal('');
+  /** Departure-reason code ('' = all) — only offered on the unscoped page. */
+  readonly reasonFilter = signal('');
+  /** Last-working-day range from the panel: one day or [from, to]; null = no bound. */
+  readonly lastDayRange = signal<Date[] | null>(null);
+  /** Only running files that are late — SLA breached or next task past its due date. */
+  readonly lateOnly     = signal(false);
   readonly currentPage  = signal(0);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -130,23 +142,39 @@ export class OffboardingListComponent implements OnInit {
   /**
    * Switching category while deep in the pager would land on a page that does not exist
    * in the new, smaller population. Same shape as `holidays-admin` / `role-list`.
+   *
+   * The panel's reason filter goes too: a category page hides that field, so a value left
+   * over from the unscoped page would narrow the list with no visible way to clear it.
    */
   private resetPageOnReasonChange = effect(() => {
     this.routeReason();
     this.currentPage.set(0);
+    this.reasonFilter.set('');
   });
 
   readonly filteredItems = computed(() => {
     this.translate.currentLang();
     const term   = this.search().trim().toLowerCase();
     const status = this.statusFilter();
+    const reasonCode = this.reasonFilter();
+    const range  = this.lastDayRange();
+    const from = range?.[0] ? toIsoDay(range[0]) : null;
+    const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
+    const lateOnly = this.lateOnly();
     return this.scopedItems().filter(w => {
       const reason = this.translate.instant('OFFBOARDING.REASON.' + w.departureReason).toLowerCase();
       const matchesTerm = !term
         || (w.employeeFullName ?? '').toLowerCase().includes(term)
         || (w.handoverManagerName ?? '').toLowerCase().includes(term)
         || reason.includes(term);
-      return matchesTerm && (!status || w.status === status);
+      // `lastWorkingDay` is an ISO date, so string comparison is date order. Null until the
+      // declaration sets it — such a file never matches a picked range.
+      const lastDay = w.lastWorkingDay?.slice(0, 10) ?? null;
+      return matchesTerm
+        && (!status || w.status === status)
+        && (!reasonCode || w.departureReason === reasonCode)
+        && (!from || (!!lastDay && lastDay >= from && lastDay <= to!))
+        && (!lateOnly || (isActive(w) && (w.slaBreachFlag || isOverdue(w))));
     });
   });
 
@@ -208,7 +236,11 @@ export class OffboardingListComponent implements OnInit {
   /** The table and the cards share one empty message, and it knows about the filter. */
   readonly emptyMessage = computed(() => {
     this.translate.currentLang();
-    if (this.statusFilter() || this.search()) {
+    // EMPTY_FILTERED names the status, so it only fits when the status is all that is set.
+    if (this.search() || this.reasonFilter() || this.lastDayRange() || this.lateOnly()) {
+      return this.translate.instant('OFFBOARDING.LIST.EMPTY_NO_MATCH');
+    }
+    if (this.statusFilter()) {
       return this.translate.instant('OFFBOARDING.LIST.EMPTY_FILTERED');
     }
     // A category page with nothing in it is not the same as an empty module.
@@ -297,16 +329,43 @@ export class OffboardingListComponent implements OnInit {
   /** The status dropdown belongs *inside* the filter panel, not loose above the table. */
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('OFFBOARDING.LIST.COL_STATUS'),
-      type: 'select',
-      placeholder: this.translate.instant('OFFBOARDING.LIST.ALL_STATUSES'),
-      options: OFFBOARDING_STATUSES.map((code: OffboardingStatus) => ({
-        value: code,
-        label: this.translate.instant('OFFBOARDING.STATUS.' + code),
-      })),
-    }];
+    const t = (k: string) => this.translate.instant(k);
+    const fields: FilterField[] = [
+      {
+        name: 'status',
+        label: t('OFFBOARDING.LIST.COL_STATUS'),
+        type: 'select',
+        placeholder: t('OFFBOARDING.LIST.ALL_STATUSES'),
+        options: OFFBOARDING_STATUSES.map((code: OffboardingStatus) => ({
+          value: code,
+          label: t('OFFBOARDING.STATUS.' + code),
+        })),
+      },
+      {
+        name: 'lastDay',
+        label: t('OFFBOARDING.LIST.COL_LAST_DAY'),
+        type: 'daterange',
+      },
+      {
+        name: 'late',
+        label: t('OFFBOARDING.LIST.FILTERS.LATE_ONLY'),
+        type: 'checkbox',
+      },
+    ];
+    // A category page is already one reason — the field would offer a single choice.
+    if (!this.routeReason()) {
+      fields.splice(1, 0, {
+        name: 'reason',
+        label: t('OFFBOARDING.LIST.COL_REASON'),
+        type: 'select',
+        placeholder: t('OFFBOARDING.LIST.FILTERS.ALL_REASONS'),
+        options: DEPARTURE_REASONS.map(code => ({
+          value: code,
+          label: t('OFFBOARDING.REASON.' + code),
+        })),
+      });
+    }
+    return fields;
   });
 
   /**
@@ -323,7 +382,12 @@ export class OffboardingListComponent implements OnInit {
       resetLabel:   t('OFFBOARDING.LIST.FILTERS.RESET'),
       triggerLabel: t('OFFBOARDING.LIST.FILTERS.TRIGGER'),
       align:        'right',
-      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+      initialValues: {
+        status:  this.statusFilter() ? [this.statusFilter()] : [],
+        reason:  this.reasonFilter() ? [this.reasonFilter()] : [],
+        lastDay: this.lastDayRange(),
+        late:    this.lateOnly(),
+      },
     };
   });
 
@@ -357,7 +421,12 @@ export class OffboardingListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    const lastDay = result['lastDay'];
+    this.statusFilter.set(str('status'));
+    this.reasonFilter.set(str('reason'));
+    this.lastDayRange.set(Array.isArray(lastDay) && lastDay.length ? lastDay as Date[] : null);
+    this.lateOnly.set(result['late'] === true);
     this.currentPage.set(0);
   }
 

@@ -20,11 +20,16 @@ import {
 import { ConfirmService } from '../../core/confirm.service';
 import { UserStore } from '../../core/user.store';
 import { statusBadge } from '../../shared/status-badge.utils';
+import { RefDataService } from '../../core/ref/ref-data.service';
+import { RefDataItem } from '../../core/ref/ref-data.model';
+import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
+import { ApprovedDemandOption } from '../recruitment-demands/recruitment-demand.model';
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
 import {
   CandidateHistoryItem,
   CandidateListItem,
+  CandidateListQuery,
   CandidateStats,
   CandidateStatus,
   PageResponse,
@@ -40,6 +45,15 @@ const STATUS_CODES: CandidateStatus[] = [
   'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
   'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
 ];
+
+/** Demand filter value for "no recruitment demand" — never a real demand id. */
+const SPONTANEOUS = 'SPONTANEOUS';
+
+/** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 /**
  * /rh/candidates/list — the flat, server-paginated candidate register.
@@ -76,11 +90,16 @@ export class CandidateListComponent implements OnInit {
   private confirm   = inject(ConfirmService);
   private router    = inject(Router);
   private translate = inject(TranslateService);
+  private refData   = inject(RefDataService);
+  private demandSvc = inject(RecruitmentDemandService);
   readonly userStore = inject(UserStore);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly page  = signal<PageResponse<CandidateListItem> | null>(null);
   readonly stats = signal<CandidateStats>({ total: 0, pending: 0, accepted: 0, hired: 0 });
+  /** Filter-panel option sources, loaded once for the user's entity. */
+  private readonly departments   = signal<RefDataItem[]>([]);
+  private readonly demandOptions = signal<ApprovedDemandOption[]>([]);
 
   readonly candidates    = computed(() => this.page()?.content ?? []);
   readonly totalElements = computed(() => this.page()?.totalElements ?? 0);
@@ -94,6 +113,12 @@ export class CandidateListComponent implements OnInit {
   // ── View state ─────────────────────────────────────────────────────────────
   readonly search       = signal('');
   readonly statusFilter = signal('');
+  /** Department id as a string ('' = all) — the filter panel's select value. */
+  readonly departmentFilter = signal('');
+  /** Demand id as a string, `SPONTANEOUS`, or '' = all. */
+  readonly demandFilter     = signal('');
+  /** Application-date range from the panel: one day or [from, to]; null = no bound. */
+  readonly createdRange     = signal<Date[] | null>(null);
   readonly currentPage  = signal(0);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -118,17 +143,47 @@ export class CandidateListComponent implements OnInit {
   // ── Toolbar ────────────────────────────────────────────────────────────────
   /** The status dropdown belongs *inside* the filter panel, not loose in a toggled row. */
   readonly filterFields = computed<FilterField[]>(() => {
-    this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('CANDIDATES.LIST.COL_STATUS'),
-      type: 'select',
-      placeholder: this.translate.instant('CANDIDATES.FILTERS.ALL_STATUSES'),
-      options: STATUS_CODES.map(code => ({
-        value: code,
-        label: this.translate.instant('CANDIDATES.STATUS.' + code),
-      })),
-    }];
+    const lang = this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      {
+        name: 'status',
+        label: t('CANDIDATES.LIST.COL_STATUS'),
+        type: 'select',
+        placeholder: t('CANDIDATES.FILTERS.ALL_STATUSES'),
+        options: STATUS_CODES.map(code => ({
+          value: code,
+          label: t('CANDIDATES.STATUS.' + code),
+        })),
+      },
+      {
+        name: 'demand',
+        label: t('CANDIDATES.FILTERS.DEMAND'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('CANDIDATES.FILTERS.ALL_DEMANDS'),
+        options: [
+          { value: SPONTANEOUS, label: t('CANDIDATES.FILTERS.SPONTANEOUS') },
+          ...this.demandOptions().map(d => ({ value: String(d.id), label: d.label })),
+        ],
+      },
+      {
+        name: 'department',
+        label: t('CANDIDATES.FILTERS.DEPARTMENT'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('CANDIDATES.FILTERS.ALL_DEPARTMENTS'),
+        options: this.departments().map(d => ({
+          value: String(d.id),
+          label: (lang === 'en' ? d.labelEn : d.labelFr) || d.labelFr || d.labelEn,
+        })),
+      },
+      {
+        name: 'createdAt',
+        label: t('CANDIDATES.FILTERS.APPLIED_ON'),
+        type: 'daterange',
+      },
+    ];
   });
 
   /**
@@ -145,7 +200,12 @@ export class CandidateListComponent implements OnInit {
       resetLabel:   t('CANDIDATES.FILTERS.RESET'),
       triggerLabel: t('CANDIDATES.FILTERS.TRIGGER'),
       align:        'right',
-      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+      initialValues: {
+        status:     this.statusFilter()     ? [this.statusFilter()]     : [],
+        demand:     this.demandFilter()     ? [this.demandFilter()]     : [],
+        department: this.departmentFilter() ? [this.departmentFilter()] : [],
+        createdAt:  this.createdRange(),
+      },
     };
   });
 
@@ -179,16 +239,39 @@ export class CandidateListComponent implements OnInit {
       if (page)  this.page.set(page);
       this.firstLoad.set(false);
     });
+
+    this.loadFilterOptions();
   }
 
-  private query() {
+  /** Every filter of the panel is applied server-side. */
+  private query(): CandidateListQuery {
+    const demand = this.demandFilter();
+    const range  = this.createdRange();
     return {
-      paysId: this.userStore.currentUser()?.paysId,
-      status: this.statusFilter() || undefined,
-      search: this.search()       || undefined,
-      page:   this.currentPage(),
-      size:   this.pageSize(),
+      paysId:       this.userStore.currentUser()?.paysId,
+      status:       this.statusFilter() || undefined,
+      search:       this.search()       || undefined,
+      departmentId: this.departmentFilter() ? Number(this.departmentFilter()) : undefined,
+      spontaneous:  demand === SPONTANEOUS || undefined,
+      demandId:     demand && demand !== SPONTANEOUS ? Number(demand) : undefined,
+      createdFrom:  range?.[0] ? toIsoDay(range[0]) : undefined,
+      // A single picked day is a one-day range.
+      createdTo:    range?.[0] ? toIsoDay(range[1] ?? range[0]) : undefined,
+      page:         this.currentPage(),
+      size:         this.pageSize(),
     };
+  }
+
+  /** Once per page: the demand and department options of the filter panel. */
+  private loadFilterOptions(): void {
+    const paysId = this.userStore.currentUser()?.paysId;
+    this.refData.getDepartments(paysId).subscribe(items =>
+      this.departments.set((items ?? []).filter(d => d.isActive !== false)));
+    if (paysId) {
+      this.demandSvc.getApprovedOptions(paysId)
+        .pipe(catchError(() => of([] as ApprovedDemandOption[])))
+        .subscribe(opts => this.demandOptions.set(opts ?? []));
+    }
   }
 
   private loadCandidates(): void {
@@ -212,7 +295,12 @@ export class CandidateListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    const range = result['createdAt'];
+    this.statusFilter.set(str('status'));
+    this.demandFilter.set(str('demand'));
+    this.departmentFilter.set(str('department'));
+    this.createdRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
     this.currentPage.set(0);
     this.loadCandidates();
   }

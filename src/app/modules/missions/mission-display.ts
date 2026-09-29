@@ -191,3 +191,45 @@ export function parseIsoDate(iso: string | null): Date | undefined {
 function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
+
+// ── List filters (missions + missions/historique) ──────────────────────────────
+
+/**
+ * True when the mission's period overlaps the picked range — one picked day is a one-day
+ * range, no range means no filter.
+ */
+export function matchesPeriod(mission: Mission, range: Date[] | null): boolean {
+  if (!range?.length) return true;
+  const from = startOfDay(range[0]);
+  const to = startOfDay(range[1] ?? range[0]);
+  const start = parseIsoDate(mission.startDate);
+  const end = parseIsoDate(mission.endDate) ?? start;
+  if (!start || !end) return true;
+  return start.getTime() <= to.getTime() && end.getTime() >= from.getTime();
+}
+
+/** One option per distinct value found in the list, sorted by label. */
+function distinctOptions(
+  missions: Mission[],
+  pick: (m: Mission) => { value: string; label: string } | null,
+): { value: string; label: string }[] {
+  const byValue = new Map<string, string>();
+  for (const m of missions) {
+    const opt = pick(m);
+    if (opt && !byValue.has(opt.value)) byValue.set(opt.value, opt.label);
+  }
+  return [...byValue].map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** The employees present in the list — the filter only offers choices that match. */
+export function employeeOptions(missions: Mission[]): { value: string; label: string }[] {
+  return distinctOptions(missions, m =>
+    ({ value: String(m.employeeUserId), label: m.employeeName || `#${m.employeeUserId}` }));
+}
+
+/** The destination countries present in the list (international missions carry one). */
+export function countryOptions(missions: Mission[]): { value: string; label: string }[] {
+  return distinctOptions(missions, m =>
+    m.countryLabel ? { value: m.countryLabel, label: m.countryLabel } : null);
+}

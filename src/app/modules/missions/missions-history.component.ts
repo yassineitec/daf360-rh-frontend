@@ -14,9 +14,9 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { MissionService } from './mission.service';
-import { Mission, MissionStatus } from './mission.model';
+import { Mission, MissionScope, MissionStatus } from './mission.model';
 import { MissionDetailDrawerComponent } from './mission-detail-drawer.component';
-import { errorMessage, parseIsoDate } from './mission-display';
+import { countryOptions, employeeOptions, errorMessage, matchesPeriod } from './mission-display';
 import { MissionsCardsSectionComponent } from './sections/missions-cards-section.component';
 import { MissionsTableSectionComponent } from './sections/missions-table-section.component';
 
@@ -30,14 +30,7 @@ const CLOSED_STATUS_CODES: MissionStatus[] = [
 
 type ViewMode = 'grid' | 'list';
 
-/** True when the mission's period overlaps `[range[0], range[1]]` — no range means no filter. */
-function matchesPeriod(mission: Mission, range: Date[] | null): boolean {
-  if (!range || range.length < 2) return true;
-  const start = parseIsoDate(mission.startDate);
-  const end = parseIsoDate(mission.endDate) ?? start;
-  if (!start || !end) return true;
-  return start.getTime() <= range[1].getTime() && end.getTime() >= range[0].getTime();
-}
+const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
 
 /**
  * `/rh/missions/historique` — read-only record of the manager's own missions that are no
@@ -72,8 +65,14 @@ export class MissionsHistoryComponent implements OnInit {
   readonly viewMode = signal<ViewMode>('grid');
   readonly search = signal('');
   readonly statusFilter = signal('');
-  /** [start, end] once both ends of the calendar range are picked, else no period filter. */
+  /** Picked period (one day or [from, to]) — keeps missions overlapping it. */
   readonly periodFilter = signal<Date[] | null>(null);
+  /** Employee user id as a string ('' = everyone) — the panel's select value. */
+  readonly employeeFilter = signal('');
+  /** `NATIONAL` / `INTERNATIONAL`, or '' = both. */
+  readonly scopeFilter = signal('');
+  /** Destination country label, or '' = any. */
+  readonly countryFilter = signal('');
   readonly currentPage = signal(0);
   readonly pageSize = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -106,13 +105,21 @@ export class MissionsHistoryComponent implements OnInit {
     const term = this.search().trim().toLowerCase();
     const status = this.statusFilter();
     const period = this.periodFilter();
+    const employee = this.employeeFilter();
+    const scope = this.scopeFilter();
+    const country = this.countryFilter();
     return this.missions().filter(m => {
       const matchesTerm = !term
         || (m.employeeName ?? '').toLowerCase().includes(term)
         || m.title.toLowerCase().includes(term)
         || m.city.toLowerCase().includes(term)
         || (m.countryLabel ?? '').toLowerCase().includes(term);
-      return matchesTerm && (!status || m.status === status) && matchesPeriod(m, period);
+      return matchesTerm
+        && (!status || m.status === status)
+        && matchesPeriod(m, period)
+        && (!employee || String(m.employeeUserId) === employee)
+        && (!scope || m.scope === scope)
+        && (!country || m.countryLabel === country);
     });
   });
 
@@ -126,7 +133,8 @@ export class MissionsHistoryComponent implements OnInit {
 
   readonly emptyMessage = computed(() => {
     this.translate.currentLang();
-    const filtered = !!this.search().trim() || !!this.statusFilter() || !!this.periodFilter();
+    const filtered = !!this.search().trim() || !!this.statusFilter() || !!this.periodFilter()
+      || !!this.employeeFilter() || !!this.scopeFilter() || !!this.countryFilter();
     return this.translate.instant(filtered
       ? 'MISSIONS.LIST.EMPTY_FILTERED'
       : 'MISSIONS.LIST.EMPTY_CLOSED');
@@ -165,6 +173,29 @@ export class MissionsHistoryComponent implements OnInit {
         label: this.translate.instant('MISSIONS.LIST.COL_PERIOD'),
         type: 'daterange',
       },
+      {
+        name: 'employee',
+        label: this.translate.instant('MISSIONS.LIST.COL_EMPLOYEE'),
+        type: 'select',
+        searchable: true,
+        placeholder: this.translate.instant('MISSIONS.LIST.FILTERS.ALL_EMPLOYEES'),
+        options: employeeOptions(this.missions()),
+      },
+      {
+        name: 'scope',
+        label: this.translate.instant('MISSIONS.LIST.FILTERS.SCOPE'),
+        type: 'select',
+        placeholder: this.translate.instant('MISSIONS.LIST.FILTERS.ALL_SCOPES'),
+        options: SCOPES.map(s => ({ value: s, label: this.translate.instant('MISSIONS.SCOPE.' + s) })),
+      },
+      {
+        name: 'country',
+        label: this.translate.instant('MISSIONS.LIST.FILTERS.COUNTRY'),
+        type: 'select',
+        searchable: true,
+        placeholder: this.translate.instant('MISSIONS.LIST.FILTERS.ALL_COUNTRIES'),
+        options: countryOptions(this.missions()),
+      },
     ];
   });
 
@@ -181,6 +212,9 @@ export class MissionsHistoryComponent implements OnInit {
       initialValues: {
         status: this.statusFilter() ? [this.statusFilter()] : [],
         period: this.periodFilter(),
+        employee: this.employeeFilter() ? [this.employeeFilter()] : [],
+        scope:    this.scopeFilter()    ? [this.scopeFilter()]    : [],
+        country:  this.countryFilter()  ? [this.countryFilter()]  : [],
       },
     };
   });
@@ -201,9 +235,13 @@ export class MissionsHistoryComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
     const period = result['period'];
-    this.periodFilter.set(Array.isArray(period) && period.length === 2 ? period as Date[] : null);
+    this.statusFilter.set(str('status'));
+    this.periodFilter.set(Array.isArray(period) && period.length ? period as Date[] : null);
+    this.employeeFilter.set(str('employee'));
+    this.scopeFilter.set(str('scope'));
+    this.countryFilter.set(str('country'));
     this.currentPage.set(0);
   }
 

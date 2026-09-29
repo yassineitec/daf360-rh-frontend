@@ -27,6 +27,19 @@ const STATUS_VARIANT: Record<RecruitmentDemandStatus, 'success' | 'warning' | 'd
   CLOTUREE:   'info',
 };
 
+/** Local-time YYYY-MM-DD — never `toISOString()`, which shifts the day across time zones. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Sorted distinct non-empty labels as select options; `keep` stays listed even if absent. */
+function distinctOptions(labels: (string | null)[], keep: string): { value: string; label: string }[] {
+  const set = new Set(labels.filter((l): l is string => !!l));
+  if (keep) set.add(keep);
+  return [...set].sort((a, b) => a.localeCompare(b)).map(l => ({ value: l, label: l }));
+}
+
 /** Card-ready view model — same shape as the Historique page's own "Recrutement" cards. */
 interface DemandCard {
   id: number;
@@ -86,7 +99,8 @@ interface DemandCard {
 
     <!-- No status filter: every card here is already EN_ATTENTE by construction. The
          "Filtres" panel narrows by the same two signals as the KPI row instead — sourcing
-         progress and age. -->
+         progress and age — plus department, urgency and submission date. All client-side
+         on the fetched batch (up to 100 by default): the endpoint only takes a status. -->
     <daf-search-toolbar
       [placeholder]="'RECRUITMENT_VALIDATION.SEARCH_PLACEHOLDER' | translate"
       [(value)]="searchQuery"
@@ -237,6 +251,20 @@ export class RecruitmentValidationSectionComponent implements OnInit {
    *  break down since every card here is already EN_ATTENTE. */
   readonly candidateFilter = signal<'all' | 'none' | 'some'>('all');
   readonly ageFilter       = signal<'all' | 'old'>('all');
+  /** Department label ('' = all) — client-side on the fetched batch, like the two above. */
+  readonly departmentFilter = signal('');
+  /** Urgency level label ('' = all) — the summary carries only the label, no id. */
+  readonly urgencyFilter    = signal('');
+  /** Submission date range: one day or [from, to]; null = no bound. */
+  readonly submittedFilter  = signal<Date[] | null>(null);
+
+  /** Departments present in the fetched batch (plus the selected one, so it never vanishes). */
+  private readonly departmentOptions = computed(() =>
+    distinctOptions(this.demands().map(d => d.department), this.departmentFilter()));
+
+  /** Urgency levels present in the fetched batch (plus the selected one). */
+  private readonly urgencyOptions = computed(() =>
+    distinctOptions(this.demands().map(d => d.urgencyLevelLabel), this.urgencyFilter()));
 
   readonly statusVariant = (s: RecruitmentDemandStatus) => STATUS_VARIANT[s];
 
@@ -263,6 +291,26 @@ export class RecruitmentValidationSectionComponent implements OnInit {
           { value: 'old', label: this.translate.instant('RECRUITMENT_VALIDATION.KPI_OLD') },
         ],
       },
+      {
+        name: 'department',
+        label: this.translate.instant('RECRUITMENT_DEMANDS.FORM.DEPARTMENT'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('DEPARTMENT_ALL'),
+        options: this.departmentOptions(),
+      },
+      {
+        name: 'urgency',
+        label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.COL_URGENCY'),
+        type: 'select',
+        placeholder: this.translate.instant('REQUESTS.LIST.FILTERS.URGENCY_ALL'),
+        options: this.urgencyOptions(),
+      },
+      {
+        name: 'submitted',
+        label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.COL_SUBMITTED'),
+        type: 'daterange',
+      },
     ];
   });
 
@@ -276,7 +324,13 @@ export class RecruitmentValidationSectionComponent implements OnInit {
       cancelLabel:  t('CANCEL'),
       resetLabel:   t('RESET'),
       align:        'right',
-      initialValues: { candidates: [this.candidateFilter()], age: [this.ageFilter()] },
+      initialValues: {
+        candidates: [this.candidateFilter()],
+        age:        [this.ageFilter()],
+        department: this.departmentFilter() ? [this.departmentFilter()] : [],
+        urgency:    this.urgencyFilter() ? [this.urgencyFilter()] : [],
+        submitted:  this.submittedFilter(),
+      },
     };
   });
 
@@ -289,6 +343,12 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     if (age === 'all' || age === 'old') {
       this.ageFilter.set(age);
     }
+    const department = result['department'];
+    this.departmentFilter.set(typeof department === 'string' ? department : '');
+    const urgency = result['urgency'];
+    this.urgencyFilter.set(typeof urgency === 'string' ? urgency : '');
+    const submitted = result['submitted'];
+    this.submittedFilter.set(Array.isArray(submitted) && submitted.length ? submitted as Date[] : null);
   }
 
   readonly target     = signal<RecruitmentDemandSummary | null>(null);
@@ -303,11 +363,22 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     const q = this.searchQuery().trim().toLowerCase();
     const candidates = this.candidateFilter();
     const age = this.ageFilter();
+    const department = this.departmentFilter();
+    const urgency = this.urgencyFilter();
+    const range = this.submittedFilter();
+    const from = range?.[0] ? toIsoDay(range[0]) : null;
+    const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
     const now = Date.now();
     return this.demands().filter(d => {
       if (candidates === 'none' && (d.candidateCount || 0) !== 0) return false;
       if (candidates === 'some' && (d.candidateCount || 0) === 0) return false;
       if (age === 'old' && !((now - new Date(d.submittedAt).getTime()) / 86400000 > 7)) return false;
+      if (department && d.department !== department) return false;
+      if (urgency && d.urgencyLevelLabel !== urgency) return false;
+      if (from) {
+        const day = d.submittedAt ? toIsoDay(new Date(d.submittedAt)) : null;
+        if (!day || day < from || day > to!) return false;
+      }
       if (!q) return true;
       return (d.jobExactTitle ?? d.jobTitle).toLowerCase().includes(q)
         || (d.department ?? '').toLowerCase().includes(q);

@@ -113,6 +113,12 @@
       "SHOW": "Filtres",
       "HIDE": "Masquer filtres",
       "ALL_STATUSES": "Tous les statuts",
+      "DEMAND": "Poste (demande de recrutement)",
+      "ALL_DEMANDS": "Tous les postes",
+      "SPONTANEOUS": "Candidature spontanée",
+      "DEPARTMENT": "Département",
+      "ALL_DEPARTMENTS": "Tous les départements",
+      "APPLIED_ON": "Date de candidature",
       "TITLE": "Filtrer les candidats",
       "TRIGGER": "Filtres",
       "APPLY": "Appliquer",
@@ -549,7 +555,14 @@
       "APPLY": "Appliquer",
       "CANCEL": "Annuler",
       "RESET": "Réinitialiser",
-      "ALL_STAGES": "Toutes les étapes"
+      "ALL_STAGES": "Toutes les étapes",
+      "DEMAND": "Poste (demande de recrutement)",
+      "ALL_DEMANDS": "Tous les postes",
+      "SPONTANEOUS": "Candidature spontanée",
+      "MIN_FIT": "Score fit minimum",
+      "ANY_FIT": "Tous les scores",
+      "FIT_AT_LEAST": "≥ {{value}} %",
+      "URGENT_ONLY": "Urgents seulement (démarrage proche)"
     },
     "DELTA": {
       "CLOSURE_RATE": "{{pct}}% de clôture",
@@ -681,7 +694,8 @@
       "CANDIDATES_ALL": "Tous",
       "CANDIDATES_SOME": "Avec candidat",
       "AGE_LABEL": "Ancienneté",
-      "AGE_ALL": "Toutes"
+      "AGE_ALL": "Toutes",
+      "DEPARTMENT_ALL": "Tous les départements"
     },
     "SUBTITLE": "Besoins en effectif remontés par les managers. Votre validation autorise l'ouverture du poste au recrutement.",
     "SEE_ALL": "Toutes les demandes",
@@ -740,7 +754,9 @@
         "APPLY": "Appliquer",
         "CANCEL": "Annuler",
         "RESET": "Réinitialiser",
-        "STATUS_LABEL": "Statut"
+        "STATUS_LABEL": "Statut",
+        "DEPARTMENT_ALL": "Tous les départements",
+        "REASON_ALL": "Tous les motifs"
       }
     },
     "FILTER": {
@@ -856,7 +872,13 @@
         "TRIGGER": "Filtres",
         "APPLY": "Appliquer",
         "CANCEL": "Annuler",
-        "RESET": "Réinitialiser"
+        "RESET": "Réinitialiser",
+        "DRAFT": "Brouillon",
+        "DRAFT_ANY": "Tous les dossiers",
+        "WITH_DRAFT": "Saisie commencée (brouillon)",
+        "NO_DRAFT": "Pas encore commencé",
+        "START_PASSED": "Date de démarrage dépassée",
+        "ALL_ENTITIES": "Toutes les entités"
       },
       "DELTA_ALL_ON_TRACK": "Tout est à jour",
       "DELTA_INCOMPLETE_ATTENTION": "{{count}} à compléter",
@@ -1828,7 +1850,9 @@
         "TRIGGER": "Filtres",
         "APPLY": "Appliquer",
         "CANCEL": "Annuler",
-        "RESET": "Réinitialiser"
+        "RESET": "Réinitialiser",
+        "ALL_REASONS": "Tous les motifs",
+        "LATE_ONLY": "En retard ou SLA dépassé uniquement"
       },
       "DELTA_ON_TRACK": "Aucune tâche en retard",
       "DELTA_OVERDUE_TASKS": "{{count}} tâche(s) en retard",
@@ -1839,7 +1863,8 @@
       "COL_STAGE": "Étape en cours",
       "STEP_OF": "étape {{step}}/{{total}}",
       "NO_HANDOVER": "Aucun repreneur",
-      "NO_LAST_DAY": "Date à définir"
+      "NO_LAST_DAY": "Date à définir",
+      "EMPTY_NO_MATCH": "Aucun dossier d’offboarding ne correspond à ces filtres"
     },
     "BADGE": {
       "SLA_BREACHED": "SLA dépassé",
@@ -2813,7 +2838,8 @@
         "VALUE": "Valeur",
         "DESCRIPTION": "Description",
         "OPTIONAL": "(optionnel)",
-        "DELETE_BODY": "Supprimer \"{{cle}}\" ?"
+        "DELETE_BODY": "Supprimer \"{{cle}}\" ?",
+        "SEED_BLOCKED_BY_CALENDAR": "Ce pays a déjà des paramètres du calendrier des jours fériés : « Initialiser par défaut » n'y ajoutera rien. Ajoutez les paramètres de paie manuellement avec « + Ajouter »."
       },
       "requestTypes": {
         "TITLE": "Types de demandes RH",
@@ -3357,6 +3383,24 @@
             "FRI": "Ven",
             "SAT": "Sam"
           }
+        },
+        "settings": {
+          "open": "Paramètres du calendrier",
+          "title": "Paramètres du calendrier",
+          "subtitle": "Apparence des jours fériés dans le calendrier de {{pays}}",
+          "showFlag": "Afficher le drapeau",
+          "flag": "Drapeau",
+          "flagDefault": "Pays de l'entité (par défaut)",
+          "abbrev": "Abréviation",
+          "abbrevHint": "{{max}} caractères maximum — vide = « {{default}} »",
+          "color": "Couleur du badge",
+          "colorDefault": "Couleur par défaut",
+          "preview": "Aperçu",
+          "seedWarning": "Ce pays n'a encore aucun paramètre de paie. Après cet enregistrement, « Initialiser par défaut » dans Paramètres de paie ne le remplira plus : initialisez la paie d'abord, ou ajoutez ses paramètres manuellement.",
+          "reset": "Réinitialiser",
+          "cancel": "Annuler",
+          "save": "Enregistrer",
+          "error": "Enregistrement impossible. Vérifiez que vous avez la permission « Administration des rôles RH »."
         }
       }
     },
@@ -3521,7 +3565,11 @@
         "RESET": "Réinitialiser",
         "STATUS_LABEL": "Statut",
         "URGENCY_LABEL": "Urgence",
-        "URGENCY_ALL": "Toutes"
+        "URGENCY_ALL": "Toutes",
+        "TYPE_ALL": "Tous les types",
+        "DECIDED_LABEL": "Date de décision",
+        "ALL_TYPES": "Tous les types",
+        "ALL_STATUSES": "Tous les statuts"
       },
       "INBOX_BTN": "Boîte de réception",
       "EMPTY_DONE": "Aucune demande traitée",
@@ -3643,7 +3691,15 @@
         "TRIGGER": "Filtres",
         "APPLY": "Appliquer",
         "CANCEL": "Annuler",
-        "RESET": "Réinitialiser"
+        "RESET": "Réinitialiser",
+        "MISSING": "Éléments manquants",
+        "MISSING_ANY": "Aucun critère",
+        "MISSING_HINT": "Dossiers auxquels il manque au moins un des éléments choisis",
+        "MISSING_HARDWARE": "Matériel",
+        "MISSING_LICENCES": "Licences",
+        "MISSING_EMAIL": "Email MS365",
+        "START_DATE": "Date de démarrage prévue",
+        "OVERDUE_ONLY": "En retard uniquement"
       },
       "DELTA_COMPLETE": "{{pct}}% traités",
       "DELTA_OVERDUE": "{{count}} hors délai",
@@ -3880,7 +3936,12 @@
         "APPLY": "Appliquer",
         "CANCEL": "Annuler",
         "RESET": "Réinitialiser",
-        "TRIGGER": "Filtrer"
+        "TRIGGER": "Filtrer",
+        "ALL_EMPLOYEES": "Tous les collaborateurs",
+        "SCOPE": "Portée",
+        "ALL_SCOPES": "Nationale et internationale",
+        "COUNTRY": "Pays de destination",
+        "ALL_COUNTRIES": "Tous les pays"
       },
       "EMPTY": "Aucune mission planifiée pour le moment"
     },

@@ -98,6 +98,33 @@ export interface HolidayDto {
   isRecurring?: boolean;
 }
 
+/**
+ * Display settings for the "Jours fériés" calendar badge (flag + "JF"), per pays.
+ * Stored front-side only, as one JSON row of `parameter_sets` under
+ * {@link HOLIDAY_CALENDAR_CONFIG_KEY} — no dedicated backend table or endpoint.
+ * A `null` field means "use the built-in default", so an unconfigured pays renders
+ * exactly as before this setting existed.
+ */
+export interface HolidayCalendarConfig {
+  /** Show the flag on the left of the badge. */
+  showFlag:    boolean;
+  /** Lowercase ISO 3166-1 alpha-2 of the flag to draw; `null` → the entity's own pays. */
+  flagIsoCode: string | null;
+  /** Badge text; `null` → the translated default ("JF" / "PH"). */
+  abbrev:      string | null;
+  /** Badge colour as `#rrggbb`; `null` → the default amber. */
+  color:       string | null;
+}
+
+export const HOLIDAY_CALENDAR_CONFIG_KEY = 'HOLIDAY_CALENDAR_CONFIG';
+
+export const DEFAULT_HOLIDAY_CALENDAR_CONFIG: HolidayCalendarConfig = {
+  showFlag:    true,
+  flagIsoCode: null,
+  abbrev:      null,
+  color:       null,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Request type catalog
 // ─────────────────────────────────────────────────────────────────────────────

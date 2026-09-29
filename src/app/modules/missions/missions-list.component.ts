@@ -18,12 +18,12 @@ import {
 
 import { MissionService } from './mission.service';
 import {
-  Mission, MissionEligibleEmployee, MissionPayload, MissionStatus,
+  Mission, MissionEligibleEmployee, MissionPayload, MissionScope, MissionStatus,
 } from './mission.model';
 import { MissionFormModalComponent } from './mission-form-modal.component';
 import { MissionDetailDrawerComponent } from './mission-detail-drawer.component';
 import {
-  errorMessage, isActive, isLate, isUpcoming,
+  employeeOptions, errorMessage, isActive, isLate, isUpcoming, matchesPeriod,
 } from './mission-display';
 import {
   MissionCardAction, MissionsCardsSectionComponent,
@@ -42,6 +42,8 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const OPEN_STATUS_CODES: MissionStatus[] = ['PENDING_HR', 'PENDING_FINANCE'];
 
 type ViewMode = 'grid' | 'list';
+
+const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
 
 /**
  * `/rh/missions` — the manager's own missions, in the canonical list shape (§1):
@@ -90,6 +92,12 @@ export class MissionsListComponent implements OnInit {
   readonly viewMode = signal<ViewMode>('grid');
   readonly search = signal('');
   readonly statusFilter = signal('');
+  /** Employee user id as a string ('' = everyone) — the panel's select value. */
+  readonly employeeFilter = signal('');
+  /** `NATIONAL` / `INTERNATIONAL`, or '' = both. */
+  readonly scopeFilter = signal('');
+  /** Picked period (one day or [from, to]) — keeps missions overlapping it. */
+  readonly periodFilter = signal<Date[] | null>(null);
   readonly currentPage = signal(0);
   readonly pageSize = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
@@ -130,16 +138,26 @@ export class MissionsListComponent implements OnInit {
   readonly filteredItems = computed(() => {
     const term = this.search().trim().toLowerCase();
     const status = this.statusFilter();
-    return this.missions().filter(m => {
-      if (!OPEN_STATUS_CODES.includes(m.status)) return false;
+    const employee = this.employeeFilter();
+    const scope = this.scopeFilter();
+    const period = this.periodFilter();
+    return this.openMissions().filter(m => {
       const matchesTerm = !term
         || (m.employeeName ?? '').toLowerCase().includes(term)
         || m.title.toLowerCase().includes(term)
         || m.city.toLowerCase().includes(term)
         || (m.countryLabel ?? '').toLowerCase().includes(term);
-      return matchesTerm && (!status || m.status === status);
+      return matchesTerm
+        && (!status || m.status === status)
+        && (!employee || String(m.employeeUserId) === employee)
+        && (!scope || m.scope === scope)
+        && matchesPeriod(m, period);
     });
   });
+
+  /** What this page lists before any filter — also the source of the panel's options. */
+  private readonly openMissions = computed(() =>
+    this.missions().filter(m => OPEN_STATUS_CODES.includes(m.status)));
 
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
@@ -155,7 +173,8 @@ export class MissionsListComponent implements OnInit {
    */
   readonly emptyMessage = computed(() => {
     this.translate.currentLang();
-    const filtered = !!this.search().trim() || !!this.statusFilter();
+    const filtered = !!this.search().trim() || !!this.statusFilter() || !!this.employeeFilter()
+      || !!this.scopeFilter() || !!this.periodFilter();
     return this.translate.instant(filtered
       ? 'MISSIONS.LIST.EMPTY_FILTERED'
       : 'MISSIONS.LIST.EMPTY');
@@ -213,16 +232,39 @@ export class MissionsListComponent implements OnInit {
   /** The status dropdown belongs INSIDE the filter panel, not loose beside the search. */
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'status',
-      label: this.translate.instant('MISSIONS.LIST.COL_STATUS'),
-      type: 'select',
-      placeholder: this.translate.instant('MISSIONS.LIST.FILTER_ALL'),
-      options: OPEN_STATUS_CODES.map(code => ({
-        value: code,
-        label: this.translate.instant('MISSIONS.STATUS.' + code),
-      })),
-    }];
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      {
+        name: 'status',
+        label: t('MISSIONS.LIST.COL_STATUS'),
+        type: 'select',
+        placeholder: t('MISSIONS.LIST.FILTER_ALL'),
+        options: OPEN_STATUS_CODES.map(code => ({
+          value: code,
+          label: t('MISSIONS.STATUS.' + code),
+        })),
+      },
+      {
+        name: 'employee',
+        label: t('MISSIONS.LIST.COL_EMPLOYEE'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('MISSIONS.LIST.FILTERS.ALL_EMPLOYEES'),
+        options: employeeOptions(this.openMissions()),
+      },
+      {
+        name: 'scope',
+        label: t('MISSIONS.LIST.FILTERS.SCOPE'),
+        type: 'select',
+        placeholder: t('MISSIONS.LIST.FILTERS.ALL_SCOPES'),
+        options: SCOPES.map(s => ({ value: s, label: t('MISSIONS.SCOPE.' + s) })),
+      },
+      {
+        name: 'period',
+        label: t('MISSIONS.LIST.COL_PERIOD'),
+        type: 'daterange',
+      },
+    ];
   });
 
   /**
@@ -239,7 +281,12 @@ export class MissionsListComponent implements OnInit {
       resetLabel: t('MISSIONS.LIST.FILTERS.RESET'),
       triggerLabel: t('MISSIONS.LIST.FILTERS.TRIGGER'),
       align: 'right',
-      initialValues: { status: this.statusFilter() ? [this.statusFilter()] : [] },
+      initialValues: {
+        status:   this.statusFilter()   ? [this.statusFilter()]   : [],
+        employee: this.employeeFilter() ? [this.employeeFilter()] : [],
+        scope:    this.scopeFilter()    ? [this.scopeFilter()]    : [],
+        period:   this.periodFilter(),
+      },
     };
   });
 
@@ -259,7 +306,12 @@ export class MissionsListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
+    const period = result['period'];
+    this.statusFilter.set(str('status'));
+    this.employeeFilter.set(str('employee'));
+    this.scopeFilter.set(str('scope'));
+    this.periodFilter.set(Array.isArray(period) && period.length ? period as Date[] : null);
     this.currentPage.set(0);
   }
 

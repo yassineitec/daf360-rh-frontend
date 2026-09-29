@@ -38,6 +38,12 @@ type MainTab = 'other' | 'recruitment';
 
 const ACTIVE_STATUSES: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
 
+/** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
+function toIsoDay(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
   warning: 'warning',
@@ -321,6 +327,12 @@ export class RequestListComponent implements OnInit {
   /** The one filter dimension left once status no longer applies here — same three levels
    *  as the KPI row above ('all' shows everything, matching the unfiltered KPI total). */
   urgencyFilter = signal<'all' | 'critical' | 'warning' | 'ok'>('all');
+  /** Request type id as a string ('' = all types). */
+  typeFilter = signal('');
+  /** One of the "en cours" statuses ('' = all three). */
+  statusFilter = signal('');
+  /** Submission-date range from the panel: one day or [from, to]; null = no bound. */
+  submittedRange = signal<Date[] | null>(null);
 
   /** Which of the two top-level tabs is showing — defaults to the employee's own
    *  requests, the reason most visitors land on this page. */
@@ -379,17 +391,54 @@ export class RequestListComponent implements OnInit {
    *  so the two never drift out of sync ("Urgentes" means the same thing in both). */
   readonly filterFields = computed<FilterField[]>(() => {
     this.translate.currentLang();
-    return [{
-      name: 'urgency',
-      label: this.translate.instant('REQUESTS.LIST.FILTERS.URGENCY_LABEL'),
-      type: 'select',
-      options: [
-        { value: 'all',      label: this.translate.instant('REQUESTS.LIST.FILTERS.URGENCY_ALL') },
-        { value: 'critical', label: this.translate.instant('REQUESTS.LIST.KPI_URGENT') },
-        { value: 'warning',  label: this.translate.instant('REQUESTS.LIST.KPI_SOON') },
-        { value: 'ok',       label: this.translate.instant('REQUESTS.LIST.KPI_OK') },
-      ],
-    }];
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      {
+        name: 'urgency',
+        label: t('REQUESTS.LIST.FILTERS.URGENCY_LABEL'),
+        type: 'select',
+        options: [
+          { value: 'all',      label: t('REQUESTS.LIST.FILTERS.URGENCY_ALL') },
+          { value: 'critical', label: t('REQUESTS.LIST.KPI_URGENT') },
+          { value: 'warning',  label: t('REQUESTS.LIST.KPI_SOON') },
+          { value: 'ok',       label: t('REQUESTS.LIST.KPI_OK') },
+        ],
+      },
+      {
+        name: 'type',
+        label: t('REQUESTS.LIST.COL_TYPE'),
+        type: 'select',
+        searchable: true,
+        placeholder: t('REQUESTS.LIST.FILTERS.ALL_TYPES'),
+        options: this.typeOptions(),
+      },
+      {
+        name: 'status',
+        label: t('REQUESTS.LIST.FILTERS.STATUS_LABEL'),
+        type: 'select',
+        placeholder: t('REQUESTS.LIST.FILTERS.ALL_STATUSES'),
+        options: ACTIVE_STATUSES.map(code => ({ value: code, label: t('REQUESTS.STATUS.' + code) })),
+      },
+      {
+        name: 'submitted',
+        label: t('REQUESTS.LIST.COL_SUBMITTED'),
+        type: 'daterange',
+      },
+    ];
+  });
+
+  /** Distinct request types of the loaded "en cours" queue, sorted by label. */
+  private readonly typeOptions = computed(() => {
+    const byId = new Map<number, string>();
+    for (const r of this.activeRows()) {
+      if (!byId.has(r.requestTypeId)) {
+        byId.set(r.requestTypeId, r.typeDisplayNameFr
+          ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }));
+      }
+    }
+    return [...byId.entries()]
+      .map(([id, label]) => ({ value: String(id), label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   });
 
   readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
@@ -402,24 +451,58 @@ export class RequestListComponent implements OnInit {
       cancelLabel:  t('CANCEL'),
       resetLabel:   t('RESET'),
       align:        'right',
-      initialValues: { urgency: [this.urgencyFilter()] },
+      initialValues: {
+        urgency:   [this.urgencyFilter()],
+        type:      this.typeFilter()   ? [this.typeFilter()]   : [],
+        status:    this.statusFilter() ? [this.statusFilter()] : [],
+        submitted: this.submittedRange(),
+      },
     };
   });
 
   onFilterApply(result: FilterResult): void {
+    const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
     const value = result['urgency'];
-    if (value === 'all' || value === 'critical' || value === 'warning' || value === 'ok') {
-      this.urgencyFilter.set(value);
-    }
+    // A reset clears the select — back to "all", the unfiltered default.
+    this.urgencyFilter.set(
+      value === 'critical' || value === 'warning' || value === 'ok' ? value : 'all');
+    this.typeFilter.set(str('type'));
+    this.statusFilter.set(str('status'));
+    const range = result['submitted'];
+    this.submittedRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
   }
 
-  /** Active rows further filtered by urgency, then by the employee-name search. */
+  /** True when any filter-panel field (not the search box) narrows the queue. */
+  private readonly hasPanelFilter = computed(() =>
+    this.urgencyFilter() !== 'all' || !!this.typeFilter() || !!this.statusFilter() || !!this.submittedRange());
+
+  /** Active rows further filtered by the panel (urgency, type, status, submission date),
+   *  then by the employee-name search — all client-side, over the fetched batch. */
   visibleRows = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
     const urgency = this.urgencyFilter();
+    const type = this.typeFilter();
+    const status = this.statusFilter();
+    const range = this.submittedRange();
     let rows = this.activeRows();
     if (urgency !== 'all') {
       rows = rows.filter((r) => this.slaPipe.transform(this.slaDeadline(r))?.level === urgency);
+    }
+    if (type) {
+      rows = rows.filter((r) => String(r.requestTypeId) === type);
+    }
+    if (status) {
+      rows = rows.filter((r) => r.status === status);
+    }
+    if (range?.[0]) {
+      // A single picked day is a one-day range; compared as local calendar days.
+      const from = toIsoDay(range[0]);
+      const to = toIsoDay(range[1] ?? range[0]);
+      rows = rows.filter((r) => {
+        if (!r.submissionDate) return false;
+        const day = toIsoDay(new Date(r.submissionDate));
+        return day >= from && day <= to;
+      });
     }
     if (q) {
       rows = rows.filter((r) => (r.employeeName ?? '').toLowerCase().includes(q));
@@ -445,10 +528,10 @@ export class RequestListComponent implements OnInit {
   readonly skeletonPlaceholders = computed(() =>
     Array.from({ length: Math.min(Math.max(this.visibleRows().length, 5), 20) }, (_, i) => i));
 
-  /** True once search or the urgency filter has narrowed a non-empty queue down to
+  /** True once search or a filter-panel field has narrowed a non-empty queue down to
    *  nothing — as opposed to the queue itself being empty, which needs different wording. */
   readonly isNarrowedEmpty = computed(() =>
-    this.activeRows().length > 0 && (!!this.searchQuery().trim() || this.urgencyFilter() !== 'all'));
+    this.activeRows().length > 0 && (!!this.searchQuery().trim() || this.hasPanelFilter()));
 
   readonly emptyMessage = computed(() => this.translate.instant(
     this.isNarrowedEmpty() ? 'REQUESTS.LIST.SEARCH_EMPTY' : 'REQUESTS.LIST.EMPTY_ACTIVE'));

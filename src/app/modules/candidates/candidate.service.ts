@@ -4,7 +4,7 @@ import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
-  CandidateFilter, CandidateListItem, CandidateDetail,
+  CandidateFilter, CandidateListItem, CandidateListQuery, CandidateDetail,
   CreateCandidateRequest, UpdateCandidateRequest,
   CandidateStats, CandidateDashboardStats, CandidateHistoryItem, PageResponse,
   HireCandidateRequest,
@@ -59,11 +59,16 @@ export class CandidateService {
     return `${this.base}/${id}/cv`;
   }
 
-  getCandidates(filter: { paysId?: number; status?: string; search?: string; page?: number; size?: number }): Observable<PageResponse<CandidateListItem>> {
-    const params: Record<string, string | number> = {};
+  getCandidates(filter: CandidateListQuery): Observable<PageResponse<CandidateListItem>> {
+    const params: Record<string, string | number | boolean> = {};
     if (filter.paysId)          params['paysId']  = filter.paysId;
     if (filter.status)          params['status']  = filter.status;
     if (filter.search)          params['search']  = filter.search;
+    if (filter.departmentId)    params['departmentId'] = filter.departmentId;
+    if (filter.demandId)        params['demandId']     = filter.demandId;
+    if (filter.spontaneous)     params['spontaneous']  = true;
+    if (filter.createdFrom)     params['createdFrom']  = filter.createdFrom;
+    if (filter.createdTo)       params['createdTo']    = filter.createdTo;
     if (filter.page != null)    params['page']    = filter.page;
     if (filter.size != null)    params['size']    = filter.size;
     return this.http.get<PageResponse<CandidateListItem>>(this.base, { params });
