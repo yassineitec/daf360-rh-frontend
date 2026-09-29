@@ -130,6 +130,37 @@ import {
               (valueChange)="maxDays.set(num($event))" />
           </div>
 
+          <!-- ── Scheduling ──────────────────────────────────────────────
+               Two rules counted in WORKING days — weekends and public holidays do not
+               consume notice, which is the point of asking for "three days' notice"
+               rather than "three days". -->
+          <p class="at-sec">{{ 'CONGES.TYPES.SEC_SCHEDULING' | translate }}</p>
+          <p class="at-hint">{{ 'CONGES.TYPES.SCHEDULING_HINT' | translate }}</p>
+          <div class="at-grid">
+            <daf-form-field
+              [options]="{ label: ('CONGES.TYPES.NOTICE_DAYS' | translate), type: 'number', fullWidth: true,
+                           hint: ('CONGES.TYPES.NOTICE_DAYS_HINT' | translate) }"
+              [value]="advanceNoticeDays()"
+              (valueChange)="advanceNoticeDays.set(num($event))" />
+
+            <daf-form-field
+              [options]="{ label: ('CONGES.TYPES.GAP_DAYS' | translate), type: 'number', fullWidth: true,
+                           hint: ('CONGES.TYPES.GAP_DAYS_HINT' | translate) }"
+              [value]="leaveGapDays()"
+              (valueChange)="leaveGapDays.set(num($event))" />
+          </div>
+          <!-- Empty and 0 are DIFFERENT answers and the form says so, because the
+               difference is invisible once saved. -->
+          <p class="at-hint">{{ 'CONGES.TYPES.SCHEDULING_NULL_HINT' | translate }}</p>
+
+          <!-- ── Explanation ─────────────────────────────────────────── -->
+          <p class="at-sec">{{ 'CONGES.TYPES.SEC_DESCRIPTION' | translate }}</p>
+          <daf-form-field
+            [options]="{ label: ('CONGES.TYPES.DESCRIPTION' | translate), type: 'textarea', rows: 3,
+                         fullWidth: true, hint: ('CONGES.TYPES.DESCRIPTION_HINT' | translate) }"
+            [value]="description()"
+            (valueChange)="description.set(str($event) ?? '')" />
+
           <!-- ── Rules ───────────────────────────────────────────────── -->
           <p class="at-sec">{{ 'CONGES.TYPES.SEC_RULES' | translate }}</p>
           <div class="at-grid">
@@ -226,6 +257,10 @@ export class AbsenceTypesAdminComponent implements OnInit {
   readonly includedInHrStats = signal(false);
   readonly requiresJustification = signal(false);
   readonly maxDays = signal<number | null>(null);
+  /** Null = inherit the country default; 0 = no rule for this type. Kept apart on purpose. */
+  readonly advanceNoticeDays = signal<number | null>(null);
+  readonly leaveGapDays = signal<number | null>(null);
+  readonly description = signal('');
   readonly displayOrder = signal(0);
   readonly allowedGender = signal<string | null>('ALL');
   readonly managerCanView = signal(true);
@@ -340,6 +375,10 @@ export class AbsenceTypesAdminComponent implements OnInit {
     const bits: string[] = [];
     if (t.requiresJustification) bits.push(this.translate.instant('CONGES.TYPES.F_JUSTIF'));
     if (t.maxDays != null)       bits.push(this.translate.instant('CONGES.TYPES.F_MAX', { n: t.maxDays }));
+    // Only when the type sets its own value — a null inherits the country's and saying so in
+    // a one-line summary would claim a rule this type does not itself define.
+    if (t.advanceNoticeDays)     bits.push(this.translate.instant('CONGES.TYPES.F_NOTICE', { n: t.advanceNoticeDays }));
+    if (t.leaveGapDays)          bits.push(this.translate.instant('CONGES.TYPES.F_GAP', { n: t.leaveGapDays }));
     if (!t.managerCanView)       bits.push(this.translate.instant('CONGES.TYPES.F_PRIVATE'));
     if (t.includedInHrStats)     bits.push(this.translate.instant('CONGES.TYPES.F_STATS'));
     return bits.length ? bits.join(' · ') : '—';
@@ -364,6 +403,9 @@ export class AbsenceTypesAdminComponent implements OnInit {
     this.includedInHrStats.set(row.includedInHrStats);
     this.requiresJustification.set(row.requiresJustification);
     this.maxDays.set(row.maxDays);
+    this.advanceNoticeDays.set(row.advanceNoticeDays);
+    this.leaveGapDays.set(row.leaveGapDays);
+    this.description.set(row.description ?? '');
     this.displayOrder.set(row.displayOrder);
     this.allowedGender.set(row.allowedGender ?? 'ALL');
     this.managerCanView.set(row.managerCanView);
@@ -423,6 +465,9 @@ export class AbsenceTypesAdminComponent implements OnInit {
       includedInHrStats: this.includedInHrStats(),
       requiresJustification: this.requiresJustification(),
       maxDays: this.maxDays(),
+      advanceNoticeDays: this.advanceNoticeDays(),
+      leaveGapDays: this.leaveGapDays(),
+      description: this.description().trim() || null,
       displayOrder: this.displayOrder(),
       allowedGender: this.allowedGender(),
       managerCanView: this.managerCanView(),
@@ -520,6 +565,9 @@ export class AbsenceTypesAdminComponent implements OnInit {
     this.includedInHrStats.set(false);
     this.requiresJustification.set(false);
     this.maxDays.set(null);
+    this.advanceNoticeDays.set(null);
+    this.leaveGapDays.set(null);
+    this.description.set('');
     // Next in sequence, so a new type lands at the end of the dropdown rather than
     // silently jumping to the front by sharing order 0 with CONGE.
     this.displayOrder.set(this.rows().reduce((m, t) => Math.max(m, t.displayOrder), -1) + 1);

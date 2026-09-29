@@ -56,6 +56,8 @@ export type CongeRowAction = 'view' | 'approve' | 'refuse' | 'archive';
       [columns]="columns()"
       [rows]="rows()"
       [config]="config()"
+      [selected]="selected()"
+      (selectedChange)="selectedChange.emit($event)"
       (sortChange)="sortChange.emit($event)"
       (rowClick)="open.emit($any($event)['_source'])">
 
@@ -124,9 +126,17 @@ export class CongesTableSectionComponent {
   readonly sortKey      = input<string>('createdAt');
   readonly sortDir      = input<'asc' | 'desc'>('desc');
 
+  /**
+   * Row selection, as the id strings `daf-data-table` works in. Off unless the page asks:
+   * a checkbox column that leads nowhere is clutter on the three read-only screens.
+   */
+  readonly selectable = input(false);
+  readonly selected   = input<string[]>([]);
+
   readonly open = output<CongeRow>();
   readonly act  = output<{ row: CongeRow; action: CongeRowAction }>();
   readonly sortChange = output<{ key: string; dir: 'asc' | 'desc' | null }>();
+  readonly selectedChange = output<string[]>();
 
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -211,7 +221,12 @@ export class CongesTableSectionComponent {
     defaultSort: { key: this.sortKey(), dir: this.sortDir() },
     // `rowId` is load-bearing with resizing on: the width and height maps were keyed by
     // render index, which stops being stable the moment the user sorts.
+    // `rowId` is what selection is keyed by as well as what tracking uses, so the ids the
+    // page sends to the server are these — the request id, not a render index.
     rowId: (row) => (row['_source'] as CongeRow).id,
+    selectable: this.selectable(),
+    selectAllLabel: this.translate.instant('CONGES.SELECT_ALL'),
+    selectRowLabel: this.translate.instant('CONGES.SELECT_ROW'),
     // Congé rows carry a reason that can run long and an employee cell that cannot be
     // truncated usefully, so the reader gets to decide which columns deserve the width.
     resizableColumns: true,

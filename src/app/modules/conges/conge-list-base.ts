@@ -46,7 +46,8 @@ export abstract class CongeListBase {
   readonly error = signal<string | null>(null);
 
   // ── View state ────────────────────────────────────────────────────────────
-  readonly viewMode = signal<ViewMode>('list');
+  /** Cards by default, as on /rh/missions and /rh/billeterie — one habit across the module. */
+  readonly viewMode = signal<ViewMode>('grid');
   readonly search = signal('');
   readonly etat = signal<DemandeEtat | null>(null);
   readonly type = signal<string | null>(null);
@@ -97,6 +98,7 @@ export abstract class CongeListBase {
         this.totalPages.set(p.totalPages ?? 0);
         this.loading.set(false);
         this.firstLoad.set(false);
+        this.onRowsReplaced();
       },
       // Never swallowed into an empty table: "nothing matched" and "the call failed" must
       // not look the same to someone checking whether anyone is waiting on them.
@@ -155,9 +157,10 @@ export abstract class CongeListBase {
 
   readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
     this.translate.currentLang();
+    // Grid first, matching the default and the order the other list pages use.
     return [
-      { id: 'list', icon: 'view_list', tooltip: this.translate.instant('CONGES.VIEW_LIST') },
       { id: 'grid', icon: 'grid_view', tooltip: this.translate.instant('CONGES.VIEW_GRID') },
+      { id: 'list', icon: 'view_list', tooltip: this.translate.instant('CONGES.VIEW_LIST') },
     ];
   });
 
@@ -284,6 +287,16 @@ export abstract class CongeListBase {
   }
 
   protected defaultSortKey(): string { return 'createdAt'; }
+
+  /**
+   * Called after a page of rows replaces the previous one — a filter, a search, a sort, a
+   * page turn or a refresh.
+   *
+   * A hook rather than four overrides: the queue is the only screen that carries row
+   * selection, and selection made on one page must not survive into another. Keeping it
+   * would leave a bar counting rows nobody can see any more.
+   */
+  protected onRowsReplaced(): void { /* nothing by default */ }
 
   setView(mode: string): void { this.viewMode.set(mode as ViewMode); }
 

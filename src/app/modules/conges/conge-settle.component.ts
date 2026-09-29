@@ -411,11 +411,41 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
       required: true,
       fullWidth: true,
       allowPastDays: true,
-      holidays: h?.holidays ?? {},
+      holidays: this.blockedDays(),
       maxDays: this.selectedType()?.maxDays ?? undefined,
       error: this.showErrors() && !this.dateDebut()
         ? this.translate.instant('CONGES.SETTLE.REQUIRED') : '',
     };
+  });
+
+  /**
+   * The only days the régularisation calendar refuses: public holidays, and leave this
+   * employee already holds.
+   *
+   * DELIBERATELY NARROWER THAN THE EMPLOYEE'S OWN FORM. That one also blocks weekends and
+   * enforces notice, because it is planning future leave. This one records leave already
+   * taken, so weekends and past dates stay open — somebody was off last Saturday and HR has
+   * to be able to say so. What stays closed are the two cases that would corrupt data rather
+   * than merely bend policy: a public holiday costs nothing and must not be filed as leave,
+   * and an overlapping range is refused by the server anyway (`countOverlapping`), so
+   * offering it would only produce an error after the fact.
+   *
+   * `daf-multi-date-picker` disables exactly the KEYS of `holidays`, which is why both go
+   * into one map.
+   */
+  readonly blockedDays = computed<Record<string, string>>(() => {
+    const h = this.headers();
+    const out: Record<string, string> = { ...(h?.holidays ?? {}) };
+    const label = this.translate.instant('CONGES.SETTLE.DAY_TAKEN');
+
+    for (const range of h?.blockingRanges ?? []) {
+      if (!range.dateDebut || !range.dateFin) continue;
+      const end = this.parseIso(range.dateFin);
+      for (let d = this.parseIso(range.dateDebut); d <= end; d.setDate(d.getDate() + 1)) {
+        out[this.toIso(d)] ??= label;
+      }
+    }
+    return out;
   });
 
   /** The picker's value, rebuilt from the two ISO signals the payload is actually built from. */

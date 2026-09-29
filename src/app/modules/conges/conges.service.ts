@@ -71,10 +71,13 @@ export class CongesService {
    * Resolves the ids server-side under the same predicate as the queue, so "approve all"
    * means exactly the rows on screen rather than whatever the client last paged through.
    */
-  bulkApprove(filter: CongeFilter = {}): Observable<BulkApproveResult> {
-    return this.http.put<BulkApproveResult>(`${this.base}/bulk-approve`, null, {
-      params: this.params(filter, 'fr'),
-    });
+  bulkApprove(filter: CongeFilter & { ids?: number[] | null } = {}): Observable<BulkApproveResult> {
+    let p = this.params(filter, 'fr');
+    // Repeated `ids=` params rather than a body: this is a PUT with no payload, and the
+    // server intersects them with the filtered queue either way — so omitting them means
+    // "the whole filtered set", not "none".
+    for (const id of filter.ids ?? []) p = p.append('ids', id);
+    return this.http.put<BulkApproveResult>(`${this.base}/bulk-approve`, null, { params: p });
   }
 
   /** Archive. An approved request has its days refunded on the way out. */

@@ -23,6 +23,14 @@ export interface AbsenceTypeRow {
   includedInHrStats: boolean;
   requiresJustification: boolean;
   maxDays: number | null;
+  /**
+   * Working days of notice before the leave may start, and working days required after a
+   * previous leave. Null = inherit the country default (V106); 0 = no rule for this type.
+   */
+  advanceNoticeDays: number | null;
+  leaveGapDays: number | null;
+  /** What the type is for, in a sentence. */
+  description: string | null;
   displayOrder: number;
   allowedGender: string | null;
   managerCanView: boolean;
@@ -46,6 +54,14 @@ export interface AbsenceTypeUpsert {
   includedInHrStats: boolean;
   requiresJustification: boolean;
   maxDays: number | null;
+  /**
+   * Working days of notice before the leave may start, and working days required after a
+   * previous leave. Null = inherit the country default (V106); 0 = no rule for this type.
+   */
+  advanceNoticeDays: number | null;
+  leaveGapDays: number | null;
+  /** What the type is for, in a sentence. */
+  description: string | null;
   displayOrder: number;
   allowedGender: string | null;
   managerCanView: boolean;

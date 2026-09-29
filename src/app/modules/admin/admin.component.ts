@@ -25,6 +25,7 @@ import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.
 import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
 import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
+import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -114,6 +115,10 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // nav group — someone adding a leave type is doing the same thing as someone adding a
   // holiday or a request type, and looks in the same place for it.
   { key: 'absence-types',         labelKey: 'ADMIN.shell.tabs.absenceTypes',        permission: 'CREATE_ABSENCE_TYPE',        icon: 'beach_access',          tone: 'teal' },
+  // Which days an entity rests, and its two default leave delays. Same gate as the timezone
+  // setting it sits beside — configuring an entity's hours and configuring which days it
+  // works at all are the same job.
+  { key: 'pays-calendar',         labelKey: 'ADMIN.shell.tabs.paysCalendar',        permission: 'ADMIN_REGIMES',              icon: 'calendar_month',        tone: 'warning' },
 ];
 
 @Component({
@@ -139,6 +144,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     DocumentTemplatesAdminComponent,
     SharePointAdminComponent,
     AbsenceTypesAdminComponent,
+    PaysCalendarAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -208,6 +214,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             @if (activeTab() === 'sharepoint')            { <app-sharepoint-admin [paysId]="paysId()" /> }
             <!-- No [paysId]: the leave-type catalogue is company-wide, not per-country. -->
             @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
+            <!-- No [paysId]: this screen configures every entity, not the caller's own. -->
+            @if (activeTab() === 'pays-calendar')         { <app-pays-calendar-admin /> }
           </daf-page>
         </div>
       }

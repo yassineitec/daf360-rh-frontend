@@ -39,13 +39,23 @@ interface CongeCard {
   host: { class: 'block' },
   template: `
     @if (loading()) {
-      <div class="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2 xl:grid-cols-3">
+      <!-- STANDARD breakpoints, not the arbitrary min-[420px] variant the other card
+           sections use. An arbitrary variant only exists in the bundle if Tailwind saw that
+           exact literal while scanning, and the RH remote and the shell compile separate
+           bundles into one document — so a class that survives in one can be missing in the
+           other and the grid silently collapses to a single column. sm/xl always exist. -->
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
         @for (i of skeletonSlots(); track i) {
           <daf-skeleton variant="block" radius="xl" width="100%" height="232px" />
         }
       </div>
     } @else {
-      <div class="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2 xl:grid-cols-3">
+      <!-- STANDARD breakpoints, not the arbitrary min-[420px] variant the other card
+           sections use. An arbitrary variant only exists in the bundle if Tailwind saw that
+           exact literal while scanning, and the RH remote and the shell compile separate
+           bundles into one document — so a class that survives in one can be missing in the
+           other and the grid silently collapses to a single column. sm/xl always exist. -->
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
         @for (card of cards(); track card.id) {
           <daf-entity-card
             [options]="card.options"
