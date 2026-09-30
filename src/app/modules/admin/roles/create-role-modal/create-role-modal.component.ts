@@ -7,6 +7,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { RoleManagementService } from '../role-management.service';
 import { PaysOption, PaysScopeMode, RoleListItem } from '../role.model';
+import { flagDataUri } from '../../flag-svgs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -61,6 +62,7 @@ export class CreateRoleModalComponent {
     this.paysOptions().map(p => ({
       value: String(p.id),
       label: p.frenchLabel ?? p.isoCode ?? String(p.id),
+      imageUrl: flagDataUri(p.isoCode),
     })),
   );
 

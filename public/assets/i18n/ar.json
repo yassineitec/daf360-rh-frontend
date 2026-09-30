@@ -1003,7 +1003,8 @@
         "interviewTypes": "أنواع المقابلات",
         "offboardingCatalog": "مهام إنهاء الخدمة",
         "documentTemplates": "قوالب المستندات",
-        "sharepoint": "SharePoint"
+        "sharepoint": "SharePoint",
+        "absenceTypes": "أنواع الإجازات"
       }
     },
     "sharepoint": {
@@ -1527,7 +1528,12 @@
     "MISSIONS_CURRENT": "المهام الجارية",
     "MISSIONS_HISTORY": "سجل المهام",
     "BILLETERIE": "التذاكر",
-    "REQUESTS_HISTORY": "سجل الطلبات"
+    "REQUESTS_HISTORY": "سجل الطلبات",
+    "CONGES": "الإجازات",
+    "CONGES_INBOX": "قيد المعالجة",
+    "CONGES_SETTLE": "التسويات",
+    "CONGES_TEAM": "فريقي",
+    "CONGES_GLOBAL": "كل الإجازات"
   },
   "MISSIONS": {
     "COMMON": {

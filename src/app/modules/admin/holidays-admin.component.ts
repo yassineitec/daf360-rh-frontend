@@ -2,7 +2,7 @@ import { Component, TemplateRef, computed, effect, inject, input, OnChanges, sig
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { DEFAULT_HOLIDAY_CALENDAR_CONFIG, Holiday, HolidayCalendarConfig } from './models/admin.model';
-import { HOLIDAY_ABBREV_MAX_LENGTH, HolidayCalendarConfigService } from './holiday-calendar-config.service';
+import { HolidayPaysOption, HolidayScopeService } from './holiday-scope.service';
 import { FLAG_SVGS, flagDataUri } from './flag-svgs';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { RhSearchBarComponent } from '../../shared/search-bar.component';
@@ -38,7 +38,6 @@ const HOLIDAY_SORT: Record<string, (h: Holiday) => string | number | null> = {
 /** Badge colour when none is configured — must match holiday-calendar.component.ts. */
 const DEFAULT_BADGE_COLOR = '#b45309';
 /** daf-select option standing for `flagIsoCode: null` (ISO codes are always 2 letters). */
-const FLAG_DEFAULT_VALUE = 'default';
 
 @Component({
   selector: 'app-holidays-admin',
@@ -70,15 +69,20 @@ const FLAG_DEFAULT_VALUE = 'default';
             variant="toggle"
             [options]="{ active: viewMode() === 'calendar', pill: true, size: 'sm', iconStart: 'calendar_month' }"
             (onClick)="viewMode.set('calendar')" />
-          @if (canConfigureCalendar()) {
-            <!-- Saving goes through /api/hr/admin/parameters, which needs HR_ADMIN_ROLES. -->
-            <daf-button
-              [title]="'ADMIN.catalog.holidays.settings.open' | translate"
-              variant="toggle"
-              [options]="{ pill: true, size: 'sm', iconStart: 'settings' }"
-              (onClick)="openSettings()" />
-          }
         </div>
+
+        <!-- Which entity's holidays. Replaces the hard-wired paysId input: this screen is
+             for administering calendars, and an administrator covering several entities had
+             no way to reach the others. The list is SCOPED server side, so it can only offer
+             what the writes would accept. -->
+        @if (paysOptions().length > 1) {
+          <daf-select
+            class="pays-picker"
+            [options]="paysOptions()"
+            [selected]="selectedPaysSelected()"
+            [config]="{ label: ('ADMIN.catalog.holidays.colCountry' | translate), fullWidth: false, searchable: true }"
+            (selectedChange)="onPaysChange($event)" />
+        }
 
         <!-- Desktop/tablet: full search box + labeled button -->
         <div class="search-field desktop-only">
@@ -180,7 +184,7 @@ const FLAG_DEFAULT_VALUE = 'default';
             <daf-select
               [selected]="selectedPaysSelected()"
               [options]="paysOptions()"
-              [config]="{ label: ('ADMIN.catalog.holidays.colCountry' | translate), required: true, fullWidth: true }"
+              [config]="{ label: ('ADMIN.catalog.holidays.colCountry' | translate), required: true, fullWidth: true, searchable: true }"
               (selectedChange)="onPaysChange($event)"
             />
           </div>
@@ -223,80 +227,6 @@ const FLAG_DEFAULT_VALUE = 'default';
         />
       </div>
     </ng-template>
-
-    <!-- Calendar settings modal — edits a draft; the calendar only changes on Save. -->
-    <ng-template #settingsTpl>
-      <div class="modal-form">
-        <p class="col-sub">{{ 'ADMIN.catalog.holidays.settings.subtitle' | translate:{ pays: paysLabel() } }}</p>
-
-        <div class="field-row">
-          <span class="preview-label">{{ 'ADMIN.catalog.holidays.settings.preview' | translate }}</span>
-          <div class="badge-preview">
-            <span class="preview-bar" [style.--hc-badge]="previewColor()" [style.--hc-badge-bg]="previewBg()">
-              @if (previewFlagUri(); as uri) { <img class="preview-flag" [src]="uri" alt="" /> }
-              <span class="preview-abbrev">{{ draft().abbrev || defaultAbbrev() }}</span>
-            </span>
-          </div>
-        </div>
-
-        <daf-toggle
-          [options]="{ label: ('ADMIN.catalog.holidays.settings.showFlag' | translate) }"
-          [checked]="draft().showFlag"
-          (checkedChange)="patchDraft({ showFlag: $event })"
-        />
-
-        @if (draft().showFlag) {
-          <div class="field-row">
-            <daf-select
-              [selected]="[draft().flagIsoCode ?? FLAG_DEFAULT_VALUE]"
-              [options]="flagOptions()"
-              [config]="{ label: ('ADMIN.catalog.holidays.settings.flag' | translate), searchable: true, fullWidth: true }"
-              (selectedChange)="onFlagChange($event)"
-            />
-          </div>
-        }
-
-        <div class="field-row">
-          <daf-form-field
-            [options]="{
-              label: ('ADMIN.catalog.holidays.settings.abbrev' | translate),
-              placeholder: defaultAbbrev(),
-              maxLength: ABBREV_MAX,
-              hint: ('ADMIN.catalog.holidays.settings.abbrevHint' | translate:{ max: ABBREV_MAX, default: defaultAbbrev() }),
-              fullWidth: true
-            }"
-            [value]="draft().abbrev ?? ''"
-            (valueChange)="onAbbrevChange($any($event))"
-          />
-        </div>
-
-        <div class="field-row">
-          <span class="preview-label">{{ 'ADMIN.catalog.holidays.settings.color' | translate }}</span>
-          <div class="color-row">
-            <input type="color" class="color-input" [value]="previewColor()" (input)="onColorChange($any($event.target).value)" />
-            <daf-button
-              [label]="'ADMIN.catalog.holidays.settings.colorDefault' | translate"
-              variant="secondary"
-              [options]="{ size: 'sm', disabled: !draft().color }"
-              (onClick)="patchDraft({ color: null })" />
-          </div>
-        </div>
-
-        @if (!paysHasOtherParams() && calendarParamId() === null) {
-          <div class="warning-banner" role="status">{{ 'ADMIN.catalog.holidays.settings.seedWarning' | translate }}</div>
-        }
-      </div>
-      @if (settingsError()) { <div class="error-banner" role="alert">{{ settingsError() }}</div> }
-      <div class="modal-footer">
-        <daf-button class="footer-left" [label]="'ADMIN.catalog.holidays.settings.reset' | translate" variant="ghost" [options]="{ disabled: settingsSaving() }" (onClick)="resetDraft()" />
-        <daf-button [label]="'ADMIN.catalog.holidays.settings.cancel' | translate" variant="secondary" [options]="{ disabled: settingsSaving() }" (onClick)="closeSettings()" />
-        <daf-button
-          [label]="'ADMIN.catalog.holidays.settings.save' | translate"
-          variant="teal"
-          [options]="{ disabled: settingsSaving(), loading: settingsSaving() }"
-          (onClick)="saveSettings()" />
-      </div>
-    </ng-template>
   `,
   styles: [`
     .section-header { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px }
@@ -329,12 +259,6 @@ const FLAG_DEFAULT_VALUE = 'default';
     .modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     .footer-left  { margin-right:auto }
 
-    /* Settings modal — the preview reuses the calendar badge's own look and CSS variables. */
-    .preview-label  { font-size:12px;font-weight:600;color:var(--color-text) }
-    .badge-preview  { display:flex;align-items:center;justify-content:center;padding:14px;border-radius:10px;border:1px dashed var(--color-border);background:var(--color-bg-secondary) }
-    .preview-bar    { display:inline-flex;align-items:center;gap:8px }
-    .preview-flag   { width:24px;height:18px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.08) }
-    .preview-abbrev { font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--hc-badge);background:var(--hc-badge-bg);padding:2px 8px;border-radius:6px }
     .color-row      { display:flex;align-items:center;gap:10px }
     .color-input    { width:44px;height:32px;padding:2px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);cursor:pointer }
     .warning-banner { padding:8px 12px;border-radius:8px;background:rgba(217,119,6,.12);color:#92400e;font-size:12px;line-height:1.45 }
@@ -346,18 +270,25 @@ export class HolidaysAdminComponent implements OnChanges {
   private translate = inject(TranslateService);
   private refData  = inject(RefDataService);
   private userStore = inject(UserStore);
-  private calendarConfigSvc = inject(HolidayCalendarConfigService);
+  /** Scoped entity list — see the constructor. */
+  private holidayScopeSvc = inject(HolidayScopeService);
 
   paysId    = input(179);
   paysLabel = input('—');
   paysIsoCode = input('');
 
   readonly isSuperAdmin = this.userStore.isSuperAdmin;
-  availablePays = signal<PaysTimezone[]>([]);
+  availablePays = signal<HolidayPaysOption[]>([]);
   selectedPaysId = signal<number | null>(null);
 
+  // imageUrl draws the country's flag on the option row AND on the trigger's selected
+  // value — daf-select renders it at 20x15, the 4x3 ratio flag-svgs.ts is cut to.
   readonly paysOptions = computed<SelectOption[]>(() =>
-    this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel })));
+    this.availablePays().map(p => ({
+      value: String(p.id),
+      label: p.frenchLabel,
+      imageUrl: flagDataUri(p.isoCode),
+    })));
 
   selectedPaysSelected(): string[] {
     return this.selectedPaysId() ? [String(this.selectedPaysId())] : [];
@@ -373,64 +304,15 @@ export class HolidaysAdminComponent implements OnChanges {
   editTarget = signal<Holiday | null>(null);
   modalError = signal<string | null>(null);
 
-  /** Calendar badge settings for the current pays (flag, "JF" text, colour). */
-  calendarConfig  = signal<HolidayCalendarConfig>(DEFAULT_HOLIDAY_CALENDAR_CONFIG);
-  /** `parameter_sets` row holding that config — null until first saved. */
-  calendarParamId = signal<number | null>(null);
-  /** False → saving the config would block the backend's payroll parameter seed. */
-  paysHasOtherParams = signal(true);
-
-  // ── Calendar settings modal ───────────────────────────────────────────────
-  readonly canConfigureCalendar = computed(() => this.userStore.permissions().includes('HR_ADMIN_ROLES'));
-  readonly ABBREV_MAX = HOLIDAY_ABBREV_MAX_LENGTH;
-  readonly FLAG_DEFAULT_VALUE = FLAG_DEFAULT_VALUE;
-
-  /** Edited copy of calendarConfig — only copied back on a successful save. */
-  draft          = signal<HolidayCalendarConfig>(DEFAULT_HOLIDAY_CALENDAR_CONFIG);
-  settingsSaving = signal(false);
-  settingsError  = signal<string | null>(null);
-  private settingsRef?: ModalRef;
-  settingsTpl = viewChild.required<TemplateRef<unknown>>('settingsTpl');
-
-  readonly defaultAbbrev = computed(() => {
-    this.translate.currentLang();
-    return this.translate.instant('ADMIN.catalog.holidays.calendar.abbrev');
-  });
-
   /**
-   * Every country FLAG_SVGS can draw, named in the UI language by the browser's own
-   * Intl.DisplayNames (no country-name table to ship), sorted by name. Codes the
-   * browser has no name for (e.g. `xx`) are left out. First entry = "entity's pays".
+   * The calendar badge, no longer configurable.
+   *
+   * Every field is null but showFlag: the calendar component already falls back to the
+   * entity's own ISO code for the flag, the translated abbreviation for the text, and the
+   * default amber for the colour. A settings modal existed to override those three — it wrote
+   * a JSON blob into `parameter_sets`, and it decided nothing the country could not.
    */
-  readonly flagOptions = computed<SelectOption[]>(() => {
-    const lang = this.translate.currentLang() ?? 'fr';
-    let names: Intl.DisplayNames | null = null;
-    try { names = new Intl.DisplayNames([lang], { type: 'region' }); } catch { /* old browser */ }
-    const countries: SelectOption[] = [];
-    for (const iso of Object.keys(FLAG_SVGS)) {
-      let label: string | undefined;
-      try { label = names?.of(iso.toUpperCase()); } catch { label = undefined; }
-      if (!label || label.toUpperCase() === iso.toUpperCase()) continue;
-      countries.push({ value: iso, label, imageUrl: flagDataUri(iso) });
-    }
-    countries.sort((a, b) => a.label.localeCompare(b.label, lang));
-    return [
-      {
-        value: FLAG_DEFAULT_VALUE,
-        label: this.translate.instant('ADMIN.catalog.holidays.settings.flagDefault'),
-        imageUrl: flagDataUri(this.paysIsoCode()) || undefined,
-      },
-      ...countries,
-    ];
-  });
-
-  readonly previewFlagUri = computed(() => {
-    const d = this.draft();
-    return d.showFlag ? flagDataUri(d.flagIsoCode ?? this.paysIsoCode()) : '';
-  });
-  readonly previewColor = computed(() => this.draft().color ?? DEFAULT_BADGE_COLOR);
-  readonly previewBg = computed(() =>
-    this.draft().color ? `color-mix(in srgb, ${this.draft().color} 12%, transparent)` : 'rgba(217,119,6,.12)');
+  readonly calendarConfig = signal<HolidayCalendarConfig>(DEFAULT_HOLIDAY_CALENDAR_CONFIG);
 
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
@@ -525,10 +407,32 @@ export class HolidaysAdminComponent implements OnChanges {
     this.currentPage.set(0);
   });
 
+  /**
+   * The entity being administered: the picker's choice, else the caller's own.
+   *
+   * Every read and write goes through this rather than the `paysId` input, so the screen
+   * follows the picker. The input remains the sensible starting point — an administrator of
+   * one entity never touches the picker and sees exactly what they saw before.
+   */
+  readonly activePaysId = computed(() => this.selectedPaysId() ?? this.paysId());
+
   constructor() {
-    if (this.isSuperAdmin()) {
-      this.refData.getPaysTimezones().subscribe(list => this.availablePays.set(list));
-    }
+    // Scoped server-side to the caller's role perimeter, and loaded for EVERYONE rather than
+    // only super admins: a regional administrator covering two entities could previously
+    // reach only the one on their own profile. The endpoint decides what is offered, so the
+    // picker can never show an entity the save would refuse.
+    this.holidayScopeSvc.scopedPays().subscribe({
+      next: list => {
+        this.availablePays.set(list);
+        // Default to the caller's own entity when it is in scope; otherwise the first one
+        // they do have, so the screen is never pointed at something they cannot read.
+        if (!list.some(p => p.id === this.paysId()) && list.length) {
+          this.selectedPaysId.set(list[0].id);
+        }
+        this.load();
+      },
+      error: () => this.availablePays.set([]),
+    });
   }
 
   onPageChange(page: number): void {
@@ -547,74 +451,12 @@ export class HolidaysAdminComponent implements OnChanges {
 
   ngOnChanges() {
     this.load();
-    this.loadCalendarConfig();
   }
 
-  loadCalendarConfig() {
-    this.calendarConfigSvc.load(this.paysId()).subscribe(res => {
-      this.calendarConfig.set(res.config);
-      this.calendarParamId.set(res.paramId);
-      this.paysHasOtherParams.set(res.hasOtherParams);
-    });
-  }
-
-  openSettings(): void {
-    this.draft.set({ ...this.calendarConfig() });
-    this.settingsError.set(null);
-    this.settingsRef = this.modal.open({
-      title: this.translate.instant('ADMIN.catalog.holidays.settings.title'),
-      body: this.settingsTpl(),
-      closeOnBackdrop: false,
-    });
-  }
-
-  closeSettings(): void {
-    this.settingsRef?.close();
-  }
-
-  patchDraft(patch: Partial<HolidayCalendarConfig>): void {
-    this.draft.update(d => ({ ...d, ...patch }));
-  }
-
-  resetDraft(): void {
-    this.draft.set({ ...DEFAULT_HOLIDAY_CALENDAR_CONFIG });
-  }
-
-  onFlagChange(value: string[]): void {
-    const v = value[0];
-    this.patchDraft({ flagIsoCode: !v || v === FLAG_DEFAULT_VALUE ? null : v });
-  }
-
-  onAbbrevChange(value: string): void {
-    const v = (value ?? '').trim().slice(0, HOLIDAY_ABBREV_MAX_LENGTH);
-    this.patchDraft({ abbrev: v || null });
-  }
-
-  onColorChange(value: string): void {
-    this.patchDraft({ color: value || null });
-  }
-
-  saveSettings(): void {
-    const config = this.calendarConfigSvc.normalize(this.draft());
-    this.settingsSaving.set(true);
-    this.settingsError.set(null);
-    this.calendarConfigSvc.save(this.paysId(), config, this.calendarParamId()).subscribe({
-      next: saved => {
-        this.settingsSaving.set(false);
-        this.calendarConfig.set(config);
-        this.calendarParamId.set(saved.id);
-        this.settingsRef?.close();
-      },
-      error: () => {
-        this.settingsSaving.set(false);
-        this.settingsError.set(this.translate.instant('ADMIN.catalog.holidays.settings.error'));
-      },
-    });
-  }
 
   load() {
     this.loading.set(true);
-    this.svc.listHolidays(this.paysId(), this.selectedYear).pipe(catchError(() => of([]))).subscribe(hs => {
+    this.svc.listHolidays(this.activePaysId(), this.selectedYear).pipe(catchError(() => of([]))).subscribe(hs => {
       this.holidays.set(hs);
       this.loading.set(false);
     });
@@ -669,7 +511,7 @@ export class HolidaysAdminComponent implements OnChanges {
 
   save() {
     this.saving.set(true);
-    const paysId = this.isSuperAdmin() ? (this.selectedPaysId() ?? this.paysId()) : this.paysId();
+    const paysId = this.activePaysId();
     const dto = { paysId, ...this.form };
     const obs = this.editTarget()
       ? this.svc.updateHoliday(this.editTarget()!.id, dto)

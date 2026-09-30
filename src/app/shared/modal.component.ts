@@ -1,5 +1,5 @@
 import {
-  Component, input, output,
+  Component, OnDestroy, effect, inject, input, output,
   HostListener, ViewChild, ElementRef,
 } from '@angular/core';
 
@@ -143,7 +143,7 @@ const SIZE_WIDTH: Record<ModalSize, string> = {
     }
   `],
 })
-export class ModalComponent {
+export class ModalComponent implements OnDestroy {
   title     = input('');
   visible   = input(false);
   hasFooter = input(false);
@@ -154,6 +154,54 @@ export class ModalComponent {
   closed = output<void>();
 
   @ViewChild('dialog') dialogEl?: ElementRef<HTMLElement>;
+
+  private readonly host = inject(ElementRef<HTMLElement>);
+
+  /**
+   * Marks where this element sat before it was moved, so it can be put back.
+   *
+   * Angular removes a view by asking its ORIGINAL anchor's parent — so an element left in
+   * `<body>` at destroy time is orphaned there. Returning it first is what makes the portal
+   * safe, and it is the bug the library hit with its own filter panel.
+   */
+  private anchor: Comment | null = null;
+
+  constructor() {
+    // THE OVERLAY IS PORTALED TO <body> WHILE OPEN, AND THAT IS NOT CosmetiC.
+    //
+    // `.overlay` is `position: fixed`, which is only relative to the viewport when no
+    // ancestor creates a containing block. `daf-card`'s default glass variant has an
+    // always-on `backdrop-filter` and `daf-page` carries a transform — either is enough, and
+    // both are ancestors on most pages here. The modal then anchored to the page instead of
+    // the screen: the backdrop covered only part of it and the dialog sat wherever the page
+    // happened to be. Moving the element out is exactly what the library does for its own
+    // select, filter and drawer overlays.
+    //
+    // It also repairs Escape: `@HostListener('keydown.escape')` never fired while the host
+    // was an empty inline element nobody could focus. In `<body>` the focused dialog is
+    // inside the host, so the key reaches it.
+    effect(() => (this.visible() ? this.moveToBody() : this.restore()));
+  }
+
+  ngOnDestroy(): void {
+    this.restore();
+  }
+
+  private moveToBody(): void {
+    const el = this.host.nativeElement as HTMLElement;
+    if (el.parentNode === document.body) return;
+    this.anchor = document.createComment('app-modal');
+    el.parentNode?.insertBefore(this.anchor, el);
+    document.body.appendChild(el);
+  }
+
+  private restore(): void {
+    const el = this.host.nativeElement as HTMLElement;
+    if (!this.anchor?.parentNode) return;
+    this.anchor.parentNode.insertBefore(el, this.anchor);
+    this.anchor.remove();
+    this.anchor = null;
+  }
 
   onOverlayClick(e: MouseEvent): void {
     if (!this.dialogEl?.nativeElement.contains(e.target as Node)) {

@@ -507,16 +507,36 @@ export class SharePointAdminComponent implements OnInit {
 
   // ── Shared ────────────────────────────────────────────────────────────────
 
+  /**
+   * A readable name for any kind code, built-in or document type.
+   *
+   * ONE resolver, used by the dropdown AND the paths table. The table used to call
+   * `instant('ADMIN.sharepoint.kind.' + code)` directly, which is only correct for the three
+   * built-in kinds — every document type (CONTRAT, JUSTIFICATIF_ABSENCE, …) has no i18n entry
+   * and so rendered as the raw key `ADMIN.sharepoint.kind.CONTRAT` in the Chemins list.
+   *
+   * Document types are deliberately NOT translated here: their labels live in
+   * `document_types.label_fr` / `label_en`, which is the whole point of putting labels in the
+   * table — a type added this afternoon has to be readable without an i18n release.
+   *
+   * A built-in whose key is somehow absent falls back to its code rather than to the key:
+   * `PAYSLIP` is poor, `ADMIN.sharepoint.kind.PAYSLIP` is broken.
+   */
+  kindLabel(code: string | null | undefined): string {
+    if (!code) return '—';
+    const known = this.kinds().find(k => k.code === code);
+    if (known && !known.builtIn) return known.label;
+
+    const key = 'ADMIN.sharepoint.kind.' + code;
+    const label = this.i18n.instant(key);
+    if (label !== key) return label;
+    // Not in `kinds()` either — a path pointing at a type that has since been removed.
+    // Its own label is gone with it, so the code is all there is to show.
+    return known?.label || code;
+  }
+
   readonly kindOptions = computed<SelectOption[]>(() =>
-    this.kinds().map(k => {
-      // Built-in kinds keep their translated names; a document type carries its own configured
-      // label, which is the whole point of putting labels in the table — a new type has to be
-      // readable here without an i18n entry being added first.
-      if (!k.builtIn) return { value: k.code, label: k.label };
-      const key = 'ADMIN.sharepoint.kind.' + k.code;
-      const label = this.i18n.instant(key);
-      return { value: k.code, label: label === key ? k.code : label };
-    }));
+    this.kinds().map(k => ({ value: k.code, label: this.kindLabel(k.code) })));
 
   readonly selectedKindYearScoped = computed(() =>
     this.kinds().find(k => k.code === this.formKind())?.yearScoped ?? false);
@@ -613,7 +633,7 @@ export class SharePointAdminComponent implements OnInit {
   readonly pathRows = computed<TableRow[]>(() =>
     this.pagedLocations().map(l => ({
       isoCode: l.isoCode ?? '—',
-      docKind: l.docKind ? this.i18n.instant('ADMIN.sharepoint.kind.' + l.docKind) : '—',
+      docKind: this.kindLabel(l.docKind),
       pathTemplate: l.pathTemplate,
       _source: l,
     })));
