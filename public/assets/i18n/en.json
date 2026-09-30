@@ -4249,6 +4249,8 @@
       "BALANCES": "Employee's balances",
       "YES": "Provided",
       "NO": "Not provided",
+      "OPEN_FILE": "Open the document",
+      "CLAIMED": "Declared, no file attached",
       "SETTLED_BY": "Filed by {{name}} on the employee's behalf — they did not submit this request themselves.",
       "DECIDED": "Decided by {{name}} on {{date}}"
     },
@@ -4296,7 +4298,8 @@
       "APPROVER_AUTO": "The only approver configured for this type",
       "NO_APPROVER": "This type requires an approver role that none of this employee's managers hold. Fix the leave type before filing the request.",
       "MAX_DAYS": "This type is capped at {{days}} day(s).",
-      "JUSTIFICATIF": "Supporting document provided",
+      "JUSTIFICATIF_FILE": "Supporting document",
+      "JUSTIFICATIF_HINT": "PDF or photo, 10 MB max. Filed in the employee's SharePoint folder.",
       "JUSTIFICATION_REQUIRED": "This type requires a supporting document.",
       "REASON": "Reason",
       "REASON_HINT": "Why this is being filed after the fact — it is the record the entry leaves behind.",

@@ -1,12 +1,12 @@
 import { Component, OnInit, computed, inject, signal, TemplateRef, viewChild } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of, switchMap } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import {
-  ButtonComponent,
+  ButtonComponent, FileUploadComponent, UploadedFile,
   FormFieldComponent, MetricCardComponent, ModalRef, ModalService, PageComponent,
   MultiDatePickerComponent,
   PageHeaderComponent, PaginationComponent, SearchToolbarComponent, SelectComponent,
-  SelectOption, ToggleComponent, ToolbarAction,
+  SelectOption, ToolbarAction,
 } from '@khalilrebhiitec/daf360';
 
 import { NotificationService } from '../../core/notification.service';
@@ -57,9 +57,10 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
   standalone: true,
   imports: [
     PageComponent, PageHeaderComponent, MetricCardComponent, SearchToolbarComponent,
-    PaginationComponent, SelectComponent, FormFieldComponent, ToggleComponent,
-    MultiDatePickerComponent, ButtonComponent, CongesTableSectionComponent,
-    CongesCardsSectionComponent, CongeDetailComponent, TranslatePipe,
+    PaginationComponent, SelectComponent, FormFieldComponent,
+    MultiDatePickerComponent, ButtonComponent, FileUploadComponent,
+    CongesTableSectionComponent, CongesCardsSectionComponent, CongeDetailComponent,
+    TranslatePipe,
   ],
   template: `
     <daf-page [loading]="firstLoad()" [kpis]="4">
@@ -231,15 +232,20 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
               }
             }
 
-            <daf-toggle
-              [checked]="justificatif()"
-              [options]="{ label: ('CONGES.SETTLE.JUSTIFICATIF' | translate) }"
-              (checkedChange)="justificatif.set($event)" />
-
-            @if (justificationMissing()) {
-              <p class="rounded-lg bg-warning/10 px-3 py-2 text-body-sm">
-                {{ 'CONGES.SETTLE.JUSTIFICATION_REQUIRED' | translate }}
-              </p>
+            <!-- THE FILE IS THE JUSTIFICATIF. The toggle is gone: it only ever recorded that
+                 the employee SAID they had one, which is what made requires_justification
+                 enforce a checkbox. A type that demands proof now demands a document. -->
+            @if (justificationRequired()) {
+              <daf-file-upload
+                [files]="justificationFile()"
+                (filesChange)="justificationFile.set($event)"
+                [config]="{ label: ('CONGES.SETTLE.JUSTIFICATIF_FILE' | translate),
+                            accept: acceptedTypes,
+                            maxSizeMb: 10,
+                            required: true,
+                            hint: ('CONGES.SETTLE.JUSTIFICATIF_HINT' | translate),
+                            error: showErrors() && justificationMissing()
+                                     ? ('CONGES.SETTLE.JUSTIFICATION_REQUIRED' | translate) : '' }" />
             }
 
             <daf-form-field
@@ -279,7 +285,10 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
   readonly dateDebut = signal<string | null>(null);
   readonly dateFin = signal<string | null>(null);
   readonly responsableId = signal<string | null>(null);
-  readonly justificatif = signal(false);
+  /** The chosen file, in the lib's own wrapper. At most one — a justificatif is one document. */
+  readonly justificationFile = signal<UploadedFile[]>([]);
+  /** What the picker accepts. Images because people photograph a certificate. */
+  readonly acceptedTypes = '.pdf,.jpg,.jpeg,.png,.webp,.heic';
   readonly reason = signal('');
   readonly showErrors = signal(false);
 
@@ -474,8 +483,14 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
   }
 
 
+  /** Whether this type demands proof at all — drives showing the control. */
+  readonly justificationRequired = computed(() =>
+    this.selectedType()?.requiresJustification ?? false);
+
+  /** Required and not yet chosen. A file with a size error is not a file. */
   readonly justificationMissing = computed(() =>
-    (this.selectedType()?.requiresJustification ?? false) && !this.justificatif());
+    this.justificationRequired()
+    && !this.justificationFile().some((f) => !f.error));
 
   /** Null renders as a dash, not a zero — "not recorded" is not "none left". */
   readonly balanceCards = computed(() => {
@@ -539,18 +554,29 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
       return;
     }
 
+    const chosen = this.justificationFile().find((f) => !f.error);
     const body: SettleRequest = {
       type: this.formType()!,
       category: this.category()!,
       dateDebut: this.dateDebut()!,
       dateFin: this.isRange() ? this.dateFin() : null,
       responsableId: Number(this.responsableId()),
-      justificatif: this.justificatif(),
+      // Set from the file rather than from a checkbox: the flag now means "a document is
+      // attached", and the upload that follows is what makes it true.
+      justificatif: !!chosen,
       reason: this.reason().trim(),
     };
 
+    const lang = this.translate.currentLang() ?? 'fr';
     this.working.set(true);
-    this.svc.settle(Number(this.employeeId()), body, this.translate.currentLang() ?? 'fr').subscribe({
+    this.svc.settle(Number(this.employeeId()), body, lang).pipe(
+      // The two calls are ONE act to the user. Chained, not fired together, because the
+      // upload needs the id the create returns — and success is only reported once both
+      // have landed, so nobody is told the entry was filed while its proof was not.
+      switchMap((created) => chosen
+        ? this.svc.attachJustification(created.id, chosen.file, lang)
+        : of(created)),
+    ).subscribe({
       next: () => {
         this.working.set(false);
         this.formRef?.close();
@@ -574,7 +600,7 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
     this.dateDebut.set(null);
     this.dateFin.set(null);
     this.responsableId.set(null);
-    this.justificatif.set(false);
+    this.justificationFile.set([]);
     this.reason.set('');
     this.showErrors.set(false);
   }

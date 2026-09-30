@@ -87,6 +87,26 @@ export class CongesService {
     });
   }
 
+  /**
+   * Attaches the supporting document to a request that already exists.
+   *
+   * A second call rather than a multipart create — see LeaveRequestController. The caller
+   * must treat the pair as one act: report success only once BOTH have returned, or the
+   * employee is told their request went in while its certificate did not.
+   */
+  attachJustification(requestId: number, file: File, lang = 'fr'): Observable<CongeRow> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return this.http.post<CongeRow>(`${this.base}/${requestId}/justification`, body, {
+      params: new HttpParams().set('lang', lang),
+    });
+  }
+
+  /** Absolute URL of the attached document, for a link or a new tab. 404 when none. */
+  justificationUrl(requestId: number): string {
+    return `${this.base}/${requestId}/justification`;
+  }
+
   /** Régularisation — HR creating a congé for someone else. */
   settle(collaborateurId: number, body: unknown, lang = 'fr'): Observable<CongeRow> {
     return this.http.post<CongeRow>(`${this.base}/settle/${collaborateurId}`, body, {

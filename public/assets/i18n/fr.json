@@ -4249,6 +4249,8 @@
       "BALANCES": "Soldes du collaborateur",
       "YES": "Fourni",
       "NO": "Non fourni",
+      "OPEN_FILE": "Ouvrir le justificatif",
+      "CLAIMED": "Déclaré, aucun fichier joint",
       "SETTLED_BY": "Régularisation saisie par {{name}} — le collaborateur n'a pas déposé cette demande lui-même.",
       "DECIDED": "Décidée par {{name}} le {{date}}"
     },
@@ -4296,7 +4298,8 @@
       "APPROVER_AUTO": "Seul responsable habilité pour ce type",
       "NO_APPROVER": "Ce type exige un rôle approbateur qu'aucun responsable de ce collaborateur ne détient. Corrigez le type de congé avant de saisir la demande.",
       "MAX_DAYS": "Ce type est plafonné à {{days}} jour(s).",
-      "JUSTIFICATIF": "Justificatif fourni",
+      "JUSTIFICATIF_FILE": "Justificatif",
+      "JUSTIFICATIF_HINT": "PDF ou photo, 10 Mo maximum. Classé dans le dossier SharePoint du collaborateur.",
       "JUSTIFICATION_REQUIRED": "Ce type exige un justificatif.",
       "REASON": "Motif",
       "REASON_HINT": "Pourquoi cette saisie a lieu après coup — c'est la trace que la régularisation laisse.",

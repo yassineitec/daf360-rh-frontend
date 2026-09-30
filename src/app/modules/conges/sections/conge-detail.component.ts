@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AvatarComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
+import { CongesService } from '../conges.service';
 import { CongeRow, LeaveBalances } from '../models/conge.model';
 import {
   avatarFor, formatDays, initialsOf, localeDate, localeOf, periodOf, stateKey, stateVariant,
@@ -86,7 +87,20 @@ import {
           <div class="flex flex-col gap-0.5">
             <dt class="text-body-sm text-on-surface-variant">{{ 'CONGES.DETAIL.JUSTIFICATIF' | translate }}</dt>
             <dd class="m-0 font-medium">
-              {{ (r.justificatif ? 'CONGES.DETAIL.YES' : 'CONGES.DETAIL.NO') | translate }}
+              <!-- Three states, not two. A file that can be opened is the point of the
+                   whole feature; "claimed" is what the 716 migrated rows carry, where the
+                   old checkbox was ticked and no document was ever stored. -->
+              @if (r.justificatifDocumentId != null) {
+                <a [href]="justificationHref()" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1 text-primary hover:underline">
+                  <span class="material-symbols-outlined text-body-lg">description</span>
+                  {{ 'CONGES.DETAIL.OPEN_FILE' | translate }}
+                </a>
+              } @else if (r.justificatif) {
+                <span class="text-on-surface-variant">{{ 'CONGES.DETAIL.CLAIMED' | translate }}</span>
+              } @else {
+                {{ 'CONGES.DETAIL.NO' | translate }}
+              }
             </dd>
           </div>
         </dl>
@@ -137,6 +151,7 @@ import {
 })
 export class CongeDetailComponent {
   private translate = inject(TranslateService);
+  private svc = inject(CongesService);
 
   readonly row = input.required<CongeRow | null>();
 
@@ -193,6 +208,12 @@ export class CongeDetailComponent {
       { key: 'TELETRAVAIL', label: this.translate.instant('CONGES.BALANCE.TELETRAVAIL'),
         value: formatDays(b?.soldeTeletravail, loc), affected: field === 'TELETRAVAIL' },
     ];
+  });
+
+  /** Opened in a new tab: the endpoint replies `inline`, so the browser renders it. */
+  protected readonly justificationHref = computed(() => {
+    const r = this.row();
+    return r ? this.svc.justificationUrl(r.id) : '';
   });
 
   /** Filed by someone other than the person it is for — the same test the server uses. */

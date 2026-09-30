@@ -48,6 +48,11 @@ export interface CongeRow {
   dateFin: string;
   totalJours: number;
   justificatif: boolean | null;
+  /**
+   * The uploaded file, in `employee_documents` (V110). Null means nothing is attached —
+   * including on the 716 migrated rows whose `justificatif` flag was only ever a claim.
+   */
+  justificatifDocumentId: number | null;
   reason: string | null;
   etatDemande: DemandeEtat;
   motifRefus: string | null;
