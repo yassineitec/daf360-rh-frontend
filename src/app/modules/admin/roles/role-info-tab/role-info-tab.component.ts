@@ -11,6 +11,7 @@ import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { PaysOption, PaysScopeMode, RoleListItem, UpdateRoleRequest } from '../role.model';
+import { flagDataUri } from '../../flag-svgs';
 import { RoleManagementService } from '../role-management.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -59,6 +60,7 @@ export class RoleInfoTabComponent {
     this.paysOptions().map(p => ({
       value: String(p.id),
       label: p.frenchLabel ?? p.isoCode ?? String(p.id),
+      imageUrl: flagDataUri(p.isoCode),
     })),
   );
 

@@ -7,6 +7,7 @@ import {
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
   TableColumn, TableConfig, TableRow, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
+import { flagDataUri } from '../flag-svgs';
 import { OvertimeService } from './overtime.service';
 import {
   ParametrageHSDto, CreateParametrageHSRequest,
@@ -51,7 +52,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
       <daf-select
         [selected]="simPaysId ? [String(simPaysId)] : []"
         [options]="paysOptions()"
-        [config]="{ label: ('ADMIN.regimes.overtime.country' | translate), placeholder: ('ADMIN.regimes.overtime.selectPlaceholder' | translate), fullWidth: true }"
+        [config]="{ label: ('ADMIN.regimes.overtime.country' | translate), placeholder: ('ADMIN.regimes.overtime.selectPlaceholder' | translate), fullWidth: true, searchable: true }"
         (selectedChange)="simPaysId = $event[0] ? Number($event[0]) : 0" />
       <daf-form-field
         [options]="{ label: ('ADMIN.regimes.overtime.date' | translate), type: 'date', fullWidth: true }"
@@ -127,7 +128,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     <daf-select
       [selected]="formPaysId ? [String(formPaysId)] : []"
       [options]="paysOptions()"
-      [config]="{ label: ('ADMIN.regimes.overtime.countryRequired' | translate), placeholder: ('ADMIN.regimes.overtime.selectCountryPlaceholder' | translate), disabled: !!editingId(), fullWidth: true }"
+      [config]="{ label: ('ADMIN.regimes.overtime.countryRequired' | translate), placeholder: ('ADMIN.regimes.overtime.selectCountryPlaceholder' | translate), disabled: !!editingId(), fullWidth: true, searchable: true }"
       (selectedChange)="formPaysId = $event[0] ? Number($event[0]) : 0" />
     <div>
       <daf-select
@@ -242,7 +243,11 @@ export class OvertimeAdminComponent implements OnChanges {
   editingId     = signal<number | null>(null);
 
   paysOptions = computed<SelectOption[]>(() =>
-    this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel }))
+    this.availablePays().map(p => ({
+      value: String(p.id),
+      label: p.frenchLabel,
+      imageUrl: flagDataUri(p.isoCode),
+    }))
   );
 
   readonly columns = computed<TableColumn[]>(() => {

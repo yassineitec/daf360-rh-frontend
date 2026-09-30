@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  BadgeCell, ButtonComponent, DafCellDirective, DataTableComponent, FormFieldComponent,
+  BadgeCell, ButtonComponent, DafCellDirective, DataTableComponent,
   SelectComponent, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
@@ -21,8 +21,6 @@ interface PaysScheduling {
   weekendDays: string[];
   /** True when nothing is configured and Saturday/Sunday is being ASSUMED, not chosen. */
   usingDefaultWeekend: boolean;
-  advanceNoticeDays: number | null;
-  leaveGapDays: number | null;
   employees: number;
 }
 
@@ -41,9 +39,13 @@ const DAYS = [
  * regime resolves to. Five readers — and until this screen, no writer anywhere in the service.
  * Changing an entity's rest days meant hand-written SQL.
  *
- * It also carries the two country-level leave delays. They belong with the weekend because
- * they are one policy — how this entity schedules time off — and because both are counted in
- * WORKING days, so one is meaningless without the other.
+ * IT SETS REST DAYS AND NOTHING ELSE.
+ * -----------------------------------------------------------------------------
+ * It briefly also carried the two leave delays, copied from `pays`. That was wrong twice
+ * over: the authoritative values live on the LEAVE TYPE (V109), because annual leave is
+ * planned weeks ahead and sick leave is declared the same morning — and a screen called
+ * « Jours de repos » is not where anyone looks for a notice period. Configuring one thing in
+ * two places is how the two drift.
  *
  * "ASSUMED" IS SHOWN AS A DISTINCT STATE, not as Saturday/Sunday.
  * -----------------------------------------------------------------------------
@@ -60,7 +62,7 @@ const DAYS = [
   standalone: true,
   imports: [
     DataTableComponent, DafCellDirective, StatusBadgeComponent, ButtonComponent,
-    FormFieldComponent, SelectComponent, ModalComponent, TableActionComponent, TranslatePipe,
+    SelectComponent, ModalComponent, TableActionComponent, TranslatePipe,
   ],
   template: `
     <div class="flex min-w-0 flex-col gap-4">
@@ -92,14 +94,6 @@ const DAYS = [
               }
             </div>
           }
-        </ng-template>
-
-        <ng-template dafCell="delays" let-row>
-          <div class="flex items-center justify-end gap-3 tabular-nums">
-            <span [title]="'ADMIN.paysCalendar.notice' | translate">{{ num(row['_s'].advanceNoticeDays) }}</span>
-            <span class="text-outline-variant">·</span>
-            <span [title]="'ADMIN.paysCalendar.gap' | translate">{{ num(row['_s'].leaveGapDays) }}</span>
-          </div>
         </ng-template>
 
         <ng-template dafCell="_actions" let-row>
@@ -142,25 +136,10 @@ const DAYS = [
             </p>
           }
 
-          <p class="text-label-caps text-tertiary">{{ 'ADMIN.paysCalendar.delaysTitle' | translate }}</p>
+          <!-- Notice periods are NOT here. They are configured per leave type in
+               Administration → Types de congés — see the class comment. -->
           <p class="text-body-sm text-on-surface-variant">
-            {{ 'ADMIN.paysCalendar.delaysHint' | translate }}
-          </p>
-
-          <daf-form-field
-            [options]="{ label: ('ADMIN.paysCalendar.notice' | translate), type: 'number', fullWidth: true,
-                         hint: ('ADMIN.paysCalendar.noticeHint' | translate) }"
-            [value]="notice()"
-            (valueChange)="notice.set(asNum($event))" />
-
-          <daf-form-field
-            [options]="{ label: ('ADMIN.paysCalendar.gap' | translate), type: 'number', fullWidth: true,
-                         hint: ('ADMIN.paysCalendar.gapHint' | translate) }"
-            [value]="gap()"
-            (valueChange)="gap.set(asNum($event))" />
-
-          <p class="text-body-sm text-on-surface-variant">
-            {{ 'ADMIN.paysCalendar.delaysNullHint' | translate }}
+            {{ 'ADMIN.paysCalendar.delaysMoved' | translate }}
           </p>
 
           @if (editError()) { <div class="text-[13px] text-danger">{{ editError() }}</div> }
@@ -193,8 +172,6 @@ export class PaysCalendarAdminComponent implements OnInit {
 
   /** daf-select multiple works in string[], which is also what the API takes. */
   readonly weekend = signal<string[]>([]);
-  readonly notice = signal<number | null>(null);
-  readonly gap = signal<number | null>(null);
 
   readonly dayOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
@@ -209,7 +186,6 @@ export class PaysCalendarAdminComponent implements OnInit {
       { key: 'employees', label: t('ADMIN.paysCalendar.colEmployees'), align: 'right',
         width: '110px', sortable: true },
       { key: 'weekend', label: t('ADMIN.paysCalendar.colWeekend') },
-      { key: 'delays', label: t('ADMIN.paysCalendar.colDelays'), align: 'right', width: '150px' },
       // A real width, not `1%`: resizableColumns puts the table in table-layout: fixed,
       // where a declared width is taken literally.
       { key: '_actions', label: '', align: 'right', width: '72px' },
@@ -259,8 +235,6 @@ export class PaysCalendarAdminComponent implements OnInit {
     // An assumed weekend is seeded with the days actually being used, so saving without
     // touching anything records the fallback as a deliberate choice rather than clearing it.
     this.weekend.set(p.usingDefaultWeekend ? ['SATURDAY', 'SUNDAY'] : [...p.weekendDays]);
-    this.notice.set(p.advanceNoticeDays);
-    this.gap.set(p.leaveGapDays);
     this.showEdit.set(true);
   }
 
@@ -273,8 +247,6 @@ export class PaysCalendarAdminComponent implements OnInit {
     this.editError.set(null);
     this.http.put<PaysScheduling>(`${this.base}/pays/${p.paysId}/scheduling`, {
       weekendDays: this.weekend(),
-      advanceNoticeDays: this.notice(),
-      leaveGapDays: this.gap(),
     }).subscribe({
       next: updated => {
         this.saving.set(false);

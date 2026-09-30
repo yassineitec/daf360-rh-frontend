@@ -12,6 +12,7 @@ import { ModalComponent } from '../../../shared/modal.component';
 import { TableActionComponent } from '../../../shared/table-action.component';
 import { NotificationService } from '../../../core/notification.service';
 import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
+import { flagDataUri } from '../flag-svgs';
 
 interface AdminUserRow {
   id: number;
@@ -329,7 +330,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
                     [config]="{ label: 'Rôle', required: true, searchable: true, fullWidth: true }"
                     (selectedChange)="patch({ roleId: $event[0] ? +$event[0] : null })" />
         <daf-select [selected]="selectedPaysValue()" [options]="paysOptions()"
-                    [config]="{ label: 'Entité', required: true, fullWidth: true }"
+                    [config]="{ label: 'Entité', required: true, fullWidth: true, searchable: true }"
                     (selectedChange)="patch({ paysId: $event[0] ? +$event[0] : null })" />
         <daf-toggle [checked]="form().isEmployee"
                     [options]="{ label: 'Compte d’une personne réelle',
@@ -389,7 +390,11 @@ export class UsersAdminComponent implements OnInit {
   readonly roleOptions = computed<SelectOption[]>(() =>
     this.roles().map(r => ({ value: String(r.id), label: r.frenchName })));
   readonly paysOptions = computed<SelectOption[]>(() =>
-    this.paysList().map(p => ({ value: String(p.id), label: p.frenchLabel ?? p.isoCode ?? String(p.id) })));
+    this.paysList().map(p => ({
+      value: String(p.id),
+      label: p.frenchLabel ?? p.isoCode ?? String(p.id),
+      imageUrl: flagDataUri(p.isoCode),
+    })));
 
   // daf-select takes string[]. Computed here rather than built in the template: a template
   // expression returning a new array each cycle re-renders the select on every tick.
