@@ -3146,7 +3146,8 @@
         "tzInheritFrom": "Héritage de l'entité ({{zone}})",
         "tzInheritUnset": "Héritage de l'entité (aucun fuseau configuré)",
         "timezoneOverrideWarning": "Ce régime utilise son propre fuseau horaire : ses heures ne sont pas lues sur l'horloge de l'entité. Réservé aux régimes temporaires (mission à l'étranger).",
-        "timezoneEntityMissing": "Cette entité n'a aucun fuseau horaire configuré : l'automatisation du pointage est désactivée pour ses employés. Renseignez-le en haut de cette page."
+        "timezoneEntityMissing": "Cette entité n'a aucun fuseau horaire configuré : l'automatisation du pointage est désactivée pour ses employés. Renseignez-le en haut de cette page.",
+        "colBadges": "Indicateurs"
       },
       "overview": {
         "empty": "Aucun employé trouvé",

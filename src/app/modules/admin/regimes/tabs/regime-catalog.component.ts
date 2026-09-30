@@ -62,12 +62,23 @@ export class RegimeCatalogComponent implements OnChanges {
     return val === true && this.currentDefaultName() !== null;
   });
 
+  /**
+   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the regime
+   * list is not paginated, every regime is already a row, so the library's own client-side
+   * sort orders the whole set — through `sortAccessor`s, since the cells are templates.
+   * The badges column carries a label now: the column picker lists columns by label, and an
+   * empty one would show up as a blank entry.
+   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const regime = (row: TableRow) => row['_source'] as WorkingTimeRegime;
     return [
-      { key: 'name',   label: this.translate.instant('ADMIN.regimes.catalog.colName') },
-      { key: 'meta',   label: this.translate.instant('ADMIN.regimes.catalog.colSchedule') },
-      { key: 'badges', label: '' },
+      { key: 'name',   label: this.translate.instant('ADMIN.regimes.catalog.colName'), sortable: true,
+        sortAccessor: (row) => regime(row).labelFr || null },
+      // Weekly hours first, days as the tie-breaker: 35h·5j before 39h·5j before 39h·6j.
+      { key: 'meta',   label: this.translate.instant('ADMIN.regimes.catalog.colSchedule'), sortable: true,
+        sortAccessor: (row) => regime(row).hoursPerWeek * 10 + regime(row).daysPerWeek },
+      { key: 'badges', label: this.translate.instant('ADMIN.regimes.catalog.colBadges') },
     ];
   });
 
@@ -80,7 +91,23 @@ export class RegimeCatalogComponent implements OnChanges {
     })),
   );
 
-  readonly tableConfig: TableConfig = { hoverable: true };
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return {
+      showHeader: false,
+      hoverable: true,
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as WorkingTimeRegime).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+    };
+  });
 
   formTouched       = signal(false);
   createFormTouched = signal(false);

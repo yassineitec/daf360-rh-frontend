@@ -1,15 +1,25 @@
 import {
-  Component, OnChanges, SimpleChanges, TemplateRef, computed, inject, input, signal, viewChild,
+  Component, OnChanges, SimpleChanges, TemplateRef, computed, inject, input, signal, untracked, viewChild,
 } from '@angular/core';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
-  FormFieldComponent, SelectComponent, SelectOption, TableColumn, TableConfig, TableRow,
+  FormFieldComponent, SelectComponent, SelectOption, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, ModalService, ModalRef, PermissionService,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
+import { TableSort, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
+
+/** What each column sorts on. A role with no assignment has no regime / dates → sorts last. */
+const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | null> = {
+  role:    r => r.roleName || null,
+  regime:  r => r.assignment?.regimeLabelFr || null,
+  effFrom: r => r.assignment?.effectiveFrom?.slice(0, 10) || null, // ISO: string order = date order
+  effTo:   r => r.assignment?.effectiveTo?.slice(0, 10) || null,
+  notes:   r => r.assignment?.notes || null,
+};
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -54,6 +64,9 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   // Pagination — 5 per page
   readonly PAGE_SIZE = 5;
   currentPage = signal(0);
+  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
+
 
   // Merge roles + assignments
   allRolesWithAssignment = computed<RoleRow[]>(() => {
@@ -95,11 +108,11 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   }
 
   readonly columns: TableColumn[] = [
-    { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role') },
-    { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime') },
-    { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom') },
-    { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo') },
-    { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes') },
+    { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role'), sortable: true },
+    { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime'), sortable: true },
+    { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom'), sortable: true },
+    { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo'), sortable: true },
+    { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes'), sortable: true },
   ];
 
   readonly totalElements = computed(() => this.allRolesWithAssignment().length);
@@ -107,7 +120,8 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   readonly pagedRoles = computed(() => {
     const start = this.currentPage() * this.PAGE_SIZE;
-    return this.allRolesWithAssignment().slice(start, start + this.PAGE_SIZE);
+    return sortByColumn(this.allRolesWithAssignment(), this.sort(), ROLE_ASSIGNMENT_SORT)
+      .slice(start, start + this.PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
@@ -124,9 +138,25 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
     const hasPerm = () => this.perms.has('ADMIN_REGIMES');
+    const tr = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
+      showHeader: false,
       hoverable: true,
       emptyMessage: this.translate.instant('ADMIN.regimes.roles.empty'),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as RoleRow).roleId,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: tr('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        tr('REQUESTS.TABLE.RESET'),
+      sortLabel:         tr('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
       actions: [
         {
           id: 'assign', icon: 'add',
@@ -152,6 +182,12 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+  }
+
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────

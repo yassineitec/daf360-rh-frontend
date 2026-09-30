@@ -3146,7 +3146,8 @@
         "tzInheritFrom": "Inherit from entity ({{zone}})",
         "tzInheritUnset": "Inherit from entity (no timezone configured)",
         "timezoneOverrideWarning": "This regime uses its own timezone: its hours are not read on the entity's clock. Intended for temporary regimes (business travel).",
-        "timezoneEntityMissing": "This entity has no timezone configured: pointage automation is disabled for its employees. Set it at the top of this page."
+        "timezoneEntityMissing": "This entity has no timezone configured: pointage automation is disabled for its employees. Set it at the top of this page.",
+        "colBadges": "Flags"
       },
       "overview": {
         "empty": "No employee found",

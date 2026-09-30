@@ -1,10 +1,10 @@
 import {
-  Component, computed, effect, inject, input, output, signal,
+  Component, computed, effect, inject, input, output, signal, untracked,
 } from '@angular/core';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-  DataTableComponent, TableColumn, TableConfig, TableRow, AvatarCell,
+  DataTableComponent, SortDirection, TableColumn, TableConfig, TableRow, AvatarCell,
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
@@ -12,6 +12,34 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 const PAGE_SIZE = 5;
 
+type RoleUserSort = { key: string; dir: 'asc' | 'desc' };
+
+/** What each table column sorts on — keyed by the table's column keys. */
+const USER_SORT_VALUE: Record<string, (u: RoleUserItem) => string | number | null> = {
+  user: u => u.fullName || null,
+  pays: u => u.paysLabel || null,
+};
+
+/** Sorts the whole filtered list — the table is `manualSort`, so it only reorders one page. */
+function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null): RoleUserItem[] {
+  const value = sort && USER_SORT_VALUE[sort.key];
+  if (!sort || !value) return items;
+  const sign = sort.dir === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const va = value(a), vb = value(b);
+    if (va === null || vb === null) return va === vb ? 0 : va === null ? 1 : -1;
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true });
+    return cmp * sign;
+  });
+}
+
+/**
+ * Users of the selected role (role editor). Library table tools are on, same as the other RH
+ * tables; **sorting is `manualSort`** — the rows are one 5-row page, so the header only emits
+ * `sortChange` and this component sorts the whole filtered list before paging.
+ */
 @Component({
   selector: 'app-role-users-tab',
   standalone: true,
@@ -58,20 +86,23 @@ export class RoleUsersTabComponent {
 
   // ── Pagination — 5 per page ─────────────────────────────────────────────────
   currentPage = signal(0);
+  /** Table header sort — applied to the whole filtered list, before paging. */
+  sort = signal<RoleUserSort | null>(null);
 
   readonly totalElements = computed(() => this.filteredUsers().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
 
   readonly pagedUsers = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.filteredUsers().slice(start, start + PAGE_SIZE);
+    return sortRoleUsers(this.filteredUsers(), this.sort()).slice(start, start + PAGE_SIZE);
   });
 
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    // `manualSort`: no sortAccessor — this component sorts (`sortRoleUsers`).
     return [
-      { key: 'user', label: this.translate.instant('ADMIN.roles.users.COL_USER'), type: 'avatar' },
-      { key: 'pays', label: this.translate.instant('ADMIN.roles.users.COL_PAYS') },
+      { key: 'user', label: this.translate.instant('ADMIN.roles.users.COL_USER'), type: 'avatar', sortable: true },
+      { key: 'pays', label: this.translate.instant('ADMIN.roles.users.COL_PAYS'), sortable: true },
     ];
   });
 
@@ -83,16 +114,40 @@ export class RoleUsersTabComponent {
     })),
   );
 
-  readonly tableConfig = computed<TableConfig>(() => ({
-    hoverable: true,
-    loading: this.loading(),
-    emptyMessage: this.translate.instant('ADMIN.roles.users.EMPTY'),
-    actions: [{
-      id: 'remove', icon: 'close',
-      tooltip: this.translate.instant('ADMIN.roles.users.REMOVE_TOOLTIP'),
-      onClick: (row: TableRow) => this.removeUser(row['_source'] as RoleUserItem),
-    }],
-  }));
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
+    return {
+      showHeader: false,
+      hoverable: true,
+      loading: this.loading(),
+      emptyMessage: t('ADMIN.roles.users.EMPTY'),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as RoleUserItem).userId,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
+      actions: [{
+        id: 'remove', icon: 'close',
+        tooltip: t('ADMIN.roles.users.REMOVE_TOOLTIP'),
+        onClick: (row: TableRow) => this.removeUser(row['_source'] as RoleUserItem),
+      }],
+    };
+  });
+
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(key && dir ? { key, dir } : null);
+    this.currentPage.set(0);
+  }
 
   onPageChange(page: number): void {
     this.currentPage.set(page);

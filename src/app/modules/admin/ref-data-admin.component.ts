@@ -1,12 +1,13 @@
 import {
-  Component, OnChanges, SimpleChanges, TemplateRef, inject, input, signal, computed, viewChild,
+  Component, OnChanges, SimpleChanges, TemplateRef, inject, input, signal, computed, untracked, viewChild,
 } from '@angular/core';
 import {
   ButtonComponent, FormFieldComponent,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
 
@@ -14,6 +15,24 @@ import { RefDataService }      from '../../core/ref/ref-data.service';
 import { RefDataItem, CreateRefDataRequest } from '../../core/ref/ref-data.model';
 import { ContractHistoryService } from '../profiles/contract-history/contract-history.service';
 import { TypeContratDto } from '../profiles/contract-history/contract-history.model';
+
+/** What each reference-data column sorts on (grades, departments, banks… tabs). */
+const REF_ITEM_SORT: Record<string, (i: RefDataItem) => string | number | null> = {
+  labelFr:      i => i.labelFr || null,
+  labelEn:      i => i.labelEn || null,
+  code:         i => i.code || null,
+  sortOrder:    i => i.sortOrder ?? null,
+  noticePeriod: i => i.noticePeriodDays ?? null,   // unset préavis → last
+  isActive:     i => (i.isActive ? 1 : 0),          // inactive first on an ascending sort
+};
+
+/** Same, for the "Types de contrat" tab. */
+const TYPE_CONTRAT_SORT: Record<string, (tc: TypeContratDto) => string | number | null> = {
+  code:     tc => tc.code || null,
+  labelFr:  tc => tc.labelFr || null,
+  labelEn:  tc => tc.labelEn || null,
+  isActive: tc => (tc.isActive ? 1 : 0),
+};
 
 type RefTab = 'grades' | 'disciplines' | 'nog-levels' | 'departments' | 'banks' | 'nationalities' | 'type-contrat' | 'it-asset-types';
 
@@ -88,7 +107,9 @@ const TABS: TabConfig[] = [
       <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
       <div class="table-scroll">
-      <daf-data-table [columns]="itemColumns()" [rows]="itemRows()" [config]="itemTableConfig()">
+      <daf-data-table [columns]="itemColumns()" [rows]="itemRows()" [config]="itemTableConfig()"
+                      (sortChange)="onSortChange($event.key, $event.dir)"
+                      (resetClick)="onSortChange('', null)">
         <ng-template dafCell="isActive" let-row>
           @if (row['_source'].isActive) {
             <span class="rda-badge rda-badge-yes">{{ 'ADMIN.data.refData.YES' | translate }}</span>
@@ -129,7 +150,9 @@ const TABS: TabConfig[] = [
       <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
       <div class="table-scroll">
-      <daf-data-table [columns]="tcColumns()" [rows]="tcRows()" [config]="itemTableConfig()">
+      <daf-data-table [columns]="tcColumns()" [rows]="tcRows()" [config]="itemTableConfig()"
+                      (sortChange)="onSortChange($event.key, $event.dir)"
+                      (resetClick)="onSortChange('', null)">
         <ng-template dafCell="isActive" let-row>
           @if (row['_source'].isActive) {
             <span class="rda-badge rda-badge-yes">{{ 'ADMIN.data.refData.YES' | translate }}</span>
@@ -350,24 +373,30 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly itemColumns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    // `manualSort`: no sortAccessor — this component sorts (sortByColumn + REF_ITEM_SORT).
     const cols: TableColumn[] = [
-      { key: 'labelFr',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR') },
-      { key: 'labelEn',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN') },
-      { key: 'code',      label: this.translate.instant('ADMIN.data.refData.COL_CODE') },
-      { key: 'sortOrder', label: this.translate.instant('ADMIN.data.refData.COL_ORDER') },
+      { key: 'labelFr',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR'), sortable: true },
+      { key: 'labelEn',   label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN'), sortable: true },
+      { key: 'code',      label: this.translate.instant('ADMIN.data.refData.COL_CODE'), sortable: true },
+      { key: 'sortOrder', label: this.translate.instant('ADMIN.data.refData.COL_ORDER'), sortable: true },
     ];
     // Grades carry the default préavis a negotiation starts from (V64) — no other
     // dimension has one, so the column only exists on this tab.
     if (this.isGradesTab()) {
-      cols.push({ key: 'noticePeriod', label: this.translate.instant('ADMIN.data.refData.COL_NOTICE_PERIOD') });
+      cols.push({ key: 'noticePeriod', label: this.translate.instant('ADMIN.data.refData.COL_NOTICE_PERIOD'), sortable: true });
     }
     cols.push(
-      { key: 'isActive',  label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
+      { key: 'isActive',  label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE'), sortable: true },
     );
     return cols;
   });
 
   currentPage = signal(0);
+  /**
+   * Table header sort — applied to the whole list of the active tab, before paging
+   * (`manualSort`). Cleared on a tab switch: each tab has its own columns.
+   */
+  readonly sort = signal<TableSort | null>(null);
 
   readonly totalPages = computed(() => {
     const len = this.isTypeContratTab() ? this.typeContrats().length : this.items().length;
@@ -385,9 +414,15 @@ export class RefDataAdminComponent implements OnChanges {
     this.currentPage.set(page);
   }
 
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
+  }
+
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.items().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.items(), this.sort(), REF_ITEM_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly itemRows = computed<TableRow[]>(() =>
@@ -407,16 +442,16 @@ export class RefDataAdminComponent implements OnChanges {
   readonly tcColumns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     return [
-      { key: 'code',     label: this.translate.instant('ADMIN.data.refData.COL_CODE') },
-      { key: 'labelFr',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR') },
-      { key: 'labelEn',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN') },
-      { key: 'isActive', label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE') },
+      { key: 'code',     label: this.translate.instant('ADMIN.data.refData.COL_CODE'), sortable: true },
+      { key: 'labelFr',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_FR'), sortable: true },
+      { key: 'labelEn',  label: this.translate.instant('ADMIN.data.refData.COL_LABEL_EN'), sortable: true },
+      { key: 'isActive', label: this.translate.instant('ADMIN.data.refData.COL_ACTIVE'), sortable: true },
     ];
   });
 
   readonly pagedTypeContrats = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.typeContrats().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.typeContrats(), this.sort(), TYPE_CONTRAT_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly tcRows = computed<TableRow[]>(() =>
@@ -431,8 +466,27 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly itemTableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
+    // Same tools on both tables; each is re-created when its tab (or its loading @if) re-renders.
+    const tools: TableConfig = {
+      showHeader:        false,
+      rowId: (row: TableRow) => (row['_source'] as { id: number }).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
+    };
     if (this.isTypeContratTab()) {
       return {
+        ...tools,
         hoverable: true,
         actions: [{
           id: 'delete', icon: 'delete', variant: 'danger',
@@ -442,6 +496,7 @@ export class RefDataAdminComponent implements OnChanges {
       };
     }
     return {
+      ...tools,
       hoverable: true,
       actions: [
         {
@@ -467,6 +522,7 @@ export class RefDataAdminComponent implements OnChanges {
     this.activeTab.set(tab);
     this.modalRef?.close();
     this.currentPage.set(0);
+    this.sort.set(null);
     this.resetForm();
     this.loadItems();
   }

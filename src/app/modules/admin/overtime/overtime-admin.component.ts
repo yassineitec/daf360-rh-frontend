@@ -8,6 +8,7 @@ import {
   TableColumn, TableConfig, TableRow, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { OvertimeService } from './overtime.service';
+import { rankIn } from '../../../shared/table-sort.utils';
 import {
   ParametrageHSDto, CreateParametrageHSRequest,
   TYPE_CALCUL_OPTIONS, DAYS_OPTIONS, OvertimeCalculationRequest, OvertimeCalculationResult,
@@ -245,21 +246,46 @@ export class OvertimeAdminComponent implements OnChanges {
     this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel }))
   );
 
+  /**
+   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the overtime rule
+   * list is not paginated — every row is already rendered — so the library's own client-side
+   * sort orders the whole set, through `sortAccessor`s on the raw values.
+   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const r = (row: TableRow) => row['_source'] as ParametrageHSDto;
+    const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
     return [
-      { key: 'paysIsoCode', label: this.translate.instant('ADMIN.regimes.overtime.columns.country') },
-      { key: 'typeCalculHs', label: this.translate.instant('ADMIN.regimes.overtime.columns.calcType') },
-      { key: 'schedule', label: this.translate.instant('ADMIN.regimes.overtime.columns.schedule') },
-      { key: 'week', label: this.translate.instant('ADMIN.regimes.overtime.columns.week') },
-      { key: 'actif', label: this.translate.instant('ADMIN.regimes.overtime.columns.status') },
+      { key: 'paysIsoCode', label: this.translate.instant('ADMIN.regimes.overtime.columns.country'), sortable: true,
+        sortAccessor: (row) => r(row).paysIsoCode || null },
+      { key: 'typeCalculHs', label: this.translate.instant('ADMIN.regimes.overtime.columns.calcType'), sortable: true,
+        sortAccessor: (row) => r(row).typeCalculHs || null },
+      // Start of the working day ("08:00:00" — HH:mm:ss sorts correctly as text).
+      { key: 'schedule', label: this.translate.instant('ADMIN.regimes.overtime.columns.schedule'), sortable: true,
+        sortAccessor: (row) => r(row).heureDebutTravail || null },
+      // First day of the working week, in calendar order (Monday first), not alphabetical.
+      { key: 'week', label: this.translate.instant('ADMIN.regimes.overtime.columns.week'), sortable: true,
+        sortAccessor: (row) => (r(row).jourDebutSemaine ? rankIn(DAYS, r(row).jourDebutSemaine) : null) },
+      { key: 'actif', label: this.translate.instant('ADMIN.regimes.overtime.columns.status'), sortable: true,
+        sortAccessor: (row) => (r(row).actif ? 1 : 0) },
     ];
   });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as ParametrageHSDto).idParametrage,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       actions: [
         {
           id: 'edit', icon: 'edit',

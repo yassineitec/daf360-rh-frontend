@@ -1,14 +1,15 @@
 import {
-  Component, OnChanges, SimpleChanges, TemplateRef, computed, inject, input, signal, viewChild,
+  Component, OnChanges, SimpleChanges, TemplateRef, computed, inject, input, signal, untracked, viewChild,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import {
   AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
   DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
-  TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
+  SortDirection, TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
   PermissionService,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
+import { TableSort, rankIn, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
 import {
   RegimeOverviewStats, EmployeeRegimeOverview, WorkingTimeRegime,
   AssignEmployeeOverrideRequest,
@@ -52,6 +53,20 @@ export class RegimeOverviewComponent implements OnChanges {
   // Pagination — 5 per page, client-side over the filtered list
   readonly PAGE_SIZE = 5;
   currentPage = signal(0);
+  /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
+
+  /** Which rule gave an employee their regime — in the order they override each other. */
+  private static readonly SOURCE_ORDER = ['SEASONAL', 'EMPLOYEE_OVERRIDE', 'ROLE_ASSIGNMENT', 'DEFAULT'] as const;
+
+  /** What each overview column sorts on. "Non configuré" (no source) always sorts last. */
+  private readonly sortValues: Record<string, (e: EmployeeRegimeOverview) => string | number | null> = {
+    employe: e => e.fullName || null,
+    role:    e => e.roleName || null,
+    regime:  e => e.resolvedRegimeLabelFr || null,
+    source:  e => (e.assignmentLevel
+      ? rankIn(RegimeOverviewComponent.SOURCE_ORDER as readonly string[], e.assignmentLevel) : null),
+  };
 
   onSearch(value: string): void {
     this.searchTerm.set(value);
@@ -109,11 +124,12 @@ export class RegimeOverviewComponent implements OnChanges {
     return list;
   });
 
+  // `manualSort`: no sortAccessor — this component sorts (sortByColumn + sortValues).
   readonly columns: TableColumn[] = [
-    { key: 'employe', label: this.translate.instant('ADMIN.regimes.overview.columns.employee'), type: 'avatar' },
-    { key: 'role', label: this.translate.instant('ADMIN.regimes.overview.columns.role') },
-    { key: 'regime', label: this.translate.instant('ADMIN.regimes.overview.columns.regime') },
-    { key: 'source', label: this.translate.instant('ADMIN.regimes.overview.columns.source'), type: 'badge' },
+    { key: 'employe', label: this.translate.instant('ADMIN.regimes.overview.columns.employee'), type: 'avatar', sortable: true },
+    { key: 'role', label: this.translate.instant('ADMIN.regimes.overview.columns.role'), sortable: true },
+    { key: 'regime', label: this.translate.instant('ADMIN.regimes.overview.columns.regime'), sortable: true },
+    { key: 'source', label: this.translate.instant('ADMIN.regimes.overview.columns.source'), type: 'badge', sortable: true },
   ];
 
   readonly totalElements = computed(() => this.filteredEmployees().length);
@@ -121,7 +137,8 @@ export class RegimeOverviewComponent implements OnChanges {
 
   readonly pagedEmployees = computed(() => {
     const start = this.currentPage() * this.PAGE_SIZE;
-    return this.filteredEmployees().slice(start, start + this.PAGE_SIZE);
+    return sortByColumn(this.filteredEmployees(), this.sort(), this.sortValues)
+      .slice(start, start + this.PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() => {
@@ -139,13 +156,35 @@ export class RegimeOverviewComponent implements OnChanges {
     this.currentPage.set(page);
   }
 
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
+  }
+
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
+      showHeader: false,
       hoverable: true,
       loading: this.isLoadingTable(),
       skeletonRows: 5,
       emptyMessage: this.translate.instant('ADMIN.regimes.overview.empty'),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as EmployeeRegimeOverview).userId,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
       actions: [{
         id: 'edit', icon: 'edit',
         tooltip: this.translate.instant('ADMIN.regimes.common.edit'),

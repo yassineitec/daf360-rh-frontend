@@ -1,8 +1,8 @@
-import { Component, Input, OnInit, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, Input, OnInit, TemplateRef, computed, inject, signal, untracked, viewChild } from '@angular/core';
 import {
   ButtonComponent, DataTableComponent, DafCellDirective, FormFieldComponent,
   ModalRef, ModalService, PaginationComponent, PaginationConfig, SelectComponent,
-  StatusBadgeComponent, TableColumn, TableConfig, TableRow, TabItem, TabsComponent,
+  SortDirection, StatusBadgeComponent, TableColumn, TableConfig, TableRow, TabItem, TabsComponent,
 } from '@khalilrebhiitec/daf360';
 import type { BadgeVariant, SelectOption } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -16,7 +16,23 @@ type Panel = 'paths' | 'employees' | 'diagnose';
 
 /** Same client-side page size as the other admin catalog tables (ref-data-admin,
  * request-types-admin) — both lists here are fetched whole from the backend. */
+import { TableSort, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+
 const PAGE_SIZE = 10;
+
+/** What each "chemins" (paths) column sorts on. */
+const PATH_SORT: Record<string, (l: SharePointLocation) => string | number | null> = {
+  isoCode:      l => l.isoCode || null,
+  docKind:      l => l.docKind || null,
+  pathTemplate: l => l.pathTemplate || null,
+};
+
+/** What each "employés" column sorts on. A never-resolved folder (no status) sorts last. */
+const EMPLOYEE_FOLDER_SORT: Record<string, (e: EmployeeFolderRow) => string | number | null> = {
+  fullName:      e => e.fullName || null,
+  status:        e => e.status || null,
+  folderSegment: e => e.folderSegment || null,
+};
 
 /**
  * Status → badge colour. `null` (never looked up) is deliberately its own, neutral state:
@@ -80,7 +96,9 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         </div>
 
         <div class="table-scroll">
-          <daf-data-table [columns]="pathColumns()" [rows]="pathRows()" [config]="pathTableConfig()">
+          <daf-data-table [columns]="pathColumns()" [rows]="pathRows()" [config]="pathTableConfig()"
+                          (sortChange)="onPathsSortChange($event.key, $event.dir)"
+                          (resetClick)="onPathsSortChange('', null)">
             <ng-template dafCell="pathTemplate" let-row>
               <code class="spa-path">{{ row['pathTemplate'] }}</code>
               @if (row['_source'].problems.length) {
@@ -132,7 +150,9 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         }
 
         <div class="table-scroll">
-          <daf-data-table [columns]="employeeColumns()" [rows]="employeeRows()" [config]="employeeTableConfig()">
+          <daf-data-table [columns]="employeeColumns()" [rows]="employeeRows()" [config]="employeeTableConfig()"
+                          (sortChange)="onEmployeesSortChange($event.key, $event.dir)"
+                          (resetClick)="onEmployeesSortChange('', null)">
             <ng-template dafCell="status" let-row>
               @if (row['_source'].status) {
                 <daf-badge [label]="('ADMIN.sharepoint.status.' + row['_source'].status) | translate"
@@ -429,6 +449,8 @@ export class SharePointAdminComponent implements OnInit {
   readonly savingPath   = signal(false);
   readonly showPicker   = signal(false);
   readonly pathsCurrentPage = signal(0);
+  /** Paths-table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly pathsSort = signal<TableSort | null>(null);
 
   // Panel 2
   readonly employees        = signal<EmployeeFolderRow[]>([]);
@@ -439,6 +461,8 @@ export class SharePointAdminComponent implements OnInit {
   readonly pinProblem       = signal<string | null>(null);
   readonly pinning          = signal(false);
   readonly employeesCurrentPage = signal(0);
+  /** Employees-table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly employeesSort = signal<TableSort | null>(null);
 
   // Panel 3
   readonly diagProfileId = signal<number | null>(null);
@@ -525,17 +549,34 @@ export class SharePointAdminComponent implements OnInit {
   }
 
   readonly pathColumns = computed<TableColumn[]>(() => [
-    { key: 'isoCode',      label: this.i18n.instant('ADMIN.sharepoint.paths.country'), width: '90px' },
-    { key: 'docKind',      label: this.i18n.instant('ADMIN.sharepoint.kindLabel'),     width: '190px' },
-    { key: 'pathTemplate', label: this.i18n.instant('ADMIN.sharepoint.paths.template') },
+    { key: 'isoCode',      label: this.i18n.instant('ADMIN.sharepoint.paths.country'), width: '90px', sortable: true },
+    { key: 'docKind',      label: this.i18n.instant('ADMIN.sharepoint.kindLabel'),     width: '190px', sortable: true },
+    { key: 'pathTemplate', label: this.i18n.instant('ADMIN.sharepoint.paths.template'), sortable: true },
   ]);
 
   /** Native `TableConfig.actions`, not a hand-placed `_actions` column — same convention
    * as the other admin catalog tables (see document-templates-admin.component.ts). */
-  readonly pathTableConfig = computed<TableConfig>(() => ({
+  readonly pathTableConfig = computed<TableConfig>(() => {
+    const t = (k: string) => this.i18n.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.pathsSort);
+    return {
+    showHeader: false,
     hoverable:    true,
     loading:      this.loadingPaths(),
     emptyMessage: this.i18n.instant('ADMIN.sharepoint.paths.empty'),
+    // Stable row identity: row heights are keyed by it, not by render index.
+    rowId: (row: TableRow) => (row['_source'] as SharePointLocation).id,
+    resizableColumns:  true,
+    resizableRows:     true,
+    columnPicker:      true,
+    columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+    showReset:         true,
+    resetLabel:        t('REQUESTS.TABLE.RESET'),
+    sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+    // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+    manualSort:        true,
+    ...(sort ? { defaultSort: sort } : {}),
     actions: [
       {
         id: 'edit', icon: 'edit',
@@ -548,7 +589,14 @@ export class SharePointAdminComponent implements OnInit {
         onClick: (row: TableRow) => this.deletePath(row['_source'] as SharePointLocation),
       },
     ],
-  }));
+    };
+  });
+
+  /** Paths header click (or reset): a new order makes the current page meaningless. */
+  onPathsSortChange(key: string, dir: SortDirection): void {
+    this.pathsSort.set(toTableSort(key, dir));
+    this.pathsCurrentPage.set(0);
+  }
 
   readonly pathsTotalPages = computed(() =>
     Math.max(1, Math.ceil(this.locations().length / PAGE_SIZE)));
@@ -559,7 +607,7 @@ export class SharePointAdminComponent implements OnInit {
 
   private readonly pagedLocations = computed(() => {
     const start = this.pathsCurrentPage() * PAGE_SIZE;
-    return this.locations().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.locations(), this.pathsSort(), PATH_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly pathRows = computed<TableRow[]>(() =>
@@ -648,17 +696,34 @@ export class SharePointAdminComponent implements OnInit {
   }
 
   readonly employeeColumns = computed<TableColumn[]>(() => [
-    { key: 'fullName',      label: this.i18n.instant('ADMIN.sharepoint.employees.name') },
-    { key: 'status',        label: this.i18n.instant('ADMIN.sharepoint.employees.status'), width: '150px' },
-    { key: 'folderSegment', label: this.i18n.instant('ADMIN.sharepoint.employees.folder') },
+    { key: 'fullName',      label: this.i18n.instant('ADMIN.sharepoint.employees.name'), sortable: true },
+    { key: 'status',        label: this.i18n.instant('ADMIN.sharepoint.employees.status'), width: '150px', sortable: true },
+    { key: 'folderSegment', label: this.i18n.instant('ADMIN.sharepoint.employees.folder'), sortable: true },
   ]);
 
   /** Native `TableConfig.actions`, not a hand-placed `_actions` column — same convention
    * as the paths table above and the other admin catalog tables. */
-  readonly employeeTableConfig = computed<TableConfig>(() => ({
+  readonly employeeTableConfig = computed<TableConfig>(() => {
+    const t = (k: string) => this.i18n.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.employeesSort);
+    return {
+    showHeader: false,
     hoverable:    true,
     loading:      this.loadingEmployees(),
     emptyMessage: this.i18n.instant('ADMIN.sharepoint.employees.empty'),
+    // Stable row identity: row heights are keyed by it, not by render index.
+    rowId: (row: TableRow) => (row['_source'] as EmployeeFolderRow).profileId,
+    resizableColumns:  true,
+    resizableRows:     true,
+    columnPicker:      true,
+    columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+    showReset:         true,
+    resetLabel:        t('REQUESTS.TABLE.RESET'),
+    sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+    // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+    manualSort:        true,
+    ...(sort ? { defaultSort: sort } : {}),
     actions: [
       {
         id: 'diagnose', icon: 'troubleshoot',
@@ -676,7 +741,14 @@ export class SharePointAdminComponent implements OnInit {
         onClick: (row: TableRow) => this.resetEmployee(row['_source'] as EmployeeFolderRow),
       },
     ],
-  }));
+    };
+  });
+
+  /** Employees header click (or reset): a new order makes the current page meaningless. */
+  onEmployeesSortChange(key: string, dir: SortDirection): void {
+    this.employeesSort.set(toTableSort(key, dir));
+    this.employeesCurrentPage.set(0);
+  }
 
   readonly employeesTotalPages = computed(() =>
     Math.max(1, Math.ceil(this.employees().length / PAGE_SIZE)));
@@ -687,7 +759,7 @@ export class SharePointAdminComponent implements OnInit {
 
   private readonly pagedEmployees = computed(() => {
     const start = this.employeesCurrentPage() * PAGE_SIZE;
-    return this.employees().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.employees(), this.employeesSort(), EMPLOYEE_FOLDER_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly employeeRows = computed<TableRow[]>(() =>

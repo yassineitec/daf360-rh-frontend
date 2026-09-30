@@ -66,7 +66,7 @@ export class CandidatesTableSectionComponent {
   readonly actioningId     = input<number | null>(null);
   /** Status → translated badge label + variant, owned by the page. */
   readonly statusBadge     = input.required<(status: string) => BadgeCell>();
-  /** Sort, resize, column picker and reset, with server-side sort — /rh/recrutement only for now. */
+  /** Sort, resize, column picker and reset, with server-side sort — /rh/recrutement and /rh/candidates/list. */
   readonly tools           = input(false);
 
   /** The trailing view action — always means "open this candidate". */

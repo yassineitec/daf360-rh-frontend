@@ -120,6 +120,8 @@ export class CandidateListComponent implements OnInit {
   /** Application-date range from the panel: one day or [from, to]; null = no bound. */
   readonly createdRange     = signal<Date[] | null>(null);
   readonly currentPage  = signal(0);
+  /** Server-side sort from the table header (Spring `sort`, e.g. `firstName,asc`); null = server order. */
+  readonly sort         = signal<string | null>(null);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
@@ -257,6 +259,7 @@ export class CandidateListComponent implements OnInit {
       createdFrom:  range?.[0] ? toIsoDay(range[0]) : undefined,
       // A single picked day is a one-day range.
       createdTo:    range?.[0] ? toIsoDay(range[1] ?? range[0]) : undefined,
+      sort:         this.sort() ?? undefined,
       page:         this.currentPage(),
       size:         this.pageSize(),
     };
@@ -307,6 +310,13 @@ export class CandidateListComponent implements OnInit {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+    this.loadCandidates();
+  }
+
+  /** A header click in the table: the backend orders every page, so re-fetch from page 0. */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.currentPage.set(0);
     this.loadCandidates();
   }
 

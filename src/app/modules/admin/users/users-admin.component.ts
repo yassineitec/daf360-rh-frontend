@@ -52,6 +52,11 @@ interface ModuleSyncResult {
   durationMs: number;
 }
 
+/** The source account a table row was built from (`_s`, see `load`). */
+function userOf(row: TableRow): AdminUserRow {
+  return row['_s'] as AdminUserRow;
+}
+
 interface AdminUserStats {
   total: number; employees: number; notEmployees: number;
   missingProfile: number; neverLoggedIn: number;
@@ -66,6 +71,11 @@ interface AdminUserStats {
  *
  * Three things it shows that nothing else did: whether an account has an HR file, what kind of
  * account it is, and whether anyone has ever signed into it.
+ *
+ * Library table tools are on, same as the other RH tables: sortable headers, resizable columns
+ * and rows, the column picker and the reset icon. **No `manualSort`**: the list is not
+ * paginated — every account is already a row — so the library's own client-side sort orders
+ * the whole set, through `sortAccessor`s since most cells are custom templates.
  */
 @Component({
   selector: 'app-users-admin',
@@ -257,18 +267,38 @@ export class UsersAdminComponent implements OnInit {
   ];
 
   readonly columns: TableColumn[] = [
-    { key: 'identity',  label: 'Utilisateur', type: 'custom' },
-    { key: 'roleLabel', label: 'Rôle',        type: 'text', width: '180px' },
-    { key: 'paysLabel', label: 'Entité',      type: 'text', width: '140px' },
-    { key: 'profile',   label: 'Fiche RH',    type: 'custom', width: '170px' },
-    { key: 'account',   label: 'Compte',      type: 'custom', width: '170px' },
-    { key: 'lastLogin', label: 'Dernière connexion', type: 'custom', width: '150px' },
+    { key: 'identity',  label: 'Utilisateur', type: 'custom', sortable: true,
+      sortAccessor: (row) => userOf(row).fullName || null },
+    // '—' placeholders sort as "no value" (last), not as the character "—".
+    { key: 'roleLabel', label: 'Rôle',        type: 'text', width: '180px', sortable: true,
+      sortAccessor: (row) => userOf(row).roleLabel || null },
+    { key: 'paysLabel', label: 'Entité',      type: 'text', width: '140px', sortable: true,
+      sortAccessor: (row) => userOf(row).paysLabel || null },
+    // Missing HR file first on an ascending sort: those are the rows this screen is for.
+    { key: 'profile',   label: 'Fiche RH',    type: 'custom', width: '170px', sortable: true,
+      sortAccessor: (row) => (userOf(row).hasProfile ? 1 : 0) },
+    // Non-employees first on an ascending sort — the accounts to review.
+    { key: 'account',   label: 'Compte',      type: 'custom', width: '170px', sortable: true,
+      sortAccessor: (row) => (userOf(row).employee ? 1 : 0) },
+    // Never signed in → no value → always last.
+    { key: 'lastLogin', label: 'Dernière connexion', type: 'custom', width: '150px', sortable: true,
+      sortAccessor: (row) => (userOf(row).lastLoginAt ? new Date(userOf(row).lastLoginAt!).getTime() : null) },
     { key: 'actions',   label: 'Reclasser',   type: 'custom', width: '190px' },
   ];
 
   readonly tableConfig: TableConfig = {
+    showHeader: false,
     hoverable: true,
     emptyMessage: 'Aucun compte ne correspond à ces critères.',
+    // Stable row identity: row heights and sorting are keyed by it, not by render index.
+    rowId:             (row) => userOf(row).id,
+    resizableColumns:  true,
+    resizableRows:     true,
+    columnPicker:      true,
+    columnPickerLabel: 'Choisir les colonnes',
+    showReset:         true,
+    resetLabel:        'Réinitialiser l’affichage du tableau',
+    sortLabel:         'Trier par {column}',
   };
 
   readonly roleOptions = computed<SelectOption[]>(() =>

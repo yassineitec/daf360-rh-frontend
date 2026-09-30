@@ -269,16 +269,28 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
     ];
   });
 
+  /**
+   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the task catalog
+   * list is not paginated — every row is already rendered — so the library's own client-side
+   * sort orders the whole set, through `sortAccessor`s on the raw values.
+   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const task = (row: TableRow) => row['_source'] as OffboardingCatalogTask;
     return [
-      { key: 'orderIndex',     label: '#', width: '50px' },
-      { key: 'taskLabel',      label: this.translate.instant('ADMIN.docs.offboarding.colLabel') },
-      { key: 'taskCode',       label: this.translate.instant('ADMIN.docs.offboarding.colCode') },
-      { key: 'ownerRole',      label: this.translate.instant('ADMIN.docs.offboarding.colRole') },
-      { key: 'slaWorkingDays', label: this.translate.instant('ADMIN.docs.offboarding.colSla'), align: 'center' },
-      { key: 'flags',          label: this.translate.instant('ADMIN.docs.offboarding.colOptions') },
-      { key: 'isActive',       label: this.translate.instant('ADMIN.docs.offboarding.colStatus') },
+      { key: 'orderIndex',     label: '#', width: '50px', sortable: true,
+        sortAccessor: (row) => task(row).orderIndex ?? null },
+      { key: 'taskLabel',      label: this.translate.instant('ADMIN.docs.offboarding.colLabel'), sortable: true },
+      { key: 'taskCode',       label: this.translate.instant('ADMIN.docs.offboarding.colCode'), sortable: true,
+        sortAccessor: (row) => task(row).taskCode || null },
+      { key: 'ownerRole',      label: this.translate.instant('ADMIN.docs.offboarding.colRole'), sortable: true },
+      { key: 'slaWorkingDays', label: this.translate.instant('ADMIN.docs.offboarding.colSla'), align: 'center', sortable: true,
+        sortAccessor: (row) => task(row).slaWorkingDays ?? null },
+      // Blocking outweighs mandatory: 2 = blocking, 1 = mandatory only, 0 = neither.
+      { key: 'flags',          label: this.translate.instant('ADMIN.docs.offboarding.colOptions'), sortable: true,
+        sortAccessor: (row) => (task(row).isBlocking ? 2 : task(row).isMandatory ? 1 : 0) },
+      { key: 'isActive',       label: this.translate.instant('ADMIN.docs.offboarding.colStatus'), sortable: true,
+        sortAccessor: (row) => (task(row).isActive ? 1 : 0) },
     ];
   });
 
@@ -297,8 +309,19 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as OffboardingCatalogTask).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       actions: [
         {
           id: 'edit', icon: 'edit',

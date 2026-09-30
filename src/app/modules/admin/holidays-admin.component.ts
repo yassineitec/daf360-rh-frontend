@@ -1,4 +1,4 @@
-import { Component, TemplateRef, computed, effect, inject, input, OnChanges, signal, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, effect, inject, input, OnChanges, signal, untracked, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { DEFAULT_HOLIDAY_CALENDAR_CONFIG, Holiday, HolidayCalendarConfig } from './models/admin.model';
@@ -16,13 +16,24 @@ import {
   ToggleComponent,
   ButtonComponent,
   SelectComponent, SelectOption,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig,
   ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
+
+/**
+ * What each holiday column sorts on. No entry for "Pays": the table always shows one
+ * entity's calendar, so every row carries the same country.
+ */
+const HOLIDAY_SORT: Record<string, (h: Holiday) => string | number | null> = {
+  dateHoliday: h => h.dateHoliday?.slice(0, 10) || null, // ISO: string order = date order
+  frenchLabel: h => h.frenchLabel || null,
+  isRecurring: h => (h.isRecurring ? 1 : 0),
+};
 
 /** Badge colour when none is configured — must match holiday-calendar.component.ts. */
 const DEFAULT_BADGE_COLOR = '#b45309';
@@ -129,7 +140,9 @@ const FLAG_DEFAULT_VALUE = 'default';
       } @else {
         <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
         <div class="table-scroll">
-        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+                        (sortChange)="onSortChange($event.key, $event.dir)"
+                        (resetClick)="onSortChange('', null)">
           <ng-template dafCell="dateHoliday" let-row>
             <span class="date-td">{{ fmtDate(row['_source'].dateHoliday) }}</span>
           </ng-template>
@@ -435,12 +448,14 @@ export class HolidaysAdminComponent implements OnChanges {
   });
 
   currentPage = signal(0);
+  /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredHolidays().length / PAGE_SIZE)));
 
   readonly pagedHolidays = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.filteredHolidays().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredHolidays(), this.sort(), HOLIDAY_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly paginationConfig: PaginationConfig = {
@@ -453,10 +468,10 @@ export class HolidaysAdminComponent implements OnChanges {
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     return [
-      { key: 'dateHoliday', label: this.translate.instant('ADMIN.catalog.holidays.colDate') },
-      { key: 'frenchLabel', label: this.translate.instant('ADMIN.catalog.holidays.colName') },
+      { key: 'dateHoliday', label: this.translate.instant('ADMIN.catalog.holidays.colDate'), sortable: true },
+      { key: 'frenchLabel', label: this.translate.instant('ADMIN.catalog.holidays.colName'), sortable: true },
       { key: 'pays',        label: this.translate.instant('ADMIN.catalog.holidays.colCountry') },
-      { key: 'isRecurring', label: this.translate.instant('ADMIN.catalog.holidays.colRecurring') },
+      { key: 'isRecurring', label: this.translate.instant('ADMIN.catalog.holidays.colRecurring'), sortable: true },
     ];
   });
 
@@ -472,8 +487,24 @@ export class HolidaysAdminComponent implements OnChanges {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as Holiday).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
       actions: [
         {
           id: 'edit', icon: 'edit',
@@ -502,6 +533,12 @@ export class HolidaysAdminComponent implements OnChanges {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+  }
+
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
   }
 
   readonly String = String;
