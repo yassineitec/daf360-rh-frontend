@@ -50,6 +50,8 @@ export interface EmployeeRequest {
   // Populated by backend enrichment
   typeCode?:           string;
   typeDisplayNameFr?:  string;
+  /** English name from the admin catalog (/rh/admin → types de demande); may be blank. */
+  typeDisplayNameEn?:  string | null;
   employeeName?:       string | null;
   paysName?:           string | null;
   approvals?:          ApprovalSummary[];

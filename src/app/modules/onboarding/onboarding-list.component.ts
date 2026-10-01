@@ -153,10 +153,11 @@ export class OnboardingListComponent implements OnInit {
 
   /** The entities present in the list; the filter is hidden when there is only one. */
   private readonly entityOptions = computed(() => {
+    const isEn = (this.translate.currentLang() ?? '').startsWith('en');
     const byId = new Map<string, string>();
     for (const r of this.items()) {
       if (r.paysId != null && !byId.has(String(r.paysId))) {
-        byId.set(String(r.paysId), r.paysLabel || `#${r.paysId}`);
+        byId.set(String(r.paysId), (isEn && r.paysLabelEn) || r.paysLabel || `#${r.paysId}`);
       }
     }
     return [...byId].map(([value, label]) => ({ value, label }))

@@ -375,11 +375,23 @@ export class RecruitmentDemandListComponent implements OnInit {
   });
 
   /** Departments present in the fetched page (plus the selected one, so it never vanishes). */
+  /**
+   * `value` is the stored (French) label — the filter matches on it — while the shown
+   * label follows the UI language, using the English name from the admin when there is one.
+   */
   private readonly departmentOptions = computed(() => {
-    const labels = new Set<string>();
-    for (const d of this.items()) if (d.department) labels.add(d.department);
-    if (this.filterDepartment()) labels.add(this.filterDepartment());
-    return [...labels].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }));
+    const isEn = (this.translate.currentLang() ?? '').startsWith('en');
+    const byValue = new Map<string, string>();
+    for (const d of this.items()) {
+      if (d.department && !byValue.has(d.department)) {
+        byValue.set(d.department, (isEn && d.departmentLabelEn) || d.department);
+      }
+    }
+    const current = this.filterDepartment();
+    if (current && !byValue.has(current)) byValue.set(current, current);
+    return [...byValue]
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   });
 
   readonly filterFields = computed<FilterField[]>(() => {

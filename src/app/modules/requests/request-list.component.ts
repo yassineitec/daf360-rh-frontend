@@ -366,18 +366,22 @@ export class RequestListComponent implements OnInit {
     ];
   });
 
-  /** Distinct request types of the loaded "en cours" queue, sorted by label. */
+  /**
+   * Distinct request types of the loaded "en cours" queue, sorted by label. The label
+   * follows the UI language (EN name from the admin catalog, FR when it is blank).
+   */
   private readonly typeOptions = computed(() => {
+    const isEn = (this.translate.currentLang() ?? '').startsWith('en');
     const byId = new Map<number, string>();
     for (const r of this.activeRows()) {
       if (!byId.has(r.requestTypeId)) {
-        byId.set(r.requestTypeId, r.typeDisplayNameFr
-          ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }));
+        byId.set(r.requestTypeId, (isEn && r.typeDisplayNameEn) || r.typeDisplayNameFr
+          || this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }));
       }
     }
     return [...byId.entries()]
       .map(([id, label]) => ({ value: String(id), label }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+      .sort((a, b) => a.label.localeCompare(b.label, isEn ? 'en' : 'fr'));
   });
 
   readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {

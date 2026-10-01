@@ -11,7 +11,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
-import { ProfileListService, FilterOptions } from './services/profile-list.service';
+import { ProfileListService, FilterOptions, ProfileFilterOption } from './services/profile-list.service';
 import { EmployeeListItem } from './models/profile.model';
 import { ProfilesCardsSectionComponent } from './sections/profiles-cards-section.component';
 import { ProfilesTableSectionComponent } from './sections/profiles-table-section.component';
@@ -93,9 +93,14 @@ export class ProfileListComponent implements OnInit {
 
   // ── Filter panel ───────────────────────────────────────────────────────────
   readonly filterFields = computed<FilterField[]>(() => {
-    this.translate.currentLang();
+    const isEn = (this.translate.currentLang() ?? '').startsWith('en');
     const t   = (k: string) => this.translate.instant(k);
-    const opt = this.filterOptions();
+    // Pays / département / grade arrive from the DB with both labels; only the
+    // displayed one follows the language, the `value` sent to /employees does not.
+    const loc = (list: ProfileFilterOption[]) =>
+      list.map(o => ({ value: o.value, label: (isEn && o.labelEn) || o.label }));
+    const raw = this.filterOptions();
+    const opt = { pays: loc(raw.pays), departments: loc(raw.departments), grades: loc(raw.grades) };
     return [
       {
         name: 'pays', label: t('PROFILES.FILTERS.PAYS'), type: 'select',
@@ -133,7 +138,7 @@ export class ProfileListComponent implements OnInit {
         placeholder: t('PROFILES.FILTERS.ALL'),
         // Codes come from the DB (a free varchar), so the list is whatever exists
         // rather than the enum; unmapped codes show as themselves.
-        options: opt.contractTypes.map(code => ({
+        options: raw.contractTypes.map(code => ({
           value: code, label: contractLabel(code, this.translate),
         })),
       },
