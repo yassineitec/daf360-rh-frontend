@@ -56,11 +56,16 @@ const WEEKDAY_KEYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
                 } @else {
                   <span class="hc-daynum" [class.hc-daynum-today]="day.isToday">{{ day.dayNumber }}</span>
                   @if (day.holiday) {
-                    <span class="hc-holiday-bar" [title]="day.holiday.frenchLabel" [style]="badgeStyle()">
+                    <!-- Flag + NAME. The name was a title tooltip only, and hardcoded to
+                         frenchLabel — so an English or Arabic reader got French, and a
+                         touch device got nothing at all. It reads in the active language and
+                         is visible; the badge keeps its abbreviation for narrow cells. -->
+                    <span class="hc-holiday-bar" [title]="label(day.holiday)" [style]="badgeStyle()">
                       @if (flagUri(); as uri) {
                         <img class="hc-holiday-flag" [src]="uri" [alt]="flagCode()" />
                       }
                       <span class="hc-holiday-abbrev">{{ config().abbrev ?? ('ADMIN.catalog.holidays.calendar.abbrev' | translate) }}</span>
+                      <span class="hc-holiday-name">{{ label(day.holiday) }}</span>
                     </span>
                   }
                 }
@@ -133,6 +138,9 @@ const WEEKDAY_KEYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     .hc-holiday-bar:hover { transform:scale(1.04) }
     .hc-holiday-flag   { width:16px;height:12px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.08);flex-shrink:0 }
     .hc-holiday-abbrev { font-size:10px;font-weight:700;letter-spacing:.03em;color:var(--hc-badge, #b45309);background:var(--hc-badge-bg, rgba(217,119,6,.12));padding:1px 5px;border-radius:5px }
+    /* Truncates rather than wraps: a month cell is a few characters wide, and a holiday
+       whose name pushed the row taller would break the grid's even rhythm. */
+    .hc-holiday-name { font-size:10px;color:var(--hc-badge, #b45309);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0 }
 
     @media (max-width: 700px) {
       .hc-cell         { min-height:56px;padding:5px }
@@ -157,6 +165,19 @@ export class HolidayCalendarComponent {
   readonly viewYear  = signal(new Date().getFullYear());
   readonly viewMonth = signal(new Date().getMonth());
   readonly selectedDay = signal<Date | null>(null);
+
+  /**
+   * The holiday's name in the reader's language.
+   *
+   * Falls back the other way round rather than showing an empty cell: a row with only a
+   * French label is common in this data, and « Fête du Travail » on an English screen beats
+   * a blank badge nobody can identify.
+   */
+  label(h: Holiday): string {
+    const lang = this.translate.currentLang() ?? 'fr';
+    const preferred = lang.startsWith('fr') ? h.frenchLabel : h.englishLabel;
+    return (preferred && preferred.trim()) || h.frenchLabel || h.englishLabel || '';
+  }
 
   readonly dayHeaders = computed(() => {
     this.translate.currentLang();
