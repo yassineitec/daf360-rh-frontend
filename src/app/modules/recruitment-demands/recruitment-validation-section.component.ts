@@ -16,7 +16,7 @@ import {
   RecruitmentDemandAction, RecruitmentDemandCardsSectionComponent,
 } from './sections/recruitment-demand-cards-section.component';
 import { RecruitmentDemandTableSectionComponent } from './sections/recruitment-demand-table-section.component';
-import { ListViewMode, readStoredView, storeView, ViewToggleComponent } from '../../shared/view-toggle.component';
+import { ListViewMode } from '../../shared/view-toggle.component';
 
 /** The permission that owns this queue — the same code the review endpoint enforces. */
 export const RECRUITMENT_APPROVE_PERMISSION = 'RH_APPROVE_RECRUITMENT_DEMAND';
@@ -43,7 +43,6 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
   return [...set].sort((a, b) => a.localeCompare(b)).map(l => ({ value: l, label: l }));
 }
 
-const VIEW_STORAGE_KEY = 'rh.requests.recruitment.view';
 
 /**
  * Recruitment validation queue — a section of the RH Demandes page.
@@ -66,7 +65,7 @@ const VIEW_STORAGE_KEY = 'rh.requests.recruitment.view';
   standalone: true,
   imports: [
     ButtonComponent, PaginationComponent, FormFieldComponent, SearchToolbarComponent, ModalComponent,
-    RecruitmentDemandCardsSectionComponent, RecruitmentDemandTableSectionComponent, ViewToggleComponent,
+    RecruitmentDemandCardsSectionComponent, RecruitmentDemandTableSectionComponent,
     TranslatePipe,
   ],
   template: `
@@ -101,14 +100,10 @@ const VIEW_STORAGE_KEY = 'rh.requests.recruitment.view';
       [debounce]="200"
       [filterFields]="filterFields()"
       [filterConfig]="filterConfig()"
-      (filterApply)="onFilterApply($event)">
-      <!-- Cards / table switch, projected so it sits just before "Filtres". -->
-      <app-view-toggle
-        [options]="viewOptions()"
-        [value]="viewMode()"
-        (valueChange)="setView($event)"
-        [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
-    </daf-search-toolbar>
+      (filterApply)="onFilterApply($event)"
+      [views]="viewOptions()"
+      [view]="viewMode()"
+      (viewChange)="setView($event)" />
 
     <!-- Same two views as the "Demande" tab next to it and /rh/it-provisioning:
          daf-entity-card grid or daf-data-table. Every demand here is EN_ATTENTE, so
@@ -208,8 +203,8 @@ export class RecruitmentValidationSectionComponent implements OnInit {
 
   readonly searchQuery   = signal('');
 
-  /** Cards or table — remembered per browser, separately from the "Demande" tab next to it. */
-  readonly viewMode = signal<ListViewMode>(readStoredView(VIEW_STORAGE_KEY));
+  /** Cards or table — separate from the "Demande" tab next to it; always opens on cards. */
+  readonly viewMode = signal<ListViewMode>('grid');
   readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
     this.translate.currentLang();
     return [
@@ -221,7 +216,6 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   setView(id: string): void {
     if (id !== 'grid' && id !== 'table') return;
     this.viewMode.set(id);
-    storeView(VIEW_STORAGE_KEY, id);
   }
 
   /** One handler for both views. */

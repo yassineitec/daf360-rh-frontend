@@ -23,7 +23,7 @@ import { RECRUITMENT_REASONS, RecruitmentDemandSummary, RecruitmentDemandStatus 
 import { RequestsService } from '../requests/requests.service';
 import { EmployeeRequest, RequestStatus, RequestType } from '../requests/models/request.model';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { ListViewMode, readStoredView, storeView, ViewToggleComponent } from '../../shared/view-toggle.component';
+import { ListViewMode } from '../../shared/view-toggle.component';
 import { RequestCardItem, RequestCardsSectionComponent, requestRef } from '../requests/request-cards-section.component';
 import { RequestTableSectionComponent } from '../requests/request-table-section.component';
 import { RecruitmentDemandCardsSectionComponent } from './sections/recruitment-demand-cards-section.component';
@@ -53,7 +53,6 @@ function inDayBounds(iso: string | null | undefined, bounds: { from: string; to:
   return day >= bounds.from && day <= bounds.to;
 }
 
-const VIEW_STORAGE_KEY = 'rh.recruitment-demands.view';
 
 /** "En cours" (no decision yet) belongs to the /rh/requests validation queue — this tab is
  *  the historique, so EN_ATTENTE is excluded from every filter/KPI/fetch below. */
@@ -96,7 +95,6 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
     SearchToolbarComponent,
     TabsComponent,
     TranslatePipe,
-    ViewToggleComponent,
     RecruitmentDemandCardsSectionComponent,
     RecruitmentDemandTableSectionComponent,
     RequestCardsSectionComponent,
@@ -162,13 +160,10 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           [debounce]="200"
           [filterFields]="filterFields()"
           [filterConfig]="filterConfig()"
-          (filterApply)="onFilterApply($event)">
-          <app-view-toggle
-            [options]="viewOptions()"
-            [value]="viewMode()"
-            (valueChange)="setView($event)"
-            [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
-        </daf-search-toolbar>
+          (filterApply)="onFilterApply($event)"
+          [views]="viewOptions()"
+          [view]="viewMode()"
+          (viewChange)="setView($event)" />
 
         <!-- daf-entity-card grid or daf-data-table — same two views as /rh/it-provisioning. -->
         @if (viewMode() === 'grid') {
@@ -214,13 +209,10 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           [debounce]="200"
           [filterFields]="otherFilterFields()"
           [filterConfig]="otherFilterConfig()"
-          (filterApply)="onOtherFilterApply($event)">
-          <app-view-toggle
-            [options]="viewOptions()"
-            [value]="viewMode()"
-            (valueChange)="setView($event)"
-            [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
-        </daf-search-toolbar>
+          (filterApply)="onOtherFilterApply($event)"
+          [views]="viewOptions()"
+          [view]="viewMode()"
+          (viewChange)="setView($event)" />
 
         <!-- Same card / table sections as /rh/requests, in history mode: no cancel action
              (a decided request has nothing left to cancel), decision date instead of SLA. -->
@@ -288,8 +280,8 @@ export class RecruitmentDemandListComponent implements OnInit {
    *  default as the Demandes page itself; "Recrutement" is one tab away. */
   mainTab = signal<'recruitment' | 'other'>('other');
 
-  /** Cards or table — one choice for both tabs, remembered per browser. */
-  readonly viewMode = signal<ListViewMode>(readStoredView(VIEW_STORAGE_KEY));
+  /** Cards or table — one choice for both tabs; always opens on cards, like the other lists. */
+  readonly viewMode = signal<ListViewMode>('grid');
   readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
     this.translate.currentLang();
     return [
@@ -301,7 +293,6 @@ export class RecruitmentDemandListComponent implements OnInit {
   setView(id: string): void {
     if (id !== 'grid' && id !== 'table') return;
     this.viewMode.set(id);
-    storeView(VIEW_STORAGE_KEY, id);
   }
   private recruitmentLoaded = false;
 

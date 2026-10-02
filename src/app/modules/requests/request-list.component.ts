@@ -23,7 +23,7 @@ import {
   RequestCardAction, RequestCardItem, RequestCardsSectionComponent, requestRef,
 } from './request-cards-section.component';
 import { RequestTableSectionComponent } from './request-table-section.component';
-import { ListViewMode, readStoredView, storeView, ViewToggleComponent } from '../../shared/view-toggle.component';
+import { ListViewMode } from '../../shared/view-toggle.component';
 import { UserStore } from '../../core/user.store';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { ConfirmService } from '../../core/confirm.service';
@@ -43,7 +43,6 @@ function toIsoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-const VIEW_STORAGE_KEY = 'rh.requests.view';
 
 const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -85,7 +84,6 @@ interface RequestCard {
     RequestCardsSectionComponent,
     RequestTableSectionComponent,
     TabsComponent,
-    ViewToggleComponent,
     TranslatePipe,
   ],
   template: `
@@ -172,14 +170,10 @@ interface RequestCard {
           [debounce]="200"
           [filterFields]="filterFields()"
           [filterConfig]="filterConfig()"
-          (filterApply)="onFilterApply($event)">
-          <!-- Cards / table switch, projected so it sits just before "Filtres". -->
-          <app-view-toggle
-            [options]="viewOptions()"
-            [value]="viewMode()"
-            (valueChange)="setView($event)"
-            [ariaLabel]="'REQUESTS.LIST.VIEW_ARIA' | translate" />
-        </daf-search-toolbar>
+          (filterApply)="onFilterApply($event)"
+          [views]="viewOptions()"
+          [view]="viewMode()"
+          (viewChange)="setView($event)" />
 
         <!-- Both views render at every width: the card grid goes 1 → 2 → 3 columns, the
              table scrolls horizontally inside daf-data-table (same as /rh/it-provisioning). -->
@@ -260,8 +254,8 @@ export class RequestListComponent implements OnInit {
   /** Submission-date range from the panel: one day or [from, to]; null = no bound. */
   submittedRange = signal<Date[] | null>(null);
 
-  /** Cards or table — both views take the same `cards()`; the choice is remembered per browser. */
-  viewMode = signal<ListViewMode>(readStoredView(VIEW_STORAGE_KEY));
+  /** Cards or table — both views take the same `cards()`; always opens on cards, like the other lists. */
+  viewMode = signal<ListViewMode>('grid');
   readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
     this.translate.currentLang();
     return [
@@ -526,7 +520,6 @@ export class RequestListComponent implements OnInit {
   setView(id: string): void {
     if (id !== 'grid' && id !== 'table') return;
     this.viewMode.set(id);
-    storeView(VIEW_STORAGE_KEY, id);
   }
 
   isActive(status: string): boolean {
