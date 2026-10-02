@@ -2496,8 +2496,13 @@
       "errLoad": "Impossible de charger les calendriers.",
       "errSave": "Le calendrier n'a pas pu être enregistré.",
       "days": {
-        "MONDAY": "Lundi", "TUESDAY": "Mardi", "WEDNESDAY": "Mercredi", "THURSDAY": "Jeudi",
-        "FRIDAY": "Vendredi", "SATURDAY": "Samedi", "SUNDAY": "Dimanche"
+        "MONDAY": "Lundi",
+        "TUESDAY": "Mardi",
+        "WEDNESDAY": "Mercredi",
+        "THURSDAY": "Jeudi",
+        "FRIDAY": "Vendredi",
+        "SATURDAY": "Samedi",
+        "SUNDAY": "Dimanche"
       }
     },
     "sharepoint": {
@@ -3897,7 +3902,9 @@
     "CONGES_INBOX": "À traiter",
     "CONGES_SETTLE": "Régularisations",
     "CONGES_TEAM": "Mon équipe",
-    "CONGES_GLOBAL": "Tous les congés"
+    "CONGES_GLOBAL": "Tous les congés",
+    "CONGES_MODIF_MANAGER": "Modifications à valider",
+    "CONGES_MODIF_HR": "Modifications — RH"
   },
   "MISSIONS": {
     "COMMON": {
@@ -4220,8 +4227,12 @@
       "EMPTY": "Aucune demande sur cette période.",
       "COUNT": "{{n}} demande(s)",
       "DAYS_TOTAL": "{{d}} jour(s) sur cette page",
-      "TEAM": { "EMPTY": "Aucun congé dans votre équipe." },
-      "GLOBAL": { "EMPTY": "Aucun congé sur votre périmètre." }
+      "TEAM": {
+        "EMPTY": "Aucun congé dans votre équipe."
+      },
+      "GLOBAL": {
+        "EMPTY": "Aucun congé sur votre périmètre."
+      }
     },
     "KPI": {
       "TOTAL": "Total",
@@ -4403,6 +4414,50 @@
       "ERR_SAVE": "L'enregistrement a échoué.",
       "ERR_REQUIRED": "Complétez les champs obligatoires.",
       "ERR_ROLES": "Les rôles validateurs n'ont pas pu être chargés."
+    },
+    "DAYS": "j",
+    "MODIF": {
+      "TITLE_MANAGER": "Modifications de congé — à valider",
+      "SUB_MANAGER": "Les collaborateurs dont vous avez validé le congé demandent à en changer les dates. Votre accord transmet la demande aux RH ; rien n'est appliqué à cette étape.",
+      "TITLE_HR": "Modifications de congé — validation RH",
+      "SUB_HR": "Dernière étape : valider applique le changement au congé et ajuste le solde du collaborateur.",
+      "KPI": {
+        "PENDING_MANAGER": "En attente responsable",
+        "PENDING_MANAGER_HELP": "Les demandes qui attendent VOTRE accord, pas celui de l'ensemble des responsables.",
+        "PENDING_HR": "En attente RH",
+        "PENDING_HR_HELP": "Sur votre périmètre pays.",
+        "APPROVED": "Validées",
+        "REJECTED": "Refusées"
+      },
+      "COL": {
+        "TYPE": "Nature",
+        "CHANGE": "Changement demandé",
+        "DELTA": "Écart",
+        "ASKED": "Demandée le"
+      },
+      "CURRENT": "Congé actuel",
+      "PROPOSED": "Demandé",
+      "CANCELLED": "Annulation du congé",
+      "MOTIF": "Motif du collaborateur",
+      "MOTIF_REFUS": "Motif du refus",
+      "MOTIF_REQUIRED": "Un motif est requis pour refuser une demande.",
+      "CONSULT": "Consulter",
+      "FORWARD": "Transmettre aux RH",
+      "APPLY": "Appliquer",
+      "REJECT": "Refuser",
+      "CONFIRM": "Confirmer",
+      "REJECT_INTRO": "Le motif sera visible par le collaborateur.",
+      "CONFIRM_FORWARD": "La demande de {{employee}} sera transmise aux RH. Le congé n'est pas encore modifié.",
+      "CONFIRM_APPLY": "Le congé de {{employee}} sera déplacé et son solde ajusté de {{days}} jour(s).",
+      "CONFIRM_APPLY_CANCEL": "Le congé de {{employee}} sera annulé et {{days}} jour(s) lui seront restitués.",
+      "DETAIL_TITLE": "Demande de modification",
+      "EMPTY_MANAGER": "Aucune demande n'attend votre accord.",
+      "EMPTY_HR": "Aucune demande n'attend de validation RH.",
+      "FORWARDED_OK": "Demande transmise aux RH.",
+      "APPLIED_OK": "Changement appliqué.",
+      "REJECTED_OK": "Demande refusée.",
+      "ERR_LOAD": "Impossible de charger les demandes de modification.",
+      "ERR_DECIDE": "La décision n'a pas pu être enregistrée."
     }
   }
 }

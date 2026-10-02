@@ -2496,8 +2496,13 @@
       "errLoad": "Could not load the calendars.",
       "errSave": "The calendar could not be saved.",
       "days": {
-        "MONDAY": "Monday", "TUESDAY": "Tuesday", "WEDNESDAY": "Wednesday", "THURSDAY": "Thursday",
-        "FRIDAY": "Friday", "SATURDAY": "Saturday", "SUNDAY": "Sunday"
+        "MONDAY": "Monday",
+        "TUESDAY": "Tuesday",
+        "WEDNESDAY": "Wednesday",
+        "THURSDAY": "Thursday",
+        "FRIDAY": "Friday",
+        "SATURDAY": "Saturday",
+        "SUNDAY": "Sunday"
       }
     },
     "sharepoint": {
@@ -3897,7 +3902,9 @@
     "CONGES_INBOX": "To handle",
     "CONGES_SETTLE": "Back-dated entries",
     "CONGES_TEAM": "My team",
-    "CONGES_GLOBAL": "All leave"
+    "CONGES_GLOBAL": "All leave",
+    "CONGES_MODIF_MANAGER": "Changes to approve",
+    "CONGES_MODIF_HR": "Changes — HR"
   },
   "MISSIONS": {
     "COMMON": {
@@ -4220,8 +4227,12 @@
       "EMPTY": "No requests in this period.",
       "COUNT": "{{n}} request(s)",
       "DAYS_TOTAL": "{{d}} day(s) on this page",
-      "TEAM": { "EMPTY": "No leave in your team." },
-      "GLOBAL": { "EMPTY": "No leave in your scope." }
+      "TEAM": {
+        "EMPTY": "No leave in your team."
+      },
+      "GLOBAL": {
+        "EMPTY": "No leave in your scope."
+      }
     },
     "KPI": {
       "TOTAL": "Total",
@@ -4403,6 +4414,50 @@
       "ERR_SAVE": "Saving failed.",
       "ERR_REQUIRED": "Fill in the required fields.",
       "ERR_ROLES": "Approver roles could not be loaded."
+    },
+    "DAYS": "d",
+    "MODIF": {
+      "TITLE_MANAGER": "Leave changes — your approval",
+      "SUB_MANAGER": "People whose leave you approved are asking to move it. Agreeing passes the request to HR; nothing is applied at this stage.",
+      "TITLE_HR": "Leave changes — HR approval",
+      "SUB_HR": "Final step: approving applies the change to the leave and adjusts the employee's balance.",
+      "KPI": {
+        "PENDING_MANAGER": "Awaiting manager",
+        "PENDING_MANAGER_HELP": "Requests waiting on YOU, not on managers in general.",
+        "PENDING_HR": "Awaiting HR",
+        "PENDING_HR_HELP": "Within your country scope.",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      },
+      "COL": {
+        "TYPE": "Kind",
+        "CHANGE": "Requested change",
+        "DELTA": "Change",
+        "ASKED": "Requested on"
+      },
+      "CURRENT": "Current leave",
+      "PROPOSED": "Requested",
+      "CANCELLED": "Leave cancelled",
+      "MOTIF": "Employee's reason",
+      "MOTIF_REFUS": "Reason for refusal",
+      "MOTIF_REQUIRED": "A reason is required to refuse a request.",
+      "CONSULT": "View",
+      "FORWARD": "Pass to HR",
+      "APPLY": "Apply",
+      "REJECT": "Refuse",
+      "CONFIRM": "Confirm",
+      "REJECT_INTRO": "The reason will be shown to the employee.",
+      "CONFIRM_FORWARD": "{{employee}}'s request will be passed to HR. The leave is not changed yet.",
+      "CONFIRM_APPLY": "{{employee}}'s leave will be moved and their balance adjusted by {{days}} day(s).",
+      "CONFIRM_APPLY_CANCEL": "{{employee}}'s leave will be cancelled and {{days}} day(s) returned to them.",
+      "DETAIL_TITLE": "Change request",
+      "EMPTY_MANAGER": "Nothing is waiting on your approval.",
+      "EMPTY_HR": "Nothing is waiting on HR approval.",
+      "FORWARDED_OK": "Request passed to HR.",
+      "APPLIED_OK": "Change applied.",
+      "REJECTED_OK": "Request refused.",
+      "ERR_LOAD": "Could not load the change requests.",
+      "ERR_DECIDE": "The decision could not be saved."
     }
   }
 }

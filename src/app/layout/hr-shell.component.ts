@@ -139,7 +139,8 @@ const APP_NAV_DEFS: AppNavDef[] = [
     id: 'conges',
     labelKey: 'NAV.CONGES',
     icon: 'beach_access',
-    permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
+    permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES',
+                  'RESPOND_MODIFICATION_MANAGER', 'RESPOND_MODIFICATION_HR'],
     children: [
       {
         id: 'conges-inbox',
@@ -156,6 +157,25 @@ const APP_NAV_DEFS: AppNavDef[] = [
         icon: 'sync',
         route: 'conges/settle',
         permissions: ['SETTLE_LEAVES'],
+      },
+      {
+        // Stage 1 of a change request: the manager who granted the congé agrees to the new
+        // dates. Right after the queue, because it is the same desk — the second thing that
+        // can land on a manager about a congé they already decided.
+        id: 'conges-modif-manager',
+        labelKey: 'NAV.CONGES_MODIF_MANAGER',
+        icon: 'edit_calendar',
+        route: 'conges/modifications/manager',
+        permissions: ['RESPOND_MODIFICATION_MANAGER'],
+      },
+      {
+        // Stage 2, and the only one that writes. Next to Régularisations rather than to the
+        // manager stage above: both are HR applying a change to a settled congé.
+        id: 'conges-modif-hr',
+        labelKey: 'NAV.CONGES_MODIF_HR',
+        icon: 'published_with_changes',
+        route: 'conges/modifications/hr',
+        permissions: ['RESPOND_MODIFICATION_HR'],
       },
       {
         id: 'conges-team',

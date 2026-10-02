@@ -160,7 +160,12 @@ export const routes: Routes = [
          */
         path: 'conges',
         canActivate: [permissionGuard],
-        data: { permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        // MUST carry the UNION of every child's codes. The parent guard runs first, so a
+        // code listed on a child but not here bounces its own audience to /forbidden before
+        // the child guard is ever reached — which is what happened to the two modification
+        // pages: they were added to the sidebar's parent and not to this one.
+        data: { permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES',
+                              'RESPOND_MODIFICATION_MANAGER', 'RESPOND_MODIFICATION_HR'] },
         loadChildren: () =>
           import('./modules/conges/conges.routes').then(m => m.CONGES_ROUTES),
       },
