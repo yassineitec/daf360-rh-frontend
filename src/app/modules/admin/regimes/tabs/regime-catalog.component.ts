@@ -6,6 +6,7 @@ import {
   ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
   ModalService, ModalRef, SelectComponent, SelectOption,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PermissionService, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
@@ -13,6 +14,7 @@ import { RefDataService } from '../../../../core/ref/ref-data.service';
 import { PaysTimezone, TimezoneOption } from '../../../../core/ref/ref-data.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { searchRows } from '../../../../shared/table-sort.utils';
 
 @Component({
   selector: 'app-regime-catalog',
@@ -20,7 +22,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   imports: [
     ReactiveFormsModule, DafHasPermissionDirective,
     ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
-    SelectComponent, DataTableComponent, DafCellDirective,
+    SelectComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent,
     TranslatePipe,
   ],
   templateUrl: './regime-catalog.component.html',
@@ -32,6 +34,7 @@ export class RegimeCatalogComponent implements OnChanges {
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
   private refData   = inject(RefDataService);
+  protected perms   = inject(PermissionService);
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
   creating = signal(false);
@@ -48,6 +51,32 @@ export class RegimeCatalogComponent implements OnChanges {
   errorMsg     = signal<string | null>(null);
   successMsg   = signal<string | null>(null);
   skeletonRows = [1,2,3,4];
+  /** Search over the regime list (toolbar above the panels). */
+  searchQuery  = signal('');
+
+  /** The regime table (absent while loading or empty) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+  }
+
+  /** Searches what the row shows: label, code, schedule and the badges. No paging here. */
+  readonly filteredRegimes = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string, p?: object) => this.translate.instant(k, p);
+    return searchRows(this.regimes(), this.searchQuery(), r => [
+      r.labelFr, r.code,
+      t('ADMIN.regimes.catalog.hoursPerWeek', { h: r.hoursPerWeek }),
+      t('ADMIN.regimes.catalog.daysPerWeek', { d: r.daysPerWeek }),
+      r.isDefault ? t('ADMIN.regimes.catalog.badgeDefault') : null,
+      this.isSeasonalActive(r) ? t('ADMIN.regimes.catalog.badgeSeasonalActive')
+        : r.seasonalFrom ? t('ADMIN.regimes.catalog.badgeSeasonal') : null,
+      r.isFlexible ? t('ADMIN.regimes.catalog.badgeFlexible') : null,
+      !r.isActive ? t('ADMIN.regimes.catalog.badgeInactive') : null,
+    ]);
+  });
 
   selectedRegime = computed(() =>
     this.regimes().find(r => r.id === this.selectedId()) ?? null
@@ -83,7 +112,7 @@ export class RegimeCatalogComponent implements OnChanges {
   });
 
   readonly rows = computed<TableRow[]>(() =>
-    this.regimes().map(r => ({
+    this.filteredRegimes().map(r => ({
       name:   r.labelFr,
       meta:   `${r.hoursPerWeek}h · ${r.daysPerWeek}j`,
       badges: null,

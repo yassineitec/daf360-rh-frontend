@@ -47,3 +47,21 @@ export function sortByColumn<T>(
     return cmp * sign;
   });
 }
+
+/**
+ * Client-side text search over a table's rows: keeps the rows where **every word** of `query`
+ * appears in at least one of the given texts (case- and accent-insensitive). `texts` returns
+ * what the reader actually sees in the row (labels, formatted dates…), not raw ids or enums.
+ *
+ * Used by the `daf-search-toolbar` placed above the admin tables: the toolbar carries `[table]`
+ * (reset + column picker right of Filtres) and its search really filters through this.
+ */
+export function searchRows<T>(items: readonly T[], query: string, texts: (item: T) => unknown[]): T[] {
+  const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const words = norm(query.trim()).split(/\s+/).filter(Boolean);
+  if (!words.length) return [...items];
+  return items.filter(item => {
+    const hay = norm(texts(item).filter(v => v != null && v !== '').map(String).join(' '));
+    return words.every(w => hay.includes(w));
+  });
+}

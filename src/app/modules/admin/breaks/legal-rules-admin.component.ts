@@ -4,34 +4,44 @@ import {
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption,
   StatusBadgeComponent, DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
-  ModalService, PermissionService,
+  ModalService, PermissionService, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { rankIn } from '../../../shared/table-sort.utils';
+import { rankIn, searchRows } from '../../../shared/table-sort.utils';
 
 @Component({
   selector: 'app-legal-rules-admin',
   standalone: true,
   imports: [
-    ButtonComponent, FormFieldComponent, SelectComponent, DafHasPermissionDirective,
+    ButtonComponent, FormFieldComponent, SelectComponent, SearchToolbarComponent,
     StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
 <div>
   <!-- Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-    <div>
-      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.legal.title' | translate }}</h2>
-      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.legal.subtitle' | translate }}</p>
-    </div>
-    <daf-button *dafHasPermission="'ADMIN_BREAKS'"
-      [label]="(showForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.legal.newRule') | translate" variant="teal"
-      [options]="{ iconStart: showForm() ? 'close' : 'add' }"
-      (onClick)="showForm.set(!showForm())" />
+  <div style="margin-bottom:20px;">
+    <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.legal.title' | translate }}</h2>
+    <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.legal.subtitle' | translate }}</p>
   </div>
+
+  <!-- Same bar as the other lists: search, "Nouvelle règle" (ADMIN_BREAKS only), and
+       [table] puts the table's reset + column picker on the right. -->
+  <daf-search-toolbar class="mb-4 block"
+    [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+    [value]="searchQuery()"
+    [debounce]="200"
+    (valueChange)="onSearch($event)"
+    [table]="lrTable">
+    @if (perms.has('ADMIN_BREAKS')) {
+      <daf-button
+        [label]="(showForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.legal.newRule') | translate"
+        [variant]="showForm() ? 'secondary' : 'teal'"
+        [options]="{ iconStart: showForm() ? 'close' : 'add' }"
+        (onClick)="toggleForm()" />
+    }
+  </daf-search-toolbar>
 
   <!-- Create form -->
   @if (showForm()) {
@@ -81,7 +91,7 @@ import { rankIn } from '../../../shared/table-sort.utils';
   }
 
   <!-- Rules table -->
-  <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+  <daf-data-table #lrTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
     <ng-template dafCell="deductionMin" let-row>
       <daf-badge [label]="row['deductionMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
     </ng-template>
@@ -93,7 +103,7 @@ export class LegalRulesAdminComponent implements OnChanges {
   private svc   = inject(BreakService);
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
-  private perms = inject(PermissionService);
+  protected perms = inject(PermissionService);
 
   readonly paysId = input<number>(179);
 
@@ -137,16 +147,32 @@ export class LegalRulesAdminComponent implements OnChanges {
     ];
   });
 
-  readonly rows = computed<TableRow[]>(() =>
-    this.rules().map(rule => ({
+  /** Toolbar search text — filters the rows on what each one shows. */
+  readonly searchQuery = signal('');
+
+  toggleForm(): void {
+    this.showForm.set(!this.showForm());
+  }
+
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
+
+  /** Not paginated: the search simply narrows the whole rule list. */
+  readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const min = this.translate.instant('ADMIN.regimes.common.minUnit');
+    const all = this.rules().map(rule => ({
       labelFr: rule.labelFr,
       hours: `${rule.minWorkHours}h${rule.maxWorkHours ? ' – ' + rule.maxWorkHours + 'h' : '+'}`,
       deductionMin: rule.deductionMin,
       appliesToDays: this.formatDays(rule.appliesToDays),
       effective: rule.effectiveFrom + (rule.effectiveTo ? ' → ' + rule.effectiveTo : ''),
       _source: rule,
-    })),
-  );
+    }));
+    return searchRows(all, this.searchQuery(), r =>
+      [r.labelFr, r.hours, `${r.deductionMin} ${min}`, r.appliesToDays, r.effective]);
+  });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();

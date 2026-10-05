@@ -1,11 +1,12 @@
 import {
-  Component, OnChanges, SimpleChanges, inject, input, signal, computed,
+  Component, OnChanges, SimpleChanges, inject, input, signal, computed, viewChild,
 } from '@angular/core';
 import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
   TableColumn, TableConfig, TableRow, ModalService,
-  FilterComponent, FilterField, FilterResult, PermissionService,
+  FilterField, FilterResult, PermissionService,
+  SearchToolbarComponent, SearchToolbarFilterConfig,
 } from '@khalilrebhiitec/daf360';
 import { BreakService } from './breaks/break.service';
 import { PointageStatusService, PointageStatusOption } from './breaks/pointage-status.service';
@@ -15,12 +16,11 @@ import {
   BreakTemplateDto, CreateBreakTemplateRequest,
 } from './breaks/break.model';
 import { WorkingTimeRegime } from './regimes/regime.model';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { UserStore } from '../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { rankIn } from '../../shared/table-sort.utils';
+import { rankIn, searchRows } from '../../shared/table-sort.utils';
 
 type BreakTab = 'templates' | 'legal-rules';
 
@@ -28,8 +28,8 @@ type BreakTab = 'templates' | 'legal-rules';
   selector: 'app-breaks-admin',
   standalone: true,
   imports: [
-    ButtonComponent, FormFieldComponent, SelectComponent, FilterComponent,
-    LegalRulesAdminComponent, DafHasPermissionDirective, StatusBadgeComponent,
+    ButtonComponent, FormFieldComponent, SelectComponent, SearchToolbarComponent,
+    LegalRulesAdminComponent, StatusBadgeComponent,
     DataTableComponent, DafCellDirective, TranslatePipe,
   ],
   template: `
@@ -49,31 +49,31 @@ type BreakTab = 'templates' | 'legal-rules';
     <div>
       <!-- Header -->
       <div class="ba-header">
-        <div>
-          <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.breaks.title' | translate }}</h2>
-          <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.breaks.subtitle' | translate }}</p>
-        </div>
-        <div class="ba-header-actions">
-          <!-- Régime filter — one table shown at a time instead of every régime's
-               table stacked one below the other. daf-filter is a button that opens a
-               panel holding the field (a searchable select here), instead of a bare
-               daf-select sitting directly in the header. -->
-          <daf-filter
-            [fields]="filterFields()"
-            [initialValues]="filterInitialValues()"
-            triggerVariant="ghost"
-            [showReset]="false"
-            (apply)="onFilterApply($event)" />
-          <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="desktop-only"
-            [label]="(showCreateForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.breaks.newTemplate') | translate" variant="teal"
+        <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.breaks.title' | translate }}</h2>
+        <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.breaks.subtitle' | translate }}</p>
+      </div>
+
+      <!-- Same bar as the other lists: search, the Régime (and, super admin, Pays) filter
+           panel — one régime's table shown at a time instead of every régime stacked —
+           "Nouveau modèle" (ADMIN_BREAKS only), and [table] puts the table's reset +
+           column picker right of Filtres. -->
+      <daf-search-toolbar class="mb-4 block"
+        [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+        [value]="searchQuery()"
+        [debounce]="200"
+        (valueChange)="onSearch($event)"
+        [filterFields]="filterFields()"
+        [filterConfig]="filterConfig()"
+        (filterApply)="onFilterApply($event)"
+        [table]="breaksTable() ?? null">
+        @if (perms.has('ADMIN_BREAKS')) {
+          <daf-button
+            [label]="(showCreateForm() ? 'ADMIN.regimes.common.cancel' : 'ADMIN.regimes.breaks.newTemplate') | translate"
+            [variant]="showCreateForm() ? 'secondary' : 'teal'"
             [options]="{ iconStart: showCreateForm() ? 'close' : 'add' }"
             (onClick)="toggleCreateForm()" />
-          <daf-button *dafHasPermission="'ADMIN_BREAKS'" class="icon-btn-toggle mobile-only"
-            [title]="showCreateForm() ? 'Annuler' : 'Nouveau modèle'" variant="teal"
-            [options]="{ iconStart: showCreateForm() ? 'close' : 'add', size: 'sm' }"
-            (onClick)="toggleCreateForm()" />
-        </div>
-      </div>
+        }
+      </daf-search-toolbar>
 
       <!-- Create form -->
       @if (showCreateForm()) {
@@ -167,7 +167,7 @@ type BreakTab = 'templates' | 'legal-rules';
           </div>
         } @else {
           <div class="table-scroll">
-          <daf-data-table [columns]="columns()" [rows]="filteredRows()" [config]="tableConfig()">
+          <daf-data-table #breaksTable [columns]="columns()" [rows]="filteredRows()" [config]="tableConfig()">
             <ng-template dafCell="deductionType" let-row>
               <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
             </ng-template>
@@ -194,8 +194,7 @@ type BreakTab = 'templates' | 'legal-rules';
     .ba-tab-btn:hover { color:var(--color-on-surface) }
     .ba-tab-btn.active { color:var(--color-tertiary);border-bottom-color:var(--color-tertiary);font-weight:600 }
     .ba-tab-icon { font-size:18px }
-    .ba-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
-    .ba-header-actions { display:flex;flex-wrap:nowrap;align-items:center;gap:12px }
+    .ba-header { margin-bottom:20px }
     .ba-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
     .ba-form-span2 { grid-column:span 2 }
     .table-scroll { overflow-x:auto }
@@ -203,12 +202,6 @@ type BreakTab = 'templates' | 'legal-rules';
     @media (max-width: 560px) {
       .ba-form-grid { grid-template-columns:1fr }
       .ba-form-span2 { grid-column:span 1 }
-    }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
     }
   `],
 })
@@ -218,7 +211,7 @@ export class BreaksAdminComponent implements OnChanges {
   private regimeSvc = inject(RegimeService);
   private modal     = inject(ModalService);
   private translate = inject(TranslateService);
-  private perms     = inject(PermissionService);
+  protected perms   = inject(PermissionService);
   private refData   = inject(RefDataService);
   private userStore = inject(UserStore);
 
@@ -269,10 +262,25 @@ export class BreaksAdminComponent implements OnChanges {
     return fields;
   });
 
-  readonly filterInitialValues = computed<FilterResult>(() => ({
-    regimeId: this.filterRegimeId() ? String(this.filterRegimeId()) : null,
-    paysId: this.overridePaysId() ? String(this.overridePaysId()) : null,
+  /** The panel opens on the current régime (and pays); no Reset — a régime is always picked. */
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => ({
+    triggerVariant: 'ghost',
+    showReset: false,
+    initialValues: {
+      regimeId: this.filterRegimeId() ? String(this.filterRegimeId()) : null,
+      paysId: this.overridePaysId() ? String(this.overridePaysId()) : null,
+    },
   }));
+
+  /** The templates table (absent while loading / with no régime) — handed to the toolbar. */
+  readonly breaksTable = viewChild<DataTableComponent>('breaksTable');
+
+  /** Toolbar search text — filters the selected régime's rows on what each one shows. */
+  readonly searchQuery = signal('');
+
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
 
   onFilterApply(result: FilterResult): void {
     const regime = result['regimeId'];
@@ -420,7 +428,15 @@ export class BreaksAdminComponent implements OnChanges {
     return this.templates().filter(t => t.regimeId === regimeId);
   });
 
-  readonly filteredRows = computed<TableRow[]>(() => this.rowsFor(this.filteredTemplates()));
+  /** Not paginated: the search simply narrows the selected régime's rows. */
+  readonly filteredRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const min = this.translate.instant('ADMIN.regimes.common.minUnit');
+    return searchRows(this.rowsFor(this.filteredTemplates()), this.searchQuery(), r => [
+      r['labelFr'], r['deductionType'], `${r['durationMin']} ${min}`,
+      r['appliesToDays'], r['schedule'], r['trigger'], r['statusCode'],
+    ]);
+  });
 
   constructor() {
     if (this.isSuperAdmin()) {

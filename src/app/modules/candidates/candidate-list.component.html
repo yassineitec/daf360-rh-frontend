@@ -42,7 +42,8 @@
     (valueChange)="onSearch($event)"
     [filterFields]="filterFields()"
     [filterConfig]="filterConfig()"
-    (filterApply)="applyFilters($event)" />
+    (filterApply)="applyFilters($event)"
+    [table]="tableSection()?.table() ?? null" />
 
   @if (actionError()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">

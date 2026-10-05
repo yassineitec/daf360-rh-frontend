@@ -5,9 +5,10 @@ import {
   ButtonComponent, FormFieldComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
 
@@ -57,7 +58,7 @@ const TABS: TabConfig[] = [
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, SearchToolbarComponent, TranslatePipe],
   template: `
 <div>
   <!-- Sub-tab bar -->
@@ -88,18 +89,23 @@ const TABS: TabConfig[] = [
   <!-- Header -->
   <div class="rda-header">
     <h3 class="rda-header-title">{{ activeTab().label | translate }}</h3>
+  </div>
+
+  <!-- Same toolbar as the other list pages: search over the active tab's rows, « Ajouter »,
+       and [table] puts the table's reset + column picker on the right. One bar for both
+       tables — only one is rendered at a time (and none while loading). -->
+  <daf-search-toolbar class="mb-4 block"
+    [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+    [value]="searchQuery()"
+    [debounce]="200"
+    (valueChange)="onSearch($event)"
+    [table]="table() ?? null">
     <daf-button
       [label]="'ADMIN.data.refData.ADD' | translate"
-      class="desktop-only"
       variant="teal"
+      [options]="{ iconStart: 'add' }"
       (onClick)="openAddModal()" />
-    <daf-button
-      class="icon-btn-toggle mobile-only"
-      title="Ajouter"
-      variant="teal"
-      [options]="{ iconStart: 'add', size: 'sm' }"
-      (onClick)="openAddModal()" />
-  </div>
+  </daf-search-toolbar>
 
   <!-- Table — generic ref data -->
   @if (!isTypeContratTab()) {
@@ -136,7 +142,7 @@ const TABS: TabConfig[] = [
           <daf-pagination
             [currentPage]="currentPage()"
             [totalPages]="totalPages()"
-            [totalElements]="items().length"
+            [totalElements]="filteredItems().length"
             [config]="paginationConfig"
             (pageChange)="onPageChange($event)" />
         </div>
@@ -168,7 +174,7 @@ const TABS: TabConfig[] = [
           <daf-pagination
             [currentPage]="currentPage()"
             [totalPages]="totalPages()"
-            [totalElements]="typeContrats().length"
+            [totalElements]="filteredTypeContrats().length"
             [config]="paginationConfig"
             (pageChange)="onPageChange($event)" />
         </div>
@@ -282,12 +288,6 @@ const TABS: TabConfig[] = [
       .rda-form-grid { grid-template-columns:1fr }
     }
 
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
-    }
-
   `],
 })
 export class RefDataAdminComponent implements OnChanges {
@@ -398,8 +398,45 @@ export class RefDataAdminComponent implements OnChanges {
    */
   readonly sort = signal<TableSort | null>(null);
 
+  /** The table rendered for the active tab (none while loading) — the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** Toolbar search — filters the active tab's whole list, before sort and paging. */
+  readonly searchQuery = signal('');
+
+  /** New search → back to the first page (otherwise it can land on an empty one). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  /** Searches what the cells show: labels, code, order, préavis (grades) and Oui/Non. */
+  readonly filteredItems = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string, p?: object) => this.translate.instant(k, p);
+    const grades = this.isGradesTab();
+    return searchRows(this.items(), this.searchQuery(), i => [
+      i.labelFr, i.labelEn, i.code, i.sortOrder,
+      grades
+        ? (i.noticePeriodDays == null
+            ? t('ADMIN.data.refData.NOTICE_UNSET')
+            : t('ADMIN.data.refData.NOTICE_DAYS', { days: i.noticePeriodDays }))
+        : null,
+      t(i.isActive ? 'ADMIN.data.refData.YES' : 'ADMIN.data.refData.NO'),
+    ]);
+  });
+
+  readonly filteredTypeContrats = computed(() => {
+    this.translate.currentLang();
+    return searchRows(this.typeContrats(), this.searchQuery(), tc => [
+      tc.code, tc.labelFr, tc.labelEn,
+      this.translate.instant(tc.isActive ? 'ADMIN.data.refData.YES' : 'ADMIN.data.refData.NO'),
+    ]);
+  });
+
   readonly totalPages = computed(() => {
-    const len = this.isTypeContratTab() ? this.typeContrats().length : this.items().length;
+    const len = this.isTypeContratTab() ? this.filteredTypeContrats().length : this.filteredItems().length;
     return Math.max(1, Math.ceil(len / PAGE_SIZE));
   });
 
@@ -422,7 +459,7 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.items(), this.sort(), REF_ITEM_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredItems(), this.sort(), REF_ITEM_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly itemRows = computed<TableRow[]>(() =>
@@ -451,7 +488,7 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly pagedTypeContrats = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.typeContrats(), this.sort(), TYPE_CONTRAT_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredTypeContrats(), this.sort(), TYPE_CONTRAT_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly tcRows = computed<TableRow[]>(() =>
@@ -523,6 +560,7 @@ export class RefDataAdminComponent implements OnChanges {
     this.modalRef?.close();
     this.currentPage.set(0);
     this.sort.set(null);
+    this.searchQuery.set('');   // each tab lists other things — a search does not carry over
     this.resetForm();
     this.loadItems();
   }

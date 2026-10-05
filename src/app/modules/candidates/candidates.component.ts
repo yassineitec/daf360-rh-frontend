@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, catchError, of } from 'rxjs';
 import {
@@ -117,6 +117,9 @@ function sameRange(a: Date[] | null, b: Date[] | null): boolean {
   templateUrl: './candidates.component.html',
 })
 export class CandidatesComponent implements OnInit {
+  /** Table view only (undefined in kanban view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(CandidatesTableSectionComponent);
+
   private svc         = inject(CandidateService);
   private confirm     = inject(ConfirmService);
   private pipelineSvc = inject(PipelineService);

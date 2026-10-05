@@ -173,7 +173,8 @@ interface RequestCard {
           (filterApply)="onFilterApply($event)"
           [views]="viewOptions()"
           [view]="viewMode()"
-          (viewChange)="setView($event)" />
+          (viewChange)="setView($event)"
+          [table]="tableSection()?.table() ?? null" />
 
         <!-- Both views render at every width: the card grid goes 1 → 2 → 3 columns, the
              table scrolls horizontally inside daf-data-table (same as /rh/it-provisioning). -->
@@ -217,6 +218,9 @@ interface RequestCard {
   `,
 })
 export class RequestListComponent implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(RequestTableSectionComponent);
+
   private svc = inject(RequestsService);
   private confirm = inject(ConfirmService);
   private notification = inject(NotificationService);

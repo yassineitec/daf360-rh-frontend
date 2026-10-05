@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, viewChild } from '@angular/core';
 import {
   AvatarCell, BadgeCell, DataTableComponent, SortDirection,
   TableColumn, TableConfig, TableRow,
@@ -59,6 +59,10 @@ const SERVER_SORT_FIELD: Record<string, string> = {
 })
 export class ProfilesTableSectionComponent {
   private translate = inject(TranslateService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   readonly employees   = input.required<EmployeeListItem[]>();
   readonly selectedIds = input.required<Set<number>>();

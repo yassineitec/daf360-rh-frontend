@@ -6,10 +6,11 @@ import {
   ButtonComponent, FormFieldComponent, SelectComponent, SelectOption, CardComponent,
   StatusBadgeComponent, BadgeOptions, DataTableComponent, DafCellDirective,
   TableColumn, TableConfig, TableRow, ModalService, ModalRef,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { flagDataUri } from '../flag-svgs';
 import { OvertimeService } from './overtime.service';
-import { rankIn } from '../../../shared/table-sort.utils';
+import { rankIn, searchRows } from '../../../shared/table-sort.utils';
 import {
   ParametrageHSDto, CreateParametrageHSRequest,
   TYPE_CALCUL_OPTIONS, DAYS_OPTIONS, OvertimeCalculationRequest, OvertimeCalculationResult,
@@ -22,25 +23,15 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   standalone: true,
   imports: [
     DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent,
-    StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe,
+    StatusBadgeComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe,
   ],
   template: `
 <div>
 
   <!-- Header -->
   <div class="ova-header">
-    <div>
-      <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.overtime.title' | translate }}</h2>
-      <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.overtime.subtitle' | translate }}</p>
-    </div>
-    <daf-button class="desktop-only"
-      [label]="'ADMIN.regimes.overtime.newRule' | translate" variant="teal"
-      [options]="{ iconStart: 'add' }"
-      (onClick)="openNewForm()" />
-    <daf-button class="icon-btn-toggle mobile-only"
-      [title]="'ADMIN.regimes.overtime.newRule' | translate" variant="teal"
-      [options]="{ iconStart: 'add', size: 'sm' }"
-      (onClick)="openNewForm()" />
+    <h2 style="font-size:var(--text-headline-md);font-weight:700;color:var(--color-primary);margin:0;">{{ 'ADMIN.regimes.overtime.title' | translate }}</h2>
+    <p style="font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0;">{{ 'ADMIN.regimes.overtime.subtitle' | translate }}</p>
   </div>
 
   <!-- Simulator -->
@@ -97,6 +88,21 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     }
   </daf-card>
 
+  <!-- Same bar as the other lists: search, "Nouvelle règle", and [table] puts the rules
+       table's reset + column picker on the right. -->
+  <daf-search-toolbar class="mb-4 block"
+    [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+    [value]="searchQuery()"
+    [debounce]="200"
+    (valueChange)="onSearch($event)"
+    [table]="ovaTable() ?? null">
+    <daf-button
+      [label]="'ADMIN.regimes.overtime.newRule' | translate"
+      variant="teal"
+      [options]="{ iconStart: 'add' }"
+      (onClick)="openNewForm()" />
+  </daf-search-toolbar>
+
   <!-- Rules table -->
   @if (isLoading()) {
     <div style="height:120px;border-radius:12px;background:linear-gradient(90deg,var(--color-outline-variant) 25%,var(--color-surface-container-low) 50%,var(--color-outline-variant) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;"></div>
@@ -104,7 +110,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
   @if (!isLoading() && rules().length > 0) {
     <div class="table-scroll">
-    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+    <daf-data-table #ovaTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
       <ng-template dafCell="paysIsoCode" let-row>
         <daf-badge [label]="row['paysIsoCode']" [options]="{ variant: 'teal' }" />
       </ng-template>
@@ -175,7 +181,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   `,
   styles: [`
     @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-    .ova-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
+    .ova-header { margin-bottom:20px }
     .ova-sim-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px }
     .ova-form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px }
     .ova-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
@@ -187,12 +193,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     @media (max-width: 480px) {
       .ova-sim-grid { grid-template-columns:1fr }
       .ova-form-grid { grid-template-columns:1fr }
-    }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
     }
   `],
 })
@@ -308,9 +308,27 @@ export class OvertimeAdminComponent implements OnChanges {
     };
   });
 
+  /** Toolbar search text — narrows the rules on what each row shows. */
+  readonly searchQuery = signal('');
+
+  /** The rules table (absent while loading / with no rule) — handed to the toolbar's `[table]`. */
+  readonly ovaTable = viewChild<DataTableComponent>('ovaTable');
+
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
+
+  /** Not paginated: the search simply narrows the whole rule list. */
   rows = computed<TableRow[]>(() => {
     this.translate.currentLang();
-    return this.rules().map(rule => ({
+    const visible = searchRows(this.rules(), this.searchQuery(), rule => [
+      rule.paysIsoCode, this.getTypeLabel(rule.typeCalculHs),
+      rule.heureDebutTravail?.slice(0, 5), rule.heureFinTravail?.slice(0, 5),
+      rule.jourDebutSemaine ? this.getDayLabel(rule.jourDebutSemaine) : null,
+      rule.jourFinSemaine ? this.getDayLabel(rule.jourFinSemaine) : null,
+      this.translate.instant(rule.actif ? 'ADMIN.regimes.overtime.active' : 'ADMIN.regimes.overtime.inactive'),
+    ]);
+    return visible.map(rule => ({
       paysIsoCode: rule.paysIsoCode,
       typeCalculHs: rule.typeCalculHs,
       schedule: rule.heureDebutTravail && rule.heureFinTravail

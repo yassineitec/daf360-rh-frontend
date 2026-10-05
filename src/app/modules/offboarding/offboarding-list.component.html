@@ -56,7 +56,8 @@
     (filterApply)="applyFilters($event)"
     [views]="viewOptions()"
     [view]="viewMode()"
-    (viewChange)="setView($event)" />
+    (viewChange)="setView($event)"
+    [table]="tableSection()?.table() ?? null" />
 
   <!-- Content sits free in the page — never wrapped in an outer card (§1).
        The board renders every filtered file across its status columns, so it owns no

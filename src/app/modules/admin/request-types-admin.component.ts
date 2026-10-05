@@ -9,9 +9,10 @@ import {
   ButtonComponent,
   StatusBadgeComponent, DataTableComponent, DafCellDirective, SortDirection,
   TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 /** What each request-type column sorts on — the raw values, not the formatted cells. */
 const REQUEST_TYPE_SORT: Record<string, (t: RequestTypeCatalog) => string | number | null> = {
@@ -32,7 +33,7 @@ const PAGE_SIZE = 5;
   imports: [
     SpinnerComponent, SelectComponent, FormFieldComponent, ButtonComponent,
     StatusBadgeComponent, DataTableComponent, DafCellDirective, PaginationComponent,
-    TranslatePipe,
+    SearchToolbarComponent, TranslatePipe,
   ],
   template: `
     <div class="section-header">
@@ -48,7 +49,7 @@ const PAGE_SIZE = 5;
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button class="desktop-only" [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="teal" (onClick)="openAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.catalog.requestTypes.add' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
 
         <daf-button
           class="icon-btn-toggle mobile-only"
@@ -74,8 +75,17 @@ const PAGE_SIZE = 5;
         <daf-button [label]="'ADMIN.catalog.requestTypes.initFull' | translate" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
+      <!-- Same toolbar as the other list pages: the search filters the rows, and [table]
+           puts the table's reset + column picker on the right of the bar. -->
+      <daf-search-toolbar class="mb-4 block"
+        [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+        [value]="searchQuery()"
+        [debounce]="200"
+        (valueChange)="onSearch($event)"
+        [table]="typesTable" />
+
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+      <daf-data-table #typesTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                       (sortChange)="onSortChange($event.key, $event.dir)"
                       (resetClick)="onSortChange('', null)">
         <ng-template dafCell="category" let-row>
@@ -286,13 +296,33 @@ export class RequestTypesAdminComponent implements OnChanges {
   currentPage = signal(0);
   /** Table header sort — applied to the whole list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
-  readonly totalElements = computed(() => this.types().length);
+  /** Toolbar search — filters the whole list, before sort and paging. */
+  readonly searchQuery = signal('');
+
+  /** Searches what the cells show (the SLA as "2 j", the translated status). */
+  readonly filteredTypes = computed(() => {
+    this.translate.currentLang();
+    const suffix = this.translate.instant('ADMIN.catalog.requestTypes.slaSuffix');
+    return searchRows(this.types(), this.searchQuery(), t => [
+      t.typeCode, t.displayNameFr, t.category, t.approvalLevel, t.defaultSlaDays + suffix,
+      this.translate.instant(t.isActive ? 'ADMIN.catalog.requestTypes.statusActive' : 'ADMIN.catalog.requestTypes.statusInactive'),
+    ]);
+  });
+
+  readonly totalElements = computed(() => this.filteredTypes().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
 
   readonly pagedTypes = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.types(), this.sort(), REQUEST_TYPE_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredTypes(), this.sort(), REQUEST_TYPE_SORT).slice(start, start + PAGE_SIZE);
   });
+
+  /** New search → back to the first page (otherwise it can land on an empty one). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
 
   readonly rows = computed<TableRow[]>(() => {
     this.translate.currentLang();

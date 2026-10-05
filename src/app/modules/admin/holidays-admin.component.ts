@@ -5,7 +5,6 @@ import { DEFAULT_HOLIDAY_CALENDAR_CONFIG, Holiday, HolidayCalendarConfig } from 
 import { HolidayPaysOption, HolidayScopeService } from './holiday-scope.service';
 import { FLAG_SVGS, flagDataUri } from './flag-svgs';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { RhSearchBarComponent } from '../../shared/search-bar.component';
 import { HolidayCalendarComponent } from './holiday-calendar.component';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
@@ -18,10 +17,11 @@ import {
   SelectComponent, SelectOption,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig,
+  SearchToolbarComponent, ToolbarToggleOption,
   ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
 
@@ -45,8 +45,7 @@ const DEFAULT_BADGE_COLOR = '#b45309';
   imports: [
     SpinnerComponent, MultiDatePickerComponent, HolidayCalendarComponent,
     FormFieldComponent, ToggleComponent, ButtonComponent, SelectComponent,
-    DataTableComponent, DafCellDirective, PaginationComponent,
-    RhSearchBarComponent,
+    DataTableComponent, DafCellDirective, PaginationComponent, SearchToolbarComponent,
     TranslatePipe,
   ],
   template: `
@@ -56,21 +55,6 @@ const DEFAULT_BADGE_COLOR = '#b45309';
         <p class="col-sub">{{ 'ADMIN.catalog.holidays.subtitle' | translate }}</p>
       </div>
       <div class="header-actions">
-
-        <!-- Table / Calendar view toggle — same daf-button pill-toggle pattern as regime-overview's source filters. -->
-        <div class="view-toggle">
-          <daf-button
-            [title]="'ADMIN.catalog.holidays.viewTable' | translate"
-            variant="toggle"
-            [options]="{ active: viewMode() === 'table', pill: true, size: 'sm', iconStart: 'table_rows' }"
-            (onClick)="viewMode.set('table')" />
-          <daf-button
-            [title]="'ADMIN.catalog.holidays.viewCalendar' | translate"
-            variant="toggle"
-            [options]="{ active: viewMode() === 'calendar', pill: true, size: 'sm', iconStart: 'calendar_month' }"
-            (onClick)="viewMode.set('calendar')" />
-        </div>
-
         <!-- Which entity's holidays. Replaces the hard-wired paysId input: this screen is
              for administering calendars, and an administrator covering several entities had
              no way to reach the others. The list is SCOPED server side, so it can only offer
@@ -83,45 +67,28 @@ const DEFAULT_BADGE_COLOR = '#b45309';
             [config]="{ label: ('ADMIN.catalog.holidays.colCountry' | translate), fullWidth: false, searchable: true }"
             (selectedChange)="onPaysChange($event)" />
         }
-
-        <!-- Desktop/tablet: full search box + labeled button -->
-        <div class="search-field desktop-only">
-          <rh-search-bar
-            [placeholder]="'ADMIN.catalog.holidays.searchPlaceholder' | translate"
-            [value]="searchQuery()"
-            (valueChange)="searchQuery.set($event)"
-          />
-        </div>
-        <daf-button class="desktop-only" [label]="'ADMIN.catalog.holidays.add' | translate" variant="teal" (onClick)="openAdd()" />
-
-        <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
-        @if (mobileSearchOpen()) {
-          <div class="search-field mobile-only mobile-search-open">
-            <rh-search-bar
-              placeholder="Rechercher par nom (fr/en)…"
-              [value]="searchQuery()"
-              (valueChange)="searchQuery.set($event)"
-            />
-          </div>
-          <daf-button
-            class="icon-btn-toggle mobile-only"
-            title="Fermer la recherche"
-            [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
-            (onClick)="mobileSearchOpen.set(false)" />
-        } @else {
-          <daf-button
-            class="icon-btn-toggle mobile-only"
-            title="Rechercher"
-            [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
-            (onClick)="mobileSearchOpen.set(true)" />
-          <daf-button
-            class="icon-btn-toggle mobile-only"
-            title="Ajouter"
-            [options]="{ iconStart: 'add', variant: 'teal', size: 'sm' }"
-            (onClick)="openAdd()" />
-        }
       </div>
     </div>
+
+    <!-- Same bar as the other lists (daf-search-toolbar): search, the Table / Calendar view
+         toggle, « Ajouter », and [table] puts reset + column picker on the right. The bar
+         handles its own mobile layout — no separate search toggle any more. The search filters
+         the table only; the calendar always shows the whole year. -->
+    <daf-search-toolbar class="mb-4 block"
+      [placeholder]="'ADMIN.catalog.holidays.searchPlaceholder' | translate"
+      [value]="searchQuery()"
+      [debounce]="200"
+      (valueChange)="onSearch($event)"
+      [views]="viewOptions()"
+      [view]="viewMode()"
+      (viewChange)="viewMode.set($any($event))"
+      [table]="table() ?? null">
+      <daf-button
+        [label]="'ADMIN.catalog.holidays.add' | translate"
+        variant="teal"
+        [options]="{ iconStart: 'add' }"
+        (onClick)="openAdd()" />
+    </daf-search-toolbar>
 
     @if (loading()) { <div class="center"><app-spinner /></div> }
     @else if (viewMode() === 'calendar') {
@@ -233,20 +200,10 @@ const DEFAULT_BADGE_COLOR = '#b45309';
     .col-title { font-size:13px;font-weight:700;margin:0 }
     .col-sub   { font-size:12px;color:var(--color-text-muted);margin:2px 0 0 }
     .header-actions { display:flex;flex-wrap:wrap;gap:8px;align-items:center }
-    .view-toggle    { display:flex;gap:4px }
-    .search-field   { width:360px;max-width:100% }
     .center         { display:flex;justify-content:center;padding:24px }
     .calendar-wrap  { width:100%;padding:8px 0 }
 
     .table-scroll   { overflow-x:auto }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
-      .mobile-search-open { display:block;flex:1;min-width:0 }
-      .header-actions { flex:1 }
-    }
     .date-td   { font-weight:600;color:var(--color-primary);white-space:nowrap }
     .recur-badge { padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;background:var(--color-bg-secondary);color:var(--color-text-muted) }
     .recur-badge.yes { background:#dcfce7;color:var(--color-success) }
@@ -317,17 +274,31 @@ export class HolidaysAdminComponent implements OnChanges {
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
   searchQuery = signal('');
-  mobileSearchOpen = signal(false);
   selectedYear = new Date().getFullYear();
   viewMode = signal<'table' | 'calendar'>('table');
 
-  readonly filteredHolidays = computed(() => {
-    const q = this.searchQuery().trim().toLowerCase();
-    if (!q) return this.holidays();
-    return this.holidays().filter(h =>
-      h.frenchLabel.toLowerCase().includes(q) || h.englishLabel.toLowerCase().includes(q)
-    );
+  /** The table (absent while loading, empty or in calendar view) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'table',    icon: 'table_rows',     tooltip: this.translate.instant('ADMIN.catalog.holidays.viewTable') },
+      { id: 'calendar', icon: 'calendar_month', tooltip: this.translate.instant('ADMIN.catalog.holidays.viewCalendar') },
+    ];
   });
+
+  /** New search → back to the first page (else one can sit on an empty page). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  /** Searches what the row shows: the date as displayed, and both labels (fr/en). */
+  readonly filteredHolidays = computed(() =>
+    searchRows(this.holidays(), this.searchQuery(), h => [this.fmtDate(h.dateHoliday), h.frenchLabel, h.englishLabel]),
+  );
 
   currentPage = signal(0);
   /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
@@ -375,6 +346,7 @@ export class HolidaysAdminComponent implements OnChanges {
     return {
       showHeader: false,
       hoverable: true,
+      emptyMessage: t('ADMIN.catalog.holidays.emptyMessage'),
       // Stable row identity: row heights are keyed by it, not by render index.
       rowId: (row: TableRow) => (row['_source'] as Holiday).id,
       resizableColumns:  true,

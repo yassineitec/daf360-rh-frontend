@@ -14,7 +14,9 @@ import {
   ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, SelectOption,
   ToggleComponent, ModalService, ModalRef,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
+import { searchRows } from '../../shared/table-sort.utils';
 
 @Component({
   selector: 'app-offboarding-catalog-admin',
@@ -22,16 +24,12 @@ import {
   imports: [
     ButtonComponent, StatusBadgeComponent,
     FormFieldComponent, SelectComponent, ToggleComponent,
-    DataTableComponent, DafCellDirective, TranslatePipe,
+    DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe,
   ],
   template: `
     <div class="cat-header">
-      <div>
-        <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
-        <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
-      </div>
-      <daf-button class="desktop-only" [label]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
-      <daf-button class="icon-btn-toggle mobile-only" [title]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
+      <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
+      <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
     </div>
 
     <!-- Validator role for this country (V66) — kept in this tab rather than in one of its
@@ -81,12 +79,27 @@ import {
       }
     </nav>
 
+    <!-- Same bar as the other lists: search (within the selected contract type),
+         "Ajouter une tâche", and [table] puts the table's reset + column picker on the right. -->
+    <daf-search-toolbar class="mb-4 block"
+      [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+      [value]="searchQuery()"
+      [debounce]="200"
+      (valueChange)="onSearch($event)"
+      [table]="catTable() ?? null">
+      <daf-button
+        [label]="'ADMIN.docs.offboarding.addTask' | translate"
+        variant="teal"
+        [options]="{ iconStart: 'add' }"
+        (onClick)="openAdd()" />
+    </daf-search-toolbar>
+
     <!-- Loading / empty state -->
     @if (loading()) {
       <div class="skeleton-wrap">
         @for (_ of [1,2,3,4,5]; track $index) { <div class="skeleton-row"></div> }
       </div>
-    } @else if (rows().length === 0) {
+    } @else if (tableRows().length === 0) {
       <div class="empty-state">
         <span class="material-symbols-outlined">list_alt</span>
         <p>{{ 'ADMIN.docs.offboarding.empty' | translate }} {{ 'ADMIN.docs.offboarding.emptyForContract' | translate }}.</p>
@@ -94,7 +107,7 @@ import {
     } @else {
       <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
+      <daf-data-table #catTable [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
         <ng-template dafCell="taskCode" let-row>
           <code class="code-chip">{{ row['_source'].taskCode }}</code>
         </ng-template>
@@ -186,7 +199,7 @@ import {
     </ng-template>
   `,
   styles: [`
-    .cat-header    { display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap }
+    .cat-header    { margin-bottom:16px }
     .section-title { font-size:15px;font-weight:700;color:var(--color-text);margin:0 0 4px }
     .section-sub   { font-size:13px;color:var(--color-text-muted);margin:0 }
     .validator-card { border:1px solid var(--color-border);border-radius:10px;padding:14px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px }
@@ -219,12 +232,6 @@ import {
     .error-banner    { margin-top:12px;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px }
     .offboarding-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     @media(max-width:500px) { .form-grid { grid-template-columns:1fr } }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
-    }
   `],
 })
 export class OffboardingCatalogAdminComponent implements OnChanges {
@@ -294,8 +301,27 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
     ];
   });
 
-  readonly tableRows = computed<TableRow[]>(() =>
-    this.rows().map(t => ({
+  /** Toolbar search text — narrows the selected contract type's tasks on what each row shows. */
+  readonly searchQuery = signal('');
+
+  /** The table (absent while loading / when empty) — handed to the toolbar's `[table]`. */
+  readonly catTable = viewChild<DataTableComponent>('catTable');
+
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
+
+  /** Not paginated: the search simply narrows the loaded list. */
+  readonly tableRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const tr = (k: string) => this.translate.instant(k);
+    const visible = searchRows(this.rows(), this.searchQuery(), task => [
+      task.orderIndex, task.taskLabel, task.taskCode, task.ownerRole, task.slaWorkingDays,
+      task.isMandatory ? tr('ADMIN.docs.offboarding.mandatory') : null,
+      task.isBlocking ? tr('ADMIN.docs.offboarding.blocking') : null,
+      tr(task.isActive ? 'ADMIN.docs.offboarding.active' : 'ADMIN.docs.offboarding.inactive'),
+    ]);
+    return visible.map(t => ({
       orderIndex:     t.orderIndex,
       taskLabel:      t.taskLabel,
       taskCode:       t.taskCode,
@@ -304,8 +330,8 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
       flags:          null,
       isActive:       t.isActive,
       _source:        t,
-    })),
-  );
+    }));
+  });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();

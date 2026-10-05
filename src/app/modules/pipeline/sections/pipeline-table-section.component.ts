@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
@@ -46,6 +46,10 @@ import { candidateAvatar, candidateInitials, stageVariant } from '../pipeline-di
 })
 export class PipelineTableSectionComponent {
   private translate = inject(TranslateService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   readonly columns      = input.required<BoardColumn[]>();
   readonly loading      = input(false);

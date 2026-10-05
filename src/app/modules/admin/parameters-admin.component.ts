@@ -6,10 +6,10 @@ import { SpinnerComponent } from '../../shared/spinner.component';
 import {
   FormFieldComponent, ButtonComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
-  PaginationComponent, PaginationConfig, ModalService, ModalRef,
+  PaginationComponent, PaginationConfig, ModalService, ModalRef, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
 
@@ -26,7 +26,7 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
   standalone: true,
   imports: [
     SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   template: `
     <div class="section-header">
@@ -43,7 +43,7 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
           [options]="{ disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
-        <daf-button class="desktop-only" [label]="'ADMIN.data.parameters.ADD' | translate" variant="teal" (onClick)="startAdd()" />
+        <daf-button class="desktop-only" [label]="'ADMIN.data.parameters.ADD' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="startAdd()" />
 
         <!-- Mobile: icon-only -->
         <daf-button
@@ -74,8 +74,17 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
         <daf-button [label]="'ADMIN.data.parameters.INIT_DEFAULT_VALUES' | translate" variant="ghost" (onClick)="seed()" />
       </div>
     } @else {
+      <!-- Same toolbar as the other list pages: the search filters the rows, and [table]
+           puts the table's reset + column picker on the right of the bar. -->
+      <daf-search-toolbar class="mb-4 block"
+        [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+        [value]="searchQuery()"
+        [debounce]="200"
+        (valueChange)="onSearch($event)"
+        [table]="paramsTable" />
+
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+      <daf-data-table #paramsTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
         (sortChange)="onSortChange($event.key, $event.dir)"
         (resetClick)="onSortChange('', null)">
         <ng-template dafCell="cle" let-row>
@@ -112,7 +121,7 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
           <daf-pagination
             [currentPage]="currentPage()"
             [totalPages]="totalPages()"
-            [totalElements]="params().length"
+            [totalElements]="filteredParams().length"
             [config]="paginationConfig"
             (pageChange)="onPageChange($event)" />
         </div>
@@ -214,12 +223,26 @@ export class ParametersAdminComponent implements OnChanges {
   /** Table header sort — applied to the whole list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
 
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.params().length / PAGE_SIZE)));
+  /** Toolbar search — filters the whole list, before sort and paging. */
+  readonly searchQuery = signal('');
+
+  readonly filteredParams = computed(() =>
+    searchRows(this.params(), this.searchQuery(), p => [p.cle, p.valeur, p.description, this.fmtDate(p.updatedAt)]),
+  );
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredParams().length / PAGE_SIZE)));
 
   readonly pagedParams = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.params(), this.sort(), PARAMETER_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredParams(), this.sort(), PARAMETER_SORT).slice(start, start + PAGE_SIZE);
   });
+
+  /** New search → back to the first page (otherwise it can land on an empty one). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedParams().map(p => ({

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -86,6 +86,9 @@ function toIsoDay(d: Date): string {
   templateUrl: './candidate-list.component.html',
 })
 export class CandidateListComponent implements OnInit {
+  /** The candidate table — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(CandidatesTableSectionComponent);
+
   private svc       = inject(CandidateService);
   private confirm   = inject(ConfirmService);
   private router    = inject(Router);

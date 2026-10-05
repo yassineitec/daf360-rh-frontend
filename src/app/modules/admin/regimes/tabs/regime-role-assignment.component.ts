@@ -4,13 +4,13 @@ import {
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SelectComponent, SelectOption, SortDirection, TableColumn, TableConfig, TableRow,
-  PaginationComponent, ModalService, ModalRef, PermissionService,
+  PaginationComponent, ModalService, ModalRef, PermissionService, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
-import { TableSort, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
 
 /** What each column sorts on. A role with no assignment has no regime / dates → sorts last. */
 const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | null> = {
@@ -28,7 +28,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   imports: [
     DataTableComponent, DafCellDirective,
     ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
@@ -64,8 +64,20 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   // Pagination — 5 per page
   readonly PAGE_SIZE = 5;
   currentPage = signal(0);
-  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
+  /** Search over the roles (toolbar above the table). */
+  searchQuery = signal('');
+
+  /** The table (absent while loading) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** New search → back to the first page (else one can sit on an empty page). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
 
 
   // Merge roles + assignments
@@ -82,6 +94,20 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   defaultRegimeName = computed(() =>
     this.regimes().find(r => r.isDefault)?.labelFr ?? null
   );
+
+  /** Searches what the row shows: role, regime (or the « Défaut (…) » fallback), dates, notes. */
+  readonly filteredRoles = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const fallback = `${t('ADMIN.regimes.roleAssign.defaultLabel')} (${this.defaultRegimeName() ?? t('ADMIN.regimes.roleAssign.notConfigured')})`;
+    return searchRows(this.allRolesWithAssignment(), this.searchQuery(), row => [
+      row.roleName,
+      row.assignment?.regimeLabelFr || fallback,
+      row.assignment ? this.formatDate(row.assignment.effectiveFrom) : null,
+      row.assignment?.effectiveTo ? this.formatDate(row.assignment.effectiveTo) : null,
+      row.assignment?.notes,
+    ]);
+  });
 
   affectedCount = computed(() => {
     const row = this.selectedRow();
@@ -115,12 +141,12 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes'), sortable: true },
   ];
 
-  readonly totalElements = computed(() => this.allRolesWithAssignment().length);
+  readonly totalElements = computed(() => this.filteredRoles().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
 
   readonly pagedRoles = computed(() => {
     const start = this.currentPage() * this.PAGE_SIZE;
-    return sortByColumn(this.allRolesWithAssignment(), this.sort(), ROLE_ASSIGNMENT_SORT)
+    return sortByColumn(this.filteredRoles(), this.sort(), ROLE_ASSIGNMENT_SORT)
       .slice(start, start + this.PAGE_SIZE);
   });
 

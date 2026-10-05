@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { BadgeCell, DataTableComponent, TableColumn, TableConfig, TableRow } from '@khalilrebhiitec/daf360';
@@ -65,6 +65,10 @@ const SERVER_SORT_FIELD: Record<string, string> = {
 })
 export class RecruitmentDemandTableSectionComponent {
   private translate = inject(TranslateService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
   private date = new DatePipe(inject(LOCALE_ID));
 
   readonly items = input.required<RecruitmentDemandSummary[]>();

@@ -24,8 +24,8 @@
     @if (!showDropdown()) {
       <daf-button
         [label]="'ADMIN.notifications.addRole' | translate"
-        variant="ghost"
-        [options]="{ size: 'sm' }"
+        variant="teal"
+        [options]="{ size: 'sm', iconStart: 'add' }"
         (onClick)="showDropdown.set(true)" />
     } @else {
       <div class="rt-add-row">

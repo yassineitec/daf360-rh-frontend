@@ -42,11 +42,6 @@
   margin: 0;
 }
 
-.nr-search {
-  width: 360px;
-  max-width: 100%;
-}
-
 .nr-error {
   background: var(--color-error-container);
   border: 1px solid #fecaca;
@@ -64,13 +59,6 @@
 
 .table-scroll {
   overflow-x: auto;
-}
-
-.mobile-only { display: none; }
-@media (max-width: 640px) {
-  .desktop-only { display: none; }
-  .mobile-only  { display: inline-flex; }
-  .nr-search-open { display: block; flex: 1; min-width: 0; }
 }
 
 /* ── Footer: count + pagination ──────────────────────────────── */

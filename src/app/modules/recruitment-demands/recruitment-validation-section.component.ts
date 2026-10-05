@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -103,7 +103,8 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
       (filterApply)="onFilterApply($event)"
       [views]="viewOptions()"
       [view]="viewMode()"
-      (viewChange)="setView($event)" />
+      (viewChange)="setView($event)"
+      [table]="tableSection()?.table() ?? null" />
 
     <!-- Same two views as the "Demande" tab next to it and /rh/it-provisioning:
          daf-entity-card grid or daf-data-table. Every demand here is EN_ATTENTE, so
@@ -183,6 +184,9 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
   `,
 })
 export class RecruitmentValidationSectionComponent implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(RecruitmentDemandTableSectionComponent);
+
   private svc          = inject(RecruitmentDemandService);
   private userStore    = inject(UserStore);
   private router       = inject(Router);

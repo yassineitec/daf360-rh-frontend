@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, StatusBadgeComponent,
@@ -59,6 +59,7 @@ export type CongeRowAction = 'view' | 'approve' | 'refuse' | 'archive';
       [selected]="selected()"
       (selectedChange)="selectedChange.emit($event)"
       (sortChange)="sortChange.emit($event)"
+      (resetClick)="sortChange.emit({ key: '', dir: null })"
       (rowClick)="open.emit($any($event)['_source'])">
 
       <!-- The period plus what it costs in working days — two facts that are always read
@@ -112,6 +113,10 @@ export type CongeRowAction = 'view' | 'approve' | 'refuse' | 'archive';
 })
 export class CongesTableSectionComponent {
   private translate = inject(TranslateService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   readonly items        = input.required<CongeRow[]>();
   readonly loading      = input(false);
@@ -230,10 +235,14 @@ export class CongesTableSectionComponent {
     // Congé rows carry a reason that can run long and an employee cell that cannot be
     // truncated usefully, so the reader gets to decide which columns deserve the width.
     resizableColumns: true,
+    resizableRows: true,
     columnPicker: true,
     columnPickerLabel: this.translate.instant('CONGES.COLUMNS'),
-    // Both of the above are per-viewer adjustments, and the lib offers to undo them only
+    // All of the above are per-viewer adjustments, and the lib offers to undo them only
     // once something has actually been changed — so this adds no chrome by default.
+    // The reset also clears the server-side sort (`resetClick`, see the template).
+    showReset: true,
+    resetLabel: this.translate.instant('REQUESTS.TABLE.RESET'),
     sortLabel: this.translate.instant('CONGES.SORT_BY'),
   }));
 }

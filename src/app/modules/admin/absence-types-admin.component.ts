@@ -3,13 +3,14 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  DataTableComponent, ButtonComponent,
+  DataTableComponent, SearchToolbarComponent, ButtonComponent,
   FormFieldComponent, SelectComponent, ToggleComponent, ModalService,
   type ModalRef, type TableColumn, type TableConfig, type TableRow,
   type SelectOption, type BadgeVariant,
 } from '@khalilrebhiitec/daf360';
 
 import { NotificationService } from '../../core/notification.service';
+import { searchRows } from '../../shared/table-sort.utils';
 // Service and model stay in `modules/conges`: they describe the congé domain, and the
 // self-service modal reads the same catalogue. Only the ADMIN SCREEN lives here, with the
 // other sixteen configurable lists — which is where someone goes to configure something.
@@ -48,7 +49,7 @@ import {
   selector: 'app-absence-types-admin',
   standalone: true,
   imports: [
-    DataTableComponent, ButtonComponent,
+    DataTableComponent, SearchToolbarComponent, ButtonComponent,
     FormFieldComponent, SelectComponent, ToggleComponent, TranslatePipe,
   ],
   // No `daf-page` / `daf-page-header` here: AdminComponent already wraps every tab in one
@@ -61,13 +62,22 @@ import {
 
     <p class="at-intro">{{ 'CONGES.TYPES.SUBTITLE' | translate }}</p>
 
-    <div class="at-bar">
-        <daf-button
-          [options]="{ label: ('CONGES.TYPES.NEW' | translate), variant: 'primary', iconStart: 'add' }"
-          (onClick)="openCreate()" />
-      </div>
+    <!-- Same bar as the other lists: search, "Nouveau type", and \`[table]\` puts the
+         table's reset + column picker on the right. -->
+    <daf-search-toolbar class="mb-4 block"
+      [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+      [value]="searchQuery()"
+      [debounce]="200"
+      (valueChange)="onSearch($event)"
+      [table]="atTable">
+      <daf-button
+        [label]="'CONGES.TYPES.NEW' | translate"
+        variant="teal"
+        [options]="{ iconStart: 'add' }"
+        (onClick)="openCreate()" />
+    </daf-search-toolbar>
 
-      <daf-data-table
+      <daf-data-table #atTable
         [columns]="columns()"
         [rows]="tableRows()"
         [config]="tableConfig()" />
@@ -221,7 +231,6 @@ import {
   styles: [`
     .at-loading { color:var(--color-text-muted);font-size:var(--text-body-sm);margin:0 0 12px }
     .at-intro   { color:var(--color-text-muted);font-size:var(--text-body-sm);margin:0 0 16px }
-    .at-bar  { display: flex; justify-content: flex-end; margin-bottom: 14px; }
     .at-form { display: flex; flex-direction: column; gap: 6px; }
     .at-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
     @media (max-width: 640px) { .at-grid { grid-template-columns: 1fr; } }
@@ -304,11 +313,21 @@ export class AbsenceTypesAdminComponent implements OnInit {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
       hoverable: true,
       loading: this.loading(),
       emptyMessage: this.translate.instant('CONGES.TYPES.EMPTY'),
       defaultSort: { key: 'displayOrder', dir: 'asc' },
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => row['id'] as number,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       actions: [
         {
           id: 'edit',
@@ -333,7 +352,24 @@ export class AbsenceTypesAdminComponent implements OnInit {
     };
   });
 
+  /** Toolbar search text — filters the rows below on what each one shows. */
+  readonly searchQuery = signal('');
+
+  protected onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
+
+  /** Not paginated: every type is a row, so the search simply narrows the list. */
   readonly tableRows = computed<TableRow[]>(() =>
+    searchRows(this.allTableRows(), this.searchQuery(), (r) => [
+      r['code'], r['label'],
+      (r['balanceCell'] as { label: string }).label,
+      r['rulesCell'], r['approversCell'],
+      (r['activeCell'] as { label: string }).label,
+      r['displayOrder'],
+    ]));
+
+  private readonly allTableRows = computed<TableRow[]>(() =>
     this.rows().map((t) => ({
       ...t,
       label: this.translate.currentLang() === 'en' ? t.labelEn : t.labelFr,

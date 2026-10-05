@@ -5,6 +5,7 @@ import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SortDirection, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
@@ -12,7 +13,7 @@ import {
 } from '../../../core/lists/configurable-list.model';
 import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
 
@@ -31,7 +32,7 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -51,16 +52,31 @@ export class ListManagerComponent implements OnInit {
   values          = signal<ListValue[]>([]);
   loadingTypes    = signal(true);
   loadingValues   = signal(false);
+  /** Search over the selected list's values (toolbar above the table). */
   searchQuery     = signal('');
   editingId       = signal<number | null>(null);
   error           = signal<string | null>(null);
   successMsg      = signal<string | null>(null);
 
-  readonly filteredTypes = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    return this.listTypes().filter(t =>
-      !q || t.labelFr.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)
-    );
+  /** The values table (absent while loading) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** New search → back to the first page (else one can sit on an empty page). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  /** Searches what the row shows: code, both labels, and the translated status badges. */
+  readonly filteredValues = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return searchRows(this.values(), this.searchQuery(), v => [
+      v.valueCode, v.labelFr, v.labelEn,
+      t(v.isActive ? 'ADMIN.data.lists.ACTIVE' : 'ADMIN.data.lists.INACTIVE'),
+      v.isSystem ? t('ADMIN.data.lists.SYSTEM') : null,
+    ]);
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -75,14 +91,14 @@ export class ListManagerComponent implements OnInit {
   });
 
   currentPage = signal(0);
-  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
 
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.values().length / PAGE_SIZE)));
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredValues().length / PAGE_SIZE)));
 
   readonly pagedValues = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.values(), this.sort(), LIST_VALUE_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredValues(), this.sort(), LIST_VALUE_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
@@ -195,6 +211,7 @@ export class ListManagerComponent implements OnInit {
     this.selectedType.set(type);
     this.modalRef?.close();
     this.editingId.set(null);
+    this.searchQuery.set('');   // a search typed for one list means nothing in the next
     this.loadValues(type.id);
   }
 

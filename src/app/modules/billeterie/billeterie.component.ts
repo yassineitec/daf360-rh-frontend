@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -72,6 +72,9 @@ type PricedFilter = '' | 'priced' | 'unpriced';
   templateUrl: './billeterie.component.html',
 })
 export class BilleterieComponent implements OnInit {
+  /** Table view only (undefined in cards view and on the change-requests tab) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(BilleterieTableSectionComponent);
+
   private svc = inject(MissionService);
   private translate = inject(TranslateService);
 

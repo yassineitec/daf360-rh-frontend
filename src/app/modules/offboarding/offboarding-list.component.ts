@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -77,6 +77,9 @@ function toIsoDay(d: Date): string {
   templateUrl: './offboarding-list.component.html',
 })
 export class OffboardingListComponent implements OnInit {
+  /** Table view only (undefined in kanban / cards views) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(OffboardingTableSectionComponent);
+
   private svc       = inject(OffboardingService);
   private router    = inject(Router);
   private route     = inject(ActivatedRoute);

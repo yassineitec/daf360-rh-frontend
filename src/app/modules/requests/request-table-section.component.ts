@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BadgeCell, DataTableComponent, TableColumn, TableConfig, TableRow } from '@khalilrebhiitec/daf360';
 
@@ -60,6 +60,10 @@ function toTime(iso: string | null | undefined): number | null {
 })
 export class RequestTableSectionComponent {
   private translate = inject(TranslateService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
   private relativeDate = new RelativeDatePipe();
 
   readonly items = input.required<RequestCardItem[]>();

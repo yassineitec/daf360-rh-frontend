@@ -10,19 +10,24 @@
       <span class="rut-title">{{ 'ADMIN.roles.users.TITLE' | translate:{ name: role().frenchName } }}</span>
       <daf-badge [label]="'ADMIN.roles.users.COUNT_BADGE' | translate:{ count: users().length }" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
-    <daf-button
-      class="desktop-only"
-      [label]="showAddPanel() ? ('ADMIN.roles.users.CLOSE' | translate) : ('ADMIN.roles.users.ADD_USER' | translate)"
-      variant="teal"
-      [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
-      (onClick)="showAddPanel.set(!showAddPanel())" />
-    <daf-button
-      class="icon-btn-toggle mobile-only"
-      [title]="showAddPanel() ? 'Fermer' : 'Ajouter un utilisateur'"
-      variant="teal"
-      [options]="{ size: 'sm', iconStart: showAddPanel() ? 'close' : 'add' }"
-      (onClick)="showAddPanel.set(!showAddPanel())" />
   </div>
+
+  <!-- Same bar as the other lists (daf-search-toolbar): filters the role's users, carries the
+       « Ajouter un utilisateur » toggle, and [table] puts reset + column picker on the right.
+       The bar handles its own mobile layout — no separate icon-only button any more. -->
+  <daf-search-toolbar
+    [placeholder]="'ADMIN.roles.users.FILTER_PLACEHOLDER' | translate"
+    [value]="localSearch()"
+    [debounce]="200"
+    (valueChange)="onLocalSearch($event)"
+    [table]="table() ?? null">
+    <!-- « Ajouter un utilisateur » / « Fermer » toggle for the add-user panel. -->
+    <daf-button
+      [label]="(showAddPanel() ? 'ADMIN.roles.users.CLOSE' : 'ADMIN.roles.users.ADD_USER') | translate"
+      [variant]="showAddPanel() ? 'secondary' : 'teal'"
+      [options]="{ iconStart: showAddPanel() ? 'close' : 'add' }"
+      (onClick)="showAddPanel.set(!showAddPanel())" />
+  </daf-search-toolbar>
 
   <!-- Add-user search panel -->
   @if (showAddPanel()) {
@@ -64,14 +69,6 @@
         }
       }
     </div>
-  }
-
-  <!-- Local filter -->
-  @if (users().length > 5) {
-    <daf-form-field
-      [options]="{ type: 'search', placeholder: ('ADMIN.roles.users.FILTER_PLACEHOLDER' | translate), prefixIcon: 'search', fullWidth: true }"
-      [value]="localSearch()"
-      (valueChange)="onLocalSearch($any($event) ?? '')" />
   }
 
   <!-- Users table -->

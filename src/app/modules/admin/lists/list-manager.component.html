@@ -9,7 +9,7 @@
     <p class="lm-loading">{{ 'ADMIN.data.lists.LOADING' | translate }}</p>
   } @else {
     <nav class="lm-tab-bar" role="tablist">
-      @for (type of filteredTypes(); track type.id) {
+      @for (type of listTypes(); track type.id) {
         <button
           class="lm-tab-btn"
           [class.active]="selectedType()?.id === type.id"
@@ -21,7 +21,7 @@
           @if (type.isSystem) { <daf-badge [label]="'ADMIN.data.lists.BADGE_SYSTEM_LOWER' | translate" [options]="{ variant: 'warning', size: 'sm' }" /> }
         </button>
       }
-      @if (filteredTypes().length === 0) {
+      @if (listTypes().length === 0) {
         <span class="lm-type-empty">{{ 'ADMIN.data.lists.NO_LISTS' | translate }}</span>
       }
     </nav>
@@ -42,14 +42,22 @@
             <p class="lm-content-desc">{{ selectedType()!.description }}</p>
           }
         </div>
-        <daf-button class="desktop-only" [label]="'ADMIN.data.lists.ADD_VALUE' | translate" variant="teal" (onClick)="openAddForm()" />
-        <daf-button
-          class="icon-btn-toggle mobile-only"
-          title="Ajouter une valeur"
-          variant="teal"
-          [options]="{ iconStart: 'add', size: 'sm' }"
-          (onClick)="openAddForm()" />
       </div>
+
+      <!-- Same bar as the other lists (daf-search-toolbar): search over the values,
+           « Ajouter une valeur », and [table] puts reset + column picker on the right. -->
+      <daf-search-toolbar class="mb-4 block"
+        [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+        [value]="searchQuery()"
+        [debounce]="200"
+        (valueChange)="onSearch($event)"
+        [table]="table() ?? null">
+        <daf-button
+          [label]="'ADMIN.data.lists.ADD_VALUE' | translate"
+          variant="teal"
+          [options]="{ iconStart: 'add' }"
+          (onClick)="openAddForm()" />
+      </daf-search-toolbar>
 
       @if (error())      { <div class="lm-alert lm-alert-error">{{ error() }}</div> }
       @if (successMsg()) { <div class="lm-alert lm-alert-success">{{ successMsg() }}</div> }
@@ -120,7 +128,7 @@
             <daf-pagination
               [currentPage]="currentPage()"
               [totalPages]="totalPages()"
-              [totalElements]="values().length"
+              [totalElements]="filteredValues().length"
               [config]="paginationConfig"
               (pageChange)="onPageChange($event)" />
           </div>

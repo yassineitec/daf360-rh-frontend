@@ -1,11 +1,13 @@
 import {
-  Component, computed, effect, inject, input, output, signal, untracked,
+  Component, computed, effect, inject, input, output, signal, untracked, viewChild,
 } from '@angular/core';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, SortDirection, TableColumn, TableConfig, TableRow, AvatarCell,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
+import { searchRows } from '../../../../shared/table-sort.utils';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -45,7 +47,7 @@ function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null): RoleUs
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-    DataTableComponent, TranslatePipe,
+    DataTableComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './role-users-tab.component.html',
   styleUrl:    './role-users-tab.component.scss',
@@ -74,15 +76,12 @@ export class RoleUsersTabComponent {
 
   private search$ = new Subject<string>();
 
-  filteredUsers = computed(() => {
-    const q = this.localSearch().toLowerCase();
-    return q
-      ? this.users().filter(u =>
-          u.fullName?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.paysLabel?.toLowerCase().includes(q))
-      : this.users();
-  });
+  /** The table (absent while empty / no match) — passed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  filteredUsers = computed(() =>
+    searchRows(this.users(), this.localSearch(), u => [u.fullName, u.email, u.paysLabel]),
+  );
 
   // ── Pagination — 5 per page ─────────────────────────────────────────────────
   currentPage = signal(0);
@@ -153,7 +152,9 @@ export class RoleUsersTabComponent {
     this.currentPage.set(page);
   }
 
+  /** New search → back to the first page (otherwise it can land on an empty one). */
   onLocalSearch(value: string): void {
+    if (value === this.localSearch()) return;   // daf-search-toolbar re-emits on blur
     this.localSearch.set(value);
     this.currentPage.set(0);
   }

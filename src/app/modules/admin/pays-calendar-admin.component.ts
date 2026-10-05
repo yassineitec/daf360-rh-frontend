@@ -3,8 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, ButtonComponent, DafCellDirective, DataTableComponent,
-  SelectComponent, SelectOption, StatusBadgeComponent, TableColumn, TableConfig, TableRow,
+  SearchToolbarComponent, SelectComponent, SelectOption, StatusBadgeComponent,
+  TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
+import { searchRows } from '../../shared/table-sort.utils';
 
 import { environment } from '../../../environments/environment';
 import { ModalComponent } from '../../shared/modal.component';
@@ -62,7 +64,7 @@ const DAYS = [
   standalone: true,
   imports: [
     DataTableComponent, DafCellDirective, StatusBadgeComponent, ButtonComponent,
-    SelectComponent, ModalComponent, TableActionComponent, TranslatePipe,
+    SearchToolbarComponent, SelectComponent, ModalComponent, TableActionComponent, TranslatePipe,
   ],
   template: `
     <div class="flex min-w-0 flex-col gap-4">
@@ -77,7 +79,16 @@ const DAYS = [
         </div>
       }
 
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="config()">
+      <!-- Same toolbar as the other list pages: the search filters the rows, and [table]
+           puts the table's reset + column picker on the right of the bar. -->
+      <daf-search-toolbar
+        [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+        [value]="searchQuery()"
+        [debounce]="200"
+        (valueChange)="onSearch($event)"
+        [table]="calendarTable" />
+
+      <daf-data-table #calendarTable [columns]="columns()" [rows]="rows()" [config]="config()">
 
         <ng-template dafCell="weekend" let-row>
           @if (row['_s'].usingDefaultWeekend) {
@@ -192,8 +203,26 @@ export class PaysCalendarAdminComponent implements OnInit {
     ];
   });
 
+  /** Toolbar search, over what each row shows (entity, head count, rest days). */
+  readonly searchQuery = signal('');
+
+  readonly filteredItems = computed(() => {
+    this.translate.currentLang();
+    return searchRows(this.items(), this.searchQuery(), p => [
+      p.frenchLabel, p.englishLabel, p.isoCode, p.employees,
+      ...(p.usingDefaultWeekend
+        ? [this.translate.instant('ADMIN.paysCalendar.assumed'), this.translate.instant('ADMIN.paysCalendar.assumedDays')]
+        : p.weekendDays.map(d => this.dayLabel(d))),
+    ]);
+  });
+
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+  }
+
   readonly rows = computed<TableRow[]>(() =>
-    this.items().map(p => ({
+    this.filteredItems().map(p => ({
       id: p.paysId,
       label: p.frenchLabel,
       employees: p.employees,
@@ -207,8 +236,12 @@ export class PaysCalendarAdminComponent implements OnInit {
     skeletonRows: 6,
     emptyMessage: this.translate.instant('ADMIN.paysCalendar.empty'),
     resizableColumns: true,
+    resizableRows: true,
     columnPicker: true,
     columnPickerLabel: this.translate.instant('ADMIN.paysCalendar.columns'),
+    showReset: true,
+    resetLabel: this.translate.instant('REQUESTS.TABLE.RESET'),
+    sortLabel: this.translate.instant('REQUESTS.TABLE.SORT_BY'),
     rowId: (row) => String(row['id']),
   }));
 

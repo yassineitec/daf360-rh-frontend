@@ -6,10 +6,10 @@ import {
   AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
   DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
   SortDirection, TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
-  PermissionService,
+  PermissionService, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
-import { TableSort, rankIn, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
+import { TableSort, rankIn, searchRows, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
 import {
   RegimeOverviewStats, EmployeeRegimeOverview, WorkingTimeRegime,
   AssignEmployeeOverrideRequest,
@@ -24,7 +24,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   imports: [
     NgClass, DataTableComponent, DafCellDirective,
     ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
@@ -68,7 +68,9 @@ export class RegimeOverviewComponent implements OnChanges {
       ? rankIn(RegimeOverviewComponent.SOURCE_ORDER as readonly string[], e.assignmentLevel) : null),
   };
 
+  /** New search → back to the first page (else one can sit on an empty page). */
   onSearch(value: string): void {
+    if (value === this.searchTerm()) return;   // daf-search-toolbar re-emits on blur
     this.searchTerm.set(value);
     this.currentPage.set(0);
   }
@@ -113,9 +115,13 @@ export class RegimeOverviewComponent implements OnChanges {
   ];
 
   filteredEmployees = computed(() => {
-    let list = this.employees();
-    const q = this.searchTerm().toLowerCase();
-    if (q) list = list.filter(e => e.fullName?.toLowerCase().includes(q) || e.roleName?.toLowerCase().includes(q));
+    this.translate.currentLang();
+    // Searches what the row shows: name, role, regime (or « Aucun ») and the source badge.
+    let list = searchRows(this.employees(), this.searchTerm(), e => [
+      e.fullName, e.roleName,
+      e.resolvedRegimeLabelFr || this.translate.instant('ADMIN.regimes.overview.regimeNone'),
+      this.getSourceLabel(e.assignmentLevel),
+    ]);
     const f = this.activeFilter();
     if (f !== 'ALL') {
       if (f === 'UNCONFIGURED') list = list.filter(e => !e.assignmentLevel);

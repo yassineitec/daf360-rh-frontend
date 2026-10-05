@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, of } from 'rxjs';
@@ -96,6 +96,9 @@ function toIsoDay(d: Date): string {
   templateUrl: './onboarding-list.component.html',
 })
 export class OnboardingListComponent implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(OnboardingTableSectionComponent);
+
   private service   = inject(OnboardingService);
   private router    = inject(Router);
   private route     = inject(ActivatedRoute);

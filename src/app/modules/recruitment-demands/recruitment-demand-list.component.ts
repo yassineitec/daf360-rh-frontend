@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -163,7 +163,8 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           (filterApply)="onFilterApply($event)"
           [views]="viewOptions()"
           [view]="viewMode()"
-          (viewChange)="setView($event)" />
+          (viewChange)="setView($event)"
+          [table]="recruitmentTableSection()?.table() ?? null" />
 
         <!-- daf-entity-card grid or daf-data-table — same two views as /rh/it-provisioning. -->
         @if (viewMode() === 'grid') {
@@ -212,7 +213,8 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           (filterApply)="onOtherFilterApply($event)"
           [views]="viewOptions()"
           [view]="viewMode()"
-          (viewChange)="setView($event)" />
+          (viewChange)="setView($event)"
+          [table]="otherTableSection()?.table() ?? null" />
 
         <!-- Same card / table sections as /rh/requests, in history mode: no cancel action
              (a decided request has nothing left to cancel), decision date instead of SLA. -->
@@ -255,6 +257,11 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
   `,
 })
 export class RecruitmentDemandListComponent implements OnInit {
+  /** "Demande de recrutement" tab, table view only — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly recruitmentTableSection = viewChild(RecruitmentDemandTableSectionComponent);
+  /** "Demande" tab, table view only — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly otherTableSection = viewChild(RequestTableSectionComponent);
+
   private svc          = inject(RecruitmentDemandService);
   private requestsSvc  = inject(RequestsService);
   private userStore    = inject(UserStore);

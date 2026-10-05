@@ -1,6 +1,6 @@
-import { Component, computed, inject, input, output, signal, effect, untracked } from '@angular/core';
+import { Component, computed, inject, input, output, signal, effect, untracked, viewChild } from '@angular/core';
 import {
-  PaginationComponent, ButtonComponent, FormFieldComponent,
+  PaginationComponent, SearchToolbarComponent, ButtonComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem } from './role.model';
@@ -41,7 +41,7 @@ function sortRoles(items: RoleListItem[], sort: RoleSort | null): RoleListItem[]
   selector: 'app-role-list',
   standalone: true,
   imports: [
-    PaginationComponent, ButtonComponent, FormFieldComponent,
+    PaginationComponent, SearchToolbarComponent, ButtonComponent,
     DataTableComponent, DafCellDirective,
     TranslatePipe,
   ],
@@ -64,13 +64,22 @@ export class RoleListComponent {
   // State
   searchQuery = signal('');
   currentPage = signal(0);
-  mobileSearchOpen = signal(false);
 
   pageSize = signal(10);
   readonly pageSizeOptions = [10, 20, 50];
 
   /** Table header sort — applied to the whole filtered list, before paging. */
   sort = signal<RoleSort | null>(null);
+
+  /** Le tableau (absent pendant le chargement) — passé au `[table]` de la barre. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** Nouvelle recherche → retour à la première page (sinon on peut rester sur une page vide). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
 
   filteredRoles = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();

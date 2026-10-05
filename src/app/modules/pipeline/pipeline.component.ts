@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -119,6 +119,9 @@ export class PipelineComponent implements OnInit {
   readonly actionError = signal<string | null>(null);
   /** Candidate id whose card action is in flight — drives the per-card spinner. */
   readonly actioningId = signal<number | null>(null);
+
+  /** Table view only (undefined in kanban view) — its `daf-data-table` goes to the toolbar. */
+  readonly tableSection = viewChild(PipelineTableSectionComponent);
 
   // ── Board ──────────────────────────────────────────────────────────────────
   /**

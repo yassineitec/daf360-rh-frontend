@@ -1,3 +1,21 @@
+<!-- Same bar as the other lists (daf-search-toolbar), full width above the two panels: the
+     search filters the regime list, « Nouveau régime » (ADMIN_REGIMES only) sits on the right,
+     and [table] puts the list's reset + column picker beside it. -->
+<daf-search-toolbar class="mb-4 block"
+  [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+  [value]="searchQuery()"
+  [debounce]="200"
+  (valueChange)="onSearch($event)"
+  [table]="table() ?? null">
+  @if (perms.has('ADMIN_REGIMES')) {
+    <daf-button
+      [label]="'ADMIN.regimes.catalog.newRegime' | translate"
+      variant="teal"
+      [options]="{ iconStart: 'add' }"
+      (onClick)="openCreateModal()" />
+  }
+</daf-search-toolbar>
+
 <div class="rc-layout">
 
   <!-- LEFT PANEL: Regime list -->
@@ -42,14 +60,6 @@
         </daf-data-table>
       }
     }
-
-    <!-- Add button -->
-    <daf-button
-      *dafHasPermission="'ADMIN_REGIMES'"
-      [label]="'ADMIN.regimes.catalog.newRegime' | translate"
-      variant="teal"
-      [options]="{ fullWidth: true, iconStart: 'add' }"
-      (onClick)="openCreateModal()" />
   </div>
 
   <!-- RIGHT PANEL: Editor -->

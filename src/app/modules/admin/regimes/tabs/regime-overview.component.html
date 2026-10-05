@@ -45,26 +45,28 @@
 
 </div>
 
-<!-- Filters -->
-<div class="ro-filters">
-  <div class="ro-search">
-    <daf-form-field
-      [options]="{ type: 'search', placeholder: ('ADMIN.regimes.overview.searchPlaceholder' | translate), prefixIcon: 'search', fullWidth: true }"
-      [value]="searchTerm()"
-      (valueChange)="onSearch($any($event) ?? '')" />
+<!-- Same bar as the other lists (daf-search-toolbar): search, the source pills projected
+     on the right, and [table] puts reset + column picker beside them. -->
+<daf-search-toolbar class="mb-4 block"
+  [placeholder]="'ADMIN.regimes.overview.searchPlaceholder' | translate"
+  [value]="searchTerm()"
+  [debounce]="200"
+  (valueChange)="onSearch($event)"
+  [table]="overviewTable">
+  <div class="ro-filters">
+    @for (f of sourceFilters; track f.value) {
+      <daf-button
+        [label]="f.label"
+        variant="toggle"
+        [options]="{ active: activeFilter() === f.value, pill: true, size: 'sm' }"
+        (onClick)="onFilterChange(f.value)" />
+    }
   </div>
-  @for (f of sourceFilters; track f.value) {
-    <daf-button
-      [label]="f.label"
-      variant="toggle"
-      [options]="{ active: activeFilter() === f.value, pill: true, size: 'sm' }"
-      (onClick)="onFilterChange(f.value)" />
-  }
-</div>
+</daf-search-toolbar>
 
 <!-- Table -->
 <div class="table-scroll">
-<daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()"
+<daf-data-table #overviewTable [columns]="columns" [rows]="rows()" [config]="tableConfig()"
                 (sortChange)="onSortChange($event.key, $event.dir)"
                 (resetClick)="onSortChange('', null)">
 

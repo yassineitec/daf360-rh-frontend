@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, catchError, of } from 'rxjs';
 import {
@@ -89,6 +89,9 @@ export class ProfileListComponent implements OnInit {
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
   readonly selectedCount = computed(() => this.selectedIds().size);
+
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar. */
+  readonly tableSection = viewChild(ProfilesTableSectionComponent);
 
 
   // ── Filter panel ───────────────────────────────────────────────────────────

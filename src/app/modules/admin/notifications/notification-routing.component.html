@@ -24,33 +24,6 @@
   <!-- Header -->
   <div class="nr-header">
     <h2 class="nr-title">{{ 'ADMIN.notifications.title' | translate }}</h2>
-    <div class="nr-search desktop-only">
-      <rh-search-bar
-        [placeholder]="'ADMIN.notifications.searchPlaceholder' | translate"
-        [value]="searchQuery()"
-        (valueChange)="onSearch($event)" />
-    </div>
-
-    <!-- Mobile, search open: input takes the row, icon becomes "close" in place -->
-    @if (mobileSearchOpen()) {
-      <div class="nr-search mobile-only nr-search-open">
-        <rh-search-bar
-          placeholder="Rechercher…"
-          [value]="searchQuery()"
-          (valueChange)="onSearch($event)" />
-      </div>
-      <daf-button
-        class="icon-btn-toggle mobile-only"
-        title="Fermer la recherche"
-        [options]="{ iconStart: 'close', variant: 'teal', size: 'sm' }"
-        (onClick)="mobileSearchOpen.set(false)" />
-    } @else {
-      <daf-button
-        class="icon-btn-toggle mobile-only"
-        title="Rechercher"
-        [options]="{ iconStart: 'search', variant: 'ghost', size: 'sm' }"
-        (onClick)="mobileSearchOpen.set(true)" />
-    }
   </div>
 
   <!-- Events are declared in code (a dispatch call must exist for one to ever fire), so this
@@ -62,9 +35,19 @@
     <div class="nr-error">{{ error() }}</div>
   }
 
+  <!-- Same bar as the other lists (daf-search-toolbar): search, and [table] puts reset +
+       column picker on the right. The bar handles its own mobile layout — no separate
+       search toggle any more. -->
+  <daf-search-toolbar
+    [placeholder]="'ADMIN.notifications.searchPlaceholder' | translate"
+    [value]="searchQuery()"
+    [debounce]="200"
+    (valueChange)="onSearch($event)"
+    [table]="eventTable" />
+
   <!-- Event table -->
   <div class="table-scroll">
-  <daf-data-table
+  <daf-data-table #eventTable
     [columns]="columns()"
     [rows]="rows()"
     [config]="tableConfig()"

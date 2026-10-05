@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   AvatarComponent, AvatarData,
@@ -157,7 +157,8 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
         (filterApply)="applyFilters($event)"
         [views]="viewOptions()"
         [view]="viewMode()"
-        (viewChange)="viewMode.set($any($event))" />
+        (viewChange)="viewMode.set($any($event))"
+        [table]="table() ?? null" />
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -420,6 +421,8 @@ export class UsersAdminComponent implements OnInit {
     { id: 'grid', icon: 'grid_view', tooltip: 'Cartes' },
   ]);
 
+  // "Nouveau compte" stays a primary toolbar action (blue), not a teal daf-button: the Filtres
+  // trigger right next to it is teal, and two teal buttons side by side read as one.
   readonly toolbarActions = computed<ToolbarAction[]>(() => [
     { id: 'create', label: 'Nouveau compte', icon: 'person_add', position: 'right', variant: 'primary' },
     {
@@ -529,10 +532,20 @@ export class UsersAdminComponent implements OnInit {
     skeletonRows: this.pageSize(),
     emptyMessage: 'Aucun compte ne correspond à ces critères.',
     resizableColumns: true,
+    resizableRows: true,
     columnPicker: true,
     columnPickerLabel: 'Colonnes',
+    // Sorting is client-side here (the whole register is loaded), so the lib's own reset
+    // is enough — no `resetClick` handler needed.
+    showReset: true,
+    resetLabel: 'Réinitialiser l\'affichage du tableau',
+    sortLabel: 'Trier par {column}',
     rowId: (row) => String(row['id']),
   }));
+
+  /** Table view only (undefined in cards view) — goes to the toolbar's `[table]` so the
+   *  reset + column picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   // ── Loading ───────────────────────────────────────────────────────────────
 

@@ -1,16 +1,15 @@
 import { Component, OnInit, computed, effect, inject, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-  ButtonComponent, StatusBadgeComponent, PaginationComponent,
+  StatusBadgeComponent, PaginationComponent, SearchToolbarComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PageComponent, PageHeaderComponent, BreadcrumbItem,
 } from '@khalilrebhiitec/daf360';
 import { NotificationEventTypeWithRule } from './notification-routing.model';
 import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
-import { RhSearchBarComponent } from '../../../shared/search-bar.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 
 /** What each event-type column sorts on. "Canaux" sorts on how many channels are on. */
 const EVENT_TYPE_SORT: Record<string, (t: NotificationEventTypeWithRule) => string | number | null> = {
@@ -23,9 +22,9 @@ const EVENT_TYPE_SORT: Record<string, (t: NotificationEventTypeWithRule) => stri
   selector: 'app-notification-routing',
   standalone: true,
   imports: [
-    FormsModule, RoutingRuleEditorComponent, ButtonComponent,
+    FormsModule, RoutingRuleEditorComponent,
     StatusBadgeComponent, PaginationComponent, PageComponent, PageHeaderComponent,
-    DataTableComponent, DafCellDirective, RhSearchBarComponent,
+    DataTableComponent, DafCellDirective, SearchToolbarComponent,
     TranslatePipe,
   ],
   templateUrl: './notification-routing.component.html',
@@ -47,7 +46,6 @@ export class NotificationRoutingComponent implements OnInit {
   loadingTypes = signal(true);
   error = signal<string | null>(null);
   searchQuery = signal('');
-  mobileSearchOpen = signal(false);
 
   currentPage = signal(0);
   pageSize = signal(10);
@@ -60,14 +58,16 @@ export class NotificationRoutingComponent implements OnInit {
     effect(() => this.detailOpen.emit(!!this.selectedType()));
   }
 
+  /** Searches what the row shows: module, event label and the translated channel badges. */
   filteredTypes = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    return this.eventTypes().filter(
-      (t) =>
-        !q ||
-        t.labelFr.toLowerCase().includes(q) ||
-        t.module.toLowerCase().includes(q)
-    );
+    this.translate.currentLang();
+    const tr = (k: string) => this.translate.instant(k);
+    return searchRows(this.eventTypes(), this.searchQuery(), t => [
+      t.module, t.labelFr,
+      t.sendInapp ? tr('ADMIN.notifications.badgeInapp') : null,
+      t.sendEmail ? tr('ADMIN.notifications.badgeEmail') : null,
+      t.isSystem  ? tr('ADMIN.notifications.badgeSystem') : null,
+    ]);
   });
 
   readonly totalElements = computed(() => this.filteredTypes().length);
@@ -135,7 +135,9 @@ export class NotificationRoutingComponent implements OnInit {
     });
   }
 
+  /** New search → back to the first page (else one can sit on an empty page). */
   onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
     this.searchQuery.set(value);
     this.currentPage.set(0);
   }
