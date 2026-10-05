@@ -2472,7 +2472,8 @@
         "documentTemplates": "Maquettes documents",
         "sharepoint": "SharePoint",
         "absenceTypes": "Types de congés",
-        "paysCalendar": "Calendrier des entités"
+        "paysCalendar": "Calendrier des entités",
+        "autorisationRules": "Autorisations"
       }
     },
     "paysCalendar": {
@@ -3517,6 +3518,43 @@
       "ccCount": "CC ({{count}})",
       "emailBodyLabel": "Corps de l'email",
       "loadingTest": "Chargement du test…"
+    },
+    "autorisationRules": {
+      "intro": "Combien de temps un collaborateur peut s'absenter sur autorisation, par entité. Un champ vide signifie « aucune limite » — zéro refuserait toute demande.",
+      "colCountry": "Entité",
+      "colEmployees": "Collaborateurs",
+      "colDaily": "Plafond / jour",
+      "colMonthly": "Plafond / mois",
+      "colPerDay": "Max par jour",
+      "colNotice": "Prévenance",
+      "colJustif": "Justificatif",
+      "noLimit": "Aucune limite",
+      "yes": "Requis",
+      "no": "Non",
+      "edit": "Modifier les règles",
+      "modalTitle": "Règles d'autorisation",
+      "employees": "{{n}} collaborateur(s)",
+      "daily": "Plafond journalier",
+      "monthly": "Plafond mensuel",
+      "modalIntro": "Ces règles s'appliquent à chaque demande d'autorisation des collaborateurs de l'entité, au dépôt comme à la validation. Les collaborateurs les voient dans leur formulaire.",
+      "dailyHint": "Une demande ne peut pas dépasser {{cap}} sur une journée.",
+      "monthlyHint": "Le total validé sur un mois ne peut pas dépasser {{cap}}.",
+      "zeroCap": "Un plafond de 0 refuserait toute demande. Choisissez une durée ou effacez pour « aucune limite ».",
+      "setNoLimit": "Aucune limite",
+      "ok": "Valider",
+      "perDay": "Autorisations max par jour",
+      "notice": "Délai de prévenance (jours)",
+      "justif": "Justificatif obligatoire",
+      "emptyMeansNoLimit": "Laissez vide pour « aucune limite ».",
+      "noticeHint": "Nombre de jours ouvrés avant la date. Vide ou 0 : aucune contrainte.",
+      "justifHint": "Le collaborateur devra joindre un document à sa demande.",
+      "monthlyBelowDaily": "Le plafond mensuel est inférieur au plafond journalier : le plafond journalier ne serait jamais atteignable.",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saved": "Règles enregistrées.",
+      "empty": "Aucune entité à configurer.",
+      "errLoad": "Impossible de charger les règles.",
+      "errSave": "Les règles n'ont pas pu être enregistrées."
     }
   },
   "REQUESTS": {
@@ -3968,7 +4006,12 @@
     "CONGES_TEAM": "Mon équipe",
     "CONGES_GLOBAL": "Tous les congés",
     "CONGES_MODIF_MANAGER": "Modifications à valider",
-    "CONGES_MODIF_HR": "Modifications — RH"
+    "CONGES_MODIF_HR": "Modifications — RH",
+    "AUTORISATIONS": "Autorisations",
+    "AUTORISATIONS_QUEUE": "À traiter",
+    "AUTORISATIONS_MINE": "Mes autorisations",
+    "AUTORISATIONS_TEAM": "Mon équipe",
+    "AUTORISATIONS_GLOBAL": "Toutes"
   },
   "MISSIONS": {
     "COMMON": {
@@ -4523,5 +4566,86 @@
       "ERR_LOAD": "Impossible de charger les demandes de modification.",
       "ERR_DECIDE": "La décision n'a pas pu être enregistrée."
     }
+  },
+  "AUTORISATIONS": {
+    "TITLE_QUEUE": "Autorisations à traiter",
+    "SUB_QUEUE": "Les demandes d'absence courte qui attendent votre décision.",
+    "TITLE_MINE": "Mes autorisations",
+    "SUB_MINE": "Vos demandes et ce qu’elles sont devenues.",
+    "TITLE_TEAM": "Autorisations de mon équipe",
+    "SUB_TEAM": "Tout votre périmètre hiérarchique, quel que soit le pays.",
+    "TITLE_GLOBAL": "Toutes les autorisations",
+    "SUB_GLOBAL": "Sur votre périmètre pays.",
+    "KPI": {
+      "TOTAL": "Total",
+      "PENDING": "En attente",
+      "APPROVED": "Validées",
+      "REFUSED": "Refusées"
+    },
+    "COL": {
+      "EMPLOYEE": "Collaborateur",
+      "DATE": "Date",
+      "SLOT": "Créneau",
+      "REASON": "Motif",
+      "STATE": "État",
+      "MOTIF": "Motif du refus"
+    },
+    "ETAT": {
+      "EN_ATTENTE": "En attente",
+      "VALIDE": "Validée",
+      "REFUSE": "Refusée",
+      "ARCHIVE": "Archivée"
+    },
+    "FILTER": {
+      "TITLE": "Filtrer",
+      "APPLY": "Appliquer",
+      "RESET": "Réinitialiser",
+      "ALL": "Toutes",
+      "FROM": "Du",
+      "TO": "Au"
+    },
+    "SEARCH": "Rechercher un collaborateur, un motif…",
+    "EMPTY": "Aucune autorisation.",
+    "SETTLED": "Régularisation",
+    "CONSULT": "Consulter",
+    "APPROVE": "Valider",
+    "REFUSE": "Refuser",
+    "WITHDRAW": "Retirer",
+    "ARCHIVE": "Archiver",
+    "CANCEL": "Annuler",
+    "CONFIRM": "Confirmer",
+    "CLOSE": "Fermer",
+    "REASON": "Motif du collaborateur",
+    "MOTIF_REFUS": "Motif du refus",
+    "MOTIF_ANNULATION": "Motif d'annulation",
+    "MOTIF_REQUIRED": "Un motif est requis.",
+    "REFUSE_INTRO": "Le motif sera visible par le collaborateur.",
+    "DETAIL_TITLE": "Demande d'autorisation",
+    "DETAIL_SUB": "Le créneau demandé, son état et son historique.",
+    "DECIDED_BY": "Décidée par",
+    "APPROVER": "Responsable",
+    "DURATION": "Durée",
+    "FILED_ON": "Déposée le",
+    "FILED_BY": "saisie par",
+    "SETTLED_HINT": "Régularisation : saisie par un tiers pour le compte du collaborateur.",
+    "AWAITING": "En attente de la décision du responsable.",
+    "MOTIF_PH": "Expliquez brièvement…",
+    "APPROVE_TITLE": "Valider l'autorisation",
+    "APPROVE_SUB": "Demande de {{employee}}",
+    "APPROVE_INTRO": "En validant, {{minutes}} seront décomptées du quota mensuel du collaborateur.",
+    "REFUSE_TITLE": "Refuser l'autorisation",
+    "REFUSE_SUB": "Demande de {{employee}}",
+    "WITHDRAW_TITLE": "Retirer ma demande",
+    "WITHDRAW_SUB": "Votre responsable n'aura plus cette demande à traiter.",
+    "WITHDRAW_INTRO": "La demande quitte la file de votre responsable. Elle n'était pas encore validée : rien n'a été décompté de votre quota.",
+    "ARCHIVE_TITLE": "Archiver l'autorisation",
+    "ARCHIVE_SUB": "Demande de {{employee}}",
+    "ARCHIVE_INTRO": "L'autorisation sort des demandes en cours. Elle reste consultable avec le filtre État « Archivée ». Cette action ne peut pas être annulée depuis cet écran.",
+    "APPROVED_OK": "Autorisation validée.",
+    "REFUSED_OK": "Autorisation refusée.",
+    "WITHDRAWN_OK": "Demande retirée.",
+    "ARCHIVED_OK": "Autorisation archivée.",
+    "ERR_LOAD": "Impossible de charger les autorisations.",
+    "ERR_ACTION": "L'opération n'a pas pu être effectuée."
   }
 }

@@ -2472,7 +2472,8 @@
         "documentTemplates": "Document templates",
         "sharepoint": "SharePoint",
         "absenceTypes": "Leave types",
-        "paysCalendar": "Entity calendar"
+        "paysCalendar": "Entity calendar",
+        "autorisationRules": "Permissions"
       }
     },
     "paysCalendar": {
@@ -3517,6 +3518,43 @@
       "ccCount": "CC ({{count}})",
       "emailBodyLabel": "Email body",
       "loadingTest": "Loading test…"
+    },
+    "autorisationRules": {
+      "intro": "How long an employee may be away on a permission, per entity. An empty field means “no limit” — zero would refuse every request.",
+      "colCountry": "Entity",
+      "colEmployees": "Employees",
+      "colDaily": "Daily cap",
+      "colMonthly": "Monthly cap",
+      "colPerDay": "Max per day",
+      "colNotice": "Notice",
+      "colJustif": "Document",
+      "noLimit": "No limit",
+      "yes": "Required",
+      "no": "No",
+      "edit": "Edit rules",
+      "modalTitle": "Permission rules",
+      "employees": "{{n}} employee(s)",
+      "daily": "Daily cap",
+      "monthly": "Monthly cap",
+      "modalIntro": "These rules apply to every permission request from this entity’s employees, both when filed and when approved. Employees see them in their form.",
+      "dailyHint": "A request cannot exceed {{cap}} in one day.",
+      "monthlyHint": "The total approved in a month cannot exceed {{cap}}.",
+      "zeroCap": "A cap of 0 would refuse every request. Pick a duration, or clear it for “no limit”.",
+      "setNoLimit": "No limit",
+      "ok": "OK",
+      "perDay": "Max permissions per day",
+      "notice": "Advance notice (days)",
+      "justif": "Supporting document required",
+      "emptyMeansNoLimit": "Leave empty for “no limit”.",
+      "noticeHint": "Working days before the date. Empty or 0: no constraint.",
+      "justifHint": "The employee will have to attach a document.",
+      "monthlyBelowDaily": "The monthly cap is below the daily one, so the daily cap could never be reached.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saved": "Rules saved.",
+      "empty": "No entity to configure.",
+      "errLoad": "Could not load the rules.",
+      "errSave": "The rules could not be saved."
     }
   },
   "REQUESTS": {
@@ -3968,7 +4006,12 @@
     "CONGES_TEAM": "My team",
     "CONGES_GLOBAL": "All leave",
     "CONGES_MODIF_MANAGER": "Changes to approve",
-    "CONGES_MODIF_HR": "Changes — HR"
+    "CONGES_MODIF_HR": "Changes — HR",
+    "AUTORISATIONS": "Permissions",
+    "AUTORISATIONS_QUEUE": "To review",
+    "AUTORISATIONS_MINE": "Mine",
+    "AUTORISATIONS_TEAM": "My team",
+    "AUTORISATIONS_GLOBAL": "All"
   },
   "MISSIONS": {
     "COMMON": {
@@ -4523,5 +4566,86 @@
       "ERR_LOAD": "Could not load the change requests.",
       "ERR_DECIDE": "The decision could not be saved."
     }
+  },
+  "AUTORISATIONS": {
+    "TITLE_QUEUE": "Permissions to review",
+    "SUB_QUEUE": "Short time-off requests awaiting your decision.",
+    "TITLE_MINE": "My permissions",
+    "SUB_MINE": "Your requests and what became of them.",
+    "TITLE_TEAM": "My team’s permissions",
+    "SUB_TEAM": "Your whole reporting line, whatever the country.",
+    "TITLE_GLOBAL": "All permissions",
+    "SUB_GLOBAL": "Within your country scope.",
+    "KPI": {
+      "TOTAL": "Total",
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REFUSED": "Rejected"
+    },
+    "COL": {
+      "EMPLOYEE": "Employee",
+      "DATE": "Date",
+      "SLOT": "Slot",
+      "REASON": "Reason",
+      "STATE": "Status",
+      "MOTIF": "Reason for refusal"
+    },
+    "ETAT": {
+      "EN_ATTENTE": "Pending",
+      "VALIDE": "Approved",
+      "REFUSE": "Rejected",
+      "ARCHIVE": "Archived"
+    },
+    "FILTER": {
+      "TITLE": "Filter",
+      "APPLY": "Apply",
+      "RESET": "Reset",
+      "ALL": "All",
+      "FROM": "From",
+      "TO": "To"
+    },
+    "SEARCH": "Search an employee, a reason…",
+    "EMPTY": "No permissions.",
+    "SETTLED": "Back-filed",
+    "CONSULT": "View",
+    "APPROVE": "Approve",
+    "REFUSE": "Refuse",
+    "WITHDRAW": "Withdraw",
+    "ARCHIVE": "Archive",
+    "CANCEL": "Cancel",
+    "CONFIRM": "Confirm",
+    "CLOSE": "Close",
+    "REASON": "Employee’s reason",
+    "MOTIF_REFUS": "Reason for refusal",
+    "MOTIF_ANNULATION": "Cancellation reason",
+    "MOTIF_REQUIRED": "A reason is required.",
+    "REFUSE_INTRO": "The reason will be shown to the employee.",
+    "DETAIL_TITLE": "Time-off permission",
+    "DETAIL_SUB": "The requested slot, its state and its history.",
+    "DECIDED_BY": "Decided by",
+    "APPROVER": "Manager",
+    "DURATION": "Duration",
+    "FILED_ON": "Filed on",
+    "FILED_BY": "entered by",
+    "SETTLED_HINT": "Back-filed: entered by someone else on the employee’s behalf.",
+    "AWAITING": "Waiting for the manager’s decision.",
+    "MOTIF_PH": "Explain briefly…",
+    "APPROVE_TITLE": "Approve the permission",
+    "APPROVE_SUB": "Request from {{employee}}",
+    "APPROVE_INTRO": "Approving deducts {{minutes}} from the employee’s monthly quota.",
+    "REFUSE_TITLE": "Refuse the permission",
+    "REFUSE_SUB": "Request from {{employee}}",
+    "WITHDRAW_TITLE": "Withdraw my request",
+    "WITHDRAW_SUB": "Your manager will no longer have this request to handle.",
+    "WITHDRAW_INTRO": "The request leaves your manager’s queue. It was not approved yet, so nothing was deducted from your quota.",
+    "ARCHIVE_TITLE": "Archive the permission",
+    "ARCHIVE_SUB": "Request from {{employee}}",
+    "ARCHIVE_INTRO": "The permission leaves the active requests. It stays visible with the State filter set to “Archived”. This cannot be undone from this screen.",
+    "APPROVED_OK": "Permission approved.",
+    "REFUSED_OK": "Permission refused.",
+    "WITHDRAWN_OK": "Request withdrawn.",
+    "ARCHIVED_OK": "Permission archived.",
+    "ERR_LOAD": "Could not load the permissions.",
+    "ERR_ACTION": "The action could not be completed."
   }
 }

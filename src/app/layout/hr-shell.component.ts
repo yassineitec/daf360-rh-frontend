@@ -194,6 +194,45 @@ const APP_NAV_DEFS: AppNavDef[] = [
     ],
   },
   {
+    // Autorisations — short paid absences in minutes. Its own group beside Congés: the two
+    // share a workflow and no model, and a child of Congés would imply a kind of congé.
+    id: 'autorisations',
+    labelKey: 'NAV.AUTORISATIONS',
+    icon: 'schedule',
+    permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
+                  'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
+    children: [
+      {
+        id: 'autorisations-queue',
+        labelKey: 'NAV.AUTORISATIONS_QUEUE',
+        icon: 'inbox',
+        route: 'autorisations/queue',
+        permissions: ['GET_LEAVES', 'RESPONSE_LEAVE'],
+      },
+      {
+        id: 'autorisations-mine',
+        labelKey: 'NAV.AUTORISATIONS_MINE',
+        icon: 'person',
+        route: 'autorisations/mine',
+        permissions: ['ADD_LEAVE', 'GET_LEAVES'],
+      },
+      {
+        id: 'autorisations-team',
+        labelKey: 'NAV.AUTORISATIONS_TEAM',
+        icon: 'groups',
+        route: 'autorisations/team',
+        permissions: ['GET_EMPLOYEES_LEAVES'],
+      },
+      {
+        id: 'autorisations-global',
+        labelKey: 'NAV.AUTORISATIONS_GLOBAL',
+        icon: 'public',
+        route: 'autorisations/global',
+        permissions: ['GET_GLOBAL_LEAVES'],
+      },
+    ],
+  },
+  {
     id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox',
     permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'],
     children: [

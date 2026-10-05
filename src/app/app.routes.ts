@@ -174,6 +174,22 @@ export const routes: Routes = [
           import('./modules/conges/conges.routes').then(m => m.CONGES_ROUTES),
       },
       {
+        /**
+         * Autorisations — short paid absences in minutes. Beside congés rather than inside
+         * them: the two share a workflow and no model, and nesting would imply a type of
+         * congé that debits no balance and counts no days.
+         *
+         * The parent carries the UNION of its children's codes: the guard runs first, so a
+         * code on a child and not here bounces its own audience before the child guard runs.
+         */
+        path: 'autorisations',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
+                              'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        loadChildren: () =>
+          import('./modules/autorisations/autorisations.routes').then(m => m.AUTORISATIONS_ROUTES),
+      },
+      {
         path: 'requests-history',
         canActivate: [permissionGuard],
         data: { permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'] },

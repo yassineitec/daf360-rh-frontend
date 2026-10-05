@@ -9,6 +9,7 @@ import { UserStore }   from '../../core/user.store';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { AdminTab }    from './models/admin.model';
+import { AutorisationRulesAdminComponent } from './autorisation-rules-admin.component';
 import { RolesAdminComponent }        from './roles-admin.component';
 import { UsersAdminComponent }        from './users/users-admin.component';
 import { ParametersAdminComponent }   from './parameters-admin.component';
@@ -119,6 +120,9 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // setting it sits beside — configuring an entity's hours and configuring which days it
   // works at all are the same job.
   { key: 'pays-calendar',         labelKey: 'ADMIN.shell.tabs.paysCalendar',        permission: 'ADMIN_REGIMES',              icon: 'calendar_month',        tone: 'warning' },
+  // Autorisation quotas per entity. Same gate as the calendar beside it — both decide what
+  // an entity's working rules ARE, rather than acting on one person's request.
+  { key: 'autorisation-rules',    labelKey: 'ADMIN.shell.tabs.autorisationRules',   permission: 'ADMIN_REGIMES',              icon: 'schedule',              tone: 'warning' },
 ];
 
 @Component({
@@ -145,6 +149,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     SharePointAdminComponent,
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
+    AutorisationRulesAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -216,6 +221,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
             <!-- No [paysId]: this screen configures every entity, not the caller's own. -->
             @if (activeTab() === 'pays-calendar')         { <app-pays-calendar-admin /> }
+            <!-- No [paysId]: this screen configures every entity in the caller's perimeter. -->
+            @if (activeTab() === 'autorisation-rules')    { <app-autorisation-rules-admin /> }
           </daf-page>
         </div>
       }
