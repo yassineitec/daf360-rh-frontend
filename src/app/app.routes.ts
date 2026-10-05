@@ -190,6 +190,19 @@ export const routes: Routes = [
           import('./modules/autorisations/autorisations.routes').then(m => m.AUTORISATIONS_ROUTES),
       },
       {
+        /**
+         * Télétravail — a day or half a day of remote work. Its own tree beside congés and
+         * autorisations, for the same reason: a shared workflow, not a shared model.
+         * The parent carries the UNION of its children's codes (see autorisations above).
+         */
+        path: 'teletravail',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
+                              'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        loadChildren: () =>
+          import('./modules/teletravail/teletravail.routes').then(m => m.TELETRAVAIL_ROUTES),
+      },
+      {
         path: 'requests-history',
         canActivate: [permissionGuard],
         data: { permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'] },

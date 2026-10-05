@@ -2473,7 +2473,8 @@
         "sharepoint": "SharePoint",
         "absenceTypes": "Types de congés",
         "paysCalendar": "Calendrier des entités",
-        "autorisationRules": "Autorisations"
+        "autorisationRules": "Autorisations",
+        "teletravailRules": "Télétravail"
       }
     },
     "paysCalendar": {
@@ -3555,6 +3556,52 @@
       "empty": "Aucune entité à configurer.",
       "errLoad": "Impossible de charger les règles.",
       "errSave": "Les règles n'ont pas pu être enregistrées."
+    },
+    "teletravailRules": {
+      "intro": "Ce qu'un collaborateur peut demander en télétravail, par entité : la durée (journée, demi-journée ou les deux), les plafonds, la prévenance et l'usage du solde. Un plafond vide signifie « aucune limite ».",
+      "colCountry": "Entité",
+      "colEmployees": "Collaborateurs",
+      "colDurations": "Durées autorisées",
+      "colWeek": "Max / semaine",
+      "colMonth": "Max / mois",
+      "colNotice": "Prévenance",
+      "colBalance": "Décompte du solde",
+      "noLimit": "Aucune limite",
+      "yes": "Oui",
+      "no": "Non",
+      "edit": "Modifier les règles",
+      "modalTitle": "Règles de télétravail",
+      "modalIntro": "Ces règles s'appliquent à chaque demande des collaborateurs de l'entité, au dépôt comme à la validation. Les collaborateurs les voient dans leur formulaire.",
+      "employees": "{{n}} collaborateur(s)",
+      "durationsLabel": "Durées que les collaborateurs peuvent demander",
+      "durations": {
+        "BOTH": "Journée entière ou demi-journée",
+        "BOTH_HINT": "Le collaborateur choisit : journée, matin ou après-midi.",
+        "FULL_DAY": "Journée entière uniquement",
+        "FULL_DAY_HINT": "Comme dans l'ancien timesheet : une demande = une journée.",
+        "HALF_DAY": "Demi-journée uniquement",
+        "HALF_DAY_HINT": "Seulement le matin ou l'après-midi, jamais une journée complète."
+      },
+      "perWeek": "Maximum par semaine",
+      "perMonth": "Maximum par mois",
+      "dayUnit": "j",
+      "daysValue": "{{n}} j",
+      "capHint": "Pas plus de {{n}} de télétravail, demandes en attente comprises.",
+      "emptyMeansNoLimit": "Laissez vide pour « aucune limite ». Par pas d'une demi-journée (ex. 2,5).",
+      "errZero": "Une limite doit être supérieure à zéro. Videz le champ pour « aucune limite ».",
+      "errHalfSteps": "Par pas d'une demi-journée : 0,5 · 1 · 1,5 · 2…",
+      "errFullDayCap": "Avec des journées entières uniquement, une limite sous 1 jour refuserait toute demande.",
+      "notice": "Délai de prévenance (jours ouvrés)",
+      "noticeHint": "Nombre de jours ouvrés avant la date. Vide ou 0 : aucune contrainte.",
+      "usesBalance": "Décompter le solde de télétravail",
+      "usesBalanceHint": "La validation débite le solde du collaborateur (1 j ou 0,5 j) ; l'archivage le restitue.",
+      "monthBelowWeek": "Le maximum mensuel est inférieur au maximum hebdomadaire : la limite par semaine ne serait jamais atteignable.",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saved": "Règles enregistrées.",
+      "empty": "Aucune entité à configurer.",
+      "errLoad": "Impossible de charger les règles.",
+      "errSave": "Les règles n'ont pas pu être enregistrées."
     }
   },
   "REQUESTS": {
@@ -4011,7 +4058,12 @@
     "AUTORISATIONS_QUEUE": "À traiter",
     "AUTORISATIONS_MINE": "Mes autorisations",
     "AUTORISATIONS_TEAM": "Mon équipe",
-    "AUTORISATIONS_GLOBAL": "Toutes"
+    "AUTORISATIONS_GLOBAL": "Toutes",
+    "TELETRAVAIL": "Télétravail",
+    "TELETRAVAIL_QUEUE": "À traiter",
+    "TELETRAVAIL_MINE": "Mes demandes",
+    "TELETRAVAIL_TEAM": "Mon équipe",
+    "TELETRAVAIL_GLOBAL": "Toutes"
   },
   "MISSIONS": {
     "COMMON": {
@@ -4646,6 +4698,85 @@
     "WITHDRAWN_OK": "Demande retirée.",
     "ARCHIVED_OK": "Autorisation archivée.",
     "ERR_LOAD": "Impossible de charger les autorisations.",
+    "ERR_ACTION": "L'opération n'a pas pu être effectuée."
+  },
+  "TELETRAVAIL": {
+    "TITLE_QUEUE": "Télétravail à traiter",
+    "SUB_QUEUE": "Les demandes de télétravail qui attendent votre décision.",
+    "TITLE_MINE": "Mon télétravail",
+    "SUB_MINE": "Vos demandes et ce qu'elles sont devenues.",
+    "TITLE_TEAM": "Télétravail de mon équipe",
+    "SUB_TEAM": "Tout votre périmètre hiérarchique, quel que soit le pays.",
+    "TITLE_GLOBAL": "Tout le télétravail",
+    "SUB_GLOBAL": "Sur votre périmètre pays.",
+    "KPI": {
+      "TOTAL": "Total",
+      "PENDING": "En attente",
+      "APPROVED": "Validées",
+      "REFUSED": "Refusées"
+    },
+    "COL": {
+      "EMPLOYEE": "Collaborateur",
+      "DATE": "Date",
+      "DURATION": "Durée",
+      "REASON": "Motif",
+      "STATE": "État",
+      "MOTIF": "Motif du refus"
+    },
+    "ETAT": {
+      "EN_ATTENTE": "En attente",
+      "VALIDE": "Validée",
+      "REFUSE": "Refusée",
+      "ARCHIVE": "Archivée"
+    },
+    "FILTER": {
+      "TITLE": "Filtrer",
+      "APPLY": "Appliquer",
+      "RESET": "Réinitialiser",
+      "ALL": "Toutes",
+      "FROM": "Du",
+      "TO": "Au"
+    },
+    "SEARCH": "Rechercher un collaborateur, un motif…",
+    "EMPTY": "Aucune demande de télétravail.",
+    "SETTLED": "Régularisation",
+    "CONSULT": "Consulter",
+    "APPROVE": "Valider",
+    "REFUSE": "Refuser",
+    "WITHDRAW": "Retirer",
+    "ARCHIVE": "Archiver",
+    "CANCEL": "Annuler",
+    "CLOSE": "Fermer",
+    "APPROVER": "Responsable",
+    "DAYS": "Décompte",
+    "REASON": "Motif du collaborateur",
+    "MOTIF_REFUS": "Motif du refus",
+    "MOTIF_ANNULATION": "Motif d'annulation",
+    "MOTIF_PH": "Expliquez brièvement…",
+    "MOTIF_REQUIRED": "Un motif est requis.",
+    "FILED_ON": "Déposée le",
+    "FILED_BY": "saisie par",
+    "SETTLED_HINT": "Régularisation : saisie par un tiers pour le compte du collaborateur.",
+    "AWAITING": "En attente de la décision du responsable.",
+    "DEBITED_HINT": "{{days}} débité(s) du solde de télétravail.",
+    "DETAIL_TITLE": "Demande de télétravail",
+    "DETAIL_SUB": "La journée demandée, son état et son historique.",
+    "REQUEST_OF": "Demande de {{employee}}",
+    "APPROVE_TITLE": "Valider le télétravail",
+    "APPROVE_INTRO": "En validant, {{days}} sera décompté du solde de télétravail du collaborateur, si son entité décompte le solde.",
+    "REFUSE_TITLE": "Refuser le télétravail",
+    "REFUSE_INTRO": "Le motif sera visible par le collaborateur.",
+    "WITHDRAW_TITLE": "Retirer ma demande",
+    "WITHDRAW_SUB": "Votre responsable n'aura plus cette demande à traiter.",
+    "WITHDRAW_INTRO": "La demande quitte la file de votre responsable. Elle n'était pas encore validée : rien n'a été décompté de votre solde.",
+    "ARCHIVE_TITLE": "Archiver le télétravail",
+    "ARCHIVE_INTRO": "La demande sort des demandes en cours. Elle n'avait rien débité : le solde ne change pas. Elle reste consultable avec le filtre État « Archivée ».",
+    "ARCHIVE_INTRO_REFUND": "La demande sort des demandes en cours et {{days}} sera restitué au solde de télétravail du collaborateur. Elle reste consultable avec le filtre État « Archivée ».",
+    "APPROVED_OK": "Télétravail validé.",
+    "REFUSED_OK": "Télétravail refusé.",
+    "WITHDRAWN_OK": "Demande retirée.",
+    "ARCHIVED_OK": "Télétravail archivé.",
+    "ERR_LOAD": "Impossible de charger les demandes de télétravail.",
     "ERR_ACTION": "L'opération n'a pas pu être effectuée."
   }
 }

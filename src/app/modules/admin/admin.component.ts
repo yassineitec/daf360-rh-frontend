@@ -10,6 +10,7 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { AdminTab }    from './models/admin.model';
 import { AutorisationRulesAdminComponent } from './autorisation-rules-admin.component';
+import { TeletravailRulesAdminComponent } from './teletravail-rules-admin.component';
 import { RolesAdminComponent }        from './roles-admin.component';
 import { UsersAdminComponent }        from './users/users-admin.component';
 import { ParametersAdminComponent }   from './parameters-admin.component';
@@ -123,6 +124,9 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // Autorisation quotas per entity. Same gate as the calendar beside it — both decide what
   // an entity's working rules ARE, rather than acting on one person's request.
   { key: 'autorisation-rules',    labelKey: 'ADMIN.shell.tabs.autorisationRules',   permission: 'ADMIN_REGIMES',              icon: 'schedule',              tone: 'warning' },
+  // Télétravail rules per entity — durations (the half-day option), caps, notice, balance.
+  // Same gate as the autorisation rules beside it, for the same reason.
+  { key: 'teletravail-rules',     labelKey: 'ADMIN.shell.tabs.teletravailRules',    permission: 'ADMIN_REGIMES',              icon: 'home_work',             tone: 'warning' },
 ];
 
 @Component({
@@ -150,6 +154,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
     AutorisationRulesAdminComponent,
+    TeletravailRulesAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -223,6 +228,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             @if (activeTab() === 'pays-calendar')         { <app-pays-calendar-admin /> }
             <!-- No [paysId]: this screen configures every entity in the caller's perimeter. -->
             @if (activeTab() === 'autorisation-rules')    { <app-autorisation-rules-admin /> }
+            @if (activeTab() === 'teletravail-rules')     { <app-teletravail-rules-admin /> }
           </daf-page>
         </div>
       }

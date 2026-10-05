@@ -2473,7 +2473,8 @@
         "sharepoint": "SharePoint",
         "absenceTypes": "Leave types",
         "paysCalendar": "Entity calendar",
-        "autorisationRules": "Permissions"
+        "autorisationRules": "Permissions",
+        "teletravailRules": "Remote work"
       }
     },
     "paysCalendar": {
@@ -3555,6 +3556,52 @@
       "empty": "No entity to configure.",
       "errLoad": "Could not load the rules.",
       "errSave": "The rules could not be saved."
+    },
+    "teletravailRules": {
+      "intro": "What an employee may ask for as remote work, per entity: the duration (full day, half day or both), the caps, the notice and whether the balance is used. An empty cap means “no limit”.",
+      "colCountry": "Entity",
+      "colEmployees": "Employees",
+      "colDurations": "Allowed durations",
+      "colWeek": "Max / week",
+      "colMonth": "Max / month",
+      "colNotice": "Notice",
+      "colBalance": "Uses balance",
+      "noLimit": "No limit",
+      "yes": "Yes",
+      "no": "No",
+      "edit": "Edit rules",
+      "modalTitle": "Remote work rules",
+      "modalIntro": "These rules apply to every request from this entity’s employees, both when filed and when approved. Employees see them in their form.",
+      "employees": "{{n}} employee(s)",
+      "durationsLabel": "Durations employees may ask for",
+      "durations": {
+        "BOTH": "Full day or half day",
+        "BOTH_HINT": "The employee chooses: full day, morning or afternoon.",
+        "FULL_DAY": "Full days only",
+        "FULL_DAY_HINT": "As in the old timesheet: one request = one day.",
+        "HALF_DAY": "Half days only",
+        "HALF_DAY_HINT": "Morning or afternoon only, never a whole day."
+      },
+      "perWeek": "Maximum per week",
+      "perMonth": "Maximum per month",
+      "dayUnit": "d",
+      "daysValue": "{{n}} d",
+      "capHint": "No more than {{n}} of remote work, pending requests included.",
+      "emptyMeansNoLimit": "Leave empty for “no limit”. In steps of half a day (e.g. 2.5).",
+      "errZero": "A cap must be above zero. Clear the field for “no limit”.",
+      "errHalfSteps": "In steps of half a day: 0.5 · 1 · 1.5 · 2…",
+      "errFullDayCap": "With full days only, a cap under 1 day would refuse every request.",
+      "notice": "Advance notice (working days)",
+      "noticeHint": "Working days before the date. Empty or 0: no constraint.",
+      "usesBalance": "Deduct from the remote-work balance",
+      "usesBalanceHint": "Approval debits the employee’s balance (1 d or 0.5 d); archiving gives it back.",
+      "monthBelowWeek": "The monthly maximum is below the weekly one, so the weekly cap could never be reached.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saved": "Rules saved.",
+      "empty": "No entity to configure.",
+      "errLoad": "Could not load the rules.",
+      "errSave": "The rules could not be saved."
     }
   },
   "REQUESTS": {
@@ -4011,7 +4058,12 @@
     "AUTORISATIONS_QUEUE": "To review",
     "AUTORISATIONS_MINE": "Mine",
     "AUTORISATIONS_TEAM": "My team",
-    "AUTORISATIONS_GLOBAL": "All"
+    "AUTORISATIONS_GLOBAL": "All",
+    "TELETRAVAIL": "Remote work",
+    "TELETRAVAIL_QUEUE": "To handle",
+    "TELETRAVAIL_MINE": "My requests",
+    "TELETRAVAIL_TEAM": "My team",
+    "TELETRAVAIL_GLOBAL": "All"
   },
   "MISSIONS": {
     "COMMON": {
@@ -4646,6 +4698,85 @@
     "WITHDRAWN_OK": "Request withdrawn.",
     "ARCHIVED_OK": "Permission archived.",
     "ERR_LOAD": "Could not load the permissions.",
+    "ERR_ACTION": "The action could not be completed."
+  },
+  "TELETRAVAIL": {
+    "TITLE_QUEUE": "Remote work to handle",
+    "SUB_QUEUE": "Remote-work requests waiting for your decision.",
+    "TITLE_MINE": "My remote work",
+    "SUB_MINE": "Your requests and what became of them.",
+    "TITLE_TEAM": "My team’s remote work",
+    "SUB_TEAM": "Your whole reporting line, whatever the country.",
+    "TITLE_GLOBAL": "All remote work",
+    "SUB_GLOBAL": "Within your country scope.",
+    "KPI": {
+      "TOTAL": "Total",
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REFUSED": "Refused"
+    },
+    "COL": {
+      "EMPLOYEE": "Employee",
+      "DATE": "Date",
+      "DURATION": "Duration",
+      "REASON": "Reason",
+      "STATE": "State",
+      "MOTIF": "Reason for refusal"
+    },
+    "ETAT": {
+      "EN_ATTENTE": "Pending",
+      "VALIDE": "Approved",
+      "REFUSE": "Refused",
+      "ARCHIVE": "Archived"
+    },
+    "FILTER": {
+      "TITLE": "Filter",
+      "APPLY": "Apply",
+      "RESET": "Reset",
+      "ALL": "All",
+      "FROM": "From",
+      "TO": "To"
+    },
+    "SEARCH": "Search an employee, a reason…",
+    "EMPTY": "No remote-work requests.",
+    "SETTLED": "Back-filed",
+    "CONSULT": "View",
+    "APPROVE": "Approve",
+    "REFUSE": "Refuse",
+    "WITHDRAW": "Withdraw",
+    "ARCHIVE": "Archive",
+    "CANCEL": "Cancel",
+    "CLOSE": "Close",
+    "APPROVER": "Manager",
+    "DAYS": "Counts as",
+    "REASON": "Employee’s reason",
+    "MOTIF_REFUS": "Reason for refusal",
+    "MOTIF_ANNULATION": "Cancellation reason",
+    "MOTIF_PH": "Explain briefly…",
+    "MOTIF_REQUIRED": "A reason is required.",
+    "FILED_ON": "Filed on",
+    "FILED_BY": "entered by",
+    "SETTLED_HINT": "Back-filed: entered by someone else on the employee’s behalf.",
+    "AWAITING": "Waiting for the manager’s decision.",
+    "DEBITED_HINT": "{{days}} debited from the remote-work balance.",
+    "DETAIL_TITLE": "Remote-work request",
+    "DETAIL_SUB": "The requested day, its state and its history.",
+    "REQUEST_OF": "Request from {{employee}}",
+    "APPROVE_TITLE": "Approve remote work",
+    "APPROVE_INTRO": "Approving deducts {{days}} from the employee’s remote-work balance, if their entity uses the balance.",
+    "REFUSE_TITLE": "Refuse remote work",
+    "REFUSE_INTRO": "The reason will be shown to the employee.",
+    "WITHDRAW_TITLE": "Withdraw my request",
+    "WITHDRAW_SUB": "Your manager will no longer have this request to handle.",
+    "WITHDRAW_INTRO": "The request leaves your manager’s queue. It was not approved yet, so nothing was deducted from your balance.",
+    "ARCHIVE_TITLE": "Archive remote work",
+    "ARCHIVE_INTRO": "The request leaves the active requests. It had debited nothing, so the balance does not change. It stays visible with the State filter set to “Archived”.",
+    "ARCHIVE_INTRO_REFUND": "The request leaves the active requests and {{days}} goes back to the employee’s remote-work balance. It stays visible with the State filter set to “Archived”.",
+    "APPROVED_OK": "Remote work approved.",
+    "REFUSED_OK": "Remote work refused.",
+    "WITHDRAWN_OK": "Request withdrawn.",
+    "ARCHIVED_OK": "Remote work archived.",
+    "ERR_LOAD": "Could not load the remote-work requests.",
     "ERR_ACTION": "The action could not be completed."
   }
 }

@@ -233,6 +233,44 @@ const APP_NAV_DEFS: AppNavDef[] = [
     ],
   },
   {
+    // Télétravail — a day or half a day of remote work. Its own group, like autorisations.
+    id: 'teletravail',
+    labelKey: 'NAV.TELETRAVAIL',
+    icon: 'home_work',
+    permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
+                  'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
+    children: [
+      {
+        id: 'teletravail-queue',
+        labelKey: 'NAV.TELETRAVAIL_QUEUE',
+        icon: 'inbox',
+        route: 'teletravail/queue',
+        permissions: ['GET_LEAVES', 'RESPONSE_LEAVE'],
+      },
+      {
+        id: 'teletravail-mine',
+        labelKey: 'NAV.TELETRAVAIL_MINE',
+        icon: 'person',
+        route: 'teletravail/mine',
+        permissions: ['ADD_LEAVE', 'GET_LEAVES'],
+      },
+      {
+        id: 'teletravail-team',
+        labelKey: 'NAV.TELETRAVAIL_TEAM',
+        icon: 'groups',
+        route: 'teletravail/team',
+        permissions: ['GET_EMPLOYEES_LEAVES'],
+      },
+      {
+        id: 'teletravail-global',
+        labelKey: 'NAV.TELETRAVAIL_GLOBAL',
+        icon: 'public',
+        route: 'teletravail/global',
+        permissions: ['GET_GLOBAL_LEAVES'],
+      },
+    ],
+  },
+  {
     id: 'requests', labelKey: 'NAV.REQUESTS', icon: 'inbox',
     permissions: ['HR_UPDATE_PROFILE', 'HR_ADMIN_ROLES'],
     children: [
