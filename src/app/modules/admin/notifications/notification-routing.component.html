@@ -68,7 +68,9 @@
     [columns]="columns()"
     [rows]="rows()"
     [config]="tableConfig()"
-    (rowClick)="selectType($event['_source'])">
+    (rowClick)="selectType($event['_source'])"
+    (sortChange)="onSortChange($event.key, $event.dir)"
+    (resetClick)="onSortChange('', null)">
 
     <ng-template dafCell="badges" let-row>
       <div class="nr-badges">

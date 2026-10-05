@@ -75,6 +75,8 @@
       [loading]="loading()"
       [skeletonRows]="pageSize()"
       [emptyMessage]="emptyMessage()"
+      [sort]="sort()"
+      (sortChange)="onSortChange($event)"
       (open)="openDetail($event)"
       (act)="onCardAction($event)" />
   }

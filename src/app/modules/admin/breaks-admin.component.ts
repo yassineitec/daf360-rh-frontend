@@ -20,6 +20,7 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { UserStore } from '../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { rankIn } from '../../shared/table-sort.utils';
 
 type BreakTab = 'templates' | 'legal-rules';
 
@@ -309,23 +310,49 @@ export class BreaksAdminComponent implements OnChanges {
     return this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
   });
 
+  /**
+   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the break
+   * list is not paginated — every template of the selected regime is already a row — so the
+   * library's own client-side sort orders the whole set, through `sortAccessor`s on the raw
+   * values (the cells hold formatted text like "≥ 6h" or "10:00 – 10:15").
+   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const b = (row: TableRow) => row['_source'] as BreakTemplateDto;
     return [
-      { key: 'labelFr', label: this.translate.instant('ADMIN.regimes.breaks.columns.label') },
-      { key: 'deductionType', label: this.translate.instant('ADMIN.regimes.breaks.columns.type') },
-      { key: 'durationMin', label: this.translate.instant('ADMIN.regimes.breaks.columns.duration') },
-      { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.breaks.columns.days') },
-      { key: 'schedule', label: this.translate.instant('ADMIN.regimes.breaks.columns.schedule') },
-      { key: 'trigger', label: this.translate.instant('ADMIN.regimes.breaks.columns.trigger') },
-      { key: 'statusCode', label: this.translate.instant('ADMIN.regimes.breaks.columns.statusCode') },
+      { key: 'labelFr', label: this.translate.instant('ADMIN.regimes.breaks.columns.label'), sortable: true },
+      // Most binding first: mandatory → automatic → optional.
+      { key: 'deductionType', label: this.translate.instant('ADMIN.regimes.breaks.columns.type'), sortable: true,
+        sortAccessor: (row) => rankIn(['MANDATORY', 'AUTO', 'OPTIONAL'], b(row).deductionType) },
+      { key: 'durationMin', label: this.translate.instant('ADMIN.regimes.breaks.columns.duration'), sortable: true,
+        sortAccessor: (row) => b(row).durationMin ?? null },
+      { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.breaks.columns.days'), sortable: true,
+        sortAccessor: (row) => rankIn(['ALL', 'WEEKDAYS', 'WEEKEND'], b(row).appliesToDays) ?? b(row).appliesToDays },
+      // The start time ("10:00"): HH:mm sorts correctly as text. No fixed time → last.
+      { key: 'schedule', label: this.translate.instant('ADMIN.regimes.breaks.columns.schedule'), sortable: true,
+        sortAccessor: (row) => b(row).breakTimeStart || null },
+      { key: 'trigger', label: this.translate.instant('ADMIN.regimes.breaks.columns.trigger'), sortable: true,
+        sortAccessor: (row) => b(row).minWorkHoursTrigger ?? null },
+      { key: 'statusCode', label: this.translate.instant('ADMIN.regimes.breaks.columns.statusCode'), sortable: true,
+        sortAccessor: (row) => (b(row).statusCode ? this.statusLabel(b(row).statusCode) : null) },
     ];
   });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as BreakTemplateDto).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       actions: [{
         id: 'delete', icon: 'delete', variant: 'danger',
         tooltip: this.translate.instant('ADMIN.regimes.common.delete'),

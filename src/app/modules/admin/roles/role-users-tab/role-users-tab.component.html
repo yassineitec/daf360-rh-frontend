@@ -83,7 +83,9 @@
   } @else if (filteredUsers().length === 0 && !loading()) {
     <p class="rut-no-results">{{ 'ADMIN.roles.users.NO_RESULTS' | translate:{ query: localSearch() } }}</p>
   } @else {
-    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()" />
+    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+                    (sortChange)="onSortChange($event.key, $event.dir)"
+                    (resetClick)="onSortChange('', null)" />
 
     <!-- Count + Pagination -->
     <div class="rut-footer">

@@ -19,7 +19,7 @@ import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
 import { RecruitmentDemandDetail, RecruitmentDemandStatus } from './recruitment-demand.model';
 
-/** Same traffic-light mapping used on /rh/recruitment-demands and its validation queue. */
+/** Same traffic-light mapping used on /rh/requests-history and its validation queue. */
 const STATUS_VARIANT: Record<RecruitmentDemandStatus, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
   EN_ATTENTE: 'warning',
   APPROUVEE:  'success',
@@ -38,7 +38,7 @@ const STATUS_ACCENT: Record<RecruitmentDemandStatus, CardAccent> = {
   CLOTUREE:   'teal',
 };
 
-/** Same icon language as the status KPI tiles on /rh/recruitment-demands, reused here for
+/** Same icon language as the status KPI tiles on /rh/requests-history, reused here for
  *  the "Décision" card so a reviewed demand reads the same way everywhere it appears. */
 const STATUS_ICON: Record<RecruitmentDemandStatus, string> = {
   EN_ATTENTE: 'hourglass_empty',

@@ -64,7 +64,9 @@
 
 <!-- Table -->
 <div class="table-scroll">
-<daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()">
+<daf-data-table [columns]="columns" [rows]="rows()" [config]="tableConfig()"
+                (sortChange)="onSortChange($event.key, $event.dir)"
+                (resetClick)="onSortChange('', null)">
 
   <ng-template dafCell="regime" let-row>
     @if (row['regime']) {

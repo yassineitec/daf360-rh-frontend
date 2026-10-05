@@ -348,13 +348,24 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
     sharepointLocation: '',
   };
 
+  /**
+   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the template
+   * list is not paginated — every row is already rendered — so the library's own client-side
+   * sort orders the whole set, through `sortAccessor`s on the raw values.
+   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const tpl = (row: TableRow) => row['_source'] as DocumentTemplate;
     return [
-      { key: 'name',      label: this.translate.instant('ADMIN.docs.templates.colName') },
-      { key: 'category',  label: this.translate.instant('ADMIN.docs.templates.colCategory') },
-      { key: 'variables', label: this.translate.instant('ADMIN.docs.templates.colVariables') },
-      { key: 'isActive',  label: this.translate.instant('ADMIN.docs.templates.colStatus') },
+      { key: 'name',      label: this.translate.instant('ADMIN.docs.templates.colName'), sortable: true,
+        sortAccessor: (row) => tpl(row).name || null },
+      // The translated category label — what the badge shows — not the stored code.
+      { key: 'category',  label: this.translate.instant('ADMIN.docs.templates.colCategory'), sortable: true,
+        sortAccessor: (row) => this.categoryLabel(tpl(row).category) || null },
+      { key: 'variables', label: this.translate.instant('ADMIN.docs.templates.colVariables'), sortable: true,
+        sortAccessor: (row) => tpl(row).variables?.length ?? 0 },
+      { key: 'isActive',  label: this.translate.instant('ADMIN.docs.templates.colStatus'), sortable: true,
+        sortAccessor: (row) => (tpl(row).isActive ? 1 : 0) },
     ];
   });
 
@@ -370,8 +381,19 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as DocumentTemplate).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       actions: [
         {
           id: 'edit', icon: 'edit',

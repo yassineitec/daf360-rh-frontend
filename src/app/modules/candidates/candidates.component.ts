@@ -161,6 +161,8 @@ export class CandidatesComponent implements OnInit {
   /** Application-date range from the panel: one day or [from, to]; null = no bound. */
   readonly createdRange     = signal<Date[] | null>(null);
   readonly currentPage  = signal(0);
+  /** Server-side sort from the list table header (Spring `sort`); null = server default order. */
+  readonly sort         = signal<string | null>(null);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
@@ -468,6 +470,7 @@ export class CandidatesComponent implements OnInit {
     this.svc.getCandidates({
       ...this.panelFilterQuery(),
       status: this.statusFilter() || undefined,
+      sort:   this.sort() ?? undefined,
       page:   this.currentPage(),
       size:   this.pageSize(),
     }).subscribe({
@@ -536,6 +539,13 @@ export class CandidatesComponent implements OnInit {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+    this.loadCandidates();
+  }
+
+  /** A header click in the list table: the backend orders every page, so re-fetch from page 0. */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.currentPage.set(0);
     this.loadCandidates();
   }
 

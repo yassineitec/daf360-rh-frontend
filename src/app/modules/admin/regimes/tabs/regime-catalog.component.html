@@ -16,7 +16,7 @@
       @if (regimes().length === 0) {
         <div class="rc-empty">{{ 'ADMIN.regimes.catalog.emptyList' | translate }}</div>
       } @else {
-        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig"
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                          (rowClick)="selectRegime($event['_source'])">
           <ng-template dafCell="name" let-row>
             <span class="rc-row-title" [class.rc-row-active]="selectedId() === row['_source'].id">{{ row['_source'].labelFr }}</span>

@@ -11,7 +11,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
-import { ProfileListService, FilterOptions } from './services/profile-list.service';
+import { ProfileListService, FilterOptions, ProfileFilterOption } from './services/profile-list.service';
 import { EmployeeListItem } from './models/profile.model';
 import { ProfilesCardsSectionComponent } from './sections/profiles-cards-section.component';
 import { ProfilesTableSectionComponent } from './sections/profiles-table-section.component';
@@ -78,6 +78,8 @@ export class ProfileListComponent implements OnInit {
   readonly searchText  = signal('');
   readonly filters     = signal<Partial<Record<FilterKey, string>>>({});
   readonly selectedIds = signal<Set<number>>(new Set());
+  /** Server-side sort from the table header (Spring `sort`, e.g. `hireDate,asc`); null = newest hire first. */
+  readonly sort        = signal<string | null>(null);
 
   // ── Paging ─────────────────────────────────────────────────────────────────
   readonly currentPage   = signal(0);
@@ -91,9 +93,14 @@ export class ProfileListComponent implements OnInit {
 
   // ── Filter panel ───────────────────────────────────────────────────────────
   readonly filterFields = computed<FilterField[]>(() => {
-    this.translate.currentLang();
+    const isEn = (this.translate.currentLang() ?? '').startsWith('en');
     const t   = (k: string) => this.translate.instant(k);
-    const opt = this.filterOptions();
+    // Pays / département / grade arrive from the DB with both labels; only the
+    // displayed one follows the language, the `value` sent to /employees does not.
+    const loc = (list: ProfileFilterOption[]) =>
+      list.map(o => ({ value: o.value, label: (isEn && o.labelEn) || o.label }));
+    const raw = this.filterOptions();
+    const opt = { pays: loc(raw.pays), departments: loc(raw.departments), grades: loc(raw.grades) };
     return [
       {
         name: 'pays', label: t('PROFILES.FILTERS.PAYS'), type: 'select',
@@ -131,7 +138,7 @@ export class ProfileListComponent implements OnInit {
         placeholder: t('PROFILES.FILTERS.ALL'),
         // Codes come from the DB (a free varchar), so the list is whatever exists
         // rather than the enum; unmapped codes show as themselves.
-        options: opt.contractTypes.map(code => ({
+        options: raw.contractTypes.map(code => ({
           value: code, label: contractLabel(code, this.translate),
         })),
       },
@@ -255,6 +262,7 @@ export class ProfileListComponent implements OnInit {
       hireDateFrom: f.hireDate ? f.hireDate.split('..')[0] || undefined : undefined,
       hireDateTo:   f.hireDate ? f.hireDate.split('..')[1] || undefined : undefined,
       includeInactive: f.includeInactive === 'true' ? true : undefined,
+      sort:         this.sort() ?? undefined,
     };
   }
 
@@ -290,6 +298,12 @@ export class ProfileListComponent implements OnInit {
     this.resetToFirstPage();
   }
 
+  /** A new order is a new result set — back to page 0, selection cleared (like a filter). */
+  onSortChange(sort: string | null): void {
+    this.sort.set(sort);
+    this.resetToFirstPage();
+  }
+
   onPageChange(page: number): void {
     this.currentPage.set(page);
     this.clearSelection();
@@ -319,6 +333,11 @@ export class ProfileListComponent implements OnInit {
    */
   selectAll(): void {
     this.selectedIds.set(new Set(this.employees().map(e => e.userId)));
+  }
+
+  /** The table's own selection column (checkbox, header "select all", reset) sends the whole set. */
+  setSelection(ids: number[]): void {
+    this.selectedIds.set(new Set(ids));
   }
 
   clearSelection(): void {

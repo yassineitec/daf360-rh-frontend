@@ -67,6 +67,8 @@
       [skeletonRows]="pageSize()"
       [emptyMessage]="emptyMessage()"
       [allowCancel]="false"
+      [sort]="sort()"
+      (sortChange)="onSortChange($event)"
       (open)="openDetail($event)" />
   }
 

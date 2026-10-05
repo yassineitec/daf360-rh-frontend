@@ -197,6 +197,8 @@ export interface CandidateListQuery {
   createdFrom?: string;
   /** `yyyy-MM-dd`, inclusive. */
   createdTo?: string;
+  /** Spring `sort`, e.g. `expectedStartDate,asc` — Candidate entity fields only. */
+  sort?: string;
   page?: number;
   size?: number;
 }

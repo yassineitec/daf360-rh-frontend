@@ -51,6 +51,8 @@ export interface RecruitmentDemandSummary {
   jobTitle: string;
   jobExactTitle: string | null;
   department: string | null;
+  /** English label of the department, display-only; `department` stays the filter value. */
+  departmentLabelEn?: string | null;
   statut: RecruitmentDemandStatus;
   urgencyLevelLabel: string | null;
   headcount: number;

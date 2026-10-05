@@ -1,16 +1,25 @@
-import { Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnChanges, signal, untracked, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { HOLIDAY_CALENDAR_CONFIG_KEY, ParameterSet } from './models/admin.model';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import {
   FormFieldComponent, ButtonComponent,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
+
+/** What each parameter column sorts on. */
+const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null> = {
+  cle:         p => p.cle || null,
+  valeur:      p => p.valeur || null,
+  description: p => p.description || null,
+  updatedAt:   p => (p.updatedAt ? new Date(p.updatedAt).getTime() || null : null),
+};
 
 @Component({
   selector: 'app-parameters-admin',
@@ -66,7 +75,9 @@ const PAGE_SIZE = 10;
       </div>
     } @else {
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+        (sortChange)="onSortChange($event.key, $event.dir)"
+        (resetClick)="onSortChange('', null)">
         <ng-template dafCell="cle" let-row>
           <span class="key-cell">{{ row['_source'].cle }}</span>
         </ng-template>
@@ -192,20 +203,22 @@ export class ParametersAdminComponent implements OnChanges {
   readonly columns = computed<TableColumn[]>(() => {
     this.t.currentLang();
     return [
-      { key: 'cle',         label: this.t.instant('ADMIN.data.parameters.KEY') },
-      { key: 'valeur',      label: this.t.instant('ADMIN.data.parameters.VALUE') },
-      { key: 'description', label: this.t.instant('ADMIN.data.parameters.DESCRIPTION') },
-      { key: 'updatedAt',   label: this.t.instant('ADMIN.data.parameters.COL_UPDATED') },
+      { key: 'cle',         label: this.t.instant('ADMIN.data.parameters.KEY'), sortable: true },
+      { key: 'valeur',      label: this.t.instant('ADMIN.data.parameters.VALUE'), sortable: true },
+      { key: 'description', label: this.t.instant('ADMIN.data.parameters.DESCRIPTION'), sortable: true },
+      { key: 'updatedAt',   label: this.t.instant('ADMIN.data.parameters.COL_UPDATED'), sortable: true },
     ];
   });
 
   currentPage = signal(0);
+  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.params().length / PAGE_SIZE)));
 
   readonly pagedParams = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.params().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.params(), this.sort(), PARAMETER_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
@@ -220,8 +233,24 @@ export class ParametersAdminComponent implements OnChanges {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.t.currentLang();
+    const tr = (k: string) => this.t.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as ParameterSet).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: tr('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        tr('REQUESTS.TABLE.RESET'),
+      sortLabel:         tr('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
       actions: [
         {
           id: 'save', icon: 'check',
@@ -260,6 +289,12 @@ export class ParametersAdminComponent implements OnChanges {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+  }
+
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
   }
 
   ngOnChanges() { this.load(); }

@@ -10,6 +10,7 @@ import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { rankIn } from '../../../shared/table-sort.utils';
 
 @Component({
   selector: 'app-legal-rules-admin',
@@ -113,14 +114,26 @@ export class LegalRulesAdminComponent implements OnChanges {
 
   readonly Number = Number;
 
+  /**
+   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the rule
+   * list is not paginated, so the library's own client-side sort orders the whole set,
+   * through `sortAccessor`s on the raw values (cells hold text like "6h – 9h").
+   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
+    const r = (row: TableRow) => row['_source'] as BreakLegalRuleDto;
     return [
-      { key: 'labelFr', label: this.translate.instant('ADMIN.regimes.legal.columns.label') },
-      { key: 'hours', label: this.translate.instant('ADMIN.regimes.legal.columns.minHours') },
-      { key: 'deductionMin', label: this.translate.instant('ADMIN.regimes.legal.columns.deduction') },
-      { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.legal.columns.days') },
-      { key: 'effective', label: this.translate.instant('ADMIN.regimes.legal.columns.effective') },
+      { key: 'labelFr', label: this.translate.instant('ADMIN.regimes.legal.columns.label'), sortable: true },
+      // The threshold that triggers the rule (min hours), as a number.
+      { key: 'hours', label: this.translate.instant('ADMIN.regimes.legal.columns.minHours'), sortable: true,
+        sortAccessor: (row) => r(row).minWorkHours ?? null },
+      { key: 'deductionMin', label: this.translate.instant('ADMIN.regimes.legal.columns.deduction'), sortable: true,
+        sortAccessor: (row) => r(row).deductionMin ?? null },
+      { key: 'appliesToDays', label: this.translate.instant('ADMIN.regimes.legal.columns.days'), sortable: true,
+        sortAccessor: (row) => rankIn(['ALL', 'WEEKDAYS', 'WEEKEND'], r(row).appliesToDays) ?? r(row).appliesToDays },
+      // The start date (ISO — string order is date order).
+      { key: 'effective', label: this.translate.instant('ADMIN.regimes.legal.columns.effective'), sortable: true,
+        sortAccessor: (row) => r(row).effectiveFrom?.slice(0, 10) || null },
     ];
   });
 
@@ -137,10 +150,21 @@ export class LegalRulesAdminComponent implements OnChanges {
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
     return {
+      showHeader: false,
       hoverable: true,
       loading: this.isLoading(),
       emptyMessage: this.translate.instant('ADMIN.regimes.legal.empty'),
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as BreakLegalRuleDto).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       actions: [{
         id: 'delete', icon: 'delete', variant: 'danger',
         tooltip: this.translate.instant('ADMIN.regimes.common.delete'),

@@ -36,7 +36,10 @@ export interface EmployeeListParams {
  */
 export interface ProfileFilterOption {
   value: string;
+  /** French label. */
   label: string;
+  /** English label, display-only — `value` stays the same in both languages. */
+  labelEn?: string | null;
 }
 
 export interface FilterOptions {

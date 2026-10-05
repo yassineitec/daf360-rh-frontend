@@ -1,16 +1,66 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent,
   TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
-import { TableActionComponent } from '../../../shared/table-action.component';
-import { OffboardingWorkflowInstance } from '../models/offboarding.model';
+import {
+  DEPARTURE_REASONS, OffboardingStatus, OffboardingWorkflowInstance,
+} from '../models/offboarding.model';
 import { employeeAvatar } from '../../../shared/utils/avatar.utils';
 import {
   initialsOf, isOverdue, localeDate, stageProgressOf, statusVariant,
 } from '../offboarding-display';
+
+/** Header sort as the page holds it — `null` = the list's natural order. */
+export interface OffboardingSort {
+  key: string;
+  dir: 'asc' | 'desc';
+}
+
+/** Workflow order of a departure file, for the "Statut" sort — not the translated label. */
+const STATUS_ORDER: OffboardingStatus[] = [
+  'PENDING', 'IN_PROGRESS', 'BLOCKED', 'VALIDATED', 'CANCELLED', 'ARCHIVED',
+];
+
+/** Position in a fixed order; an unknown code is "no value" (sorted last), never -1. */
+function rank<T>(order: readonly T[], value: T): number | null {
+  const i = order.indexOf(value);
+  return i < 0 ? null : i;
+}
+
+/** What each table column sorts on — keyed by the table's column keys. */
+const SORT_VALUE: Record<string, (wf: OffboardingWorkflowInstance) => string | number | null> = {
+  employee:       wf => wf.employeeFullName || null,
+  // The reasons' declared order (the sidebar's), not their translated labels.
+  reason:         wf => rank(DEPARTURE_REASONS, wf.departureReason),
+  // How far the file has gone: the active step, 1 … 7.
+  stage:          wf => stageProgressOf(wf).step,
+  status:         wf => rank(STATUS_ORDER, wf.status),
+  lastWorkingDay: wf => wf.lastWorkingDay?.slice(0, 10) || null, // ISO: string order = date order
+};
+
+/**
+ * Sorts the whole filtered list — /rh/offboarding (and its per-reason sub-pages) calls it
+ * before slicing a page, since the table is `manualSort`. Missing values sort last in
+ * both directions, like the library's own comparator.
+ */
+export function sortOffboarding(
+  items: OffboardingWorkflowInstance[], sort: OffboardingSort | null,
+): OffboardingWorkflowInstance[] {
+  const value = sort && SORT_VALUE[sort.key];
+  if (!sort || !value) return items;
+  const sign = sort.dir === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const va = value(a), vb = value(b);
+    if (va === null || vb === null) return va === vb ? 0 : va === null ? 1 : -1;
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true });
+    return cmp * sign;
+  });
+}
 
 /**
  * List view of `/rh/offboarding`, on the same shape as the candidates list
@@ -23,24 +73,32 @@ import {
  * & Matériel · étape 4/7" says the same thing AND says where the file is stuck, and the
  * SLA / overdue warning folds into that cell instead of owning a column.
  *
- * **No column is `sortable`** — the rows are one client-paginated page and
- * `daf-data-table` sorts client-side, so the arrows would reorder just that page (§10b).
+ * Library table tools are on, same as /rh/it-provisioning: sortable headers, resizable
+ * columns and rows, the column picker and the reset icon. **Sorting is `manualSort`**: the
+ * rows are one client-paginated page, so a local sort would reorder just that page (§10b).
+ * The header only emits `sortChange`; the page sorts the whole filtered list
+ * (`sortOffboarding`) before slicing it, and `sort` feeds back in as `defaultSort` so the
+ * arrow survives a view switch. Reset only emits `resetClick`, so the page's sort clears on it.
+ *
+ * The row action is `config.actions`, not a projected `_actions` column: under
+ * `resizableColumns` (fixed layout) the lib sizes its own actions column, whereas a
+ * `width: '1%'` cell collapses to a few pixels — and would be listed, unnamed, in the
+ * column picker.
  */
 @Component({
   selector: 'rh-offboarding-table-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    DataTableComponent, DafCellDirective,
-    TableActionComponent, TranslatePipe,
-  ],
+  imports: [DataTableComponent, DafCellDirective, TranslatePipe],
   host: { class: 'block' },
   template: `
     <daf-data-table
       [columns]="columns()"
       [rows]="rows()"
       [config]="config()"
-      (rowClick)="open.emit($any($event)['_source'].id)">
+      (rowClick)="open.emit($any($event)['_source'].id)"
+      (sortChange)="sortChange.emit($event.dir ? { key: $event.key, dir: $event.dir } : null)"
+      (resetClick)="sortChange.emit(null)">
 
       <!-- Where the file stands, plus the lateness signal. The step count carries the
            progress the removed progress-bar column used to show. -->
@@ -67,15 +125,6 @@ import {
         </div>
       </ng-template>
 
-      <ng-template dafCell="_actions" let-row>
-        <div class="flex items-center justify-end gap-2">
-          <rh-table-action
-            id="view"
-            [tooltip]="'OFFBOARDING.LIST.OPEN' | translate"
-            (action)="open.emit(row['_source'].id)" />
-        </div>
-      </ng-template>
-
     </daf-data-table>
   `,
 })
@@ -86,19 +135,22 @@ export class OffboardingTableSectionComponent {
   readonly loading      = input(false);
   readonly skeletonRows = input(10);
   readonly emptyMessage = input('');
+  /** The page's current sort — seeds the header arrow when the table (re)mounts. */
+  readonly sort         = input<OffboardingSort | null>(null);
 
-  readonly open = output<number>();
+  readonly open       = output<number>();
+  readonly sortChange = output<OffboardingSort | null>();
 
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    // `manualSort`: no sortAccessor here — the page sorts (`sortOffboarding`).
     return [
-      { key: 'employee',       label: t('OFFBOARDING.LIST.COL_EMPLOYEE'), type: 'avatar' },
-      { key: 'reason',         label: t('OFFBOARDING.LIST.COL_REASON') },
-      { key: 'stage',          label: t('OFFBOARDING.LIST.COL_STAGE') },
-      { key: 'status',         label: t('OFFBOARDING.LIST.COL_STATUS'), type: 'badge' },
-      { key: 'lastWorkingDay', label: t('OFFBOARDING.LIST.COL_LAST_DAY') },
-      { key: '_actions',       label: '', align: 'right', width: '1%' },
+      { key: 'employee',       label: t('OFFBOARDING.LIST.COL_EMPLOYEE'), type: 'avatar', sortable: true },
+      { key: 'reason',         label: t('OFFBOARDING.LIST.COL_REASON'), sortable: true },
+      { key: 'stage',          label: t('OFFBOARDING.LIST.COL_STAGE'), sortable: true },
+      { key: 'status',         label: t('OFFBOARDING.LIST.COL_STATUS'), type: 'badge', sortable: true },
+      { key: 'lastWorkingDay', label: t('OFFBOARDING.LIST.COL_LAST_DAY'), sortable: true },
     ];
   });
 
@@ -134,11 +186,33 @@ export class OffboardingTableSectionComponent {
     return employeeAvatar(item.employeeProfileId, item.employeePhotoUrl, item.employeeGender);
   }
 
-  protected readonly config = computed<TableConfig>(() => ({
-    showHeader:   false,          // the page's daf-page-header is the only h1
-    hoverable:    true,
-    loading:      this.loading(),
-    skeletonRows: Math.min(this.skeletonRows(), 20),
-    emptyMessage: this.emptyMessage(),
-  }));
+  protected readonly config = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const wf = (row: TableRow) => row['_source'] as OffboardingWorkflowInstance;
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
+    return {
+      showHeader:   false,          // the page's daf-page-header is the only h1
+      hoverable:    true,
+      loading:      this.loading(),
+      skeletonRows: Math.min(this.skeletonRows(), 20),
+      emptyMessage: this.emptyMessage(),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId:        (row) => wf(row).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
+      actions: [
+        { id: 'open', icon: 'visibility', tooltip: t('OFFBOARDING.LIST.OPEN'),
+          onClick: (row) => this.open.emit(wf(row).id) },
+      ],
+    };
+  });
 }

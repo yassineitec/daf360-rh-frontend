@@ -1,4 +1,4 @@
-import { Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnChanges, signal, untracked, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }        from './admin.service';
 import { RequestTypeCatalog }  from './models/admin.model';
@@ -7,10 +7,21 @@ import {
   SelectComponent, SelectOption,
   FormFieldComponent,
   ButtonComponent,
-  StatusBadgeComponent, DataTableComponent, DafCellDirective,
+  StatusBadgeComponent, DataTableComponent, DafCellDirective, SortDirection,
   TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+
+/** What each request-type column sorts on — the raw values, not the formatted cells. */
+const REQUEST_TYPE_SORT: Record<string, (t: RequestTypeCatalog) => string | number | null> = {
+  typeCode:       t => t.typeCode || null,
+  displayNameFr:  t => t.displayNameFr || null,
+  category:       t => t.category || null,
+  approvalLevel:  t => t.approvalLevel || null,        // L1 before L2
+  defaultSlaDays: t => t.defaultSlaDays ?? null,       // the number, not "2 j"
+  isActive:       t => (t.isActive ? 1 : 0),           // inactive first on an ascending sort
+};
 
 const CATEGORIES = ['DOCUMENT','PERSONAL_DATA_CHANGE','BANK_DETAILS','CAREER','OTHER'];
 const PAGE_SIZE = 5;
@@ -64,7 +75,9 @@ const PAGE_SIZE = 5;
       </div>
     } @else {
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+      <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+                      (sortChange)="onSortChange($event.key, $event.dir)"
+                      (resetClick)="onSortChange('', null)">
         <ng-template dafCell="category" let-row>
           <daf-badge [label]="row['category']" [options]="{ variant: 'neutral', size: 'sm' }" />
         </ng-template>
@@ -224,19 +237,35 @@ export class RequestTypesAdminComponent implements OnChanges {
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     return [
-      { key: 'typeCode', label: this.translate.instant('ADMIN.catalog.requestTypes.colCode') },
-      { key: 'displayNameFr', label: this.translate.instant('ADMIN.catalog.requestTypes.colLabel') },
-      { key: 'category', label: this.translate.instant('ADMIN.catalog.requestTypes.colCategory') },
-      { key: 'approvalLevel', label: this.translate.instant('ADMIN.catalog.requestTypes.colApproval') },
-      { key: 'defaultSlaDays', label: this.translate.instant('ADMIN.catalog.requestTypes.colSla'), align: 'center' },
-      { key: 'isActive', label: this.translate.instant('ADMIN.catalog.requestTypes.colActive'), align: 'center' },
+      { key: 'typeCode', label: this.translate.instant('ADMIN.catalog.requestTypes.colCode'), sortable: true },
+      { key: 'displayNameFr', label: this.translate.instant('ADMIN.catalog.requestTypes.colLabel'), sortable: true },
+      { key: 'category', label: this.translate.instant('ADMIN.catalog.requestTypes.colCategory'), sortable: true },
+      { key: 'approvalLevel', label: this.translate.instant('ADMIN.catalog.requestTypes.colApproval'), sortable: true },
+      { key: 'defaultSlaDays', label: this.translate.instant('ADMIN.catalog.requestTypes.colSla'), align: 'center', sortable: true },
+      { key: 'isActive', label: this.translate.instant('ADMIN.catalog.requestTypes.colActive'), align: 'center', sortable: true },
     ];
   });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
+      showHeader: false,
       hoverable: true,
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as RequestTypeCatalog).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
       actions: [
         {
           id: 'edit', icon: 'edit',
@@ -255,12 +284,14 @@ export class RequestTypesAdminComponent implements OnChanges {
 
   // Pagination — 5 per page
   currentPage = signal(0);
+  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
   readonly totalElements = computed(() => this.types().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / PAGE_SIZE));
 
   readonly pagedTypes = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.types().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.types(), this.sort(), REQUEST_TYPE_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() => {
@@ -279,6 +310,12 @@ export class RequestTypesAdminComponent implements OnChanges {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+  }
+
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
   }
 
   ngOnChanges() { this.load(); }

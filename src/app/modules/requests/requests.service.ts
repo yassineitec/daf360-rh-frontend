@@ -26,6 +26,7 @@ export class RequestsService {
     if (filter.status)            params = params.set('status',    filter.status);
     if (filter.typeId   != null)  params = params.set('typeId',    filter.typeId);
     if (filter.paysId   != null)  params = params.set('paysId',    filter.paysId);
+    if (filter.sort)              params = params.set('sort',      filter.sort);
     if (filter.page     != null)  params = params.set('page',      filter.page);
     if (filter.size     != null)  params = params.set('size',      filter.size ?? 20);
     return this.http.get<PageResponse<EmployeeRequest>>(`${this.base}/requests`, { params });

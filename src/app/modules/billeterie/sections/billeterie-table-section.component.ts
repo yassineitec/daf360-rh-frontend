@@ -1,15 +1,48 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
-import { TableActionComponent } from '../../../shared/table-action.component';
 import { Mission } from '../../missions/mission.model';
 import {
   daysUntil, destination, formatAmount, initialsOf, isLate, localeDate, localeOf,
 } from '../../missions/mission-display';
 import { BilleterieAction } from './billeterie-cards-section.component';
+
+/** Header sort as the page holds it — `null` = the queue's natural order. */
+export interface BilleterieSort {
+  key: string;
+  dir: 'asc' | 'desc';
+}
+
+/** What each table column sorts on — keyed by the table's column keys. */
+const SORT_VALUE: Record<string, (m: Mission) => string | number | null> = {
+  employee:    m => m.employeeName || null,
+  destination: m => destination(m) || null,
+  period:      m => m.startDate?.slice(0, 10) || null, // ISO: string order = date order
+  // Not priced first on an ascending sort: those are the ones still to work on.
+  priced:      m => (m.expenses ? 1 : 0),
+  total:       m => m.expenses?.totalEstimatedCost ?? null,
+};
+
+/**
+ * Sorts the whole filtered queue — the page calls it before slicing a page, since the
+ * table is `manualSort`. Missing values sort last in both directions, like the library.
+ */
+export function sortBilleterie(items: Mission[], sort: BilleterieSort | null): Mission[] {
+  const value = sort && SORT_VALUE[sort.key];
+  if (!sort || !value) return items;
+  const sign = sort.dir === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const va = value(a), vb = value(b);
+    if (va === null || vb === null) return va === vb ? 0 : va === null ? 1 : -1;
+    const cmp = typeof va === 'number' && typeof vb === 'number'
+      ? va - vb
+      : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base', numeric: true });
+    return cmp * sign;
+  });
+}
 
 /**
  * List view of the billeterie queue, on the §6b house table style.
@@ -19,15 +52,23 @@ import { BilleterieAction } from './billeterie-cards-section.component';
  * whether the row can be validated at all.
  *
  * No `rowClick`: every action here is a decision, so a row click would be ambiguous (§6b).
+ *
+ * Library table tools are on, same as the other RH tables. **Sorting is `manualSort`**: the
+ * rows are one client-side page of the queue, so the header only emits `sortChange` and the
+ * page sorts the whole filtered queue (`sortBilleterie`) before slicing it; `sort` feeds back
+ * in as `defaultSort`. The actions are `config.actions` (per-row `disabled` for "Valider"),
+ * no longer a projected `_actions` cell, which fixed layout would squeeze to a few pixels.
  */
 @Component({
   selector: 'rh-billeterie-table-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, DafCellDirective, TableActionComponent, TranslatePipe],
+  imports: [DataTableComponent, DafCellDirective, TranslatePipe],
   host: { class: 'block' },
   template: `
-    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="config()">
+    <daf-data-table [columns]="columns()" [rows]="rows()" [config]="config()"
+      (sortChange)="sortChange.emit($event.dir ? { key: $event.key, dir: $event.dir } : null)"
+      (resetClick)="sortChange.emit(null)">
 
       <ng-template dafCell="period" let-row>
         <p class="text-body-md text-on-surface">{{ row['period'] }}</p>
@@ -51,26 +92,6 @@ import { BilleterieAction } from './billeterie-cards-section.component';
         }
       </ng-template>
 
-      <!-- Projected rather than config.actions: "Valider" is conditional on the sheet
-           existing, and TableAction has no row predicate (§6b rule 4). -->
-      <ng-template dafCell="_actions" let-row>
-        <div class="flex items-center justify-end gap-2">
-          <rh-table-action id="view"
-            [tooltip]="'MISSIONS.LIST.VIEW' | translate"
-            (action)="act.emit({ mission: row['_source'], action: 'view' })" />
-          <rh-table-action id="edit" icon="receipt_long"
-            [tooltip]="'BILLETERIE.PRICE' | translate"
-            (action)="act.emit({ mission: row['_source'], action: 'price' })" />
-          <rh-table-action id="approve" icon="check_circle"
-            [tooltip]="'BILLETERIE.VALIDATE' | translate"
-            [disabled]="!row['_source'].expenses"
-            (action)="act.emit({ mission: row['_source'], action: 'validate' })" />
-          <rh-table-action id="reject" icon="block" variant="danger"
-            [tooltip]="'BILLETERIE.REJECT' | translate"
-            (action)="act.emit({ mission: row['_source'], action: 'reject' })" />
-        </div>
-      </ng-template>
-
     </daf-data-table>
   `,
 })
@@ -81,19 +102,22 @@ export class BilleterieTableSectionComponent {
   readonly loading      = input(false);
   readonly skeletonRows = input(10);
   readonly emptyMessage = input('');
+  /** The page's current sort — seeds the header arrow when the table (re)mounts. */
+  readonly sort         = input<BilleterieSort | null>(null);
 
-  readonly act = output<{ mission: Mission; action: BilleterieAction }>();
+  readonly act        = output<{ mission: Mission; action: BilleterieAction }>();
+  readonly sortChange = output<BilleterieSort | null>();
 
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    // `manualSort`: no sortAccessor here — the page sorts (`sortBilleterie`).
     return [
-      { key: 'employee',    label: t('MISSIONS.LIST.COL_EMPLOYEE'), type: 'avatar' },
-      { key: 'destination', label: t('MISSIONS.LIST.COL_DESTINATION') },
-      { key: 'period',      label: t('MISSIONS.LIST.COL_PERIOD') },
-      { key: 'priced',      label: t('BILLETERIE.COL_STATE'), type: 'badge' },
-      { key: 'total',       label: t('BILLETERIE.COL_TOTAL'), align: 'right' },
-      { key: '_actions',    label: '', align: 'right', width: '1%' },
+      { key: 'employee',    label: t('MISSIONS.LIST.COL_EMPLOYEE'), type: 'avatar', sortable: true },
+      { key: 'destination', label: t('MISSIONS.LIST.COL_DESTINATION'), sortable: true },
+      { key: 'period',      label: t('MISSIONS.LIST.COL_PERIOD'), sortable: true },
+      { key: 'priced',      label: t('BILLETERIE.COL_STATE'), type: 'badge', sortable: true },
+      { key: 'total',       label: t('BILLETERIE.COL_TOTAL'), align: 'right', sortable: true },
     ];
   });
 
@@ -124,11 +148,42 @@ export class BilleterieTableSectionComponent {
     }));
   });
 
-  protected readonly config = computed<TableConfig>(() => ({
-    showHeader: false,
-    hoverable: false,
-    loading: this.loading(),
-    skeletonRows: Math.min(this.skeletonRows(), 20),
-    emptyMessage: this.emptyMessage(),
-  }));
+  protected readonly config = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const mission = (row: TableRow) => row['_source'] as Mission;
+    const emit = (row: TableRow, action: BilleterieAction) => this.act.emit({ mission: mission(row), action });
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
+    return {
+      showHeader: false,
+      hoverable: false,
+      loading: this.loading(),
+      skeletonRows: Math.min(this.skeletonRows(), 20),
+      emptyMessage: this.emptyMessage(),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row) => mission(row).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
+      actions: [
+        { id: 'view', icon: 'visibility', tooltip: t('MISSIONS.LIST.VIEW'),
+          onClick: (row) => emit(row, 'view') },
+        { id: 'price', icon: 'receipt_long', tooltip: t('BILLETERIE.PRICE'),
+          onClick: (row) => emit(row, 'price') },
+        // No expense sheet yet → nothing to validate.
+        { id: 'validate', icon: 'check_circle', tooltip: t('BILLETERIE.VALIDATE'),
+          disabled: (row) => !mission(row).expenses,
+          onClick: (row) => emit(row, 'validate') },
+        { id: 'reject', icon: 'block', variant: 'danger', tooltip: t('BILLETERIE.REJECT'),
+          onClick: (row) => emit(row, 'reject') },
+      ],
+    };
+  });
 }

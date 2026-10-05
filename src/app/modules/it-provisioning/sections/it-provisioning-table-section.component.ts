@@ -1,11 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, ProgressBarComponent,
   TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
-import { TableActionComponent } from '../../../shared/table-action.component';
 import { statusBadge } from '../../../shared/status-badge.utils';
 import { ProvisioningListItem } from '../it-provisioning.model';
 import {
@@ -13,32 +12,41 @@ import {
   licCount, licencesComplete, overdueDays,
 } from '../it-provisioning-display';
 
+/** Header sort as the page holds it — `null` = the list's natural order. */
+export interface ProvisioningSort {
+  key: string;
+  dir: 'asc' | 'desc';
+}
+
 /**
  * List view of `/rh/it-provisioning`, on the §6b table house style: no wrapper,
- * `showHeader: false`, `emptyMessage`, icon-only row actions.
+ * `showHeader: false`, `emptyMessage`, icon-only row actions from `config.actions`.
  *
  * The hardware/licence `daf-progress-bar`s live here rather than on the cards
  * because a table can project a cell and `daf-entity-card` has no content slot.
  *
- * **No column is `sortable`.** The rows handed in are one *page* of the filtered
- * set, and `daf-data-table` sorts client-side — so the arrows would silently
- * reorder just the visible page (§10b). `candidat` used to carry `sortable: true`.
+ * Library table tools are on: sortable headers, resizable columns and rows, the
+ * column picker and the reset icon. **Sorting is `manualSort`**: the rows handed in
+ * are one *page* of the filtered set, so a local sort would only reorder the visible
+ * page (§10b). The header just emits `sortChange` and the page sorts the whole
+ * filtered list before slicing it — `sort` feeds back in as `defaultSort` so the
+ * arrow survives a grid ↔ list round trip. Reset clears widths/heights/columns/sort
+ * inside the table but only emits `resetClick`, so the page's sort is cleared on it.
  */
 @Component({
   selector: 'rh-it-provisioning-table-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    DataTableComponent, DafCellDirective, ProgressBarComponent,
-    TableActionComponent, TranslatePipe,
-  ],
+  imports: [DataTableComponent, DafCellDirective, ProgressBarComponent, TranslatePipe],
   host: { class: 'block' },
   template: `
     <daf-data-table
       [columns]="columns()"
       [rows]="rows()"
       [config]="config()"
-      (rowClick)="open.emit($any($event)['_source'].id)">
+      (rowClick)="open.emit($any($event)['_source'].id)"
+      (sortChange)="sortChange.emit($event.dir ? { key: $event.key, dir: $event.dir } : null)"
+      (resetClick)="sortChange.emit(null)">
 
       <ng-template dafCell="ms365Email" let-row>
         @if (row['ms365Email']) {
@@ -78,15 +86,6 @@ import {
         </div>
       </ng-template>
 
-      <ng-template dafCell="_actions" let-row>
-        <div class="flex items-center justify-end gap-2">
-          <rh-table-action
-            [icon]="row['isCompleted'] ? 'visibility' : 'edit_note'"
-            [tooltip]="(row['isCompleted'] ? 'IT_PROVISIONING.LIST.VIEW' : 'IT_PROVISIONING.LIST.COMPLETE') | translate"
-            (action)="open.emit(row['_source'].id)" />
-        </div>
-      </ng-template>
-
     </daf-data-table>
   `,
 })
@@ -96,8 +95,11 @@ export class ItProvisioningTableSectionComponent {
   readonly items        = input.required<ProvisioningListItem[]>();
   readonly loading      = input(false);
   readonly skeletonRows = input(10);
+  /** The page's current sort — seeds the header arrow when the table (re)mounts. */
+  readonly sort         = input<ProvisioningSort | null>(null);
 
-  readonly open = output<number>();
+  readonly open       = output<number>();
+  readonly sortChange = output<ProvisioningSort | null>();
 
   protected readonly hardwareSlots = HARDWARE_SLOTS;
   protected readonly licenceSlots  = LICENCE_SLOTS;
@@ -105,14 +107,14 @@ export class ItProvisioningTableSectionComponent {
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    // `manualSort`: no sortAccessor here — the page sorts (`sortProvisioning`).
     return [
-      { key: 'candidat',          label: t('IT_PROVISIONING.LIST.COL_CANDIDATE'), type: 'avatar' },
-      { key: 'ms365Email',        label: t('IT_PROVISIONING.LIST.COL_EMAIL') },
-      { key: 'status',            label: t('IT_PROVISIONING.LIST.COL_STATUS'), type: 'badge' },
-      { key: 'expectedStartDate', label: t('IT_PROVISIONING.LIST.COL_START') },
-      { key: 'hwLabel',           label: t('IT_PROVISIONING.LIST.COL_HARDWARE') },
-      { key: 'licLabel',          label: t('IT_PROVISIONING.LIST.COL_LICENSES') },
-      { key: '_actions',          label: '', align: 'right', width: '1%' },
+      { key: 'candidat',          label: t('IT_PROVISIONING.LIST.COL_CANDIDATE'), type: 'avatar', sortable: true },
+      { key: 'ms365Email',        label: t('IT_PROVISIONING.LIST.COL_EMAIL'), sortable: true },
+      { key: 'status',            label: t('IT_PROVISIONING.LIST.COL_STATUS'), type: 'badge', sortable: true },
+      { key: 'expectedStartDate', label: t('IT_PROVISIONING.LIST.COL_START'), sortable: true },
+      { key: 'hwLabel',           label: t('IT_PROVISIONING.LIST.COL_HARDWARE'), sortable: true },
+      { key: 'licLabel',          label: t('IT_PROVISIONING.LIST.COL_LICENSES'), sortable: true },
     ];
   });
 
@@ -142,12 +144,35 @@ export class ItProvisioningTableSectionComponent {
 
   protected readonly config = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const done = (row: TableRow) => row['isCompleted'] === true;
+    const openRow = (row: TableRow) => this.open.emit((row['_source'] as ProvisioningListItem).id);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
       showHeader:   false,          // the page's daf-page-header is the only h1
       hoverable:    true,
       loading:      this.loading(),
       skeletonRows: Math.min(this.skeletonRows(), 20),
-      emptyMessage: this.translate.instant('IT_PROVISIONING.LIST.TABLE_EMPTY'),
+      emptyMessage: t('IT_PROVISIONING.LIST.TABLE_EMPTY'),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId:        (row) => (row['_source'] as ProvisioningListItem).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
+      // Exactly one per row: view a completed file, complete an open one.
+      actions: [
+        { id: 'view',     icon: 'visibility', tooltip: t('IT_PROVISIONING.LIST.VIEW'),
+          hidden: (row) => !done(row), onClick: openRow },
+        { id: 'complete', icon: 'edit_note',  tooltip: t('IT_PROVISIONING.LIST.COMPLETE'),
+          hidden: done, onClick: openRow },
+      ],
     };
   });
 

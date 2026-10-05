@@ -93,7 +93,7 @@ interface TimelineStep {
           </div>
         </daf-card>
       } @else {
-        <!-- Same scaffold as /rh/profiles/:id and /rh/recruitment-demands/:id: a sticky
+        <!-- Same scaffold as /rh/profiles/:id and /rh/requests-history/:id: a sticky
              reference card on the left (there, identity/job details; here, the requester)
              and everything else flowing in the right column. -->
         <div class="flex flex-col gap-6 lg:flex-row">

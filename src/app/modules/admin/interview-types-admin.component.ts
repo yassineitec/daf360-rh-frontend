@@ -1,14 +1,22 @@
-import { Component, Input, OnChanges, TemplateRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, Input, OnChanges, TemplateRef, computed, inject, signal, untracked, viewChild } from '@angular/core';
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-  DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
+import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
 const PAGE_SIZE = 5;
+
+/** What each interview-type column sorts on. No sort = the stored order (`orderIndex`). */
+const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number | null> = {
+  orderIndex: t => t.orderIndex ?? null,
+  name:       t => t.name || null,
+  isActive:   t => (t.isActive ? 1 : 0),   // inactive first on an ascending sort
+};
 
 @Component({
   selector: 'app-interview-types-admin',
@@ -82,7 +90,9 @@ const PAGE_SIZE = 5;
         <p class="ita-empty">{{ 'ADMIN.docs.interviews.empty' | translate }}</p>
       } @else {
         <div class="table-scroll">
-        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
+        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+                        (sortChange)="onSortChange($event.key, $event.dir)"
+                        (resetClick)="onSortChange('', null)">
           <ng-template dafCell="name" let-row>
             <div class="ita-row-name">{{ row['name'] }}</div>
             @if (row['description']) {
@@ -162,30 +172,56 @@ export class InterviewTypesAdminComponent implements OnChanges {
 
   // Pagination — 5 per page
   currentPage = signal(0);
+  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
   readonly totalPages = computed(() => Math.ceil(this.types().length / PAGE_SIZE));
 
   readonly pagedTypes = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.types().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.types(), this.sort(), INTERVIEW_TYPE_SORT).slice(start, start + PAGE_SIZE);
   });
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
   }
 
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
+  }
+
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     return [
-      { key: 'orderIndex', label: this.translate.instant('ADMIN.docs.interviews.colOrder'), align: 'center', width: '70px' },
-      { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colName') },
-      { key: 'isActive', label: this.translate.instant('ADMIN.docs.interviews.colStatus'), align: 'center', width: '110px' },
+      { key: 'orderIndex', label: this.translate.instant('ADMIN.docs.interviews.colOrder'), align: 'center', width: '70px', sortable: true },
+      { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colName'), sortable: true },
+      { key: 'isActive', label: this.translate.instant('ADMIN.docs.interviews.colStatus'), align: 'center', width: '110px', sortable: true },
     ];
   });
 
-  readonly tableConfig = computed<TableConfig>(() => ({
+  readonly tableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
+    return {
+    showHeader: false,
     hoverable: true,
     loading: this.loading(),
     emptyMessage: this.translate.instant('ADMIN.docs.interviews.tableEmpty'),
+    // Stable row identity: row heights are keyed by it, not by render index.
+    rowId: (row: TableRow) => (row['_source'] as InterviewType).id,
+    resizableColumns:  true,
+    resizableRows:     true,
+    columnPicker:      true,
+    columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+    showReset:         true,
+    resetLabel:        t('REQUESTS.TABLE.RESET'),
+    sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+    // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+    manualSort:        true,
+    ...(sort ? { defaultSort: sort } : {}),
     actions: [
       {
         id: 'edit', icon: 'edit',
@@ -205,7 +241,8 @@ export class InterviewTypesAdminComponent implements OnChanges {
         onClick: (row: TableRow) => this.toggleActive(row['_source'] as InterviewType),
       },
     ],
-  }));
+    };
+  });
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedTypes().map(t => ({

@@ -60,6 +60,8 @@
     [canAcceptReject]="canAcceptReject()"
     [actioningId]="actioningId()"
     [statusBadge]="statusBadgeCell()"
+    [tools]="true"
+    (sortChange)="onSortChange($event)"
     (rowActivate)="openDossier($event)"
     (open)="onView($event)"
     (accept)="quickAccept($event)"

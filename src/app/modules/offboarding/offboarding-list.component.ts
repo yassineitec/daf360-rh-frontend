@@ -23,7 +23,9 @@ import {
 } from './models/offboarding.model';
 import { StageCode, boardStageOf, isActive, isOverdue } from './offboarding-display';
 import { OffboardingCardsSectionComponent } from './sections/offboarding-cards-section.component';
-import { OffboardingTableSectionComponent } from './sections/offboarding-table-section.component';
+import {
+  OffboardingSort, OffboardingTableSectionComponent, sortOffboarding,
+} from './sections/offboarding-table-section.component';
 import { OffboardingBoardSectionComponent } from './sections/offboarding-board-section.component';
 import {
   OFFBOARDING_KANBAN_COLUMN_DEFS, OffboardingKanbanColumn, byLastWorkingDayAsc,
@@ -178,12 +180,17 @@ export class OffboardingListComponent implements OnInit {
     });
   });
 
+  /** List-table header sort — applied to the whole filtered set, before paging. Kept across
+   *  views. (The board has its own per-column `columnSort`, unrelated to this one.) */
+  readonly tableSort = signal<OffboardingSort | null>(null);
+  readonly sortedItems = computed(() => sortOffboarding(this.filteredItems(), this.tableSort()));
+
   readonly totalElements = computed(() => this.filteredItems().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.pageSize()));
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return this.filteredItems().slice(start, start + this.pageSize());
+    return this.sortedItems().slice(start, start + this.pageSize());
   });
 
   // ── Kanban board ───────────────────────────────────────────────────────────
@@ -432,6 +439,12 @@ export class OffboardingListComponent implements OnInit {
 
   setView(mode: string): void {
     this.viewMode.set(mode as ViewMode);
+  }
+
+  /** A new order makes the current page meaningless — back to the first one. */
+  onTableSortChange(sort: OffboardingSort | null): void {
+    this.tableSort.set(sort);
+    this.currentPage.set(0);
   }
 
   onPageChange(page: number): void {

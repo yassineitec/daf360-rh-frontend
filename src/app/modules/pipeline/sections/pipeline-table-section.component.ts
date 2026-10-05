@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
-import { TableActionComponent } from '../../../shared/table-action.component';
 import { BoardColumn } from '../board.model';
 import { KanbanCandidate } from '../services/pipeline.service';
 import { candidateAvatar, candidateInitials, stageVariant } from '../pipeline-display';
@@ -20,30 +19,29 @@ import { candidateAvatar, candidateInitials, stageVariant } from '../pipeline-di
  * Stateless: rows are derived from `columns`, and every action leaves as an
  * output. `config.loading` renders skeleton rows shaped per column, so this
  * section needs no separate `daf-skeleton` for re-fetches (§10b).
+ *
+ * Library table tools are on, same as the other RH tables: sortable headers, resizable
+ * columns and rows, the column picker and the reset icon. **No `manualSort` here**: with
+ * no pagination every candidate is already a row, so the library's own client-side sort
+ * orders the whole set — `manualSort` only exists to sort beyond the rows handed in.
+ *
+ * The row action is `config.actions`, not a projected `_actions` column: under
+ * `resizableColumns` (fixed layout) the lib sizes its own actions column, whereas a
+ * `width: '1%'` cell collapses to a few pixels and would be listed, unnamed, in the
+ * column picker.
  */
 @Component({
   selector: 'rh-pipeline-table-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, DafCellDirective, TableActionComponent, TranslatePipe],
+  imports: [DataTableComponent],
   host: { class: 'hidden sm:block' },
   template: `
     <daf-data-table
       [columns]="columnDefs()"
       [rows]="rows()"
       [config]="tableConfig()"
-      (rowClick)="open.emit($any($event)['_source'].id)">
-
-      <ng-template dafCell="_actions" let-row>
-        <div class="flex items-center justify-end gap-2">
-          <rh-table-action
-            id="view"
-            [tooltip]="'PIPELINE.VIEW' | translate"
-            (action)="open.emit(row['_source'].id)" />
-        </div>
-      </ng-template>
-
-    </daf-data-table>
+      (rowClick)="open.emit($any($event)['_source'].id)" />
   `,
 })
 export class PipelineTableSectionComponent {
@@ -58,12 +56,18 @@ export class PipelineTableSectionComponent {
   protected readonly columnDefs = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    const src = (row: TableRow) => row['_source'] as KanbanCandidate;
     return [
-      { key: 'candidat',  label: t('PIPELINE.COL_CANDIDATE'), type: 'avatar' },
-      { key: 'poste',     label: t('PIPELINE.COL_POSITION') },
-      { key: 'stage',     label: t('PIPELINE.COL_STAGE'), type: 'badge' },
-      { key: 'fit',       label: t('PIPELINE.COL_FIT'), align: 'right' },
-      { key: '_actions',  label: '', align: 'right', width: '1%' },
+      // Avatar / text cells: the library's own fallback sorts on .name / the text.
+      { key: 'candidat',  label: t('PIPELINE.COL_CANDIDATE'), type: 'avatar', sortable: true },
+      { key: 'poste',     label: t('PIPELINE.COL_POSITION'), sortable: true,
+        sortAccessor: (row) => src(row).poste || null },
+      // Board order (Nouveau → … → Recruté), not the badge label's alphabetical order.
+      { key: 'stage',     label: t('PIPELINE.COL_STAGE'), type: 'badge', sortable: true,
+        sortAccessor: (row) => row['stageIndex'] as number },
+      // The number, not the "85%" string ("100%" would sort before "9%").
+      { key: 'fit',       label: t('PIPELINE.COL_FIT'), align: 'right', sortable: true,
+        sortAccessor: (row) => src(row).fitScore ?? null },
     ];
   });
 
@@ -73,7 +77,7 @@ export class PipelineTableSectionComponent {
    * interview into Entretien, and the table has to agree with what the board shows.
    */
   protected readonly rows = computed<TableRow[]>(() =>
-    this.columns().flatMap(col =>
+    this.columns().flatMap((col, stageIndex) =>
       col.candidates.map((c: KanbanCandidate) => ({
         candidat: {
           name:     c.fullName,
@@ -84,6 +88,7 @@ export class PipelineTableSectionComponent {
         poste:   c.poste || '—',
         stage:   { label: col.label, options: { variant: stageVariant(col.key), dot: true } } as BadgeCell,
         fit:     c.fitScore != null ? `${c.fitScore}%` : '—',
+        stageIndex,
         _source: c,
       })),
     ),
@@ -91,12 +96,27 @@ export class PipelineTableSectionComponent {
 
   protected readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const src = (row: TableRow) => row['_source'] as KanbanCandidate;
     return {
       showHeader:   false,          // the page's daf-page-header is the only h1
       hoverable:    true,
       loading:      this.loading(),
       skeletonRows: Math.min(this.skeletonRows(), 20),
-      emptyMessage: this.translate.instant('PIPELINE.NO_CANDIDATES'),
+      emptyMessage: t('PIPELINE.NO_CANDIDATES'),
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId:        (row) => src(row).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      actions: [
+        { id: 'view', icon: 'visibility', tooltip: t('PIPELINE.VIEW'),
+          onClick: (row) => this.open.emit(src(row).id) },
+      ],
     };
   });
 }

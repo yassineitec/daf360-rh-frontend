@@ -50,6 +50,8 @@ export interface EmployeeRequest {
   // Populated by backend enrichment
   typeCode?:           string;
   typeDisplayNameFr?:  string;
+  /** English name from the admin catalog (/rh/admin → types de demande); may be blank. */
+  typeDisplayNameEn?:  string | null;
   employeeName?:       string | null;
   paysName?:           string | null;
   approvals?:          ApprovalSummary[];
@@ -79,6 +81,8 @@ export interface RequestFilter {
   status?:    RequestStatus;
   typeId?:    number;
   paysId?:    number;
+  /** Spring `sort` param, e.g. `submissionDate,desc` — entity fields only. */
+  sort?:      string;
   page?:      number;
   size?:      number;
 }

@@ -96,6 +96,8 @@
       [canAcceptReject]="canAcceptReject()"
       [actioningId]="actioningId()"
       [statusBadge]="statusBadgeCell()"
+      [tools]="true"
+      (sortChange)="onSortChange($event)"
       (open)="onView($event)"
       (rowActivate)="onView($event)"
       (accept)="quickAccept($event)"

@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
-import { TableActionComponent } from '../../../shared/table-action.component';
 import { MissionChangeRequest } from '../../missions/mission.model';
 import { initialsOf, localeDate, localeOf } from '../../missions/mission-display';
 
@@ -17,12 +16,17 @@ export type ChangeRequestAction = 'accept' | 'refuse';
  * Deliberately: an ask is three fields and a reason, and the decision is read from the
  * requested dates next to the current ones. A card grid would spread four short values
  * over a 232px tile and bury the comparison the reviewer actually needs.
+ *
+ * Library table tools are on, same as the other RH tables. **No `manualSort`**: this list
+ * is not paginated, every ask is already a row, so the library's own client-side sort orders
+ * the whole set — through `sortAccessor`s, since the cells hold formatted dates. The actions
+ * are `config.actions`, not a projected `_actions` cell that fixed layout would squeeze.
  */
 @Component({
   selector: 'rh-change-requests-table-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DataTableComponent, DafCellDirective, TableActionComponent, TranslatePipe],
+  imports: [DataTableComponent, DafCellDirective],
   host: { class: 'block' },
   template: `
     <daf-data-table [columns]="columns()" [rows]="rows()" [config]="config()">
@@ -42,17 +46,6 @@ export type ChangeRequestAction = 'accept' | 'refuse';
         <p class="max-w-md whitespace-pre-line text-body-md text-on-surface">
           {{ row['_source'].reason }}
         </p>
-      </ng-template>
-
-      <ng-template dafCell="_actions" let-row>
-        <div class="flex items-center justify-end gap-2">
-          <rh-table-action id="approve" icon="check_circle"
-            [tooltip]="'BILLETERIE.ACCEPT_REQUEST' | translate"
-            (action)="act.emit({ request: row['_source'], action: 'accept' })" />
-          <rh-table-action id="reject" icon="block" variant="danger"
-            [tooltip]="'BILLETERIE.REFUSE_REQUEST' | translate"
-            (action)="act.emit({ request: row['_source'], action: 'refuse' })" />
-        </div>
       </ng-template>
 
     </daf-data-table>
@@ -79,13 +72,20 @@ export class ChangeRequestsTableSectionComponent {
   protected readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    const src = (row: TableRow) => row['_source'] as MissionChangeRequest;
+    const time = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() || null : null);
     return [
-      { key: 'employee', label: t('MISSIONS.LIST.COL_EMPLOYEE'), type: 'avatar' },
-      { key: 'type',     label: t('BILLETERIE.COL_ASK'), type: 'badge' },
-      { key: 'ask',      label: t('MISSIONS.CHANGE.REQUESTED_PERIOD') },
-      { key: 'reason',   label: t('BILLETERIE.COL_REASON') },
-      { key: 'created',  label: t('BILLETERIE.COL_SUBMITTED') },
-      { key: '_actions', label: '', align: 'right', width: '1%' },
+      // Avatar / badge cells: the library's own fallback sorts on .name / .label.
+      { key: 'employee', label: t('MISSIONS.LIST.COL_EMPLOYEE'), type: 'avatar', sortable: true },
+      { key: 'type',     label: t('BILLETERIE.COL_ASK'), type: 'badge', sortable: true },
+      // The requested start date; a cancellation has none and sorts last.
+      { key: 'ask',      label: t('MISSIONS.CHANGE.REQUESTED_PERIOD'), sortable: true,
+        sortAccessor: (row) => time(src(row).requestedStartDate) },
+      { key: 'reason',   label: t('BILLETERIE.COL_REASON'), sortable: true,
+        sortAccessor: (row) => src(row).reason || null },
+      // The real submission time, not the formatted "12/03/2026" text.
+      { key: 'created',  label: t('BILLETERIE.COL_SUBMITTED'), sortable: true,
+        sortAccessor: (row) => time(src(row).createdAt) },
     ];
   });
 
@@ -116,11 +116,31 @@ export class ChangeRequestsTableSectionComponent {
     });
   });
 
-  protected readonly config = computed<TableConfig>(() => ({
-    showHeader: false,
-    hoverable: false,
-    loading: this.loading(),
-    skeletonRows: Math.min(Math.max(this.items().length, 3), 20),
-    emptyMessage: this.emptyMessage(),
-  }));
+  protected readonly config = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const request = (row: TableRow) => row['_source'] as MissionChangeRequest;
+    return {
+      showHeader: false,
+      hoverable: false,
+      loading: this.loading(),
+      skeletonRows: Math.min(Math.max(this.items().length, 3), 20),
+      emptyMessage: this.emptyMessage(),
+      // Stable row identity: row heights and sorting are keyed by it, not by render index.
+      rowId: (row) => request(row).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        t('REQUESTS.TABLE.RESET'),
+      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      actions: [
+        { id: 'accept', icon: 'check_circle', tooltip: t('BILLETERIE.ACCEPT_REQUEST'),
+          onClick: (row) => this.act.emit({ request: request(row), action: 'accept' }) },
+        { id: 'refuse', icon: 'block', variant: 'danger', tooltip: t('BILLETERIE.REFUSE_REQUEST'),
+          onClick: (row) => this.act.emit({ request: request(row), action: 'refuse' }) },
+      ],
+    };
+  });
 }

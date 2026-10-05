@@ -53,7 +53,9 @@
       } @else {
         <!-- Real daf-data-table, same as the "Utilisateurs" tab of this same module. -->
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
-                         (rowClick)="roleSelected.emit($event['_source'])">
+                         (rowClick)="roleSelected.emit($event['_source'])"
+                         (sortChange)="onSortChange($event.key, $event.dir)"
+                         (resetClick)="onSortChange('', null)">
           <ng-template dafCell="name" let-row>
             <span class="rl-item-name" [class.rl-active]="selectedRoleId() === row['_source'].id">{{ row['name'] }}</span>
           </ng-template>

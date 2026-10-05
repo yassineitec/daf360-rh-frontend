@@ -1,9 +1,9 @@
-import { Component, TemplateRef, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
-  FormFieldComponent, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
+  FormFieldComponent, SortDirection, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
 } from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
@@ -12,8 +12,18 @@ import {
 } from '../../../core/lists/configurable-list.model';
 import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TableSort, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
+
+/** What each list-value column sorts on. No sort = the list's own `sortOrder`. */
+const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> = {
+  valueCode: v => v.valueCode || null,
+  labelFr:   v => v.labelFr || null,
+  labelEn:   v => v.labelEn || null,
+  isActive:  v => (v.isActive ? 1 : 0),   // inactive first on an ascending sort
+  isSystem:  v => (v.isSystem ? 1 : 0),   // editable values first on an ascending sort
+};
 
 @Component({
   selector: 'app-list-manager',
@@ -56,21 +66,23 @@ export class ListManagerComponent implements OnInit {
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     return [
-      { key: 'valueCode', label: this.translate.instant('ADMIN.data.lists.COL_CODE') },
-      { key: 'labelFr', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_FR') },
-      { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN') },
-      { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE') },
-      { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM') },
+      { key: 'valueCode', label: this.translate.instant('ADMIN.data.lists.COL_CODE'), sortable: true },
+      { key: 'labelFr', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_FR'), sortable: true },
+      { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN'), sortable: true },
+      { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE'), sortable: true },
+      { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM'), sortable: true },
     ];
   });
 
   currentPage = signal(0);
+  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  readonly sort = signal<TableSort | null>(null);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.values().length / PAGE_SIZE)));
 
   readonly pagedValues = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return this.values().slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.values(), this.sort(), LIST_VALUE_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
@@ -87,10 +99,25 @@ export class ListManagerComponent implements OnInit {
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
     this.editingId();
+    const tr = (k: string) => this.translate.instant(k);
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.sort);
     return {
       hoverable: false,
       showHeader: false,
       emptyMessage: this.translate.instant('ADMIN.data.lists.EMPTY_MESSAGE'),
+      // Stable row identity: row heights are keyed by it, not by render index.
+      rowId: (row: TableRow) => (row['_source'] as ListValue).id,
+      resizableColumns:  true,
+      resizableRows:     true,
+      columnPicker:      true,
+      columnPickerLabel: tr('REQUESTS.TABLE.COLUMN_PICKER'),
+      showReset:         true,
+      resetLabel:        tr('REQUESTS.TABLE.RESET'),
+      sortLabel:         tr('REQUESTS.TABLE.SORT_BY'),
+      // Rows are one client-side page; this component sorts the whole list (sortByColumn).
+      manualSort:        true,
+      ...(sort ? { defaultSort: sort } : {}),
       actions: [
         {
           id: 'save', icon: 'check', variant: 'default',
@@ -131,6 +158,12 @@ export class ListManagerComponent implements OnInit {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
+  }
+
+  /** Header click (or the reset icon): a new order makes the current page meaningless. */
+  onSortChange(key: string, dir: SortDirection): void {
+    this.sort.set(toTableSort(key, dir));
+    this.currentPage.set(0);
   }
 
   editForm: FormGroup = this.fb.group({

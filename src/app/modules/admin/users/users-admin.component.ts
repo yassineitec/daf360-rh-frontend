@@ -71,6 +71,11 @@ interface ModuleSyncResult {
   durationMs: number;
 }
 
+/** The source account a table row was built from (`_s`, see `load`). */
+function userOf(row: TableRow): AdminUserRow {
+  return row['_s'] as AdminUserRow;
+}
+
 interface AdminUserStats {
   total: number; employees: number; notEmployees: number;
   missingProfile: number; neverLoggedIn: number;

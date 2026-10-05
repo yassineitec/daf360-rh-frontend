@@ -146,6 +146,10 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/requests/requests.routes').then(m => m.REQUESTS_ROUTES),
       },
+      // Historique des demandes (HR requests + recruitment demands). Was /rh/recruitment-demands —
+      // the old URL still redirects, so bookmarks and already-sent notification links keep working.
+      { path: 'recruitment-demands', redirectTo: 'requests-history', pathMatch: 'full' },
+      { path: 'recruitment-demands/:id', redirectTo: 'requests-history/:id' },
       {
         /**
          * Congés — moved here from the timesheet application (2026-09-28).
@@ -170,7 +174,7 @@ export const routes: Routes = [
           import('./modules/conges/conges.routes').then(m => m.CONGES_ROUTES),
       },
       {
-        path: 'recruitment-demands',
+        path: 'requests-history',
         canActivate: [permissionGuard],
         data: { permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'] },
         loadChildren: () =>
