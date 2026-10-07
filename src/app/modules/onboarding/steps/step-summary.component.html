@@ -35,7 +35,7 @@
         <dd>{{ data()?.gender ? genderLabel(data()?.gender) : '—' }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.NATIONALITY' | translate }}</dt>
-        <dd>{{ val(data()?.nationality) }}</dd>
+        <dd>{{ labels().nationality }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.NATIONAL_ID' | translate }}</dt>
         <dd>{{ val(data()?.nationalId) }}</dd>
@@ -61,16 +61,16 @@
         <dd>{{ contractTypeLabel() }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.GRADE' | translate }}</dt>
-        <dd>{{ val(data()?.grade) }}</dd>
+        <dd>{{ labels().grade }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.DISCIPLINE' | translate }}</dt>
-        <dd>{{ val(data()?.discipline) }}</dd>
+        <dd>{{ labels().discipline }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.DEPARTMENT' | translate }}</dt>
-        <dd>{{ val(data()?.department) }}</dd>
+        <dd>{{ labels().department }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.NOG_LEVEL' | translate }}</dt>
-        <dd>{{ val(data()?.nogLevel) }}</dd>
+        <dd>{{ labels().nogLevel }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.PROBATION_END' | translate }}</dt>
         <dd>{{ val(data()?.probationEndDate) }}</dd>
@@ -134,7 +134,7 @@
         <dd>{{ val(data()?.cnssAffiliationDate) }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.MARITAL' | translate }}</dt>
-        <dd>{{ val(data()?.maritalStatus) }}</dd>
+        <dd>{{ labels().maritalStatus }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.CHILDREN' | translate }}</dt>
         <dd>{{ val(data()?.numberOfChildren) }}</dd>
@@ -157,7 +157,7 @@
     <div class="card-body">
       <dl>
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.BANK' | translate }}</dt>
-        <dd>{{ val(data()?.bankName) }}</dd>
+        <dd>{{ labels().bank }}</dd>
 
         <dt>{{ 'ONBOARDING.STEP_SUMMARY.RIB' | translate }}</dt>
         <dd>{{ val(data()?.rib) }}</dd>

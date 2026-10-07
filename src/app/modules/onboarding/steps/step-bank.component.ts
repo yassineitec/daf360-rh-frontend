@@ -1,3 +1,4 @@
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { Component, OnInit, input, output, signal, inject, computed } from '@angular/core';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
@@ -48,7 +49,7 @@ export class StepBankComponent implements OnInit {
   taxId                = signal('');
 
   readonly bankOptions = computed<SelectOption[]>(() =>
-    this.banks().map(b => ({ value: String(b.id), label: b.labelFr })));
+    this.banks().map(b => ({ value: String(b.id), label: adminLabel(b, this.translate) })));
 
   ngOnInit(): void {
     const d  = this.data();
@@ -70,7 +71,7 @@ export class StepBankComponent implements OnInit {
   emit(): void {
     this.changed.emit({
       bankId:               this.bankId(),
-      bankName:             this.banks().find(b => b.id === this.bankId())?.labelFr ?? undefined,
+      bankName:             adminLabel(this.banks().find(b => b.id === this.bankId()), this.translate) || undefined,
       rib:                  this.rib(),
       bankAccountNumber:    this.bankAccountNumber(),
       iban:                 this.iban(),

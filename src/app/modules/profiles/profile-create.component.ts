@@ -1,3 +1,4 @@
+import { contractNeedsEndDate } from '../onboarding/onboarding.model';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -16,12 +17,14 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { ProfileService } from './profile.service';
-import { ProfileListService } from './services/profile-list.service';
+import { ProfileFilterOption, ProfileListService } from './services/profile-list.service';
 import { EmployeeListItem, EmployeeProfile, ProfileCreateDto } from './models/profile.model';
 import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem } from '../../core/ref/ref-data.model';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
 import { SectionCardComponent } from '../../shared/detail/section-card.component';
 import { NewProfileIdentityCardComponent } from './detail-sections/new-profile-identity-card.component';
 import { toDate, fromDate, toSelected, fromSelected, asText } from './detail-sections/field-bridges';
@@ -75,6 +78,7 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
   private svc       = inject(ProfileService);
   private listSvc   = inject(ProfileListService);
   private refSvc    = inject(RefDataService);
+  private configListSvc = inject(ConfigurableListService);
   private userStore = inject(UserStore);
   private notify    = inject(NotificationService);
   private translate = inject(TranslateService);
@@ -114,8 +118,12 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
   readonly personalPhone    = signal('');
   readonly personalAddress  = signal('');
 
-  /** Only FIXED_TERM needs an end date — `@ValidFixedTermContract` rejects it missing. */
-  readonly needsEndDate = computed(() => this.contractType() === 'FIXED_TERM');
+  /**
+   * Contract types are CONTRACT_TYPE list codes (CDI, CDD, …). `@ValidFixedTermContract`
+   * requires an end date for CDD; this used to test the old FIXED_TERM code, which the list
+   * never offers, so the date field never appeared.
+   */
+  readonly needsEndDate = computed(() => contractNeedsEndDate(this.contractType()));
 
   // ── Staged photo ───────────────────────────────────────────────────────────
   private photoFile = signal<File | null>(null);
@@ -154,7 +162,7 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
   }
 
   // ── Reference data ─────────────────────────────────────────────────────────
-  private readonly paysList    = signal<SelectOption[]>([]);
+  private readonly paysList    = signal<ProfileFilterOption[]>([]);
   private readonly departments = signal<RefDataItem[]>([]);
   private readonly grades      = signal<RefDataItem[]>([]);
   private readonly disciplines = signal<RefDataItem[]>([]);
@@ -164,23 +172,28 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
     return { value: '', label: this.translate.instant('PROFILES.COMMON.SELECT_PLACEHOLDER') };
   }
   private refOptions(items: RefDataItem[]): SelectOption[] {
-    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: i.labelFr }))];
+    const english = this.translate.currentLang() === 'en';
+    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: (english && i.labelEn) || i.labelFr }))];
   }
 
-  readonly paysOptions       = computed(() => [this.blankOption(), ...this.paysList()]);
+  /** Entities in the UI language — filter-options carries both labels. */
+  readonly paysOptions       = computed<SelectOption[]>(() => {
+    const en = this.translate.currentLang() === 'en';
+    return [this.blankOption(), ...this.paysList().map(o => ({ value: o.value, label: (en && o.labelEn) || o.label }))];
+  });
   readonly departmentOptions = computed(() => this.refOptions(this.departments()));
   readonly gradeOptions      = computed(() => this.refOptions(this.grades()));
   readonly disciplineOptions = computed(() => this.refOptions(this.disciplines()));
   readonly nogLevelOptions   = computed(() => this.refOptions(this.nogLevels()));
 
+  /** Admin › Listes configurables › Type de contrat (CONTRACT_TYPE) — an addition there shows here. */
+  private readonly contractTypes = signal<ListValue[]>([]);
+
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
-    this.translate.currentLang();
+    const english = this.translate.currentLang() === 'en';
     return [
       this.blankOption(),
-      { value: 'PERMANENT',  label: this.translate.instant('PROFILES.CONTRACT_TYPE.PERMANENT')  },
-      { value: 'FIXED_TERM', label: this.translate.instant('PROFILES.CONTRACT_TYPE.FIXED_TERM') },
-      { value: 'INTERN',     label: this.translate.instant('PROFILES.CONTRACT_TYPE.INTERN')     },
-      { value: 'CONSULTANT', label: this.translate.instant('PROFILES.CONTRACT_TYPE.CONSULTANT') },
+      ...this.contractTypes().map(v => ({ value: v.valueCode, label: (english && v.labelEn) || v.labelFr })),
     ];
   });
 
@@ -265,6 +278,9 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
     this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));
+    this.configListSvc.getListValues('CONTRACT_TYPE', paysId)
+      .pipe(catchError(() => of([] as ListValue[])))
+      .subscribe(v => this.contractTypes.set(v));
   }
 
   onPaysChange(values: string[]): void {

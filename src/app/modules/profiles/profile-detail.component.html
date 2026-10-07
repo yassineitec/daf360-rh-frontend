@@ -40,6 +40,7 @@
             [genderOptions]="genderOptions()"
             [maritalStatusOptions]="maritalStatusOptions()"
             [nationalityOptions]="nationalityOptions()"
+            [gradeLabel]="positionLabels().grade"
             (photoChange)="onPhotoChange($event)"
             (changeStatus)="openTransitionModal()"
             (startOffboarding)="openOffboardingModal()"
@@ -73,6 +74,7 @@
                 <rh-employment-section
                   [profile]="p" [editMode]="editMode()" [editForm]="editForm()"
                   [contractTypeOptions]="contractTypeOptions()"
+                  [contractTypeLabel]="p.contractType ? contractTypeLabel(p.contractType) : null"
                   (patch)="patch($event)" />
 
                 <rh-position-section
@@ -81,6 +83,7 @@
                   [gradeOptions]="gradeOptions()"
                   [disciplineOptions]="disciplineOptions()"
                   [nogLevelOptions]="nogLevelOptions()"
+                  [labels]="positionLabels()"
                   (patch)="patch($event)" />
 
                 <rh-regime-section
@@ -169,7 +172,8 @@
             }
 
             @case ('remuneration') {
-              <rh-remuneration-section [profile]="p" />
+              <rh-remuneration-section [profile]="p"
+                [contractLabel]="p.contractType ? contractTypeLabel(p.contractType) : null" />
             }
             <!-- Historique documents — the whole SharePoint dossier. Self-loading: it owns its
                  fetch, filters and download, so the page only passes the id. -->
@@ -234,6 +238,7 @@
   <rh-document-edit-form
     [profileId]="profileId"
     [document]="doc"
+    [docTypeOptions]="docTypeOptions()"
     (saved)="onDocumentUpdated()"
     (cancelled)="editingDocument.set(null)" />
 }

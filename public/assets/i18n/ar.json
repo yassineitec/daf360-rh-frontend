@@ -1,4 +1,47 @@
 {
+  "STATUS_BADGE": {
+    "CONGE": "إجازة",
+    "MALADIE": "مرض",
+    "MATERNITE": "أمومة",
+    "PATERNITE": "أبوة",
+    "EXCEPTIONNEL": "استثنائي",
+    "DEUIL_AUTRE": "حداد/أخرى",
+    "EN_ATTENTE": "قيد الانتظار",
+    "VALIDE": "مقبول",
+    "REFUSE": "مرفوض",
+    "ARCHIVE": "مؤرشف",
+    "PRE_ONBOARDING": "ما قبل الإدماج",
+    "ACTIVE": "نشط",
+    "ON_LEAVE": "في إجازة",
+    "ON_MISSION": "في مهمة",
+    "OFFBOARDING": "إنهاء الخدمة",
+    "TERMINATED": "منتهٍ",
+    "ARCHIVED": "مؤرشف",
+    "SUBMITTED": "مُقدَّم",
+    "IN_REVIEW": "قيد المعالجة",
+    "APPROVED": "موافق عليه",
+    "REJECTED": "مرفوض",
+    "CANCELLED": "ملغى",
+    "PENDING_L2": "بانتظار المستوى 2",
+    "DRAFT": "مسودة",
+    "VALIDATED": "مُصادق عليه",
+    "PUBLISHED": "منشور",
+    "LOCKED": "مُقفل",
+    "PENDING": "قيد الانتظار",
+    "ACCEPTED": "مقبول",
+    "OFFER_SENT": "تم إرسال العرض",
+    "IT_IN_PROGRESS": "تقنية المعلومات قيد التنفيذ",
+    "EMAIL_RECEIVED": "تم استلام البريد",
+    "HR_IN_PROGRESS": "الموارد البشرية قيد التنفيذ",
+    "HIRED": "تم التوظيف",
+    "IN_PROGRESS": "قيد التنفيذ",
+    "EMAIL_CREATED": "تم إنشاء البريد",
+    "COMPLETED": "مكتمل"
+  },
+  "GENDER": {
+    "MALE": "ذكر",
+    "FEMALE": "أنثى"
+  },
   "HOME": {
     "TITLE": "بوابة الموارد البشرية",
     "SUBTITLE": "مرحباً {{name}}، إليك حالة موظفيك اليوم.",
@@ -63,6 +106,20 @@
       "MALE": "ذكور",
       "BY_COUNTRY": "التوزيع حسب البلد",
       "COUNTRY_UNKNOWN": "غير محدد"
+    },
+    "ENGINEER_PRO_STATS": {
+      "LABEL": "المهندسون / المهنيون",
+      "ENGINEER": "مهندسون",
+      "PRO": "مهنيون"
+    },
+    "SENIORITY_STATS": {
+      "LABEL": "الأقدمية",
+      "JUNIOR": "مبتدئ",
+      "CONFIRME": "متمرس",
+      "SENIOR": "خبير",
+      "JUNIOR_RANGE": "من 0 إلى 4 سنوات",
+      "CONFIRME_RANGE": "من 5 إلى 7 سنوات",
+      "SENIOR_RANGE": "8 سنوات فأكثر"
     },
     "PROFILE_COMPLETION": {
       "LABEL": "اكتمال الملفات",

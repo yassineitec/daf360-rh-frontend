@@ -134,7 +134,8 @@ export class DocumentsDrawerComponent {
         filename: 'attestation-titularisation.pdf',
         title: t('PROFILES.HR_DOCS.ATT_TENURE_TITLE'),
         description: t('PROFILES.HR_DOCS.ATT_TENURE_DESC'),
-        disabled: profile.contractType !== 'PERMANENT',
+        // Titularisation = permanent contract: CDI, or PERMANENT on rows not yet migrated.
+        disabled: profile.contractType !== 'CDI' && profile.contractType !== 'PERMANENT',
         disabledTooltip: t('PROFILES.HR_DOCS.ATT_TENURE_DISABLED'),
       },
       {

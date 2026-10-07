@@ -65,8 +65,8 @@ export interface EmployeeProfile {
   lifecycleStatus: LifecycleStatus;
 
   // ── Identité ─────────────────────────────────────────────────────────────
-  /** employee_profiles.payroll_matricule — registre paie, décimal zéro-padé ("01", "206").
-   *  Attribué à l'activation, jamais régénéré. */
+  /** employee_profiles.payroll_matricule — numéro transmis par le cabinet comptable ("01", "206").
+   *  Saisi une seule fois dans l'onglet Emploi, verrouillé ensuite. */
   matricule: string | null;
   fullName: string | null; // Users.fullName (enrichi par le service)
 
@@ -181,6 +181,8 @@ export interface ProfileUpdateDto {
   contractEndDate?: string;
   probationEndDate?: string;
   isOnProbation?: boolean;
+  /** Matricule du cabinet comptable — accepté seulement tant que le profil n'en a pas. */
+  payrollMatricule?: string;
   // Poste — FK IDs (dimension table migration)
   departmentId?: number | null;
   gradeId?: number | null;

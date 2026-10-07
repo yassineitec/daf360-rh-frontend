@@ -1,8 +1,10 @@
-import { Component, OnInit, computed, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OnboardingFormData, OnboardingProfileDto } from '../onboarding.model';
 import { MultiDatePickerComponent } from '@khalilrebhiitec/daf360';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
+import { RegimeSummary } from '../onboarding.model';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
@@ -24,10 +26,20 @@ export class StepRegimeComponent implements OnInit {
   protected readonly isoToDate = isoToDate;
   protected readonly dateToIso = dateToIso;
 
+  private translate = inject(TranslateService);
+
+  /** rh/admin régime label in the UI language — the radio list and the selection line. */
+  regimeLabel(r: RegimeSummary): string {
+    return adminLabel(r, this.translate);
+  }
+
   selectedRegimeLabel = computed(() => {
+    this.translate.currentLang();
     const regimes = this.formInfo()?.availableRegimes ?? [];
     const r = regimes.find(r => r.id === this.regimeTemplateId());
-    return r ? r.labelFr + ' (' + r.hoursPerWeek + 'h/sem)' : null;
+    return r
+      ? `${adminLabel(r, this.translate)} (${this.translate.instant('ONBOARDING.STEP_REGIME.HOURS_PER_WEEK', { hours: r.hoursPerWeek })})`
+      : null;
   });
 
   ngOnInit(): void {

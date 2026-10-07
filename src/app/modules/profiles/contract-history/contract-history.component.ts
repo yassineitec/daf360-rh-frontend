@@ -7,9 +7,12 @@ import {
   PaginationComponent,
   StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { ContractHistoryService } from './contract-history.service';
-import { ContractHistoryDto } from './contract-history.model';
+import { ContractHistoryDto, TypeContratDto } from './contract-history.model';
 
 const PAGE_SIZE = 5;
 
@@ -35,7 +38,7 @@ const PAGE_SIZE = 5;
       </p>
       @if (activeContract()) {
         <p style="font-size:12px;color:var(--color-teal);margin:3px 0 0;">
-          {{ 'PROFILES.HISTORY.ACTIVE_CONTRACT' | translate }} <strong>{{ activeContract()!.typeContratLabelFr }}</strong>
+          {{ 'PROFILES.HISTORY.ACTIVE_CONTRACT' | translate }} <strong>{{ typeLabel(activeContract()!) }}</strong>
           · {{ 'PROFILES.HISTORY.SINCE_LABEL' | translate }} {{ activeContract()!.dateEffet | date:'dd/MM/yyyy' }}
           @if (activeContract()!.salaireNet) { · {{ activeContract()!.salaireNet | number:'1.0-0' }} {{ 'PROFILES.HISTORY.TND_NET_SUFFIX' | translate }} }
         </p>
@@ -79,7 +82,7 @@ const PAGE_SIZE = 5;
             <div class="flex flex-1 flex-col gap-1.5">
 
               <div class="flex flex-wrap items-center gap-2">
-                <span class="text-[13px] font-bold text-on-surface">{{ c.typeContratLabelFr }}</span>
+                <span class="text-[13px] font-bold text-on-surface">{{ typeLabel(c) }}</span>
                 <daf-badge [label]="(c.typeDocument === 'CONTRAT_INITIAL' ? 'PROFILES.HISTORY.DOC_INITIAL' : 'PROFILES.HISTORY.DOC_AMENDMENT') | translate"
                   [options]="{ variant: c.typeDocument === 'CONTRAT_INITIAL' ? 'info' : 'warning', pill: true, size: 'sm' }" />
                 @if (c.isActive) {
@@ -142,6 +145,17 @@ const PAGE_SIZE = 5;
  */
 export class ContractHistoryComponent implements OnChanges {
   private svc = inject(ContractHistoryService);
+  private translate = inject(TranslateService);
+
+  /** Référentiels › Type contrat — the DTO only carries the French label. */
+  private readonly typeContrats = toSignal(
+    this.svc.getTypeContrats().pipe(catchError(() => of([] as TypeContratDto[]))), { initialValue: [] });
+
+  /** Contract type in the UI language, by code; an unknown code keeps the DTO label. */
+  protected typeLabel(c: ContractHistoryDto): string {
+    const type = this.typeContrats().find(t => t.code === c.typeContratCode);
+    return type ? adminLabel(type, this.translate) : c.typeContratLabelFr;
+  }
 
   readonly profileId = input.required<number>();
   readonly canEdit   = input<boolean>(false);

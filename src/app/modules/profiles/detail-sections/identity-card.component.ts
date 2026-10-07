@@ -85,8 +85,8 @@ export interface IdentityPill {
         <p class="max-w-full wrap-break-word text-[20px] font-black leading-tight text-on-surface">
           {{ profile().fullName ?? '—' }}
         </p>
-        @if (profile().grade) {
-          <p class="max-w-full wrap-break-word text-[14px] font-medium text-outline">{{ profile().grade }}</p>
+        @if (gradeLabel() ?? profile().grade; as grade) {
+          <p class="max-w-full wrap-break-word text-[14px] font-medium text-outline">{{ grade }}</p>
         }
 
         @if (pills().length) {
@@ -168,6 +168,8 @@ export class IdentityCardComponent {
   readonly genderOptions        = input<SelectOption[]>([]);
   readonly maritalStatusOptions = input<SelectOption[]>([]);
   readonly nationalityOptions   = input<SelectOption[]>([]);
+  /** Grade in the UI language, resolved by the parent from Admin › Référentiels. */
+  readonly gradeLabel = input<string | null | undefined>(null);
 
   readonly photoChange  = output<Event>();
   readonly patch        = output<Partial<ProfileUpdateDto>>();

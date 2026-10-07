@@ -17,6 +17,10 @@ import {
 } from './sections/recruitment-demand-cards-section.component';
 import { RecruitmentDemandTableSectionComponent } from './sections/recruitment-demand-table-section.component';
 import { ListViewMode } from '../../shared/view-toggle.component';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 
 /** The permission that owns this queue — the same code the review endpoint enforces. */
 export const RECRUITMENT_APPROVE_PERMISSION = 'RH_APPROVE_RECRUITMENT_DEMAND';
@@ -37,10 +41,18 @@ function toIsoDay(d: Date): string {
 }
 
 /** Sorted distinct non-empty labels as select options; `keep` stays listed even if absent. */
-function distinctOptions(labels: (string | null)[], keep: string): { value: string; label: string }[] {
+/**
+ * `value` stays the French label (it is what the filter matches on); `display` maps it to
+ * the label shown, so only the text follows the UI language.
+ */
+function distinctOptions(
+  labels: (string | null)[], keep: string, display: (fr: string) => string = l => l,
+): { value: string; label: string }[] {
   const set = new Set(labels.filter((l): l is string => !!l));
   if (keep) set.add(keep);
-  return [...set].sort((a, b) => a.localeCompare(b)).map(l => ({ value: l, label: l }));
+  return [...set]
+    .map(l => ({ value: l, label: display(l) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 
@@ -192,6 +204,12 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   private router       = inject(Router);
   private translate    = inject(TranslateService);
   private notification = inject(NotificationService);
+  private listSvc      = inject(ConfigurableListService);
+
+  /** rh/admin URGENCY_LEVEL — the summary only carries the French label, matched here. */
+  private readonly urgencyLevels = toSignal(
+    this.listSvc.getListValues('URGENCY_LEVEL').pipe(catchError(() => of([] as ListValue[]))),
+    { initialValue: [] as ListValue[] });
 
   readonly demands = signal<RecruitmentDemandSummary[]>([]);
   readonly loading = signal(true);
@@ -239,12 +257,20 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   readonly submittedFilter  = signal<Date[] | null>(null);
 
   /** Departments present in the fetched batch (plus the selected one, so it never vanishes). */
-  private readonly departmentOptions = computed(() =>
-    distinctOptions(this.demands().map(d => d.department), this.departmentFilter()));
+  private readonly departmentOptions = computed(() => {
+    const en = this.translate.currentLang() === 'en';
+    const enByFr = new Map(this.demands().map(d => [d.department, d.departmentLabelEn] as const));
+    return distinctOptions(this.demands().map(d => d.department), this.departmentFilter(),
+      fr => (en && enByFr.get(fr)) || fr);
+  });
 
   /** Urgency levels present in the fetched batch (plus the selected one). */
-  private readonly urgencyOptions = computed(() =>
-    distinctOptions(this.demands().map(d => d.urgencyLevelLabel), this.urgencyFilter()));
+  private readonly urgencyOptions = computed(() => {
+    this.translate.currentLang();
+    const levels = this.urgencyLevels();
+    return distinctOptions(this.demands().map(d => d.urgencyLevelLabel), this.urgencyFilter(),
+      fr => { const v = levels.find(l => l.labelFr === fr); return v ? adminLabel(v, this.translate) : fr; });
+  });
 
   readonly statusVariant = (s: RecruitmentDemandStatus) => STATUS_VARIANT[s];
 

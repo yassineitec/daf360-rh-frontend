@@ -120,6 +120,16 @@
             }
           </ng-template>
 
+          <!-- Per-pays lists only (see `columns`): a shared value is offered to EVERY entity,
+               which is the thing to spot before adding an entity-specific one next to it. -->
+          <ng-template dafCell="scope" let-row>
+            @if (row['_source'].paysId === null) {
+              <daf-badge [label]="'ADMIN.data.lists.SCOPE_ALL' | translate" [options]="{ variant: 'neutral' }" />
+            } @else {
+              <daf-badge [label]="'ADMIN.data.lists.SCOPE_PAYS' | translate" [options]="{ variant: 'info' }" />
+            }
+          </ng-template>
+
         </daf-data-table>
         </div>
 

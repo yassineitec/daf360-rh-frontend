@@ -1,3 +1,4 @@
+import { DepartureReasonLabelService } from './departure-reason-labels.service';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -75,6 +76,7 @@ import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
 })
 export class OffboardingDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
+  protected readonly reasons = inject(DepartureReasonLabelService);
   private svc       = inject(OffboardingService);
   private translate = inject(TranslateService);
   private userStore = inject(UserStore);
@@ -1539,7 +1541,7 @@ export class OffboardingDetailComponent implements OnInit {
 
   // ── Label helpers ──────────────────────────────────────────────────────────
   statusLabel(s: string): string { return this.translate.instant('OFFBOARDING.STATUS.' + s); }
-  reasonLabel(r: string): string { return this.translate.instant('OFFBOARDING.REASON.' + r); }
+  reasonLabel(r: string): string { return this.reasons.label(r); }
 
   private parseReasonList(json: string | null | undefined): DepartureReason[] {
     if (!json) return [];

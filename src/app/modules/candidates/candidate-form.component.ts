@@ -28,7 +28,7 @@ import {
   UploadedFile,
 } from '@khalilrebhiitec/daf360';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
-import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
+import { genderOptions } from '../../shared/utils/gender.utils';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WizardStepCardComponent } from '../../shared/wizard/wizard-step-card.component';
 
@@ -72,32 +72,51 @@ export class CandidateFormComponent implements OnInit {
   departments     = signal<RefDataItem[]>([]);
   nationalities   = signal<RefDataItem[]>([]);
   employmentTypes = signal<ListValue[]>([]);
-
-  readonly gradeOptions = computed<SelectOption[]>(() =>
-    this.grades().map(g => ({ value: String(g.id), label: g.labelFr }))
-  );
-  readonly disciplineOptions = computed<SelectOption[]>(() =>
-    this.disciplines().map(d => ({ value: String(d.id), label: d.labelFr }))
-  );
-  readonly departmentOptions = computed<SelectOption[]>(() =>
-    this.departments().map(d => ({ value: String(d.id), label: d.labelFr }))
-  );
-  readonly nationalityOptions = computed<SelectOption[]>(() =>
-    this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr }))
-  );
-
-  /** Gender options limited to Homme / Femme (canonical MALE/FEMALE codes). */
-  readonly genderOptions: SelectOption[] = GENDER_OPTIONS
-    .filter(o => o.value === 'MALE' || o.value === 'FEMALE')
-    .map(o => ({ value: o.value, label: o.label }));
+  genders         = signal<ListValue[]>([]);
 
   /**
-   * Contract types come from the configurable EMPLOYMENT_TYPE list (per pays).
+   * Admin-managed label in the UI language. Both labels are edited in rh/admin; an
+   * entry with no English label falls back to the French one rather than showing blank.
+   */
+  private label(item: { labelFr: string; labelEn: string }): string {
+    return (this.translate.currentLang() === 'en' ? item.labelEn : item.labelFr)
+      || item.labelFr || item.labelEn;
+  }
+
+  readonly gradeOptions = computed<SelectOption[]>(() =>
+    this.grades().map(g => ({ value: String(g.id), label: this.label(g) }))
+  );
+  readonly disciplineOptions = computed<SelectOption[]>(() =>
+    this.disciplines().map(d => ({ value: String(d.id), label: this.label(d) }))
+  );
+  readonly departmentOptions = computed<SelectOption[]>(() =>
+    this.departments().map(d => ({ value: String(d.id), label: this.label(d) }))
+  );
+  readonly nationalityOptions = computed<SelectOption[]>(() =>
+    this.nationalities().map(n => ({ value: String(n.id), label: this.label(n) }))
+  );
+
+  /**
+   * Gender options from the admin GENDER list, still limited to Homme / Femme (canonical
+   * MALE/FEMALE codes). Falls back to the static options while the list is empty.
+   */
+  readonly genderOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    const fromAdmin = this.genders()
+      .filter(v => v.valueCode === 'MALE' || v.valueCode === 'FEMALE')
+      .map(v => ({ value: v.valueCode, label: this.label(v) }));
+    return fromAdmin.length
+      ? fromAdmin
+      : genderOptions(this.translate);
+  });
+
+  /**
+   * Contract types come from the configurable CONTRACT_TYPE list (per pays).
    * The candidate stores an `employmentTypeId`; the backend later derives the
    * actual contract code from it at hire time (CandidateService#hireCandidate).
    */
   readonly employmentTypeChipOptions = computed<ChipOption[]>(() =>
-    this.employmentTypes().map(t => ({ value: String(t.id), label: t.labelFr || t.labelEn })),
+    this.employmentTypes().map(t => ({ value: String(t.id), label: this.label(t) })),
   );
 
   // ── Wizard state ─────────────────────────────────────────────────────────
@@ -312,7 +331,10 @@ export class CandidateFormComponent implements OnInit {
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
     this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
-    this.listSvc.getListValues('EMPLOYMENT_TYPE', paysId).subscribe(v => this.employmentTypes.set(v));
+    this.listSvc.getListValues('CONTRACT_TYPE', paysId).subscribe(v => this.employmentTypes.set(v));
+    this.listSvc.getListValues('GENDER')
+      .pipe(catchError(() => of([] as ListValue[])))
+      .subscribe(v => this.genders.set(v));
   }
 
   // ── Bridge helpers ───────────────────────────────────────────────────────

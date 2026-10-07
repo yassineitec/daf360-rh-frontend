@@ -17,7 +17,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { RequestsService } from './requests.service';
-import { EmployeeRequest, RequestStatus, RequestType } from './models/request.model';
+import { EmployeeRequest, RequestStatus, RequestType, requestTypeName } from './models/request.model';
 import { SlaCountdownPipe, SlaLevel, SlaResult } from '../../shared/sla-countdown.pipe';
 import {
   RequestCardAction, RequestCardItem, RequestCardsSectionComponent, requestRef,
@@ -279,7 +279,7 @@ export class RequestListComponent implements OnInit {
    *  read by the shared KPI row above so the cards don't need their own copy of its data. */
   readonly recruitmentSection = viewChild(RecruitmentValidationSectionComponent);
 
-  protected readonly statusBadge = statusBadge;
+  protected readonly statusBadge = (s: string) => statusBadge(s, this.translate);
 
   canViewInbox = computed(() => this.userStore.isHrManager() || this.userStore.isAdmin());
 
@@ -491,7 +491,7 @@ export class RequestListComponent implements OnInit {
         ref: requestRef(r),
         employeeLabel: r.employeeName
           ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
-        type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
+        type: requestTypeName(r, this.translate.currentLang()) ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
         categoryLabel: category ? this.translate.instant('REQUESTS.CATEGORY.' + category) : '',
         status: this.statusBadge(r.status),
         isActive,

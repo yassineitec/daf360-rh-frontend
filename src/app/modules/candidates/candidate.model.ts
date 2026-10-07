@@ -73,7 +73,7 @@ export interface CandidateDetail {
   department: string | null;
   departmentId: number | null;
   /**
-   * Contract type. The backend exposes it as an EMPLOYMENT_TYPE list value
+   * Contract type. The backend exposes it as an CONTRACT_TYPE list value
    * (employmentTypeId + resolved employmentTypeLabel), NOT a `contractType`
    * enum. `employmentTypeLabel` is the human label to display.
    */
@@ -156,7 +156,7 @@ export interface UpdateCandidateRequest {
   departmentId?: number | null;
   nationalityId?: number | null;
   /**
-   * Contract type — an EMPLOYMENT_TYPE list-value id. Validated server-side against
+   * Contract type — an CONTRACT_TYPE list-value id. Validated server-side against
    * the active values of the candidate's own entity, and refused once the candidate
    * is HIRED (a contract has been written from it by then).
    */

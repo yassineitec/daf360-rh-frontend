@@ -180,3 +180,15 @@ export function getFieldsForType(typeCode: string): FieldDef[] {
 export function isFileField(f: FieldDef): boolean {
   return f.type === 'file';
 }
+
+/**
+ * Request-type name in the UI language — both names are edited in rh/admin (types de
+ * demande); a blank English name falls back to the French one. `undefined` while the
+ * backend has not enriched the row, so callers keep their "Demande #N" fallback.
+ */
+export function requestTypeName(
+  r: { typeDisplayNameFr?: string; typeDisplayNameEn?: string | null },
+  lang: string | undefined | null,
+): string | undefined {
+  return (lang === 'en' && r.typeDisplayNameEn) || r.typeDisplayNameFr || undefined;
+}

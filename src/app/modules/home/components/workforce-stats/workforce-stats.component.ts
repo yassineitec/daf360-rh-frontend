@@ -41,20 +41,32 @@ interface CountryBar {
         <div class="wf-split mt-6 items-center">
           <div class="wf-half flex items-center gap-3">
             <img src="/images/female.svg" alt="" class="wf-icon shrink-0" />
-            <div class="flex flex-col min-w-0">
+            <div class="flex flex-col flex-1 min-w-0">
               <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.FEMALE' | translate }}</p>
               <p class="text-[18px] font-bold text-teal">
-                {{ pctFemmes() != null ? pctFemmes() + '%' : '—' }}
+                {{ femmes() ?? '—' }}
+                @if (pctFemmes() != null) {
+                  <span class="text-[12px] font-medium text-outline">· {{ pctFemmes() }}%</span>
+                }
               </p>
+              <daf-progress-bar class="block w-full mt-1.5"
+                [value]="pctFemmes() ?? 0"
+                [options]="{ max: 100, size: 'sm', variant: 'teal', showPercent: false }" />
             </div>
           </div>
           <div class="wf-half wf-half--second flex items-center gap-3">
             <img src="/images/male.svg" alt="" class="wf-icon shrink-0" />
-            <div class="flex flex-col min-w-0">
+            <div class="flex flex-col flex-1 min-w-0">
               <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.WORKFORCE_STATS.MALE' | translate }}</p>
               <p class="text-[18px] font-bold text-teal">
-                {{ pctHommes() != null ? pctHommes() + '%' : '—' }}
+                {{ hommes() ?? '—' }}
+                @if (pctHommes() != null) {
+                  <span class="text-[12px] font-medium text-outline">· {{ pctHommes() }}%</span>
+                }
               </p>
+              <daf-progress-bar class="block w-full mt-1.5"
+                [value]="pctHommes() ?? 0"
+                [options]="{ max: 100, size: 'sm', variant: 'teal', showPercent: false }" />
             </div>
           </div>
         </div>
@@ -125,6 +137,8 @@ export class WorkforceStatsComponent {
   readonly totalActifs = input.required<number>();
   readonly pctFemmes   = input<number | null | undefined>(undefined);
   readonly pctHommes   = input<number | null | undefined>(undefined);
+  readonly femmes      = input<number | null | undefined>(undefined);
+  readonly hommes      = input<number | null | undefined>(undefined);
   readonly byCountry   = input<CountryHeadcount[]>([]);
 
   readonly countryBars = computed<CountryBar[]>(() =>

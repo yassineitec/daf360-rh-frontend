@@ -1,3 +1,4 @@
+import { DepartureReasonLabelService } from './departure-reason-labels.service';
 import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -81,6 +82,7 @@ export class OffboardingListComponent implements OnInit {
   readonly tableSection = viewChild(OffboardingTableSectionComponent);
 
   private svc       = inject(OffboardingService);
+  protected readonly reasons = inject(DepartureReasonLabelService);
   private router    = inject(Router);
   private route     = inject(ActivatedRoute);
   private translate = inject(TranslateService);
@@ -167,7 +169,7 @@ export class OffboardingListComponent implements OnInit {
     const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
     const lateOnly = this.lateOnly();
     return this.scopedItems().filter(w => {
-      const reason = this.translate.instant('OFFBOARDING.REASON.' + w.departureReason).toLowerCase();
+      const reason = this.reasons.label(w.departureReason).toLowerCase();
       const matchesTerm = !term
         || (w.employeeFullName ?? '').toLowerCase().includes(term)
         || (w.handoverManagerName ?? '').toLowerCase().includes(term)
@@ -264,7 +266,7 @@ export class OffboardingListComponent implements OnInit {
   private readonly reasonLabel = computed(() => {
     this.translate.currentLang();
     const reason = this.routeReason();
-    return reason ? this.translate.instant('OFFBOARDING.REASON.' + reason) : '';
+    return reason ? this.reasons.label(reason) : '';
   });
 
   readonly pageTitle = computed(() => {
@@ -371,7 +373,7 @@ export class OffboardingListComponent implements OnInit {
         placeholder: t('OFFBOARDING.LIST.FILTERS.ALL_REASONS'),
         options: DEPARTURE_REASONS.map(code => ({
           value: code,
-          label: t('OFFBOARDING.REASON.' + code),
+          label: this.reasons.label(code),
         })),
       });
     }

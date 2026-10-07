@@ -23,7 +23,7 @@ import { ListValue } from '../../core/lists/configurable-list.model';
 import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
 import { ApprovedDemandOption } from '../recruitment-demands/recruitment-demand.model';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
+import { genderOptions } from '../../shared/utils/gender.utils';
 import { CandidateService } from './candidate.service';
 import {
   CandidateDetail, CandidateHistoryItem, HireCandidateRequest, UpdateCandidateRequest,
@@ -170,8 +170,9 @@ export class CandidateDetailComponent implements OnInit {
     return c !== null && HIREABLE_STATUSES.includes(c.status) && this.canHire();
   });
 
-  /** Human contract-type label from the backend (resolved EMPLOYMENT_TYPE list value). */
-  readonly contractTypeLabel = computed(() => this.candidate()?.employmentTypeLabel ?? null);
+  /** CONTRACT_TYPE label in the UI language (see readLabels); the backend French label as fallback. */
+  readonly contractTypeLabel = computed(() =>
+    this.readLabels().employmentType ?? this.candidate()?.employmentTypeLabel ?? null);
 
   /** Whether the hire form must ask for an end date (backend enforces this too). */
   readonly requiresEndDate = computed(() => {
@@ -357,22 +358,33 @@ export class CandidateDetailComponent implements OnInit {
     this.editMode.set(true);
     this.editSaveError.set(null);
 
-    // Scoped to the candidate's own entity, like the hire and contract forms:
-    // grades and departments are per-pays, and the unscoped list would offer
-    // another entity's structure. Nationalities are global.
-    const paysId = c.paysId;
+    this.loadAdminLists(c.paysId);
+    this.demandSvc.getApprovedOptions(c.paysId)
+      .pipe(catchError(() => of([] as ApprovedDemandOption[])))
+      .subscribe(d => this.demands.set(d));
+  }
+
+  /**
+   * The rh/admin lists behind this page's selects AND its read-mode labels — loaded with
+   * the record, not on edit, because read mode resolves its labels from them too.
+   *
+   * Scoped to the candidate's own entity, like the hire and contract forms:
+   * grades and departments are per-pays, and the unscoped list would offer
+   * another entity's structure. Nationalities are global.
+   */
+  private loadAdminLists(paysId: number): void {
     this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
     this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
-    // The same two lists the create wizard offers, and for contract types the exact
-    // set the backend now validates against (active EMPLOYMENT_TYPE values of this pays).
-    this.listSvc.getListValues('EMPLOYMENT_TYPE', paysId)
+    // The same lists the create wizard offers, and for contract types the exact
+    // set the backend now validates against (active CONTRACT_TYPE values of this pays).
+    this.listSvc.getListValues('CONTRACT_TYPE', paysId)
       .pipe(catchError(() => of([] as ListValue[])))
       .subscribe(v => this.employmentTypes.set(v));
-    this.demandSvc.getApprovedOptions(paysId)
-      .pipe(catchError(() => of([] as ApprovedDemandOption[])))
-      .subscribe(d => this.demands.set(d));
+    this.listSvc.getListValues('GENDER')
+      .pipe(catchError(() => of([] as ListValue[])))
+      .subscribe(v => this.genders.set(v));
   }
 
   saveCandidate(): void {
@@ -454,13 +466,31 @@ export class CandidateDetailComponent implements OnInit {
   private readonly departments   = signal<RefDataItem[]>([]);
   private readonly nationalities = signal<RefDataItem[]>([]);
   private readonly employmentTypes = signal<ListValue[]>([]);
+  private readonly genders         = signal<ListValue[]>([]);
   private readonly demands         = signal<ApprovedDemandOption[]>([]);
 
   private blankOption(): SelectOption {
     return { value: '', label: this.translate.instant('CANDIDATES.COMMON.SELECT_PLACEHOLDER') };
   }
+  /**
+   * rh/admin label in the UI language (Référentiels and Listes configurables both carry
+   * labelFr / labelEn); an entry with no English label falls back to the French one.
+   */
+  private adminLabel(item: { labelFr: string; labelEn: string }): string {
+    return (this.translate.currentLang() === 'en' && item.labelEn) || item.labelFr || item.labelEn;
+  }
   private refOptions(items: RefDataItem[]): SelectOption[] {
-    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: i.labelFr }))];
+    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: this.adminLabel(i) }))];
+  }
+  /**
+   * Read-mode label for an rh/admin FK. The candidate DTO only carries the French label,
+   * so the entry is resolved by id; an id the list no longer holds keeps the DTO's text.
+   */
+  private adminLabelById<T extends { id: number; labelFr: string; labelEn: string }>(
+    items: T[], id: number | null | undefined, fallback: string | null,
+  ): string | null {
+    const item = id != null ? items.find(i => i.id === id) : undefined;
+    return item ? this.adminLabel(item) : fallback;
   }
 
   readonly nationalityOptions = computed(() => this.refOptions(this.nationalities()));
@@ -468,10 +498,32 @@ export class CandidateDetailComponent implements OnInit {
   readonly gradeOptions       = computed(() => this.refOptions(this.grades()));
   readonly disciplineOptions  = computed(() => this.refOptions(this.disciplines()));
 
-  /** Homme / Femme, the same canonical codes the create wizard offers. */
+  /** Admin GENDER values for the canonical codes — Homme / Femme, as the create wizard offers. */
+  private readonly adminGenders = computed(() =>
+    this.genders().filter(v => v.valueCode === 'MALE' || v.valueCode === 'FEMALE'));
+
+  /** From the admin GENDER list; the static options only while that list is empty. */
   readonly genderOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return [this.blankOption(), ...GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }))];
+    const fromAdmin = this.adminGenders().map(v => ({ value: v.valueCode, label: this.adminLabel(v) }));
+    return [this.blankOption(), ...(fromAdmin.length ? fromAdmin : genderOptions(this.translate))];
+  });
+
+  /** Read-mode labels of the record, in the UI language, from the same rh/admin lists. */
+  readonly readLabels = computed(() => {
+    const c = this.candidate();
+    if (!c) return {};
+    const gender = c.gender
+      ? this.adminGenders().find(v => v.valueCode === c.gender!.trim().toUpperCase())
+      : undefined;
+    return {
+      department:     this.adminLabelById(this.departments(),     c.departmentId,        c.department),
+      grade:          this.adminLabelById(this.grades(),          c.appliedGradeId,      c.appliedGrade),
+      discipline:     this.adminLabelById(this.disciplines(),     c.appliedDisciplineId, c.appliedDiscipline),
+      nationality:    this.adminLabelById(this.nationalities(),   c.nationalityId,       c.nationality),
+      employmentType: this.adminLabelById(this.employmentTypes(), c.employmentTypeId,    c.employmentTypeLabel),
+      gender:         gender ? this.adminLabel(gender) : null,
+    };
   });
 
   /**
@@ -480,7 +532,7 @@ export class CandidateDetailComponent implements OnInit {
    * an empty choice would be offering a hidden default.
    */
   readonly employmentTypeOptions = computed<SelectOption[]>(() =>
-    this.employmentTypes().map(t => ({ value: String(t.id), label: t.labelFr || t.labelEn })),
+    this.employmentTypes().map(t => ({ value: String(t.id), label: this.adminLabel(t) })),
   );
 
   /**
@@ -532,6 +584,7 @@ export class CandidateDetailComponent implements OnInit {
     this.candidateService.getById(this.candidateId).subscribe({
       next: data => {
         this.candidate.set(data);
+        this.loadAdminLists(data.paysId);
         this.salaryNetRh.set(data.salaireNetRh ?? null);
         this.salaryNetCandidat.set(data.salaireNetCandidat ?? null);
         this.firstLoad.set(false);

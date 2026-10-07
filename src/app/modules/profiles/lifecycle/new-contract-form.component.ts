@@ -1,3 +1,7 @@
+import { catchError, of } from 'rxjs';
+import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
+import { ListValue } from '../../../core/lists/configurable-list.model';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import {
   AfterViewInit, Component, computed, inject, input, OnInit, output, signal,
   TemplateRef, viewChild,
@@ -52,7 +56,7 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
                 [class.type-chip--active]="contractType === t"
                 class="type-chip"
                 (click)="contractType = t; dateFinPrevue = ''"
-              >{{ 'PROFILES.CONTRACT_TYPE.' + t | translate }}</button>
+              >{{ chipLabel(t) }}</button>
             }
           </div>
         </div>
@@ -193,6 +197,21 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
   private translate = inject(TranslateService);
 
   readonly types = TYPE_CODES;
+
+  private listSvc = inject(ConfigurableListService);
+  /** Admin › Listes configurables › CONTRACT_TYPE of this entity — labels only. */
+  private readonly adminTypes = signal<ListValue[]>([]);
+
+  /**
+   * The chips stay the lifecycle engine's types — each has its own rules (end date, trial,
+   * CIVP/stage fields) — but their text is the admin label of the matching CONTRACT_TYPE
+   * value, in the UI language (FREELANCE is the list's name for PORTAGE, as in
+   * ContractTypeBridge). A type the list does not hold keeps the i18n label.
+   */
+  protected chipLabel(t: ContractTypeCode): string {
+    const v = this.adminTypes().find(x => x.valueCode === t || (t === 'PORTAGE' && x.valueCode === 'FREELANCE'));
+    return v ? adminLabel(v, this.translate) : this.translate.instant('PROFILES.CONTRACT_TYPE.' + t);
+  }
   readonly cfg   = CONTRACT_TYPE_CONFIG;
 
   formTpl = viewChild.required<TemplateRef<unknown>>('formTpl');
@@ -231,6 +250,9 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
   error  = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.listSvc.getListValues('CONTRACT_TYPE', this.paysId())
+      .pipe(catchError(() => of([] as ListValue[])))
+      .subscribe(v => this.adminTypes.set(v));
     // Needed to translate the chosen contract type CODE into the historique table's FK.
     // Failure is tolerated: the lifecycle contract is the important half and must not be
     // blocked because a lookup list did not load.

@@ -1,5 +1,9 @@
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { Component, output, signal, OnInit, inject, computed } from '@angular/core';
-import { OnboardingProfileDto, OnboardingFormData, CONTRACT_OPTIONS } from '../onboarding.model';
+import { OnboardingProfileDto, OnboardingFormData, contractNeedsEndDate } from '../onboarding.model';
+import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
+import { contractLabel } from '../../profiles/profile-labels';
+import { ListValue } from '../../../core/lists/configurable-list.model';
 import { RefDataService } from '../../../core/ref/ref-data.service';
 import { RefDataItem } from '../../../core/ref/ref-data.model';
 import { UserStore } from '../../../core/user.store';
@@ -11,13 +15,6 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
-
-const CONTRACT_LABEL_KEY: Record<string, string> = {
-  PERMANENT:  'ONBOARDING.STEP_CONTRACT.CONTRACT_PERMANENT',
-  FIXED_TERM: 'ONBOARDING.STEP_CONTRACT.CONTRACT_FIXED_TERM',
-  INTERN:     'ONBOARDING.STEP_CONTRACT.CONTRACT_INTERN',
-  CONSULTANT: 'ONBOARDING.STEP_CONTRACT.CONTRACT_CONSULTANT',
-};
 
 @Component({
   selector: 'app-step-contract',
@@ -34,13 +31,24 @@ export class StepContractComponent implements OnInit {
   private refSvc = inject(RefDataService);
   private userStore = inject(UserStore);
   private translate = inject(TranslateService);
+  private listSvc   = inject(ConfigurableListService);
+
+  /** Admin › Listes configurables › Type de contrat (CONTRACT_TYPE) — the same list as the profile. */
+  private readonly contractTypes = signal<ListValue[]>([]);
 
   readonly contractOptions = computed<SelectOption[]>(() => {
-    this.translate.currentLang();
-    return CONTRACT_OPTIONS
-      .filter(o => o.value !== '')
-      .map(o => ({ value: o.value, label: this.translate.instant(CONTRACT_LABEL_KEY[o.value] ?? o.label) }));
+    const options = this.contractTypes().map(v => ({ value: v.valueCode, label: adminLabel(v, this.translate) }));
+    // A code the list does not hold (deactivated value, or a pre-migration PERMANENT/…)
+    // stays selectable, otherwise the select would show empty and lose it on save.
+    const current = this.contractType();
+    if (current && !options.some(o => o.value === current)) {
+      options.push({ value: current, label: contractLabel(current, this.translate) });
+    }
+    return options;
   });
+
+  /** Fixed-term types ask for an end date (CDD, CIVP, stage, détachement). */
+  readonly needsEndDate = computed(() => contractNeedsEndDate(this.contractType()));
 
   hireDate         = signal('');
   contractType     = signal('');
@@ -57,10 +65,10 @@ export class StepContractComponent implements OnInit {
   nogLevels   = signal<RefDataItem[]>([]);
   departments = signal<RefDataItem[]>([]);
 
-  readonly gradeOptions      = computed<SelectOption[]>(() => this.grades().map(g => ({ value: String(g.id), label: g.labelFr })));
-  readonly disciplineOptions = computed<SelectOption[]>(() => this.disciplines().map(d => ({ value: String(d.id), label: d.labelFr })));
-  readonly nogOptions        = computed<SelectOption[]>(() => this.nogLevels().map(n => ({ value: String(n.id), label: n.labelFr })));
-  readonly departmentOptions = computed<SelectOption[]>(() => this.departments().map(d => ({ value: String(d.id), label: d.labelFr })));
+  readonly gradeOptions      = computed<SelectOption[]>(() => this.grades().map(g => ({ value: String(g.id), label: adminLabel(g, this.translate) })));
+  readonly disciplineOptions = computed<SelectOption[]>(() => this.disciplines().map(d => ({ value: String(d.id), label: adminLabel(d, this.translate) })));
+  readonly nogOptions        = computed<SelectOption[]>(() => this.nogLevels().map(n => ({ value: String(n.id), label: adminLabel(n, this.translate) })));
+  readonly departmentOptions = computed<SelectOption[]>(() => this.departments().map(d => ({ value: String(d.id), label: adminLabel(d, this.translate) })));
 
   protected readonly isoToDate = isoToDate;
   protected readonly dateToIso = dateToIso;
@@ -89,12 +97,14 @@ export class StepContractComponent implements OnInit {
     this.refSvc.getDisciplines(paysId).subscribe(r => { this.disciplines.set(r); this.emit(); });
     this.refSvc.getNogLevels(paysId).subscribe(r => { this.nogLevels.set(r); this.emit(); });
     this.refSvc.getDepartments(paysId).subscribe(r => { this.departments.set(r); this.emit(); });
+    this.listSvc.getListValues('CONTRACT_TYPE', paysId).subscribe(v => this.contractTypes.set(v));
 
     this.emit();
   }
 
   private labelOf(list: RefDataItem[], id: number | null): string | undefined {
-    return id == null ? undefined : list.find(x => x.id === id)?.labelFr;
+    const item = id == null ? undefined : list.find(x => x.id === id);
+    return item ? adminLabel(item, this.translate) : undefined;
   }
 
   emit(): void {

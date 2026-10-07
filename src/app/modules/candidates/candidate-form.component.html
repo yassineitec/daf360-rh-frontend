@@ -101,7 +101,7 @@
 
             <daf-select
               [selected]="getSelectStr('identity.gender')"
-              [options]="genderOptions"
+              [options]="genderOptions()"
               [config]="{
                 label: ('CANDIDATES.FORM.GENDER' | translate),
                 placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
@@ -268,17 +268,17 @@
 
           <!-- Salary benchmarking (optional — used for cost simulation) -->
           <div class="border-t border-outline-variant/40 pt-6">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-outline mb-3">Informations salariales (optionnel)</p>
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-outline mb-3">{{ 'CANDIDATES.FORM.SALARY_SECTION' | translate }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-form-field
-                [options]="{ label: 'Prétention salariale candidat (net)', type: 'number',
-                             placeholder: 'ex: 2800', prefixIcon: 'person' }"
+                [options]="{ label: ('CANDIDATES.FORM.SALARY_CANDIDATE_NET' | translate), type: 'number',
+                             placeholder: ('CANDIDATES.FORM.SALARY_CANDIDATE_NET_PH' | translate), prefixIcon: 'person' }"
                 [value]="getTextValue('position.salaireNetCandidat')"
                 (valueChange)="setTextValue('position.salaireNetCandidat', $event ? +$event : null)" />
 
               <daf-form-field
-                [options]="{ label: 'Budget RH (net)', type: 'number',
-                             placeholder: 'ex: 3000', prefixIcon: 'currency_exchange' }"
+                [options]="{ label: ('CANDIDATES.FORM.SALARY_HR_BUDGET_NET' | translate), type: 'number',
+                             placeholder: ('CANDIDATES.FORM.SALARY_HR_BUDGET_NET_PH' | translate), prefixIcon: 'currency_exchange' }"
                 [value]="getTextValue('position.salaireNetRh')"
                 (valueChange)="setTextValue('position.salaireNetRh', $event ? +$event : null)" />
             </div>

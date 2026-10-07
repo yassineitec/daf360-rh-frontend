@@ -21,7 +21,7 @@ import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
 import { RECRUITMENT_REASONS, RecruitmentDemandSummary, RecruitmentDemandStatus } from './recruitment-demand.model';
 import { RequestsService } from '../requests/requests.service';
-import { EmployeeRequest, RequestStatus, RequestType } from '../requests/models/request.model';
+import { EmployeeRequest, RequestStatus, RequestType, requestTypeName } from '../requests/models/request.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { ListViewMode } from '../../shared/view-toggle.component';
 import { RequestCardItem, RequestCardsSectionComponent, requestRef } from '../requests/request-cards-section.component';
@@ -625,9 +625,9 @@ export class RecruitmentDemandListComponent implements OnInit {
         ref: requestRef(r),
         employeeLabel: r.employeeName
           ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
-        type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
+        type: requestTypeName(r, this.translate.currentLang()) ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
         categoryLabel: category ? this.translate.instant('REQUESTS.CATEGORY.' + category) : '',
-        status: statusBadge(r.status),
+        status: statusBadge(r.status, this.translate),
         isActive: false,
         sla: null,
         slaLabel: '',

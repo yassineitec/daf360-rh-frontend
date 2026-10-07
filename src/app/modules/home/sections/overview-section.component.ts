@@ -3,6 +3,8 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AlertCardComponent, MissingDocAlert, ProbationAlert } from '../components/alert-card/alert-card.component';
 import { WorkforceStatsComponent } from '../components/workforce-stats/workforce-stats.component';
 import { ProfileCompletionComponent } from '../components/profile-completion/profile-completion.component';
+import { EngineerProStatsComponent } from '../components/engineer-pro-stats/engineer-pro-stats.component';
+import { SeniorityStatsComponent } from '../components/seniority-stats/seniority-stats.component';
 import { CountryHeadcount } from '../services/home.service';
 
 /**
@@ -14,7 +16,7 @@ import { CountryHeadcount } from '../services/home.service';
   selector: 'rh-overview-section',
   standalone: true,
   host: { class: 'block' },
-  imports: [TranslatePipe, AlertCardComponent, WorkforceStatsComponent, ProfileCompletionComponent],
+  imports: [TranslatePipe, AlertCardComponent, WorkforceStatsComponent, EngineerProStatsComponent, SeniorityStatsComponent, ProfileCompletionComponent],
   template: `
     <!-- Tablet and up — ONE grid, two shapes, driven by a single col-span.
          md–lg (768–1279): 2 columns. The watchlist spans both, so it gets the full width
@@ -26,9 +28,13 @@ import { CountryHeadcount } from '../services/home.service';
          width from 768px up: the watchlist took half and the two cards split the other
          half, so at 768px each stat card had ~180px of box and ~130px of content after
          'padding: lg'. That is what squashed the effectif card. A tablet is not a small
-         desktop, and this is the tier that was missing rather than a size to shrink into. -->
+         desktop, and this is the tier that was missing rather than a size to shrink into.
+
+         Four stat cards now (Féminin/Masculin, Ing/Pro, Junior/Confirmé/Senior,
+         completion), always two per row. At xl the watchlist spans two ROWS, so the
+         right half is a 2×2 block and no cell is left empty next to it. -->
     <div class="hidden md:grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      <div class="md:col-span-2">
+      <div class="md:col-span-2 xl:row-span-2">
         <rh-alert-card
           [probationAlerts]="probationAlerts()"
           [probationTotal]="probationTotal()"
@@ -40,7 +46,27 @@ import { CountryHeadcount } from '../services/home.service';
           [totalActifs]="totalActifs()"
           [pctFemmes]="pctFemmes()"
           [pctHommes]="pctHommes()"
+          [femmes]="femmes()"
+          [hommes]="hommes()"
           [byCountry]="byCountry()" />
+      </div>
+      <div class="min-w-0">
+        <rh-engineer-pro-stats
+          [total]="ingProTotal()"
+          [pctIngenieurs]="pctIngenieurs()"
+          [pctPros]="pctPros()"
+          [ingenieurs]="ingenieurs()"
+          [pros]="pros()" />
+      </div>
+      <div class="min-w-0">
+        <rh-seniority-stats
+          [total]="ingProTotal()"
+          [pctJuniors]="pctJuniors()"
+          [pctConfirmes]="pctConfirmes()"
+          [pctSeniors]="pctSeniors()"
+          [juniors]="juniors()"
+          [confirmes]="confirmes()"
+          [seniors]="seniors()" />
       </div>
       <div class="min-w-0">
         <rh-profile-completion
@@ -76,6 +102,19 @@ export class OverviewSectionComponent {
   readonly pctFemmes          = input<number | null | undefined>(undefined);
   readonly pctHommes          = input<number | null | undefined>(undefined);
   readonly byCountry          = input<CountryHeadcount[]>([]);
+  readonly ingProTotal        = input<number>(0);
+  readonly pctIngenieurs      = input<number | null | undefined>(undefined);
+  readonly pctPros            = input<number | null | undefined>(undefined);
+  readonly pctJuniors         = input<number | null | undefined>(undefined);
+  readonly pctConfirmes       = input<number | null | undefined>(undefined);
+  readonly pctSeniors         = input<number | null | undefined>(undefined);
+  readonly femmes             = input<number | null | undefined>(undefined);
+  readonly hommes             = input<number | null | undefined>(undefined);
+  readonly ingenieurs         = input<number | null | undefined>(undefined);
+  readonly pros               = input<number | null | undefined>(undefined);
+  readonly juniors            = input<number | null | undefined>(undefined);
+  readonly confirmes          = input<number | null | undefined>(undefined);
+  readonly seniors            = input<number | null | undefined>(undefined);
   readonly tauxGlobalPct      = input<number>(0);
   readonly dossiersIncomplets = input<number>(0);
 

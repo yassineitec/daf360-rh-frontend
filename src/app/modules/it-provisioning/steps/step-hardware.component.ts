@@ -1,3 +1,6 @@
+import { toSignal } from '@angular/core/rxjs-interop';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
+import { RefDataService } from '../../../core/ref/ref-data.service';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -97,6 +100,10 @@ export interface AssetFieldChange {
 })
 export class StepHardwareComponent {
   private translate = inject(TranslateService);
+  private refSvc    = inject(RefDataService);
+
+  /** Référentiels › Types d'équipements IT — the row label in the UI language, by type code. */
+  private readonly assetTypes = toSignal(this.refSvc.getItAssetTypes(), { initialValue: [] });
 
   readonly assets = input.required<ItAssetDto[]>();
   readonly notes  = input('');
@@ -118,7 +125,15 @@ export class StepHardwareComponent {
     ];
   });
 
-  protected readonly rows = computed<TableRow[]>(() => this.assets().map(a => ({ ...a })));
+  protected readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const types = this.assetTypes();
+    return this.assets().map(a => {
+      const type = types.find(t => t.code === a.assetTypeCode);
+      // The DTO only carries the French label; an unknown code keeps it.
+      return { ...a, assetTypeLabelFr: type ? adminLabel(type, this.translate) : a.assetTypeLabelFr };
+    });
+  });
 
   protected readonly config = computed<TableConfig>(() => {
     this.translate.currentLang();

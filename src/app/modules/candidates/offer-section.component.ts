@@ -46,13 +46,14 @@ export class OfferSectionComponent {
   private offerService   = inject(OfferService);
   private simulationSvc  = inject(PayrollSimulationService);
   private listSvc        = inject(ConfigurableListService);
+  private translate      = inject(TranslateService);
 
   readonly candidateId   = input.required<number>();
   readonly status        = input.required<string>();
   readonly candidateName  = input<string>('');
   /** Needed by the payroll engine — the parameter set is per entity. */
   readonly paysId         = input.required<number>();
-  /** Resolves to the engine's contract code via the EMPLOYMENT_TYPE list. */
+  /** Resolves to the engine's contract code via the CONTRACT_TYPE list. */
   readonly employmentTypeId = input<number | null>(null);
   readonly changed        = output<void>();
 
@@ -86,8 +87,15 @@ export class OfferSectionComponent {
   readonly actioning = signal(false);
 
   readonly salaryFieldOpts: FormFieldOptions = { type: 'number', placeholder: '0', fullWidth: true };
-  readonly noteFieldOpts:   FormFieldOptions = { type: 'text', placeholder: 'Avantages, prime, devise…', fullWidth: true };
-  readonly reasonFieldOpts: FormFieldOptions = { type: 'textarea', placeholder: 'Motif du refus…', rows: 3, fullWidth: true };
+  // Computed, not getters: daf-form-field must see the same object until the language changes.
+  readonly noteFieldOpts = computed<FormFieldOptions>(() => {
+    this.translate.currentLang();
+    return { type: 'text', placeholder: this.translate.instant('CANDIDATES.OFFER.NOTE_PLACEHOLDER'), fullWidth: true };
+  });
+  readonly reasonFieldOpts = computed<FormFieldOptions>(() => {
+    this.translate.currentLang();
+    return { type: 'textarea', placeholder: this.translate.instant('CANDIDATES.OFFER.REASON_PLACEHOLDER'), rows: 3, fullWidth: true };
+  });
 
   constructor() {
     // Reload the offer whenever the candidate changes.
@@ -96,12 +104,12 @@ export class OfferSectionComponent {
       if (id) this.load(id);
     });
     // The payroll engine speaks contract CODES (CDI/CDD/…), the candidate carries an
-    // EMPLOYMENT_TYPE list id. Same resolution the cost-simulation panel does.
+    // CONTRACT_TYPE list id. Same resolution the cost-simulation panel does.
     effect(() => {
       const pays = this.paysId();
       const typeId = this.employmentTypeId();
       if (!pays || typeId == null) return;
-      this.listSvc.getListValues('EMPLOYMENT_TYPE', pays).subscribe(values => {
+      this.listSvc.getListValues('CONTRACT_TYPE', pays).subscribe(values => {
         const match = values.find(v => v.id === typeId);
         if (match?.payrollContractCode) this.contractCode.set(match.payrollContractCode);
       });
@@ -199,8 +207,7 @@ export class OfferSectionComponent {
       error: err => {
         this.simulating.set(false);
         const detail = err?.error?.detail as string | undefined;
-        this.simError.set(detail
-          ?? 'Erreur lors du calcul. Vérifiez que les paramètres de paie sont configurés pour ce pays.');
+        this.simError.set(detail ?? this.translate.instant('CANDIDATES.COST_SIM.ERR_CALC'));
       },
     });
   }
@@ -224,7 +231,7 @@ export class OfferSectionComponent {
       : this.offerService.draftOffer(id, body);
     call.subscribe({
       next: () => { this.offerSubmitting.set(false); this.showOfferModal.set(false); this.load(id); this.changed.emit(); },
-      error: err => { this.offerSubmitting.set(false); this.actionError.set(err?.error?.detail ?? err?.error?.message ?? "Erreur lors de l'enregistrement de l'offre."); },
+      error: err => { this.offerSubmitting.set(false); this.actionError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.OFFER.ERR_SAVE')); },
     });
   }
 
@@ -235,7 +242,7 @@ export class OfferSectionComponent {
     this.actionError.set(null);
     this.offerService.sendOffer(id).subscribe({
       next: () => { this.actioning.set(false); this.load(id); this.changed.emit(); },
-      error: err => { this.actioning.set(false); this.actionError.set(err?.error?.detail ?? "Erreur lors de l'envoi au candidat."); },
+      error: err => { this.actioning.set(false); this.actionError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.OFFER.ERR_SEND')); },
     });
   }
 
@@ -245,7 +252,7 @@ export class OfferSectionComponent {
     this.actionError.set(null);
     this.offerService.acceptOffer(id).subscribe({
       next: () => { this.actioning.set(false); this.load(id); this.changed.emit(); },
-      error: err => { this.actioning.set(false); this.actionError.set(err?.error?.detail ?? "Erreur lors de l'acceptation."); },
+      error: err => { this.actioning.set(false); this.actionError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.OFFER.ERR_ACCEPT')); },
     });
   }
 
@@ -262,7 +269,7 @@ export class OfferSectionComponent {
     this.rejectSubmitting.set(true);
     this.offerService.rejectOffer(id, this.rejectReason.trim()).subscribe({
       next: () => { this.rejectSubmitting.set(false); this.showRejectModal.set(false); this.load(id); this.changed.emit(); },
-      error: err => { this.rejectSubmitting.set(false); this.actionError.set(err?.error?.detail ?? "Erreur lors du refus."); },
+      error: err => { this.rejectSubmitting.set(false); this.actionError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.OFFER.ERR_REFUSE')); },
     });
   }
 
@@ -296,13 +303,19 @@ export class OfferSectionComponent {
   setExpiryDate(v: Date | Date[] | null): void { this.offerForm.expiryDate = dateToIso(v) || null; }
 
   // ── Display ──────────────────────────────────────────────────────────────────
+  /** Display locale follows the UI language (dates and digit grouping). */
+  private locale(): string {
+    return this.translate.currentLang() === 'en' ? 'en-GB' : 'fr-FR';
+  }
   formatSalary(v: number | null): string {
     if (v == null) return '—';
-    return v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' DT';
+    // "DT" is the French abbreviation of the dinar; English reads the ISO code.
+    const unit = this.translate.currentLang() === 'en' ? ' TND' : ' DT';
+    return v.toLocaleString(this.locale(), { maximumFractionDigits: 0 }) + unit;
   }
   formatDate(d: string | null): string {
     if (!d) return '—';
     const dt = new Date(d);
-    return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    return isNaN(dt.getTime()) ? d : dt.toLocaleDateString(this.locale(), { day: '2-digit', month: 'short', year: 'numeric' });
   }
 }

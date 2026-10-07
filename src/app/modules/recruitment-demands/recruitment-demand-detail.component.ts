@@ -18,6 +18,11 @@ import {
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
 import { RecruitmentDemandDetail, RecruitmentDemandStatus } from './recruitment-demand.model';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+import { RefDataService } from '../../core/ref/ref-data.service';
+import { RefDataItem } from '../../core/ref/ref-data.model';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 
 /** Same traffic-light mapping used on /rh/requests-history and its validation queue. */
 const STATUS_VARIANT: Record<RecruitmentDemandStatus, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
@@ -98,7 +103,7 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
 
       <daf-page-header
         [title]="demand()?.jobTitle ?? ('RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate)"
-        [subtitle]="demand()?.department ?? undefined"
+        [subtitle]="departmentLabel()"
         [badges]="headerBadges()"
         [breadcrumbs]="breadcrumbs()"
         [breadcrumbLabel]="'RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB_ARIA' | translate" />
@@ -301,6 +306,50 @@ export class RecruitmentDemandDetailComponent implements OnInit {
   private svc       = inject(RecruitmentDemandService);
   private userStore = inject(UserStore);
   private translate = inject(TranslateService);
+  private listSvc   = inject(ConfigurableListService);
+  private refSvc    = inject(RefDataService);
+
+  // rh/admin lists behind the demand's fields. The DTO carries their ids plus the French
+  // label only; the ids are resolved here so the page follows the UI language.
+  private readonly urgencyLevels    = signal<ListValue[]>([]);
+  private readonly cspCategories    = signal<ListValue[]>([]);
+  private readonly experienceLevels = signal<ListValue[]>([]);
+  private readonly educationLevels  = signal<ListValue[]>([]);
+  private readonly departments      = signal<RefDataItem[]>([]);
+
+  private loadAdminLists(paysId: number): void {
+    const list = (code: string, target: ReturnType<typeof signal<ListValue[]>>) =>
+      this.listSvc.getListValues(code, paysId)
+        .pipe(catchError(() => of([] as ListValue[])))
+        .subscribe(v => target.set(v));
+    list('URGENCY_LEVEL',    this.urgencyLevels);
+    list('CSP_CATEGORY',     this.cspCategories);
+    list('EXPERIENCE_LEVEL', this.experienceLevels);
+    list('EDUCATION_LEVEL',  this.educationLevels);
+    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+  }
+
+  /** rh/admin label by id, in the UI language; an id the list no longer holds keeps the DTO label. */
+  private labelById(items: { id: number; labelFr: string; labelEn: string }[],
+                    id: number | null | undefined, fallback: string | null): string {
+    const item = id != null ? items.find(i => i.id === id) : undefined;
+    return item ? adminLabel(item, this.translate) : (fallback ?? '—');
+  }
+
+  /** Department in the UI language — the page subtitle. */
+  readonly departmentLabel = computed(() => {
+    const d = this.demand();
+    if (!d) return undefined;
+    return this.labelById(this.departments(), d.departmentId, d.department) || undefined;
+  });
+
+  /** Recruitment reason — an enum, translated with the same keys as the create form. */
+  private reasonLabel(d: RecruitmentDemandDetail): string {
+    if (!d.recruitmentReason) return d.recruitmentReasonLabel ?? '—';
+    const key = `RECRUITMENT_DEMANDS.FORM.REASON.${d.recruitmentReason}_LABEL`;
+    const text = this.translate.instant(key);
+    return text !== key ? text : (d.recruitmentReasonLabel ?? '—');
+  }
 
   demand        = signal<RecruitmentDemandDetail | null>(null);
   loading       = signal(true);
@@ -357,12 +406,12 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     const field = (key: string, value: string): DetailField => ({ key, label: t(key), value, ...FIELD_ICON[key] });
     const fields: DetailField[] = [];
     if (d.jobExactTitle) fields.push(field('EXACT_TITLE', d.jobExactTitle));
-    fields.push(field('RECRUITMENT_REASON',  d.recruitmentReasonLabel ?? '—'));
+    fields.push(field('RECRUITMENT_REASON',  this.reasonLabel(d)));
     fields.push(field('HEADCOUNT',           String(d.headcount)));
-    fields.push(field('URGENCY',             d.urgencyLevelLabel ?? '—'));
-    fields.push(field('CSP',                 d.cspCategoryLabel ?? '—'));
-    fields.push(field('EXPERIENCE',          d.experienceLevelLabel ?? '—'));
-    fields.push(field('EDUCATION',           d.educationLevelLabel ?? '—'));
+    fields.push(field('URGENCY',    this.labelById(this.urgencyLevels(),    d.urgencyLevelId,    d.urgencyLevelLabel)));
+    fields.push(field('CSP',        this.labelById(this.cspCategories(),    d.cspCategoryId,     d.cspCategoryLabel)));
+    fields.push(field('EXPERIENCE', this.labelById(this.experienceLevels(), d.experienceLevelId, d.experienceLevelLabel)));
+    fields.push(field('EDUCATION',  this.labelById(this.educationLevels(),  d.educationLevelId,  d.educationLevelLabel)));
     fields.push(field('TARGET_START',        d.targetStartDate ? this.formatDate(d.targetStartDate) : '—'));
     fields.push(field('BUDGET',              d.budgetRange ?? '—'));
     fields.push(field('LINKED_CANDIDATES',   String(d.candidateCount)));
@@ -385,6 +434,7 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.svc.getById(id).pipe(catchError(() => of(null))).subscribe(d => {
       this.demand.set(d);
+      if (d) this.loadAdminLists(d.paysId);
       this.loading.set(false);
     });
   }

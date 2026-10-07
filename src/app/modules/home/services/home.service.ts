@@ -30,6 +30,23 @@ export interface WorkforceData {
   pctFemmes:   number;
   /** Active headcount per country, biggest first — feeds the effectif bar chart. */
   byCountry:   CountryHeadcount[];
+  /** Grade containing "ingénieur" / "engineer" (code or FR/EN label). */
+  ingenieurs:    number;
+  /** Everyone else, profiles with no grade included. */
+  pros:          number;
+  pctIngenieurs: number;
+  pctPros:       number;
+  /** Seniority from hire date, in full years: under 5. */
+  juniors:              number;
+  /** 5 to 7 years. */
+  confirmes:            number;
+  /** 8 years and more. */
+  seniors:              number;
+  /** Profiles with no hire date — counted in the total, in no bucket. */
+  ancienneteNonDefinie: number;
+  pctJuniors:           number;
+  pctConfirmes:         number;
+  pctSeniors:           number;
 }
 
 export interface ProfileCompletionData {

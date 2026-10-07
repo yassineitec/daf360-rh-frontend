@@ -1,3 +1,7 @@
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, catchError, of } from 'rxjs';
@@ -62,6 +66,18 @@ export class ProfileListComponent implements OnInit {
   private router    = inject(Router);
   private translate = inject(TranslateService);
   private userStore = inject(UserStore);
+  private listSvc   = inject(ConfigurableListService);
+
+  /** Admin › Listes configurables › CONTRACT_TYPE, every entity — labels for the contract filter. */
+  private readonly contractTypes = toSignal(
+    this.listSvc.getListValues('CONTRACT_TYPE').pipe(catchError(() => of([] as ListValue[]))),
+    { initialValue: [] as ListValue[] });
+
+  /** The admin label of a stored code; legacy codes the list does not hold keep the i18n set. */
+  private contractFilterLabel(code: string): string {
+    const v = this.contractTypes().find(t => t.valueCode === code);
+    return v ? adminLabel(v, this.translate) : contractLabel(code, this.translate);
+  }
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly employees     = signal<EmployeeListItem[]>([]);
@@ -142,7 +158,7 @@ export class ProfileListComponent implements OnInit {
         // Codes come from the DB (a free varchar), so the list is whatever exists
         // rather than the enum; unmapped codes show as themselves.
         options: raw.contractTypes.map(code => ({
-          value: code, label: contractLabel(code, this.translate),
+          value: code, label: this.contractFilterLabel(code),
         })),
       },
       {

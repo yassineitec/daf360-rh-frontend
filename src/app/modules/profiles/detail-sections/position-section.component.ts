@@ -7,6 +7,13 @@ import { ProfileFieldComponent } from '../../../shared/detail/profile-field.comp
 import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 import { fromSelected, toSelected } from './field-bridges';
 
+export interface PositionLabels {
+  department?: string | null;
+  grade?:      string | null;
+  discipline?: string | null;
+  nogLevel?:   string | null;
+}
+
 /**
  * Poste tab — "Affectation & Structure" from `design/profile-detail.html`: the
  * four reference-data assignments as tinted tiles in read mode, as lib selects in
@@ -23,13 +30,13 @@ import { fromSelected, toSelected } from './field-bridges';
       @if (!editMode()) {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <rh-profile-field variant="tile"
-            [label]="'PROFILES.FIELDS.DEPARTMENT' | translate" [value]="profile().department" />
+            [label]="'PROFILES.FIELDS.DEPARTMENT' | translate" [value]="labels().department ?? profile().department" />
           <rh-profile-field variant="tile"
-            [label]="'PROFILES.FIELDS.GRADE' | translate" [value]="profile().grade" />
+            [label]="'PROFILES.FIELDS.GRADE' | translate" [value]="labels().grade ?? profile().grade" />
           <rh-profile-field variant="tile"
-            [label]="'PROFILES.FIELDS.DISCIPLINE' | translate" [value]="profile().discipline" />
+            [label]="'PROFILES.FIELDS.DISCIPLINE' | translate" [value]="labels().discipline ?? profile().discipline" />
           <rh-profile-field variant="tile"
-            [label]="'PROFILES.FIELDS.NOG_LEVEL' | translate" [value]="profile().nogLevel" />
+            [label]="'PROFILES.FIELDS.NOG_LEVEL' | translate" [value]="labels().nogLevel ?? profile().nogLevel" />
         </div>
       } @else {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -63,6 +70,8 @@ export class PositionSectionComponent {
   readonly gradeOptions      = input<SelectOption[]>([]);
   readonly disciplineOptions = input<SelectOption[]>([]);
   readonly nogLevelOptions   = input<SelectOption[]>([]);
+  /** Read-mode labels in the UI language, resolved by the parent from Admin › Référentiels. */
+  readonly labels = input<PositionLabels>({});
 
   readonly patch = output<Partial<ProfileUpdateDto>>();
 

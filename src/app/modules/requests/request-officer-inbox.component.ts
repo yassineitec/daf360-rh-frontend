@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 
 import { RequestsService }  from './requests.service';
-import { EmployeeRequest, RequestStatus } from './models/request.model';
+import { EmployeeRequest, RequestStatus, requestTypeName } from './models/request.model';
 import {
   StatusBadgeComponent, BadgeOptions, ButtonComponent, CardComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
@@ -116,7 +116,7 @@ const SERVER_SORT_FIELD: Record<string, string> = {
     >
       <div class="refuse-body">
         <p class="refuse-desc">
-          {{ 'REQUESTS.INBOX.REFUSE_DESC' | translate:{ id: refuseTarget()?.id, type: refuseTarget()?.typeDisplayNameFr } }}
+          {{ 'REQUESTS.INBOX.REFUSE_DESC' | translate:{ id: refuseTarget()?.id, type: refuseTypeName() } }}
         </p>
         <label class="form-label">{{ 'REQUESTS.INBOX.REFUSE_MOTIF_LABEL' | translate }}</label>
         <textarea
@@ -159,9 +159,14 @@ export class RequestOfficerInboxComponent implements OnInit {
   /** The header state the table re-mounts with — it is rebuilt by the loading `@if` on every fetch. */
   private tableSortSeed = signal<{ key: string; dir: 'asc' | 'desc' } | null>(null);
   refuseTarget  = signal<EmployeeRequest | null>(null);
+  /** The refused request's type name, in the UI language, for the modal text. */
+  readonly refuseTypeName = computed(() => {
+    const r = this.refuseTarget();
+    return r ? requestTypeName(r, this.translate.currentLang()) : undefined;
+  });
   refuseMotif   = '';
   errorMsg      = signal('');
-  protected readonly statusBadge = statusBadge;
+  protected readonly statusBadge = (s: string) => statusBadge(s, this.translate);
 
   /** Statuses the backend allows processing on — actions are hidden otherwise. */
   private static readonly PROCESSABLE: RequestStatus[] = ['SUBMITTED', 'IN_REVIEW', 'PENDING_L2'];
@@ -230,7 +235,7 @@ export class RequestOfficerInboxComponent implements OnInit {
     return this.rows().map(row => ({
       id: row.id,
       employee: row.employeeName ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: row.employeeProfileId }),
-      type: row.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: row.requestTypeId }),
+      type: requestTypeName(row, this.translate.currentLang()) ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: row.requestTypeId }),
       submitted: this.fmtDate(row.submissionDate),
       sla: this.slaPipe.transform(this.slaDeadline(row)),
       status: row.status,

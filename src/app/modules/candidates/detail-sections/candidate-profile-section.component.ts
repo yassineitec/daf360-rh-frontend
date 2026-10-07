@@ -48,16 +48,16 @@ import { formatDate } from '../candidate-display';
               [value]="candidate().appliedPosition" />
             <rh-profile-field variant="tile"
               [label]="'CANDIDATES.DETAIL.CONTRACT_TYPE' | translate"
-              [value]="candidate().employmentTypeLabel" />
+              [value]="labels().employmentType ?? candidate().employmentTypeLabel" />
             <rh-profile-field variant="tile"
               [label]="'CANDIDATES.DETAIL.DEPARTMENT' | translate"
-              [value]="candidate().department" />
+              [value]="labels().department ?? candidate().department" />
             <rh-profile-field variant="tile"
               [label]="'CANDIDATES.DETAIL.GRADE' | translate"
-              [value]="candidate().appliedGrade" />
+              [value]="labels().grade ?? candidate().appliedGrade" />
             <rh-profile-field variant="tile"
               [label]="'CANDIDATES.DETAIL.DISCIPLINE' | translate"
-              [value]="candidate().appliedDiscipline" />
+              [value]="labels().discipline ?? candidate().appliedDiscipline" />
             @if (candidate().experienceYears != null) {
               <rh-profile-field variant="tile"
                 [label]="'CANDIDATES.DETAIL.EXPERIENCE' | translate"
@@ -199,6 +199,11 @@ export class CandidateProfileSectionComponent {
   readonly disciplineOptions     = input<SelectOption[]>([]);
   readonly employmentTypeOptions = input<SelectOption[]>([]);
   readonly demandOptions         = input<SelectOption[]>([]);
+  /** Read-mode labels in the UI language, resolved by the page from the rh/admin lists. */
+  readonly labels = input<{
+    department?: string | null; grade?: string | null;
+    discipline?: string | null; employmentType?: string | null;
+  }>({});
 
   readonly patch = output<Partial<UpdateCandidateRequest>>();
 

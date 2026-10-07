@@ -1,3 +1,4 @@
+import { DepartureReasonLabelService } from '../departure-reason-labels.service';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -62,7 +63,7 @@ import { employeeAvatar } from '../../../shared/utils/avatar.utils';
           <div class="min-w-0">
             <h4 class="font-bold text-on-surface truncate">{{ item().employeeFullName || '—' }}</h4>
             <p class="text-xs text-outline truncate">
-              {{ 'OFFBOARDING.REASON.' + item().departureReason | translate }}
+              {{ reasons.label(item().departureReason) }}
             </p>
           </div>
         </div>
@@ -108,6 +109,7 @@ import { employeeAvatar } from '../../../shared/utils/avatar.utils';
 })
 export class OffboardingKanbanCardComponent {
   private translate = inject(TranslateService);
+  protected readonly reasons = inject(DepartureReasonLabelService);
 
   readonly item = input.required<OffboardingWorkflowInstance>();
   /**

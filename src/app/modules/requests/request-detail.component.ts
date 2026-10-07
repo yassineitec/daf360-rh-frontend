@@ -10,7 +10,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { RequestsService }      from './requests.service';
-import { EmployeeRequest, GeneratedDocument } from './models/request.model';
+import { EmployeeRequest, GeneratedDocument, requestTypeName } from './models/request.model';
 import { PdfDownloadButtonComponent } from '../../shared/pdf-download-button/pdf-download-button.component';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
 import { UserStore }       from '../../core/user.store';
@@ -425,7 +425,7 @@ export class RequestDetailComponent implements OnInit {
     this.translate.currentLang();
     const r = this.req();
     if (!r) return '';
-    return r.typeDisplayNameFr
+    return requestTypeName(r, this.translate.currentLang())
       ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId });
   });
 

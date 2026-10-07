@@ -1,4 +1,4 @@
-import { Component, TemplateRef, computed, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import {
@@ -45,6 +45,13 @@ export class ListManagerComponent implements OnInit {
   private modal       = inject(ModalService);
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
+
+  /**
+   * The entity picked in /rh/admin. A per-pays list (CONTRACT_TYPE…) shows and creates the
+   * values of THIS entity; a global list ignores it. The admin shell rebuilds this tab when
+   * the pick changes, so the value is read as-is, never watched.
+   */
+  readonly paysId = input<number | null>(null);
   adding  = signal(false);
 
   listTypes       = signal<ListType[]>([]);
@@ -68,11 +75,26 @@ export class ListManagerComponent implements OnInit {
     this.currentPage.set(0);
   }
 
+  /** Per-pays list: whether the selected list is split by entity right now. */
+  readonly isPerPaysView = computed(() =>
+    !!this.selectedType()?.isPerPays && this.paysId() != null);
+
+  /**
+   * The admin endpoint returns every entity's values at once. For a per-pays list, keep the
+   * picked entity's own values plus the shared ones (pays_id NULL) — exactly what a form of
+   * that entity is offered (ConfigurableListValueRepository.findActiveByListTypeAndPays).
+   */
+  readonly scopedValues = computed(() => {
+    if (!this.isPerPaysView()) return this.values();
+    const pays = this.paysId();
+    return this.values().filter(v => v.paysId === pays || v.paysId === null);
+  });
+
   /** Searches what the row shows: code, both labels, and the translated status badges. */
   readonly filteredValues = computed(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
-    return searchRows(this.values(), this.searchQuery(), v => [
+    return searchRows(this.scopedValues(), this.searchQuery(), v => [
       v.valueCode, v.labelFr, v.labelEn,
       t(v.isActive ? 'ADMIN.data.lists.ACTIVE' : 'ADMIN.data.lists.INACTIVE'),
       v.isSystem ? t('ADMIN.data.lists.SYSTEM') : null,
@@ -87,6 +109,10 @@ export class ListManagerComponent implements OnInit {
       { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN'), sortable: true },
       { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE'), sortable: true },
       { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM'), sortable: true },
+      // Only where it means something: a global list has no entity to tell apart.
+      ...(this.isPerPaysView()
+        ? [{ key: 'scope', label: this.translate.instant('ADMIN.data.lists.COL_SCOPE'), sortable: false }]
+        : []),
     ];
   });
 
@@ -286,7 +312,10 @@ export class ListManagerComponent implements OnInit {
     if (this.addForm.invalid || !this.selectedType()) return;
     const type = this.selectedType()!;
     this.adding.set(true);
-    const dto: CreateListValueRequest = { listTypeId: type.id, paysId: null, ...this.addForm.value };
+    // A per-pays list gets the value for the entity picked in /rh/admin; a global one stays
+    // shared (null), as before.
+    const paysId = type.isPerPays ? this.paysId() : null;
+    const dto: CreateListValueRequest = { listTypeId: type.id, paysId, ...this.addForm.value };
     this.listService.createValue(dto).subscribe({
       next: () => {
         this.adding.set(false);
