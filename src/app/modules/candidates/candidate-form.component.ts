@@ -92,8 +92,12 @@ export class CandidateFormComponent implements OnInit {
   readonly departmentOptions = computed<SelectOption[]>(() =>
     this.departments().map(d => ({ value: String(d.id), label: this.label(d) }))
   );
+  /** Candidates are recruited for the Tunisian and Egyptian entities only — offer just those two. */
+  private static readonly CANDIDATE_NATIONALITY_CODES = ['TN', 'EG'];
   readonly nationalityOptions = computed<SelectOption[]>(() =>
-    this.nationalities().map(n => ({ value: String(n.id), label: this.label(n) }))
+    this.nationalities()
+      .filter(n => CandidateFormComponent.CANDIDATE_NATIONALITY_CODES.includes((n.code ?? '').toUpperCase()))
+      .map(n => ({ value: String(n.id), label: this.label(n) }))
   );
 
   /**
