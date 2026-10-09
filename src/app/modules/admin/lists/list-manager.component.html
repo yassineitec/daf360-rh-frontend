@@ -98,19 +98,6 @@
             }
           </ng-template>
 
-          <!-- Type de contrat only (see `columns`): the contract rules this type follows. -->
-          <ng-template dafCell="lifecycleNature" let-row>
-            @if (editingId() === row['_source'].id) {
-              <ng-container [formGroup]="editForm">
-                <daf-select [options]="natureOptions()"
-                  [selected]="editForm.controls['lifecycleNature'].value ? [editForm.controls['lifecycleNature'].value] : []"
-                  (selectedChange)="editForm.controls['lifecycleNature'].setValue($event[0] ?? null)" />
-              </ng-container>
-            } @else {
-              {{ natureLabel(row['_source'].lifecycleNature) }}
-            }
-          </ng-template>
-
           <ng-template dafCell="isActive" let-row>
             @if (editingId() === row['_source'].id) {
               <ng-container [formGroup]="editForm">
