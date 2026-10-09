@@ -766,6 +766,7 @@
     "ERR_LOAD": "Could not load the hiring requests.",
     "ERR_NO_PAYS": "Your account is not attached to an entity — the approval queue cannot be listed.",
     "ERR_COMMENT_REQUIRED": "Please give a reason for the rejection.",
+    "ERR_OWN_REQUEST": "You cannot approve or reject your own request: another approver must handle it.",
     "ERR_REVIEW": "Saving the decision failed. Please retry.",
     "FILTERS": {
       "TITLE": "Filter requests",
@@ -2559,7 +2560,8 @@
         "documentTemplates": "Document templates",
         "sharepoint": "SharePoint",
         "absenceTypes": "Leave types",
-        "paysCalendar": "Entity calendar"
+        "paysCalendar": "Entity calendar",
+        "contractAlerts": "Contract deadlines"
       }
     },
     "users": {
@@ -2669,6 +2671,35 @@
         "created": "Account created for {{name}}.",
         "createError": "Error while creating the account."
       }
+    },
+    "contractAlerts": {
+      "title": "Contract deadlines",
+      "subtitle": "How many days before a contract ends and before a trial period ends HR is notified, for this entity and per contract type. Recipients and wording are set in Notifications (Contract expiry, Trial period ending).",
+      "colType": "Contract type",
+      "colExpiry": "Contract-end alert",
+      "colTrial": "Trial-end alert",
+      "colStatus": "Status",
+      "days": "{{n}} day(s) before",
+      "configured": "Configured",
+      "defaults": "Defaults",
+      "edit": "Edit lead times",
+      "editTitle": "Alert lead times",
+      "expiryLabel": "Contract end (days before)",
+      "expiryHint": "No effect on a CDI, which has no end date.",
+      "trialLabel": "Trial period end (days before)",
+      "trialHint": "0 = on the day.",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "invalid": "Each lead time must be a whole number between 0 and {{max}}.",
+      "saveError": "Could not save the lead times.",
+      "loadError": "Could not load the contract configuration.",
+      "empty": "No contract type.",
+      "note": "\"Defaults\": this type has no configuration in this entity; the alert still goes out with these lead times. Saving creates the configuration. A change applies from the next daily run (08:00).",
+      "runNow": "Run the check now",
+      "runResult": "Check complete: {{due}} alert(s) due, {{sent}} sent, {{pending}} with no recipient (retried on the next run).",
+      "runBusy": "A check is already running.",
+      "runError": "The check failed."
     },
     "paysCalendar": {
       "intro": "An entity's rest days decide what a leave costs in days, which days presence is expected, and how working-time regimes resolve. An entity with no configuration silently falls back to Saturday/Sunday.",
