@@ -30,6 +30,7 @@ import { DocumentTemplatesAdminComponent }   from './document-templates-admin.co
 import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
+import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -123,6 +124,9 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // setting it sits beside — configuring an entity's hours and configuring which days it
   // works at all are the same job.
   { key: 'pays-calendar',         labelKey: 'ADMIN.shell.tabs.paysCalendar',        permission: 'ADMIN_REGIMES',              icon: 'calendar_month',        tone: 'warning' },
+  // How many days ahead HR hears about a contract end / a trial-period end. ADMIN_ROLES
+  // because that is what the backend's config update checks.
+  { key: 'contract-alerts',       labelKey: 'ADMIN.shell.tabs.contractAlerts',      permission: 'ADMIN_ROLES',                icon: 'event_upcoming',        tone: 'danger' },
 ];
 
 @Component({
@@ -151,6 +155,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     SharePointAdminComponent,
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
+    ContractAlertsAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -248,6 +253,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
             <!-- No [paysId]: this screen configures every entity, not the caller's own. -->
             @if (activeTab() === 'pays-calendar')         { <app-pays-calendar-admin /> }
+            @if (activeTab() === 'contract-alerts')       { <app-contract-alerts-admin [paysId]="paysId()" /> }
             }
           </daf-page>
         </div>

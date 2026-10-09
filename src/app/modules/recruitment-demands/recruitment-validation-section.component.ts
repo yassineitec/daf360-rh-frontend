@@ -242,8 +242,15 @@ export class RecruitmentValidationSectionComponent implements OnInit {
 
   /** One handler for both views. */
   onDemandAction(action: RecruitmentDemandAction, d: RecruitmentDemandSummary): void {
-    if (action === 'view') this.openDemand(d.id);
-    else this.askVerdict(d, action === 'approve');
+    if (action === 'view') { this.openDemand(d.id); return; }
+    // Four-eyes: the backend refuses a verdict on one's own request — say so up front
+    // instead of letting the modal fail on submit.
+    if (d.createdByUserId === this.userStore.currentUser()?.userId) {
+      this.error.set(this.translate.instant('RECRUITMENT_VALIDATION.ERR_OWN_REQUEST'));
+      return;
+    }
+    this.error.set(null);
+    this.askVerdict(d, action === 'approve');
   }
   /** The two filter dimensions that match the KPI row — status has nothing left to
    *  break down since every card here is already EN_ATTENTE. */
