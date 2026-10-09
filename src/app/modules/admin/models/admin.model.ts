@@ -191,8 +191,8 @@ export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | '
 // ─────────────────────────────────────────────────────────────────────────────
 // Offboarding task catalog
 // ─────────────────────────────────────────────────────────────────────────────
-// Was a hardcoded literal union backed by a fixed array; now sourced per-country from
-// RefDataService.getContractTypes() (backend-driven reference data). Widened to plain
+// Was a hardcoded literal union backed by a fixed array; now sourced per-country from the
+// CONTRACT_TYPE configurable list (its `valueCode`, see offboarding-catalog-admin). Widened to plain
 // `string` — the narrower union is gone, but every existing consumer (employee.model.ts's
 // `contractType` field, employee-form.component.ts's literal array) still type-checks fine
 // against `string`, so this is a safe, non-breaking widening for the two untouched callers.

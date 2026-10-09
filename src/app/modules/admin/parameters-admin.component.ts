@@ -48,14 +48,14 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
         <!-- Mobile: icon-only -->
         <daf-button
           class="icon-btn-toggle mobile-only"
-          title="Initialiser par défaut"
+          [title]="'ADMIN.data.parameters.INIT_DEFAULT' | translate"
           variant="ghost"
           [options]="{ iconStart: 'restart_alt', size: 'sm', disabled: seeding(), loading: seeding() }"
           (onClick)="seed()"
         />
         <daf-button
           class="icon-btn-toggle mobile-only"
-          title="Ajouter"
+          [title]="'ADMIN.data.parameters.ADD' | translate"
           variant="teal"
           [options]="{ iconStart: 'add', size: 'sm' }"
           (onClick)="startAdd()"

@@ -1,15 +1,25 @@
 import {
   Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild,
 } from '@angular/core';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, forkJoin, Observable, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { AdminService } from './admin.service';
 import {
   OffboardingCatalogTask, Role, SaveCatalogTaskRequest,
 } from './models/admin.model';
-import { RefDataService } from '../../core/ref/ref-data.service';
-import { RefDataItem } from '../../core/ref/ref-data.model';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+
+/**
+ * Un onglet du catalogue : un code de type de contrat, avec sa valeur CONTRACT_TYPE quand
+ * elle existe (libellés FR/EN). `value` est absent pour un code présent dans le catalogue
+ * mais plus (ou pas) dans la liste — gardé pour que ses tâches restent visibles.
+ */
+interface CatalogContractType {
+  code:   string;
+  value?: ListValue;
+}
 import {
   ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, SelectOption,
   ToggleComponent, ModalService, ModalRef,
@@ -72,10 +82,10 @@ import { searchRows } from '../../shared/table-sort.utils';
         <button
           class="cat-tab-btn"
           [class.active]="filterContractType === ct.code"
-          (click)="selectContractType(ct.code ?? '')"
+          (click)="selectContractType(ct.code)"
           role="tab"
           type="button"
-        >{{ contractTypeLabel(ct.code ?? '') }}</button>
+        >{{ contractTypeLabel(ct.code) }}</button>
       }
     </nav>
 
@@ -236,7 +246,7 @@ import { searchRows } from '../../shared/table-sort.utils';
 })
 export class OffboardingCatalogAdminComponent implements OnChanges {
   private svc = inject(AdminService);
-  private refData = inject(RefDataService);
+  private lists = inject(ConfigurableListService);
   private translate = inject(TranslateService);
   private modal = inject(ModalService);
   private modalRef?: ModalRef;
@@ -244,7 +254,7 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   paysId = input.required<number>();
 
-  readonly contractTypes = signal<RefDataItem[]>([]);
+  readonly contractTypes = signal<CatalogContractType[]>([]);
 
   // Empty until the first ngOnChanges resolves contractTypes() for this pays — see
   // loadContractTypes(), which picks the first available code once the fetch lands.
@@ -265,7 +275,7 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return this.contractTypes().map(ct => ({ value: ct.code ?? '', label: this.contractTypeLabel(ct.code ?? '') }));
+    return this.contractTypes().map(ct => ({ value: ct.code, label: this.contractTypeLabel(ct.code) }));
   });
 
   readonly validatorOptions = computed<SelectOption[]>(() => {
@@ -399,12 +409,34 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
   }
 
   /**
-   * Contract types are per-country, so this refetches on every paysId change (ngOnChanges
-   * fires on any input change, not just the first). load() only runs once the fetch resolves,
-   * because it depends on filterContractType being a valid code for THIS country.
+   * Les types de contrat viennent de la liste configurable CONTRACT_TYPE du pays
+   * (Admin › Listes configurables : valeurs globales + valeurs propres au pays). Le
+   * catalogue est indexé par `value_code` (CDI, CDD, CIVP, STAGE, FREELANCE…), le même code
+   * que le workflow d'offboarding lit sur le contrat du collaborateur.
+   *
+   * Avant, ils venaient de `/api/hr/ref/contract-types`, un endpoint qui n'a jamais existé
+   * côté backend : l'erreur était avalée en liste vide, si bien que ni les onglets ni le
+   * select « Type de contrat » de la modale n'affichaient quoi que ce soit.
+   *
+   * On y ajoute les codes déjà présents dans le catalogue mais absents de la liste (valeur
+   * désactivée, code historique) : sans eux, leurs tâches deviendraient inaccessibles.
+   *
+   * Rechargé à chaque changement de pays ; load() n'est lancé qu'une fois la liste connue,
+   * parce qu'il dépend d'un filterContractType valide pour CE pays.
    */
   private loadContractTypes(): void {
-    this.refData.getContractTypes(this.paysId()).subscribe(types => {
+    const paysId = this.paysId();
+    forkJoin({
+      values: this.lists.getListValues('CONTRACT_TYPE', paysId)
+        .pipe(catchError(() => of([] as ListValue[]))),
+      tasks:  this.svc.listCatalogTasks(paysId)
+        .pipe(catchError(() => of([] as OffboardingCatalogTask[]))),
+    }).subscribe(({ values, tasks }) => {
+      if (paysId !== this.paysId()) return;   // réponse d'un pays qui n'est plus affiché
+      const types: CatalogContractType[] = values.map(v => ({ code: v.valueCode, value: v }));
+      for (const code of new Set(tasks.map(t => t.contractType))) {
+        if (code && !types.some(t => t.code === code)) types.push({ code });
+      }
       this.contractTypes.set(types);
       if (!types.some(t => t.code === this.filterContractType)) {
         this.filterContractType = types[0]?.code ?? '';
@@ -541,7 +573,12 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
       });
   }
 
+  /** Libellé de la liste CONTRACT_TYPE ; à défaut la traduction historique, puis le code. */
   contractTypeLabel(ct: string): string {
+    const value = this.contractTypes().find(t => t.code === ct)?.value;
+    if (value) {
+      return (this.translate.currentLang() === 'en' && value.labelEn) ? value.labelEn : value.labelFr;
+    }
     const key = `ADMIN.docs.offboarding.contractType.${ct}`;
     const val = this.translate.instant(key);
     return val === key ? ct : val;

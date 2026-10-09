@@ -60,7 +60,7 @@ const PAGE_SIZE = 5;
         />
         <daf-button
           class="icon-btn-toggle mobile-only"
-          title="Ajouter"
+          [title]="'ADMIN.catalog.requestTypes.add' | translate"
           variant="teal"
           [options]="{ iconStart: 'add', size: 'sm' }"
           (onClick)="openAdd()"

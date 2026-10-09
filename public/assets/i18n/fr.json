@@ -108,9 +108,9 @@
       "COUNTRY_UNKNOWN": "Non défini"
     },
     "ENGINEER_PRO_STATS": {
-      "LABEL": "Ingénieurs / Pros",
+      "LABEL": "Ingénieurs / Projeteurs",
       "ENGINEER": "Ingénieurs",
-      "PRO": "Pros"
+      "PROJETEUR": "Projeteurs"
     },
     "SENIORITY_STATS": {
       "LABEL": "Ancienneté",
@@ -1714,6 +1714,7 @@
       "MODAL_TITLE": "Nouveau contrat",
       "CREATE": "Créer le contrat",
       "ERR_START": "La date de début est obligatoire.",
+      "ERR_NO_TYPE": "Choisissez un type de contrat.",
       "ERR_END": "La date de fin est obligatoire pour ce type de contrat.",
       "ERR_CREATE": "Erreur lors de la création du contrat."
     },
@@ -2561,6 +2562,114 @@
         "paysCalendar": "Calendrier des entités"
       }
     },
+    "users": {
+      "stats": {
+        "total": "Comptes",
+        "totalHelp": "Tous les comptes du registre, personnes et comptes techniques confondus.",
+        "employees": "Personnes",
+        "employeesHelp": "Comptes marqués comme appartenant à une personne réelle. Seuls ceux-ci apparaissent dans les listes et les notifications.",
+        "missingProfile": "Sans dossier RH",
+        "missingProfileHelp": "Comptes sans fiche employé. Ni congés, ni contrat, ni bulletins tant qu’elle n’existe pas.",
+        "neverLoggedIn": "Jamais connectés",
+        "neverLoggedInHelp": "Comptes qui ne se sont jamais authentifiés — souvent un import en double ou une adresse absente d’Azure AD."
+      },
+      "searchPlaceholder": "Rechercher un nom, un e-mail, un identifiant…",
+      "badges": {
+        "person": "Personne",
+        "technicalAccount": "Compte technique",
+        "technical": "Technique",
+        "noProfile": "Sans dossier RH",
+        "noProfileShort": "Sans dossier",
+        "neverLoggedIn": "Jamais connecté",
+        "disabled": "Désactivé"
+      },
+      "balances": {
+        "conge": "Congés",
+        "maladie": "Maladie",
+        "teletravail": "Télétravail"
+      },
+      "editBalances": "Modifier les soldes",
+      "editBalancesTooltip": "Modifier les soldes de congés",
+      "toTechnicalTooltip": "Reclasser en compte technique — retire ce compte de toutes les listes de personnes",
+      "toPersonTooltip": "Reclasser en personne réelle — le compte réapparaîtra dans les listes",
+      "empty": "Aucun compte ne correspond à ces critères.",
+      "perPage": "par page",
+      "balanceModal": {
+        "title": "Soldes de congés",
+        "help": "Laisser un champ vide enregistre « non renseigné ». Saisir <strong>0</strong> enregistre « aucun jour restant » — ce n’est pas la même chose.",
+        "conge": "Solde congés (jours)",
+        "maladie": "Solde maladie (jours)",
+        "teletravail": "Solde télétravail (jours)"
+      },
+      "createModal": {
+        "title": "Nouvel utilisateur",
+        "help": "Crée le compte DAF360 uniquement. La connexion se fait par Azure AD sur l’adresse e-mail : la personne ne pourra pas se connecter tant qu’un compte Azure avec cette même adresse n’existe pas. Aucune fiche RH n’est créée — le compte apparaîtra comme « fiche RH manquante ».",
+        "fullName": "Nom complet",
+        "email": "E-mail",
+        "role": "Rôle",
+        "entity": "Entité",
+        "isEmployee": "Compte d’une personne réelle",
+        "isEmployeeHint": "Décochez pour un compte de test ou technique : il n’apparaîtra dans aucune liste de personnes."
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "create": "Créer"
+      },
+      "views": {
+        "list": "Tableau",
+        "grid": "Cartes"
+      },
+      "toolbar": {
+        "create": "Nouveau compte",
+        "sync": "Synchroniser",
+        "syncTooltip": "Pousse l’état des comptes vers finance et la paie sans attendre le rapprochement automatique"
+      },
+      "filters": {
+        "accountType": "Type de compte",
+        "all": "Tous",
+        "allFem": "Toutes",
+        "realPerson": "Personne réelle",
+        "technicalAccount": "Compte technique",
+        "entity": "Entité",
+        "role": "Rôle",
+        "onlyMissing": "Sans dossier RH uniquement",
+        "title": "Filtres",
+        "apply": "Appliquer",
+        "cancel": "Annuler",
+        "reset": "Réinitialiser",
+        "trigger": "Filtrer"
+      },
+      "columns": {
+        "user": "Utilisateur",
+        "role": "Rôle",
+        "entity": "Entité",
+        "account": "Compte",
+        "lastLogin": "Dernière connexion"
+      },
+      "table": {
+        "columnPicker": "Colonnes",
+        "reset": "Réinitialiser l'affichage du tableau",
+        "sortBy": "Trier par {column}"
+      },
+      "never": "Jamais",
+      "employee": "Employé",
+      "notEmployee": "Non-employé",
+      "messages": {
+        "loadError": "Erreur lors du chargement des comptes.",
+        "balancesInvalid": "Les soldes doivent être des nombres positifs, ou vides.",
+        "balancesSaved": "Soldes mis à jour pour {{name}}.",
+        "balancesError": "Erreur lors de l’enregistrement des soldes.",
+        "toggled": "{{name}} : {{status}}.",
+        "toggleError": "Erreur lors du changement.",
+        "syncFailed": "Modules non joints : {{modules}}. La modification est enregistrée et sera reprise sous 15 min.",
+        "syncDone": "Modules synchronisés : {{modules}}.",
+        "syncNone": "Aucun module configuré pour la synchronisation.",
+        "syncError": "Synchronisation impossible. La reprise automatique aura lieu sous 15 min.",
+        "created": "Compte créé pour {{name}}.",
+        "createError": "Erreur lors de la création du compte."
+      }
+    },
     "paysCalendar": {
       "intro": "Les jours de repos d'une entité décident du coût d'un congé en jours, des jours où la présence est attendue, et de la résolution des régimes horaires. Une entité sans configuration retombe silencieusement sur samedi/dimanche.",
       "colEntity": "Entité",
@@ -2827,6 +2936,8 @@
         "COL_ACTIVE": "Actif",
         "COL_SYSTEM": "Système",
         "COL_SCOPE": "Entité",
+        "COL_NATURE": "Règles de contrat",
+        "FIELD_NATURE": "Suit les règles de",
         "SCOPE_ALL": "Toutes les entités",
         "SCOPE_PAYS": "Cette entité",
         "COL_ACTIONS": "Actions",
@@ -2888,6 +2999,7 @@
         "PH_ORDER": "0",
         "CANCEL": "Annuler",
         "SAVING": "Enregistrement…",
+        "SAVE": "Enregistrer",
         "ADD_SHORT": "Ajouter",
         "MODAL_ADD_TC": "Ajouter un type de contrat",
         "TC_FIELD_CODE": "Code",
@@ -3539,6 +3651,18 @@
       "addRole": "Ajouter un rôle",
       "selectRolePlaceholder": "-- Sélectionner un rôle --",
       "add": "Ajouter",
+      "tagSubject": "La personne concernée",
+      "tagManagerOfSubject": "Son manager",
+      "tagSuffixManager": "manager du rôle",
+      "tagSuffixPermission": "droit",
+      "tagSuffixAuto": "auto",
+      "tagSuffixAll": "tous",
+      "recipientModeAll": "Tous les titulaires du rôle",
+      "recipientModeManager": "Le manager (rôle supérieur)",
+      "recipientModePermission": "Tous les titulaires d’un droit",
+      "recipientModeSubject": "La personne concernée",
+      "recipientModeManagerOfSubject": "Le manager de la personne concernée",
+      "entityTypeNone": "Aucun (non cliquable)",
       "loadingRule": "Chargement de la règle…",
       "generalSettings": "Paramètres généraux",
       "toggleInapp": "Notification in-app",
@@ -3764,6 +3888,7 @@
       "EMPTY": "Aucune demande en attente",
       "DETAILS": "Détails",
       "APPROVE": "Approuver",
+      "APPROVE_COMMENT": "Approuvé via boîte de réception",
       "REJECT": "Refuser",
       "REFUSE_TITLE": "Refuser la demande",
       "REFUSE_DESC": "Demande #{{id}} — {{type}}",
@@ -4557,6 +4682,22 @@
       "ERR_SAVE": "L'enregistrement a échoué.",
       "ERR_REQUIRED": "Complétez les champs obligatoires.",
       "ERR_ROLES": "Les rôles validateurs n'ont pas pu être chargés."
+    }
+  },
+  "COMMON": {
+    "close": "Fermer",
+    "loading": "Chargement…",
+    "remove": "Retirer",
+    "addTag": "Ajouter un tag…",
+    "signingIn": "Connexion en cours…",
+    "pdf": {
+      "download": "Télécharger",
+      "generating": "Génération…",
+      "generated": "{{filename}} — document généré.",
+      "serviceUnavailable": "Service PDF indisponible. Réessayez plus tard.",
+      "unexpectedError": "Erreur inattendue lors de la génération du document.",
+      "notGeneratedYet": "Le document n'a pas encore été généré. Générez-le d'abord.",
+      "downloadError": "Erreur lors du téléchargement du fichier."
     }
   }
 }

@@ -19,16 +19,14 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ContractLifecycleService } from './contract-lifecycle.service';
 import {
   ContractDetailDto, ContractTypeCode, CreateContractRequest,
-  CONTRACT_TYPE_CONFIG,
+  CONTRACT_TYPE_CONFIG, contractNatureOf,
 } from './contract-lifecycle.model';
 import { ContractHistoryService } from '../contract-history/contract-history.service';
 import {
-  TypeContratDto, TypeDocument,
+  TypeDocument,
   CreateContractRequest as CreateHistoryEntryRequest,
 } from '../contract-history/contract-history.model';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
-
-const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEMENT', 'PORTAGE'];
 
 @Component({
   selector: 'app-new-contract-form',
@@ -51,11 +49,11 @@ const TYPE_CODES: ContractTypeCode[] = ['CDI', 'CDD', 'CIVP', 'STAGE', 'DETACHEM
         <div>
           <label class="lbl">{{ 'PROFILES.NEW_CONTRACT.TYPE' | translate }}</label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
-            @for (t of types; track t) {
+            @for (t of adminTypes(); track t.id) {
               <button type="button"
-                [class.type-chip--active]="contractType === t"
+                [class.type-chip--active]="selectedTypeId() === t.id"
                 class="type-chip"
-                (click)="contractType = t; dateFinPrevue = ''"
+                (click)="selectType(t)"
               >{{ chipLabel(t) }}</button>
             }
           </div>
@@ -196,27 +194,32 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
   private modalService = inject(ModalService);
   private translate = inject(TranslateService);
 
-  readonly types = TYPE_CODES;
-
   private listSvc = inject(ConfigurableListService);
-  /** Admin › Listes configurables › CONTRACT_TYPE of this entity — labels only. */
-  private readonly adminTypes = signal<ListValue[]>([]);
-
   /**
-   * The chips stay the lifecycle engine's types — each has its own rules (end date, trial,
-   * CIVP/stage fields) — but their text is the admin label of the matching CONTRACT_TYPE
-   * value, in the UI language (FREELANCE is the list's name for PORTAGE, as in
-   * ContractTypeBridge). A type the list does not hold keeps the i18n label.
+   * The chips: Admin › Listes configurables › CONTRACT_TYPE of this entity — every type there,
+   * « contrat » included. The contract stores the picked value's id; its rules (end date,
+   * trial, CIVP/stage fields) follow the value's nature (Admin › « Règles de contrat »).
    */
-  protected chipLabel(t: ContractTypeCode): string {
-    const v = this.adminTypes().find(x => x.valueCode === t || (t === 'PORTAGE' && x.valueCode === 'FREELANCE'));
-    return v ? adminLabel(v, this.translate) : this.translate.instant('PROFILES.CONTRACT_TYPE.' + t);
+  protected readonly adminTypes = signal<ListValue[]>([]);
+  protected readonly selectedTypeId = signal<number | null>(null);
+
+  protected chipLabel(t: ListValue): string {
+    return adminLabel(t, this.translate);
   }
   readonly cfg   = CONTRACT_TYPE_CONFIG;
 
   formTpl = viewChild.required<TemplateRef<unknown>>('formTpl');
 
-  contractType:          ContractTypeCode = 'CDI';
+  /** Nature of the picked type — what the conditional fields and the end-date rule key on. */
+  get contractType(): ContractTypeCode {
+    return contractNatureOf(this.adminTypes().find(t => t.id === this.selectedTypeId()));
+  }
+
+  protected selectType(t: ListValue): void {
+    this.selectedTypeId.set(t.id);
+    this.dateFinPrevue = '';
+  }
+
   dateDebut:             string  = '';
   dateFinPrevue:         string  = '';
   referenceContrat:      string  = '';
@@ -235,9 +238,6 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
   motif:        string = '';
   commentaire:  string = '';
 
-  /** `types_contrat` rows, needed to map a contract type CODE to its historique FK id. */
-  private readonly typeContrats = signal<TypeContratDto[]>([]);
-
   readonly docTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
     return [
@@ -252,14 +252,12 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.listSvc.getListValues('CONTRACT_TYPE', this.paysId())
       .pipe(catchError(() => of([] as ListValue[])))
-      .subscribe(v => this.adminTypes.set(v));
-    // Needed to translate the chosen contract type CODE into the historique table's FK.
-    // Failure is tolerated: the lifecycle contract is the important half and must not be
-    // blocked because a lookup list did not load.
-    this.historySvc.getTypeContrats().subscribe({
-      next: tc => this.typeContrats.set(tc),
-      error: () => this.typeContrats.set([]),
-    });
+      .subscribe(v => {
+        this.adminTypes.set(v);
+        // Preselect CDI (the common case), else the first type of the list.
+        const cdi = v.find(t => t.valueCode?.toUpperCase() === 'CDI') ?? v[0];
+        this.selectedTypeId.set(cdi?.id ?? null);
+      });
   }
 
   ngAfterViewInit(): void {
@@ -313,6 +311,10 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
       this.error.set(this.translate.instant('PROFILES.NEW_CONTRACT.ERR_NO_PAYS'));
       return;
     }
+    const typeId = this.selectedTypeId();
+    if (typeId == null) {
+      this.error.set(this.translate.instant('PROFILES.NEW_CONTRACT.ERR_NO_TYPE')); return;
+    }
     if (this.cfg[this.contractType].needsEndDate && !this.dateFinPrevue) {
       this.error.set(this.translate.instant('PROFILES.NEW_CONTRACT.ERR_END')); return;
     }
@@ -320,7 +322,8 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
     const req: CreateContractRequest = {
       employeeProfileId:       this.profileId(),
       paysId:                  this.paysId(),
-      contractTypeCode:        this.contractType,
+      // The list value's id: the contract stores it (like profiles and candidates).
+      contractTypeCode:        String(typeId),
       dateDebut:               this.dateDebut,
       dateFinPrevue:           this.dateFinPrevue || null,
       referenceContrat:        this.referenceContrat || null,
@@ -360,18 +363,12 @@ export class NewContractFormComponent implements OnInit, AfterViewInit {
    * the motif and whether this is an initial contract or an avenant — none of which the
    * lifecycle table holds.
    *
-   * Skipped silently when the type cannot be mapped to a `types_contrat` row: that means the
-   * lookup list did not load or the code is not configured, and neither is worth blocking on.
+   * The history now points at the same CONTRACT_TYPE list value as the contract (the separate
+   * type_contrat table is retired), so the picked id is used as is.
    */
   private recordInHistory(done: () => void): void {
-    const typeId = this.typeContrats().find(tc => tc.code === this.contractType)?.id;
-    if (typeId == null) {
-      console.warn(
-        `[new-contract] no types_contrat row matches code "${this.contractType}" — `
-        + 'the contract was created but not logged in the dossier history.');
-      done();
-      return;
-    }
+    const typeId = this.selectedTypeId();
+    if (typeId == null) { done(); return; }
 
     const entry: CreateHistoryEntryRequest = {
       idTypeContrat: typeId,

@@ -1,8 +1,10 @@
 import { Component, computed, input, output, signal } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-tags-input',
   standalone: true,
+  imports: [TranslatePipe],
   templateUrl: './tags-input.component.html',
   styleUrl: './tags-input.component.scss',
 })
@@ -10,7 +12,8 @@ export class TagsInputComponent {
   tags        = input<string[]>([]);
   tagsChange  = output<string[]>();
   suggestions = input<string[]>([]);
-  placeholder = input('Ajouter un tag…');
+  /** Empty = the translated « Ajouter un tag… ». */
+  placeholder = input('');
   color       = input('#3b82f6');
 
   inputValue      = signal('');

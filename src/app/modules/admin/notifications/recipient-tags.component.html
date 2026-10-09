@@ -33,7 +33,7 @@
         <daf-select
           class="rt-select"
           [selected]="modeValue()"
-          [options]="modeOptions"
+          [options]="modeOptions()"
           [config]="{ label: ('ADMIN.notifications.recipientMode' | translate) }"
           (selectedChange)="onModeChange($event[0])" />
 

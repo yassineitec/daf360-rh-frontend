@@ -71,7 +71,7 @@ import { fmtDate } from './field-bridges';
               <div class="flex flex-1 flex-col gap-1.5">
 
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-[13px] font-bold text-on-surface">{{ typeLabel(c.contractTypeCode) }}</span>
+                  <span class="text-[13px] font-bold text-on-surface">{{ c.contractTypeLabel || typeLabel(c.contractTypeCode) }}</span>
                   <daf-badge [label]="statusLabel(c.currentStatusCode)"
                              [options]="{ variant: statusVariant(c.currentStatusCode), size: 'sm' }" />
                   @if (c.isActive) {

@@ -5,7 +5,7 @@ import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SortDirection, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
-  SearchToolbarComponent,
+  SearchToolbarComponent, SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
@@ -24,7 +24,13 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   labelEn:   v => v.labelEn || null,
   isActive:  v => (v.isActive ? 1 : 0),   // inactive first on an ascending sort
   isSystem:  v => (v.isSystem ? 1 : 0),   // editable values first on an ascending sort
+  lifecycleNature: v => v.lifecycleNature || null,
 };
+
+/** The list whose values carry a lifecycle nature (the contract engine's rules). */
+const CONTRACT_TYPE_LIST = 'CONTRACT_TYPE';
+/** Mirrors the backend ContractTypeRefs.NATURES. */
+const CONTRACT_NATURES = ['CDI', 'CDD', 'CIVP', 'STAGE', 'FREELANCE', 'DETACHEMENT'] as const;
 
 @Component({
   selector: 'app-list-manager',
@@ -32,7 +38,7 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, SelectComponent, TranslatePipe,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -75,6 +81,21 @@ export class ListManagerComponent implements OnInit {
     this.currentPage.set(0);
   }
 
+  /**
+   * Type de contrat: each value says which contract rules it follows (CDI, CDD…), so a type
+   * added here (« contrat ») can be hired on — the lifecycle engine keys its rules on it.
+   */
+  readonly isContractTypeList = computed(() => this.selectedType()?.code === CONTRACT_TYPE_LIST);
+
+  readonly natureOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return CONTRACT_NATURES.map(n => ({ value: n, label: this.natureLabel(n) }));
+  });
+
+  natureLabel(nature: string | null): string {
+    return nature ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + nature) : '—';
+  }
+
   /** Per-pays list: whether the selected list is split by entity right now. */
   readonly isPerPaysView = computed(() =>
     !!this.selectedType()?.isPerPays && this.paysId() != null);
@@ -107,6 +128,9 @@ export class ListManagerComponent implements OnInit {
       { key: 'valueCode', label: this.translate.instant('ADMIN.data.lists.COL_CODE'), sortable: true },
       { key: 'labelFr', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_FR'), sortable: true },
       { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN'), sortable: true },
+      ...(this.isContractTypeList()
+        ? [{ key: 'lifecycleNature', label: this.translate.instant('ADMIN.data.lists.COL_NATURE'), sortable: true }]
+        : []),
       { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE'), sortable: true },
       { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM'), sortable: true },
       // Only where it means something: a global list has no entity to tell apart.
@@ -132,6 +156,7 @@ export class ListManagerComponent implements OnInit {
       valueCode: v.valueCode,
       labelFr:   v.labelFr,
       labelEn:   v.labelEn,
+      lifecycleNature: v.lifecycleNature,
       isActive:  v.isActive,
       isSystem:  v.isSystem,
       _source:   v,
@@ -213,6 +238,7 @@ export class ListManagerComponent implements OnInit {
     labelEn:   ['', Validators.required],
     sortOrder: [0],
     isActive:  [true],
+    lifecycleNature: [null as string | null],
   });
 
   addForm: FormGroup = this.fb.group({
@@ -220,6 +246,7 @@ export class ListManagerComponent implements OnInit {
     labelFr:   ['', Validators.required],
     labelEn:   ['', Validators.required],
     sortOrder: [0],
+    lifecycleNature: ['CDI' as string | null],
   });
 
   ngOnInit(): void {
@@ -242,7 +269,7 @@ export class ListManagerComponent implements OnInit {
   }
 
   openAddForm(): void {
-    this.addForm.reset({ sortOrder: 0 });
+    this.addForm.reset({ sortOrder: 0, lifecycleNature: 'CDI' });
     this.modalRef = this.modal.open({
       title: this.translate.instant('ADMIN.data.lists.MODAL_ADD_TITLE'),
       body: this.bodyTpl(),
@@ -268,6 +295,7 @@ export class ListManagerComponent implements OnInit {
     this.editForm.patchValue({
       labelFr: value.labelFr, labelEn: value.labelEn,
       sortOrder: value.sortOrder, isActive: value.isActive,
+      lifecycleNature: value.lifecycleNature,
     });
   }
 
@@ -275,7 +303,9 @@ export class ListManagerComponent implements OnInit {
 
   saveEdit(value: ListValue): void {
     if (this.editForm.invalid) return;
-    const dto: UpdateListValueRequest = this.editForm.value;
+    const { lifecycleNature, ...fields } = this.editForm.value;
+    // Only the contract-type list has a nature; other lists never send one.
+    const dto: UpdateListValueRequest = this.isContractTypeList() ? { ...fields, lifecycleNature } : fields;
     this.listService.updateValue(value.id, dto).subscribe({
       next: () => { this.editingId.set(null); this.flash(this.translate.instant('ADMIN.data.lists.MSG_UPDATED')); this.loadValues(value.listTypeId); },
       error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_GENERIC')),
@@ -315,12 +345,16 @@ export class ListManagerComponent implements OnInit {
     // A per-pays list gets the value for the entity picked in /rh/admin; a global one stays
     // shared (null), as before.
     const paysId = type.isPerPays ? this.paysId() : null;
-    const dto: CreateListValueRequest = { listTypeId: type.id, paysId, ...this.addForm.value };
+    const { lifecycleNature, ...fields } = this.addForm.value;
+    const dto: CreateListValueRequest = {
+      listTypeId: type.id, paysId, ...fields,
+      ...(this.isContractTypeList() ? { lifecycleNature } : {}),
+    };
     this.listService.createValue(dto).subscribe({
       next: () => {
         this.adding.set(false);
         this.modalRef?.close();
-        this.addForm.reset({ sortOrder: 0 });
+        this.addForm.reset({ sortOrder: 0, lifecycleNature: 'CDI' });
         this.flash(this.translate.instant('ADMIN.data.lists.MSG_ADDED'));
         this.loadValues(type.id);
       },

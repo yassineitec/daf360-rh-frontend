@@ -288,7 +288,7 @@ export class RequestOfficerInboxComponent implements OnInit {
       confirmLabel: this.translate.instant('REQUESTS.INBOX.APPROVE'), icon: 'check',
     }))) return;
     this.errorMsg.set('');
-    this.svc.processRequest(row.id, this.officerId(), 'APPROVED', 'Approuvé via boîte de réception')
+    this.svc.processRequest(row.id, this.officerId(), 'APPROVED', this.translate.instant('REQUESTS.INBOX.APPROVE_COMMENT'))
       .subscribe({
         next: updated => this.rows.update(rs => rs.map(r => r.id === updated.id ? updated : r)),
         error: err => this.errorMsg.set(this.extractError(err)),

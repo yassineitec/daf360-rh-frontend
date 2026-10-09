@@ -8,7 +8,7 @@
           <h2 class="rd-title">{{ 'RECRUITMENT_DEMANDS.FORM.TITLE' | translate }}</h2>
           <p class="rd-sub">{{ 'RECRUITMENT_DEMANDS.FORM.SUBTITLE' | translate }}</p>
         </div>
-        <button type="button" class="rd-close" (click)="onClose()" aria-label="Fermer">
+        <button type="button" class="rd-close" (click)="onClose()" [attr.aria-label]="'COMMON.close' | translate">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>

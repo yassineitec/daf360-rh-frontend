@@ -3,13 +3,13 @@
     @for (tag of tags(); track tag; let i = $index) {
       <span class="tag-badge" [style.background]="color() + '1a'" [style.color]="color()" [style.border]="'1px solid ' + color() + '40'">
         {{ tag }}
-        <button type="button" class="tag-remove" (click)="removeTag(i); $event.stopPropagation()" aria-label="Retirer">×</button>
+        <button type="button" class="tag-remove" (click)="removeTag(i); $event.stopPropagation()" [attr.aria-label]="'COMMON.remove' | translate">×</button>
       </span>
     }
     <input
       #inputEl
       class="tag-input"
-      [placeholder]="tags().length === 0 ? placeholder() : ''"
+      [placeholder]="tags().length === 0 ? (placeholder() || ('COMMON.addTag' | translate)) : ''"
       (input)="onInput($event)"
       (keydown)="onKeydown($event, inputEl)"
       (focus)="onFocus()"

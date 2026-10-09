@@ -108,9 +108,9 @@
       "COUNTRY_UNKNOWN": "Not set"
     },
     "ENGINEER_PRO_STATS": {
-      "LABEL": "Engineers / Pros",
+      "LABEL": "Engineers / Technicians",
       "ENGINEER": "Engineers",
-      "PRO": "Pros"
+      "PROJETEUR": "Technicians"
     },
     "SENIORITY_STATS": {
       "LABEL": "Seniority",
@@ -1714,6 +1714,7 @@
       "MODAL_TITLE": "New contract",
       "CREATE": "Create contract",
       "ERR_START": "The start date is required.",
+      "ERR_NO_TYPE": "Choose a contract type.",
       "ERR_END": "The end date is required for this contract type.",
       "ERR_CREATE": "Error while creating the contract."
     },
@@ -2561,6 +2562,114 @@
         "paysCalendar": "Entity calendar"
       }
     },
+    "users": {
+      "stats": {
+        "total": "Accounts",
+        "totalHelp": "Every account in the register, people and technical accounts alike.",
+        "employees": "People",
+        "employeesHelp": "Accounts flagged as belonging to a real person. Only these appear in lists and notifications.",
+        "missingProfile": "No HR file",
+        "missingProfileHelp": "Accounts without an employee file. No leave, contract or payslips until one exists.",
+        "neverLoggedIn": "Never signed in",
+        "neverLoggedInHelp": "Accounts that have never authenticated — often a duplicate import or an address missing from Azure AD."
+      },
+      "searchPlaceholder": "Search by name, email, identifier…",
+      "badges": {
+        "person": "Person",
+        "technicalAccount": "Technical account",
+        "technical": "Technical",
+        "noProfile": "No HR file",
+        "noProfileShort": "No file",
+        "neverLoggedIn": "Never signed in",
+        "disabled": "Disabled"
+      },
+      "balances": {
+        "conge": "Leave",
+        "maladie": "Sick",
+        "teletravail": "Remote work"
+      },
+      "editBalances": "Edit balances",
+      "editBalancesTooltip": "Edit leave balances",
+      "toTechnicalTooltip": "Reclassify as technical account — removes this account from every list of people",
+      "toPersonTooltip": "Reclassify as real person — the account will reappear in the lists",
+      "empty": "No account matches these criteria.",
+      "perPage": "per page",
+      "balanceModal": {
+        "title": "Leave balances",
+        "help": "Leaving a field empty records “not set”. Entering <strong>0</strong> records “no days left” — they are not the same thing.",
+        "conge": "Leave balance (days)",
+        "maladie": "Sick leave balance (days)",
+        "teletravail": "Remote work balance (days)"
+      },
+      "createModal": {
+        "title": "New user",
+        "help": "Creates the DAF360 account only. Sign-in goes through Azure AD on the email address: the person cannot sign in until an Azure account with that same address exists. No HR file is created — the account will show as “HR file missing”.",
+        "fullName": "Full name",
+        "email": "Email",
+        "role": "Role",
+        "entity": "Entity",
+        "isEmployee": "Account of a real person",
+        "isEmployeeHint": "Uncheck for a test or technical account: it will not appear in any list of people."
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save",
+        "create": "Create"
+      },
+      "views": {
+        "list": "Table",
+        "grid": "Cards"
+      },
+      "toolbar": {
+        "create": "New account",
+        "sync": "Synchronize",
+        "syncTooltip": "Pushes account state to finance and payroll without waiting for the automatic reconciliation"
+      },
+      "filters": {
+        "accountType": "Account type",
+        "all": "All",
+        "allFem": "All",
+        "realPerson": "Real person",
+        "technicalAccount": "Technical account",
+        "entity": "Entity",
+        "role": "Role",
+        "onlyMissing": "Without HR file only",
+        "title": "Filters",
+        "apply": "Apply",
+        "cancel": "Cancel",
+        "reset": "Reset",
+        "trigger": "Filter"
+      },
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "entity": "Entity",
+        "account": "Account",
+        "lastLogin": "Last sign-in"
+      },
+      "table": {
+        "columnPicker": "Columns",
+        "reset": "Reset table layout",
+        "sortBy": "Sort by {column}"
+      },
+      "never": "Never",
+      "employee": "Employee",
+      "notEmployee": "Non-employee",
+      "messages": {
+        "loadError": "Error while loading accounts.",
+        "balancesInvalid": "Balances must be positive numbers, or empty.",
+        "balancesSaved": "Balances updated for {{name}}.",
+        "balancesError": "Error while saving balances.",
+        "toggled": "{{name}}: {{status}}.",
+        "toggleError": "Error while changing the account type.",
+        "syncFailed": "Modules not reached: {{modules}}. The change is saved and will be picked up within 15 min.",
+        "syncDone": "Modules synchronized: {{modules}}.",
+        "syncNone": "No module configured for synchronization.",
+        "syncError": "Synchronization failed. Automatic recovery will run within 15 min.",
+        "created": "Account created for {{name}}.",
+        "createError": "Error while creating the account."
+      }
+    },
     "paysCalendar": {
       "intro": "An entity's rest days decide what a leave costs in days, which days presence is expected, and how working-time regimes resolve. An entity with no configuration silently falls back to Saturday/Sunday.",
       "colEntity": "Entity",
@@ -2827,6 +2936,8 @@
         "COL_ACTIVE": "Active",
         "COL_SYSTEM": "System",
         "COL_SCOPE": "Entity",
+        "COL_NATURE": "Contract rules",
+        "FIELD_NATURE": "Follows the rules of",
         "SCOPE_ALL": "All entities",
         "SCOPE_PAYS": "This entity",
         "COL_ACTIONS": "Actions",
@@ -2888,6 +2999,7 @@
         "PH_ORDER": "0",
         "CANCEL": "Cancel",
         "SAVING": "Saving…",
+        "SAVE": "Save",
         "ADD_SHORT": "Add",
         "MODAL_ADD_TC": "Add a contract type",
         "TC_FIELD_CODE": "Code",
@@ -3539,6 +3651,18 @@
       "addRole": "Add a role",
       "selectRolePlaceholder": "-- Select a role --",
       "add": "Add",
+      "tagSubject": "The person concerned",
+      "tagManagerOfSubject": "Their manager",
+      "tagSuffixManager": "role manager",
+      "tagSuffixPermission": "permission",
+      "tagSuffixAuto": "auto",
+      "tagSuffixAll": "all",
+      "recipientModeAll": "All holders of the role",
+      "recipientModeManager": "The manager (higher role)",
+      "recipientModePermission": "All holders of a permission",
+      "recipientModeSubject": "The person concerned",
+      "recipientModeManagerOfSubject": "The manager of the person concerned",
+      "entityTypeNone": "None (not clickable)",
       "loadingRule": "Loading rule…",
       "generalSettings": "General settings",
       "toggleInapp": "In-app notification",
@@ -3764,6 +3888,7 @@
       "EMPTY": "No pending requests",
       "DETAILS": "Details",
       "APPROVE": "Approve",
+      "APPROVE_COMMENT": "Approved via inbox",
       "REJECT": "Reject",
       "REFUSE_TITLE": "Reject request",
       "REFUSE_DESC": "Request #{{id}} — {{type}}",
@@ -4557,6 +4682,22 @@
       "ERR_SAVE": "Saving failed.",
       "ERR_REQUIRED": "Fill in the required fields.",
       "ERR_ROLES": "Approver roles could not be loaded."
+    }
+  },
+  "COMMON": {
+    "close": "Close",
+    "loading": "Loading…",
+    "remove": "Remove",
+    "addTag": "Add a tag…",
+    "signingIn": "Signing in…",
+    "pdf": {
+      "download": "Download",
+      "generating": "Generating…",
+      "generated": "{{filename}} — document generated.",
+      "serviceUnavailable": "PDF service unavailable. Please try again later.",
+      "unexpectedError": "Unexpected error while generating the document.",
+      "notGeneratedYet": "The document has not been generated yet. Generate it first.",
+      "downloadError": "Error while downloading the file."
     }
   }
 }

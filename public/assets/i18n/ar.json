@@ -108,9 +108,9 @@
       "COUNTRY_UNKNOWN": "غير محدد"
     },
     "ENGINEER_PRO_STATS": {
-      "LABEL": "المهندسون / المهنيون",
+      "LABEL": "المهندسون / التقنيون",
       "ENGINEER": "مهندسون",
-      "PRO": "مهنيون"
+      "PROJETEUR": "تقنيون"
     },
     "SENIORITY_STATS": {
       "LABEL": "الأقدمية",

@@ -98,6 +98,19 @@
             }
           </ng-template>
 
+          <!-- Type de contrat only (see `columns`): the contract rules this type follows. -->
+          <ng-template dafCell="lifecycleNature" let-row>
+            @if (editingId() === row['_source'].id) {
+              <ng-container [formGroup]="editForm">
+                <daf-select [options]="natureOptions()"
+                  [selected]="editForm.controls['lifecycleNature'].value ? [editForm.controls['lifecycleNature'].value] : []"
+                  (selectedChange)="editForm.controls['lifecycleNature'].setValue($event[0] ?? null)" />
+              </ng-container>
+            } @else {
+              {{ natureLabel(row['_source'].lifecycleNature) }}
+            }
+          </ng-template>
+
           <ng-template dafCell="isActive" let-row>
             @if (editingId() === row['_source'].id) {
               <ng-container [formGroup]="editForm">
@@ -168,6 +181,12 @@
         [options]="{ label: ('ADMIN.data.lists.FIELD_ORDER' | translate), type: 'number', fullWidth: true }"
         [value]="addForm.controls['sortOrder'].value"
         (valueChange)="addForm.controls['sortOrder'].setValue($any($event))" />
+      @if (isContractTypeList()) {
+        <daf-select [options]="natureOptions()"
+          [config]="{ label: ('ADMIN.data.lists.FIELD_NATURE' | translate) }"
+          [selected]="addForm.controls['lifecycleNature'].value ? [addForm.controls['lifecycleNature'].value] : []"
+          (selectedChange)="addForm.controls['lifecycleNature'].setValue($event[0] ?? 'CDI')" />
+      }
     </div>
   </form>
   <div class="lm-modal-footer">

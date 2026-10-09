@@ -1,15 +1,17 @@
 import { Component, input } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-spinner',
   standalone: true,
+  imports: [TranslatePipe],
   template: `
     <span
       class="spinner"
       [class.spinner--sm]="size() === 'sm'"
       [class.spinner--lg]="size() === 'lg'"
       role="status"
-      aria-label="Chargement…"
+      [attr.aria-label]="'COMMON.loading' | translate"
     ></span>
   `,
   styles: [`

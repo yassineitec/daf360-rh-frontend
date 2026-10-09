@@ -652,7 +652,7 @@ export class RequestListComponent implements OnInit {
       cancelLabel: this.translate.instant('REQUESTS.APPROVE.BACK'),
     }))) return;
     this.svc
-      .processRequest(row.id, this.currentUserId(), 'APPROVED', 'Approuvé')
+      .processRequest(row.id, this.currentUserId(), 'APPROVED', this.translate.instant('REQUESTS.DRAWER.DEFAULT_APPROVE_COMMENT'))
       .pipe(catchError(() => of(null)))
       .subscribe((updated) => {
         if (updated) {
