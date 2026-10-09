@@ -2937,7 +2937,6 @@
         "COL_SYSTEM": "System",
         "COL_SCOPE": "Entity",
         "COL_NATURE": "Contract rules",
-        "FIELD_NATURE": "Follows the rules of",
         "SCOPE_ALL": "All entities",
         "SCOPE_PAYS": "This entity",
         "COL_ACTIONS": "Actions",

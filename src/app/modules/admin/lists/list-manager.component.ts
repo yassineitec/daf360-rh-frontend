@@ -246,7 +246,6 @@ export class ListManagerComponent implements OnInit {
     labelFr:   ['', Validators.required],
     labelEn:   ['', Validators.required],
     sortOrder: [0],
-    lifecycleNature: ['CDI' as string | null],
   });
 
   ngOnInit(): void {
@@ -269,7 +268,7 @@ export class ListManagerComponent implements OnInit {
   }
 
   openAddForm(): void {
-    this.addForm.reset({ sortOrder: 0, lifecycleNature: 'CDI' });
+    this.addForm.reset({ sortOrder: 0 });
     this.modalRef = this.modal.open({
       title: this.translate.instant('ADMIN.data.lists.MODAL_ADD_TITLE'),
       body: this.bodyTpl(),
@@ -345,16 +344,14 @@ export class ListManagerComponent implements OnInit {
     // A per-pays list gets the value for the entity picked in /rh/admin; a global one stays
     // shared (null), as before.
     const paysId = type.isPerPays ? this.paysId() : null;
-    const { lifecycleNature, ...fields } = this.addForm.value;
-    const dto: CreateListValueRequest = {
-      listTypeId: type.id, paysId, ...fields,
-      ...(this.isContractTypeList() ? { lifecycleNature } : {}),
-    };
+    // No nature asked here: the backend gives a new contract type the nature of its code
+    // (CDD → CDD), else CDI — changed afterwards in the « Règles de contrat » column.
+    const dto: CreateListValueRequest = { listTypeId: type.id, paysId, ...this.addForm.value };
     this.listService.createValue(dto).subscribe({
       next: () => {
         this.adding.set(false);
         this.modalRef?.close();
-        this.addForm.reset({ sortOrder: 0, lifecycleNature: 'CDI' });
+        this.addForm.reset({ sortOrder: 0 });
         this.flash(this.translate.instant('ADMIN.data.lists.MSG_ADDED'));
         this.loadValues(type.id);
       },

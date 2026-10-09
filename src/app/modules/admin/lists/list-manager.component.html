@@ -181,12 +181,6 @@
         [options]="{ label: ('ADMIN.data.lists.FIELD_ORDER' | translate), type: 'number', fullWidth: true }"
         [value]="addForm.controls['sortOrder'].value"
         (valueChange)="addForm.controls['sortOrder'].setValue($any($event))" />
-      @if (isContractTypeList()) {
-        <daf-select [options]="natureOptions()"
-          [config]="{ label: ('ADMIN.data.lists.FIELD_NATURE' | translate) }"
-          [selected]="addForm.controls['lifecycleNature'].value ? [addForm.controls['lifecycleNature'].value] : []"
-          (selectedChange)="addForm.controls['lifecycleNature'].setValue($event[0] ?? 'CDI')" />
-      }
     </div>
   </form>
   <div class="lm-modal-footer">
