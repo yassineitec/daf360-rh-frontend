@@ -3,13 +3,14 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { CardComponent, ProgressBarComponent } from '@khalilrebhiitec/daf360';
 
 /**
- * Ingénieurs / Pros split of the in-service headcount — the sibling of the
+ * Ingénieurs / Projeteurs split of the in-service headcount — the sibling of the
  * Féminin / Masculin card in `rh-workforce-stats`, same two-halves design and the
  * same container-query breakpoints (see that component for why they key off the
  * card's width rather than the viewport's).
  *
- * The split itself is decided server-side from the profile's grade: see
- * `DashboardService.getIngenieurProCounts()`.
+ * The split itself is decided server-side from the profile's grade code (EN* → ingénieur,
+ * BC* → projeteur): see `DashboardService.getIngenieurProjeteurCounts()`.
+ * `total` is ingénieurs + projeteurs — profiles that are neither aren't counted here.
  */
 @Component({
   selector: 'rh-engineer-pro-stats',
@@ -45,18 +46,18 @@ import { CardComponent, ProgressBarComponent } from '@khalilrebhiitec/daf360';
           </div>
           <div class="ep-half ep-half--second flex items-center gap-3">
             <span class="ep-icon shrink-0 rounded-2xl flex items-center justify-center bg-teal/10 text-teal">
-              <span class="material-symbols-outlined">work</span>
+              <span class="material-symbols-outlined">architecture</span>
             </span>
             <div class="flex flex-col flex-1 min-w-0">
-              <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.ENGINEER_PRO_STATS.PRO' | translate }}</p>
+              <p class="text-[11px] text-outline font-bold uppercase">{{ 'HOME.ENGINEER_PRO_STATS.PROJETEUR' | translate }}</p>
               <p class="text-[18px] font-bold text-teal">
-                {{ pros() ?? '—' }}
-                @if (pctPros() != null) {
-                  <span class="text-[12px] font-medium text-outline">· {{ pctPros() }}%</span>
+                {{ projeteurs() ?? '—' }}
+                @if (pctProjeteurs() != null) {
+                  <span class="text-[12px] font-medium text-outline">· {{ pctProjeteurs() }}%</span>
                 }
               </p>
               <daf-progress-bar class="block w-full mt-1.5"
-                [value]="pctPros() ?? 0"
+                [value]="pctProjeteurs() ?? 0"
                 [options]="{ max: 100, size: 'sm', variant: 'teal', showPercent: false }" />
             </div>
           </div>
@@ -99,7 +100,7 @@ import { CardComponent, ProgressBarComponent } from '@khalilrebhiitec/daf360';
 export class EngineerProStatsComponent {
   readonly total         = input<number>(0);
   readonly pctIngenieurs = input<number | null | undefined>(undefined);
-  readonly pctPros       = input<number | null | undefined>(undefined);
+  readonly pctProjeteurs = input<number | null | undefined>(undefined);
   readonly ingenieurs    = input<number | null | undefined>(undefined);
-  readonly pros          = input<number | null | undefined>(undefined);
+  readonly projeteurs    = input<number | null | undefined>(undefined);
 }

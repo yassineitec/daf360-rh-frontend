@@ -52,15 +52,15 @@ import { CountryHeadcount } from '../services/home.service';
       </div>
       <div class="min-w-0">
         <rh-engineer-pro-stats
-          [total]="ingProTotal()"
+          [total]="ingProjTotal()"
           [pctIngenieurs]="pctIngenieurs()"
-          [pctPros]="pctPros()"
+          [pctProjeteurs]="pctProjeteurs()"
           [ingenieurs]="ingenieurs()"
-          [pros]="pros()" />
+          [projeteurs]="projeteurs()" />
       </div>
       <div class="min-w-0">
         <rh-seniority-stats
-          [total]="ingProTotal()"
+          [total]="seniorityTotal()"
           [pctJuniors]="pctJuniors()"
           [pctConfirmes]="pctConfirmes()"
           [pctSeniors]="pctSeniors()"
@@ -102,16 +102,17 @@ export class OverviewSectionComponent {
   readonly pctFemmes          = input<number | null | undefined>(undefined);
   readonly pctHommes          = input<number | null | undefined>(undefined);
   readonly byCountry          = input<CountryHeadcount[]>([]);
-  readonly ingProTotal        = input<number>(0);
+  readonly ingProjTotal       = input<number>(0);
+  readonly seniorityTotal     = input<number>(0);
   readonly pctIngenieurs      = input<number | null | undefined>(undefined);
-  readonly pctPros            = input<number | null | undefined>(undefined);
+  readonly pctProjeteurs      = input<number | null | undefined>(undefined);
   readonly pctJuniors         = input<number | null | undefined>(undefined);
   readonly pctConfirmes       = input<number | null | undefined>(undefined);
   readonly pctSeniors         = input<number | null | undefined>(undefined);
   readonly femmes             = input<number | null | undefined>(undefined);
   readonly hommes             = input<number | null | undefined>(undefined);
   readonly ingenieurs         = input<number | null | undefined>(undefined);
-  readonly pros               = input<number | null | undefined>(undefined);
+  readonly projeteurs         = input<number | null | undefined>(undefined);
   readonly juniors            = input<number | null | undefined>(undefined);
   readonly confirmes          = input<number | null | undefined>(undefined);
   readonly seniors            = input<number | null | undefined>(undefined);
