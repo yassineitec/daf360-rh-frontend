@@ -357,7 +357,10 @@ export class RecruitmentDemandDetailComponent implements OnInit {
   reviewComment = '';
   reviewError   = signal<string | null>(null);
 
-  readonly canApprove = () => this.userStore.hasPermission('RH_APPROVE_RECRUITMENT_DEMAND');
+  /** Never on one's own request — the backend refuses it (four-eyes), so the buttons would only fail. */
+  readonly canApprove = () =>
+    this.userStore.hasPermission('RH_APPROVE_RECRUITMENT_DEMAND')
+    && this.demand()?.createdByUserId !== this.userStore.currentUser()?.userId;
   readonly canCancel  = () => {
     const d = this.demand();
     const uid = this.userStore.currentUser()?.userId;

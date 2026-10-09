@@ -766,6 +766,7 @@
     "ERR_LOAD": "Impossible de charger les demandes de recrutement.",
     "ERR_NO_PAYS": "Votre compte n'est rattaché à aucune entité — impossible de lister les demandes à valider.",
     "ERR_COMMENT_REQUIRED": "Indiquez le motif du refus.",
+    "ERR_OWN_REQUEST": "Vous ne pouvez pas valider ou refuser votre propre demande : un autre valideur doit la traiter.",
     "ERR_REVIEW": "L'enregistrement de la décision a échoué. Réessayez.",
     "FILTERS": {
       "TITLE": "Filtrer les demandes",
@@ -2559,7 +2560,8 @@
         "documentTemplates": "Maquettes documents",
         "sharepoint": "SharePoint",
         "absenceTypes": "Types de congés",
-        "paysCalendar": "Calendrier des entités"
+        "paysCalendar": "Calendrier des entités",
+        "contractAlerts": "Échéances de contrat"
       }
     },
     "users": {
@@ -2669,6 +2671,35 @@
         "created": "Compte créé pour {{name}}.",
         "createError": "Erreur lors de la création du compte."
       }
+    },
+    "contractAlerts": {
+      "title": "Échéances de contrat",
+      "subtitle": "Combien de jours avant la fin d'un contrat et avant la fin d'une période d'essai les RH sont notifiés, pour cette entité et par type de contrat. Les destinataires et le texte se règlent dans Notifications (Échéance de contrat, Fin de période d'essai).",
+      "colType": "Type de contrat",
+      "colExpiry": "Alerte fin de contrat",
+      "colTrial": "Alerte fin de période d'essai",
+      "colStatus": "État",
+      "days": "{{n}} jour(s) avant",
+      "configured": "Configuré",
+      "defaults": "Valeurs par défaut",
+      "edit": "Modifier les délais",
+      "editTitle": "Délais d'alerte",
+      "expiryLabel": "Fin de contrat (jours avant)",
+      "expiryHint": "Sans effet sur un CDI, qui n'a pas de date de fin.",
+      "trialLabel": "Fin de période d'essai (jours avant)",
+      "trialHint": "0 = le jour même.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "invalid": "Chaque délai doit être un nombre entier entre 0 et {{max}}.",
+      "saveError": "Impossible d'enregistrer les délais.",
+      "loadError": "Impossible de charger la configuration des contrats.",
+      "empty": "Aucun type de contrat.",
+      "note": "« Valeurs par défaut » : aucune configuration pour ce type dans cette entité ; l'alerte part tout de même avec ces délais. Enregistrer crée la configuration. Une modification s'applique dès le prochain passage quotidien (08h00).",
+      "runNow": "Lancer la vérification maintenant",
+      "runResult": "Vérification terminée : {{due}} alerte(s) à envoyer, {{sent}} envoyée(s), {{pending}} sans destinataire (réessayée(s) au prochain passage).",
+      "runBusy": "Une vérification est déjà en cours.",
+      "runError": "La vérification a échoué."
     },
     "paysCalendar": {
       "intro": "Les jours de repos d'une entité décident du coût d'un congé en jours, des jours où la présence est attendue, et de la résolution des régimes horaires. Une entité sans configuration retombe silencieusement sur samedi/dimanche.",
