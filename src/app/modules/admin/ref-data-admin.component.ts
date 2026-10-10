@@ -9,6 +9,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 
 const PAGE_SIZE = 10;
 
@@ -249,7 +250,7 @@ const TABS: TabConfig[] = [
 <ng-template #bodyTplNotice>
   @if (noticeTarget(); as g) {
     <p class="rda-notice-hint">
-      {{ 'ADMIN.data.refData.MODAL_NOTICE_HELP' | translate: { grade: g.labelFr } }}
+      {{ 'ADMIN.data.refData.MODAL_NOTICE_HELP' | translate: { grade: label(g) } }}
     </p>
     <daf-form-field
       [options]="{ label: ('ADMIN.data.refData.FIELD_NOTICE_PERIOD' | translate), type: 'number', placeholder: ('ADMIN.data.refData.PH_NOTICE_PERIOD' | translate), hint: ('ADMIN.data.refData.HINT_NOTICE_PERIOD' | translate), fullWidth: true }"
@@ -296,6 +297,11 @@ export class RefDataAdminComponent implements OnChanges {
   private modal       = inject(ModalService);
   private translate   = inject(TranslateService);
   private modalRef?: ModalRef;
+
+  /** An entry's name in the UI language, for the messages that quote it. */
+  label(item: { labelFr?: string | null; labelEn?: string | null }): string {
+    return adminLabel(item, this.translate);
+  }
   bodyTplGeneric     = viewChild.required<TemplateRef<unknown>>('bodyTplGeneric');
   bodyTplTypeContrat = viewChild.required<TemplateRef<unknown>>('bodyTplTypeContrat');
   bodyTplNotice      = viewChild.required<TemplateRef<unknown>>('bodyTplNotice');
@@ -652,7 +658,7 @@ export class RefDataAdminComponent implements OnChanges {
   deleteItem(item: RefDataItem): void {
     this.modal.open({
       title: this.translate.instant('ADMIN.data.refData.DELETE_ENTRY_TITLE'),
-      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: item.labelFr }),
+      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: this.label(item) }),
       buttons: [
         { label: this.translate.instant('ADMIN.data.refData.CANCEL'), variant: 'secondary', action: r => r.close() },
         { label: this.translate.instant('ADMIN.data.refData.DELETE'), variant: 'primary',   action: r => { this.doDeleteItem(item); r.close(); } },
@@ -695,7 +701,7 @@ export class RefDataAdminComponent implements OnChanges {
   deleteTypeContrat(tc: TypeContratDto): void {
     this.modal.open({
       title: this.translate.instant('ADMIN.data.refData.DELETE_TC_TITLE'),
-      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: tc.labelFr }),
+      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: this.label(tc) }),
       buttons: [
         { label: this.translate.instant('ADMIN.data.refData.CANCEL'), variant: 'secondary', action: r => r.close() },
         { label: this.translate.instant('ADMIN.data.refData.DELETE'), variant: 'primary',   action: r => { this.doDeleteTypeContrat(tc); r.close(); } },

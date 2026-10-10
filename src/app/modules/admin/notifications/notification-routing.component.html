@@ -7,11 +7,11 @@
     <daf-page [kpis]="0" [breadcrumbs]="true">
       <daf-page-header
         class="nr-breadcrumb-header"
-        [title]="selectedType()!.labelFr"
+        [title]="label(selectedType()!)"
         [breadcrumbs]="[
           { label: ('ADMIN.shell.title' | translate) },
           { label: ('ADMIN.shell.tabs.notifications' | translate) },
-          { label: selectedType()!.labelFr }
+          { label: label(selectedType()!) }
         ]"
         (breadcrumbNavigate)="onBreadcrumbNavigate($event)" />
       <app-routing-rule-editor [eventType]="selectedType()!" />

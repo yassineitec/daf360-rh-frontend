@@ -54,7 +54,7 @@
   (valueChange)="onSearch($event)"
   [table]="overviewTable">
   <div class="ro-filters">
-    @for (f of sourceFilters; track f.value) {
+    @for (f of sourceFilters(); track f.value) {
       <daf-button
         [label]="f.label"
         variant="toggle"
@@ -66,7 +66,7 @@
 
 <!-- Table -->
 <div class="table-scroll">
-<daf-data-table #overviewTable [columns]="columns" [rows]="rows()" [config]="tableConfig()"
+<daf-data-table #overviewTable [columns]="columns()"[rows]="rows()" [config]="tableConfig()"
                 (sortChange)="onSortChange($event.key, $event.dir)"
                 (resetClick)="onSortChange('', null)">
 
@@ -109,7 +109,7 @@
       <span class="ro-source-badge" [ngClass]="getSourceClass(selectedEmployee()?.assignmentLevel)">{{ getSourceLabel(selectedEmployee()?.assignmentLevel) }}</span>
     </div>
     @if (selectedEmployee()?.resolvedRegimeLabelFr) {
-      <p class="ro-current-regime-value">{{ selectedEmployee()!.resolvedRegimeLabelFr }}</p>
+      <p class="ro-current-regime-value">{{ regimeLabel(selectedEmployee()) }}</p>
     } @else {
       <p class="ro-regime-none">{{ 'ADMIN.regimes.overview.noRegimeConfigured' | translate }}</p>
     }

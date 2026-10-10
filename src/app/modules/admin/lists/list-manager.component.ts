@@ -14,6 +14,7 @@ import {
 import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 
 const PAGE_SIZE = 10;
 
@@ -64,6 +65,22 @@ export class ListManagerComponent implements OnInit {
   editingId       = signal<number | null>(null);
   error           = signal<string | null>(null);
   successMsg      = signal<string | null>(null);
+
+  /** A list's name (tab + content title) in the UI language. */
+  typeLabel(type: ListType): string {
+    return adminLabel(type, this.translate);
+  }
+
+  /**
+   * A list's description in the UI language. The DB holds one (French) description, so it is
+   * translated here by list code; a list with no TYPE_DESC entry keeps the DB text.
+   */
+  typeDescription(type: ListType): string | null {
+    if (!type.description) return null;
+    const key = 'ADMIN.data.lists.TYPE_DESC.' + type.code;
+    const label = this.translate.instant(key);
+    return label !== key ? label : type.description;
+  }
 
   /** The values table (absent while loading) — fed to the toolbar's `[table]`. */
   readonly table = viewChild(DataTableComponent);

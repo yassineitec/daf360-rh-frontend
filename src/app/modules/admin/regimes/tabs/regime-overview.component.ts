@@ -15,6 +15,7 @@ import {
   AssignEmployeeOverrideRequest,
 } from '../regime.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { adminLabel } from '../../../../shared/utils/admin-label.utils';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
@@ -63,7 +64,7 @@ export class RegimeOverviewComponent implements OnChanges {
   private readonly sortValues: Record<string, (e: EmployeeRegimeOverview) => string | number | null> = {
     employe: e => e.fullName || null,
     role:    e => e.roleName || null,
-    regime:  e => e.resolvedRegimeLabelFr || null,
+    regime:  e => this.regimeLabel(e) || null,
     source:  e => (e.assignmentLevel
       ? rankIn(RegimeOverviewComponent.SOURCE_ORDER as readonly string[], e.assignmentLevel) : null),
   };
@@ -93,9 +94,19 @@ export class RegimeOverviewComponent implements OnChanges {
   isSaving          = signal(false);
   panelError        = signal<string | null>(null);
 
+  /**
+   * The employee's regime in the UI language. The overview DTO carries only the French label,
+   * so the English one is looked up in the loaded catalog by id (French when not found).
+   */
+  regimeLabel(e: EmployeeRegimeOverview | null | undefined): string | null {
+    if (!e) return null;
+    const r = this.regimes().find(r => r.id === e.resolvedRegimeId);
+    return r ? adminLabel(r, this.translate) : e.resolvedRegimeLabelFr;
+  }
+
   regimeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
+    return this.regimes().map(r => ({ value: String(r.id), label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
   });
 
   overrideRegimeSelected(): string[] {
@@ -106,20 +117,24 @@ export class RegimeOverviewComponent implements OnChanges {
     this.overrideRegimeId = value[0] ? Number(value[0]) : 0;
   }
 
-  sourceFilters: { value: SourceFilter; label: string }[] = [
-    { value: 'ALL',              label: this.translate.instant('ADMIN.regimes.overview.filters.ALL')          },
-    { value: 'EMPLOYEE_OVERRIDE', label: this.translate.instant('ADMIN.regimes.overview.filters.OVERRIDE')    },
-    { value: 'ROLE_ASSIGNMENT',  label: this.translate.instant('ADMIN.regimes.overview.filters.BY_ROLE')      },
-    { value: 'DEFAULT',          label: this.translate.instant('ADMIN.regimes.overview.filters.DEFAULT')      },
-    { value: 'UNCONFIGURED',     label: this.translate.instant('ADMIN.regimes.overview.filters.UNCONFIGURED') },
-  ];
+  // Computed (not a field): re-labelled when the user switches language.
+  readonly sourceFilters = computed<{ value: SourceFilter; label: string }[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: 'ALL',              label: this.translate.instant('ADMIN.regimes.overview.filters.ALL')          },
+      { value: 'EMPLOYEE_OVERRIDE', label: this.translate.instant('ADMIN.regimes.overview.filters.OVERRIDE')    },
+      { value: 'ROLE_ASSIGNMENT',  label: this.translate.instant('ADMIN.regimes.overview.filters.BY_ROLE')      },
+      { value: 'DEFAULT',          label: this.translate.instant('ADMIN.regimes.overview.filters.DEFAULT')      },
+      { value: 'UNCONFIGURED',     label: this.translate.instant('ADMIN.regimes.overview.filters.UNCONFIGURED') },
+    ];
+  });
 
   filteredEmployees = computed(() => {
     this.translate.currentLang();
     // Searches what the row shows: name, role, regime (or « Aucun ») and the source badge.
     let list = searchRows(this.employees(), this.searchTerm(), e => [
       e.fullName, e.roleName,
-      e.resolvedRegimeLabelFr || this.translate.instant('ADMIN.regimes.overview.regimeNone'),
+      this.regimeLabel(e) || this.translate.instant('ADMIN.regimes.overview.regimeNone'),
       this.getSourceLabel(e.assignmentLevel),
     ]);
     const f = this.activeFilter();
@@ -131,12 +146,16 @@ export class RegimeOverviewComponent implements OnChanges {
   });
 
   // `manualSort`: no sortAccessor — this component sorts (sortByColumn + sortValues).
-  readonly columns: TableColumn[] = [
-    { key: 'employe', label: this.translate.instant('ADMIN.regimes.overview.columns.employee'), type: 'avatar', sortable: true },
-    { key: 'role', label: this.translate.instant('ADMIN.regimes.overview.columns.role'), sortable: true },
-    { key: 'regime', label: this.translate.instant('ADMIN.regimes.overview.columns.regime'), sortable: true },
-    { key: 'source', label: this.translate.instant('ADMIN.regimes.overview.columns.source'), type: 'badge', sortable: true },
-  ];
+  // Computed so the headers follow a language switch.
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'employe', label: this.translate.instant('ADMIN.regimes.overview.columns.employee'), type: 'avatar', sortable: true },
+      { key: 'role', label: this.translate.instant('ADMIN.regimes.overview.columns.role'), sortable: true },
+      { key: 'regime', label: this.translate.instant('ADMIN.regimes.overview.columns.regime'), sortable: true },
+      { key: 'source', label: this.translate.instant('ADMIN.regimes.overview.columns.source'), type: 'badge', sortable: true },
+    ];
+  });
 
   readonly totalElements = computed(() => this.filteredEmployees().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
@@ -152,7 +171,7 @@ export class RegimeOverviewComponent implements OnChanges {
     return this.pagedEmployees().map(e => ({
       employe: { name: e.fullName, initials: this.getInitials(e.fullName) } as AvatarCell,
       role: e.roleName ?? '—',
-      regime: e.resolvedRegimeLabelFr,
+      regime: this.regimeLabel(e),
       source: { label: this.getSourceLabel(e.assignmentLevel), options: this.sourceBadgeOptions(e.assignmentLevel) } as BadgeCell,
       _source: e,
     }));

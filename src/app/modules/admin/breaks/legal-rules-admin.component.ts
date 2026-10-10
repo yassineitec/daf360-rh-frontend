@@ -10,6 +10,7 @@ import { BreakService } from './break.service';
 import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { rankIn, searchRows } from '../../../shared/table-sort.utils';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-legal-rules-admin',
@@ -163,7 +164,7 @@ export class LegalRulesAdminComponent implements OnChanges {
     this.translate.currentLang();
     const min = this.translate.instant('ADMIN.regimes.common.minUnit');
     const all = this.rules().map(rule => ({
-      labelFr: rule.labelFr,
+      labelFr: adminLabel(rule, this.translate),
       hours: `${rule.minWorkHours}h${rule.maxWorkHours ? ' – ' + rule.maxWorkHours + 'h' : '+'}`,
       deductionMin: rule.deductionMin,
       appliesToDays: this.formatDays(rule.appliesToDays),

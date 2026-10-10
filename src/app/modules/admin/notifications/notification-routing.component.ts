@@ -10,11 +10,12 @@ import { NotificationRoutingService } from './notification-routing.service';
 import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 
-/** What each event-type column sorts on. "Canaux" sorts on how many channels are on. */
+/** What each event-type column sorts on. "Canaux" sorts on how many channels are on.
+ *  The event label sorts on the label shown — see `sortAccessors`. */
 const EVENT_TYPE_SORT: Record<string, (t: NotificationEventTypeWithRule) => string | number | null> = {
   module:  t => t.module || null,
-  labelFr: t => t.labelFr || null,
   badges:  t => (t.sendInapp ? 1 : 0) + (t.sendEmail ? 1 : 0),
 };
 
@@ -54,6 +55,16 @@ export class NotificationRoutingComponent implements OnInit {
 
   readonly pageSizeOptions = [10, 20, 50];
 
+  /** An event's label in the UI language (English when the UI is English and one exists). */
+  label(t: NotificationEventTypeWithRule): string {
+    return adminLabel(t, this.translate);
+  }
+
+  private readonly sortAccessors: typeof EVENT_TYPE_SORT = {
+    ...EVENT_TYPE_SORT,
+    labelFr: t => this.label(t) || null,
+  };
+
   constructor() {
     effect(() => this.detailOpen.emit(!!this.selectedType()));
   }
@@ -63,7 +74,7 @@ export class NotificationRoutingComponent implements OnInit {
     this.translate.currentLang();
     const tr = (k: string) => this.translate.instant(k);
     return searchRows(this.eventTypes(), this.searchQuery(), t => [
-      t.module, t.labelFr,
+      t.module, this.label(t),
       t.sendInapp ? tr('ADMIN.notifications.badgeInapp') : null,
       t.sendEmail ? tr('ADMIN.notifications.badgeEmail') : null,
       t.isSystem  ? tr('ADMIN.notifications.badgeSystem') : null,
@@ -75,7 +86,7 @@ export class NotificationRoutingComponent implements OnInit {
 
   readonly pagedTypes = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return sortByColumn(this.filteredTypes(), this.sort(), EVENT_TYPE_SORT)
+    return sortByColumn(this.filteredTypes(), this.sort(), this.sortAccessors)
       .slice(start, start + this.pageSize());
   });
 
@@ -91,7 +102,7 @@ export class NotificationRoutingComponent implements OnInit {
   readonly rows = computed<TableRow[]>(() =>
     this.pagedTypes().map((t) => ({
       module:  t.module,
-      labelFr: t.labelFr,
+      labelFr: this.label(t),
       _source: t,
     })),
   );

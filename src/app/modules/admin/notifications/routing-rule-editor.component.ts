@@ -21,6 +21,7 @@ import {
 } from './notification-routing.model';
 import { RecipientTagsComponent } from './recipient-tags.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-routing-rule-editor',
@@ -286,7 +287,7 @@ export class RoutingRuleEditorComponent {
         this.testActiveTab.set('inapp');
         this.testLoading.set(false);
         this.testModalRef = this.modal.open({
-          title: this.translate.instant('ADMIN.notifications.previewTitle', { name: this.eventType()?.labelFr ?? '' }),
+          title: this.translate.instant('ADMIN.notifications.previewTitle', { name: adminLabel(this.eventType(), this.translate) }),
           body: this.testBodyTpl(),
           size: 'lg',
         });

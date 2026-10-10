@@ -15,6 +15,7 @@ import { PaysTimezone, TimezoneOption } from '../../../../core/ref/ref-data.mode
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { searchRows } from '../../../../shared/table-sort.utils';
+import { adminLabel } from '../../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-regime-catalog',
@@ -62,12 +63,17 @@ export class RegimeCatalogComponent implements OnChanges {
     this.searchQuery.set(value);
   }
 
+  /** A regime's name in the UI language (English when the UI is English and one exists). */
+  regimeName(r: WorkingTimeRegime): string {
+    return adminLabel(r, this.translate);
+  }
+
   /** Searches what the row shows: label, code, schedule and the badges. No paging here. */
   readonly filteredRegimes = computed(() => {
     this.translate.currentLang();
     const t = (k: string, p?: object) => this.translate.instant(k, p);
     return searchRows(this.regimes(), this.searchQuery(), r => [
-      r.labelFr, r.code,
+      this.regimeName(r), r.code,
       t('ADMIN.regimes.catalog.hoursPerWeek', { h: r.hoursPerWeek }),
       t('ADMIN.regimes.catalog.daysPerWeek', { d: r.daysPerWeek }),
       r.isDefault ? t('ADMIN.regimes.catalog.badgeDefault') : null,
@@ -82,9 +88,10 @@ export class RegimeCatalogComponent implements OnChanges {
     this.regimes().find(r => r.id === this.selectedId()) ?? null
   );
 
-  currentDefaultName = computed(() =>
-    this.regimes().find(r => r.isDefault && r.id !== this.selectedId())?.labelFr ?? null
-  );
+  currentDefaultName = computed(() => {
+    const r = this.regimes().find(r => r.isDefault && r.id !== this.selectedId());
+    return r ? this.regimeName(r) : null;
+  });
 
   showDefaultWarning = computed(() => {
     const val = this.form.get('isDefault')?.value;
@@ -103,7 +110,7 @@ export class RegimeCatalogComponent implements OnChanges {
     const regime = (row: TableRow) => row['_source'] as WorkingTimeRegime;
     return [
       { key: 'name',   label: this.translate.instant('ADMIN.regimes.catalog.colName'), sortable: true,
-        sortAccessor: (row) => regime(row).labelFr || null },
+        sortAccessor: (row) => this.regimeName(regime(row)) || null },
       // Weekly hours first, days as the tie-breaker: 35h·5j before 39h·5j before 39h·6j.
       { key: 'meta',   label: this.translate.instant('ADMIN.regimes.catalog.colSchedule'), sortable: true,
         sortAccessor: (row) => regime(row).hoursPerWeek * 10 + regime(row).daysPerWeek },
@@ -113,7 +120,7 @@ export class RegimeCatalogComponent implements OnChanges {
 
   readonly rows = computed<TableRow[]>(() =>
     this.filteredRegimes().map(r => ({
-      name:   r.labelFr,
+      name:   this.regimeName(r),
       meta:   `${r.hoursPerWeek}h · ${r.daysPerWeek}j`,
       badges: null,
       _source: r,

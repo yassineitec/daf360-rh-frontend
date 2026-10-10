@@ -17,7 +17,7 @@
           role="tab"
           type="button"
         >
-          {{ type.labelFr }}
+          {{ typeLabel(type) }}
           @if (type.isSystem) { <daf-badge [label]="'ADMIN.data.lists.BADGE_SYSTEM_LOWER' | translate" [options]="{ variant: 'warning', size: 'sm' }" /> }
         </button>
       }
@@ -37,9 +37,9 @@
 
       <div class="lm-content-header">
         <div>
-          <h3 class="lm-content-title">{{ selectedType()!.labelFr }}</h3>
+          <h3 class="lm-content-title">{{ typeLabel(selectedType()!) }}</h3>
           @if (selectedType()!.description) {
-            <p class="lm-content-desc">{{ selectedType()!.description }}</p>
+            <p class="lm-content-desc">{{ typeDescription(selectedType()!) }}</p>
           }
         </div>
       </div>

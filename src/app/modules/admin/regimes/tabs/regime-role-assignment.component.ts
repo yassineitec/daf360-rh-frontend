@@ -12,15 +12,16 @@ import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
 
-/** What each column sorts on. A role with no assignment has no regime / dates → sorts last. */
+/** What each column sorts on. A role with no assignment has no regime / dates → sorts last.
+ *  The regime sorts on the label shown — see `sortAccessors`. */
 const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | null> = {
   role:    r => r.roleName || null,
-  regime:  r => r.assignment?.regimeLabelFr || null,
   effFrom: r => r.assignment?.effectiveFrom?.slice(0, 10) || null, // ISO: string order = date order
   effTo:   r => r.assignment?.effectiveTo?.slice(0, 10) || null,
   notes:   r => r.assignment?.notes || null,
 };
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { adminLabel } from '../../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-regime-role-assignment',
@@ -91,9 +92,26 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     }));
   });
 
-  defaultRegimeName = computed(() =>
-    this.regimes().find(r => r.isDefault)?.labelFr ?? null
-  );
+  defaultRegimeName = computed(() => {
+    const r = this.regimes().find(r => r.isDefault);
+    return r ? adminLabel(r, this.translate) : null;
+  });
+
+  /**
+   * The assigned regime in the UI language. The assignment DTO carries only the French label,
+   * so the English one is looked up in the loaded catalog by id (French when not found).
+   */
+  regimeLabel(row: RoleRow): string | null {
+    const a = row.assignment;
+    if (!a) return null;
+    const r = this.regimes().find(r => r.id === a.regimeId);
+    return r ? adminLabel(r, this.translate) : a.regimeLabelFr;
+  }
+
+  private readonly sortAccessors: typeof ROLE_ASSIGNMENT_SORT = {
+    ...ROLE_ASSIGNMENT_SORT,
+    regime: r => this.regimeLabel(r) || null,
+  };
 
   /** Searches what the row shows: role, regime (or the « Défaut (…) » fallback), dates, notes. */
   readonly filteredRoles = computed(() => {
@@ -102,7 +120,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     const fallback = `${t('ADMIN.regimes.roleAssign.defaultLabel')} (${this.defaultRegimeName() ?? t('ADMIN.regimes.roleAssign.notConfigured')})`;
     return searchRows(this.allRolesWithAssignment(), this.searchQuery(), row => [
       row.roleName,
-      row.assignment?.regimeLabelFr || fallback,
+      this.regimeLabel(row) || fallback,
       row.assignment ? this.formatDate(row.assignment.effectiveFrom) : null,
       row.assignment?.effectiveTo ? this.formatDate(row.assignment.effectiveTo) : null,
       row.assignment?.notes,
@@ -121,7 +139,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.translate.currentLang();
     return this.regimes().map(r => ({
       value: String(r.id),
-      label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}${r.isFlexible ? this.translate.instant('ADMIN.regimes.roles.flexibleSuffix') : ''}`,
+      label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}${r.isFlexible ? this.translate.instant('ADMIN.regimes.roles.flexibleSuffix') : ''}`,
     }));
   });
 
@@ -133,27 +151,31 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.formRegimeId = value[0] ? Number(value[0]) : 0;
   }
 
-  readonly columns: TableColumn[] = [
-    { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role'), sortable: true },
-    { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime'), sortable: true },
-    { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom'), sortable: true },
-    { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo'), sortable: true },
-    { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes'), sortable: true },
-  ];
+  // Computed so the headers follow a language switch.
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role'), sortable: true },
+      { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime'), sortable: true },
+      { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom'), sortable: true },
+      { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo'), sortable: true },
+      { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes'), sortable: true },
+    ];
+  });
 
   readonly totalElements = computed(() => this.filteredRoles().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
 
   readonly pagedRoles = computed(() => {
     const start = this.currentPage() * this.PAGE_SIZE;
-    return sortByColumn(this.filteredRoles(), this.sort(), ROLE_ASSIGNMENT_SORT)
+    return sortByColumn(this.filteredRoles(), this.sort(), this.sortAccessors)
       .slice(start, start + this.PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedRoles().map(row => ({
       role: row.roleName,
-      regime: row.assignment?.regimeLabelFr ?? null,
+      regime: this.regimeLabel(row),
       effFrom: row.assignment ? this.formatDate(row.assignment.effectiveFrom) : '—',
       effTo: row.assignment?.effectiveTo ? this.formatDate(row.assignment.effectiveTo) : '—',
       notes: row.assignment?.notes ?? '—',

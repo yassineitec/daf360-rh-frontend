@@ -21,6 +21,7 @@ import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { UserStore } from '../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { rankIn, searchRows } from '../../shared/table-sort.utils';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 
 type BreakTab = 'templates' | 'legal-rules';
 
@@ -315,7 +316,7 @@ export class BreaksAdminComponent implements OnChanges {
 
   regimeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return this.regimes().map(r => ({ value: String(r.id), label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
+    return this.regimes().map(r => ({ value: String(r.id), label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
   });
 
   /**
@@ -372,7 +373,7 @@ export class BreaksAdminComponent implements OnChanges {
 
   rowsFor(templates: BreakTemplateDto[]): TableRow[] {
     return templates.map(t => ({
-      labelFr: t.labelFr,
+      labelFr: adminLabel(t, this.translate),
       deductionType: t.deductionType,
       durationMin: t.durationMin,
       appliesToDays: this.formatDays(t.appliesToDays),
@@ -409,14 +410,15 @@ export class BreaksAdminComponent implements OnChanges {
     const none = { value: '', label: this.translate.instant('ADMIN.regimes.breaks.statusCodeNone') };
     return [none, ...this.pointageStatuses().map(s => ({
       value: s.status,
-      label: `${s.labelFr || s.status} (${s.status})`,
+      label: `${adminLabel(s, this.translate) || s.status} (${s.status})`,
     }))];
   });
 
   /** Human label for a stored code; falls back to the raw code if it is unknown. */
   statusLabel(code?: string | null): string {
     if (!code) return '—';
-    return this.pointageStatuses().find(s => s.status === code)?.labelFr ?? code;
+    const s = this.pointageStatuses().find(s => s.status === code);
+    return s ? adminLabel(s, this.translate) || code : code;
   }
 
   readonly Number = Number;

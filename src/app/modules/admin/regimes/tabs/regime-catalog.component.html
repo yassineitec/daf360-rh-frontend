@@ -37,7 +37,7 @@
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                          (rowClick)="selectRegime($event['_source'])">
           <ng-template dafCell="name" let-row>
-            <span class="rc-row-title" [class.rc-row-active]="selectedId() === row['_source'].id">{{ row['_source'].labelFr }}</span>
+            <span class="rc-row-title" [class.rc-row-active]="selectedId() === row['_source'].id">{{ regimeName(row['_source']) }}</span>
             <span class="rc-row-code">{{ row['_source'].code }}</span>
           </ng-template>
 

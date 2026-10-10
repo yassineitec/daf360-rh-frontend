@@ -14,11 +14,10 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 
-/** What each request-type column sorts on — the raw values, not the formatted cells. */
+/** What each request-type column sorts on — the raw values, not the formatted cells.
+ *  Name and category sort on the label shown — see `sortAccessors`. */
 const REQUEST_TYPE_SORT: Record<string, (t: RequestTypeCatalog) => string | number | null> = {
   typeCode:       t => t.typeCode || null,
-  displayNameFr:  t => t.displayNameFr || null,
-  category:       t => t.category || null,
   approvalLevel:  t => t.approvalLevel || null,        // L1 before L2
   defaultSlaDays: t => t.defaultSlaDays ?? null,       // the number, not "2 j"
   isActive:       t => (t.isActive ? 1 : 0),           // inactive first on an ascending sort
@@ -143,7 +142,7 @@ const PAGE_SIZE = 5;
           <div class="field-row">
             <daf-select
               [selected]="[form.category]"
-              [options]="categoryOptions"
+              [options]="categoryOptions()"
               [config]="{ label: ('ADMIN.catalog.requestTypes.fieldCategory' | translate), required: true, fullWidth: true }"
               (selectedChange)="form.category = $event[0]"
             />
@@ -233,7 +232,28 @@ export class RequestTypesAdminComponent implements OnChanges {
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   readonly categories = CATEGORIES;
-  readonly categoryOptions: SelectOption[] = CATEGORIES.map(c => ({ value: c, label: c }));
+  readonly categoryOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return CATEGORIES.map(c => ({ value: c, label: this.categoryLabel(c) }));
+  });
+
+  /** A type's name in the UI language (English when the UI is English and one exists). */
+  typeName(t: RequestTypeCatalog): string {
+    return (this.translate.currentLang() === 'en' && t.displayNameEn) || t.displayNameFr || '';
+  }
+
+  /** A category code as its translated label (REQUESTS.CATEGORY.*); unknown code → itself. */
+  categoryLabel(code: string): string {
+    const key = 'REQUESTS.CATEGORY.' + code;
+    const label = this.translate.instant(key);
+    return label !== key ? label : code;
+  }
+
+  private readonly sortAccessors: typeof REQUEST_TYPE_SORT = {
+    ...REQUEST_TYPE_SORT,
+    displayNameFr: t => this.typeName(t) || null,
+    category:      t => (t.category ? this.categoryLabel(t.category) : null),
+  };
   readonly approvalLevelOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
     return [
@@ -304,7 +324,7 @@ export class RequestTypesAdminComponent implements OnChanges {
     this.translate.currentLang();
     const suffix = this.translate.instant('ADMIN.catalog.requestTypes.slaSuffix');
     return searchRows(this.types(), this.searchQuery(), t => [
-      t.typeCode, t.displayNameFr, t.category, t.approvalLevel, t.defaultSlaDays + suffix,
+      t.typeCode, this.typeName(t), this.categoryLabel(t.category), t.approvalLevel, t.defaultSlaDays + suffix,
       this.translate.instant(t.isActive ? 'ADMIN.catalog.requestTypes.statusActive' : 'ADMIN.catalog.requestTypes.statusInactive'),
     ]);
   });
@@ -314,7 +334,7 @@ export class RequestTypesAdminComponent implements OnChanges {
 
   readonly pagedTypes = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.filteredTypes(), this.sort(), REQUEST_TYPE_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredTypes(), this.sort(), this.sortAccessors).slice(start, start + PAGE_SIZE);
   });
 
   /** New search → back to the first page (otherwise it can land on an empty one). */
@@ -329,8 +349,8 @@ export class RequestTypesAdminComponent implements OnChanges {
     const suffix = this.translate.instant('ADMIN.catalog.requestTypes.slaSuffix');
     return this.pagedTypes().map(t => ({
       typeCode: t.typeCode,
-      displayNameFr: t.displayNameFr,
-      category: t.category,
+      displayNameFr: this.typeName(t),
+      category: this.categoryLabel(t.category),
       approvalLevel: t.approvalLevel,
       defaultSlaDays: t.defaultSlaDays + suffix,
       isActive: t.isActive,
@@ -398,7 +418,7 @@ export class RequestTypesAdminComponent implements OnChanges {
   deactivate(t: RequestTypeCatalog) {
     this.modal.open({
       title: this.translate.instant('ADMIN.catalog.requestTypes.deactivateTitle'),
-      body:  this.translate.instant('ADMIN.catalog.requestTypes.deactivateBody', { name: t.displayNameFr }),
+      body:  this.translate.instant('ADMIN.catalog.requestTypes.deactivateBody', { name: this.typeName(t) }),
       buttons: [
         { label: this.translate.instant('ADMIN.catalog.requestTypes.cancel'),            variant: 'secondary', action: r => r.close() },
         { label: this.translate.instant('ADMIN.catalog.requestTypes.actionDeactivate'),  variant: 'primary',   action: r => {

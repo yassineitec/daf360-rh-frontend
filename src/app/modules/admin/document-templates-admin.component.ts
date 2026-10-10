@@ -188,11 +188,11 @@ const DEFAULT_HTML = `<!DOCTYPE html>
           } @else {
             @for (group of variableGroups(); track group.name) {
               <div class="var-group">
-                <div class="var-group-label">{{ group.name }}</div>
+                <div class="var-group-label">{{ groupLabel(group.name) }}</div>
                 @for (v of group.vars; track v.key) {
                   <button class="var-chip" (click)="insertVariable(v.key)">
                     <code class="var-code">{{ '{{' + v.key + '}}' }}</code>
-                    <span class="var-label-text">{{ v.labelFr }}</span>
+                    <span class="var-label-text">{{ variableLabel(v) }}</span>
                   </button>
                 }
               </div>
@@ -472,6 +472,25 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
       ],
     };
   });
+
+  /**
+   * The variable catalog comes from the backend in French only (DocumentVariableCatalog.java),
+   * so labels are translated here by variable key; a variable with no i18n entry keeps the
+   * backend's French label.
+   */
+  variableLabel(v: VariableDef): string {
+    const key = 'ADMIN.docs.templates.vars.' + v.key.replace(/\./g, '_');
+    const label = this.translate.instant(key);
+    return label !== key ? label : v.labelFr;
+  }
+
+  /** Same for the group name ("Employé", "Entreprise"…), keyed on its unaccented upper case. */
+  groupLabel(name: string): string {
+    const code = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    const key = 'ADMIN.docs.templates.varGroups.' + code;
+    const label = this.translate.instant(key);
+    return label !== key ? label : name;
+  }
 
   readonly variableGroups = computed(() => {
     const map = new Map<string, VariableDef[]>();
