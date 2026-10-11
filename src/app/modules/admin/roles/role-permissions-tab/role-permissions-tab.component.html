@@ -8,7 +8,7 @@
 
   <div class="rpt-header">
     <div class="rpt-header-left">
-      <span class="rpt-title">{{ 'ADMIN.roles.permissions.TITLE' | translate:{ name: role().frenchName } }}</span>
+      <span class="rpt-title">{{ 'ADMIN.roles.permissions.TITLE' | translate:{ name: roleName() } }}</span>
       <daf-badge [label]="'ADMIN.roles.permissions.ACTIVE_BADGE' | translate:{ checked: checkedCount(), total: totalPermissions() }" [options]="{ variant: 'neutral', size: 'sm' }" />
     </div>
     <div class="rpt-header-actions">

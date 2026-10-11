@@ -8,11 +8,11 @@
       <daf-page [kpis]="0" [breadcrumbs]="true">
         <daf-page-header
           class="rm-breadcrumb-header"
-          [title]="selectedRole()!.frenchName"
+          [title]="roleName(selectedRole()!)"
           [breadcrumbs]="[
             { label: ('ADMIN.shell.title' | translate) },
             { label: ('ADMIN.shell.tabs.roles' | translate) },
-            { label: selectedRole()!.frenchName }
+            { label: roleName(selectedRole()!) }
           ]"
           (breadcrumbNavigate)="onBreadcrumbNavigate($event)" />
         <app-role-editor

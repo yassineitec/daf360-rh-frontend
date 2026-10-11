@@ -9,6 +9,7 @@ import { RoleManagementService } from '../role-management.service';
 import { PaysOption, PaysScopeMode, RoleListItem } from '../role.model';
 import { flagDataUri } from '../../flag-svgs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-create-role-modal',
@@ -33,6 +34,7 @@ export class CreateRoleModalComponent {
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   frenchName    = signal('');
+  englishName   = signal('');
   parentRoleId  = signal<number | null>(null);
   paysScopeMode = signal<PaysScopeMode>('OWN');
   paysScope     = signal<number[]>([]);
@@ -45,7 +47,7 @@ export class CreateRoleModalComponent {
   }
 
   parentOptions = computed<SelectOption[]>(() =>
-    this.allRoles().map(r => ({ value: String(r.id), label: r.frenchName }))
+    this.allRoles().map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) }))
   );
 
   parentSelected = computed(() =>
@@ -111,6 +113,7 @@ export class CreateRoleModalComponent {
     this.svc
       .createRole({
         frenchName:    this.frenchName().trim(),
+        englishName:   this.englishName().trim() || null,
         parentRoleId:  this.parentRoleId(),
         paysScopeMode: this.paysScopeMode(),
         showAll:       this.paysScopeMode() === 'ALL',
@@ -136,6 +139,7 @@ export class CreateRoleModalComponent {
 
   reset(): void {
     this.frenchName.set('');
+    this.englishName.set('');
     this.parentRoleId.set(null);
     this.paysScopeMode.set('OWN');
     this.paysScope.set([]);

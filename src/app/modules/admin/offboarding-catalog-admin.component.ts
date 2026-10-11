@@ -27,6 +27,7 @@ import {
   SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { searchRows } from '../../shared/table-sort.utils';
+import { roleLabel } from '../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-offboarding-catalog-admin',
@@ -282,7 +283,7 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
     this.translate.currentLang();
     return [
       { value: '', label: this.translate.instant('ADMIN.docs.offboarding.validatorNone') },
-      ...this.roles().map(r => ({ value: String(r.id), label: r.frenchName })),
+      ...this.roles().map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) })),
     ];
   });
 

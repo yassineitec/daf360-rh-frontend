@@ -5,20 +5,14 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem } from './role.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../shared/utils/admin-label.utils';
 
 type RoleSort = { key: string; dir: 'asc' | 'desc' };
-
-/** What each table column sorts on — keyed by the table's column keys. */
-const ROLE_SORT_VALUE: Record<string, (r: RoleListItem) => string | number | null> = {
-  name:    r => r.frenchName || null,
-  // The "details" cell leads with the permission count, so that is what it sorts on.
-  details: r => r.permissionCount ?? null,
-  parent:  r => r.parentRoleName || null,
-};
+type RoleSortValues = Record<string, (r: RoleListItem) => string | number | null>;
 
 /** Sorts the whole filtered list — the table is `manualSort`, so it only reorders one page. */
-function sortRoles(items: RoleListItem[], sort: RoleSort | null): RoleListItem[] {
-  const value = sort && ROLE_SORT_VALUE[sort.key];
+function sortRoles(items: RoleListItem[], sort: RoleSort | null, values: RoleSortValues): RoleListItem[] {
+  const value = sort && values[sort.key];
   if (!sort || !value) return items;
   const sign = sort.dir === 'asc' ? 1 : -1;
   return [...items].sort((a, b) => {
@@ -81,11 +75,32 @@ export class RoleListComponent {
     this.currentPage.set(0);
   }
 
+  /** A role's name in the UI language. */
+  name(r: RoleListItem): string {
+    return roleLabel(r, this.translate);
+  }
+
+  /** The parent's name in the UI language, looked up by id (the DTO's parentRoleName is French). */
+  parentName(r: RoleListItem): string | null {
+    if (r.parentRoleId == null) return null;
+    const parent = this.roles().find(p => p.id === r.parentRoleId);
+    return parent ? this.name(parent) : r.parentRoleName;
+  }
+
+  /** What each table column sorts on — keyed by the table's column keys. */
+  private readonly sortValues: RoleSortValues = {
+    name:    r => this.name(r) || null,
+    // The "details" cell leads with the permission count, so that is what it sorts on.
+    details: r => r.permissionCount ?? null,
+    parent:  r => this.parentName(r) || null,
+  };
+
+  /** Searches both names, so a role is found whichever language it was typed in. */
   filteredRoles = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
     if (!q) return this.roles();
     return this.roles().filter(r =>
-      r.frenchName.toLowerCase().includes(q)
+      r.frenchName.toLowerCase().includes(q) || !!r.englishName?.toLowerCase().includes(q)
     );
   });
 
@@ -93,7 +108,8 @@ export class RoleListComponent {
 
   pagedRoles = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return sortRoles(this.filteredRoles(), this.sort()).slice(start, start + this.pageSize());
+    this.translate.currentLang();   // names (and so the order) depend on the language
+    return sortRoles(this.filteredRoles(), this.sort(), this.sortValues).slice(start, start + this.pageSize());
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -108,8 +124,8 @@ export class RoleListComponent {
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedRoles().map(r => ({
-      name:    r.frenchName,
-      parent:  r.parentRoleName ?? null,
+      name:    this.name(r),
+      parent:  this.parentName(r),
       _source: r,
     })),
   );

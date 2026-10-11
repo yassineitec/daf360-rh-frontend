@@ -12,6 +12,8 @@ export type PaysScopeMode = 'OWN' | 'LIST' | 'ALL';
 export interface RoleListItem {
   id: number;
   frenchName: string;
+  /** Null when the role has no English name — shown via `roleLabel()`. */
+  englishName?: string | null;
   parentRoleId: number | null;
   parentRoleName: string | null;
   /** Legacy flag, kept in sync server-side with paysScopeMode === 'ALL'. */
@@ -29,6 +31,7 @@ export interface PermissionGroup    { groupName: string; permissions: Permission
 
 export interface CreateRoleRequest {
   frenchName: string;
+  englishName?: string | null;
   parentRoleId?: number | null;
   showAll?: boolean;
   paysScopeMode?: PaysScopeMode;
@@ -38,6 +41,8 @@ export interface CreateRoleRequest {
 
 export interface UpdateRoleRequest {
   frenchName?: string;
+  /** Omit to leave untouched; '' clears it. */
+  englishName?: string;
   parentRoleId?: number | null;
   showAll?: boolean;
   paysScopeMode?: PaysScopeMode;

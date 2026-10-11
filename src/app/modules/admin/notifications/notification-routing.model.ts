@@ -15,7 +15,7 @@ export interface NotificationEventTypeWithRule {
   emailToCount: number;
 }
 
-export interface RoleOption { id: number; frenchName: string; }
+export interface RoleOption { id: number; frenchName: string; englishName?: string | null; }
 
 export type RecipientMode =
   | 'ALL'                 // every holder of a role

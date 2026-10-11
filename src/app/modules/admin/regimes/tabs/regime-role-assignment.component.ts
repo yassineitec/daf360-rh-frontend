@@ -21,7 +21,7 @@ const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | nul
   notes:   r => r.assignment?.notes || null,
 };
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { adminLabel } from '../../../../shared/utils/admin-label.utils';
+import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-regime-role-assignment',
@@ -87,7 +87,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.assignments().forEach(a => assignMap.set(a.roleId, a));
     return this.allRoles().map(r => ({
       roleId: r.id,
-      roleName: r.frenchName,
+      roleName: roleLabel(r, this.translate),
       assignment: assignMap.get(r.id) ?? null,
     }));
   });

@@ -9,6 +9,7 @@ import { CreateRoleModalComponent } from './create-role-modal/create-role-modal.
 import { RoleManagementService }    from './role-management.service';
 import { RoleListItem }             from './role.model';
 import { TranslateService, TranslatePipe } from '@ngx-translate/core';
+import { roleLabel } from '../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-role-management',
@@ -20,6 +21,11 @@ import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 export class RoleManagementComponent implements OnInit {
   private svc = inject(RoleManagementService);
   private translate = inject(TranslateService);
+
+  /** A role's name in the UI language (title + breadcrumb). */
+  roleName(r: RoleListItem): string {
+    return roleLabel(r, this.translate);
+  }
 
   // Lets the admin shell's own "Administration" breadcrumb crumb jump back to its module grid.
   backToAdmin = output<void>();

@@ -11,6 +11,7 @@ import {
 
 import { NotificationService } from '../../core/notification.service';
 import { searchRows } from '../../shared/table-sort.utils';
+import { roleLabel } from '../../shared/utils/admin-label.utils';
 // Service and model stay in `modules/conges`: they describe the congé domain, and the
 // self-service modal reads the same catalogue. Only the ADMIN SCREEN lives here, with the
 // other sixteen configurable lists — which is where someone goes to configure something.
@@ -296,7 +297,13 @@ export class AbsenceTypesAdminComponent implements OnInit {
     ['TOP_OF_HIERARCHY', 'ROLE_MATCH', 'SAME_COUNTRY_FIRST'].map((s) => ({ value: s, label: s })));
 
   readonly roleOptions = computed<SelectOption[]>(() =>
-    this.roles().map((r) => ({ value: String(r.id), label: r.frenchName })));
+    this.roles().map((r) => ({ value: String(r.id), label: roleLabel(r, this.translate) })));
+
+  /** An approver role in the UI language — the row carries the French name, so look it up by id. */
+  approverName(a: { roleId: number; roleName: string }): string {
+    const r = this.roles().find(x => x.id === a.roleId);
+    return r ? roleLabel(r, this.translate) : a.roleName;
+  }
 
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -378,7 +385,7 @@ export class AbsenceTypesAdminComponent implements OnInit {
         : { label: this.translate.instant('CONGES.TYPES.NO_BALANCE'), options: { variant: 'neutral' as BadgeVariant } },
       rulesCell: this.rulesSummary(t),
       approversCell: t.approverRoles.length
-        ? t.approverRoles.map((r) => r.roleName).join(', ')
+        ? t.approverRoles.map((r) => this.approverName(r)).join(', ')
         : this.translate.instant('CONGES.TYPES.APPROVERS_DEFAULT'),
       activeCell: t.active
         ? { label: this.translate.instant('CONGES.TYPES.ON'), options: { variant: 'success' as BadgeVariant } }

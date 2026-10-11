@@ -13,6 +13,7 @@ import { ModalComponent } from '../../../shared/modal.component';
 import { TableActionComponent } from '../../../shared/table-action.component';
 import { NotificationService } from '../../../core/notification.service';
 import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
+import { BilingualRoleName, roleLabel } from '../../../shared/utils/admin-label.utils';
 import { flagDataUri } from '../flag-svgs';
 
 interface AdminUserRow {
@@ -386,13 +387,19 @@ export class UsersAdminComponent implements OnInit {
   readonly balanceForm = signal<BalanceForm>(
     { soldeConge: '', soldeMaladie: '', soldeTeletravail: '' });
 
-  readonly roles = signal<{ id: number; frenchName: string }[]>([]);
+  readonly roles = signal<({ id: number } & BilingualRoleName)[]>([]);
   readonly paysList = signal<{ id: number; frenchLabel: string | null; isoCode: string | null }[]>([]);
 
   // ── Options ───────────────────────────────────────────────────────────────
 
   readonly roleOptions = computed<SelectOption[]>(() =>
-    this.roles().map(r => ({ value: String(r.id), label: r.frenchName })));
+    this.roles().map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) })));
+
+  /** A user's role in the UI language — the row's roleLabel is French, so look it up by id. */
+  userRoleName(u: AdminUserRow): string | null {
+    const r = u.roleId != null ? this.roles().find(x => x.id === u.roleId) : undefined;
+    return r ? roleLabel(r, this.translate) : u.roleLabel;
+  }
   readonly paysOptions = computed<SelectOption[]>(() =>
     this.paysList().map(p => ({
       value: String(p.id),
@@ -534,7 +541,7 @@ export class UsersAdminComponent implements OnInit {
     this.translate.currentLang();
     return this.paged().map(u => ({
       id: u.id,
-      roleLabel: u.roleLabel ?? '—',
+      roleLabel: this.userRoleName(u) ?? '—',
       paysLabel: u.paysLabel ?? '—',
       lastLogin: u.lastLoginAt ? this.formatDate(u.lastLoginAt) : this.t('ADMIN.users.never'),
       // A dash for null, the figure for zero — the column picker can hide any of the three.
@@ -576,7 +583,7 @@ export class UsersAdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.http.get<{ id: number; frenchName: string }[]>(`${environment.hrApiUrl}/api/hr/admin/roles`)
+    this.http.get<({ id: number } & BilingualRoleName)[]>(`${environment.hrApiUrl}/api/hr/admin/roles`)
       .subscribe({ next: r => this.roles.set(r ?? []), error: () => this.roles.set([]) });
     this.http.get<{ id: number; frenchLabel: string | null; isoCode: string | null }[]>(
       `${environment.hrApiUrl}/api/hr/ref/pays`)

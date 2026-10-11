@@ -14,6 +14,7 @@ import { PaysOption, PaysScopeMode, RoleListItem, UpdateRoleRequest } from '../r
 import { flagDataUri } from '../../flag-svgs';
 import { RoleManagementService } from '../role-management.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-role-info-tab',
@@ -32,6 +33,7 @@ export class RoleInfoTabComponent {
   private translate = inject(TranslateService);
 
   frenchName        = signal('');
+  englishName       = signal('');
   parentRoleId      = signal<number | null>(null);
   paysScopeMode     = signal<PaysScopeMode>('OWN');
   paysScope         = signal<number[]>([]);
@@ -47,7 +49,7 @@ export class RoleInfoTabComponent {
   otherRoles = computed(() => this.allRoles().filter(r => r.id !== this.role().id));
 
   parentRoleOptions = computed<SelectOption[]>(() =>
-    this.otherRoles().map(r => ({ value: String(r.id), label: r.frenchName })),
+    this.otherRoles().map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) })),
   );
 
   scopeModeOptions = computed<SelectOption[]>(() => [
@@ -103,6 +105,7 @@ export class RoleInfoTabComponent {
     effect(() => {
       const r = this.role();
       this.frenchName.set(r.frenchName);
+      this.englishName.set(r.englishName ?? '');
       this.parentRoleId.set(r.parentRoleId ?? null);
       // Tolerate a backend that predates V74 (no mode in the payload).
       this.paysScopeMode.set(r.paysScopeMode ?? (r.showAll ? 'ALL' : 'OWN'));
@@ -122,6 +125,8 @@ export class RoleInfoTabComponent {
 
     const dto: UpdateRoleRequest = {
       frenchName:    this.frenchName(),
+      // Always sent: '' is how the admin clears it (the backend stores null).
+      englishName:   this.englishName().trim(),
       parentRoleId:  this.parentRoleId(),
       paysScopeMode: this.paysScopeMode(),
       // showAll is derived server-side from the mode, but the older payload shape is still

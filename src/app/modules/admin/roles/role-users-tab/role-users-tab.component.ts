@@ -11,6 +11,7 @@ import { searchRows } from '../../../../shared/table-sort.utils';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 const PAGE_SIZE = 5;
 
@@ -60,6 +61,11 @@ export class RoleUsersTabComponent {
 
   private svc = inject(RoleManagementService);
   private translate = inject(TranslateService);
+
+  /** The role's name in the UI language (tab title). */
+  roleName(): string {
+    return roleLabel(this.role(), this.translate);
+  }
 
   // ── State ────────────────────────────────────────────────────────────────
   users         = signal<RoleUserItem[]>([]);

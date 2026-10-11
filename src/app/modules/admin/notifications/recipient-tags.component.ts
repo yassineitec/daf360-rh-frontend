@@ -9,6 +9,7 @@ import {
   RoleOption,
 } from './notification-routing.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../shared/utils/admin-label.utils';
 
 /**
  * Recipient tags for one channel (in-app, or one of TO / CC / BCC).
@@ -78,7 +79,7 @@ export class RecipientTagsComponent {
       .map(r => r.roleId);
     return this.availableRoles()
       .filter(r => !taken.includes(r.id))
-      .map(r => ({ value: String(r.id), label: r.frenchName }));
+      .map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) }));
   });
 
   readonly permOptions = computed<SelectOption[]>(() => {
@@ -108,8 +109,14 @@ export class RecipientTagsComponent {
       case 'PERMISSION':         return r.permissionCode ?? '—';
       case 'SUBJECT':            return this.t('tagSubject');
       case 'MANAGER_OF_SUBJECT': return this.t('tagManagerOfSubject');
-      default:                   return r.roleName ?? '—';
+      default:                   return this.roleName(r) ?? '—';
     }
+  }
+
+  /** The recipient's role in the UI language — the recipient carries the French name only. */
+  private roleName(r: RecipientItem): string | null {
+    const role = r.roleId != null ? this.availableRoles().find(x => x.id === r.roleId) : undefined;
+    return role ? roleLabel(role, this.translate) : r.roleName;
   }
 
   /** Suffix that makes the targeting visible on the tag itself. */

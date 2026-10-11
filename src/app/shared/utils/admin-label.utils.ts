@@ -17,3 +17,18 @@ export function adminLabel(item: BilingualLabel | null | undefined, translate: T
   if (!item) return '';
   return (translate.currentLang() === 'en' && item.labelEn) || item.labelFr || item.labelEn || '';
 }
+
+/** A role as the Roles table names it: `frenchName` always, `englishName` optional. */
+export interface BilingualRoleName {
+  frenchName?: string | null;
+  englishName?: string | null;
+}
+
+/**
+ * A role's name in the UI language — same rule as `adminLabel`: English when the UI is
+ * English and the role has one, French otherwise.
+ */
+export function roleLabel(role: BilingualRoleName | null | undefined, translate: TranslateService): string {
+  if (!role) return '';
+  return (translate.currentLang() === 'en' && role.englishName) || role.frenchName || role.englishName || '';
+}
