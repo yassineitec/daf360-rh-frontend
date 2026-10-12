@@ -98,7 +98,7 @@
 <!-- Employee Panel body — projected into the real daf-modal-host via ModalService. -->
 <ng-template #bodyTpl>
 
-  <p class="ro-panel-role">{{ 'ADMIN.regimes.overview.panelRole' | translate:{ role: (selectedEmployee()?.roleName ?? '—') } }}</p>
+  <p class="ro-panel-role">{{ 'ADMIN.regimes.overview.panelRole' | translate:{ role: (roleName(selectedEmployee()) ?? '—') } }}</p>
 
   @if (panelError()) { <div class="ro-msg-error">{{ panelError() }}</div> }
 

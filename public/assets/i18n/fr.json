@@ -1399,6 +1399,7 @@
       "SALARY_CANDIDATE": "Prétention nette candidat",
       "SALARY_RH": "Salaire net RH",
       "SALARY_RH_MOVED_HINT": "Géré désormais dans l'onglet Rémunération.",
+      "CONTRACT_TYPE_EMPTY_HINT": "Aucun type de contrat n'est disponible pour ce pays. Veuillez contacter l'administrateur.",
       "MATRICULE_LOCK_HINT": "À saisir à réception du matricule transmis par le cabinet comptable. Une fois enregistré, il n'est plus modifiable.",
       "SALARY_CANDIDATE_INPUT": "Prétention nette candidat (TND)",
       "SALARY_RH_INPUT": "Salaire net proposé RH (TND)",
@@ -2478,8 +2479,8 @@
         "SAVE": "Enregistrer",
         "DELETE": "Supprimer ce role",
         "DELETE_DISABLED_TOOLTIP": "Impossible de supprimer un role attribue a des utilisateurs actifs",
-        "DELETE_CONFIRM_PREFIX": "Confirmer la suppression de",
-        "DELETE_CONFIRM_SUFFIX": "? Cette action est irreversible.",
+        "DELETE_CONFIRM_PREFIX": "Confirmer la suppression de « ",
+        "DELETE_CONFIRM_SUFFIX": " » ? Cette action est irréversible.",
         "CANCEL": "Annuler",
         "DELETING": "Suppression...",
         "CONFIRM": "Confirmer",
@@ -3469,6 +3470,7 @@
         "colBadges": "Indicateurs"
       },
       "overview": {
+        "profileFallback": "Profil {{id}}",
         "empty": "Aucun employé trouvé",
         "errorAssign": "Erreur lors de l'assignation.",
         "errorGeneric": "Erreur.",
@@ -3476,13 +3478,14 @@
         "removeOverrideBody": "Supprimer l'override et revenir au régime du rôle ?",
         "filters": {
           "ALL": "Tous",
-          "OVERRIDE": "Override",
+          "OVERRIDE": "Dérogation",
           "BY_ROLE": "Par rôle",
           "DEFAULT": "Défaut",
           "UNCONFIGURED": "Non configuré"
         },
         "source": {
-          "OVERRIDE": "Override",
+          "SEASONAL": "Saisonnier",
+          "OVERRIDE": "Dérogation",
           "BY_ROLE": "Par rôle",
           "DEFAULT": "Défaut",
           "UNCONFIGURED": "Non configuré"
@@ -3619,6 +3622,7 @@
     },
     "catalog": {
       "requestTypes": {
+        "fieldDescriptionEn": "Description anglaise",
         "title": "Types de demandes RH",
         "subtitle": "Catalogue par entité",
         "initDefault": "Initialiser par défaut",
@@ -3640,7 +3644,7 @@
         "fieldCategory": "Catégorie",
         "fieldApprovalLevel": "Niveau approbation",
         "fieldSla": "SLA (jours)",
-        "fieldDescription": "Description",
+        "fieldDescription": "Description française",
         "cancel": "Annuler",
         "save": "Enregistrer",
         "create": "Créer",

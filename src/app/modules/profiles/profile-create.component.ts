@@ -188,6 +188,9 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
 
   /** Admin › Listes configurables › Type de contrat (CONTRACT_TYPE) — an addition there shows here. */
   private readonly contractTypes = signal<ListValue[]>([]);
+  /** False until the selected country's list is loaded — no hint flashes meanwhile. */
+  private readonly contractTypesLoaded = signal(false);
+  readonly contractTypesEmpty = computed(() => this.contractTypesLoaded() && this.contractTypes().length === 0);
 
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
     const english = this.translate.currentLang() === 'en';
@@ -278,9 +281,10 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
     this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));
+    this.contractTypesLoaded.set(false);
     this.configListSvc.getListValues('CONTRACT_TYPE', paysId)
       .pipe(catchError(() => of([] as ListValue[])))
-      .subscribe(v => this.contractTypes.set(v));
+      .subscribe(v => { this.contractTypes.set(v); this.contractTypesLoaded.set(true); });
   }
 
   onPaysChange(values: string[]): void {

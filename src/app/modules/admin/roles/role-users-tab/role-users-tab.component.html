@@ -48,11 +48,11 @@
                   <span class="rut-result-name">{{ u.fullName }}</span>
                   <span class="rut-result-email">{{ u.email }}</span>
                   <div class="rut-result-tags">
-                    @if (u.paysLabel) {
-                      <daf-badge [label]="u.paysLabel" [options]="{ variant: 'neutral', size: 'sm' }" />
+                    @if (paysName(u); as pays) {
+                      <daf-badge [label]="pays" [options]="{ variant: 'neutral', size: 'sm' }" />
                     }
                     @if (u.currentRoleName) {
-                      <daf-badge [label]="'ADMIN.roles.users.CURRENT_ROLE' | translate:{ name: u.currentRoleName }" [options]="{ variant: 'info', size: 'sm' }" />
+                      <daf-badge [label]="'ADMIN.roles.users.CURRENT_ROLE' | translate:{ name: currentRoleName(u) }" [options]="{ variant: 'info', size: 'sm' }" />
                     } @else {
                       <daf-badge [label]="'ADMIN.roles.users.NO_ROLE' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
                     }

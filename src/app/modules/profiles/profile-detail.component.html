@@ -74,6 +74,7 @@
                 <rh-employment-section
                   [profile]="p" [editMode]="editMode()" [editForm]="editForm()"
                   [contractTypeOptions]="contractTypeOptions()"
+                  [contractTypesEmpty]="contractTypesEmpty()"
                   [contractTypeLabel]="p.contractType ? contractTypeLabel(p.contractType) : null"
                   (patch)="patch($event)" />
 

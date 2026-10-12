@@ -122,8 +122,11 @@ export interface RegimeOverviewStats {
 export interface EmployeeRegimeOverview {
   employeeProfileId: number;
   userId: number;
-  fullName: string;
+  /** Null when the profile has no user name — shown as "Profil N" (see employeeName()). */
+  fullName: string | null;
   roleName: string | null;
+  /** The role's English name; null when it has none (then roleName is shown). */
+  roleNameEn?: string | null;
   resolvedRegimeId: number | null;
   resolvedRegimeLabelFr: string | null;
   assignmentLevel: 'SEASONAL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | null;

@@ -58,7 +58,11 @@ export interface RoleUserItem {
   email: string;
   paysId: number;
   paysLabel: string | null;
+  /** English entity label; null when absent (then paysLabel is shown). */
+  paysLabelEn?: string | null;
   currentRoleName: string | null;  // populated in search results only
+  /** English name of currentRoleName; null when the role has none. */
+  currentRoleNameEn?: string | null;
 }
 
 /** Subset of GET /api/hr/ref/pays used for the country picker. */

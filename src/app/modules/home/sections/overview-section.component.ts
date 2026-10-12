@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AlertCardComponent, MissingDocAlert, ProbationAlert } from '../components/alert-card/alert-card.component';
+import { MissingDocAlert, MissingDocsCardComponent, ProbationAlert, ProbationCardComponent } from '../components/alert-card/alert-card.component';
 import { WorkforceStatsComponent } from '../components/workforce-stats/workforce-stats.component';
 import { ProfileCompletionComponent } from '../components/profile-completion/profile-completion.component';
 import { EngineerProStatsComponent } from '../components/engineer-pro-stats/engineer-pro-stats.component';
@@ -16,13 +16,14 @@ import { CountryHeadcount } from '../services/home.service';
   selector: 'rh-overview-section',
   standalone: true,
   host: { class: 'block' },
-  imports: [TranslatePipe, AlertCardComponent, WorkforceStatsComponent, EngineerProStatsComponent, SeniorityStatsComponent, ProfileCompletionComponent],
+  imports: [TranslatePipe, ProbationCardComponent, MissingDocsCardComponent, WorkforceStatsComponent, EngineerProStatsComponent, SeniorityStatsComponent, ProfileCompletionComponent],
   template: `
-    <!-- Tablet and up — ONE grid, two shapes, driven by a single col-span.
-         md–lg (768–1279): 2 columns. The watchlist spans both, so it gets the full width
-                           and the two stat cards sit half-and-half beneath it.
-         xl and up:        4 columns. Watchlist spans 2 (½), each stat card takes 1 (¼) —
-                           the original three-across row.
+    <!-- Tablet and up — ONE grid, two shapes.
+         md–lg (768–1279): 2 columns. The two watchlist cards (missing docs, probation)
+                           share the first row, then the four stat cards two per row.
+         xl and up:        4 columns. Each watchlist card spans 2 (½) on its own row —
+                           missing docs on row 1, probation on row 2 — pinned there with
+                           col/row-start; the four stat cards auto-fill the right-hand 2×2.
 
          The old markup was 'hidden md:flex' with a nested flex, i.e. ONE layout for every
          width from 768px up: the watchlist took half and the two cards split the other
@@ -30,16 +31,19 @@ import { CountryHeadcount } from '../services/home.service';
          'padding: lg'. That is what squashed the effectif card. A tablet is not a small
          desktop, and this is the tier that was missing rather than a size to shrink into.
 
-         Four stat cards now (Féminin/Masculin, Ing/Pro, Junior/Confirmé/Senior,
-         completion), always two per row. At xl the watchlist spans two ROWS, so the
-         right half is a 2×2 block and no cell is left empty next to it. -->
+         The watchlist used to be ONE card spanning two rows at xl: its two short lists sat
+         at the top of a two-row-tall box and left the rest blank. Split in two, each card
+         is one row tall and follows its stat-card neighbours. -->
     <div class="hidden md:grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      <div class="md:col-span-2 xl:row-span-2">
-        <rh-alert-card
-          [probationAlerts]="probationAlerts()"
-          [probationTotal]="probationTotal()"
-          [missingDocsAlerts]="missingDocsAlerts()"
-          [missingDocsTotal]="missingDocsTotal()" />
+      <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-1">
+        <rh-missing-docs-card
+          [alerts]="missingDocsAlerts()"
+          [total]="missingDocsTotal()" />
+      </div>
+      <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-2">
+        <rh-probation-card
+          [alerts]="probationAlerts()"
+          [total]="probationTotal()" />
       </div>
       <div class="min-w-0">
         <rh-workforce-stats

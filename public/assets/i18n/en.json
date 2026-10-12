@@ -1399,6 +1399,7 @@
       "SALARY_CANDIDATE": "Candidate net expectation",
       "SALARY_RH": "HR net salary",
       "SALARY_RH_MOVED_HINT": "Now managed in the Remuneration tab.",
+      "CONTRACT_TYPE_EMPTY_HINT": "No contract type is available for this country. Please contact your administrator.",
       "MATRICULE_LOCK_HINT": "Enter it once received from the accounting firm. Once saved, it can no longer be changed.",
       "SALARY_CANDIDATE_INPUT": "Candidate net expectation (TND)",
       "SALARY_RH_INPUT": "HR proposed net salary (TND)",
@@ -2478,8 +2479,8 @@
         "SAVE": "Save",
         "DELETE": "Delete this role",
         "DELETE_DISABLED_TOOLTIP": "Cannot delete a role assigned to active users",
-        "DELETE_CONFIRM_PREFIX": "Confirm the deletion of",
-        "DELETE_CONFIRM_SUFFIX": "? This action is irreversible.",
+        "DELETE_CONFIRM_PREFIX": "Confirm the deletion of \"",
+        "DELETE_CONFIRM_SUFFIX": "\"? This action is irreversible.",
         "CANCEL": "Cancel",
         "DELETING": "Deleting...",
         "CONFIRM": "Confirm",
@@ -3469,6 +3470,7 @@
         "colBadges": "Flags"
       },
       "overview": {
+        "profileFallback": "Profile {{id}}",
         "empty": "No employee found",
         "errorAssign": "Error while assigning.",
         "errorGeneric": "Error.",
@@ -3482,6 +3484,7 @@
           "UNCONFIGURED": "Unconfigured"
         },
         "source": {
+          "SEASONAL": "Seasonal",
           "OVERRIDE": "Override",
           "BY_ROLE": "By role",
           "DEFAULT": "Default",
@@ -3619,6 +3622,7 @@
     },
     "catalog": {
       "requestTypes": {
+        "fieldDescriptionEn": "English description",
         "title": "HR request types",
         "subtitle": "Catalog by entity",
         "initDefault": "Initialize defaults",
@@ -3640,7 +3644,7 @@
         "fieldCategory": "Category",
         "fieldApprovalLevel": "Approval level",
         "fieldSla": "SLA (days)",
-        "fieldDescription": "Description",
+        "fieldDescription": "French description",
         "cancel": "Cancel",
         "save": "Save",
         "create": "Create",

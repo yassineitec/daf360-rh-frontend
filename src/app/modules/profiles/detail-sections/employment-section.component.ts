@@ -77,10 +77,17 @@ import { asNumber, asText, fmtDate, fromDate, toDate } from './field-bridges';
               [config]="{ label: ('PROFILES.FIELDS.HIRE_DATE' | translate), selectionMode: 'single' }"
               [value]="toDate(editForm().hireDate)"
               (valueChange)="patch.emit({ hireDate: fromDate($event) })" />
-            <daf-select [options]="contractTypeOptions()"
-              [config]="{ label: ('PROFILES.FIELDS.CONTRACT_TYPE' | translate), searchable: true }"
-              [selected]="editForm().contractType ? [editForm().contractType!] : []"
-              (selectedChange)="patch.emit({ contractType: $event[0] })" />
+            <div>
+              <daf-select [options]="contractTypeOptions()"
+                [config]="{ label: ('PROFILES.FIELDS.CONTRACT_TYPE' | translate), searchable: true }"
+                [selected]="editForm().contractType ? [editForm().contractType!] : []"
+                (selectedChange)="patch.emit({ contractType: $event[0] })" />
+              @if (contractTypesEmpty()) {
+                <p class="mt-1 text-[11px] text-on-surface-variant">
+                  {{ 'PROFILES.FIELDS.CONTRACT_TYPE_EMPTY_HINT' | translate }}
+                </p>
+              }
+            </div>
             <daf-multi-date-picker
               [config]="{ label: ('PROFILES.FIELDS.CONTRACT_END' | translate), selectionMode: 'single' }"
               [value]="toDate(editForm().contractEndDate)"
@@ -172,6 +179,8 @@ export class EmploymentSectionComponent {
   readonly editForm = input.required<ProfileUpdateDto>();
 
   readonly contractTypeOptions = input<SelectOption[]>([]);
+  /** The country's CONTRACT_TYPE list is empty — tell the user where to fill it. */
+  readonly contractTypesEmpty = input(false);
   /** Display label of the profile's contract type, resolved by the parent from the admin list. */
   readonly contractTypeLabel = input<string | null>(null);
 

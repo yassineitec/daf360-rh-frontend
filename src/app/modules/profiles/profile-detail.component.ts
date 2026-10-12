@@ -478,6 +478,8 @@ export class ProfileDetailComponent implements OnInit {
 
   /** Admin › Listes configurables › Type de contrat (CONTRACT_TYPE) — an addition there shows here. */
   private readonly contractTypes = signal<ListValue[]>([]);
+  private readonly contractTypesLoaded = signal(false);
+  readonly contractTypesEmpty = computed(() => this.contractTypesLoaded() && this.contractTypes().length === 0);
 
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
@@ -684,7 +686,7 @@ export class ProfileDetailComponent implements OnInit {
       // Loaded up front, not on edit: the header badges and the read-mode row need labels too.
       this.configListSvc.getListValues('CONTRACT_TYPE', profile?.paysId)
         .pipe(catchError(() => of([] as ListValue[])))
-        .subscribe(v => this.contractTypes.set(v));
+        .subscribe(v => { this.contractTypes.set(v); this.contractTypesLoaded.set(true); });
       // Same reason: the Affectation tiles and the identity card's grade show these labels
       // in read mode, in the UI language. The service caches them, so edit mode reuses them.
       if (profile) this.loadPositionRefs(profile.paysId);

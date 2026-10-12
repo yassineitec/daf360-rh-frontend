@@ -17,15 +17,11 @@ const PAGE_SIZE = 5;
 
 type RoleUserSort = { key: string; dir: 'asc' | 'desc' };
 
-/** What each table column sorts on — keyed by the table's column keys. */
-const USER_SORT_VALUE: Record<string, (u: RoleUserItem) => string | number | null> = {
-  user: u => u.fullName || null,
-  pays: u => u.paysLabel || null,
-};
+type RoleUserSortValues = Record<string, (u: RoleUserItem) => string | number | null>;
 
 /** Sorts the whole filtered list — the table is `manualSort`, so it only reorders one page. */
-function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null): RoleUserItem[] {
-  const value = sort && USER_SORT_VALUE[sort.key];
+function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null, values: RoleUserSortValues): RoleUserItem[] {
+  const value = sort && values[sort.key];
   if (!sort || !value) return items;
   const sign = sort.dir === 'asc' ? 1 : -1;
   return [...items].sort((a, b) => {
@@ -67,6 +63,23 @@ export class RoleUsersTabComponent {
     return roleLabel(this.role(), this.translate);
   }
 
+  /** A user's entity (pays) in the UI language — English label when the UI is English. */
+  paysName(u: RoleUserItem): string | null {
+    return (this.translate.currentLang() === 'en' && u.paysLabelEn) || u.paysLabel || null;
+  }
+
+  /** A search result's current role in the UI language. */
+  currentRoleName(u: RoleUserItem): string | null {
+    if (!u.currentRoleName) return null;
+    return roleLabel({ frenchName: u.currentRoleName, englishName: u.currentRoleNameEn }, this.translate);
+  }
+
+  /** What each table column sorts on — keyed by the table's column keys. */
+  private readonly sortValues: RoleUserSortValues = {
+    user: u => u.fullName || null,
+    pays: u => this.paysName(u),
+  };
+
   // ── State ────────────────────────────────────────────────────────────────
   users         = signal<RoleUserItem[]>([]);
   loading       = signal(false);
@@ -86,7 +99,7 @@ export class RoleUsersTabComponent {
   readonly table = viewChild(DataTableComponent);
 
   filteredUsers = computed(() =>
-    searchRows(this.users(), this.localSearch(), u => [u.fullName, u.email, u.paysLabel]),
+    searchRows(this.users(), this.localSearch(), u => [u.fullName, u.email, this.paysName(u)]),
   );
 
   // ── Pagination — 5 per page ─────────────────────────────────────────────────
@@ -99,7 +112,7 @@ export class RoleUsersTabComponent {
 
   readonly pagedUsers = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortRoleUsers(this.filteredUsers(), this.sort()).slice(start, start + PAGE_SIZE);
+    return sortRoleUsers(this.filteredUsers(), this.sort(), this.sortValues).slice(start, start + PAGE_SIZE);
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -114,7 +127,7 @@ export class RoleUsersTabComponent {
   readonly rows = computed<TableRow[]>(() =>
     this.pagedUsers().map(u => ({
       user: { name: u.fullName, initials: u.fullName.charAt(0).toUpperCase(), subtitle: u.email } as AvatarCell,
-      pays: u.paysLabel ?? '—',
+      pays: this.paysName(u) ?? '—',
       _source: u,
     })),
   );

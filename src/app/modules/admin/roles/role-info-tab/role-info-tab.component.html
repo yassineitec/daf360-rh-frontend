@@ -96,7 +96,9 @@
     @if (showDeleteConfirm()) {
       <div class="delete-confirm">
         <p class="delete-confirm-text">
-          {{ 'ADMIN.roles.info.DELETE_CONFIRM_PREFIX' | translate }} <strong>« {{ frenchName() }} »</strong> {{ 'ADMIN.roles.info.DELETE_CONFIRM_SUFFIX' | translate }}
+          <!-- Quotes live in the translations (« » in French, "" in English); the name is the
+               saved role's, in the UI language — not the unsaved French field. -->
+          {{ 'ADMIN.roles.info.DELETE_CONFIRM_PREFIX' | translate }}<strong>{{ roleName() }}</strong>{{ 'ADMIN.roles.info.DELETE_CONFIRM_SUFFIX' | translate }}
         </p>
         <div class="delete-confirm-actions">
           <daf-button

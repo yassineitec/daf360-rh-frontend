@@ -170,6 +170,13 @@ const PAGE_SIZE = 5;
             (valueChange)="form.description = $any($event)"
           />
         </div>
+        <div class="field-row">
+          <daf-form-field
+            [options]="{ label: ('ADMIN.catalog.requestTypes.fieldDescriptionEn' | translate), type: 'textarea', rows: 2, fullWidth: true }"
+            [value]="form.descriptionEn"
+            (valueChange)="form.descriptionEn = $any($event) ?? ''"
+          />
+        </div>
       </div>
       @if (modalError()) { <div class="error-banner" role="alert">{{ modalError() }}</div> }
       <div class="rta-modal-footer">
@@ -262,7 +269,7 @@ export class RequestTypesAdminComponent implements OnChanges {
     ];
   });
 
-  form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1' as 'L1'|'L2', defaultSlaDays:2 };
+  form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', descriptionEn:'', category:'DOCUMENT', approvalLevel:'L1' as 'L1'|'L2', defaultSlaDays:2 };
 
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -385,14 +392,14 @@ export class RequestTypesAdminComponent implements OnChanges {
 
   openAdd() {
     this.editTarget.set(null);
-    this.form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', category:'DOCUMENT', approvalLevel:'L1', defaultSlaDays:2 };
+    this.form = { typeCode:'', displayNameFr:'', displayNameEn:'', description:'', descriptionEn:'', category:'DOCUMENT', approvalLevel:'L1', defaultSlaDays:2 };
     this.modalError.set(null);
     this.openModal(this.translate.instant('ADMIN.catalog.requestTypes.modalTitleNew'));
   }
 
   openEdit(t: RequestTypeCatalog) {
     this.editTarget.set(t);
-    this.form = { typeCode:t.typeCode, displayNameFr:t.displayNameFr, displayNameEn:t.displayNameEn, description:t.description??'', category:t.category, approvalLevel:t.approvalLevel, defaultSlaDays:t.defaultSlaDays };
+    this.form = { typeCode:t.typeCode, displayNameFr:t.displayNameFr, displayNameEn:t.displayNameEn, description:t.description??'', descriptionEn:t.descriptionEn??'', category:t.category, approvalLevel:t.approvalLevel, defaultSlaDays:t.defaultSlaDays };
     this.modalError.set(null);
     this.openModal(this.translate.instant('ADMIN.catalog.requestTypes.modalTitleEdit'));
   }

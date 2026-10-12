@@ -46,6 +46,11 @@ export class RoleInfoTabComponent {
   /** Set when the backend refuses a rename because users are still assigned (422). */
   renameConflict    = signal(false);
 
+  /** The saved role's name in the UI language (delete confirmation). */
+  roleName(): string {
+    return roleLabel(this.role(), this.translate);
+  }
+
   otherRoles = computed(() => this.allRoles().filter(r => r.id !== this.role().id));
 
   parentRoleOptions = computed<SelectOption[]>(() =>

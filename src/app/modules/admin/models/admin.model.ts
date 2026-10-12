@@ -135,6 +135,8 @@ export interface RequestTypeCatalog {
   displayNameFr:       string;
   displayNameEn:       string;
   description:         string | null;
+  /** English description; null when none (the French one is the fallback). */
+  descriptionEn?:      string | null;
   category:            string;
   approvalLevel:       'L1' | 'L2';
   defaultSlaDays:      number;
@@ -148,6 +150,8 @@ export interface RequestTypeDto {
   displayNameFr: string;
   displayNameEn: string;
   description?:  string;
+  /** '' clears it on update (the backend stores null). */
+  descriptionEn?: string;
   category:     string;
   approvalLevel: 'L1' | 'L2';
   defaultSlaDays: number;

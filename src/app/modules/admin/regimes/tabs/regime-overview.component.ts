@@ -15,7 +15,7 @@ import {
   AssignEmployeeOverrideRequest,
 } from '../regime.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { adminLabel } from '../../../../shared/utils/admin-label.utils';
+import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
@@ -62,8 +62,8 @@ export class RegimeOverviewComponent implements OnChanges {
 
   /** What each overview column sorts on. "Non configuré" (no source) always sorts last. */
   private readonly sortValues: Record<string, (e: EmployeeRegimeOverview) => string | number | null> = {
-    employe: e => e.fullName || null,
-    role:    e => e.roleName || null,
+    employe: e => this.employeeName(e),
+    role:    e => this.roleName(e) || null,
     regime:  e => this.regimeLabel(e) || null,
     source:  e => (e.assignmentLevel
       ? rankIn(RegimeOverviewComponent.SOURCE_ORDER as readonly string[], e.assignmentLevel) : null),
@@ -104,6 +104,17 @@ export class RegimeOverviewComponent implements OnChanges {
     return r ? adminLabel(r, this.translate) : e.resolvedRegimeLabelFr;
   }
 
+  /** The employee's name, or "Profil N" / "Profile N" in the UI language when there is none. */
+  employeeName(e: EmployeeRegimeOverview): string {
+    return e.fullName || this.translate.instant('ADMIN.regimes.overview.profileFallback', { id: e.employeeProfileId });
+  }
+
+  /** The employee's role in the UI language (English when the UI is English and one exists). */
+  roleName(e: EmployeeRegimeOverview | null | undefined): string | null {
+    if (!e) return null;
+    return roleLabel({ frenchName: e.roleName, englishName: e.roleNameEn }, this.translate) || null;
+  }
+
   regimeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
     return this.regimes().map(r => ({ value: String(r.id), label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
@@ -133,7 +144,7 @@ export class RegimeOverviewComponent implements OnChanges {
     this.translate.currentLang();
     // Searches what the row shows: name, role, regime (or « Aucun ») and the source badge.
     let list = searchRows(this.employees(), this.searchTerm(), e => [
-      e.fullName, e.roleName,
+      this.employeeName(e), this.roleName(e),
       this.regimeLabel(e) || this.translate.instant('ADMIN.regimes.overview.regimeNone'),
       this.getSourceLabel(e.assignmentLevel),
     ]);
@@ -169,8 +180,8 @@ export class RegimeOverviewComponent implements OnChanges {
   readonly rows = computed<TableRow[]>(() => {
     this.translate.currentLang();
     return this.pagedEmployees().map(e => ({
-      employe: { name: e.fullName, initials: this.getInitials(e.fullName) } as AvatarCell,
-      role: e.roleName ?? '—',
+      employe: { name: this.employeeName(e), initials: this.getInitials(e.fullName ?? '') } as AvatarCell,
+      role: this.roleName(e) ?? '—',
       regime: this.regimeLabel(e),
       source: { label: this.getSourceLabel(e.assignmentLevel), options: this.sourceBadgeOptions(e.assignmentLevel) } as BadgeCell,
       _source: e,
@@ -247,7 +258,7 @@ export class RegimeOverviewComponent implements OnChanges {
     this.overrideReason   = '';
     this.noEndDate.set(true);
     this.modalRef = this.modal.open({
-      title: emp.fullName ?? '',
+      title: this.employeeName(emp),
       body: this.bodyTpl(),
       closeOnBackdrop: false,
     });
@@ -298,6 +309,7 @@ export class RegimeOverviewComponent implements OnChanges {
 
   getSourceLabel(level: string | null | undefined): string {
     const m: Record<string, string> = {
+      SEASONAL: this.translate.instant('ADMIN.regimes.overview.source.SEASONAL'),
       EMPLOYEE_OVERRIDE: this.translate.instant('ADMIN.regimes.overview.source.OVERRIDE'),
       ROLE_ASSIGNMENT: this.translate.instant('ADMIN.regimes.overview.source.BY_ROLE'),
       DEFAULT: this.translate.instant('ADMIN.regimes.overview.source.DEFAULT'),
@@ -322,6 +334,8 @@ export class RegimeOverviewComponent implements OnChanges {
 
   sourceBadgeOptions(level: string | null | undefined): BadgeOptions {
     switch (level) {
+      // Same colour as the catalog's "seasonal, active" badge — not the red of "unconfigured".
+      case 'SEASONAL':          return { variant: 'warning' };
       case 'EMPLOYEE_OVERRIDE': return { variant: 'teal' };
       case 'ROLE_ASSIGNMENT':   return { variant: 'secondary' };
       case 'DEFAULT':           return { variant: 'neutral' };
