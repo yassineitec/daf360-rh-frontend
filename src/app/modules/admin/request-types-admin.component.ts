@@ -1,4 +1,4 @@
-import { Component, TemplateRef, computed, inject, input, OnChanges, signal, untracked, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnChanges, SimpleChanges, signal, untracked, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }        from './admin.service';
 import { RequestTypeCatalog }  from './models/admin.model';
@@ -13,6 +13,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 /** What each request-type column sorts on — the raw values, not the formatted cells.
  *  Name and category sort on the label shown — see `sortAccessors`. */
@@ -326,6 +327,12 @@ export class RequestTypesAdminComponent implements OnChanges {
   /** Toolbar search — filters the whole list, before sort and paging. */
   readonly searchQuery = signal('');
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('request-types', {
+    searchQuery: this.searchQuery, sort: this.sort, currentPage: this.currentPage,
+  });
+
   /** Searches what the cells show (the SLA as "2 j", the translated status). */
   readonly filteredTypes = computed(() => {
     this.translate.currentLang();
@@ -375,14 +382,17 @@ export class RequestTypesAdminComponent implements OnChanges {
     this.currentPage.set(0);
   }
 
-  ngOnChanges() { this.load(); }
+  /** Premier passage : pas de retour à la page 0, la page restaurée (`memory`) doit survivre. */
+  ngOnChanges(changes: SimpleChanges) { this.load(!changes['paysId']?.firstChange); }
 
-  private load() {
+  private load(resetPage = true) {
     this.loading.set(true);
-    this.currentPage.set(0);
+    if (resetPage) this.currentPage.set(0);
     this.svc.listRequestTypes(this.paysId()).pipe(catchError(() => of([]))).subscribe(ts => {
       this.types.set(ts);
       this.loading.set(false);
+      // Page restaurée au-delà de la liste : retour à la dernière page existante.
+      this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
     });
   }
 

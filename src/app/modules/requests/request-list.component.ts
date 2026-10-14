@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
@@ -23,6 +23,7 @@ import {
   RequestCardAction, RequestCardItem, RequestCardsSectionComponent, requestRef,
 } from './request-cards-section.component';
 import { RequestTableSectionComponent } from './request-table-section.component';
+import { RequestsListStateService } from './requests-list-state.service';
 import { ListViewMode } from '../../shared/view-toggle.component';
 import { UserStore } from '../../core/user.store';
 import { statusBadge } from '../../shared/status-badge.utils';
@@ -195,6 +196,7 @@ interface RequestCard {
             [canApprove]="canViewInbox()"
             [tools]="true"
             [serverSort]="true"
+            [sort]="sort()"
             (serverSortChange)="onSortChange($event)"
             [emptyMessage]="emptyMessage()"
             (action)="onItemAction($event.action, $event.item)" />
@@ -305,6 +307,46 @@ export class RequestListComponent implements OnInit {
 
   onMainTabChange(id: string): void {
     if (id === 'other' || id === 'recruitment') this.mainTab.set(id);
+  }
+
+  // ── Mémoire de la page ─────────────────────────────────────────────────────
+  private pageState = inject(RequestsListStateService);
+
+  /**
+   * Les signaux qui décrivent la page telle que l'utilisateur l'a laissée, par nom —
+   * l'onglet actif, et la recherche / les filtres / le tri / la pagination de l'onglet
+   * « Demande ». L'onglet « Demande de recrutement » mémorise les siens lui-même.
+   */
+  private readonly persisted: Record<string, WritableSignal<any>> = {
+    mainTab:        this.mainTab,
+    viewMode:       this.viewMode,
+    searchQuery:    this.searchQuery,
+    urgencyFilter:  this.urgencyFilter,
+    typeFilter:     this.typeFilter,
+    statusFilter:   this.statusFilter,
+    submittedRange: this.submittedRange,
+    sort:           this.sort,
+    page:           this.page,
+    pageSize:       this.pageSize,
+  };
+
+  /**
+   * Chaque changement est mémorisé, pour que le retour depuis une fiche retrouve la page
+   * telle qu'on l'a quittée. Le premier passage a lieu après `ngOnInit`, donc après la
+   * restauration : il réécrit l'état restauré, sans l'écraser par des valeurs vides.
+   */
+  private readonly persistState = effect(() => {
+    this.pageState.save('list', Object.fromEntries(
+      Object.entries(this.persisted).map(([key, sig]) => [key, sig()])));
+  });
+
+  /** Avant le premier chargement et le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.pageState.restore('list');
+    if (!s) return;
+    for (const [key, sig] of Object.entries(this.persisted)) {
+      if (key in s) sig.set(s[key]);
+    }
   }
 
   currentPaysId = computed(() => this.userStore.currentUser()?.paysId ?? 1);
@@ -570,7 +612,9 @@ export class RequestListComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.reload();
+    this.restoreState();
+    // `false` : garder la page restaurée — `reload()` repart sinon de la première.
+    this.reload(false);
     this.svc.listTypes(this.currentPaysId())
       .pipe(catchError(() => of([] as RequestType[])))
       .subscribe((types) => this.typesById.set(new Map(types.map((t) => [t.id, t]))));
@@ -591,6 +635,12 @@ export class RequestListComponent implements OnInit {
       .listRequests(filter)
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
+        // Page restaurée devenue hors limites (demandes traitées entre-temps) : on retombe
+        // sur la première plutôt que d'afficher une page vide.
+        if (res && res.content.length === 0 && this.page() > 0) {
+          this.reload();
+          return;
+        }
         this.loading.set(false);
         // Cleared whether or not the call succeeded: on failure the page must render its
         // real (empty) state, not sit on a skeleton forever.

@@ -252,10 +252,26 @@ export class OffboardingDetailComponent implements OnInit {
     return `${this.translate.instant('OFFBOARDING.DETAIL.DEPARTURE')} : ${date}${suffix}`;
   });
 
+  /**
+   * Ouvert depuis la page d'un motif (`?reason=RESIGNATION`) : le retour y ramène, là où
+   * l'utilisateur a laissé ses filtres, et non à la liste complète. Un code inconnu est
+   * ignoré — on retombe alors sur la liste complète.
+   */
+  private readonly fromReason: DepartureReason | null = (() => {
+    const code = this.route.snapshot.queryParamMap.get('reason');
+    return code && (DEPARTURE_REASONS as readonly string[]).includes(code) ? code as DepartureReason : null;
+  })();
+
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
     this.translate.currentLang();
+    const reason = this.fromReason;
     return [
-      { label: this.translate.instant('OFFBOARDING.LIST.TITLE'), link: '/rh/offboarding' },
+      reason
+        ? {
+            label: this.translate.instant('OFFBOARDING.LIST.TITLE_REASON', { reason: this.reasons.label(reason) }),
+            link: `/rh/offboarding/type/${reason}`,
+          }
+        : { label: this.translate.instant('OFFBOARDING.LIST.TITLE'), link: '/rh/offboarding' },
       { label: this.employeeName() },
     ];
   });

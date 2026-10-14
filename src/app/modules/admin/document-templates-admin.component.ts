@@ -17,6 +17,7 @@ import {
   SearchToolbarComponent, SearchToolbarFilterConfig, FilterField, FilterResult, ToolbarAction,
 } from '@khalilrebhiitec/daf360';
 import { searchRows } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="fr">
@@ -320,6 +321,13 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
   showInactive   = signal(false);
   /** Toolbar search text — narrows the loaded list on what each row shows. */
   searchQuery    = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche et filtres gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('document-templates', {
+    filterCategory: this.filterCategory, showInactive: this.showInactive, searchQuery: this.searchQuery,
+  });
+
   loading        = signal(false);
   rows           = signal<DocumentTemplate[]>([]);
   variables      = signal<VariableDef[]>([]);

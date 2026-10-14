@@ -22,6 +22,7 @@ const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | nul
 };
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../../admin-section-state';
 
 @Component({
   selector: 'app-regime-role-assignment',
@@ -69,6 +70,12 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   readonly sort = signal<TableSort | null>(null);
   /** Search over the roles (toolbar above the table). */
   searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('regimes.role-assignment', {
+    currentPage: this.currentPage, sort: this.sort, searchQuery: this.searchQuery,
+  });
 
   /** The table (absent while loading) — fed to the toolbar's `[table]`. */
   readonly table = viewChild(DataTableComponent);
@@ -240,15 +247,24 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['paysId']) { this.loadData(); }
+    if (changes['paysId']) {
+      // Premier passage : on garde la page restaurée (`rememberAdminState`) ; seul un vrai
+      // changement d'entité repart de la première page.
+      if (!changes['paysId'].firstChange) this.currentPage.set(0);
+      this.loadData();
+    }
   }
 
   loadData(): void {
     this.loading.set(true);
-    this.currentPage.set(0);
     // Load regimes, assignments, and roles in parallel
     let pending = 3;
-    const done = () => { if (--pending === 0) this.loading.set(false); };
+    const done = () => {
+      if (--pending > 0) return;
+      // Page restaurée (ou liste raccourcie) : on retombe sur la dernière page existante.
+      this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
+      this.loading.set(false);
+    };
 
     this.svc.getRegimes(this.paysId()).subscribe({ next: rs => { this.regimes.set(rs); done(); }, error: done });
     this.svc.getRoleAssignments(this.paysId()).subscribe({ next: as => { this.assignments.set(as); done(); }, error: done });

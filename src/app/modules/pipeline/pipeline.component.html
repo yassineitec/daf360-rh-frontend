@@ -88,6 +88,8 @@
     <rh-pipeline-table-section
       [columns]="boardColumns()"
       [loading]="loading()"
+      [sort]="listSort()"
+      (sortChange)="listSort.set($event)"
       (open)="onView($event)" />
   }
 

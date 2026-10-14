@@ -15,6 +15,7 @@ import { NotificationService } from '../../../core/notification.service';
 import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
 import { BilingualRoleName, roleLabel } from '../../../shared/utils/admin-label.utils';
 import { flagDataUri } from '../flag-svgs';
+import { rememberAdminState } from '../admin-section-state';
 
 interface AdminUserRow {
   id: number;
@@ -372,6 +373,14 @@ export class UsersAdminComponent implements OnInit {
   readonly pageSize = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Vue, recherche, filtres et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('users', {
+    viewMode: this.viewMode, search: this.search, employeeFilter: this.employeeFilter,
+    paysFilter: this.paysFilter, roleFilter: this.roleFilter, onlyMissing: this.onlyMissing,
+    currentPage: this.currentPage, pageSize: this.pageSize,
+  });
+
   readonly propagating = signal(false);
 
   readonly showCreate = signal(false);
@@ -480,6 +489,13 @@ export class UsersAdminComponent implements OnInit {
       title: this.t('ADMIN.users.filters.title'), applyLabel: this.t('ADMIN.users.filters.apply'),
       cancelLabel: this.t('ADMIN.users.filters.cancel'), resetLabel: this.t('ADMIN.users.filters.reset'),
       triggerLabel: this.t('ADMIN.users.filters.trigger'), align: 'right',
+      // Le panneau s'ouvre sur les filtres restaurés ; un `select` attend un `string[]`.
+      initialValues: {
+        employee: this.employeeFilter() ? [this.employeeFilter()] : [],
+        pays:     this.paysFilter()     ? [this.paysFilter()]     : [],
+        role:     this.roleFilter()     ? [this.roleFilter()]     : [],
+        missing:  this.onlyMissing(),
+      },
     };
   });
 
@@ -595,7 +611,12 @@ export class UsersAdminComponent implements OnInit {
     this.error.set(null);
     this.loading.set(true);
     this.http.get<AdminUserRow[]>(this.base).subscribe({
-      next: list => { this.users.set(list ?? []); this.loading.set(false); },
+      next: list => {
+        this.users.set(list ?? []);
+        this.loading.set(false);
+        // Page restaurée (ou registre raccourci) : retour à la dernière page existante.
+        this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
+      },
       error: () => {
         this.users.set([]);
         this.loading.set(false);

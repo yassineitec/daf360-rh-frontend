@@ -16,6 +16,7 @@ import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { searchRows } from '../../../../shared/table-sort.utils';
 import { adminLabel } from '../../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../../admin-section-state';
 
 @Component({
   selector: 'app-regime-catalog',
@@ -54,6 +55,10 @@ export class RegimeCatalogComponent implements OnChanges {
   skeletonRows = [1,2,3,4];
   /** Search over the regime list (toolbar above the panels). */
   searchQuery  = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('regimes.catalog', { searchQuery: this.searchQuery });
 
   /** The regime table (absent while loading or empty) — fed to the toolbar's `[table]`. */
   readonly table = viewChild(DataTableComponent);

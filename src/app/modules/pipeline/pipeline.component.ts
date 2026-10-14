@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -27,8 +27,9 @@ import {
 import { RefuseOfferModalComponent } from './components/refuse-offer-modal.component';
 import { PipelineBoardSectionComponent } from './sections/pipeline-board-section.component';
 import { PipelineMobileSectionComponent, MobilePipelineItem } from './sections/pipeline-mobile-section.component';
-import { PipelineTableSectionComponent } from './sections/pipeline-table-section.component';
+import { PipelineTableSectionComponent, PipelineTableSort } from './sections/pipeline-table-section.component';
 import { OfferService } from './services/offer.service';
+import { PipelineStateService } from './services/pipeline-state.service';
 import { KanbanCandidate, KanbanColumn, PipelineService, PipelineStats } from './services/pipeline.service';
 
 /** Board or flat list. The choice survives search, filtering and a re-fetch. */
@@ -111,6 +112,46 @@ export class PipelineComponent implements OnInit {
    * `null` = "Tous".
    */
   readonly mobileStageFilter = signal<string | null>(null);
+  /** Tri d'en-tête de la vue liste — fait par la lib, tenu ici pour le reposer au retour. */
+  readonly listSort          = signal<PipelineTableSort | null>(null);
+
+  // ── Mémoire de la page ─────────────────────────────────────────────────────
+  private pageState = inject(PipelineStateService);
+
+  /**
+   * Chaque changement de vue, de recherche, de filtre ou de tri est mémorisé, pour que le
+   * retour depuis la fiche d'un candidat (fil d'Ariane) retrouve la page telle qu'on l'a
+   * quittée. Le premier passage a lieu après `ngOnInit`, donc après la restauration : il
+   * réécrit l'état restauré, sans l'écraser par des valeurs vides.
+   */
+  private readonly persistState = effect(() => {
+    this.pageState.save({
+      viewMode:          this.viewMode(),
+      search:            this.search(),
+      stageFilter:       this.stageFilter(),
+      demandFilter:      this.demandFilter(),
+      minFitFilter:      this.minFitFilter(),
+      urgentOnly:        this.urgentOnly(),
+      columnSortDirs:    this.columnSortDirs(),
+      mobileStageFilter: this.mobileStageFilter(),
+      listSort:          this.listSort(),
+    });
+  });
+
+  /** Avant le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.pageState.restore();
+    if (!s) return;
+    this.viewMode.set(s.viewMode);
+    this.search.set(s.search);
+    this.stageFilter.set(s.stageFilter);
+    this.demandFilter.set(s.demandFilter);
+    this.minFitFilter.set(s.minFitFilter);
+    this.urgentOnly.set(s.urgentOnly);
+    this.columnSortDirs.set(s.columnSortDirs);
+    this.mobileStageFilter.set(s.mobileStageFilter);
+    this.listSort.set(s.listSort);
+  }
 
   // ── Feedback ───────────────────────────────────────────────────────────────
   /** Success banner after accept/refuse; dismissible, cleared on a view switch. */
@@ -352,6 +393,7 @@ export class PipelineComponent implements OnInit {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.restoreState();
     forkJoin({
       kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
       stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),

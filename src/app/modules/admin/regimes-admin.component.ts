@@ -5,6 +5,7 @@ import { RegimeOverviewComponent } from './regimes/tabs/regime-overview.componen
 import { EntityTimezoneCardComponent } from './regimes/entity-timezone-card.component';
 import { TabItem, TabsComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { rememberAdminState } from './admin-section-state';
 
 type RegimeTab = 'catalog' | 'roles' | 'overview';
 
@@ -52,6 +53,10 @@ export class RegimesAdminComponent {
 
   readonly paysId = input<number>(179);
   activeTab = signal<RegimeTab>('catalog');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Onglet actif gardé tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('regimes', { activeTab: this.activeTab });
 
   readonly tabs = computed<TabItem[]>(() => {
     this.translate.currentLang();

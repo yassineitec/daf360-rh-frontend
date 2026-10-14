@@ -392,11 +392,23 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     }];
   });
 
+  /**
+   * Ouverte depuis l'onglet « Demande de recrutement » de `/rh/requests` (`?from=requests`) :
+   * le retour y ramène. Sinon elle vient de l'Historique, qui est la liste de ces demandes.
+   *
+   * Le retour pointait auparavant vers `/requests`, chemin qui n'existe pas une fois l'app
+   * montée dans le shell (sous `/rh`) : le fil d'Ariane et « Retour » menaient à la page 404.
+   */
+  private readonly fromRequests = this.route.snapshot.queryParamMap.get('from') === 'requests';
+  private readonly backLink = this.fromRequests ? '/rh/requests' : '/rh/requests-history';
+
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
     this.translate.currentLang();
     const d = this.demand();
     return [
-      { label: this.translate.instant('RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB'), link: '/requests' },
+      this.fromRequests
+        ? { label: this.translate.instant('RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB'), link: this.backLink }
+        : { label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.TITLE'), link: this.backLink },
       { label: d?.jobTitle ?? '' },
     ];
   });
@@ -430,7 +442,7 @@ export class RecruitmentDemandDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/requests']);
+    this.router.navigate([this.backLink]);
   }
 
   ngOnInit(): void {

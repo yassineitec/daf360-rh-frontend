@@ -6,6 +6,7 @@ import {
 import { RoleListItem } from './role.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { roleLabel } from '../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../admin-section-state';
 
 type RoleSort = { key: string; dir: 'asc' | 'desc' };
 type RoleSortValues = Record<string, (r: RoleListItem) => string | number | null>;
@@ -64,6 +65,12 @@ export class RoleListComponent {
 
   /** Table header sort — applied to the whole filtered list, before paging. */
   sort = signal<RoleSort | null>(null);
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin, détail d'un rôle compris (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('roles.list', {
+    searchQuery: this.searchQuery, currentPage: this.currentPage, pageSize: this.pageSize, sort: this.sort,
+  });
 
   /** Le tableau (absent pendant le chargement) — passé au `[table]` de la barre. */
   readonly table = viewChild(DataTableComponent);
@@ -168,8 +175,21 @@ export class RoleListComponent {
     this.currentPage.set(0);
   }
 
+  /** Liste vue au passage précédent — `null` avant le premier. */
+  private lastRoles: RoleListItem[] | null = null;
+
   private resetPageOnFilterChange = effect(() => {
     this.filteredRoles();
+    const roles = this.roles();
+    const prev = this.lastRoles;
+    this.lastRoles = roles;
+    // Premier passage ou arrivée de la liste : garder la page restaurée, ramenée à la
+    // dernière page existante. Seul un vrai changement de liste revient à la page 0.
+    if (prev === null || prev.length === 0) {
+      // `Math.max(0, …)` : une recherche restaurée qui ne trouve plus rien donne 0 page.
+      if (roles.length) this.currentPage.set(Math.max(0, Math.min(untracked(this.currentPage), this.totalPages() - 1)));
+      return;
+    }
     this.currentPage.set(0);
   });
 

@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -21,6 +21,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue } from '../../core/lists/configurable-list.model';
 import { adminLabel } from '../../shared/utils/admin-label.utils';
+import { RequestsListStateService } from '../requests/requests-list-state.service';
 
 /** The permission that owns this queue — the same code the review endpoint enforces. */
 export const RECRUITMENT_APPROVE_PERMISSION = 'RH_APPROVE_RECRUITMENT_DEMAND';
@@ -136,6 +137,7 @@ function distinctOptions(
         [decisions]="true"
         [tools]="true"
         [serverSort]="true"
+        [sort]="sort()"
         (serverSortChange)="onSortChange($event)"
         [emptyMessage]="'RECRUITMENT_VALIDATION.EMPTY' | translate"
         (action)="onDemandAction($event.action, $event.demand)" />
@@ -262,6 +264,45 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   readonly urgencyFilter    = signal('');
   /** Submission date range: one day or [from, to]; null = no bound. */
   readonly submittedFilter  = signal<Date[] | null>(null);
+
+  // ── Mémoire de l'onglet ────────────────────────────────────────────────────
+  private pageState = inject(RequestsListStateService);
+
+  /**
+   * Les signaux qui décrivent l'onglet tel que l'utilisateur l'a laissé, par nom — sa
+   * partie de l'état de `/rh/requests` (la page mémorise la sienne, onglet actif compris).
+   */
+  private readonly persisted: Record<string, WritableSignal<any>> = {
+    viewMode:         this.viewMode,
+    searchQuery:      this.searchQuery,
+    candidateFilter:  this.candidateFilter,
+    ageFilter:        this.ageFilter,
+    departmentFilter: this.departmentFilter,
+    urgencyFilter:    this.urgencyFilter,
+    submittedFilter:  this.submittedFilter,
+    sort:             this.sort,
+    page:             this.page,
+    pageSize:         this.pageSize,
+  };
+
+  /**
+   * Chaque changement est mémorisé, pour que le retour depuis la fiche d'une demande de
+   * recrutement retrouve l'onglet tel qu'on l'a quitté. Le premier passage a lieu après
+   * `ngOnInit`, donc après la restauration.
+   */
+  private readonly persistState = effect(() => {
+    this.pageState.save('validation', Object.fromEntries(
+      Object.entries(this.persisted).map(([key, sig]) => [key, sig()])));
+  });
+
+  /** Avant le premier chargement et le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.pageState.restore('validation');
+    if (!s) return;
+    for (const [key, sig] of Object.entries(this.persisted)) {
+      if (key in s) sig.set(s[key]);
+    }
+  }
 
   /** Departments present in the fetched batch (plus the selected one, so it never vanishes). */
   private readonly departmentOptions = computed(() => {
@@ -416,6 +457,7 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.restoreState();
     this.load();
   }
 
@@ -437,6 +479,13 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     this.svc.listByPays(paysId, 'EN_ATTENTE', this.page(), this.pageSize(), this.sort())
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
+        // Page restaurée devenue hors limites (demandes décidées entre-temps) : on retombe
+        // sur la première plutôt que d'afficher une page vide.
+        if (res && !res.content?.length && this.page() > 0) {
+          this.page.set(0);
+          this.load();
+          return;
+        }
         this.loading.set(false);
         if (!res) {
           this.error.set(this.translate.instant('RECRUITMENT_VALIDATION.ERR_LOAD'));
@@ -517,8 +566,12 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     });
   }
 
+  /**
+   * `from=requests` : la fiche ramène alors ici (`/rh/requests`, onglet « Demande de
+   * recrutement » restauré), et non à l'Historique des demandes.
+   */
   openDemand(id: number): void {
-    this.router.navigate(['/rh/requests-history', id]);
+    this.router.navigate(['/rh/requests-history', id], { queryParams: { from: 'requests' } });
   }
 
   asText(v: string | number | null): string {

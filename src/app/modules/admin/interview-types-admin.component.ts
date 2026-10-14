@@ -8,6 +8,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const PAGE_SIZE = 5;
 
@@ -172,6 +173,12 @@ export class InterviewTypesAdminComponent implements OnChanges {
   /** Toolbar search text — filters the whole list, before sorting and paging. */
   readonly searchQuery = signal('');
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('interview-types', {
+    currentPage: this.currentPage, sort: this.sort, searchQuery: this.searchQuery,
+  });
+
   /** The table (absent when the list is empty) — handed to the toolbar's `[table]`. */
   readonly itaTable = viewChild<DataTableComponent>('itaTable');
 
@@ -272,11 +279,20 @@ export class InterviewTypesAdminComponent implements OnChanges {
 
   ngOnChanges(): void { this.load(); }
 
+  /** Premier chargement déjà fait — le tout premier garde la page restaurée par `memory`. */
+  private loadedOnce = false;
+
   private load(): void {
     this.loading.set(true);
-    this.currentPage.set(0);
+    if (this.loadedOnce) this.currentPage.set(0);
+    this.loadedOnce = true;
     this.svc.getTypes().subscribe({
-      next:  t  => { this.types.set(t); this.loading.set(false); },
+      next:  t  => {
+        this.types.set(t); this.loading.set(false);
+        // Page restaurée au-delà de la liste rechargée → dernière page existante.
+        const last = Math.max(0, this.totalPages() - 1);
+        if (this.currentPage() > last) this.currentPage.set(last);
+      },
       error: () => { this.error.set(this.translate.instant('ADMIN.docs.interviews.loadError')); this.loading.set(false); },
     });
   }

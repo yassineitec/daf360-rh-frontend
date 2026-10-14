@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { MissingDocAlert, MissingDocsCardComponent, ProbationAlert, ProbationCardComponent } from '../components/alert-card/alert-card.component';
 import { WorkforceStatsComponent } from '../components/workforce-stats/workforce-stats.component';
@@ -6,6 +6,9 @@ import { ProfileCompletionComponent } from '../components/profile-completion/pro
 import { EngineerProStatsComponent } from '../components/engineer-pro-stats/engineer-pro-stats.component';
 import { SeniorityStatsComponent } from '../components/seniority-stats/seniority-stats.component';
 import { CountryHeadcount } from '../services/home.service';
+
+/** The workforce cards that open a department-filterable detail pop-up. */
+export type WorkforceCardKey = 'workforce' | 'ingproj' | 'seniority';
 
 /**
  * Home section 2 — the watchlist plus the two headcount/completion cards.
@@ -45,7 +48,11 @@ import { CountryHeadcount } from '../services/home.service';
           [alerts]="probationAlerts()"
           [total]="probationTotal()" />
       </div>
-      <div class="min-w-0">
+      <!-- The three workforce cards open a detail pop-up (owned by the page) where they
+           can be filtered by department. -->
+      <div class="min-w-0 cursor-pointer" role="button" tabindex="0"
+           [attr.aria-label]="'HOME.OPEN_DETAIL' | translate"
+           (click)="cardOpen.emit('workforce')" (keydown.enter)="cardOpen.emit('workforce')">
         <rh-workforce-stats
           [totalActifs]="totalActifs()"
           [pctFemmes]="pctFemmes()"
@@ -54,7 +61,9 @@ import { CountryHeadcount } from '../services/home.service';
           [hommes]="hommes()"
           [byCountry]="byCountry()" />
       </div>
-      <div class="min-w-0">
+      <div class="min-w-0 cursor-pointer" role="button" tabindex="0"
+           [attr.aria-label]="'HOME.OPEN_DETAIL' | translate"
+           (click)="cardOpen.emit('ingproj')" (keydown.enter)="cardOpen.emit('ingproj')">
         <rh-engineer-pro-stats
           [total]="ingProjTotal()"
           [pctIngenieurs]="pctIngenieurs()"
@@ -62,7 +71,9 @@ import { CountryHeadcount } from '../services/home.service';
           [ingenieurs]="ingenieurs()"
           [projeteurs]="projeteurs()" />
       </div>
-      <div class="min-w-0">
+      <div class="min-w-0 cursor-pointer" role="button" tabindex="0"
+           [attr.aria-label]="'HOME.OPEN_DETAIL' | translate"
+           (click)="cardOpen.emit('seniority')" (keydown.enter)="cardOpen.emit('seniority')">
         <rh-seniority-stats
           [total]="seniorityTotal()"
           [pctJuniors]="pctJuniors()"
@@ -122,6 +133,9 @@ export class OverviewSectionComponent {
   readonly seniors            = input<number | null | undefined>(undefined);
   readonly tauxGlobalPct      = input<number>(0);
   readonly dossiersIncomplets = input<number>(0);
+
+  /** A workforce card was clicked — the page opens its detail pop-up. */
+  readonly cardOpen = output<WorkforceCardKey>();
 
   readonly tiles = computed(() => [
     { icon: 'event_busy',  value: this.probationTotal(),         labelKey: 'HOME.ALERT_CARD.PROBATION_TITLE' },

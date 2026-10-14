@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -21,6 +21,7 @@ import { ItProvisioningCardsSectionComponent } from './sections/it-provisioning-
 import {
   ItProvisioningTableSectionComponent, ProvisioningSort,
 } from './sections/it-provisioning-table-section.component';
+import { ItProvisioningListStateService } from './it-provisioning-list-state.service';
 
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -166,6 +167,44 @@ export class ItProvisioningListComponent implements OnInit {
     return this.sortedItems().slice(start, start + this.pageSize());
   });
 
+  // ── Mémoire de la liste ────────────────────────────────────────────────────
+  private listState = inject(ItProvisioningListStateService);
+
+  /**
+   * Chaque changement de vue, de recherche, de filtre, de tri ou de page est mémorisé,
+   * pour que le retour depuis un dossier retrouve la liste telle qu'on l'a quittée. Le
+   * premier passage a lieu après `ngOnInit`, donc après la restauration : il réécrit
+   * l'état restauré, sans l'écraser par des valeurs vides.
+   */
+  private readonly persistState = effect(() => {
+    this.listState.save({
+      viewMode:      this.viewMode(),
+      search:        this.search(),
+      statusFilter:  this.statusFilter(),
+      overdueOnly:   this.overdueOnly(),
+      missingFilter: this.missingFilter(),
+      startRange:    this.startRange(),
+      sort:          this.sort(),
+      page:          this.currentPage(),
+      pageSize:      this.pageSize(),
+    });
+  });
+
+  /** Avant le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.listState.restore();
+    if (!s) return;
+    this.viewMode.set(s.viewMode);
+    this.search.set(s.search);
+    this.statusFilter.set(s.statusFilter);
+    this.overdueOnly.set(s.overdueOnly);
+    this.missingFilter.set(s.missingFilter);
+    this.startRange.set(s.startRange);
+    this.sort.set(s.sort);
+    this.currentPage.set(s.page);
+    this.pageSize.set(s.pageSize);
+  }
+
   // ── KPIs ───────────────────────────────────────────────────────────────────
   readonly stats = computed(() => {
     const open = this.items().filter(r => r.status !== 'COMPLETED');
@@ -294,6 +333,7 @@ export class ItProvisioningListComponent implements OnInit {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.restoreState();
     this.load();
   }
 
@@ -303,6 +343,11 @@ export class ItProvisioningListComponent implements OnInit {
     this.service.getAllList().subscribe({
       next: data => {
         this.items.set(data);
+        // Page restaurée devenue hors limites (dossiers terminés ou retirés entre-temps) :
+        // on retombe sur la dernière page qui existe plutôt que sur une page vide.
+        if (this.currentPage() > 0 && this.currentPage() >= this.totalPages()) {
+          this.currentPage.set(Math.max(0, this.totalPages() - 1));
+        }
         this.loading.set(false);
         this.firstLoad.set(false);
       },

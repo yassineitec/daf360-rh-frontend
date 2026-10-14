@@ -1,8 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked, viewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import {
-  BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
+  BadgeCell, DafCellDirective, DataTableComponent, SortDirection, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
+
+/** Tri d'en-tête du tableau (colonne + sens), tel que la page le mémorise. */
+export interface PipelineTableSort {
+  key: string;
+  dir: 'asc' | 'desc';
+}
 
 import { BoardColumn } from '../board.model';
 import { KanbanCandidate } from '../services/pipeline.service';
@@ -41,7 +47,9 @@ import { candidateAvatar, candidateInitials, stageVariant } from '../pipeline-di
       [columns]="columnDefs()"
       [rows]="rows()"
       [config]="tableConfig()"
-      (rowClick)="open.emit($any($event)['_source'].id)" />
+      (rowClick)="open.emit($any($event)['_source'].id)"
+      (sortChange)="onSortChange($event.key, $event.dir)"
+      (resetClick)="sortChange.emit(null)" />
   `,
 })
 export class PipelineTableSectionComponent {
@@ -54,8 +62,16 @@ export class PipelineTableSectionComponent {
   readonly columns      = input.required<BoardColumn[]>();
   readonly loading      = input(false);
   readonly skeletonRows = input(10);
+  /**
+   * Tri en cours, tenu par la page. Le tri reste fait par la lib (côté client) : cette
+   * entrée ne sert qu'à le reposer quand le tableau est (re)créé — retour d'une fiche,
+   * retour de la vue Kanban —, sans quoi il repartait dans l'ordre des colonnes.
+   */
+  readonly sort = input<PipelineTableSort | null>(null);
 
   readonly open = output<number>();
+  /** Clic d'en-tête (ou réinitialisation) : la page le mémorise pour le reposer au retour. */
+  readonly sortChange = output<PipelineTableSort | null>();
 
   protected readonly columnDefs = computed<TableColumn[]>(() => {
     this.translate.currentLang();
@@ -117,10 +133,17 @@ export class PipelineTableSectionComponent {
       showReset:         true,
       resetLabel:        t('REQUESTS.TABLE.RESET'),
       sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      // Lu une seule fois (`untracked`) : le suivre reconstruirait la config à chaque clic
+      // d'en-tête, et la lib n'applique de toute façon `defaultSort` qu'au premier rendu.
+      ...(untracked(this.sort) ? { defaultSort: untracked(this.sort)! } : {}),
       actions: [
         { id: 'view', icon: 'visibility', tooltip: t('PIPELINE.VIEW'),
           onClick: (row) => this.open.emit(src(row).id) },
       ],
     };
   });
+
+  protected onSortChange(key: string, dir: SortDirection): void {
+    this.sortChange.emit(key && (dir === 'asc' || dir === 'desc') ? { key, dir } : null);
+  }
 }

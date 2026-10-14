@@ -48,6 +48,33 @@ export interface WorkforceData {
   pctJuniors:           number;
   pctConfirmes:         number;
   pctSeniors:           number;
+  /** Age brackets of the whole (filtered) headcount, from the date of birth. */
+  ages:                 AgeBreakdown;
+  /** Same, engineers + drafters only (EN / BC grades). */
+  techAges:             AgeBreakdown;
+  /**
+   * Age brackets of each clickable pop-up tile: femmes, hommes · ingenieurs, projeteurs,
+   * autres · juniors, confirmes, seniors.
+   */
+  groupAges:            Partial<Record<string, AgeBreakdown>>;
+}
+
+/** Full years of age. Absent from older backends — read with `?.`. */
+export interface AgeBreakdown {
+  moins25:      number;
+  de25a34:      number;
+  de35a44:      number;
+  de45a54:      number;
+  plus55:       number;
+  /** No date of birth — in `total`, in no bracket. */
+  nonRenseigne: number;
+  total:        number;
+  ageMoyen:     number | null;
+  /**
+   * Group under 5 people: the backend withholds the brackets (all 0), since on a tiny
+   * department they would give away each person's age.
+   */
+  hidden:       boolean;
 }
 
 export interface ProfileCompletionData {
@@ -138,6 +165,14 @@ export interface HomeData {
 }
 
 /**
+ * `?paysId=` for the dashboard endpoints. Only honoured server side for cross-country
+ * admins (DashboardService.scopePaysId) — anyone else stays on their own entity.
+ */
+function paysParams(paysId: number | null): Record<string, number> {
+  return paysId != null ? { paysId } : {};
+}
+
+/**
  * Data for the RH home page (`/rh/accueil`).
  *
  * ⚠️ The **backend paths are still `/api/hr/dashboard/*`** — only the frontend was
@@ -151,28 +186,35 @@ export class HomeService {
   private http = inject(HttpClient);
   private base = `${environment.hrApiUrl}/api/hr`;
 
-  getStats(): Observable<HomeStats> {
-    return this.http.get<HomeStats>(`${this.base}/dashboard/stats`);
+  getStats(paysId: number | null = null): Observable<HomeStats> {
+    return this.http.get<HomeStats>(`${this.base}/dashboard/stats`, { params: paysParams(paysId) });
   }
 
-  getWorkforce(): Observable<WorkforceData> {
-    return this.http.get<WorkforceData>(`${this.base}/dashboard/workforce`);
+  /**
+   * `departmentId` narrows every workforce card (headcount, gender, country,
+   * engineers/drafters, seniority) to that department and its direct sub-departments.
+   */
+  getWorkforce(paysId: number | null = null, departmentId: number | null = null): Observable<WorkforceData> {
+    const params = departmentId != null
+      ? { ...paysParams(paysId), departmentId }
+      : paysParams(paysId);
+    return this.http.get<WorkforceData>(`${this.base}/dashboard/workforce`, { params });
   }
 
-  getCompletion(): Observable<ProfileCompletionData> {
-    return this.http.get<ProfileCompletionData>(`${this.base}/dashboard/completion`);
+  getCompletion(paysId: number | null = null): Observable<ProfileCompletionData> {
+    return this.http.get<ProfileCompletionData>(`${this.base}/dashboard/completion`, { params: paysParams(paysId) });
   }
 
-  getFinPeriodeEssai(): Observable<PreviewResponse<ProbationAlertDto>> {
-    return this.http.get<PreviewResponse<ProbationAlertDto>>(`${this.base}/dashboard/fin-periode-essai`);
+  getFinPeriodeEssai(paysId: number | null = null): Observable<PreviewResponse<ProbationAlertDto>> {
+    return this.http.get<PreviewResponse<ProbationAlertDto>>(`${this.base}/dashboard/fin-periode-essai`, { params: paysParams(paysId) });
   }
 
-  getMissingDocs(): Observable<PreviewResponse<MissingDocumentDto>> {
-    return this.http.get<PreviewResponse<MissingDocumentDto>>(`${this.base}/dashboard/missing-documents`);
+  getMissingDocs(paysId: number | null = null): Observable<PreviewResponse<MissingDocumentDto>> {
+    return this.http.get<PreviewResponse<MissingDocumentDto>>(`${this.base}/dashboard/missing-documents`, { params: paysParams(paysId) });
   }
 
-  getAnniversaires(): Observable<AnniversaireDto[]> {
-    return this.http.get<AnniversaireDto[]>(`${this.base}/dashboard/anniversaires`);
+  getAnniversaires(paysId: number | null = null): Observable<AnniversaireDto[]> {
+    return this.http.get<AnniversaireDto[]>(`${this.base}/dashboard/anniversaires`, { params: paysParams(paysId) });
   }
 
   /**
@@ -180,26 +222,30 @@ export class HomeService {
    * feeds two consumers — the employee cards (first 4 only) and the activity
    * sidebar widget — so it asks for more than 4 deliberately.
    */
-  getNouveauxEmployes(limit = 10): Observable<NouveauEmployeDto[]> {
+  getNouveauxEmployes(limit = 10, paysId: number | null = null): Observable<NouveauEmployeDto[]> {
     return this.http.get<NouveauEmployeDto[]>(`${this.base}/dashboard/nouveaux-employes`, {
-      params: { limit },
+      params: { limit, ...paysParams(paysId) },
     });
   }
 
   private emptyPreview<T>(): PreviewResponse<T> { return { items: [], total: 0 }; }
 
-  load(): Observable<HomeData> {
+  /**
+   * `paysId` null = no filter: the caller's own entity, or every entity for a cross-country admin.
+   * `departmentId` only reaches the workforce cards — alerts and joiners stay per country.
+   */
+  load(paysId: number | null = null, departmentId: number | null = null): Observable<HomeData> {
     const failed: string[] = [];
     const fail = (key: string) => { failed.push(key); };
 
     return forkJoin({
-      stats:            this.getStats().pipe(catchError(() => { fail('stats');            return of(null); })),
-      workforce:        this.getWorkforce().pipe(catchError(() => { fail('workforce');    return of(null); })),
-      completion:       this.getCompletion().pipe(catchError(() => { fail('completion');  return of(null); })),
-      probation:        this.getFinPeriodeEssai().pipe(catchError(() => { fail('probation');        return of(this.emptyPreview<ProbationAlertDto>()); })),
-      missingDocuments: this.getMissingDocs().pipe(catchError(() => { fail('missingDocuments');     return of(this.emptyPreview<MissingDocumentDto>()); })),
-      anniversaires:    this.getAnniversaires().pipe(catchError(() => { fail('anniversaires');      return of([] as AnniversaireDto[]); })),
-      nouveauxEmployes: this.getNouveauxEmployes().pipe(catchError(() => { fail('nouveauxEmployes'); return of([] as NouveauEmployeDto[]); })),
+      stats:            this.getStats(paysId).pipe(catchError(() => { fail('stats');            return of(null); })),
+      workforce:        this.getWorkforce(paysId, departmentId).pipe(catchError(() => { fail('workforce');    return of(null); })),
+      completion:       this.getCompletion(paysId).pipe(catchError(() => { fail('completion');  return of(null); })),
+      probation:        this.getFinPeriodeEssai(paysId).pipe(catchError(() => { fail('probation');        return of(this.emptyPreview<ProbationAlertDto>()); })),
+      missingDocuments: this.getMissingDocs(paysId).pipe(catchError(() => { fail('missingDocuments');     return of(this.emptyPreview<MissingDocumentDto>()); })),
+      anniversaires:    this.getAnniversaires(paysId).pipe(catchError(() => { fail('anniversaires');      return of([] as AnniversaireDto[]); })),
+      nouveauxEmployes: this.getNouveauxEmployes(10, paysId).pipe(catchError(() => { fail('nouveauxEmployes'); return of([] as NouveauEmployeDto[]); })),
     }).pipe(map(result => ({ ...result, failed })));
   }
 }

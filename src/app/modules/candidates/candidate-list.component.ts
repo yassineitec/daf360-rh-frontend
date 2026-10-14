@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -26,6 +26,7 @@ import { RecruitmentDemandService } from '../recruitment-demands/recruitment-dem
 import { ApprovedDemandOption } from '../recruitment-demands/recruitment-demand.model';
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
+import { CandidateListStateService } from './candidate-list-state.service';
 import {
   CandidateHistoryItem,
   CandidateListItem,
@@ -127,6 +128,42 @@ export class CandidateListComponent implements OnInit {
   readonly sort         = signal<string | null>(null);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
+  // ── Mémoire de la liste ────────────────────────────────────────────────────
+  private listState = inject(CandidateListStateService);
+
+  /**
+   * Chaque changement de recherche, de filtre, de tri ou de page est mémorisé, pour que le
+   * retour depuis la fiche d'un candidat retrouve la liste telle qu'on l'a quittée. Pas le
+   * panneau du dossier : c'est un aperçu ouvert sur la page, pas un réglage de la liste.
+   * Le premier passage a lieu après `ngOnInit`, donc après la restauration.
+   */
+  private readonly persistState = effect(() => {
+    this.listState.save({
+      search:           this.search(),
+      statusFilter:     this.statusFilter(),
+      departmentFilter: this.departmentFilter(),
+      demandFilter:     this.demandFilter(),
+      createdRange:     this.createdRange(),
+      sort:             this.sort(),
+      page:             this.currentPage(),
+      pageSize:         this.pageSize(),
+    });
+  });
+
+  /** Avant le premier chargement et le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.listState.restore();
+    if (!s) return;
+    this.search.set(s.search);
+    this.statusFilter.set(s.statusFilter);
+    this.departmentFilter.set(s.departmentFilter);
+    this.demandFilter.set(s.demandFilter);
+    this.createdRange.set(s.createdRange);
+    this.sort.set(s.sort);
+    this.currentPage.set(s.page);
+    this.pageSize.set(s.pageSize);
+  }
 
   // ── Dossier drawer ─────────────────────────────────────────────────────────
   readonly selectedId       = signal<number | null>(null);
@@ -236,6 +273,7 @@ export class CandidateListComponent implements OnInit {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.restoreState();
     forkJoin({
       stats: this.svc.getStats().pipe(catchError(() => of(null))),
       page:  this.svc.getCandidates(this.query()).pipe(catchError(() => of(null))),
@@ -243,6 +281,12 @@ export class CandidateListComponent implements OnInit {
       if (stats) this.stats.set(stats);
       if (page)  this.page.set(page);
       this.firstLoad.set(false);
+      // Page restaurée devenue hors limites (candidats archivés entre-temps) : on retombe
+      // sur la première plutôt que d'afficher une page vide.
+      if (page && page.content.length === 0 && this.currentPage() > 0) {
+        this.currentPage.set(0);
+        this.loadCandidates();
+      }
     });
 
     this.loadFilterOptions();
@@ -332,7 +376,13 @@ export class CandidateListComponent implements OnInit {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
-  onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
+  /**
+   * `from=list` : le fil d'Ariane de la fiche ramène alors ici, et non au Kanban de
+   * `/rh/candidates` — c'est ce retour qui retrouve la liste filtrée.
+   */
+  onView(id: number): void {
+    this.router.navigate(['/rh/candidates', id], { queryParams: { from: 'list' } });
+  }
 
   // ── Dossier drawer ─────────────────────────────────────────────────────────
   /** A row click opens the dossier; the row's "Voir" button opens the candidate. */

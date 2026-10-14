@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked, viewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { BadgeCell, DataTableComponent, TableColumn, TableConfig, TableRow } from '@khalilrebhiitec/daf360';
 
@@ -82,6 +82,12 @@ export class RequestTableSectionComponent {
    */
   readonly serverSort = input(false);
   readonly serverSortChange = output<string | null>();
+  /**
+   * Tri serveur en cours (`submissionDate,asc`…), tel que la page le tient (`serverSort`
+   * seulement). Il ne sert qu'à placer la flèche quand le tableau est (re)créé — retour
+   * d'une fiche, retour de la vue cartes : sans lui, la liste restait triée sans le montrer.
+   */
+  readonly sort = input<string | null>(null);
 
   readonly action = output<{ action: RequestCardAction; item: RequestCardItem }>();
 
@@ -146,6 +152,8 @@ export class RequestTableSectionComponent {
       rowId: (row) => (row['_source'] as RequestCardItem).id,
       // Rows are rendered in the order the server returned; sortChange still fires.
       manualSort: this.serverSort(),
+      // Lu une seule fois (`untracked`) : la lib n'applique `defaultSort` qu'au premier rendu.
+      ...this.defaultSort(untracked(this.sort)),
       ...(this.tools() ? {
         resizableColumns: true,
         resizableRows: true,
@@ -169,6 +177,14 @@ export class RequestTableSectionComponent {
       ],
     };
   });
+
+  /** Inverse de `onSortChange` : `submissionDate,asc` → la flèche sur la colonne correspondante. */
+  private defaultSort(sort: string | null): Pick<TableConfig, 'defaultSort'> {
+    if (!this.serverSort()) return {};
+    const [field, dir] = (sort ?? '').split(',');
+    const key = Object.keys(SERVER_SORT_FIELD).find(k => SERVER_SORT_FIELD[k] === field);
+    return key && (dir === 'asc' || dir === 'desc') ? { defaultSort: { key, dir } } : {};
+  }
 
   /** Header click in server mode → Spring `sort` value, or null when the sort is cleared —
    *  also on the reset icon, which clears the table's sort without emitting sortChange. */

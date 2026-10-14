@@ -7,6 +7,7 @@ import {
   TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { searchRows } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 import { environment } from '../../../environments/environment';
 import { ModalComponent } from '../../shared/modal.component';
@@ -205,6 +206,10 @@ export class PaysCalendarAdminComponent implements OnInit {
 
   /** Toolbar search, over what each row shows (entity, head count, rest days). */
   readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('pays-calendar', { searchQuery: this.searchQuery });
 
   readonly filteredItems = computed(() => {
     this.translate.currentLang();

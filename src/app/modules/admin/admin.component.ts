@@ -31,6 +31,7 @@ import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
 import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
+import { AdminSectionStateService }         from './admin-section-state';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -367,9 +368,15 @@ export class AdminComponent {
   // A computed, not a template literal: a fresh array each cycle re-renders daf-select.
   readonly selectedPaysValue = computed<string[]>(() => [String(this.paysId())]);
 
+  private sectionState = inject(AdminSectionStateService);
+
   onPaysChange(values: string[]): void {
     const id = Number(values[0]);
-    if (Number.isFinite(id) && id > 0) this.selectedPaysId.set(id);
+    if (!Number.isFinite(id) || id <= 0 || id === this.paysId()) return;
+    // Les filtres mémorisés des sections sont ceux de l'ancienne entité (un département, un
+    // rôle de là-bas) : on les oublie avant que `paysKey` reconstruise la section ouverte.
+    this.sectionState.clear();
+    this.selectedPaysId.set(id);
   }
 
   currentPays = computed(() => {

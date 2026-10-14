@@ -442,10 +442,22 @@ export class RequestDetailComponent implements OnInit {
     return [{ label: this.statusLabel(r.status), variant: this.statusBadgeOptions(r.status).variant, pill: true }];
   });
 
+  /**
+   * Ouverte depuis l'Historique (`?from=history`) : le retour y ramène, là où l'utilisateur
+   * a laissé ses filtres, plutôt qu'à la file des demandes en cours.
+   *
+   * Le retour pointait auparavant vers `/requests`, chemin qui n'existe pas une fois l'app
+   * montée dans le shell (sous `/rh`) : le fil d'Ariane et « Retour » menaient à la page 404.
+   */
+  private readonly fromHistory = this.route.snapshot.queryParamMap.get('from') === 'history';
+  private readonly backLink = this.fromHistory ? '/rh/requests-history' : '/rh/requests';
+
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
     this.translate.currentLang();
     return [
-      { label: this.translate.instant('REQUESTS.DETAIL.BREADCRUMB'), link: '/requests' },
+      this.fromHistory
+        ? { label: this.translate.instant('RECRUITMENT_DEMANDS.LIST.TITLE'), link: this.backLink }
+        : { label: this.translate.instant('REQUESTS.DETAIL.BREADCRUMB'), link: this.backLink },
       { label: this.requestTypeLabel() },
     ];
   });
@@ -513,7 +525,7 @@ export class RequestDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/requests']);
+    this.router.navigate([this.backLink]);
   }
 
   ngOnInit() {

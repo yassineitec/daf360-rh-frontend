@@ -81,7 +81,7 @@ export class QuickActionsSectionComponent {
     return [
       { icon: 'inbox',        label: t('HOME.QUICK_ACTIONS.REQUESTS_LABEL'),    sublabel: t('HOME.QUICK_ACTIONS.REQUESTS_SUBLABEL', { count: this.pendingRequests() }), route: 'requests',    color: 'secondary' },
       { icon: 'person_add',   label: t('HOME.QUICK_ACTIONS.ONBOARDING_LABEL'),  sublabel: t('HOME.QUICK_ACTIONS.ONBOARDING_SUBLABEL'),                                   route: 'onboarding',  color: 'amber' },
-      { icon: 'beach_access', label: t('HOME.QUICK_ACTIONS.LEAVE_LABEL'),       sublabel: t('HOME.QUICK_ACTIONS.LEAVE_SUBLABEL'),                                        route: 'leave',       color: 'tertiary' },
+      { icon: 'beach_access', label: t('HOME.QUICK_ACTIONS.LEAVE_LABEL'),       sublabel: t('HOME.QUICK_ACTIONS.LEAVE_SUBLABEL'),                                        route: 'conges/inbox', color: 'tertiary' },
       { icon: 'analytics',    label: t('HOME.QUICK_ACTIONS.RECRUITMENT_LABEL'), sublabel: t('HOME.QUICK_ACTIONS.RECRUITMENT_SUBLABEL'),                                  route: 'recrutement', color: 'teal' },
     ];
   });

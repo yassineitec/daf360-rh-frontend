@@ -10,6 +10,7 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 import { adminLabel } from '../../shared/utils/admin-label.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const PAGE_SIZE = 10;
 
@@ -410,6 +411,12 @@ export class RefDataAdminComponent implements OnChanges {
   /** Toolbar search — filters the active tab's whole list, before sort and paging. */
   readonly searchQuery = signal('');
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Onglet, recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('ref-data', {
+    activeTab: this.activeTab, currentPage: this.currentPage, sort: this.sort, searchQuery: this.searchQuery,
+  });
+
   /** New search → back to the first page (otherwise it can land on an empty one). */
   onSearch(value: string): void {
     if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
@@ -590,7 +597,7 @@ export class RefDataAdminComponent implements OnChanges {
 
     if (tab.key === 'type-contrat') {
       this.contractSvc.getTypeContrats().subscribe({
-        next: tc => { this.typeContrats.set(tc); this.loading.set(false); },
+        next: tc => { this.typeContrats.set(tc); this.loading.set(false); this.clampPage(); },
         error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_TC')); this.loading.set(false); },
       });
       return;
@@ -598,7 +605,7 @@ export class RefDataAdminComponent implements OnChanges {
 
     if (tab.key === 'it-asset-types') {
       this.refSvc.getItAssetTypes().subscribe({
-        next: r  => { this.items.set(r); this.loading.set(false); },
+        next: r  => { this.items.set(r); this.loading.set(false); this.clampPage(); },
         error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_ASSETS')); this.loading.set(false); },
       });
       return;
@@ -609,9 +616,14 @@ export class RefDataAdminComponent implements OnChanges {
       : this.refSvc.getNationalities();
 
     obs.subscribe({
-      next: r  => { this.items.set(r); this.loading.set(false); },
+      next: r  => { this.items.set(r); this.loading.set(false); this.clampPage(); },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_DATA')); this.loading.set(false); },
     });
+  }
+
+  /** Page restaurée (ou après une suppression) au-delà de la liste rechargée → dernière page existante. */
+  private clampPage(): void {
+    if (this.currentPage() > this.totalPages() - 1) this.currentPage.set(this.totalPages() - 1);
   }
 
   private getForType(key: RefTab, paysId: number) {

@@ -16,6 +16,7 @@ import {
 } from '../regime.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../../admin-section-state';
 
 type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
@@ -56,6 +57,12 @@ export class RegimeOverviewComponent implements OnChanges {
   currentPage = signal(0);
   /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, filtre, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('regimes.overview', {
+    searchTerm: this.searchTerm, activeFilter: this.activeFilter, currentPage: this.currentPage, sort: this.sort,
+  });
 
   /** Which rule gave an employee their regime — in the order they override each other. */
   private static readonly SOURCE_ORDER = ['SEASONAL', 'EMPLOYEE_OVERRIDE', 'ROLE_ASSIGNMENT', 'DEFAULT'] as const;
@@ -242,7 +249,12 @@ export class RegimeOverviewComponent implements OnChanges {
       error: () => this.isLoadingStats.set(false),
     });
     this.svc.getOverviewEmployees(this.paysId()).subscribe({
-      next: es => { this.employees.set(es); this.isLoadingTable.set(false); },
+      next: es => {
+        this.employees.set(es);
+        // Page restaurée (ou liste raccourcie) : on retombe sur la dernière page existante.
+        this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
+        this.isLoadingTable.set(false);
+      },
       error: () => this.isLoadingTable.set(false),
     });
     this.svc.getRegimes(this.paysId()).subscribe({ next: rs => this.regimes.set(rs) });

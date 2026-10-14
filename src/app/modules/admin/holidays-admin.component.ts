@@ -22,6 +22,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const PAGE_SIZE = 10;
 
@@ -304,6 +305,12 @@ export class HolidaysAdminComponent implements OnChanges {
   /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Vue, recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('holidays', {
+    viewMode: this.viewMode, searchQuery: this.searchQuery, sort: this.sort, currentPage: this.currentPage,
+  });
+
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredHolidays().length / PAGE_SIZE)));
 
   readonly pagedHolidays = computed(() => {
@@ -374,8 +381,21 @@ export class HolidaysAdminComponent implements OnChanges {
     };
   });
 
+  /** Lignes vues au passage précédent (ids) — `null` avant le premier. */
+  private lastHolidayIds: string | null = null;
+
   private resetPageOnFilterChange = effect(() => {
-    this.filteredHolidays();
+    const ids = this.filteredHolidays().map(h => h.id).join(',');
+    const prev = this.lastHolidayIds;
+    this.lastHolidayIds = ids;
+    if (!ids) return;
+    // Arrivée de la liste, ou rechargement identique (le chargement part deux fois à
+    // l'ouverture) : garder la page restaurée, ramenée à la dernière page existante.
+    // Seul un vrai changement des lignes revient à la page 0.
+    if (!prev || prev === ids) {
+      this.currentPage.set(Math.max(0, Math.min(untracked(this.currentPage), this.totalPages() - 1)));
+      return;
+    }
     this.currentPage.set(0);
   });
 

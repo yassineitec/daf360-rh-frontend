@@ -11,6 +11,7 @@ import {
 import { flagDataUri } from '../flag-svgs';
 import { OvertimeService } from './overtime.service';
 import { rankIn, searchRows } from '../../../shared/table-sort.utils';
+import { rememberAdminState } from '../admin-section-state';
 import {
   ParametrageHSDto, CreateParametrageHSRequest,
   TYPE_CALCUL_OPTIONS, DAYS_OPTIONS, OvertimeCalculationRequest, OvertimeCalculationResult,
@@ -310,6 +311,10 @@ export class OvertimeAdminComponent implements OnChanges {
 
   /** Toolbar search text — narrows the rules on what each row shows. */
   readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('overtime', { searchQuery: this.searchQuery });
 
   /** The rules table (absent while loading / with no rule) — handed to the toolbar's `[table]`. */
   readonly ovaTable = viewChild<DataTableComponent>('ovaTable');

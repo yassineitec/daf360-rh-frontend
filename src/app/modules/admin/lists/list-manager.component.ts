@@ -15,6 +15,7 @@ import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 import { adminLabel } from '../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../admin-section-state';
 
 const PAGE_SIZE = 10;
 
@@ -137,6 +138,12 @@ export class ListManagerComponent implements OnInit {
   /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Liste ouverte, recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('lists', {
+    selectedType: this.selectedType, searchQuery: this.searchQuery, currentPage: this.currentPage, sort: this.sort,
+  });
+
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredValues().length / PAGE_SIZE)));
 
   readonly pagedValues = computed(() => {
@@ -244,7 +251,13 @@ export class ListManagerComponent implements OnInit {
       next: types => {
         this.listTypes.set(types);
         this.loadingTypes.set(false);
-        if (types.length) this.selectType(types[0]);
+        // Liste restaurée (`rememberAdminState`) : on la rouvre telle quelle, sans vider sa
+        // recherche ni revenir en page 1 — `selectType` ne sert qu'aux vrais changements.
+        const restored = types.find(t => t.id === this.selectedType()?.id);
+        if (restored) {
+          this.selectedType.set(restored);
+          this.loadValues(restored.id, false);
+        } else if (types.length) this.selectType(types[0]);
       },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_TYPES')); this.loadingTypes.set(false); },
     });
@@ -271,11 +284,16 @@ export class ListManagerComponent implements OnInit {
     this.modalRef?.close();
   }
 
-  loadValues(id: number): void {
+  loadValues(id: number, resetPage = true): void {
     this.loadingValues.set(true);
-    this.currentPage.set(0);
+    if (resetPage) this.currentPage.set(0);
     this.listService.getAllValuesForAdmin(id).subscribe({
-      next: vals => { this.values.set(vals); this.loadingValues.set(false); },
+      next: vals => {
+        this.values.set(vals);
+        // Page restaurée (ou liste raccourcie) : on retombe sur la dernière page existante.
+        this.currentPage.update(p => Math.min(p, this.totalPages() - 1));
+        this.loadingValues.set(false);
+      },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_VALUES')); this.loadingValues.set(false); },
     });
   }

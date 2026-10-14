@@ -28,6 +28,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { searchRows } from '../../shared/table-sort.utils';
 import { roleLabel } from '../../shared/utils/admin-label.utils';
+import { rememberAdminState } from './admin-section-state';
 
 @Component({
   selector: 'app-offboarding-catalog-admin',
@@ -314,6 +315,10 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   /** Toolbar search text — narrows the selected contract type's tasks on what each row shows. */
   readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('offboarding-catalog', { searchQuery: this.searchQuery });
 
   /** The table (absent while loading / when empty) — handed to the toolbar's `[table]`. */
   readonly catTable = viewChild<DataTableComponent>('catTable');

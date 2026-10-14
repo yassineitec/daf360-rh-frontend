@@ -22,6 +22,7 @@ import { UserStore } from '../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { rankIn, searchRows } from '../../shared/table-sort.utils';
 import { adminLabel } from '../../shared/utils/admin-label.utils';
+import { rememberAdminState } from './admin-section-state';
 
 type BreakTab = 'templates' | 'legal-rules';
 
@@ -279,6 +280,14 @@ export class BreaksAdminComponent implements OnChanges {
   /** Toolbar search text — filters the selected régime's rows on what each one shows. */
   readonly searchQuery = signal('');
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Onglet, régime, pays (super admin) et recherche gardés tant qu'on reste dans /rh/admin
+   *  (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('breaks', {
+    activeTab: this.activeTab, filterRegimeId: this.filterRegimeId,
+    overridePaysId: this.overridePaysId, searchQuery: this.searchQuery,
+  });
+
   onSearch(value: string): void {
     if (value !== this.searchQuery()) this.searchQuery.set(value);
   }
@@ -447,16 +456,19 @@ export class BreaksAdminComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['paysId']) this.loadAll();
+    // Premier passage : on garde le régime restauré (`rememberAdminState`) s'il existe encore.
+    if (changes['paysId']) this.loadAll(changes['paysId'].firstChange);
   }
 
-  loadAll(): void {
+  loadAll(keepRegime = false): void {
     this.isLoading.set(true);
-    this.filterRegimeId.set(null);
+    const kept = keepRegime ? this.filterRegimeId() : null;
+    if (!keepRegime) this.filterRegimeId.set(null);
     this.regimeSvc.getRegimes(this.effectivePaysId()).subscribe({
       next: rs => {
         this.regimes.set(rs);
-        if (rs.length) this.filterRegimeId.set(rs[0].id);
+        if (kept !== null && rs.some(r => r.id === kept)) return;
+        this.filterRegimeId.set(rs.length ? rs[0].id : null);
       },
     });
     this.breakSvc.getTemplatesForPays(this.effectivePaysId()).subscribe({

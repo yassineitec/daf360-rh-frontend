@@ -1,4 +1,4 @@
-import { Component, TemplateRef, computed, inject, input, OnChanges, signal, untracked, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnChanges, SimpleChanges, signal, untracked, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { AdminService }     from './admin.service';
 import { HOLIDAY_CALENDAR_CONFIG_KEY, ParameterSet } from './models/admin.model';
@@ -10,6 +10,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const PAGE_SIZE = 10;
 
@@ -226,6 +227,12 @@ export class ParametersAdminComponent implements OnChanges {
   /** Toolbar search — filters the whole list, before sort and paging. */
   readonly searchQuery = signal('');
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('parameters', {
+    searchQuery: this.searchQuery, sort: this.sort, currentPage: this.currentPage,
+  });
+
   readonly filteredParams = computed(() =>
     searchRows(this.params(), this.searchQuery(), p => [p.cle, p.valeur, p.description, this.fmtDate(p.updatedAt)]),
   );
@@ -320,11 +327,12 @@ export class ParametersAdminComponent implements OnChanges {
     this.currentPage.set(0);
   }
 
-  ngOnChanges() { this.load(); }
+  /** Premier passage : pas de retour à la page 0, la page restaurée (`memory`) doit survivre. */
+  ngOnChanges(changes: SimpleChanges) { this.load(!changes['paysId']?.firstChange); }
 
-  private load() {
+  private load(resetPage = true) {
     this.loading.set(true);
-    this.currentPage.set(0);
+    if (resetPage) this.currentPage.set(0);
     this.svc.listParameters(this.paysId()).pipe(catchError(() => of([]))).subscribe(ps => {
       // The holiday calendar's display settings share this table but are edited from the
       // "Jours fériés" page (HolidayCalendarConfigService) — keep them out of payroll.
@@ -332,6 +340,8 @@ export class ParametersAdminComponent implements OnChanges {
       this.params.set(ps.filter(p => !isCalendarConfig(p)));
       this.hasHiddenCalendarConfig.set(ps.some(isCalendarConfig));
       this.loading.set(false);
+      // Page restaurée au-delà de la liste : retour à la dernière page existante.
+      this.currentPage.update(p => Math.min(p, this.totalPages() - 1));
     });
   }
 

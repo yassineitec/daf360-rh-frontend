@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, viewChild } from '@angular/core';
+import { Component, computed, inject, input, output, untracked, viewChild } from '@angular/core';
 import {
   AvatarCell, BadgeCell, DataTableComponent, SortDirection,
   TableColumn, TableConfig, TableRow,
@@ -72,6 +72,12 @@ export class ProfilesTableSectionComponent {
   /** `HR_UPDATE_PROFILE` / `HR_CREATE_PROFILE`, resolved once by the page. */
   readonly canEdit          = input<boolean>(false);
   readonly canCreateProfile = input<boolean>(false);
+  /**
+   * Tri serveur en cours (`hireDate,asc`…), tel que la page le tient. Il ne sert qu'à
+   * placer la flèche quand le tableau est (re)créé — retour d'une fiche, retour de la
+   * vue cartes : sans lui, la liste restait triée mais aucune colonne ne le montrait.
+   */
+  readonly sort = input<string | null>(null);
 
   /** The whole row, not an id: a row with no `profileId` still routes, on its `userId`. */
   readonly viewProfile  = output<EmployeeListItem>();
@@ -124,6 +130,9 @@ export class ProfilesTableSectionComponent {
       sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
       // Rows are rendered in the order the server returned; sortChange still fires.
       manualSort:        true,
+      // Lu une seule fois (`untracked`) : le suivre reconstruirait la config à chaque
+      // clic d'en-tête, et la lib n'applique de toute façon `defaultSort` qu'au premier rendu.
+      ...this.defaultSort(untracked(this.sort)),
       // Both actions are conditional now — see the card view's canConsult/canModify for
       // the reasoning, which is the same on both surfaces.
       actions: [
@@ -204,6 +213,13 @@ export class ProfilesTableSectionComponent {
   /** Checkbox, header "select all" or reset: hand the page the full new selection. */
   protected onSelectedChange(keys: string[]): void {
     this.selectionChange.emit(keys.map(Number).filter(n => !Number.isNaN(n)));
+  }
+
+  /** Inverse de `onSortChange` : `hireDate,asc` → la flèche sur la colonne `hireDate`. */
+  private defaultSort(sort: string | null): Pick<TableConfig, 'defaultSort'> {
+    const [field, dir] = (sort ?? '').split(',');
+    const key = Object.keys(SERVER_SORT_FIELD).find(k => SERVER_SORT_FIELD[k] === field);
+    return key && (dir === 'asc' || dir === 'desc') ? { defaultSort: { key, dir } } : {};
   }
 
   /** Header click (or the reset icon) → Spring `sort` value, or null when cleared. */

@@ -8,6 +8,7 @@ import {
 import type { BadgeVariant, SelectOption } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FolderPickerComponent } from './folder-picker.component';
+import { rememberAdminState } from '../admin-section-state';
 import {
   Diagnosis, DocKindInfo, EmployeeFolderRow, SharePointAdminService,
   SharePointLocation, SharePointStatus,
@@ -489,6 +490,18 @@ export class SharePointAdminComponent implements OnInit {
   /** Employees toolbar search — filters the whole list, before sort and paging. */
   readonly employeesSearch = signal('');
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /**
+   * Onglet, type de document, recherches, tris et pages gardés tant qu'on reste dans
+   * /rh/admin (voir `rememberAdminState`). Ni le dossier du sélecteur ni le diagnostic.
+   */
+  private readonly memory = rememberAdminState('sharepoint', {
+    panel: this.panel, docKind: this.docKind,
+    pathsCurrentPage: this.pathsCurrentPage, pathsSort: this.pathsSort, pathsSearch: this.pathsSearch,
+    employeesCurrentPage: this.employeesCurrentPage, employeesSort: this.employeesSort,
+    employeesSearch: this.employeesSearch,
+  });
+
   // Panel 3
   readonly diagProfileId = signal<number | null>(null);
   readonly diagnosis     = signal<Diagnosis | null>(null);
@@ -588,7 +601,11 @@ export class SharePointAdminComponent implements OnInit {
   private loadLocations(): void {
     this.loadingPaths.set(true);
     this.svc.listLocations().subscribe({
-      next: rows => { this.locations.set(rows); this.loadingPaths.set(false); },
+      next: rows => {
+        this.locations.set(rows); this.loadingPaths.set(false);
+        // Page restaurée (ou après une suppression) au-delà de la liste → dernière page existante.
+        if (this.pathsCurrentPage() > this.pathsTotalPages() - 1) this.pathsCurrentPage.set(this.pathsTotalPages() - 1);
+      },
       error: () => { this.loadingPaths.set(false); this.fail('ADMIN.sharepoint.errors.load'); },
     });
   }
@@ -751,7 +768,11 @@ export class SharePointAdminComponent implements OnInit {
   private loadEmployees(): void {
     this.loadingEmployees.set(true);
     this.svc.listEmployees(this.docKind()).subscribe({
-      next: rows => { this.employees.set(rows); this.loadingEmployees.set(false); },
+      next: rows => {
+        this.employees.set(rows); this.loadingEmployees.set(false);
+        // Page restaurée au-delà de la liste rechargée → dernière page existante.
+        if (this.employeesCurrentPage() > this.employeesTotalPages() - 1) this.employeesCurrentPage.set(this.employeesTotalPages() - 1);
+      },
       error: () => { this.loadingEmployees.set(false); this.fail('ADMIN.sharepoint.errors.load'); },
     });
   }

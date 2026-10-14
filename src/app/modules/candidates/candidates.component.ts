@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, catchError, of } from 'rxjs';
 import {
@@ -21,6 +21,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { CandidateService } from './candidate.service';
 import { RejectModalComponent } from './reject-modal.component';
+import { RecrutementStateService } from './recrutement-state.service';
 import { UserStore } from '../../core/user.store';
 import { ConfirmService } from '../../core/confirm.service';
 import { statusBadge } from '../../shared/status-badge.utils';
@@ -286,6 +287,51 @@ export class CandidatesComponent implements OnInit {
 
   readonly canAcceptReject = computed(() => this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'));
 
+  // ── Mémoire de la page ─────────────────────────────────────────────────────
+  private pageState = inject(RecrutementStateService);
+
+  /**
+   * Chaque changement de vue, de recherche, de filtre, de tri ou de page est mémorisé,
+   * pour que le retour depuis la fiche d'un candidat retrouve la page telle qu'on l'a
+   * quittée. Le premier passage a lieu après `ngOnInit`, donc après la restauration :
+   * il réécrit l'état restauré, sans l'écraser par des valeurs vides.
+   */
+  private readonly persistState = effect(() => {
+    this.pageState.save({
+      viewMode:          this.viewMode(),
+      search:            this.search(),
+      statusFilter:      this.statusFilter(),
+      departmentFilter:  this.departmentFilter(),
+      demandFilter:      this.demandFilter(),
+      createdRange:      this.createdRange(),
+      sort:              this.sort(),
+      page:              this.currentPage(),
+      pageSize:          this.pageSize(),
+      columnSortDirs:    this.columnSortDirs(),
+      mobileStageFilter: this.mobileStageFilter(),
+    });
+  });
+
+  /**
+   * Avant les premiers chargements et le premier rendu : la requête du tableau Kanban
+   * lit les filtres, et `daf-filter` ne lit `initialValues` qu'une fois.
+   */
+  private restoreState(): void {
+    const s = this.pageState.restore();
+    if (!s) return;
+    this.viewMode.set(s.viewMode);
+    this.search.set(s.search);
+    this.statusFilter.set(s.statusFilter);
+    this.departmentFilter.set(s.departmentFilter);
+    this.demandFilter.set(s.demandFilter);
+    this.createdRange.set(s.createdRange);
+    this.sort.set(s.sort);
+    this.currentPage.set(s.page);
+    this.pageSize.set(s.pageSize);
+    this.columnSortDirs.set(s.columnSortDirs);
+    this.mobileStageFilter.set(s.mobileStageFilter);
+  }
+
   // ── Toolbar ────────────────────────────────────────────────────────────────
   /**
    * The status dropdown belongs *inside* the filter panel — `daf-search-toolbar`
@@ -391,6 +437,10 @@ export class CandidatesComponent implements OnInit {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.restoreState();
+    // Retour sur la vue liste : elle ne se charge sinon qu'à la bascule (`setView`).
+    if (this.viewMode() === 'list') this.loadCandidates();
+
     forkJoin({
       stats:  this.svc.getDashboardStats().pipe(catchError(() => of(null))),
       kanban: this.svc.getCandidates(this.kanbanQuery()).pipe(catchError(() => of(null))),
@@ -477,7 +527,17 @@ export class CandidatesComponent implements OnInit {
       page:   this.currentPage(),
       size:   this.pageSize(),
     }).subscribe({
-      next:  r  => { this.page.set(r); this.loading.set(false); },
+      next: r => {
+        // Page restaurée devenue hors limites (candidats archivés entre-temps) : on
+        // retombe sur la première plutôt que d'afficher une liste vide.
+        if (r.content.length === 0 && this.currentPage() > 0) {
+          this.currentPage.set(0);
+          this.loadCandidates();
+          return;
+        }
+        this.page.set(r);
+        this.loading.set(false);
+      },
       error: () => this.loading.set(false),
     });
   }
@@ -561,7 +621,13 @@ export class CandidatesComponent implements OnInit {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
-  onView(id: number): void { this.router.navigate(['/rh/candidates', id]); }
+  /**
+   * `from=recrutement` : le fil d'Ariane de la fiche ramène alors ici, et non au Kanban de
+   * `/rh/candidates` — c'est ce retour qui retrouve la page filtrée.
+   */
+  onView(id: number): void {
+    this.router.navigate(['/rh/candidates', id], { queryParams: { from: 'recrutement' } });
+  }
 
   // ── Accept / reject (PENDING candidates only) ──────────────────────────────
   async quickAccept({ candidate, event }: { candidate: CandidateListItem; event: Event }): Promise<void> {

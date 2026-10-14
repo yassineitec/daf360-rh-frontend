@@ -11,6 +11,7 @@ import { BreakLegalRuleDto, CreateBreakLegalRuleRequest } from './break.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { rankIn, searchRows } from '../../../shared/table-sort.utils';
 import { adminLabel } from '../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../admin-section-state';
 
 @Component({
   selector: 'app-legal-rules-admin',
@@ -150,6 +151,10 @@ export class LegalRulesAdminComponent implements OnChanges {
 
   /** Toolbar search text — filters the rows on what each one shows. */
   readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('breaks.legal-rules', { searchQuery: this.searchQuery });
 
   toggleForm(): void {
     this.showForm.set(!this.showForm());

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output, untracked, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { BadgeCell, DataTableComponent, TableColumn, TableConfig, TableRow } from '@khalilrebhiitec/daf360';
@@ -81,6 +81,12 @@ export class RecruitmentDemandTableSectionComponent {
   /** Server-side sort (`manualSort`) — only entity-backed columns stay sortable (SERVER_SORT_FIELD). */
   readonly serverSort = input(false);
   readonly serverSortChange = output<string | null>();
+  /**
+   * Tri serveur en cours (`submittedAt,asc`…), tel que la page le tient (`serverSort`
+   * seulement). Il ne sert qu'à placer la flèche quand le tableau est (re)créé — retour
+   * d'une fiche, retour de la vue cartes : sans lui, la liste restait triée sans le montrer.
+   */
+  readonly sort = input<string | null>(null);
 
   readonly action = output<{ action: RecruitmentDemandAction; demand: RecruitmentDemandSummary }>();
 
@@ -141,6 +147,8 @@ export class RecruitmentDemandTableSectionComponent {
       rowId: (row) => (row['_source'] as RecruitmentDemandSummary).id,
       // Rows are rendered in the order the server returned; sortChange still fires.
       manualSort: this.serverSort(),
+      // Lu une seule fois (`untracked`) : la lib n'applique `defaultSort` qu'au premier rendu.
+      ...this.defaultSort(untracked(this.sort)),
       ...(this.tools() ? {
         resizableColumns: true,
         resizableRows: true,
@@ -163,6 +171,14 @@ export class RecruitmentDemandTableSectionComponent {
       ],
     };
   });
+
+  /** Inverse de `onSortChange` : `submittedAt,asc` → la flèche sur la colonne correspondante. */
+  private defaultSort(sort: string | null): Pick<TableConfig, 'defaultSort'> {
+    if (!this.serverSort()) return {};
+    const [field, dir] = (sort ?? '').split(',');
+    const key = Object.keys(SERVER_SORT_FIELD).find(k => SERVER_SORT_FIELD[k] === field);
+    return key && (dir === 'asc' || dir === 'desc') ? { defaultSort: { key, dir } } : {};
+  }
 
   /** Header click (or the reset icon) in server mode → Spring `sort` value, or null when cleared. */
   protected onSortChange(key: string, dir: 'asc' | 'desc' | null): void {

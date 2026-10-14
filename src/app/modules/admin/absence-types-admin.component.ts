@@ -12,6 +12,7 @@ import {
 import { NotificationService } from '../../core/notification.service';
 import { searchRows } from '../../shared/table-sort.utils';
 import { roleLabel } from '../../shared/utils/admin-label.utils';
+import { rememberAdminState } from './admin-section-state';
 // Service and model stay in `modules/conges`: they describe the congé domain, and the
 // self-service modal reads the same catalogue. Only the ADMIN SCREEN lives here, with the
 // other sixteen configurable lists — which is where someone goes to configure something.
@@ -361,6 +362,10 @@ export class AbsenceTypesAdminComponent implements OnInit {
 
   /** Toolbar search text — filters the rows below on what each one shows. */
   readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('absence-types', { searchQuery: this.searchQuery });
 
   protected onSearch(value: string): void {
     if (value !== this.searchQuery()) this.searchQuery.set(value);

@@ -2,7 +2,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue } from '../../core/lists/configurable-list.model';
 import { adminLabel } from '../../shared/utils/admin-label.utils';
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { forkJoin, catchError, of } from 'rxjs';
 import {
@@ -21,6 +21,7 @@ import { ProfilesCardsSectionComponent } from './sections/profiles-cards-section
 import { ProfilesTableSectionComponent } from './sections/profiles-table-section.component';
 import { CONTRACT_CODES, LIFECYCLE_CODES, contractLabel, lifecycleLabel } from './profile-labels';
 import { UserStore } from '../../core/user.store';
+import { ProfileListStateService } from './services/profile-list-state.service';
 
 const DEFAULT_PAGE_SIZE = 12;
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
@@ -108,6 +109,42 @@ export class ProfileListComponent implements OnInit {
 
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar. */
   readonly tableSection = viewChild(ProfilesTableSectionComponent);
+
+  // ── Mémoire de la liste ────────────────────────────────────────────────────
+  private listState = inject(ProfileListStateService);
+
+  /**
+   * Chaque changement de recherche, de filtre, de tri, de page ou de vue est mémorisé,
+   * pour que le retour depuis une fiche (fil d'Ariane) retrouve la liste telle qu'on l'a
+   * quittée. Pas la sélection : elle porte sur une page, et elle est déjà vidée à chaque
+   * nouveau jeu de résultats. Le premier passage a lieu après `ngOnInit`, donc après la
+   * restauration : il réécrit l'état restauré, sans l'écraser par des valeurs vides.
+   */
+  private readonly persistState = effect(() => {
+    this.listState.save({
+      searchText: this.searchText(),
+      filters:    this.filters(),
+      sort:       this.sort(),
+      page:       this.currentPage(),
+      pageSize:   this.pageSize(),
+      viewMode:   this.viewMode(),
+    });
+  });
+
+  /**
+   * Avant le premier chargement et le premier rendu : `daf-filter` ne lit
+   * `initialValues` qu'une fois, le panneau doit donc naître avec les valeurs restaurées.
+   */
+  private restoreState(): void {
+    const s = this.listState.restore();
+    if (!s) return;
+    this.searchText.set(s.searchText);
+    this.filters.set(s.filters as Partial<Record<FilterKey, string>>);
+    this.sort.set(s.sort);
+    this.currentPage.set(s.page);
+    this.pageSize.set(s.pageSize);
+    this.viewMode.set(s.viewMode);
+  }
 
 
   // ── Filter panel ───────────────────────────────────────────────────────────
@@ -236,6 +273,7 @@ export class ProfileListComponent implements OnInit {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.restoreState();
     forkJoin({
       list: this.svc.getEmployees(this.queryParams()).pipe(catchError(() => of(null))),
       opts: this.svc.getFilterOptions(),
@@ -251,8 +289,10 @@ export class ProfileListComponent implements OnInit {
     this.svc.getEmployees(this.queryParams())
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
-        this.applyPage(res);
+        // Avant `applyPage` : s'il relance un chargement (page hors limites), c'est lui
+        // qui rallume l'indicateur.
         this.loading.set(false);
+        this.applyPage(res);
       });
   }
 
@@ -262,6 +302,13 @@ export class ProfileListComponent implements OnInit {
       return;
     }
     this.error.set(null);
+    // Page restaurée devenue hors limites (profils sortis entre-temps) : on retombe sur
+    // la première plutôt que d'afficher une liste vide.
+    if (res.content.length === 0 && this.currentPage() > 0) {
+      this.currentPage.set(0);
+      this.loadEmployees();
+      return;
+    }
     this.employees.set(res.content);
     this.totalElements.set(res.totalElements);
     this.totalPages.set(res.totalPages);

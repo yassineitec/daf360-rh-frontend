@@ -198,11 +198,24 @@ export class CandidateDetailComponent implements OnInit {
   });
 
   // ── Header ─────────────────────────────────────────────────────────────────
+  /**
+   * La page d'où la fiche a été ouverte, pour que le retour y ramène — là où l'utilisateur
+   * a laissé ses filtres : `/rh/recrutement` (`?from=recrutement`), la liste
+   * `/rh/candidates/list` (`?from=list`), sinon le Kanban de `/rh/candidates`.
+   */
+  private readonly back: { labelKey: string; link: string } = (() => {
+    switch (this.route.snapshot.queryParamMap.get('from')) {
+      case 'recrutement': return { labelKey: 'CANDIDATES.PIPELINE_RH.TITLE', link: '/rh/recrutement' };
+      case 'list':        return { labelKey: 'CANDIDATES.LIST.TITLE',        link: '/rh/candidates/list' };
+      default:            return { labelKey: 'CANDIDATES.DETAIL.BREADCRUMB', link: '/rh/candidates' };
+    }
+  })();
+
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
     this.translate.currentLang();
     const c = this.candidate();
     return [
-      { label: this.translate.instant('CANDIDATES.DETAIL.BREADCRUMB'), link: '/rh/candidates' },
+      { label: this.translate.instant(this.back.labelKey), link: this.back.link },
       { label: c ? `${c.firstName} ${c.lastName}` : `#${this.candidateId}` },
     ];
   });
@@ -744,7 +757,9 @@ export class CandidateDetailComponent implements OnInit {
   // ── Navigation ─────────────────────────────────────────────────────────────
   goToProvisioning(provId: number): void { this.router.navigate(['/rh/it-provisioning', provId]); }
   goToOnboarding(): void { this.router.navigate(['/rh/onboarding', this.candidateId]); }
-  navigateToCandidate(): void { this.router.navigate(['/rh/candidates']); }
+  navigateToCandidate(): void {
+    this.router.navigate([this.back.link]);
+  }
   navigateToProfiles(): void { this.router.navigate(['/rh/profiles']); }
 }
 

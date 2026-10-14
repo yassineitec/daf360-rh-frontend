@@ -11,6 +11,7 @@ import { RoutingRuleEditorComponent } from './routing-rule-editor.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 import { adminLabel } from '../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../admin-section-state';
 
 /** What each event-type column sorts on. "Canaux" sorts on how many channels are on.
  *  The event label sorts on the label shown — see `sortAccessors`. */
@@ -52,6 +53,13 @@ export class NotificationRoutingComponent implements OnInit {
   pageSize = signal(10);
   /** Table header sort — applied to the whole list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri, page et taille de page gardés tant qu'on reste dans /rh/admin (voir
+   *  `rememberAdminState`). Jamais la règle ouverte (`selectedType`). */
+  private readonly memory = rememberAdminState('notifications', {
+    searchQuery: this.searchQuery, currentPage: this.currentPage, pageSize: this.pageSize, sort: this.sort,
+  });
 
   readonly pageSizeOptions = [10, 20, 50];
 
@@ -137,6 +145,8 @@ export class NotificationRoutingComponent implements OnInit {
     this.svc.getEventTypes().subscribe({
       next: (types) => {
         this.eventTypes.set(types);
+        // Page restaurée (ou liste raccourcie) : on retombe sur la dernière page existante.
+        this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
         this.loadingTypes.set(false);
       },
       error: (err) => {
