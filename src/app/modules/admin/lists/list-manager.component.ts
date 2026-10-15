@@ -19,6 +19,12 @@ import { rememberAdminState } from '../admin-section-state';
 
 const PAGE_SIZE = 10;
 
+/**
+ * Lists kept in the DB but no longer administered here. EMPLOYMENT_TYPE was replaced by
+ * CONTRACT_TYPE (same « Type de contrat » label) — sql/2026-10-15_suppr_liste_employment_type.sql drops it.
+ */
+const HIDDEN_LIST_CODES = new Set(['EMPLOYMENT_TYPE']);
+
 /** What each list-value column sorts on. No sort = the list's own `sortOrder`. */
 const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> = {
   valueCode: v => v.valueCode || null,
@@ -248,7 +254,8 @@ export class ListManagerComponent implements OnInit {
 
   ngOnInit(): void {
     this.listService.getListTypes().subscribe({
-      next: types => {
+      next: all => {
+        const types = all.filter(t => !HIDDEN_LIST_CODES.has(t.code));
         this.listTypes.set(types);
         this.loadingTypes.set(false);
         // Liste restaurée (`rememberAdminState`) : on la rouvre telle quelle, sans vider sa
