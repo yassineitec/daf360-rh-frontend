@@ -1,0 +1,99 @@
+<!-- /rh/cdi-conversions — canonical page shape (UI-PLAYBOOK §1). `daf-page` owns the rhythm. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
+
+  <daf-page-header
+    [title]="'CDI_CONVERSION.TITLE' | translate"
+    [subtitle]="'CDI_CONVERSION.SUBTITLE' | translate" />
+
+  <section class="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-4">
+    <daf-metric-card
+      [label]="'CDI_CONVERSION.KPI.TODO' | translate"
+      [value]="stats().todo"
+      [options]="{ icon: 'pending_actions', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+    <daf-metric-card
+      [label]="'CDI_CONVERSION.KPI.PENDING' | translate"
+      [value]="stats().pending"
+      [options]="{ icon: 'hourglass_top', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+    <daf-metric-card
+      [label]="'CDI_CONVERSION.KPI.TO_CONVERT' | translate"
+      [value]="stats().toConvert"
+      [options]="{ icon: 'assignment_turned_in', iconColor: 'text-tertiary', iconBg: 'bg-tertiary/10' }" />
+    <daf-metric-card
+      [label]="'CDI_CONVERSION.KPI.CONVERTED' | translate"
+      [value]="stats().converted"
+      [options]="{ icon: 'workspace_premium', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
+  </section>
+
+  <daf-tabs #tabsRef
+    variant="underline"
+    style="--daf-tabs-fade: var(--color-background)"
+    [tabs]="tabs()"
+    [(active)]="activeTab"
+    idPrefix="cdi-conversions" />
+
+  <div role="tabpanel"
+       [id]="tabsRef.panelId(activeTab())"
+       [attr.aria-labelledby]="tabsRef.tabId(activeTab())"
+       class="flex flex-col gap-8">
+
+    @if (error()) {
+      <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+        <span class="material-symbols-outlined text-[18px]">error</span>
+        {{ error() }}
+      </div>
+    }
+
+    <daf-data-table
+      [columns]="columns()"
+      [rows]="rows()"
+      [config]="config()"
+      (rowClick)="onRowClick($event)" />
+  </div>
+
+</daf-page>
+
+<!-- Modals and drawer at the PAGE ROOT: they are position:fixed (§10e). -->
+<rh-cdi-conversion-detail-drawer
+  [request]="selected()"
+  [open]="!!selected()"
+  (closed)="selected.set(null)"
+  (act)="onDrawerAction($event)" />
+
+<rh-cdi-conversion-decision-modal
+  [visible]="!!deciding()"
+  [request]="selected()"
+  [action]="deciding() ?? 'APPROVE'"
+  [submitting]="submitting()"
+  [error]="modalError()"
+  (closed)="deciding.set(null)"
+  (submit)="applyDecision($event)" />
+
+<app-modal
+  [title]="'CDI_CONVERSION.CANCEL.TITLE' | translate"
+  [visible]="cancelling()"
+  [hasFooter]="true"
+  (closed)="cancelling.set(false)">
+  <div class="flex flex-col gap-5">
+    <p class="m-0 text-body-sm text-on-surface-variant">{{ 'CDI_CONVERSION.CANCEL.HELP' | translate }}</p>
+    @if (modalError()) {
+      <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+        <span class="material-symbols-outlined text-[18px]">error</span>
+        {{ modalError() }}
+      </div>
+    }
+    <daf-form-field
+      [value]="cancelComment()"
+      [options]="{ type: 'textarea', rows: 2, fullWidth: true, maxLength: 2000,
+                   label: ('CDI_CONVERSION.FIELDS.COMMENT' | translate) }"
+      (valueChange)="onCancelComment($event)" />
+  </div>
+  <div slot="footer">
+    <daf-button
+      [options]="{ variant: 'secondary', label: ('CDI_CONVERSION.ACTIONS.CANCEL' | translate) }"
+      (onClick)="cancelling.set(false)" />
+    <daf-button
+      [options]="{ variant: 'danger', iconStart: 'block', label: ('CDI_CONVERSION.CANCEL.CONFIRM' | translate),
+                   loading: submitting(), disabled: submitting() }"
+      (onClick)="confirmCancel()" />
+  </div>
+</app-modal>

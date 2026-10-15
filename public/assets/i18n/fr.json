@@ -4283,6 +4283,98 @@
       "PLACEHOLDER": "Module Congés — implémentation à venir."
     }
   },
+  "CDI_CONVERSION": {
+    "TITLE": "Passages en CDI",
+    "SUBTITLE": "Demandes de passage d'un CIVP en CDI : validation technique et salariale, escalade, puis conversion par les RH",
+    "TABS": { "TODO": "À traiter", "ALL": "Toutes les demandes" },
+    "KPI": { "TODO": "À traiter par moi", "PENDING": "En attente de décision", "TO_CONVERT": "Validées, à convertir", "CONVERTED": "Converties en CDI" },
+    "COLS": { "EMPLOYEE": "Collaborateur", "STATUS": "Statut", "START": "Début du CDI", "SALARY": "Salaire net", "REQUESTER": "Demandé par", "REQUESTED_AT": "Déposée le" },
+    "EMPTY_TODO": "Aucune demande n'attend votre action.",
+    "EMPTY_ALL": "Aucune demande de passage en CDI.",
+    "STATUS": {
+      "SUBMITTED": "À valider",
+      "ESCALATED": "Escaladée",
+      "APPROVED": "Validée — à convertir",
+      "CONVERTED": "Convertie en CDI",
+      "REJECTED": "Refusée",
+      "CANCELLED": "Annulée"
+    },
+    "STEP": {
+      "SUBMIT": "Demande déposée",
+      "APPROVE": "Validée",
+      "REJECT": "Refusée",
+      "ESCALATE": "Escaladée",
+      "CANCEL": "Annulée",
+      "CONVERT": "Contrat CDI établi"
+    },
+    "NEXT": {
+      "VALIDATION": "Validation technique et salariale attendue",
+      "ARBITRATION": "Décision attendue au niveau supérieur",
+      "CONVERSION": "Établissement du contrat CDI par les RH"
+    },
+    "FIELDS": {
+      "START_DATE": "Date de début du CDI",
+      "PROPOSED_SALARY": "Salaire net mensuel proposé",
+      "SALARY_HINT": "Montant net mensuel, dans la devise du pays",
+      "JUSTIFICATION": "Justification",
+      "JUSTIFICATION_PH": "Affectations, retours des responsables, compétences acquises…",
+      "REQUESTED_BY": "Demandé par",
+      "REQUESTED_AT": "Déposée le",
+      "CIVP_PERIOD": "Période CIVP",
+      "DECIDED_BY": "Décision par",
+      "DECIDED_AT": "Décision le",
+      "VALIDATED_SALARY": "Salaire net retenu",
+      "VALIDATED_START": "Début du CDI retenu",
+      "CONVERTED_AT": "Contrat établi le",
+      "COMMENT": "Commentaire",
+      "REASON": "Motif (obligatoire)"
+    },
+    "ACTIONS": {
+      "OPEN": "Voir la demande",
+      "APPROVE": "Valider",
+      "REJECT": "Refuser",
+      "ESCALATE": "Escalader",
+      "CANCEL_REQUEST": "Annuler la demande",
+      "CANCEL": "Annuler",
+      "CLOSE": "Fermer"
+    },
+    "DETAIL": {
+      "TITLE": "Demande de passage en CDI",
+      "OPEN_PROFILE": "Ouvrir la fiche",
+      "REQUEST": "Demande",
+      "DECISION": "Décision",
+      "HISTORY": "Historique",
+      "TO_CONVERT": "Demande validée : établissez le contrat CDI depuis la fiche du collaborateur (onglet Historique)."
+    },
+    "DECISION": {
+      "TITLE_APPROVE": "Valider le passage en CDI",
+      "TITLE_REJECT": "Refuser le passage en CDI",
+      "TITLE_ESCALATE": "Escalader la demande",
+      "CONFIRM_APPROVE": "Valider",
+      "CONFIRM_REJECT": "Refuser",
+      "CONFIRM_ESCALATE": "Escalader",
+      "KEEP_PROPOSAL": "Laissez la proposition ou ajustez le montant",
+      "ESCALATE_HELP": "La demande sera transmise au niveau supérieur, qui prendra la décision finale. Expliquez ce qu'il doit trancher."
+    },
+    "REQUEST": {
+      "TITLE": "Demander le passage en CDI",
+      "CONTRACT": "Contrat concerné",
+      "HELP": "La demande sera validée sur le plan technique et salarial, éventuellement escaladée ; les RH seront notifiés de la décision finale.",
+      "SUBMIT": "Envoyer la demande",
+      "SENT": "Demande de passage en CDI envoyée."
+    },
+    "CANCEL": {
+      "TITLE": "Annuler la demande",
+      "HELP": "La demande sera close sans décision. Un nouveau dépôt reste possible.",
+      "CONFIRM": "Annuler la demande"
+    },
+    "CARD": {
+      "LABEL": "Passage en CDI",
+      "OPEN": "Voir la demande",
+      "REQUEST": "Demander le passage en CDI"
+    },
+    "CONVERT_INFO": "Passage validé par {{by}} — salaire net retenu : {{salary}}. Le contrat CDI sera créé à la date ci-dessous."
+  },
   "NAV": {
     "SECTION_LABEL": "NAVIGATION RH",
     "ACCUEIL": "Accueil",
@@ -4300,6 +4392,7 @@
     "MISSIONS_CURRENT": "Missions en cours",
     "MISSIONS_HISTORY": "Historique des missions",
     "BILLETERIE": "Billeterie",
+    "CDI_CONVERSIONS": "Passages en CDI",
     "REQUESTS_HISTORY": "Historique demande",
     "CONGES": "Congés",
     "CONGES_INBOX": "À traiter",

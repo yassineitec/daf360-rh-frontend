@@ -4283,6 +4283,98 @@
       "PLACEHOLDER": "Leave module — implementation coming soon."
     }
   },
+  "CDI_CONVERSION": {
+    "TITLE": "Permanent contract requests",
+    "SUBTITLE": "CIVP to permanent contract (CDI) requests: technical and salary validation, escalation, then conversion by HR",
+    "TABS": { "TODO": "To handle", "ALL": "All requests" },
+    "KPI": { "TODO": "Waiting for me", "PENDING": "Awaiting decision", "TO_CONVERT": "Approved, to convert", "CONVERTED": "Converted to CDI" },
+    "COLS": { "EMPLOYEE": "Employee", "STATUS": "Status", "START": "CDI start", "SALARY": "Net salary", "REQUESTER": "Requested by", "REQUESTED_AT": "Filed on" },
+    "EMPTY_TODO": "No request is waiting for you.",
+    "EMPTY_ALL": "No permanent contract request.",
+    "STATUS": {
+      "SUBMITTED": "To validate",
+      "ESCALATED": "Escalated",
+      "APPROVED": "Approved — to convert",
+      "CONVERTED": "Converted to CDI",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "STEP": {
+      "SUBMIT": "Request filed",
+      "APPROVE": "Approved",
+      "REJECT": "Rejected",
+      "ESCALATE": "Escalated",
+      "CANCEL": "Cancelled",
+      "CONVERT": "CDI contract created"
+    },
+    "NEXT": {
+      "VALIDATION": "Technical and salary validation pending",
+      "ARBITRATION": "Decision pending at the higher level",
+      "CONVERSION": "CDI contract to be created by HR"
+    },
+    "FIELDS": {
+      "START_DATE": "CDI start date",
+      "PROPOSED_SALARY": "Proposed monthly net salary",
+      "SALARY_HINT": "Monthly net amount, in the country's currency",
+      "JUSTIFICATION": "Justification",
+      "JUSTIFICATION_PH": "Assignments, managers' feedback, skills acquired…",
+      "REQUESTED_BY": "Requested by",
+      "REQUESTED_AT": "Filed on",
+      "CIVP_PERIOD": "CIVP period",
+      "DECIDED_BY": "Decided by",
+      "DECIDED_AT": "Decided on",
+      "VALIDATED_SALARY": "Retained net salary",
+      "VALIDATED_START": "Retained CDI start",
+      "CONVERTED_AT": "Contract created on",
+      "COMMENT": "Comment",
+      "REASON": "Reason (required)"
+    },
+    "ACTIONS": {
+      "OPEN": "View request",
+      "APPROVE": "Approve",
+      "REJECT": "Reject",
+      "ESCALATE": "Escalate",
+      "CANCEL_REQUEST": "Cancel request",
+      "CANCEL": "Cancel",
+      "CLOSE": "Close"
+    },
+    "DETAIL": {
+      "TITLE": "Permanent contract request",
+      "OPEN_PROFILE": "Open profile",
+      "REQUEST": "Request",
+      "DECISION": "Decision",
+      "HISTORY": "History",
+      "TO_CONVERT": "Request approved: create the CDI contract from the employee's profile (History tab)."
+    },
+    "DECISION": {
+      "TITLE_APPROVE": "Approve the move to CDI",
+      "TITLE_REJECT": "Reject the move to CDI",
+      "TITLE_ESCALATE": "Escalate the request",
+      "CONFIRM_APPROVE": "Approve",
+      "CONFIRM_REJECT": "Reject",
+      "CONFIRM_ESCALATE": "Escalate",
+      "KEEP_PROPOSAL": "Keep the proposal or adjust the amount",
+      "ESCALATE_HELP": "The request goes to the higher level, who takes the final decision. Explain what they need to decide."
+    },
+    "REQUEST": {
+      "TITLE": "Request a move to CDI",
+      "CONTRACT": "Contract",
+      "HELP": "The request is validated on the technical and salary side, possibly escalated; HR is notified of the final decision.",
+      "SUBMIT": "Send request",
+      "SENT": "Permanent contract request sent."
+    },
+    "CANCEL": {
+      "TITLE": "Cancel the request",
+      "HELP": "The request is closed without a decision. A new one can be filed later.",
+      "CONFIRM": "Cancel request"
+    },
+    "CARD": {
+      "LABEL": "Move to CDI",
+      "OPEN": "View request",
+      "REQUEST": "Request move to CDI"
+    },
+    "CONVERT_INFO": "Approved by {{by}} — retained net salary: {{salary}}. The CDI contract will start on the date below."
+  },
   "NAV": {
     "SECTION_LABEL": "HR NAVIGATION",
     "ACCUEIL": "Home",
@@ -4300,6 +4392,7 @@
     "MISSIONS_CURRENT": "Current missions",
     "MISSIONS_HISTORY": "Mission history",
     "BILLETERIE": "Ticketing",
+    "CDI_CONVERSIONS": "Permanent contract requests",
     "REQUESTS_HISTORY": "Request history",
     "CONGES": "Leave",
     "CONGES_INBOX": "To handle",
