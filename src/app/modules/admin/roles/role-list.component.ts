@@ -1,24 +1,19 @@
-import { Component, computed, inject, input, output, signal, effect, untracked } from '@angular/core';
+import { Component, computed, inject, input, output, signal, effect, untracked, viewChild } from '@angular/core';
 import {
-  PaginationComponent, ButtonComponent, FormFieldComponent,
+  PaginationComponent, SearchToolbarComponent, ButtonComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { RoleListItem } from './role.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../admin-section-state';
 
 type RoleSort = { key: string; dir: 'asc' | 'desc' };
-
-/** What each table column sorts on — keyed by the table's column keys. */
-const ROLE_SORT_VALUE: Record<string, (r: RoleListItem) => string | number | null> = {
-  name:    r => r.frenchName || null,
-  // The "details" cell leads with the permission count, so that is what it sorts on.
-  details: r => r.permissionCount ?? null,
-  parent:  r => r.parentRoleName || null,
-};
+type RoleSortValues = Record<string, (r: RoleListItem) => string | number | null>;
 
 /** Sorts the whole filtered list — the table is `manualSort`, so it only reorders one page. */
-function sortRoles(items: RoleListItem[], sort: RoleSort | null): RoleListItem[] {
-  const value = sort && ROLE_SORT_VALUE[sort.key];
+function sortRoles(items: RoleListItem[], sort: RoleSort | null, values: RoleSortValues): RoleListItem[] {
+  const value = sort && values[sort.key];
   if (!sort || !value) return items;
   const sign = sort.dir === 'asc' ? 1 : -1;
   return [...items].sort((a, b) => {
@@ -41,7 +36,7 @@ function sortRoles(items: RoleListItem[], sort: RoleSort | null): RoleListItem[]
   selector: 'app-role-list',
   standalone: true,
   imports: [
-    PaginationComponent, ButtonComponent, FormFieldComponent,
+    PaginationComponent, SearchToolbarComponent, ButtonComponent,
     DataTableComponent, DafCellDirective,
     TranslatePipe,
   ],
@@ -64,7 +59,6 @@ export class RoleListComponent {
   // State
   searchQuery = signal('');
   currentPage = signal(0);
-  mobileSearchOpen = signal(false);
 
   pageSize = signal(10);
   readonly pageSizeOptions = [10, 20, 50];
@@ -72,11 +66,48 @@ export class RoleListComponent {
   /** Table header sort — applied to the whole filtered list, before paging. */
   sort = signal<RoleSort | null>(null);
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin, détail d'un rôle compris (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('roles.list', {
+    searchQuery: this.searchQuery, currentPage: this.currentPage, pageSize: this.pageSize, sort: this.sort,
+  });
+
+  /** Le tableau (absent pendant le chargement) — passé au `[table]` de la barre. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** Nouvelle recherche → retour à la première page (sinon on peut rester sur une page vide). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  /** A role's name in the UI language. */
+  name(r: RoleListItem): string {
+    return roleLabel(r, this.translate);
+  }
+
+  /** The parent's name in the UI language, looked up by id (the DTO's parentRoleName is French). */
+  parentName(r: RoleListItem): string | null {
+    if (r.parentRoleId == null) return null;
+    const parent = this.roles().find(p => p.id === r.parentRoleId);
+    return parent ? this.name(parent) : r.parentRoleName;
+  }
+
+  /** What each table column sorts on — keyed by the table's column keys. */
+  private readonly sortValues: RoleSortValues = {
+    name:    r => this.name(r) || null,
+    // The "details" cell leads with the permission count, so that is what it sorts on.
+    details: r => r.permissionCount ?? null,
+    parent:  r => this.parentName(r) || null,
+  };
+
+  /** Searches both names, so a role is found whichever language it was typed in. */
   filteredRoles = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
     if (!q) return this.roles();
     return this.roles().filter(r =>
-      r.frenchName.toLowerCase().includes(q)
+      r.frenchName.toLowerCase().includes(q) || !!r.englishName?.toLowerCase().includes(q)
     );
   });
 
@@ -84,7 +115,8 @@ export class RoleListComponent {
 
   pagedRoles = computed(() => {
     const start = this.currentPage() * this.pageSize();
-    return sortRoles(this.filteredRoles(), this.sort()).slice(start, start + this.pageSize());
+    this.translate.currentLang();   // names (and so the order) depend on the language
+    return sortRoles(this.filteredRoles(), this.sort(), this.sortValues).slice(start, start + this.pageSize());
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -99,8 +131,8 @@ export class RoleListComponent {
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedRoles().map(r => ({
-      name:    r.frenchName,
-      parent:  r.parentRoleName ?? null,
+      name:    this.name(r),
+      parent:  this.parentName(r),
       _source: r,
     })),
   );
@@ -143,8 +175,21 @@ export class RoleListComponent {
     this.currentPage.set(0);
   }
 
+  /** Liste vue au passage précédent — `null` avant le premier. */
+  private lastRoles: RoleListItem[] | null = null;
+
   private resetPageOnFilterChange = effect(() => {
     this.filteredRoles();
+    const roles = this.roles();
+    const prev = this.lastRoles;
+    this.lastRoles = roles;
+    // Premier passage ou arrivée de la liste : garder la page restaurée, ramenée à la
+    // dernière page existante. Seul un vrai changement de liste revient à la page 0.
+    if (prev === null || prev.length === 0) {
+      // `Math.max(0, …)` : une recherche restaurée qui ne trouve plus rien donne 0 page.
+      if (roles.length) this.currentPage.set(Math.max(0, Math.min(untracked(this.currentPage), this.totalPages() - 1)));
+      return;
+    }
     this.currentPage.set(0);
   });
 

@@ -1,3 +1,4 @@
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { Component, OnInit, computed, input, output, signal, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
@@ -10,7 +11,7 @@ import {
   MultiDatePickerComponent,
   SelectOption,
 } from '@khalilrebhiitec/daf360';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
@@ -28,14 +29,15 @@ export class StepIdentityComponent implements OnInit {
 
   private listService = inject(ConfigurableListService);
   private refSvc      = inject(RefDataService);
+  private translate   = inject(TranslateService);
 
   private genderList   = toSignal(this.listService.getListValues('GENDER'), { initialValue: [] });
   nationalities        = signal<RefDataItem[]>([]);
 
   readonly genderOptions = computed<SelectOption[]>(() =>
-    this.genderList().map(v => ({ value: v.valueCode, label: v.labelFr })));
+    this.genderList().map(v => ({ value: v.valueCode, label: adminLabel(v, this.translate) })));
   readonly nationalityOptions = computed<SelectOption[]>(() =>
-    this.nationalities().map(n => ({ value: String(n.id), label: n.labelFr })));
+    this.nationalities().map(n => ({ value: String(n.id), label: adminLabel(n, this.translate) })));
 
   firstName      = signal('');
   lastName       = signal('');

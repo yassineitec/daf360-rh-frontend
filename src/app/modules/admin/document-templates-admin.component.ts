@@ -14,7 +14,10 @@ import {
   ButtonComponent, StatusBadgeComponent,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
   ModalService, ModalRef,
+  SearchToolbarComponent, SearchToolbarFilterConfig, FilterField, FilterResult, ToolbarAction,
 } from '@khalilrebhiitec/daf360';
+import { searchRows } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="fr">
@@ -56,38 +59,35 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 @Component({
   selector: 'app-document-templates-admin',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, TranslatePipe],
+  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe],
   template: `
     <!-- Header -->
     <div class="tmpl-header">
-      <div>
-        <h3 class="section-title">{{ 'ADMIN.docs.templates.title' | translate }}</h3>
-        <p class="section-sub">{{ 'ADMIN.docs.templates.subtitle' | translate }} ({{'{{'}}variable.clé{{'}}'}}).</p>
-      </div>
-      <daf-button class="desktop-only" [label]="'ADMIN.docs.templates.newTemplate' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
-      <daf-button class="icon-btn-toggle mobile-only" title="Nouvelle maquette" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
+      <h3 class="section-title">{{ 'ADMIN.docs.templates.title' | translate }}</h3>
+      <p class="section-sub">{{ 'ADMIN.docs.templates.subtitle' | translate }} ({{'{{'}}variable.clé{{'}}'}}).</p>
     </div>
 
-    <!-- Filter bar -->
-    <div class="filter-bar">
-      <select class="filter-select" [(ngModel)]="filterCategory" (ngModelChange)="load()">
-        <option value="">{{ 'ADMIN.docs.templates.allCategories' | translate }}</option>
-        @for (c of TEMPLATE_CATEGORIES; track c) {
-          <option [value]="c">{{ categoryLabel(c) }}</option>
-        }
-      </select>
-      <label class="show-inactive-toggle">
-        <input type="checkbox" [(ngModel)]="showInactive" (ngModelChange)="load()" />
-        <span>{{ 'ADMIN.docs.templates.showInactive' | translate }}</span>
-      </label>
-    </div>
+    <!-- Same bar as the other lists: search, the category / inactive filters (server-side,
+         they reload the list) in the Filtres panel, "Nouvelle maquette", and [table] puts
+         the table's reset + column picker right of Filtres. -->
+    <daf-search-toolbar class="mb-4 block"
+      [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+      [value]="searchQuery()"
+      [debounce]="200"
+      (valueChange)="onSearch($event)"
+      [filterFields]="filterFields()"
+      [filterConfig]="filterConfig()"
+      (filterApply)="onFilterApply($event)"
+      [actions]="toolbarActions()"
+      (action)="onToolbarAction($event)"
+      [table]="tmplTable() ?? null" />
 
     <!-- List -->
     @if (loading()) {
       <div class="skeleton-wrap">
         @for (_ of [1,2,3]; track $index) { <div class="skeleton-row"></div> }
       </div>
-    } @else if (rows().length === 0) {
+    } @else if (tableRows().length === 0) {
       <div class="empty-state">
         <span class="material-symbols-outlined">description</span>
         <p>{{ 'ADMIN.docs.templates.empty' | translate }}</p>
@@ -95,7 +95,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     } @else {
       <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
+      <daf-data-table #tmplTable [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
         <ng-template dafCell="name" let-row>
           <span class="tmpl-name">{{ row['_source'].name }}</span>
           @if (row['_source'].description) { <span class="tmpl-desc">{{ row['_source'].description }}</span> }
@@ -189,11 +189,11 @@ const DEFAULT_HTML = `<!DOCTYPE html>
           } @else {
             @for (group of variableGroups(); track group.name) {
               <div class="var-group">
-                <div class="var-group-label">{{ group.name }}</div>
+                <div class="var-group-label">{{ groupLabel(group.name) }}</div>
                 @for (v of group.vars; track v.key) {
                   <button class="var-chip" (click)="insertVariable(v.key)">
                     <code class="var-code">{{ '{{' + v.key + '}}' }}</code>
-                    <span class="var-label-text">{{ v.labelFr }}</span>
+                    <span class="var-label-text">{{ variableLabel(v) }}</span>
                   </button>
                 }
               </div>
@@ -229,13 +229,9 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     </ng-template>
   `,
   styles: [`
-    .tmpl-header    { display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap }
+    .tmpl-header    { margin-bottom:16px }
     .section-title  { font-size:15px;font-weight:700;color:var(--color-text);margin:0 0 4px }
     .section-sub    { font-size:13px;color:var(--color-text-muted);margin:0 }
-
-    .filter-bar     { display:flex;align-items:center;gap:14px;margin-bottom:16px }
-    .filter-select  { padding:7px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;background:var(--color-surface);color:var(--color-text);min-width:200px }
-    .show-inactive-toggle { display:flex;align-items:center;gap:6px;font-size:13px;color:var(--color-text-muted);cursor:pointer }
 
     .skeleton-wrap  { display:flex;flex-direction:column;gap:8px }
     .skeleton-row   { height:52px;background:var(--color-bg-secondary);border-radius:6px;animation:pulse 1.4s ease-in-out infinite }
@@ -304,12 +300,6 @@ const DEFAULT_HTML = `<!DOCTYPE html>
       .var-panel       { max-height:250px }
     }
     @media(max-width:500px) { .meta-grid { grid-template-columns:1fr } }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
-    }
   `],
 })
 export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
@@ -326,8 +316,18 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
   protected readonly TEMPLATE_CATEGORIES = TEMPLATE_CATEGORIES;
 
   // ── State ──────────────────────────────────────────────────────────────────
-  filterCategory = '';
-  showInactive   = false;
+  /** Server-side filters (they reload the list) — set from the toolbar's Filtres panel. */
+  filterCategory = signal('');
+  showInactive   = signal(false);
+  /** Toolbar search text — narrows the loaded list on what each row shows. */
+  searchQuery    = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche et filtres gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('document-templates', {
+    filterCategory: this.filterCategory, showInactive: this.showInactive, searchQuery: this.searchQuery,
+  });
+
   loading        = signal(false);
   rows           = signal<DocumentTemplate[]>([]);
   variables      = signal<VariableDef[]>([]);
@@ -369,15 +369,80 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
     ];
   });
 
-  readonly tableRows = computed<TableRow[]>(() =>
-    this.rows().map(t => ({
+  /** The table (absent while loading / when empty) — handed to the toolbar's `[table]`. */
+  readonly tmplTable = viewChild<DataTableComponent>('tmplTable');
+
+  // "Nouvelle maquette" stays a primary toolbar action (blue), not a teal daf-button: the
+  // Filtres trigger right next to it is teal, and two teal buttons side by side read as one.
+  readonly toolbarActions = computed<ToolbarAction[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'create', label: this.translate.instant('ADMIN.docs.templates.newTemplate'), icon: 'add',
+        position: 'right', variant: 'primary' },
+    ];
+  });
+
+  onToolbarAction(id: string): void {
+    if (id === 'create') this.openAdd();
+  }
+
+  readonly filterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    return [
+      {
+        name: 'category',
+        label: this.translate.instant('ADMIN.docs.templates.colCategory'),
+        type: 'select',
+        placeholder: this.translate.instant('ADMIN.docs.templates.allCategories'),
+        options: TEMPLATE_CATEGORIES.map(c => ({ value: c, label: this.categoryLabel(c) })),
+      },
+      {
+        name: 'showInactive',
+        label: this.translate.instant('ADMIN.docs.templates.showInactive'),
+        type: 'checkbox',
+      },
+    ];
+  });
+
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => ({
+    initialValues: {
+      category: this.filterCategory() || null,
+      showInactive: this.showInactive(),
+    },
+  }));
+
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
+
+  /** Apply (or the panel's Reset, which applies the cleared result): reload only on a change. */
+  onFilterApply(result: FilterResult): void {
+    const category = typeof result['category'] === 'string' ? result['category'] : '';
+    const showInactive = result['showInactive'] === true;
+    if (category === this.filterCategory() && showInactive === this.showInactive()) return;
+    this.filterCategory.set(category);
+    this.showInactive.set(showInactive);
+    this.load();
+  }
+
+  /** Not paginated: the search simply narrows the loaded list. */
+  readonly tableRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const varWord = (n: number) => this.translate.instant(
+      n > 1 ? 'ADMIN.docs.templates.variablePlural' : 'ADMIN.docs.templates.variableSingular');
+    const visible = searchRows(this.rows(), this.searchQuery(), t => [
+      t.name, t.description, t.sharepointLocation, this.categoryLabel(t.category),
+      t.variables?.length ? `${t.variables.length} ${varWord(t.variables.length)}` : null,
+      this.translate.instant(t.isActive ? 'ADMIN.docs.templates.active' : 'ADMIN.docs.templates.inactive'),
+    ]);
+    return visible.map(t => ({
       name:      t.name,
       category:  t.category,
       variables: t.variables?.length ?? 0,
       isActive:  t.isActive,
       _source:   t,
-    })),
-  );
+    }));
+  });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
@@ -416,6 +481,25 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
     };
   });
 
+  /**
+   * The variable catalog comes from the backend in French only (DocumentVariableCatalog.java),
+   * so labels are translated here by variable key; a variable with no i18n entry keeps the
+   * backend's French label.
+   */
+  variableLabel(v: VariableDef): string {
+    const key = 'ADMIN.docs.templates.vars.' + v.key.replace(/\./g, '_');
+    const label = this.translate.instant(key);
+    return label !== key ? label : v.labelFr;
+  }
+
+  /** Same for the group name ("Employé", "Entreprise"…), keyed on its unaccented upper case. */
+  groupLabel(name: string): string {
+    const code = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    const key = 'ADMIN.docs.templates.varGroups.' + code;
+    const label = this.translate.instant(key);
+    return label !== key ? label : name;
+  }
+
   readonly variableGroups = computed(() => {
     const map = new Map<string, VariableDef[]>();
     for (const v of this.variables()) {
@@ -437,7 +521,7 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
 
   load() {
     this.loading.set(true);
-    this.svc.listTemplates(this.paysId(), this.filterCategory || undefined, this.showInactive)
+    this.svc.listTemplates(this.paysId(), this.filterCategory() || undefined, this.showInactive())
       .pipe(catchError(() => of([])))
       .subscribe(list => { this.rows.set(list); this.loading.set(false); });
   }
@@ -446,7 +530,7 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
     this.editingId.set(null);
     this.form = {
       paysId:             this.paysId(),
-      category:           this.filterCategory,
+      category:           this.filterCategory(),
       name:               '',
       description:        '',
       htmlContent:        '',

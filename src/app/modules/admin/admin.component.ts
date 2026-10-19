@@ -2,15 +2,19 @@ import {
   Component, DestroyRef, Signal, WritableSignal, computed, effect, inject, signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { CardComponent, PageComponent, PageHeaderComponent } from '@khalilrebhiitec/daf360';
+import {
+  CardComponent, PageComponent, PageHeaderComponent, SelectComponent, SelectOption,
+} from '@khalilrebhiitec/daf360';
 import { UserStore }   from '../../core/user.store';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { AdminTab }    from './models/admin.model';
 import { AutorisationRulesAdminComponent } from './autorisation-rules-admin.component';
 import { TeletravailRulesAdminComponent } from './teletravail-rules-admin.component';
+import { flagDataUri } from './flag-svgs';
 import { RolesAdminComponent }        from './roles-admin.component';
 import { UsersAdminComponent }        from './users/users-admin.component';
 import { ParametersAdminComponent }   from './parameters-admin.component';
@@ -28,6 +32,8 @@ import { DocumentTemplatesAdminComponent }   from './document-templates-admin.co
 import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
+import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
+import { AdminSectionStateService }         from './admin-section-state';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -127,6 +133,9 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // Télétravail rules per entity — durations (the half-day option), caps, notice, balance.
   // Same gate as the autorisation rules beside it, for the same reason.
   { key: 'teletravail-rules',     labelKey: 'ADMIN.shell.tabs.teletravailRules',    permission: 'ADMIN_REGIMES',              icon: 'home_work',             tone: 'warning' },
+  // How many days ahead HR hears about a contract end / a trial-period end. ADMIN_ROLES
+  // because that is what the backend's config update checks.
+  { key: 'contract-alerts',       labelKey: 'ADMIN.shell.tabs.contractAlerts',      permission: 'ADMIN_ROLES',                icon: 'event_upcoming',        tone: 'danger' },
 ];
 
 @Component({
@@ -136,6 +145,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     CardComponent,
     PageComponent,
     PageHeaderComponent,
+    SelectComponent,
+    NgTemplateOutlet,
     RolesAdminComponent,
     UsersAdminComponent,
     ParametersAdminComponent,
@@ -155,6 +166,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     PaysCalendarAdminComponent,
     AutorisationRulesAdminComponent,
     TeletravailRulesAdminComponent,
+    ContractAlertsAdminComponent,
     TranslatePipe,
   ],
   template: `
@@ -170,10 +182,28 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     } @else {
       @if (activeTab() === null) {
         <div class="page-header">
-          <h2 class="page-title">{{ 'ADMIN.shell.title' | translate }}</h2>
-          <p class="page-sub">{{ 'ADMIN.shell.entity' | translate:{ pays: currentPays() } }}</p>
+          <div>
+            <h2 class="page-title">{{ 'ADMIN.shell.title' | translate }}</h2>
+            <p class="page-sub">{{ 'ADMIN.shell.entity' | translate:{ pays: currentPays() } }}</p>
+          </div>
+          <ng-container *ngTemplateOutlet="paysPicker" />
         </div>
       }
+
+      <!-- Same pays picker as /finance/admin, drawn on the home and in every tab's header.
+           Defaults to the connected admin's own entity; only shown to the cross-country
+           admins the backend already lets through (TenantService), so it never offers an
+           entity whose writes would be refused. -->
+      <ng-template #paysPicker>
+        @if (canSwitchPays() && paysOptions().length > 1) {
+          <daf-select
+            class="pays-picker"
+            [options]="paysOptions()"
+            [selected]="selectedPaysValue()"
+            [config]="{ label: ('ADMIN.shell.countryMenu' | translate), fullWidth: false, searchable: true }"
+            (selectedChange)="onPaysChange($event)" />
+        }
+      </ng-template>
 
       @if (activeTab() === null) {
         <!-- Same module-card recipe as /finance/home: a flex-wrap grid of clickable
@@ -204,16 +234,24 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
                 class="tab-breadcrumb-header"
                 [title]="currentTabLabelKey() | translate"
                 [breadcrumbs]="[{ label: ('ADMIN.shell.title' | translate) }, { label: (currentTabLabelKey() | translate) }]"
-                (breadcrumbNavigate)="activeTab.set(null)" />
+                (breadcrumbNavigate)="activeTab.set(null)">
+                <!-- Static root, @if inside the template: content nested in an @if lives in
+                     an embedded view that <ng-content select="[pageActions]"> never finds. -->
+                <div pageActions><ng-container *ngTemplateOutlet="paysPicker" /></div>
+              </daf-page-header>
             }
 
+            <!-- Keyed on the pays: switching entity destroys and rebuilds the open tab, so
+                 every section reloads for the new one — several of them (regimes, sharepoint)
+                 only read [paysId] once and would otherwise keep showing the old entity. -->
+            @for (key of paysKey(); track key) {
             @if (activeTab() === 'roles')         { <app-roles-admin (backToAdmin)="activeTab.set(null)" (roleDetailOpen)="rolesDetailOpen.set($event)" /> }
             @if (activeTab() === 'users')         { <app-users-admin /> }
             @if (activeTab() === 'parameters')    { <app-parameters-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'holidays')      { <app-holidays-admin [paysId]="paysId()" [paysLabel]="currentPays()" [paysIsoCode]="currentPaysIso()" /> }
             @if (activeTab() === 'request-types') { <app-request-types-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'regimes')       { <app-regimes-admin [paysId]="paysId()" /> }
-            @if (activeTab() === 'lists')         { <app-list-manager /> }
+            @if (activeTab() === 'lists')         { <app-list-manager [paysId]="paysId()" /> }
             @if (activeTab() === 'notifications') { <app-notification-routing (backToAdmin)="activeTab.set(null)" (detailOpen)="notificationDetailOpen.set($event)" /> }
             @if (activeTab() === 'breaks')        { <app-breaks-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'ref-data')     { <app-ref-data-admin [paysId]="paysId()" /> }
@@ -229,6 +267,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             <!-- No [paysId]: this screen configures every entity in the caller's perimeter. -->
             @if (activeTab() === 'autorisation-rules')    { <app-autorisation-rules-admin /> }
             @if (activeTab() === 'teletravail-rules')     { <app-teletravail-rules-admin /> }
+            @if (activeTab() === 'contract-alerts')       { <app-contract-alerts-admin [paysId]="paysId()" /> }
+            }
           </daf-page>
         </div>
       }
@@ -249,7 +289,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     .access-denied svg { opacity:.25 }
     .access-denied h2  { font-size:var(--text-headline-md);font-weight:600;margin:0;color:var(--color-text) }
     .access-denied p   { font-size:var(--text-body-md);margin:0 }
-    .page-header { padding:24px 24px 0 }
+    .page-header { padding:24px 24px 0; display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px }
+    .pays-picker { display:block; min-width:220px }
     .page-title  { font-family:var(--font-sans);font-size:24px;font-weight:700;letter-spacing:-0.025em;line-height:1.25;margin:0 }
     @media (min-width: 640px) { .page-title { font-size:32px } }
     .page-sub    { font-size:var(--text-body-sm);color:var(--color-text-muted);margin:3px 0 0 }
@@ -312,10 +353,44 @@ export class AdminComponent {
   notificationDetailOpen = signal(false);
   isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager());
 
-  // Every module card's [paysId] reads from the logged-in user's own pays.
   availablePays  = signal<PaysTimezone[]>([]);
 
-  paysId = computed(() => this.userStore.currentUser()?.paysId ?? 52);
+  /** The picker's choice; null until one is made, i.e. the connected admin's own entity. */
+  private selectedPaysId = signal<number | null>(null);
+
+  /** The entity every module card administers: the picked one, else the caller's own. */
+  paysId = computed(() => this.selectedPaysId() ?? this.userStore.currentUser()?.paysId ?? 52);
+
+  /** One-item list keyed on the pays — the template's @for rebuilds the open tab on change. */
+  paysKey = computed(() => [this.paysId()]);
+
+  /**
+   * Same two permissions that open the cross-country scope server side (TenantService:
+   * ADMIN_ROLES, RH_SUPER_ADMIN). Anyone else stays on their own entity, as before.
+   */
+  canSwitchPays = computed(() =>
+    this.userStore.isSuperAdmin() || this.userStore.hasPermission('ADMIN_ROLES'));
+
+  readonly paysOptions = computed<SelectOption[]>(() =>
+    this.availablePays().map(p => ({
+      value: String(p.id),
+      label: `${p.frenchLabel} (${p.isoCode})`,
+      imageUrl: flagDataUri(p.isoCode),
+    })));
+
+  // A computed, not a template literal: a fresh array each cycle re-renders daf-select.
+  readonly selectedPaysValue = computed<string[]>(() => [String(this.paysId())]);
+
+  private sectionState = inject(AdminSectionStateService);
+
+  onPaysChange(values: string[]): void {
+    const id = Number(values[0]);
+    if (!Number.isFinite(id) || id <= 0 || id === this.paysId()) return;
+    // Les filtres mémorisés des sections sont ceux de l'ancienne entité (un département, un
+    // rôle de là-bas) : on les oublie avant que `paysKey` reconstruise la section ouverte.
+    this.sectionState.clear();
+    this.selectedPaysId.set(id);
+  }
 
   currentPays = computed(() => {
     const picked = this.availablePays().find(p => p.id === this.paysId());

@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -54,6 +54,9 @@ const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
   templateUrl: './missions-history.component.html',
 })
 export class MissionsHistoryComponent implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(MissionsTableSectionComponent);
+
   private svc = inject(MissionService);
   private translate = inject(TranslateService);
 

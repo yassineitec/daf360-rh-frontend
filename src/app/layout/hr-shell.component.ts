@@ -89,6 +89,15 @@ const APP_NAV_DEFS: AppNavDef[] = [
       },
     ],
   },
+  // CIVP → CDI requests: the validator's, the arbiter's and RH's queue, and each requester's
+  // own list. Requests themselves are filed from the profile's contract card.
+  {
+    id: 'cdi-conversions',
+    labelKey: 'NAV.CDI_CONVERSIONS',
+    icon: 'workspace_premium',
+    route: 'cdi-conversions',
+    permissions: ['RH_REQUEST_CDI_CONVERSION', 'RH_VALIDATE_CDI_CONVERSION', 'RH_ARBITRATE_CDI_CONVERSION', 'RH_MANAGE_LIFECYCLE'],
+  },
   // `missions` is the manager planning for their team; `billeterie` (below) is RH
   // pricing and validating what was planned — two different desks, deliberately kept as
   // two separate top-level entries rather than one group, since a manager holds only the

@@ -228,7 +228,7 @@
 
   <div class="flex flex-col gap-1 mt-3">
     <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.NOTE' | translate }}</label>
-    <daf-form-field [value]="offerForm.salaryNote ?? null" [options]="noteFieldOpts" (valueChange)="onNoteChange($event)" />
+    <daf-form-field [value]="offerForm.salaryNote ?? null" [options]="noteFieldOpts()" (valueChange)="onNoteChange($event)" />
   </div>
 
   <div class="grid grid-cols-2 gap-3 mt-3">
@@ -269,7 +269,7 @@
   <p class="text-[13px] font-semibold text-on-surface mb-3">{{ candidateName() }}</p>
   <div class="flex flex-col gap-1">
     <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.REJECT_REASON_LABEL' | translate }} <span class="text-danger">*</span></label>
-    <daf-form-field [value]="rejectReason" [options]="reasonFieldOpts" (valueChange)="onReasonChange($event)" />
+    <daf-form-field [value]="rejectReason" [options]="reasonFieldOpts()" (valueChange)="onReasonChange($event)" />
   </div>
   @if (actionError()) {
     <p class="text-xs text-danger mt-3">{{ actionError() }}</p>

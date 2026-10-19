@@ -1,3 +1,4 @@
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
@@ -222,7 +223,7 @@ export class ItProvisioningFormComponent implements OnInit {
    * `daf-select` sees as a new input every tick.
    */
   readonly adSelectOptions = computed<SelectOption[]>(() =>
-    this.adOptions().map(opt => ({ value: opt.valueCode, label: opt.labelFr })),
+    this.adOptions().map(opt => ({ value: opt.valueCode, label: adminLabel(opt, this.translate) })),
   );
 
   assetIndex(assetTypeCode: string): number {

@@ -7,6 +7,7 @@ import {
   PdfServiceUnavailableError,
 } from '../../core/pdf/pdf-download.service';
 import { NotificationService } from '../../core/notification.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 type ButtonState = 'idle' | 'loading' | 'success' | 'error';
 type Variant = 'primary' | 'outline' | 'icon';
@@ -14,7 +15,7 @@ type Variant = 'primary' | 'outline' | 'icon';
 @Component({
   selector: 'app-pdf-download-button',
   standalone: true,
-  imports: [],
+  imports: [TranslatePipe],
   template: `
     <div class="pdf-btn-wrap">
       <button
@@ -32,13 +33,13 @@ type Variant = 'primary' | 'outline' | 'icon';
       >
         @if (state() === 'loading') {
           <span class="pdf-spinner"></span>
-          <span>Generation...</span>
+          <span>{{ 'COMMON.pdf.generating' | translate }}</span>
         } @else if (state() === 'success') {
           <span>&#10003;</span>
-          <span>{{ label() }}</span>
+          <span>{{ label() || ('COMMON.pdf.download' | translate) }}</span>
         } @else {
           <span>&#128196;</span>
-          <span>{{ label() }}</span>
+          <span>{{ label() || ('COMMON.pdf.download' | translate) }}</span>
         }
       </button>
       @if (errorMsg()) {
@@ -99,9 +100,11 @@ type Variant = 'primary' | 'outline' | 'icon';
 export class PdfDownloadButtonComponent {
   private pdfSvc = inject(PdfDownloadService);
   private notify = inject(NotificationService);
+  private translate = inject(TranslateService);
 
   // Signal inputs
-  label           = input<string>('Telecharger');
+  /** Empty = the translated « Télécharger » / « Download ». */
+  label           = input<string>('');
   /** Generate endpoint (POST/GET → returns the doc). Only needed when docId is not set. */
   endpoint        = input<string>('');
   body            = input<Record<string, unknown> | null>(null);
@@ -136,8 +139,8 @@ export class PdfDownloadButtonComponent {
         this.state.set('idle');
         const message =
           err instanceof PdfBusinessError            ? err.serverMessage
-          : err instanceof PdfServiceUnavailableError ? 'Service PDF indisponible. Réessayez plus tard.'
-          :                                             'Erreur inattendue lors de la génération du document.';
+          : err instanceof PdfServiceUnavailableError ? this.translate.instant('COMMON.pdf.serviceUnavailable')
+          :                                             this.translate.instant('COMMON.pdf.unexpectedError');
         this.fail(message);
       },
     });
@@ -147,15 +150,15 @@ export class PdfDownloadButtonComponent {
     this.pdfSvc.downloadById(id, this.filename()).subscribe({
       next: () => {
         this.state.set('success');
-        this.notify.success(`${this.filename()} — document généré.`);
+        this.notify.success(this.translate.instant('COMMON.pdf.generated', { filename: this.filename() }));
         setTimeout(() => this.state.set('idle'), 2500);
       },
       error: (err) => {
         this.state.set('idle');
         this.fail(
           err?.status === 503
-            ? "Le document n'a pas encore été généré. Générez-le d'abord."
-            : 'Erreur lors du téléchargement du fichier.',
+            ? this.translate.instant('COMMON.pdf.notGeneratedYet')
+            : this.translate.instant('COMMON.pdf.downloadError'),
         );
       },
     });

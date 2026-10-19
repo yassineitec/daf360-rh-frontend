@@ -118,6 +118,16 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/offboarding/offboarding.routes').then(m => m.OFFBOARDING_ROUTES),
       },
+      // CIVP → CDI requests (V119): validator / arbiter / RH desk, and each requester's own
+      // list. Same codes as CdiConversionService's read check — and as the shell's
+      // notification-display CDI_CONVERSION entry.
+      {
+        path: 'cdi-conversions',
+        canActivate: [permissionGuard],
+        data: { permissions: ['RH_REQUEST_CDI_CONVERSION', 'RH_VALIDATE_CDI_CONVERSION', 'RH_ARBITRATE_CDI_CONVERSION', 'RH_MANAGE_LIFECYCLE', 'RH_VIEW_CONTRACTS'] },
+        loadChildren: () =>
+          import('./modules/cdi-conversions/cdi-conversions.routes').then(m => m.CDI_CONVERSIONS_ROUTES),
+      },
       // Old path — kept so bookmarks and the notification deep links still land.
       { path: 'lifecycle', redirectTo: 'offboarding' },
       { path: 'lifecycle/:id', redirectTo: 'offboarding/:id' },

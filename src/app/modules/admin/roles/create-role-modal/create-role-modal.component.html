@@ -12,6 +12,14 @@
         (valueChange)="frenchName.set($any($event))" />
     </div>
 
+    <!-- Nom anglais (optionnel) -->
+    <div class="crm-field">
+      <daf-form-field
+        [options]="{ label: ('ADMIN.roles.create.NAME_EN_LABEL' | translate), placeholder: ('ADMIN.roles.create.NAME_EN_PLACEHOLDER' | translate), hint: ('ADMIN.roles.create.NAME_EN_HINT' | translate), disabled: saving(), fullWidth: true }"
+        [value]="englishName()"
+        (valueChange)="englishName.set($any($event) ?? '')" />
+    </div>
+
     <!-- Rôle parent -->
     <div class="crm-field">
       <daf-select

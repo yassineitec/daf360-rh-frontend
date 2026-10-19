@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked } from '@angular/core';
+import { DepartureReasonLabelService } from '../departure-reason-labels.service';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked, viewChild } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent,
@@ -130,6 +131,11 @@ export function sortOffboarding(
 })
 export class OffboardingTableSectionComponent {
   private translate = inject(TranslateService);
+  protected readonly reasons = inject(DepartureReasonLabelService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   readonly items        = input.required<OffboardingWorkflowInstance[]>();
   readonly loading      = input(false);
@@ -168,7 +174,7 @@ export class OffboardingTableSectionComponent {
         initials: initialsOf(item.employeeFullName),
         subtitle: item.handoverManagerName ?? undefined,
       },
-      reason:         t('OFFBOARDING.REASON.' + item.departureReason),
+      reason:         this.reasons.label(item.departureReason),
       stage:          stageProgressOf(item),
       status:         {
         label:   t('OFFBOARDING.STATUS.' + item.status),

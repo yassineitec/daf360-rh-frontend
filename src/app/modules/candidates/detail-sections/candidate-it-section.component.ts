@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, inject } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BadgeOptions, ButtonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 import { SectionCardComponent } from '../../../shared/detail/section-card.component';
@@ -86,7 +86,9 @@ export class CandidateItSectionComponent {
   readonly manage = output<number>();
 
   protected readonly licences = LICENCES;
-  protected readonly badge = statusBadge;
+  private readonly translate = inject(TranslateService);
+  /** Status badge in the UI language. */
+  protected readonly badge = (s: string) => statusBadge(s, this.translate);
 
   protected readonly assets = computed(() => {
     const prov = this.provisioning();

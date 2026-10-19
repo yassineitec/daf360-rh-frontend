@@ -1,3 +1,4 @@
+import { DepartureReasonLabelService } from '../departure-reason-labels.service';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { EntityCardComponent, EntityCardOptions, SkeletonComponent } from '@khalilrebhiitec/daf360';
@@ -56,6 +57,7 @@ interface OffboardingCard {
 })
 export class OffboardingCardsSectionComponent {
   private translate = inject(TranslateService);
+  protected readonly reasons = inject(DepartureReasonLabelService);
 
   readonly items        = input.required<OffboardingWorkflowInstance[]>();
   readonly loading      = input(false);
@@ -94,7 +96,7 @@ export class OffboardingCardsSectionComponent {
           },
           metadata: {
             title:       item.employeeFullName ?? t('OFFBOARDING.LIST.PROFILE_PREFIX', { id: item.employeeProfileId }),
-            subtitle:    t('OFFBOARDING.REASON.' + item.departureReason),
+            subtitle:    this.reasons.label(item.departureReason),
             status:      cardStatus(item.status),
             statusLabel: t('OFFBOARDING.STATUS.' + item.status),
           },

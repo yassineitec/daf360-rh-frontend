@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked, viewChild } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DafCellDirective, DataTableComponent, TableColumn, TableConfig, TableRow,
@@ -97,6 +97,10 @@ export function sortBilleterie(items: Mission[], sort: BilleterieSort | null): M
 })
 export class BilleterieTableSectionComponent {
   private translate = inject(TranslateService);
+
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   readonly items        = input.required<Mission[]>();
   readonly loading      = input(false);

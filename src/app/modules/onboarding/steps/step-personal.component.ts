@@ -1,3 +1,4 @@
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { Component, input, output, OnInit, signal, inject, computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { OnboardingProfileDto, OnboardingFormData } from '../onboarding.model';
@@ -8,7 +9,7 @@ import {
   MultiDatePickerComponent,
   SelectOption,
 } from '@khalilrebhiitec/daf360';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isoToDate, dateToIso } from '../../../shared/date-picker.utils';
 
 @Component({
@@ -25,9 +26,10 @@ export class StepPersonalComponent implements OnInit {
   changed = output<Partial<OnboardingProfileDto>>();
 
   private listService = inject(ConfigurableListService);
+  private translate   = inject(TranslateService);
   private maritalList = toSignal(this.listService.getListValues('MARITAL_STATUS'), { initialValue: [] });
   readonly maritalOptions = computed<SelectOption[]>(() =>
-    this.maritalList().map(v => ({ value: v.valueCode, label: v.labelFr })));
+    this.maritalList().map(v => ({ value: v.valueCode, label: adminLabel(v, this.translate) })));
 
   cnssNumber          = signal('');
   cnssAffiliationDate = signal('');

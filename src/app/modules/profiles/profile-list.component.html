@@ -26,7 +26,8 @@
     (filterApply)="applyFilters($event)"
     [views]="viewOptions()"
     [view]="viewMode()"
-    (viewChange)="viewMode.set($any($event))" />
+    (viewChange)="viewMode.set($any($event))"
+    [table]="tableSection()?.table() ?? null" />
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
@@ -58,6 +59,7 @@
       (viewProfile)="onViewProfile($event)"
       (toggleSelect)="toggleSelect($event)"
       (selectionChange)="setSelection($event)"
+      [sort]="sort()"
       (sortChange)="onSortChange($event)"
       (edit)="onEdit($event)" />
   }

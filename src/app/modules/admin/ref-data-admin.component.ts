@@ -5,9 +5,12 @@ import {
   ButtonComponent, FormFieldComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const PAGE_SIZE = 10;
 
@@ -57,7 +60,7 @@ const TABS: TabConfig[] = [
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, SearchToolbarComponent, TranslatePipe],
   template: `
 <div>
   <!-- Sub-tab bar -->
@@ -88,18 +91,23 @@ const TABS: TabConfig[] = [
   <!-- Header -->
   <div class="rda-header">
     <h3 class="rda-header-title">{{ activeTab().label | translate }}</h3>
+  </div>
+
+  <!-- Same toolbar as the other list pages: search over the active tab's rows, « Ajouter »,
+       and [table] puts the table's reset + column picker on the right. One bar for both
+       tables — only one is rendered at a time (and none while loading). -->
+  <daf-search-toolbar class="mb-4 block"
+    [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+    [value]="searchQuery()"
+    [debounce]="200"
+    (valueChange)="onSearch($event)"
+    [table]="table() ?? null">
     <daf-button
       [label]="'ADMIN.data.refData.ADD' | translate"
-      class="desktop-only"
       variant="teal"
+      [options]="{ iconStart: 'add' }"
       (onClick)="openAddModal()" />
-    <daf-button
-      class="icon-btn-toggle mobile-only"
-      title="Ajouter"
-      variant="teal"
-      [options]="{ iconStart: 'add', size: 'sm' }"
-      (onClick)="openAddModal()" />
-  </div>
+  </daf-search-toolbar>
 
   <!-- Table — generic ref data -->
   @if (!isTypeContratTab()) {
@@ -136,7 +144,7 @@ const TABS: TabConfig[] = [
           <daf-pagination
             [currentPage]="currentPage()"
             [totalPages]="totalPages()"
-            [totalElements]="items().length"
+            [totalElements]="filteredItems().length"
             [config]="paginationConfig"
             (pageChange)="onPageChange($event)" />
         </div>
@@ -168,7 +176,7 @@ const TABS: TabConfig[] = [
           <daf-pagination
             [currentPage]="currentPage()"
             [totalPages]="totalPages()"
-            [totalElements]="typeContrats().length"
+            [totalElements]="filteredTypeContrats().length"
             [config]="paginationConfig"
             (pageChange)="onPageChange($event)" />
         </div>
@@ -243,7 +251,7 @@ const TABS: TabConfig[] = [
 <ng-template #bodyTplNotice>
   @if (noticeTarget(); as g) {
     <p class="rda-notice-hint">
-      {{ 'ADMIN.data.refData.MODAL_NOTICE_HELP' | translate: { grade: g.labelFr } }}
+      {{ 'ADMIN.data.refData.MODAL_NOTICE_HELP' | translate: { grade: label(g) } }}
     </p>
     <daf-form-field
       [options]="{ label: ('ADMIN.data.refData.FIELD_NOTICE_PERIOD' | translate), type: 'number', placeholder: ('ADMIN.data.refData.PH_NOTICE_PERIOD' | translate), hint: ('ADMIN.data.refData.HINT_NOTICE_PERIOD' | translate), fullWidth: true }"
@@ -282,12 +290,6 @@ const TABS: TabConfig[] = [
       .rda-form-grid { grid-template-columns:1fr }
     }
 
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
-    }
-
   `],
 })
 export class RefDataAdminComponent implements OnChanges {
@@ -296,6 +298,11 @@ export class RefDataAdminComponent implements OnChanges {
   private modal       = inject(ModalService);
   private translate   = inject(TranslateService);
   private modalRef?: ModalRef;
+
+  /** An entry's name in the UI language, for the messages that quote it. */
+  label(item: { labelFr?: string | null; labelEn?: string | null }): string {
+    return adminLabel(item, this.translate);
+  }
   bodyTplGeneric     = viewChild.required<TemplateRef<unknown>>('bodyTplGeneric');
   bodyTplTypeContrat = viewChild.required<TemplateRef<unknown>>('bodyTplTypeContrat');
   bodyTplNotice      = viewChild.required<TemplateRef<unknown>>('bodyTplNotice');
@@ -398,8 +405,51 @@ export class RefDataAdminComponent implements OnChanges {
    */
   readonly sort = signal<TableSort | null>(null);
 
+  /** The table rendered for the active tab (none while loading) — the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** Toolbar search — filters the active tab's whole list, before sort and paging. */
+  readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Onglet, recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('ref-data', {
+    activeTab: this.activeTab, currentPage: this.currentPage, sort: this.sort, searchQuery: this.searchQuery,
+  });
+
+  /** New search → back to the first page (otherwise it can land on an empty one). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  /** Searches what the cells show: labels, code, order, préavis (grades) and Oui/Non. */
+  readonly filteredItems = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string, p?: object) => this.translate.instant(k, p);
+    const grades = this.isGradesTab();
+    return searchRows(this.items(), this.searchQuery(), i => [
+      i.labelFr, i.labelEn, i.code, i.sortOrder,
+      grades
+        ? (i.noticePeriodDays == null
+            ? t('ADMIN.data.refData.NOTICE_UNSET')
+            : t('ADMIN.data.refData.NOTICE_DAYS', { days: i.noticePeriodDays }))
+        : null,
+      t(i.isActive ? 'ADMIN.data.refData.YES' : 'ADMIN.data.refData.NO'),
+    ]);
+  });
+
+  readonly filteredTypeContrats = computed(() => {
+    this.translate.currentLang();
+    return searchRows(this.typeContrats(), this.searchQuery(), tc => [
+      tc.code, tc.labelFr, tc.labelEn,
+      this.translate.instant(tc.isActive ? 'ADMIN.data.refData.YES' : 'ADMIN.data.refData.NO'),
+    ]);
+  });
+
   readonly totalPages = computed(() => {
-    const len = this.isTypeContratTab() ? this.typeContrats().length : this.items().length;
+    const len = this.isTypeContratTab() ? this.filteredTypeContrats().length : this.filteredItems().length;
     return Math.max(1, Math.ceil(len / PAGE_SIZE));
   });
 
@@ -422,7 +472,7 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly pagedItems = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.items(), this.sort(), REF_ITEM_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredItems(), this.sort(), REF_ITEM_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly itemRows = computed<TableRow[]>(() =>
@@ -451,7 +501,7 @@ export class RefDataAdminComponent implements OnChanges {
 
   readonly pagedTypeContrats = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.typeContrats(), this.sort(), TYPE_CONTRAT_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredTypeContrats(), this.sort(), TYPE_CONTRAT_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly tcRows = computed<TableRow[]>(() =>
@@ -523,6 +573,7 @@ export class RefDataAdminComponent implements OnChanges {
     this.modalRef?.close();
     this.currentPage.set(0);
     this.sort.set(null);
+    this.searchQuery.set('');   // each tab lists other things — a search does not carry over
     this.resetForm();
     this.loadItems();
   }
@@ -546,7 +597,7 @@ export class RefDataAdminComponent implements OnChanges {
 
     if (tab.key === 'type-contrat') {
       this.contractSvc.getTypeContrats().subscribe({
-        next: tc => { this.typeContrats.set(tc); this.loading.set(false); },
+        next: tc => { this.typeContrats.set(tc); this.loading.set(false); this.clampPage(); },
         error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_TC')); this.loading.set(false); },
       });
       return;
@@ -554,7 +605,7 @@ export class RefDataAdminComponent implements OnChanges {
 
     if (tab.key === 'it-asset-types') {
       this.refSvc.getItAssetTypes().subscribe({
-        next: r  => { this.items.set(r); this.loading.set(false); },
+        next: r  => { this.items.set(r); this.loading.set(false); this.clampPage(); },
         error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_ASSETS')); this.loading.set(false); },
       });
       return;
@@ -565,9 +616,14 @@ export class RefDataAdminComponent implements OnChanges {
       : this.refSvc.getNationalities();
 
     obs.subscribe({
-      next: r  => { this.items.set(r); this.loading.set(false); },
+      next: r  => { this.items.set(r); this.loading.set(false); this.clampPage(); },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.refData.ERR_LOAD_DATA')); this.loading.set(false); },
     });
+  }
+
+  /** Page restaurée (ou après une suppression) au-delà de la liste rechargée → dernière page existante. */
+  private clampPage(): void {
+    if (this.currentPage() > this.totalPages() - 1) this.currentPage.set(this.totalPages() - 1);
   }
 
   private getForType(key: RefTab, paysId: number) {
@@ -614,7 +670,7 @@ export class RefDataAdminComponent implements OnChanges {
   deleteItem(item: RefDataItem): void {
     this.modal.open({
       title: this.translate.instant('ADMIN.data.refData.DELETE_ENTRY_TITLE'),
-      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: item.labelFr }),
+      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: this.label(item) }),
       buttons: [
         { label: this.translate.instant('ADMIN.data.refData.CANCEL'), variant: 'secondary', action: r => r.close() },
         { label: this.translate.instant('ADMIN.data.refData.DELETE'), variant: 'primary',   action: r => { this.doDeleteItem(item); r.close(); } },
@@ -657,7 +713,7 @@ export class RefDataAdminComponent implements OnChanges {
   deleteTypeContrat(tc: TypeContratDto): void {
     this.modal.open({
       title: this.translate.instant('ADMIN.data.refData.DELETE_TC_TITLE'),
-      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: tc.labelFr }),
+      body:  this.translate.instant('ADMIN.data.refData.DELETE_CONFIRM', { label: this.label(tc) }),
       buttons: [
         { label: this.translate.instant('ADMIN.data.refData.CANCEL'), variant: 'secondary', action: r => r.close() },
         { label: this.translate.instant('ADMIN.data.refData.DELETE'), variant: 'primary',   action: r => { this.doDeleteTypeContrat(tc); r.close(); } },

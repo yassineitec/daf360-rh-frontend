@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -21,13 +21,14 @@ import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
 import { RECRUITMENT_REASONS, RecruitmentDemandSummary, RecruitmentDemandStatus } from './recruitment-demand.model';
 import { RequestsService } from '../requests/requests.service';
-import { EmployeeRequest, RequestStatus, RequestType } from '../requests/models/request.model';
+import { EmployeeRequest, RequestStatus, RequestType, requestTypeName } from '../requests/models/request.model';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { ListViewMode } from '../../shared/view-toggle.component';
 import { RequestCardItem, RequestCardsSectionComponent, requestRef } from '../requests/request-cards-section.component';
 import { RequestTableSectionComponent } from '../requests/request-table-section.component';
 import { RecruitmentDemandCardsSectionComponent } from './sections/recruitment-demand-cards-section.component';
 import { RecruitmentDemandTableSectionComponent } from './sections/recruitment-demand-table-section.component';
+import { RequestsHistoryStateService } from './requests-history-state.service';
 
 /** "En cours" (no response yet) belongs to /rh/requests — this page's "Demande" tab is
  *  the historique, so every other (decided) status shows here instead. */
@@ -163,7 +164,8 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           (filterApply)="onFilterApply($event)"
           [views]="viewOptions()"
           [view]="viewMode()"
-          (viewChange)="setView($event)" />
+          (viewChange)="setView($event)"
+          [table]="recruitmentTableSection()?.table() ?? null" />
 
         <!-- daf-entity-card grid or daf-data-table — same two views as /rh/it-provisioning. -->
         @if (viewMode() === 'grid') {
@@ -180,6 +182,7 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
             [skeletonRows]="pageSize()"
             [tools]="true"
             [serverSort]="true"
+            [sort]="sort()"
             (serverSortChange)="onSortChange($event)"
             [emptyMessage]="'RECRUITMENT_DEMANDS.LIST.EMPTY' | translate"
             (action)="viewDetail($event.demand.id)" />
@@ -212,7 +215,8 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
           (filterApply)="onOtherFilterApply($event)"
           [views]="viewOptions()"
           [view]="viewMode()"
-          (viewChange)="setView($event)" />
+          (viewChange)="setView($event)"
+          [table]="otherTableSection()?.table() ?? null" />
 
         <!-- Same card / table sections as /rh/requests, in history mode: no cancel action
              (a decided request has nothing left to cancel), decision date instead of SLA. -->
@@ -232,6 +236,7 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
             [history]="true"
             [tools]="true"
             [serverSort]="true"
+            [sort]="otherSort()"
             (serverSortChange)="onOtherSortChange($event)"
             [emptyMessage]="'RECRUITMENT_DEMANDS.LIST.OTHER_EMPTY' | translate"
             (action)="viewOtherDemand($event.item.id)" />
@@ -255,6 +260,11 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
   `,
 })
 export class RecruitmentDemandListComponent implements OnInit {
+  /** "Demande de recrutement" tab, table view only — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly recruitmentTableSection = viewChild(RecruitmentDemandTableSectionComponent);
+  /** "Demande" tab, table view only — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly otherTableSection = viewChild(RequestTableSectionComponent);
+
   private svc          = inject(RecruitmentDemandService);
   private requestsSvc  = inject(RequestsService);
   private userStore    = inject(UserStore);
@@ -484,6 +494,53 @@ export class RecruitmentDemandListComponent implements OnInit {
   /** Request type catalogue of the current pays — feeds the "Type de demande" filter. */
   private readonly requestTypes = signal<RequestType[]>([]);
 
+  // ── Mémoire de la page ─────────────────────────────────────────────────────
+  private pageState = inject(RequestsHistoryStateService);
+
+  /**
+   * Les signaux qui décrivent la page telle que l'utilisateur l'a laissée, par nom —
+   * l'onglet actif, la vue, et recherche / filtres / tri / pagination des deux onglets.
+   */
+  private readonly persisted: Record<string, WritableSignal<any>> = {
+    mainTab:              this.mainTab,
+    viewMode:             this.viewMode,
+    searchQuery:          this.searchQuery,
+    filterStatut:         this.filterStatut,
+    filterDepartment:     this.filterDepartment,
+    filterReason:         this.filterReason,
+    filterSubmitted:      this.filterSubmitted,
+    sort:                 this.sort,
+    page:                 this.page,
+    pageSize:             this.pageSize,
+    otherSearchQuery:     this.otherSearchQuery,
+    otherStatusFilter:    this.otherStatusFilter,
+    otherTypeFilter:      this.otherTypeFilter,
+    otherSubmittedFilter: this.otherSubmittedFilter,
+    otherDecidedFilter:   this.otherDecidedFilter,
+    otherSort:            this.otherSort,
+    otherPage:            this.otherPage,
+    otherPageSize:        this.otherPageSize,
+  };
+
+  /**
+   * Chaque changement est mémorisé, pour que le retour depuis une fiche retrouve la page
+   * telle qu'on l'a quittée. Le premier passage a lieu après `ngOnInit`, donc après la
+   * restauration : il réécrit l'état restauré, sans l'écraser par des valeurs vides.
+   */
+  private readonly persistState = effect(() => {
+    this.pageState.save(Object.fromEntries(
+      Object.entries(this.persisted).map(([key, sig]) => [key, sig()])));
+  });
+
+  /** Avant les premiers chargements et le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.pageState.restore();
+    if (!s) return;
+    for (const [key, sig] of Object.entries(this.persisted)) {
+      if (key in s) sig.set(s[key]);
+    }
+  }
+
   /** "En cours" never appears in this filter — that status lives on /rh/requests only.
    *  "Tout" here means every decided request, not literally every status. */
   readonly otherFilterFields = computed<FilterField[]>(() => {
@@ -618,9 +675,9 @@ export class RecruitmentDemandListComponent implements OnInit {
         ref: requestRef(r),
         employeeLabel: r.employeeName
           ?? this.translate.instant('REQUESTS.COMMON.PROFILE_NUMBER', { id: r.employeeProfileId }),
-        type: r.typeDisplayNameFr ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
+        type: requestTypeName(r, this.translate.currentLang()) ?? this.translate.instant('REQUESTS.COMMON.REQUEST_NUMBER', { id: r.requestTypeId }),
         categoryLabel: category ? this.translate.instant('REQUESTS.CATEGORY.' + category) : '',
-        status: statusBadge(r.status),
+        status: statusBadge(r.status, this.translate),
         isActive: false,
         sla: null,
         slaLabel: '',
@@ -651,8 +708,12 @@ export class RecruitmentDemandListComponent implements OnInit {
     this.loadOther();
   }
 
+  /**
+   * `from=history` : la fiche (partagée avec `/rh/requests`) ramène alors ici, onglet
+   * « Demande » restauré, et non à la file des demandes en cours.
+   */
   viewOtherDemand(id: number): void {
-    this.router.navigate(['/rh/requests', id]);
+    this.router.navigate(['/rh/requests', id], { queryParams: { from: 'history' } });
   }
 
   private loadOther(): void {
@@ -669,6 +730,13 @@ export class RecruitmentDemandListComponent implements OnInit {
     this.requestsSvc.listRequests({ ...filter, sort })
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
+        // Page restaurée devenue hors limites : on retombe sur la première plutôt que
+        // d'afficher une page vide.
+        if (res && res.content.length === 0 && this.otherPage() > 0) {
+          this.otherPage.set(0);
+          this.loadOther();
+          return;
+        }
         this.otherLoading.set(false);
         // "Demande" is the default tab, so its first fetch is what clears the whole-page
         // skeleton — recruitment's own `load()` only runs once someone switches tabs.
@@ -682,7 +750,15 @@ export class RecruitmentDemandListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.restoreState();
     this.loadOther();
+    // Retour sur l'onglet « Recrutement » : il ne se charge sinon qu'à la bascule
+    // (`onMainTabChange`). `load()` et non `reload()`, pour garder la page restaurée.
+    if (this.mainTab() === 'recruitment') {
+      this.recruitmentLoaded = true;
+      this.load();
+      this.loadCounts();
+    }
     this.requestsSvc.listTypes(this.currentPaysId())
       .pipe(catchError(() => of([] as RequestType[])))
       .subscribe((types) => this.requestTypes.set(types));
@@ -739,6 +815,12 @@ export class RecruitmentDemandListComponent implements OnInit {
 
     obs$.pipe(catchError(() => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: this.pageSize() })))
       .subscribe((r) => {
+        // Page restaurée devenue hors limites : on retombe sur la première.
+        if (r.content.length === 0 && this.page() > 0) {
+          this.page.set(0);
+          this.load();
+          return;
+        }
         this.items.set(r.content);
         this.total.set(r.totalElements);
         this.totalPages.set(r.totalPages);

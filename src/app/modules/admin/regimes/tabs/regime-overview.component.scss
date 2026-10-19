@@ -70,15 +70,13 @@
 .ro-skeleton-sm { width: 48px; }
 .ro-skeleton-xs { width: 36px; }
 
+/* Source pills, projected into the search toolbar's right zone. */
 .ro-filters {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
-
-.ro-search { width: 360px; max-width: 100%; }
 
 .table-scroll { overflow-x: auto; }
 

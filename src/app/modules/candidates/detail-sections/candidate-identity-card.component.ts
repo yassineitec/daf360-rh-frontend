@@ -157,7 +157,7 @@ export interface CandidatePill {
           @if (!editMode()) {
             <rh-profile-field
               [label]="'CANDIDATES.DETAIL.NATIONALITY' | translate"
-              [value]="candidate().nationality" />
+              [value]="nationalityLabel() ?? candidate().nationality" />
           } @else {
             <daf-select [options]="nationalityOptions()"
               [config]="{ label: ('CANDIDATES.DETAIL.NATIONALITY' | translate), searchable: true }"
@@ -223,6 +223,9 @@ export class CandidateIdentityCardComponent {
 
   readonly genderOptions      = input<SelectOption[]>([]);
   readonly nationalityOptions = input<SelectOption[]>([]);
+  /** Read-mode labels in the UI language, resolved by the page from the rh/admin lists. */
+  readonly nationalityLabel = input<string | null | undefined>(null);
+  readonly genderText       = input<string | null | undefined>(null);
 
   readonly patch      = output<Partial<UpdateCandidateRequest>>();
   readonly toggleEdit = output<void>();
@@ -233,7 +236,8 @@ export class CandidateIdentityCardComponent {
   );
   protected readonly gender = computed(() => {
     const g = this.candidate().gender;
-    return g ? genderLabel(g) : null;
+    this.translate.currentLang();
+    return g ? (this.genderText() ?? genderLabel(g, this.translate)) : null;
   });
 
   /** Locale-aware, like every other date on this page — `formatDate` is the page's helper. */

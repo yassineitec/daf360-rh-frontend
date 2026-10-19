@@ -8,6 +8,7 @@ import { AbsenceTypeRow, AbsenceTypeUpsert } from './models/absence-type.model';
 export interface RoleOption {
   id: number;
   frenchName: string;
+  englishName?: string | null;
 }
 
 /**

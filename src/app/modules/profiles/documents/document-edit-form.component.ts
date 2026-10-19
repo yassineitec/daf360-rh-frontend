@@ -61,6 +61,11 @@ import { DOCUMENT_TYPE_CODES, EmployeeDocument } from '../models/profile.model';
 export class DocumentEditFormComponent implements AfterViewInit {
   readonly profileId = input.required<number>();
   readonly document  = input.required<EmployeeDocument>();
+  /**
+   * The page's document types — Admin › document types (the same list the upload uses),
+   * already labelled in the UI language. Empty → the compiled-in codes below.
+   */
+  readonly docTypeOptions = input<SelectOption[]>([]);
 
   readonly saved     = output<EmployeeDocument>();
   readonly cancelled = output<void>();
@@ -80,6 +85,14 @@ export class DocumentEditFormComponent implements AfterViewInit {
 
   readonly typeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
+    const fromAdmin = this.docTypeOptions();
+    if (fromAdmin.length) {
+      // Keep the document's current type selectable even if the admin has since removed it.
+      const current = this.document().documentType;
+      return fromAdmin.some(o => o.value === current)
+        ? fromAdmin
+        : [...fromAdmin, { value: current, label: this.translate.instant('PROFILES.DOC_TYPES.' + current) }];
+    }
     return DOCUMENT_TYPE_CODES.map(code => ({
       value: code,
       label: this.translate.instant('PROFILES.DOC_TYPES.' + code),

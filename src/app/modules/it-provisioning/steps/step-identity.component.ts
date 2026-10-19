@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, input, inject } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 import { statusBadge } from '../../../shared/status-badge.utils';
@@ -35,5 +35,7 @@ import { ProvisioningDetail } from '../it-provisioning.model';
 })
 export class StepIdentityComponent {
   readonly prov = input.required<ProvisioningDetail>();
-  protected readonly badge = statusBadge;
+  private readonly translate = inject(TranslateService);
+  /** Status badge in the UI language. */
+  protected readonly badge = (s: string) => statusBadge(s, this.translate);
 }

@@ -60,7 +60,7 @@
       <div class="field-group">
         <daf-select
           [selected]="[entityType() ?? '']"
-          [options]="entityTypeOptions"
+          [options]="entityTypeOptions()"
           [config]="{ label: ('ADMIN.notifications.entityTypeLabel' | translate), fullWidth: true }"
           (selectedChange)="onEntityTypeChange($event[0])" />
         <p class="editor-hint">{{ 'ADMIN.notifications.entityTypeHint' | translate }}</p>

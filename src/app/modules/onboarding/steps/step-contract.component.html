@@ -88,7 +88,7 @@
           (valueChange)="probationEndDate.set(dateToIso($event) || ''); emit()" />
       </div>
 
-      @if (contractType() === 'FIXED_TERM') {
+      @if (needsEndDate()) {
         <div class="form-field">
           <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.CONTRACT_END' | translate }} <span class="req">*</span></label>
           <daf-multi-date-picker
@@ -99,7 +99,7 @@
       }
     }
 
-    @if (!isOnProbation() && contractType() === 'FIXED_TERM') {
+    @if (!isOnProbation() && needsEndDate()) {
       <div class="form-field">
         <label class="form-label">{{ 'ONBOARDING.STEP_CONTRACT.CONTRACT_END' | translate }} <span class="req">*</span></label>
         <daf-multi-date-picker

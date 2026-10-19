@@ -1,3 +1,5 @@
+import { TranslateService } from '@ngx-translate/core';
+
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'secondary' | 'neutral' | 'teal';
 
 const STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
@@ -47,7 +49,17 @@ const STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
   COMPLETED:      { label: 'Complété',        variant: 'success'   },
 };
 
-export function statusBadge(status: string): { label: string; options: { variant: BadgeVariant } } {
+/**
+ * Badge for a status code. Pass the TranslateService to get the label in the UI language
+ * (STATUS_BADGE.* keys); without it the label is the French one above, as before.
+ * An unknown code renders as itself.
+ */
+export function statusBadge(
+  status: string, translate?: TranslateService,
+): { label: string; options: { variant: BadgeVariant } } {
   const cfg = STATUS_MAP[status] ?? { label: status, variant: 'neutral' as BadgeVariant };
-  return { label: cfg.label, options: { variant: cfg.variant } };
+  const label = translate && STATUS_MAP[status]
+    ? translate.instant('STATUS_BADGE.' + status)
+    : cfg.label;
+  return { label, options: { variant: cfg.variant } };
 }

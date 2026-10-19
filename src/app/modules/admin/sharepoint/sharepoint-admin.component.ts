@@ -2,11 +2,13 @@ import { Component, Input, OnInit, TemplateRef, computed, inject, signal, untrac
 import {
   ButtonComponent, DataTableComponent, DafCellDirective, FormFieldComponent,
   ModalRef, ModalService, PaginationComponent, PaginationConfig, SelectComponent,
-  SortDirection, StatusBadgeComponent, TableColumn, TableConfig, TableRow, TabItem, TabsComponent,
+  SearchToolbarComponent, SortDirection, StatusBadgeComponent, TableColumn, TableConfig, TableRow,
+  TabItem, TabsComponent,
 } from '@khalilrebhiitec/daf360';
 import type { BadgeVariant, SelectOption } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FolderPickerComponent } from './folder-picker.component';
+import { rememberAdminState } from '../admin-section-state';
 import {
   Diagnosis, DocKindInfo, EmployeeFolderRow, SharePointAdminService,
   SharePointLocation, SharePointStatus,
@@ -16,7 +18,7 @@ type Panel = 'paths' | 'employees' | 'diagnose';
 
 /** Same client-side page size as the other admin catalog tables (ref-data-admin,
  * request-types-admin) — both lists here are fetched whole from the backend. */
-import { TableSort, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
 
@@ -55,7 +57,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent, StatusBadgeComponent,
     DataTableComponent, DafCellDirective, FolderPickerComponent, TabsComponent,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   template: `
     <div class="spa-wrap">
@@ -90,13 +92,25 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
       @if (panel() === 'paths') {
         <div class="spa-panel-head">
           <p class="spa-panel-hint">{{ 'ADMIN.sharepoint.paths.hint' | translate }}</p>
-          <daf-button [label]="'ADMIN.sharepoint.paths.add' | translate"
-                      variant="teal" [options]="{ iconStart: 'add' }"
-                      (onClick)="openPathForm(null)" />
         </div>
 
+        <!-- Same toolbar as the other list pages: search, « Ajouter un chemin », and [table]
+             puts the table's reset + column picker on the right of the bar. -->
+        <daf-search-toolbar class="spa-toolbar"
+          [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+          [value]="pathsSearch()"
+          [debounce]="200"
+          (valueChange)="onPathsSearch($event)"
+          [table]="pathsTable">
+          <daf-button
+            [label]="'ADMIN.sharepoint.paths.add' | translate"
+            variant="teal"
+            [options]="{ iconStart: 'add' }"
+            (onClick)="openPathForm(null)" />
+        </daf-search-toolbar>
+
         <div class="table-scroll">
-          <daf-data-table [columns]="pathColumns()" [rows]="pathRows()" [config]="pathTableConfig()"
+          <daf-data-table #pathsTable [columns]="pathColumns()" [rows]="pathRows()" [config]="pathTableConfig()"
                           (sortChange)="onPathsSortChange($event.key, $event.dir)"
                           (resetClick)="onPathsSortChange('', null)">
             <ng-template dafCell="pathTemplate" let-row>
@@ -117,7 +131,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
             <daf-pagination
               [currentPage]="pathsCurrentPage()"
               [totalPages]="pathsTotalPages()"
-              [totalElements]="locations().length"
+              [totalElements]="filteredLocations().length"
               [config]="paginationConfig"
               (pageChange)="onPathsPageChange($event)" />
           </div>
@@ -149,8 +163,15 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
           </div>
         }
 
+        <daf-search-toolbar class="spa-toolbar"
+          [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+          [value]="employeesSearch()"
+          [debounce]="200"
+          (valueChange)="onEmployeesSearch($event)"
+          [table]="employeesTable" />
+
         <div class="table-scroll">
-          <daf-data-table [columns]="employeeColumns()" [rows]="employeeRows()" [config]="employeeTableConfig()"
+          <daf-data-table #employeesTable [columns]="employeeColumns()" [rows]="employeeRows()" [config]="employeeTableConfig()"
                           (sortChange)="onEmployeesSortChange($event.key, $event.dir)"
                           (resetClick)="onEmployeesSortChange('', null)">
             <ng-template dafCell="status" let-row>
@@ -182,7 +203,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
             <daf-pagination
               [currentPage]="employeesCurrentPage()"
               [totalPages]="employeesTotalPages()"
-              [totalElements]="employees().length"
+              [totalElements]="filteredEmployees().length"
               [config]="paginationConfig"
               (pageChange)="onEmployeesPageChange($event)" />
           </div>
@@ -359,6 +380,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
     .spa-kind  { min-width:220px }
 
     .spa-tabs { margin-bottom:16px }
+    .spa-toolbar { display:block;margin-bottom:14px }
 
     .spa-panel-head { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px }
     .spa-panel-hint { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:0;max-width:70ch }
@@ -451,6 +473,8 @@ export class SharePointAdminComponent implements OnInit {
   readonly pathsCurrentPage = signal(0);
   /** Paths-table header sort — applied to the whole list, before paging (`manualSort`). */
   readonly pathsSort = signal<TableSort | null>(null);
+  /** Paths toolbar search — filters the whole list, before sort and paging. */
+  readonly pathsSearch = signal('');
 
   // Panel 2
   readonly employees        = signal<EmployeeFolderRow[]>([]);
@@ -463,6 +487,20 @@ export class SharePointAdminComponent implements OnInit {
   readonly employeesCurrentPage = signal(0);
   /** Employees-table header sort — applied to the whole list, before paging (`manualSort`). */
   readonly employeesSort = signal<TableSort | null>(null);
+  /** Employees toolbar search — filters the whole list, before sort and paging. */
+  readonly employeesSearch = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /**
+   * Onglet, type de document, recherches, tris et pages gardés tant qu'on reste dans
+   * /rh/admin (voir `rememberAdminState`). Ni le dossier du sélecteur ni le diagnostic.
+   */
+  private readonly memory = rememberAdminState('sharepoint', {
+    panel: this.panel, docKind: this.docKind,
+    pathsCurrentPage: this.pathsCurrentPage, pathsSort: this.pathsSort, pathsSearch: this.pathsSearch,
+    employeesCurrentPage: this.employeesCurrentPage, employeesSort: this.employeesSort,
+    employeesSearch: this.employeesSearch,
+  });
 
   // Panel 3
   readonly diagProfileId = signal<number | null>(null);
@@ -563,7 +601,11 @@ export class SharePointAdminComponent implements OnInit {
   private loadLocations(): void {
     this.loadingPaths.set(true);
     this.svc.listLocations().subscribe({
-      next: rows => { this.locations.set(rows); this.loadingPaths.set(false); },
+      next: rows => {
+        this.locations.set(rows); this.loadingPaths.set(false);
+        // Page restaurée (ou après une suppression) au-delà de la liste → dernière page existante.
+        if (this.pathsCurrentPage() > this.pathsTotalPages() - 1) this.pathsCurrentPage.set(this.pathsTotalPages() - 1);
+      },
       error: () => { this.loadingPaths.set(false); this.fail('ADMIN.sharepoint.errors.load'); },
     });
   }
@@ -618,8 +660,24 @@ export class SharePointAdminComponent implements OnInit {
     this.pathsCurrentPage.set(0);
   }
 
+  /** New search → back to the first page (otherwise it can land on an empty one). */
+  onPathsSearch(value: string): void {
+    if (value === this.pathsSearch()) return;   // daf-search-toolbar re-emits on blur
+    this.pathsSearch.set(value);
+    this.pathsCurrentPage.set(0);
+  }
+
+  /** Searches what the cells show: country, document type label, template, problems. */
+  readonly filteredLocations = computed(() => {
+    this.i18n.currentLang();
+    return searchRows(this.locations(), this.pathsSearch(), l => [
+      l.isoCode, this.kindLabel(l.docKind), l.pathTemplate,
+      ...l.problems.map(p => this.i18n.instant(p)),
+    ]);
+  });
+
   readonly pathsTotalPages = computed(() =>
-    Math.max(1, Math.ceil(this.locations().length / PAGE_SIZE)));
+    Math.max(1, Math.ceil(this.filteredLocations().length / PAGE_SIZE)));
 
   onPathsPageChange(page: number): void {
     this.pathsCurrentPage.set(page);
@@ -627,7 +685,7 @@ export class SharePointAdminComponent implements OnInit {
 
   private readonly pagedLocations = computed(() => {
     const start = this.pathsCurrentPage() * PAGE_SIZE;
-    return sortByColumn(this.locations(), this.pathsSort(), PATH_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredLocations(), this.pathsSort(), PATH_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly pathRows = computed<TableRow[]>(() =>
@@ -710,7 +768,11 @@ export class SharePointAdminComponent implements OnInit {
   private loadEmployees(): void {
     this.loadingEmployees.set(true);
     this.svc.listEmployees(this.docKind()).subscribe({
-      next: rows => { this.employees.set(rows); this.loadingEmployees.set(false); },
+      next: rows => {
+        this.employees.set(rows); this.loadingEmployees.set(false);
+        // Page restaurée au-delà de la liste rechargée → dernière page existante.
+        if (this.employeesCurrentPage() > this.employeesTotalPages() - 1) this.employeesCurrentPage.set(this.employeesTotalPages() - 1);
+      },
       error: () => { this.loadingEmployees.set(false); this.fail('ADMIN.sharepoint.errors.load'); },
     });
   }
@@ -770,8 +832,27 @@ export class SharePointAdminComponent implements OnInit {
     this.employeesCurrentPage.set(0);
   }
 
+  /** New search → back to the first page (otherwise it can land on an empty one). */
+  onEmployeesSearch(value: string): void {
+    if (value === this.employeesSearch()) return;   // daf-search-toolbar re-emits on blur
+    this.employeesSearch.set(value);
+    this.employeesCurrentPage.set(0);
+  }
+
+  /** Searches what the cells show: name, status badge, folder (or the last error). */
+  readonly filteredEmployees = computed(() => {
+    this.i18n.currentLang();
+    const t = (k: string) => this.i18n.instant(k);
+    return searchRows(this.employees(), this.employeesSearch(), e => [
+      e.fullName,
+      t('ADMIN.sharepoint.status.' + (e.status ?? 'NEVER')),
+      e.folderSegment ?? e.lastError,
+      e.folderSegment && e.source === 'MANUAL' ? t('ADMIN.sharepoint.employees.manual') : null,
+    ]);
+  });
+
   readonly employeesTotalPages = computed(() =>
-    Math.max(1, Math.ceil(this.employees().length / PAGE_SIZE)));
+    Math.max(1, Math.ceil(this.filteredEmployees().length / PAGE_SIZE)));
 
   onEmployeesPageChange(page: number): void {
     this.employeesCurrentPage.set(page);
@@ -779,7 +860,7 @@ export class SharePointAdminComponent implements OnInit {
 
   private readonly pagedEmployees = computed(() => {
     const start = this.employeesCurrentPage() * PAGE_SIZE;
-    return sortByColumn(this.employees(), this.employeesSort(), EMPLOYEE_FOLDER_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredEmployees(), this.employeesSort(), EMPLOYEE_FOLDER_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly employeeRows = computed<TableRow[]>(() =>

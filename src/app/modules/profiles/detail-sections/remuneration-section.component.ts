@@ -142,7 +142,7 @@ const BONUS_CURRENCIES = ['TND', 'EUR', 'USD', 'EGP', 'SAR', 'AED'];
                   <input type="checkbox"
                     [checked]="isBenefitSelected(cfg, b.benefitCode)"
                     (change)="toggleBenefit(cfg, b.benefitCode)" />
-                  {{ b.benefitLabelFr }}
+                  {{ benefitLabel(b) }}
                 </label>
               }
             </div>
@@ -187,7 +187,14 @@ export class RemunerationSectionComponent implements OnInit {
   private svc = inject(RemunerationService);
   private translate = inject(TranslateService);
 
+  /** Payroll benefit label in the UI language — the catalogue carries both. */
+  protected benefitLabel(b: { benefitLabelFr: string; benefitLabelEn: string | null }): string {
+    return (this.translate.currentLang() === 'en' && b.benefitLabelEn) || b.benefitLabelFr;
+  }
+
   readonly profile = input.required<EmployeeProfile>();
+  /** Contract type label from Admin › Listes configurables › CONTRACT_TYPE, resolved by the page. */
+  readonly contractLabel = input<string | null>(null);
 
   readonly config   = signal<EmployeePayrollConfigDto | null>(null);
   readonly benefits = signal<BenefitCatalogueDto[]>([]);
@@ -296,7 +303,7 @@ export class RemunerationSectionComponent implements OnInit {
   }
 
   contractTypeLabel(): string {
-    return contractLabel(this.profile().contractType, this.translate);
+    return this.contractLabel() ?? contractLabel(this.profile().contractType, this.translate);
   }
 
   isBenefitSelected(cfg: EmployeePayrollConfigDto, code: string): boolean {

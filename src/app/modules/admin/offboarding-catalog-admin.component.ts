@@ -1,20 +1,34 @@
 import {
   Component, TemplateRef, computed, inject, input, OnChanges, signal, viewChild,
 } from '@angular/core';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, forkJoin, Observable, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { AdminService } from './admin.service';
 import {
   OffboardingCatalogTask, Role, SaveCatalogTaskRequest,
 } from './models/admin.model';
-import { RefDataService } from '../../core/ref/ref-data.service';
-import { RefDataItem } from '../../core/ref/ref-data.model';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+
+/**
+ * Un onglet du catalogue : un code de type de contrat, avec sa valeur CONTRACT_TYPE quand
+ * elle existe (libellés FR/EN). `value` est absent pour un code présent dans le catalogue
+ * mais plus (ou pas) dans la liste — gardé pour que ses tâches restent visibles.
+ */
+interface CatalogContractType {
+  code:   string;
+  value?: ListValue;
+}
 import {
   ButtonComponent, StatusBadgeComponent, FormFieldComponent, SelectComponent, SelectOption,
   ToggleComponent, ModalService, ModalRef,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
+import { searchRows } from '../../shared/table-sort.utils';
+import { roleLabel } from '../../shared/utils/admin-label.utils';
+import { rememberAdminState } from './admin-section-state';
 
 @Component({
   selector: 'app-offboarding-catalog-admin',
@@ -22,16 +36,12 @@ import {
   imports: [
     ButtonComponent, StatusBadgeComponent,
     FormFieldComponent, SelectComponent, ToggleComponent,
-    DataTableComponent, DafCellDirective, TranslatePipe,
+    DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe,
   ],
   template: `
     <div class="cat-header">
-      <div>
-        <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
-        <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
-      </div>
-      <daf-button class="desktop-only" [label]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add' }" (onClick)="openAdd()" />
-      <daf-button class="icon-btn-toggle mobile-only" [title]="'ADMIN.docs.offboarding.addTask' | translate" variant="teal" [options]="{ iconStart: 'add', size: 'sm' }" (onClick)="openAdd()" />
+      <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
+      <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
     </div>
 
     <!-- Validator role for this country (V66) — kept in this tab rather than in one of its
@@ -74,19 +84,34 @@ import {
         <button
           class="cat-tab-btn"
           [class.active]="filterContractType === ct.code"
-          (click)="selectContractType(ct.code ?? '')"
+          (click)="selectContractType(ct.code)"
           role="tab"
           type="button"
-        >{{ contractTypeLabel(ct.code ?? '') }}</button>
+        >{{ contractTypeLabel(ct.code) }}</button>
       }
     </nav>
+
+    <!-- Same bar as the other lists: search (within the selected contract type),
+         "Ajouter une tâche", and [table] puts the table's reset + column picker on the right. -->
+    <daf-search-toolbar class="mb-4 block"
+      [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+      [value]="searchQuery()"
+      [debounce]="200"
+      (valueChange)="onSearch($event)"
+      [table]="catTable() ?? null">
+      <daf-button
+        [label]="'ADMIN.docs.offboarding.addTask' | translate"
+        variant="teal"
+        [options]="{ iconStart: 'add' }"
+        (onClick)="openAdd()" />
+    </daf-search-toolbar>
 
     <!-- Loading / empty state -->
     @if (loading()) {
       <div class="skeleton-wrap">
         @for (_ of [1,2,3,4,5]; track $index) { <div class="skeleton-row"></div> }
       </div>
-    } @else if (rows().length === 0) {
+    } @else if (tableRows().length === 0) {
       <div class="empty-state">
         <span class="material-symbols-outlined">list_alt</span>
         <p>{{ 'ADMIN.docs.offboarding.empty' | translate }} {{ 'ADMIN.docs.offboarding.emptyForContract' | translate }}.</p>
@@ -94,7 +119,7 @@ import {
     } @else {
       <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
       <div class="table-scroll">
-      <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
+      <daf-data-table #catTable [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
         <ng-template dafCell="taskCode" let-row>
           <code class="code-chip">{{ row['_source'].taskCode }}</code>
         </ng-template>
@@ -186,7 +211,7 @@ import {
     </ng-template>
   `,
   styles: [`
-    .cat-header    { display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap }
+    .cat-header    { margin-bottom:16px }
     .section-title { font-size:15px;font-weight:700;color:var(--color-text);margin:0 0 4px }
     .section-sub   { font-size:13px;color:var(--color-text-muted);margin:0 }
     .validator-card { border:1px solid var(--color-border);border-radius:10px;padding:14px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px }
@@ -219,17 +244,11 @@ import {
     .error-banner    { margin-top:12px;padding:10px 14px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:13px }
     .offboarding-modal-footer { display:flex;justify-content:flex-end;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-outline-variant) }
     @media(max-width:500px) { .form-grid { grid-template-columns:1fr } }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
-    }
   `],
 })
 export class OffboardingCatalogAdminComponent implements OnChanges {
   private svc = inject(AdminService);
-  private refData = inject(RefDataService);
+  private lists = inject(ConfigurableListService);
   private translate = inject(TranslateService);
   private modal = inject(ModalService);
   private modalRef?: ModalRef;
@@ -237,7 +256,7 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   paysId = input.required<number>();
 
-  readonly contractTypes = signal<RefDataItem[]>([]);
+  readonly contractTypes = signal<CatalogContractType[]>([]);
 
   // Empty until the first ngOnChanges resolves contractTypes() for this pays — see
   // loadContractTypes(), which picks the first available code once the fetch lands.
@@ -258,14 +277,14 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
 
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return this.contractTypes().map(ct => ({ value: ct.code ?? '', label: this.contractTypeLabel(ct.code ?? '') }));
+    return this.contractTypes().map(ct => ({ value: ct.code, label: this.contractTypeLabel(ct.code) }));
   });
 
   readonly validatorOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
     return [
       { value: '', label: this.translate.instant('ADMIN.docs.offboarding.validatorNone') },
-      ...this.roles().map(r => ({ value: String(r.id), label: r.frenchName })),
+      ...this.roles().map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) })),
     ];
   });
 
@@ -294,8 +313,31 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
     ];
   });
 
-  readonly tableRows = computed<TableRow[]>(() =>
-    this.rows().map(t => ({
+  /** Toolbar search text — narrows the selected contract type's tasks on what each row shows. */
+  readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('offboarding-catalog', { searchQuery: this.searchQuery });
+
+  /** The table (absent while loading / when empty) — handed to the toolbar's `[table]`. */
+  readonly catTable = viewChild<DataTableComponent>('catTable');
+
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
+
+  /** Not paginated: the search simply narrows the loaded list. */
+  readonly tableRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const tr = (k: string) => this.translate.instant(k);
+    const visible = searchRows(this.rows(), this.searchQuery(), task => [
+      task.orderIndex, task.taskLabel, task.taskCode, task.ownerRole, task.slaWorkingDays,
+      task.isMandatory ? tr('ADMIN.docs.offboarding.mandatory') : null,
+      task.isBlocking ? tr('ADMIN.docs.offboarding.blocking') : null,
+      tr(task.isActive ? 'ADMIN.docs.offboarding.active' : 'ADMIN.docs.offboarding.inactive'),
+    ]);
+    return visible.map(t => ({
       orderIndex:     t.orderIndex,
       taskLabel:      t.taskLabel,
       taskCode:       t.taskCode,
@@ -304,8 +346,8 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
       flags:          null,
       isActive:       t.isActive,
       _source:        t,
-    })),
-  );
+    }));
+  });
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
@@ -373,12 +415,34 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
   }
 
   /**
-   * Contract types are per-country, so this refetches on every paysId change (ngOnChanges
-   * fires on any input change, not just the first). load() only runs once the fetch resolves,
-   * because it depends on filterContractType being a valid code for THIS country.
+   * Les types de contrat viennent de la liste configurable CONTRACT_TYPE du pays
+   * (Admin › Listes configurables : valeurs globales + valeurs propres au pays). Le
+   * catalogue est indexé par `value_code` (CDI, CDD, CIVP, STAGE, FREELANCE…), le même code
+   * que le workflow d'offboarding lit sur le contrat du collaborateur.
+   *
+   * Avant, ils venaient de `/api/hr/ref/contract-types`, un endpoint qui n'a jamais existé
+   * côté backend : l'erreur était avalée en liste vide, si bien que ni les onglets ni le
+   * select « Type de contrat » de la modale n'affichaient quoi que ce soit.
+   *
+   * On y ajoute les codes déjà présents dans le catalogue mais absents de la liste (valeur
+   * désactivée, code historique) : sans eux, leurs tâches deviendraient inaccessibles.
+   *
+   * Rechargé à chaque changement de pays ; load() n'est lancé qu'une fois la liste connue,
+   * parce qu'il dépend d'un filterContractType valide pour CE pays.
    */
   private loadContractTypes(): void {
-    this.refData.getContractTypes(this.paysId()).subscribe(types => {
+    const paysId = this.paysId();
+    forkJoin({
+      values: this.lists.getListValues('CONTRACT_TYPE', paysId)
+        .pipe(catchError(() => of([] as ListValue[]))),
+      tasks:  this.svc.listCatalogTasks(paysId)
+        .pipe(catchError(() => of([] as OffboardingCatalogTask[]))),
+    }).subscribe(({ values, tasks }) => {
+      if (paysId !== this.paysId()) return;   // réponse d'un pays qui n'est plus affiché
+      const types: CatalogContractType[] = values.map(v => ({ code: v.valueCode, value: v }));
+      for (const code of new Set(tasks.map(t => t.contractType))) {
+        if (code && !types.some(t => t.code === code)) types.push({ code });
+      }
       this.contractTypes.set(types);
       if (!types.some(t => t.code === this.filterContractType)) {
         this.filterContractType = types[0]?.code ?? '';
@@ -515,7 +579,12 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
       });
   }
 
+  /** Libellé de la liste CONTRACT_TYPE ; à défaut la traduction historique, puis le code. */
   contractTypeLabel(ct: string): string {
+    const value = this.contractTypes().find(t => t.code === ct)?.value;
+    if (value) {
+      return (this.translate.currentLang() === 'en' && value.labelEn) ? value.labelEn : value.labelFr;
+    }
     const key = `ADMIN.docs.offboarding.contractType.${ct}`;
     const val = this.translate.instant(key);
     return val === key ? ct : val;

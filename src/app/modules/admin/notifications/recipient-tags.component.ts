@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent, SelectComponent, SelectOption } from '@khalilrebhiitec/daf360';
 import {
@@ -8,7 +8,8 @@ import {
   RecipientMode,
   RoleOption,
 } from './notification-routing.model';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../shared/utils/admin-label.utils';
 
 /**
  * Recipient tags for one channel (in-app, or one of TO / CC / BCC).
@@ -30,7 +31,9 @@ import { TranslatePipe } from '@ngx-translate/core';
   styleUrl: './recipient-tags.component.scss',
 })
 export class RecipientTagsComponent {
-  recipients       = input<RecipientItem[]>([]);
+  private readonly translate = inject(TranslateService);
+
+  recipients      = input<RecipientItem[]>([]);
   availableRoles   = input<RoleOption[]>([]);
   availablePerms   = input<PermissionOption[]>([]);
   sectionTitle     = input('');
@@ -44,13 +47,17 @@ export class RecipientTagsComponent {
   selectedRoleId = signal<number | null>(null);
   selectedPerm   = signal<string | null>(null);
 
-  readonly modeOptions: SelectOption[] = [
-    { value: 'ALL',                label: 'Tous les titulaires du rôle' },
-    { value: 'MANAGER',            label: 'Le manager (rôle supérieur)' },
-    { value: 'PERMISSION',         label: 'Tous les titulaires d’un droit' },
-    { value: 'SUBJECT',            label: 'La personne concernée' },
-    { value: 'MANAGER_OF_SUBJECT', label: 'Le manager de la personne concernée' },
-  ];
+  readonly modeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant('ADMIN.notifications.' + k);
+    return [
+      { value: 'ALL',                label: t('recipientModeAll') },
+      { value: 'MANAGER',            label: t('recipientModeManager') },
+      { value: 'PERMISSION',         label: t('recipientModePermission') },
+      { value: 'SUBJECT',            label: t('recipientModeSubject') },
+      { value: 'MANAGER_OF_SUBJECT', label: t('recipientModeManagerOfSubject') },
+    ];
+  });
 
   readonly isPermissionMode = computed(() => this.mode() === 'PERMISSION');
 
@@ -72,7 +79,7 @@ export class RecipientTagsComponent {
       .map(r => r.roleId);
     return this.availableRoles()
       .filter(r => !taken.includes(r.id))
-      .map(r => ({ value: String(r.id), label: r.frenchName }));
+      .map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) }));
   });
 
   readonly permOptions = computed<SelectOption[]>(() => {
@@ -100,21 +107,31 @@ export class RecipientTagsComponent {
   tagLabel(r: RecipientItem): string {
     switch (r.recipientMode ?? 'ALL') {
       case 'PERMISSION':         return r.permissionCode ?? '—';
-      case 'SUBJECT':            return 'La personne concernée';
-      case 'MANAGER_OF_SUBJECT': return 'Son manager';
-      default:                   return r.roleName ?? '—';
+      case 'SUBJECT':            return this.t('tagSubject');
+      case 'MANAGER_OF_SUBJECT': return this.t('tagManagerOfSubject');
+      default:                   return this.roleName(r) ?? '—';
     }
+  }
+
+  /** The recipient's role in the UI language — the recipient carries the French name only. */
+  private roleName(r: RecipientItem): string | null {
+    const role = r.roleId != null ? this.availableRoles().find(x => x.id === r.roleId) : undefined;
+    return role ? roleLabel(role, this.translate) : r.roleName;
   }
 
   /** Suffix that makes the targeting visible on the tag itself. */
   tagSuffix(r: RecipientItem): string {
     switch (r.recipientMode ?? 'ALL') {
-      case 'MANAGER':            return 'manager du rôle';
-      case 'PERMISSION':         return 'droit';
-      case 'SUBJECT':            return 'auto';
-      case 'MANAGER_OF_SUBJECT': return 'auto';
-      default:                   return 'tous';
+      case 'MANAGER':            return this.t('tagSuffixManager');
+      case 'PERMISSION':         return this.t('tagSuffixPermission');
+      case 'SUBJECT':            return this.t('tagSuffixAuto');
+      case 'MANAGER_OF_SUBJECT': return this.t('tagSuffixAuto');
+      default:                   return this.t('tagSuffixAll');
     }
+  }
+
+  private t(key: string): string {
+    return this.translate.instant('ADMIN.notifications.' + key);
   }
 
   // ── Interaction ────────────────────────────────────────────────────────────

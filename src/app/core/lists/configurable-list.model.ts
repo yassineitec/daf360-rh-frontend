@@ -19,6 +19,8 @@ export interface ListValue {
   isActive: boolean;
   isSystem: boolean;
   payrollContractCode: string | null;
+  /** CONTRACT_TYPE only: lifecycle rules this type follows (CDI, CDD, CIVP, STAGE, FREELANCE, DETACHEMENT). */
+  lifecycleNature: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -30,6 +32,7 @@ export interface CreateListValueRequest {
   labelFr: string;
   labelEn: string;
   sortOrder?: number;
+  lifecycleNature?: string | null;
 }
 
 export interface UpdateListValueRequest {
@@ -39,4 +42,5 @@ export interface UpdateListValueRequest {
   isActive?: boolean;
   forceDeactivate?: boolean;
   payrollContractCode?: string | null;
+  lifecycleNature?: string | null;
 }

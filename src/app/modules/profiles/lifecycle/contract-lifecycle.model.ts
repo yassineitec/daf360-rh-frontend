@@ -15,7 +15,12 @@ export type ContractStatus =
   | 'RENOUVELE'
   | 'INACTIF';
 
-export type ContractTypeCode = 'CDI' | 'CDD' | 'CIVP' | 'STAGE' | 'DETACHEMENT' | 'PORTAGE';
+/**
+ * Lifecycle nature of a contract — the backend's ContractTypeRefs.NATURES (FREELANCE), plus
+ * the legacy PORTAGE. A CONTRACT_TYPE list value (« contrat »…) maps to one through its
+ * `lifecycleNature`; the contract itself stores the list value's id.
+ */
+export type ContractTypeCode = 'CDI' | 'CDD' | 'CIVP' | 'STAGE' | 'DETACHEMENT' | 'FREELANCE' | 'PORTAGE';
 
 // ── Response DTOs ─────────────────────────────────────────────────────────────
 
@@ -23,6 +28,10 @@ export interface ContractListDto {
   id:                   number;
   employeeProfileId:    number;
   contractTypeCode:     ContractTypeCode;
+  /** configurable_list_values.id of the CONTRACT_TYPE value the contract stores. */
+  contractTypeId?:      number | null;
+  /** That value's label (« contrat », « CDI — Durée indéterminée »…). */
+  contractTypeLabel?:   string | null;
   currentStatusCode:    ContractStatus;
   dateDebut:            string;
   dateFinPrevue:        string | null;
@@ -42,6 +51,8 @@ export interface ContractDetailDto {
   employeeProfileId:          number;
   paysId:                     number;
   contractTypeCode:           ContractTypeCode;
+  contractTypeId?:            number | null;
+  contractTypeLabel?:         string | null;
   currentStatusCode:          ContractStatus;
   dateDebut:                  string;
   dateFinPrevue:              string | null;
@@ -116,7 +127,8 @@ export interface LifecycleAlertDto {
 export interface CreateContractRequest {
   employeeProfileId:          number;
   paysId:                     number;
-  contractTypeCode:           ContractTypeCode;
+  /** A CONTRACT_TYPE list value id (as text) or a code (CDI…) — the backend stores the id. */
+  contractTypeCode:           string;
   dateDebut:                  string;
   dateFinPrevue?:             string | null;
   referenceContrat?:          string | null;
@@ -195,5 +207,16 @@ export const CONTRACT_TYPE_CONFIG: Record<ContractTypeCode, ContractTypeConfig> 
   CIVP:        { label: 'CIVP',         needsEndDate: true,  hasTrial: false },
   STAGE:       { label: 'Stage',        needsEndDate: true,  hasTrial: false },
   DETACHEMENT: { label: 'Détachement',  needsEndDate: true,  hasTrial: false },
+  FREELANCE:   { label: 'Freelance',    needsEndDate: false, hasTrial: false },
   PORTAGE:     { label: 'Portage',      needsEndDate: false, hasTrial: false },
 };
+
+/** The nature of a CONTRACT_TYPE list value — mirrors ContractTypeRefs.natureOf (backend). */
+export function contractNatureOf(v: { lifecycleNature?: string | null; valueCode: string } | null | undefined): ContractTypeCode {
+  const known = (c: string | null | undefined) => {
+    const u = (c ?? '').trim().toUpperCase();
+    return u && u !== 'PORTAGE' && u in CONTRACT_TYPE_CONFIG ? u as ContractTypeCode : null;
+  };
+  return known(v?.lifecycleNature) ?? known(v?.valueCode)
+    ?? ((v?.valueCode ?? '').trim().toUpperCase() === 'PORTAGE' ? 'FREELANCE' : 'CDI');
+}

@@ -6,6 +6,7 @@ import {
   ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
   ModalService, ModalRef, SelectComponent, SelectOption,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
+  PermissionService, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
@@ -13,6 +14,9 @@ import { RefDataService } from '../../../../core/ref/ref-data.service';
 import { PaysTimezone, TimezoneOption } from '../../../../core/ref/ref-data.model';
 import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { searchRows } from '../../../../shared/table-sort.utils';
+import { adminLabel } from '../../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../../admin-section-state';
 
 @Component({
   selector: 'app-regime-catalog',
@@ -20,7 +24,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   imports: [
     ReactiveFormsModule, DafHasPermissionDirective,
     ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
-    SelectComponent, DataTableComponent, DafCellDirective,
+    SelectComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent,
     TranslatePipe,
   ],
   templateUrl: './regime-catalog.component.html',
@@ -32,6 +36,7 @@ export class RegimeCatalogComponent implements OnChanges {
   private modal = inject(ModalService);
   private translate = inject(TranslateService);
   private refData   = inject(RefDataService);
+  protected perms   = inject(PermissionService);
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
   creating = signal(false);
@@ -48,14 +53,50 @@ export class RegimeCatalogComponent implements OnChanges {
   errorMsg     = signal<string | null>(null);
   successMsg   = signal<string | null>(null);
   skeletonRows = [1,2,3,4];
+  /** Search over the regime list (toolbar above the panels). */
+  searchQuery  = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('regimes.catalog', { searchQuery: this.searchQuery });
+
+  /** The regime table (absent while loading or empty) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+  }
+
+  /** A regime's name in the UI language (English when the UI is English and one exists). */
+  regimeName(r: WorkingTimeRegime): string {
+    return adminLabel(r, this.translate);
+  }
+
+  /** Searches what the row shows: label, code, schedule and the badges. No paging here. */
+  readonly filteredRegimes = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string, p?: object) => this.translate.instant(k, p);
+    return searchRows(this.regimes(), this.searchQuery(), r => [
+      this.regimeName(r), r.code,
+      t('ADMIN.regimes.catalog.hoursPerWeek', { h: r.hoursPerWeek }),
+      t('ADMIN.regimes.catalog.daysPerWeek', { d: r.daysPerWeek }),
+      r.isDefault ? t('ADMIN.regimes.catalog.badgeDefault') : null,
+      this.isSeasonalActive(r) ? t('ADMIN.regimes.catalog.badgeSeasonalActive')
+        : r.seasonalFrom ? t('ADMIN.regimes.catalog.badgeSeasonal') : null,
+      r.isFlexible ? t('ADMIN.regimes.catalog.badgeFlexible') : null,
+      !r.isActive ? t('ADMIN.regimes.catalog.badgeInactive') : null,
+    ]);
+  });
 
   selectedRegime = computed(() =>
     this.regimes().find(r => r.id === this.selectedId()) ?? null
   );
 
-  currentDefaultName = computed(() =>
-    this.regimes().find(r => r.isDefault && r.id !== this.selectedId())?.labelFr ?? null
-  );
+  currentDefaultName = computed(() => {
+    const r = this.regimes().find(r => r.isDefault && r.id !== this.selectedId());
+    return r ? this.regimeName(r) : null;
+  });
 
   showDefaultWarning = computed(() => {
     const val = this.form.get('isDefault')?.value;
@@ -74,7 +115,7 @@ export class RegimeCatalogComponent implements OnChanges {
     const regime = (row: TableRow) => row['_source'] as WorkingTimeRegime;
     return [
       { key: 'name',   label: this.translate.instant('ADMIN.regimes.catalog.colName'), sortable: true,
-        sortAccessor: (row) => regime(row).labelFr || null },
+        sortAccessor: (row) => this.regimeName(regime(row)) || null },
       // Weekly hours first, days as the tie-breaker: 35h·5j before 39h·5j before 39h·6j.
       { key: 'meta',   label: this.translate.instant('ADMIN.regimes.catalog.colSchedule'), sortable: true,
         sortAccessor: (row) => regime(row).hoursPerWeek * 10 + regime(row).daysPerWeek },
@@ -83,8 +124,8 @@ export class RegimeCatalogComponent implements OnChanges {
   });
 
   readonly rows = computed<TableRow[]>(() =>
-    this.regimes().map(r => ({
-      name:   r.labelFr,
+    this.filteredRegimes().map(r => ({
+      name:   this.regimeName(r),
       meta:   `${r.hoursPerWeek}h · ${r.daysPerWeek}j`,
       badges: null,
       _source: r,

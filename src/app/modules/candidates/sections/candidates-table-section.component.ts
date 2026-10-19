@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, untracked, viewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, DataTableComponent, SortDirection, TableColumn, TableConfig, TableRow,
@@ -59,6 +59,10 @@ const SERVER_SORT_FIELD: Record<string, string> = {
 export class CandidatesTableSectionComponent {
   private translate = inject(TranslateService);
 
+  /** The rendered table — the page hands it to `daf-search-toolbar` so the reset + column
+   *  picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
+
   readonly candidates      = input.required<CandidateListItem[]>();
   readonly loading         = input(false);
   readonly skeletonRows    = input(10);
@@ -68,6 +72,12 @@ export class CandidatesTableSectionComponent {
   readonly statusBadge     = input.required<(status: string) => BadgeCell>();
   /** Sort, resize, column picker and reset, with server-side sort — /rh/recrutement and /rh/candidates/list. */
   readonly tools           = input(false);
+  /**
+   * Tri serveur en cours (`firstName,asc`…), tel que la page le tient (`tools` seulement).
+   * Il ne sert qu'à placer la flèche quand le tableau est (re)créé — retour d'une fiche,
+   * retour de la vue Kanban : sans lui, la liste restait triée mais aucune colonne ne le montrait.
+   */
+  readonly sort            = input<string | null>(null);
 
   /** The trailing view action — always means "open this candidate". */
   readonly open = output<number>();
@@ -137,6 +147,9 @@ export class CandidatesTableSectionComponent {
         sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
         // Rows are rendered in the order the server returned; sortChange still fires.
         manualSort:        true,
+        // Lu une seule fois (`untracked`) : le suivre reconstruirait la config à chaque
+        // clic d'en-tête, et la lib n'applique de toute façon `defaultSort` qu'au premier rendu.
+        ...this.defaultSort(untracked(this.sort)),
       } : {}),
       actions: [
         { id: 'accept', icon: 'check_circle', tooltip: t('CANDIDATES.ACTIONS.ACCEPT'),
@@ -150,6 +163,13 @@ export class CandidatesTableSectionComponent {
       ],
     };
   });
+
+  /** Inverse de `onSortChange` : `firstName,asc` → la flèche sur la colonne `candidat`. */
+  private defaultSort(sort: string | null): Pick<TableConfig, 'defaultSort'> {
+    const [field, dir] = (sort ?? '').split(',');
+    const key = Object.keys(SERVER_SORT_FIELD).find(k => SERVER_SORT_FIELD[k] === field);
+    return key && (dir === 'asc' || dir === 'desc') ? { defaultSort: { key, dir } } : {};
+  }
 
   /** Header click (or the reset icon) → Spring `sort` value, or null when cleared. */
   protected onSortChange(key: string, dir: SortDirection): void {

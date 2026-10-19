@@ -59,7 +59,7 @@ export class RecruitmentPipelineComponent implements OnInit {
   error   = signal<string | null>(null);
 
   readonly stages = STAGES;
-  protected readonly statusBadge = statusBadge;
+  protected readonly statusBadge = (s: string) => statusBadge(s, this.translate);
 
   readonly grouped = computed(() =>
     STAGES.map(stage => ({

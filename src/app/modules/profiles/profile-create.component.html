@@ -78,11 +78,18 @@
                 [selected]="toSelected(paysId())"
                 (selectedChange)="onPaysChange($event)" />
 
-              <daf-select
-                [options]="contractTypeOptions()"
-                [config]="{ label: ('PROFILES.NEW.CONTRACT_TYPE' | translate), required: true }"
-                [selected]="contractType() ? [contractType()] : []"
-                (selectedChange)="contractType.set($event[0] || '')" />
+              <div>
+                <daf-select
+                  [options]="contractTypeOptions()"
+                  [config]="{ label: ('PROFILES.NEW.CONTRACT_TYPE' | translate), required: true }"
+                  [selected]="contractType() ? [contractType()] : []"
+                  (selectedChange)="contractType.set($event[0] || '')" />
+                @if (contractTypesEmpty()) {
+                  <p class="mt-1 text-[11px] text-on-surface-variant">
+                    {{ 'PROFILES.FIELDS.CONTRACT_TYPE_EMPTY_HINT' | translate }}
+                  </p>
+                }
+              </div>
 
               <daf-multi-date-picker
                 [config]="{ label: ('PROFILES.NEW.HIRE_DATE' | translate), selectionMode: 'single' }"

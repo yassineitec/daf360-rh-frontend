@@ -80,7 +80,8 @@ export type HistoryScope = 'team' | 'global';
         (filterApply)="applyFilters($event)"
         [views]="viewOptions()"
         [view]="viewMode()"
-        (viewChange)="setView($event)" />
+        (viewChange)="setView($event)"
+        [table]="tableSection()?.table() ?? null" />
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -121,6 +122,9 @@ export type HistoryScope = 'team' | 'global';
   `,
 })
 export class CongeHistoryComponent extends CongeListBase implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(CongesTableSectionComponent);
+
   /**
    * Which history this is. Read from the route's `data.scope` rather than bound as an input:
    * rh-frontend calls provideRouter(routes) WITHOUT withComponentInputBinding(), so a

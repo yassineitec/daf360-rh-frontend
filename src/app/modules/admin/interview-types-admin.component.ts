@@ -2,12 +2,13 @@ import { Component, Input, OnChanges, TemplateRef, computed, inject, signal, unt
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, DafCellDirective, SortDirection, TableColumn, TableConfig, TableRow,
-  ModalService, ModalRef,
+  ModalService, ModalRef, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
-import { TableSort, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
+import { rememberAdminState } from './admin-section-state';
 
 const PAGE_SIZE = 5;
 
@@ -24,30 +25,31 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
   imports: [
     ButtonComponent, FormFieldComponent,
     StatusBadgeComponent, PaginationComponent, DataTableComponent, DafCellDirective,
-    TranslatePipe,
+    SearchToolbarComponent, TranslatePipe,
   ],
   template: `
     <div class="ita-wrap">
 
       <!-- Header -->
       <div class="ita-header">
-        <div>
-          <h2 class="ita-title">{{ 'ADMIN.docs.interviews.title' | translate }}</h2>
-          <p class="ita-sub">{{ 'ADMIN.docs.interviews.subtitle' | translate:{ count: types().length } }}</p>
-        </div>
+        <h2 class="ita-title">{{ 'ADMIN.docs.interviews.title' | translate }}</h2>
+        <p class="ita-sub">{{ 'ADMIN.docs.interviews.subtitle' | translate:{ count: types().length } }}</p>
+      </div>
+
+      <!-- Same bar as the other lists: search, "Nouveau type", and [table] puts the
+           table's reset + column picker on the right. -->
+      <daf-search-toolbar class="mb-4 block"
+        [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
+        [value]="searchQuery()"
+        [debounce]="200"
+        (valueChange)="onSearch($event)"
+        [table]="itaTable() ?? null">
         <daf-button
           [label]="'ADMIN.docs.interviews.newType' | translate"
           variant="teal"
-          class="desktop-only"
           [options]="{ iconStart: 'add' }"
           (onClick)="openAdd()" />
-        <daf-button
-          class="icon-btn-toggle mobile-only"
-          title="Nouveau type"
-          variant="teal"
-          [options]="{ iconStart: 'add', size: 'sm' }"
-          (onClick)="openAdd()" />
-      </div>
+      </daf-search-toolbar>
 
       <!-- Global error -->
       @if (error()) {
@@ -90,7 +92,7 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
         <p class="ita-empty">{{ 'ADMIN.docs.interviews.empty' | translate }}</p>
       } @else {
         <div class="table-scroll">
-        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+        <daf-data-table #itaTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                         (sortChange)="onSortChange($event.key, $event.dir)"
                         (resetClick)="onSortChange('', null)">
           <ng-template dafCell="name" let-row>
@@ -108,14 +110,14 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
         </div>
 
         <!-- Count + Pagination -->
-        @if (types().length > 0) {
+        @if (filteredTypes().length > 0) {
           <div class="ita-footer">
-            <span class="ita-count"><strong>{{ types().length }}</strong> {{ 'ADMIN.docs.interviews.typesWord' | translate }}</span>
+            <span class="ita-count"><strong>{{ filteredTypes().length }}</strong> {{ 'ADMIN.docs.interviews.typesWord' | translate }}</span>
             @if (totalPages() > 1) {
               <daf-pagination
                 [currentPage]="currentPage()"
                 [totalPages]="totalPages()"
-                [totalElements]="types().length"
+                [totalElements]="filteredTypes().length"
                 (pageChange)="onPageChange($event)" />
             }
           </div>
@@ -125,7 +127,7 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
   `,
   styles: [`
     .ita-wrap   { width:100% }
-    .ita-header { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px }
+    .ita-header { margin-bottom:20px }
     .ita-title  { font-size:var(--text-headline-md);font-weight:600;color:var(--color-on-surface);margin:0 }
     .ita-sub    { font-size:var(--text-body-sm);color:var(--color-on-surface-variant);margin:3px 0 0 }
     .ita-form-grid  { display:grid;grid-template-columns:1fr 120px;gap:12px }
@@ -142,12 +144,6 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
 
     @media (max-width: 480px) {
       .ita-form-grid { grid-template-columns:1fr }
-    }
-
-    .mobile-only { display:none }
-    @media (max-width: 640px) {
-      .desktop-only { display:none }
-      .mobile-only  { display:inline-flex }
     }
   `],
 })
@@ -174,11 +170,38 @@ export class InterviewTypesAdminComponent implements OnChanges {
   currentPage = signal(0);
   /** Table header sort — applied to the whole list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
-  readonly totalPages = computed(() => Math.ceil(this.types().length / PAGE_SIZE));
+  /** Toolbar search text — filters the whole list, before sorting and paging. */
+  readonly searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('interview-types', {
+    currentPage: this.currentPage, sort: this.sort, searchQuery: this.searchQuery,
+  });
+
+  /** The table (absent when the list is empty) — handed to the toolbar's `[table]`. */
+  readonly itaTable = viewChild<DataTableComponent>('itaTable');
+
+  /** New search → back to the first page (otherwise one can sit on an empty page). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  readonly filteredTypes = computed(() => {
+    this.translate.currentLang();
+    return searchRows(this.types(), this.searchQuery(), t => [
+      t.orderIndex, t.name, t.description,
+      this.translate.instant(t.isActive ? 'ADMIN.docs.interviews.active' : 'ADMIN.docs.interviews.inactive'),
+    ]);
+  });
+
+  readonly totalPages = computed(() => Math.ceil(this.filteredTypes().length / PAGE_SIZE));
 
   readonly pagedTypes = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.types(), this.sort(), INTERVIEW_TYPE_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredTypes(), this.sort(), INTERVIEW_TYPE_SORT).slice(start, start + PAGE_SIZE);
   });
 
   onPageChange(page: number): void {
@@ -256,11 +279,20 @@ export class InterviewTypesAdminComponent implements OnChanges {
 
   ngOnChanges(): void { this.load(); }
 
+  /** Premier chargement déjà fait — le tout premier garde la page restaurée par `memory`. */
+  private loadedOnce = false;
+
   private load(): void {
     this.loading.set(true);
-    this.currentPage.set(0);
+    if (this.loadedOnce) this.currentPage.set(0);
+    this.loadedOnce = true;
     this.svc.getTypes().subscribe({
-      next:  t  => { this.types.set(t); this.loading.set(false); },
+      next:  t  => {
+        this.types.set(t); this.loading.set(false);
+        // Page restaurée au-delà de la liste rechargée → dernière page existante.
+        const last = Math.max(0, this.totalPages() - 1);
+        if (this.currentPage() > last) this.currentPage.set(last);
+      },
       error: () => { this.error.set(this.translate.instant('ADMIN.docs.interviews.loadError')); this.loading.set(false); },
     });
   }

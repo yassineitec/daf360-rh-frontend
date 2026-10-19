@@ -1,3 +1,4 @@
+import { adminLabel } from '../../shared/utils/admin-label.utils';
 import {
   Component, inject, input, OnChanges, output, signal, SimpleChanges,
 } from '@angular/core';
@@ -36,7 +37,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
                 <option [value]="null">{{ 'PROFILES.COMMON.SELECT_ELLIPSIS' | translate }}</option>
                 @for (r of regimes(); track r.id) {
                   <option [value]="r.id">
-                    {{ r.labelFr }} — {{ 'PROFILES.REGIME_MODAL.OPTION_META' | translate:{ hours: r.hoursPerWeek, days: r.daysPerWeek } }}
+                    {{ regimeLabel(r) }} — {{ 'PROFILES.REGIME_MODAL.OPTION_META' | translate:{ hours: r.hoursPerWeek, days: r.daysPerWeek } }}
                     @if (r.isDefault) { {{ 'PROFILES.REGIME_MODAL.DEFAULT_SUFFIX' | translate }} }
                   </option>
                 }
@@ -108,6 +109,11 @@ export class RegimeAssignModalComponent implements OnChanges {
   private fb  = inject(FormBuilder);
   private svc = inject(ProfileService);
   private translate = inject(TranslateService);
+
+  /** rh/admin régime label in the UI language. */
+  protected regimeLabel(r: WorkingTimeRegime): string {
+    return adminLabel(r, this.translate);
+  }
 
   profileId = input.required<number>();
   paysId    = input.required<number>();

@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -17,6 +17,11 @@ import {
 } from './sections/recruitment-demand-cards-section.component';
 import { RecruitmentDemandTableSectionComponent } from './sections/recruitment-demand-table-section.component';
 import { ListViewMode } from '../../shared/view-toggle.component';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+import { adminLabel } from '../../shared/utils/admin-label.utils';
+import { RequestsListStateService } from '../requests/requests-list-state.service';
 
 /** The permission that owns this queue — the same code the review endpoint enforces. */
 export const RECRUITMENT_APPROVE_PERMISSION = 'RH_APPROVE_RECRUITMENT_DEMAND';
@@ -37,10 +42,18 @@ function toIsoDay(d: Date): string {
 }
 
 /** Sorted distinct non-empty labels as select options; `keep` stays listed even if absent. */
-function distinctOptions(labels: (string | null)[], keep: string): { value: string; label: string }[] {
+/**
+ * `value` stays the French label (it is what the filter matches on); `display` maps it to
+ * the label shown, so only the text follows the UI language.
+ */
+function distinctOptions(
+  labels: (string | null)[], keep: string, display: (fr: string) => string = l => l,
+): { value: string; label: string }[] {
   const set = new Set(labels.filter((l): l is string => !!l));
   if (keep) set.add(keep);
-  return [...set].sort((a, b) => a.localeCompare(b)).map(l => ({ value: l, label: l }));
+  return [...set]
+    .map(l => ({ value: l, label: display(l) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 
@@ -103,7 +116,8 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
       (filterApply)="onFilterApply($event)"
       [views]="viewOptions()"
       [view]="viewMode()"
-      (viewChange)="setView($event)" />
+      (viewChange)="setView($event)"
+      [table]="tableSection()?.table() ?? null" />
 
     <!-- Same two views as the "Demande" tab next to it and /rh/it-provisioning:
          daf-entity-card grid or daf-data-table. Every demand here is EN_ATTENTE, so
@@ -123,6 +137,7 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
         [decisions]="true"
         [tools]="true"
         [serverSort]="true"
+        [sort]="sort()"
         (serverSortChange)="onSortChange($event)"
         [emptyMessage]="'RECRUITMENT_VALIDATION.EMPTY' | translate"
         (action)="onDemandAction($event.action, $event.demand)" />
@@ -183,11 +198,20 @@ function distinctOptions(labels: (string | null)[], keep: string): { value: stri
   `,
 })
 export class RecruitmentValidationSectionComponent implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(RecruitmentDemandTableSectionComponent);
+
   private svc          = inject(RecruitmentDemandService);
   private userStore    = inject(UserStore);
   private router       = inject(Router);
   private translate    = inject(TranslateService);
   private notification = inject(NotificationService);
+  private listSvc      = inject(ConfigurableListService);
+
+  /** rh/admin URGENCY_LEVEL — the summary only carries the French label, matched here. */
+  private readonly urgencyLevels = toSignal(
+    this.listSvc.getListValues('URGENCY_LEVEL').pipe(catchError(() => of([] as ListValue[]))),
+    { initialValue: [] as ListValue[] });
 
   readonly demands = signal<RecruitmentDemandSummary[]>([]);
   readonly loading = signal(true);
@@ -220,8 +244,15 @@ export class RecruitmentValidationSectionComponent implements OnInit {
 
   /** One handler for both views. */
   onDemandAction(action: RecruitmentDemandAction, d: RecruitmentDemandSummary): void {
-    if (action === 'view') this.openDemand(d.id);
-    else this.askVerdict(d, action === 'approve');
+    if (action === 'view') { this.openDemand(d.id); return; }
+    // Four-eyes: the backend refuses a verdict on one's own request — say so up front
+    // instead of letting the modal fail on submit.
+    if (d.createdByUserId === this.userStore.currentUser()?.userId) {
+      this.error.set(this.translate.instant('RECRUITMENT_VALIDATION.ERR_OWN_REQUEST'));
+      return;
+    }
+    this.error.set(null);
+    this.askVerdict(d, action === 'approve');
   }
   /** The two filter dimensions that match the KPI row — status has nothing left to
    *  break down since every card here is already EN_ATTENTE. */
@@ -234,13 +265,60 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   /** Submission date range: one day or [from, to]; null = no bound. */
   readonly submittedFilter  = signal<Date[] | null>(null);
 
+  // ── Mémoire de l'onglet ────────────────────────────────────────────────────
+  private pageState = inject(RequestsListStateService);
+
+  /**
+   * Les signaux qui décrivent l'onglet tel que l'utilisateur l'a laissé, par nom — sa
+   * partie de l'état de `/rh/requests` (la page mémorise la sienne, onglet actif compris).
+   */
+  private readonly persisted: Record<string, WritableSignal<any>> = {
+    viewMode:         this.viewMode,
+    searchQuery:      this.searchQuery,
+    candidateFilter:  this.candidateFilter,
+    ageFilter:        this.ageFilter,
+    departmentFilter: this.departmentFilter,
+    urgencyFilter:    this.urgencyFilter,
+    submittedFilter:  this.submittedFilter,
+    sort:             this.sort,
+    page:             this.page,
+    pageSize:         this.pageSize,
+  };
+
+  /**
+   * Chaque changement est mémorisé, pour que le retour depuis la fiche d'une demande de
+   * recrutement retrouve l'onglet tel qu'on l'a quitté. Le premier passage a lieu après
+   * `ngOnInit`, donc après la restauration.
+   */
+  private readonly persistState = effect(() => {
+    this.pageState.save('validation', Object.fromEntries(
+      Object.entries(this.persisted).map(([key, sig]) => [key, sig()])));
+  });
+
+  /** Avant le premier chargement et le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.pageState.restore('validation');
+    if (!s) return;
+    for (const [key, sig] of Object.entries(this.persisted)) {
+      if (key in s) sig.set(s[key]);
+    }
+  }
+
   /** Departments present in the fetched batch (plus the selected one, so it never vanishes). */
-  private readonly departmentOptions = computed(() =>
-    distinctOptions(this.demands().map(d => d.department), this.departmentFilter()));
+  private readonly departmentOptions = computed(() => {
+    const en = this.translate.currentLang() === 'en';
+    const enByFr = new Map(this.demands().map(d => [d.department, d.departmentLabelEn] as const));
+    return distinctOptions(this.demands().map(d => d.department), this.departmentFilter(),
+      fr => (en && enByFr.get(fr)) || fr);
+  });
 
   /** Urgency levels present in the fetched batch (plus the selected one). */
-  private readonly urgencyOptions = computed(() =>
-    distinctOptions(this.demands().map(d => d.urgencyLevelLabel), this.urgencyFilter()));
+  private readonly urgencyOptions = computed(() => {
+    this.translate.currentLang();
+    const levels = this.urgencyLevels();
+    return distinctOptions(this.demands().map(d => d.urgencyLevelLabel), this.urgencyFilter(),
+      fr => { const v = levels.find(l => l.labelFr === fr); return v ? adminLabel(v, this.translate) : fr; });
+  });
 
   readonly statusVariant = (s: RecruitmentDemandStatus) => STATUS_VARIANT[s];
 
@@ -379,6 +457,7 @@ export class RecruitmentValidationSectionComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.restoreState();
     this.load();
   }
 
@@ -400,6 +479,13 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     this.svc.listByPays(paysId, 'EN_ATTENTE', this.page(), this.pageSize(), this.sort())
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
+        // Page restaurée devenue hors limites (demandes décidées entre-temps) : on retombe
+        // sur la première plutôt que d'afficher une page vide.
+        if (res && !res.content?.length && this.page() > 0) {
+          this.page.set(0);
+          this.load();
+          return;
+        }
         this.loading.set(false);
         if (!res) {
           this.error.set(this.translate.instant('RECRUITMENT_VALIDATION.ERR_LOAD'));
@@ -480,8 +566,12 @@ export class RecruitmentValidationSectionComponent implements OnInit {
     });
   }
 
+  /**
+   * `from=requests` : la fiche ramène alors ici (`/rh/requests`, onglet « Demande de
+   * recrutement » restauré), et non à l'Historique des demandes.
+   */
   openDemand(id: number): void {
-    this.router.navigate(['/rh/requests-history', id]);
+    this.router.navigate(['/rh/requests-history', id], { queryParams: { from: 'requests' } });
   }
 
   asText(v: string | number | null): string {

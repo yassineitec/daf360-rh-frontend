@@ -26,6 +26,7 @@ export interface RegimeSummary {
   id: number;
   code: string;
   labelFr: string;
+  labelEn?: string | null;
   hoursPerWeek: number;
   isDefault: boolean;
 }
@@ -233,5 +234,14 @@ export const STEPS = [
   { number: 8, label: 'Récapitulatif',key: 'summary'    },
 ];
 
-export const CONTRACT_OPTIONS  = [{ value:'',              label:'—' }, { value:'PERMANENT',   label:'CDI' }, { value:'FIXED_TERM',  label:'CDD' }, { value:'INTERN',      label:'Stage' }, { value:'CONSULTANT',  label:'Consultant' }];
+/**
+ * Contract types now come from Admin › Listes configurables › CONTRACT_TYPE (CDI, CDD, …).
+ * These are the ones that run to an end date — the lifecycle engine's needsEndDate set —
+ * plus the pre-migration FIXED_TERM code.
+ */
+const END_DATE_CONTRACT_TYPES = new Set(['CDD', 'CIVP', 'STAGE', 'DETACHEMENT', 'FIXED_TERM']);
+
+export function contractNeedsEndDate(code: string | null | undefined): boolean {
+  return !!code && END_DATE_CONTRACT_TYPES.has(code);
+}
 export const STAFF_OPTIONS: { value: string; label: string }[] = [];

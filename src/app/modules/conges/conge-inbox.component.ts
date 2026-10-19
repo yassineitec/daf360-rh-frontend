@@ -83,7 +83,8 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
         (filterApply)="applyFilters($event)"
         [views]="viewOptions()"
         [view]="viewMode()"
-        (viewChange)="setView($event)" />
+        (viewChange)="setView($event)"
+        [table]="tableSection()?.table() ?? null" />
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -243,6 +244,9 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
   `,
 })
 export class CongeInboxComponent extends CongeListBase implements OnInit {
+  /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(CongesTableSectionComponent);
+
   private readonly modal = inject(ModalService);
   private readonly notify = inject(NotificationService);
 

@@ -3,6 +3,7 @@ import { ButtonComponent, CheckboxComponent, StatusBadgeComponent } from '@khali
 import { RoleManagementService } from '../role-management.service';
 import { PermissionGroup, RoleListItem } from '../role.model';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-role-permissions-tab',
@@ -17,6 +18,11 @@ export class RolePermissionsTabComponent implements OnInit {
 
   private svc = inject(RoleManagementService);
   private translate = inject(TranslateService);
+
+  /** The role's name in the UI language (tab title). */
+  roleName(): string {
+    return roleLabel(this.role(), this.translate);
+  }
 
   catalog        = signal<PermissionGroup[]>([]);
   loadingCatalog = signal(true);

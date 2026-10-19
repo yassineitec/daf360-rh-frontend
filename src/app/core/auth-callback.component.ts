@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserStore } from './user.store';
 import { SpinnerComponent } from '../shared/spinner.component';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Landing component for /auth/callback.
@@ -14,11 +15,11 @@ import { SpinnerComponent } from '../shared/spinner.component';
 @Component({
   selector: 'app-auth-callback',
   standalone: true,
-  imports: [SpinnerComponent],
+  imports: [SpinnerComponent, TranslatePipe],
   template: `
     <div style="display:flex;align-items:center;justify-content:center;height:100dvh;flex-direction:column;gap:16px;color:var(--color-text-muted,#6B7280)">
       <app-spinner size="lg" />
-      <p style="font-size:14px;margin:0">Connexion en cours…</p>
+      <p style="font-size:14px;margin:0">{{ 'COMMON.signingIn' | translate }}</p>
     </div>
   `,
 })

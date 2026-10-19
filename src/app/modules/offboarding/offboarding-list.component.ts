@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { DepartureReasonLabelService } from './departure-reason-labels.service';
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -27,6 +28,7 @@ import {
   OffboardingSort, OffboardingTableSectionComponent, sortOffboarding,
 } from './sections/offboarding-table-section.component';
 import { OffboardingBoardSectionComponent } from './sections/offboarding-board-section.component';
+import { OffboardingListStateService } from './offboarding-list-state.service';
 import {
   OFFBOARDING_KANBAN_COLUMN_DEFS, OffboardingKanbanColumn, byLastWorkingDayAsc,
 } from './offboarding-kanban.model';
@@ -77,7 +79,11 @@ function toIsoDay(d: Date): string {
   templateUrl: './offboarding-list.component.html',
 })
 export class OffboardingListComponent implements OnInit {
+  /** Table view only (undefined in kanban / cards views) — its `daf-data-table` goes to the toolbar's `[table]`. */
+  readonly tableSection = viewChild(OffboardingTableSectionComponent);
+
   private svc       = inject(OffboardingService);
+  protected readonly reasons = inject(DepartureReasonLabelService);
   private router    = inject(Router);
   private route     = inject(ActivatedRoute);
   private translate = inject(TranslateService);
@@ -147,11 +153,19 @@ export class OffboardingListComponent implements OnInit {
    *
    * The panel's reason filter goes too: a category page hides that field, so a value left
    * over from the unscoped page would narrow the list with no visible way to clear it.
+   *
+   * Seulement sur un VRAI changement de motif, pas au premier passage : celui-ci a lieu
+   * après `ngOnInit`, et effacerait la page et le filtre que `restoreState()` vient de
+   * remettre au retour d'un dossier.
    */
+  private lastReason: DepartureReason | null | undefined = undefined;
   private resetPageOnReasonChange = effect(() => {
-    this.routeReason();
-    this.currentPage.set(0);
-    this.reasonFilter.set('');
+    const reason = this.routeReason();
+    if (this.lastReason !== undefined && reason !== this.lastReason) {
+      this.currentPage.set(0);
+      this.reasonFilter.set('');
+    }
+    this.lastReason = reason;
   });
 
   readonly filteredItems = computed(() => {
@@ -164,7 +178,7 @@ export class OffboardingListComponent implements OnInit {
     const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
     const lateOnly = this.lateOnly();
     return this.scopedItems().filter(w => {
-      const reason = this.translate.instant('OFFBOARDING.REASON.' + w.departureReason).toLowerCase();
+      const reason = this.reasons.label(w.departureReason).toLowerCase();
       const matchesTerm = !term
         || (w.employeeFullName ?? '').toLowerCase().includes(term)
         || (w.handoverManagerName ?? '').toLowerCase().includes(term)
@@ -240,6 +254,46 @@ export class OffboardingListComponent implements OnInit {
     this.columnSort.update(s => ({ ...s, [key]: (s[key] ?? 'asc') === 'asc' ? 'desc' : 'asc' }));
   }
 
+  // ── Mémoire de la liste ────────────────────────────────────────────────────
+  private listState = inject(OffboardingListStateService);
+
+  /**
+   * Chaque changement de vue, de recherche, de filtre, de tri ou de page est mémorisé, avec
+   * le motif de la page, pour que le retour depuis un dossier retrouve la liste telle qu'on
+   * l'a quittée. Le premier passage a lieu après `ngOnInit`, donc après la restauration.
+   */
+  private readonly persistState = effect(() => {
+    this.listState.save({
+      scope:        this.routeReason(),
+      viewMode:     this.viewMode(),
+      search:       this.search(),
+      statusFilter: this.statusFilter(),
+      reasonFilter: this.reasonFilter(),
+      lastDayRange: this.lastDayRange(),
+      lateOnly:     this.lateOnly(),
+      tableSort:    this.tableSort(),
+      columnSort:   this.columnSort(),
+      page:         this.currentPage(),
+      pageSize:     this.pageSize(),
+    });
+  });
+
+  /** Avant le premier rendu : `daf-filter` ne lit `initialValues` qu'une fois. */
+  private restoreState(): void {
+    const s = this.listState.restore(this.routeReason());
+    if (!s) return;
+    this.viewMode.set(s.viewMode);
+    this.search.set(s.search);
+    this.statusFilter.set(s.statusFilter);
+    this.reasonFilter.set(s.reasonFilter);
+    this.lastDayRange.set(s.lastDayRange);
+    this.lateOnly.set(s.lateOnly);
+    this.tableSort.set(s.tableSort);
+    this.columnSort.set(s.columnSort);
+    this.currentPage.set(s.page);
+    this.pageSize.set(s.pageSize);
+  }
+
   /** The table and the cards share one empty message, and it knows about the filter. */
   readonly emptyMessage = computed(() => {
     this.translate.currentLang();
@@ -261,7 +315,7 @@ export class OffboardingListComponent implements OnInit {
   private readonly reasonLabel = computed(() => {
     this.translate.currentLang();
     const reason = this.routeReason();
-    return reason ? this.translate.instant('OFFBOARDING.REASON.' + reason) : '';
+    return reason ? this.reasons.label(reason) : '';
   });
 
   readonly pageTitle = computed(() => {
@@ -368,7 +422,7 @@ export class OffboardingListComponent implements OnInit {
         placeholder: t('OFFBOARDING.LIST.FILTERS.ALL_REASONS'),
         options: DEPARTURE_REASONS.map(code => ({
           value: code,
-          label: t('OFFBOARDING.REASON.' + code),
+          label: this.reasons.label(code),
         })),
       });
     }
@@ -408,6 +462,7 @@ export class OffboardingListComponent implements OnInit {
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.restoreState();
     this.load();
   }
 
@@ -415,6 +470,11 @@ export class OffboardingListComponent implements OnInit {
     if (!this.firstLoad()) this.loading.set(true);
     this.svc.listOffboarding().pipe(catchError(() => of([]))).subscribe(list => {
       this.items.set(list);
+      // Page restaurée devenue hors limites (dossiers clos entre-temps) : on retombe sur
+      // la dernière page qui existe plutôt que sur une page vide.
+      if (this.currentPage() > 0 && this.currentPage() >= this.totalPages()) {
+        this.currentPage.set(Math.max(0, this.totalPages() - 1));
+      }
       this.loading.set(false);
       this.firstLoad.set(false);
     });
@@ -466,6 +526,9 @@ export class OffboardingListComponent implements OnInit {
    * app.routes bounced the user to `accueil` instead of opening the file.
    */
   open(id: number): void {
-    this.router.navigate(['/rh/offboarding', id]);
+    // `reason` : depuis la page d'un motif, le fil d'Ariane du dossier y ramène — et non à
+    // la liste complète, qui n'est pas celle que l'utilisateur a filtrée.
+    const reason = this.routeReason();
+    this.router.navigate(['/rh/offboarding', id], reason ? { queryParams: { reason } } : {});
   }
 }

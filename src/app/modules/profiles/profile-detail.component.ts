@@ -1,3 +1,4 @@
+import { DepartureReasonLabelService } from '../offboarding/departure-reason-labels.service';
 import { Component, OnInit, computed, effect, inject, signal, TemplateRef, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -36,7 +37,7 @@ import {
   ProfileUpdateDto,
 } from './models/profile.model';
 import { statusBadge } from '../../shared/status-badge.utils';
-import { GENDER_OPTIONS } from '../../shared/utils/gender.utils';
+import { genderOptions } from '../../shared/utils/gender.utils';
 import { profilePhotoUrlFresh } from '../../shared/utils/avatar.utils';
 import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
@@ -47,9 +48,12 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem } from '../../core/ref/ref-data.model';
 import { ContractHistoryService } from './contract-history/contract-history.service';
 import { ContractHistoryDto } from './contract-history/contract-history.model';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
+import { contractLabel } from './profile-labels';
 import { ContractLifecycleService } from './lifecycle/contract-lifecycle.service';
 import {
-  ContractListDto, ContractDetailDto, ContractTransitionHistoryDto, CONTRACT_TYPE_CONFIG,
+  ContractListDto, ContractDetailDto, ContractTransitionHistoryDto,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
 import { DocumentEditFormComponent } from './documents/document-edit-form.component';
@@ -75,6 +79,11 @@ import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.com
 import { RemunerationSectionComponent } from './detail-sections/remuneration-section.component';
 import { DocumentHistorySectionComponent } from './detail-sections/document-history-section.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
+import { CdiConversionService } from '../cdi-conversions/cdi-conversion.service';
+import {
+  CDI_PAGE_PERMISSIONS, CDI_PERMISSIONS, CdiConversion, SubmitCdiConversionPayload, isAwaitingConversion,
+} from '../cdi-conversions/cdi-conversion.model';
+import { CdiConversionRequestModalComponent } from '../cdi-conversions/cdi-conversion-request-modal.component';
 
 /**
  * One per section of the original page, minus Identité — the design keeps that
@@ -117,7 +126,7 @@ const OFFERED_DEPARTURE_REASONS: readonly DepartureReason[] = ['RESIGNATION'];
 const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   // Emploi & poste is one tab, so its marker covers the contract, the pay and
   // the affectation blocks together.
-  emploi:   ['hireDate', 'contractType', 'contractEndDate', 'probationEndDate', 'isOnProbation',
+  emploi:   ['payrollMatricule', 'hireDate', 'contractType', 'contractEndDate', 'probationEndDate', 'isOnProbation',
              'salaireNetCandidat', 'departmentId', 'gradeId', 'disciplineId', 'nogLevelId'],
   // Contact holds both the employee's own details and the emergency contact.
   contact:  ['personalEmail', 'personalPhone', 'phone', 'personalAddress',
@@ -161,12 +170,14 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
     DocumentEditFormComponent,
     DocumentHistorySectionComponent,
     RemunerationSectionComponent,
+    CdiConversionRequestModalComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
 })
 export class ProfileDetailComponent implements OnInit {
   private route        = inject(ActivatedRoute);
+  protected readonly reasons = inject(DepartureReasonLabelService);
   private router       = inject(Router);
   private confirm      = inject(ConfirmService);
   private svc          = inject(ProfileService);
@@ -177,6 +188,7 @@ export class ProfileDetailComponent implements OnInit {
   private assetSvc     = inject(ItAssetService);
   private lcSvc        = inject(ContractLifecycleService);
   private contractHistorySvc = inject(ContractHistoryService);
+  private configListSvc = inject(ConfigurableListService);
   private modalService = inject(ModalService);
   private offboardingSvc = inject(OffboardingService);
   private translate    = inject(TranslateService);
@@ -395,10 +407,15 @@ export class ProfileDetailComponent implements OnInit {
     return LIFECYCLE_LABELS[s] ? this.translate.instant('PROFILES.LIFECYCLE.' + s) : s;
   }
 
-  private contractTypeLabel(code: string): string {
-    return CONTRACT_TYPE_CONFIG[code as keyof typeof CONTRACT_TYPE_CONFIG]
-      ? this.translate.instant('PROFILES.CONTRACT_TYPE.' + code)
-      : code;
+  /**
+   * The admin list (type_contrat) wins; a code it does not hold (deactivated type, or a
+   * legacy CDI/CDD… value) falls back to the PROFILES.CONTRACT_TYPE.* catalog, then the code.
+   */
+  contractTypeLabel(code: string | null | undefined): string {
+    if (!code) return '—';
+    const v = this.contractTypes().find(t => t.valueCode === code);
+    if (v) return (this.translate.currentLang() === 'en' && v.labelEn) || v.labelFr;
+    return contractLabel(code, this.translate);
   }
 
   protected readonly statusBadge = statusBadge;
@@ -422,13 +439,36 @@ export class ProfileDetailComponent implements OnInit {
   private blankOption(): SelectOption {
     return { value: '', label: this.translate.instant('PROFILES.COMMON.SELECT_PLACEHOLDER') };
   }
-  private refOptions(items: RefDataItem[]): SelectOption[] {
-    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: i.labelFr }))];
+  /** Admin › Référentiels label in the UI language — English falls back to French when unset. */
+  private refText(item: RefDataItem): string {
+    return (this.translate.currentLang() === 'en' && item.labelEn) || item.labelFr;
   }
+  private refOptions(items: RefDataItem[]): SelectOption[] {
+    return [this.blankOption(), ...items.map(i => ({ value: String(i.id), label: this.refText(i) }))];
+  }
+  /**
+   * Read-mode label for a ref-data FK. The profile DTO only carries the French label, so the
+   * item is resolved by id; an id the list no longer holds (deactivated) keeps the DTO's text.
+   */
+  private refLabel(items: RefDataItem[], id: number | null | undefined, fallback: string | null): string | null {
+    const item = id != null ? items.find(i => i.id === id) : undefined;
+    return item ? this.refText(item) : fallback;
+  }
+
+  readonly positionLabels = computed(() => {
+    const p = this.profile();
+    if (!p) return {};
+    return {
+      department: this.refLabel(this.departments(), p.departmentId, p.department),
+      grade:      this.refLabel(this.grades(),      p.gradeId,      p.grade),
+      discipline: this.refLabel(this.disciplines(), p.disciplineId, p.discipline),
+      nogLevel:   this.refLabel(this.nogLevels(),   p.nogLevelId,   p.nogLevel),
+    };
+  });
 
   readonly genderOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return [this.blankOption(), ...GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }))];
+    return [this.blankOption(), ...genderOptions(this.translate)];
   });
 
   readonly maritalStatusOptions = computed<SelectOption[]>(() => {
@@ -442,15 +482,21 @@ export class ProfileDetailComponent implements OnInit {
     ];
   });
 
+  /** Admin › Listes configurables › Type de contrat (CONTRACT_TYPE) — an addition there shows here. */
+  private readonly contractTypes = signal<ListValue[]>([]);
+  private readonly contractTypesLoaded = signal(false);
+  readonly contractTypesEmpty = computed(() => this.contractTypesLoaded() && this.contractTypes().length === 0);
+
   readonly contractTypeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return [
-      this.blankOption(),
-      { value: 'PERMANENT',  label: this.translate.instant('PROFILES.CONTRACT_TYPE.PERMANENT')  },
-      { value: 'FIXED_TERM', label: this.translate.instant('PROFILES.CONTRACT_TYPE.FIXED_TERM') },
-      { value: 'INTERN',     label: this.translate.instant('PROFILES.CONTRACT_TYPE.INTERN')     },
-      { value: 'CONSULTANT', label: this.translate.instant('PROFILES.CONTRACT_TYPE.CONSULTANT') },
-    ];
+    const options = this.contractTypes().map(v => ({ value: v.valueCode, label: this.contractTypeLabel(v.valueCode) }));
+    // Keep the profile's current code selectable even if the admin has since deactivated it,
+    // otherwise the select would show empty and the next save could not round-trip it.
+    const current = this.profile()?.contractType;
+    if (current && !options.some(o => o.value === current)) {
+      options.push({ value: current, label: this.contractTypeLabel(current) });
+    }
+    return [this.blankOption(), ...options];
   });
 
   readonly nationalityOptions = computed(() => this.refOptions(this.nationalities()));
@@ -573,6 +619,19 @@ export class ProfileDetailComponent implements OnInit {
   readonly showNewContractModal = signal(false);
   private lcLoaded = false;
 
+  // ── CIVP → CDI requests (V119) ─────────────────────────────────────────────
+  private cdiSvc = inject(CdiConversionService);
+  /** Latest request per CIVP contract id (null = none yet). */
+  readonly lcCdiRequests = signal<Record<number, CdiConversion | null>>({});
+  readonly canRequestCdi = computed(() => this.userStore.hasPermission(CDI_PERMISSIONS.REQUEST));
+  private readonly canReadCdi = computed(() => CDI_PAGE_PERMISSIONS.some(c => this.userStore.hasPermission(c)));
+  /** The CIVP contract the request modal is open for. */
+  readonly cdiRequestContract = signal<ContractListDto | null>(null);
+  readonly cdiSubmitting = signal(false);
+  readonly cdiError = signal<string | null>(null);
+  /** The approved request behind the CIVP contract being converted — shown in the modal. */
+  readonly selectedCdiApproval = signal<CdiConversion | null>(null);
+
   // ── IT equipment ledger (V76) ──────────────────────────────────────────────
   readonly itAssets       = signal<ItAssetAssignmentDto[]>([]);
   readonly assetsLoading  = signal(false);
@@ -643,6 +702,13 @@ export class ProfileDetailComponent implements OnInit {
         .pipe(catchError(() => of([] as DocumentTypeOption[]))),
     }).subscribe(({ profile, docs, types }) => {
       this.docTypes.set(types);
+      // Loaded up front, not on edit: the header badges and the read-mode row need labels too.
+      this.configListSvc.getListValues('CONTRACT_TYPE', profile?.paysId)
+        .pipe(catchError(() => of([] as ListValue[])))
+        .subscribe(v => { this.contractTypes.set(v); this.contractTypesLoaded.set(true); });
+      // Same reason: the Affectation tiles and the identity card's grade show these labels
+      // in read mode, in the UI language. The service caches them, so edit mode reuses them.
+      if (profile) this.loadPositionRefs(profile.paysId);
       this.documents.set(docs);
       this.docsLoading.set(false);
       this.profile.set(profile);
@@ -704,6 +770,8 @@ export class ProfileDetailComponent implements OnInit {
       nationalityId: p.nationalityId ?? null, nationalId: p.nationalId ?? '',
       passportNumber: p.passportNumber ?? '', maritalStatus: p.maritalStatus ?? '',
       numberOfChildren: p.numberOfChildren ?? null,
+      // Starts empty: only a newly typed matricule is sent (a saved one is read-only).
+      payrollMatricule: '',
       hireDate: p.hireDate ?? '', contractType: p.contractType ?? '',
       contractEndDate: p.contractEndDate ?? '', probationEndDate: p.probationEndDate ?? '',
       isOnProbation: p.isOnProbation ?? false,
@@ -723,12 +791,17 @@ export class ProfileDetailComponent implements OnInit {
     this.editSaveError.set(null);
 
     const paysId = p.paysId;
-    this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
-    this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
-    this.refSvc.getNogLevels(paysId).subscribe(r => this.nogLevels.set(r));
-    this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
+    this.loadPositionRefs(paysId);
     this.refSvc.getBanks(paysId).subscribe(r => this.banks.set(r));
     this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
+  }
+
+  private loadPositionRefs(paysId: number | null | undefined): void {
+    const id = paysId ?? undefined;
+    this.refSvc.getGrades(id).subscribe(r => this.grades.set(r));
+    this.refSvc.getDisciplines(id).subscribe(r => this.disciplines.set(r));
+    this.refSvc.getNogLevels(id).subscribe(r => this.nogLevels.set(r));
+    this.refSvc.getDepartments(id).subscribe(r => this.departments.set(r));
   }
 
   saveProfile(): void {
@@ -823,7 +896,7 @@ export class ProfileDetailComponent implements OnInit {
   readonly startingOffboarding = signal(false);
 
   offboardingReasonLabel(r: DepartureReason): string {
-    return this.translate.instant('OFFBOARDING.REASON.' + r);
+    return this.reasons.label(r);
   }
 
   openOffboardingModal(): void {
@@ -1102,7 +1175,7 @@ export class ProfileDetailComponent implements OnInit {
     this.lcLoaded = true;
     this.lcLoading.set(true);
     this.lcSvc.getContracts(this.profileId).pipe(catchError(() => of([])))
-      .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); });
+      .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); this.loadCdiRequests(cs); });
     this.lcSvc.getLifecycleHistory(this.profileId).pipe(catchError(() => of([])))
       .subscribe(h => this.lcHistory.set(h));
     // The dossier log used to be fetched by app-contract-history itself. That component is
@@ -1115,6 +1188,43 @@ export class ProfileDetailComponent implements OnInit {
   private refreshContracts(): void {
     this.lcLoaded = false;
     this.loadContracts();
+  }
+
+  /** The latest CDI request of each CIVP contract — the contract card shows its status. */
+  private loadCdiRequests(contracts: ContractListDto[]): void {
+    if (!this.canReadCdi()) return;
+    const civp = contracts.filter(c => c.contractTypeCode === 'CIVP');
+    if (!civp.length) { this.lcCdiRequests.set({}); return; }
+    forkJoin(civp.map(c => this.cdiSvc.latestForContract(c.id).pipe(catchError(() => of(null)))))
+      .subscribe(reqs => {
+        const byContract: Record<number, CdiConversion | null> = {};
+        civp.forEach((c, i) => byContract[c.id] = reqs[i]);
+        this.lcCdiRequests.set(byContract);
+      });
+  }
+
+  openCdiRequestModal(contractId: number): void {
+    this.cdiError.set(null);
+    this.cdiRequestContract.set(this.lcContracts().find(c => c.id === contractId) ?? null);
+  }
+
+  submitCdiRequest(payload: SubmitCdiConversionPayload): void {
+    const contract = this.cdiRequestContract();
+    if (!contract || this.cdiSubmitting()) return;
+    this.cdiSubmitting.set(true);
+    this.cdiError.set(null);
+    this.cdiSvc.submit(contract.id, payload).subscribe({
+      next: () => {
+        this.cdiSubmitting.set(false);
+        this.cdiRequestContract.set(null);
+        this.notify.success(this.translate.instant('CDI_CONVERSION.REQUEST.SENT'));
+        this.loadCdiRequests(this.lcContracts());
+      },
+      error: err => {
+        this.cdiSubmitting.set(false);
+        this.cdiError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
+      },
+    });
   }
 
   // ── IT equipment ledger ────────────────────────────────────────────────────
@@ -1267,7 +1377,11 @@ export class ProfileDetailComponent implements OnInit {
 
   openConvertCDIModal(contractId: number): void {
     this.selectedContractId = contractId;
-    this.cdiStartDate = '';
+    // CIVP: start from what the validation retained (V119) — the backend refuses the
+    // conversion without an approved request anyway.
+    const approved = this.lcCdiRequests()[contractId];
+    this.selectedCdiApproval.set(isAwaitingConversion(approved) ? approved : null);
+    this.cdiStartDate = isAwaitingConversion(approved) ? (approved!.validatedStartDate ?? '') : '';
     this.cdiComment = '';
     this.lcError.set(null);
     const tpl = this.convertCDITpl();

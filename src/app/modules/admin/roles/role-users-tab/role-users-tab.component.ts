@@ -1,28 +1,27 @@
 import {
-  Component, computed, effect, inject, input, output, signal, untracked,
+  Component, computed, effect, inject, input, output, signal, untracked, viewChild,
 } from '@angular/core';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import {
   ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
   DataTableComponent, SortDirection, TableColumn, TableConfig, TableRow, AvatarCell,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
+import { searchRows } from '../../../../shared/table-sort.utils';
 import { RoleListItem, RoleUserItem } from '../role.model';
 import { RoleManagementService } from '../role-management.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { roleLabel } from '../../../../shared/utils/admin-label.utils';
 
 const PAGE_SIZE = 5;
 
 type RoleUserSort = { key: string; dir: 'asc' | 'desc' };
 
-/** What each table column sorts on — keyed by the table's column keys. */
-const USER_SORT_VALUE: Record<string, (u: RoleUserItem) => string | number | null> = {
-  user: u => u.fullName || null,
-  pays: u => u.paysLabel || null,
-};
+type RoleUserSortValues = Record<string, (u: RoleUserItem) => string | number | null>;
 
 /** Sorts the whole filtered list — the table is `manualSort`, so it only reorders one page. */
-function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null): RoleUserItem[] {
-  const value = sort && USER_SORT_VALUE[sort.key];
+function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null, values: RoleUserSortValues): RoleUserItem[] {
+  const value = sort && values[sort.key];
   if (!sort || !value) return items;
   const sign = sort.dir === 'asc' ? 1 : -1;
   return [...items].sort((a, b) => {
@@ -45,7 +44,7 @@ function sortRoleUsers(items: RoleUserItem[], sort: RoleUserSort | null): RoleUs
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, StatusBadgeComponent, PaginationComponent,
-    DataTableComponent, TranslatePipe,
+    DataTableComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './role-users-tab.component.html',
   styleUrl:    './role-users-tab.component.scss',
@@ -58,6 +57,28 @@ export class RoleUsersTabComponent {
 
   private svc = inject(RoleManagementService);
   private translate = inject(TranslateService);
+
+  /** The role's name in the UI language (tab title). */
+  roleName(): string {
+    return roleLabel(this.role(), this.translate);
+  }
+
+  /** A user's entity (pays) in the UI language — English label when the UI is English. */
+  paysName(u: RoleUserItem): string | null {
+    return (this.translate.currentLang() === 'en' && u.paysLabelEn) || u.paysLabel || null;
+  }
+
+  /** A search result's current role in the UI language. */
+  currentRoleName(u: RoleUserItem): string | null {
+    if (!u.currentRoleName) return null;
+    return roleLabel({ frenchName: u.currentRoleName, englishName: u.currentRoleNameEn }, this.translate);
+  }
+
+  /** What each table column sorts on — keyed by the table's column keys. */
+  private readonly sortValues: RoleUserSortValues = {
+    user: u => u.fullName || null,
+    pays: u => this.paysName(u),
+  };
 
   // ── State ────────────────────────────────────────────────────────────────
   users         = signal<RoleUserItem[]>([]);
@@ -74,15 +95,12 @@ export class RoleUsersTabComponent {
 
   private search$ = new Subject<string>();
 
-  filteredUsers = computed(() => {
-    const q = this.localSearch().toLowerCase();
-    return q
-      ? this.users().filter(u =>
-          u.fullName?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.paysLabel?.toLowerCase().includes(q))
-      : this.users();
-  });
+  /** The table (absent while empty / no match) — passed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  filteredUsers = computed(() =>
+    searchRows(this.users(), this.localSearch(), u => [u.fullName, u.email, this.paysName(u)]),
+  );
 
   // ── Pagination — 5 per page ─────────────────────────────────────────────────
   currentPage = signal(0);
@@ -94,7 +112,7 @@ export class RoleUsersTabComponent {
 
   readonly pagedUsers = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortRoleUsers(this.filteredUsers(), this.sort()).slice(start, start + PAGE_SIZE);
+    return sortRoleUsers(this.filteredUsers(), this.sort(), this.sortValues).slice(start, start + PAGE_SIZE);
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -109,7 +127,7 @@ export class RoleUsersTabComponent {
   readonly rows = computed<TableRow[]>(() =>
     this.pagedUsers().map(u => ({
       user: { name: u.fullName, initials: u.fullName.charAt(0).toUpperCase(), subtitle: u.email } as AvatarCell,
-      pays: u.paysLabel ?? '—',
+      pays: this.paysName(u) ?? '—',
       _source: u,
     })),
   );
@@ -153,7 +171,9 @@ export class RoleUsersTabComponent {
     this.currentPage.set(page);
   }
 
+  /** New search → back to the first page (otherwise it can land on an empty one). */
   onLocalSearch(value: string): void {
+    if (value === this.localSearch()) return;   // daf-search-toolbar re-emits on blur
     this.localSearch.set(value);
     this.currentPage.set(0);
   }

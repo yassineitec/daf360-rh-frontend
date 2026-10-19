@@ -2,6 +2,7 @@ import {
   Component, OnDestroy, effect, inject, input, output,
   HostListener, ViewChild, ElementRef,
 } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -15,6 +16,7 @@ const SIZE_WIDTH: Record<ModalSize, string> = {
 @Component({
   selector: 'app-modal',
   standalone: true,
+  imports: [TranslatePipe],
   template: `
     @if (visible()) {
       <div class="overlay" (click)="onOverlayClick($event)">
@@ -31,7 +33,7 @@ const SIZE_WIDTH: Record<ModalSize, string> = {
 
           <header class="dialog-header">
             <h2 class="dialog-title">{{ title() }}</h2>
-            <button class="dialog-close" (click)="closed.emit()" aria-label="Fermer">
+            <button class="dialog-close" (click)="closed.emit()" [attr.aria-label]="'COMMON.close' | translate">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2.5">
                 <path d="M6 18L18 6M6 6l12 12"/>

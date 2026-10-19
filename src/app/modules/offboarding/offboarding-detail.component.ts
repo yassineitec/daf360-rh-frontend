@@ -1,3 +1,4 @@
+import { DepartureReasonLabelService } from './departure-reason-labels.service';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -75,6 +76,7 @@ import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
 })
 export class OffboardingDetailComponent implements OnInit {
   private route     = inject(ActivatedRoute);
+  protected readonly reasons = inject(DepartureReasonLabelService);
   private svc       = inject(OffboardingService);
   private translate = inject(TranslateService);
   private userStore = inject(UserStore);
@@ -250,10 +252,26 @@ export class OffboardingDetailComponent implements OnInit {
     return `${this.translate.instant('OFFBOARDING.DETAIL.DEPARTURE')} : ${date}${suffix}`;
   });
 
+  /**
+   * Ouvert depuis la page d'un motif (`?reason=RESIGNATION`) : le retour y ramène, là où
+   * l'utilisateur a laissé ses filtres, et non à la liste complète. Un code inconnu est
+   * ignoré — on retombe alors sur la liste complète.
+   */
+  private readonly fromReason: DepartureReason | null = (() => {
+    const code = this.route.snapshot.queryParamMap.get('reason');
+    return code && (DEPARTURE_REASONS as readonly string[]).includes(code) ? code as DepartureReason : null;
+  })();
+
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
     this.translate.currentLang();
+    const reason = this.fromReason;
     return [
-      { label: this.translate.instant('OFFBOARDING.LIST.TITLE'), link: '/rh/offboarding' },
+      reason
+        ? {
+            label: this.translate.instant('OFFBOARDING.LIST.TITLE_REASON', { reason: this.reasons.label(reason) }),
+            link: `/rh/offboarding/type/${reason}`,
+          }
+        : { label: this.translate.instant('OFFBOARDING.LIST.TITLE'), link: '/rh/offboarding' },
       { label: this.employeeName() },
     ];
   });
@@ -1539,7 +1557,7 @@ export class OffboardingDetailComponent implements OnInit {
 
   // ── Label helpers ──────────────────────────────────────────────────────────
   statusLabel(s: string): string { return this.translate.instant('OFFBOARDING.STATUS.' + s); }
-  reasonLabel(r: string): string { return this.translate.instant('OFFBOARDING.REASON.' + r); }
+  reasonLabel(r: string): string { return this.reasons.label(r); }
 
   private parseReasonList(json: string | null | undefined): DepartureReason[] {
     if (!json) return [];

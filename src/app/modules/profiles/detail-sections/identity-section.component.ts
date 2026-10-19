@@ -1,5 +1,5 @@
-import { Component, computed, input, output } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { Component, computed, inject, input, output } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   FormFieldComponent, MultiDatePickerComponent, SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
@@ -40,7 +40,7 @@ import { genderLabel } from '../../../shared/utils/gender.utils';
       }
 
       @if (!editMode()) {
-        <rh-profile-field [label]="'PROFILES.FIELDS.GENDER' | translate" [value]="genderLabel(profile().gender)" />
+        <rh-profile-field [label]="'PROFILES.FIELDS.GENDER' | translate" [value]="gender()" />
       } @else {
         <daf-select [options]="genderOptions()"
           [config]="{ label: ('PROFILES.FIELDS.GENDER' | translate), searchable: true }"
@@ -99,6 +99,14 @@ export class IdentitySectionComponent {
   readonly editMode = input(false);
   readonly editForm = input.required<ProfileUpdateDto>();
 
+  private translate = inject(TranslateService);
+
+  /** Gender in the UI language — read mode. */
+  protected readonly gender = computed(() => {
+    this.translate.currentLang();
+    return genderLabel(this.profile().gender, this.translate);
+  });
+
   readonly genderOptions        = input<SelectOption[]>([]);
   readonly maritalStatusOptions = input<SelectOption[]>([]);
   readonly nationalityOptions   = input<SelectOption[]>([]);
@@ -125,5 +133,5 @@ export class IdentitySectionComponent {
   protected readonly fromSelected = fromSelected;
   protected readonly asText       = asText;
   protected readonly asNumber     = asNumber;
-  protected readonly genderLabel  = genderLabel;
+
 }

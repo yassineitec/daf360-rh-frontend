@@ -50,7 +50,8 @@
     (filterApply)="applyFilters($event)"
     [views]="viewOptions()"
     [view]="viewMode()"
-    (viewChange)="setView($event)" />
+    (viewChange)="setView($event)"
+    [table]="tableSection()?.table() ?? null" />
 
   @if (actionError()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -87,6 +88,8 @@
     <rh-pipeline-table-section
       [columns]="boardColumns()"
       [loading]="loading()"
+      [sort]="listSort()"
+      (sortChange)="listSort.set($event)"
       (open)="onView($event)" />
   }
 

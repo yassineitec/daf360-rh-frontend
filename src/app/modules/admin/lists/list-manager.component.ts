@@ -1,10 +1,11 @@
-import { Component, TemplateRef, computed, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
+import { Component, TemplateRef, computed, inject, input, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SortDirection, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
+  SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
@@ -12,9 +13,17 @@ import {
 } from '../../../core/lists/configurable-list.model';
 import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableSort, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../admin-section-state';
 
 const PAGE_SIZE = 10;
+
+/**
+ * Lists kept in the DB but no longer administered here. EMPLOYMENT_TYPE was replaced by
+ * CONTRACT_TYPE (same « Type de contrat » label) — sql/2026-10-15_suppr_liste_employment_type.sql drops it.
+ */
+const HIDDEN_LIST_CODES = new Set(['EMPLOYMENT_TYPE']);
 
 /** What each list-value column sorts on. No sort = the list's own `sortOrder`. */
 const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> = {
@@ -31,7 +40,7 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -44,6 +53,13 @@ export class ListManagerComponent implements OnInit {
   private modal       = inject(ModalService);
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
+
+  /**
+   * The entity picked in /rh/admin. A per-pays list (CONTRACT_TYPE…) shows and creates the
+   * values of THIS entity; a global list ignores it. The admin shell rebuilds this tab when
+   * the pick changes, so the value is read as-is, never watched.
+   */
+  readonly paysId = input<number | null>(null);
   adding  = signal(false);
 
   listTypes       = signal<ListType[]>([]);
@@ -51,16 +67,62 @@ export class ListManagerComponent implements OnInit {
   values          = signal<ListValue[]>([]);
   loadingTypes    = signal(true);
   loadingValues   = signal(false);
+  /** Search over the selected list's values (toolbar above the table). */
   searchQuery     = signal('');
   editingId       = signal<number | null>(null);
   error           = signal<string | null>(null);
   successMsg      = signal<string | null>(null);
 
-  readonly filteredTypes = computed(() => {
-    const q = this.searchQuery().toLowerCase();
-    return this.listTypes().filter(t =>
-      !q || t.labelFr.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)
-    );
+  /** A list's name (tab + content title) in the UI language. */
+  typeLabel(type: ListType): string {
+    return adminLabel(type, this.translate);
+  }
+
+  /**
+   * A list's description in the UI language. The DB holds one (French) description, so it is
+   * translated here by list code; a list with no TYPE_DESC entry keeps the DB text.
+   */
+  typeDescription(type: ListType): string | null {
+    if (!type.description) return null;
+    const key = 'ADMIN.data.lists.TYPE_DESC.' + type.code;
+    const label = this.translate.instant(key);
+    return label !== key ? label : type.description;
+  }
+
+  /** The values table (absent while loading) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** New search → back to the first page (else one can sit on an empty page). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
+
+  /** Per-pays list: whether the selected list is split by entity right now. */
+  readonly isPerPaysView = computed(() =>
+    !!this.selectedType()?.isPerPays && this.paysId() != null);
+
+  /**
+   * The admin endpoint returns every entity's values at once. For a per-pays list, keep the
+   * picked entity's own values plus the shared ones (pays_id NULL) — exactly what a form of
+   * that entity is offered (ConfigurableListValueRepository.findActiveByListTypeAndPays).
+   */
+  readonly scopedValues = computed(() => {
+    if (!this.isPerPaysView()) return this.values();
+    const pays = this.paysId();
+    return this.values().filter(v => v.paysId === pays || v.paysId === null);
+  });
+
+  /** Searches what the row shows: code, both labels, and the translated status badges. */
+  readonly filteredValues = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return searchRows(this.scopedValues(), this.searchQuery(), v => [
+      v.valueCode, v.labelFr, v.labelEn,
+      t(v.isActive ? 'ADMIN.data.lists.ACTIVE' : 'ADMIN.data.lists.INACTIVE'),
+      v.isSystem ? t('ADMIN.data.lists.SYSTEM') : null,
+    ]);
   });
 
   readonly columns = computed<TableColumn[]>(() => {
@@ -71,18 +133,28 @@ export class ListManagerComponent implements OnInit {
       { key: 'labelEn', label: this.translate.instant('ADMIN.data.lists.COL_LABEL_EN'), sortable: true },
       { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE'), sortable: true },
       { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM'), sortable: true },
+      // Only where it means something: a global list has no entity to tell apart.
+      ...(this.isPerPaysView()
+        ? [{ key: 'scope', label: this.translate.instant('ADMIN.data.lists.COL_SCOPE'), sortable: false }]
+        : []),
     ];
   });
 
   currentPage = signal(0);
-  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
 
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.values().length / PAGE_SIZE)));
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Liste ouverte, recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('lists', {
+    selectedType: this.selectedType, searchQuery: this.searchQuery, currentPage: this.currentPage, sort: this.sort,
+  });
+
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredValues().length / PAGE_SIZE)));
 
   readonly pagedValues = computed(() => {
     const start = this.currentPage() * PAGE_SIZE;
-    return sortByColumn(this.values(), this.sort(), LIST_VALUE_SORT).slice(start, start + PAGE_SIZE);
+    return sortByColumn(this.filteredValues(), this.sort(), LIST_VALUE_SORT).slice(start, start + PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
@@ -182,10 +254,17 @@ export class ListManagerComponent implements OnInit {
 
   ngOnInit(): void {
     this.listService.getListTypes().subscribe({
-      next: types => {
+      next: all => {
+        const types = all.filter(t => !HIDDEN_LIST_CODES.has(t.code));
         this.listTypes.set(types);
         this.loadingTypes.set(false);
-        if (types.length) this.selectType(types[0]);
+        // Liste restaurée (`rememberAdminState`) : on la rouvre telle quelle, sans vider sa
+        // recherche ni revenir en page 1 — `selectType` ne sert qu'aux vrais changements.
+        const restored = types.find(t => t.id === this.selectedType()?.id);
+        if (restored) {
+          this.selectedType.set(restored);
+          this.loadValues(restored.id, false);
+        } else if (types.length) this.selectType(types[0]);
       },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_TYPES')); this.loadingTypes.set(false); },
     });
@@ -195,6 +274,7 @@ export class ListManagerComponent implements OnInit {
     this.selectedType.set(type);
     this.modalRef?.close();
     this.editingId.set(null);
+    this.searchQuery.set('');   // a search typed for one list means nothing in the next
     this.loadValues(type.id);
   }
 
@@ -211,11 +291,16 @@ export class ListManagerComponent implements OnInit {
     this.modalRef?.close();
   }
 
-  loadValues(id: number): void {
+  loadValues(id: number, resetPage = true): void {
     this.loadingValues.set(true);
-    this.currentPage.set(0);
+    if (resetPage) this.currentPage.set(0);
     this.listService.getAllValuesForAdmin(id).subscribe({
-      next: vals => { this.values.set(vals); this.loadingValues.set(false); },
+      next: vals => {
+        this.values.set(vals);
+        // Page restaurée (ou liste raccourcie) : on retombe sur la dernière page existante.
+        this.currentPage.update(p => Math.min(p, this.totalPages() - 1));
+        this.loadingValues.set(false);
+      },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_VALUES')); this.loadingValues.set(false); },
     });
   }
@@ -232,6 +317,7 @@ export class ListManagerComponent implements OnInit {
 
   saveEdit(value: ListValue): void {
     if (this.editForm.invalid) return;
+    // No nature sent: the backend keeps the value's current one.
     const dto: UpdateListValueRequest = this.editForm.value;
     this.listService.updateValue(value.id, dto).subscribe({
       next: () => { this.editingId.set(null); this.flash(this.translate.instant('ADMIN.data.lists.MSG_UPDATED')); this.loadValues(value.listTypeId); },
@@ -269,7 +355,12 @@ export class ListManagerComponent implements OnInit {
     if (this.addForm.invalid || !this.selectedType()) return;
     const type = this.selectedType()!;
     this.adding.set(true);
-    const dto: CreateListValueRequest = { listTypeId: type.id, paysId: null, ...this.addForm.value };
+    // A per-pays list gets the value for the entity picked in /rh/admin; a global one stays
+    // shared (null), as before.
+    const paysId = type.isPerPays ? this.paysId() : null;
+    // No nature asked here: the backend gives a new contract type the nature of its code
+    // (CDD → CDD), else CDI.
+    const dto: CreateListValueRequest = { listTypeId: type.id, paysId, ...this.addForm.value };
     this.listService.createValue(dto).subscribe({
       next: () => {
         this.adding.set(false);

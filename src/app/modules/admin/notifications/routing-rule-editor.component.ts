@@ -1,5 +1,5 @@
 import {
-  Component, effect, inject, input, signal, TemplateRef, viewChild,
+  Component, computed, effect, inject, input, signal, TemplateRef, viewChild,
   WritableSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +21,7 @@ import {
 } from './notification-routing.model';
 import { RecipientTagsComponent } from './recipient-tags.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { adminLabel } from '../../../shared/utils/admin-label.utils';
 
 @Component({
   selector: 'app-routing-rule-editor',
@@ -115,10 +116,13 @@ export class RoutingRuleEditorComponent {
   readonly availablePerms = signal<PermissionOption[]>([]);
 
   /** Select options: an explicit "none" entry, since clearing the kind is a real choice. */
-  readonly entityTypeOptions: SelectOption[] = [
-    { value: '', label: 'Aucun (non cliquable)' },
-    ...ENTITY_TYPES.map(code => ({ value: code, label: code })),
-  ];
+  readonly entityTypeOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { value: '', label: this.translate.instant('ADMIN.notifications.entityTypeNone') },
+      ...ENTITY_TYPES.map(code => ({ value: code, label: code })),
+    ];
+  });
 
   /**
    * Creates the missing rule, then drops straight into the editor for it.
@@ -283,7 +287,7 @@ export class RoutingRuleEditorComponent {
         this.testActiveTab.set('inapp');
         this.testLoading.set(false);
         this.testModalRef = this.modal.open({
-          title: this.translate.instant('ADMIN.notifications.previewTitle', { name: this.eventType()?.labelFr ?? '' }),
+          title: this.translate.instant('ADMIN.notifications.previewTitle', { name: adminLabel(this.eventType(), this.translate) }),
           body: this.testBodyTpl(),
           size: 'lg',
         });

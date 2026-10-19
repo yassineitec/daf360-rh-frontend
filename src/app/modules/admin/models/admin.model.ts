@@ -135,6 +135,8 @@ export interface RequestTypeCatalog {
   displayNameFr:       string;
   displayNameEn:       string;
   description:         string | null;
+  /** English description; null when none (the French one is the fallback). */
+  descriptionEn?:      string | null;
   category:            string;
   approvalLevel:       'L1' | 'L2';
   defaultSlaDays:      number;
@@ -148,6 +150,8 @@ export interface RequestTypeDto {
   displayNameFr: string;
   displayNameEn: string;
   description?:  string;
+  /** '' clears it on update (the backend stores null). */
+  descriptionEn?: string;
   category:     string;
   approvalLevel: 'L1' | 'L2';
   defaultSlaDays: number;
@@ -186,13 +190,13 @@ export interface RegimeDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin tabs
 // ─────────────────────────────────────────────────────────────────────────────
-export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog' | 'document-templates' | 'sharepoint' | 'users' | 'absence-types' | 'pays-calendar' | 'autorisation-rules' | 'teletravail-rules';
+export type AdminTab = 'roles' | 'parameters' | 'holidays' | 'request-types' | 'regimes' | 'lists' | 'notifications' | 'breaks' | 'ref-data' | 'overtime' | 'interview-types' | 'offboarding-catalog' | 'document-templates' | 'sharepoint' | 'users' | 'absence-types' | 'pays-calendar' | 'autorisation-rules' | 'teletravail-rules' | 'contract-alerts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Offboarding task catalog
 // ─────────────────────────────────────────────────────────────────────────────
-// Was a hardcoded literal union backed by a fixed array; now sourced per-country from
-// RefDataService.getContractTypes() (backend-driven reference data). Widened to plain
+// Was a hardcoded literal union backed by a fixed array; now sourced per-country from the
+// CONTRACT_TYPE configurable list (its `valueCode`, see offboarding-catalog-admin). Widened to plain
 // `string` — the narrower union is gone, but every existing consumer (employee.model.ts's
 // `contractType` field, employee-form.component.ts's literal array) still type-checks fine
 // against `string`, so this is a safe, non-breaking widening for the two untouched callers.

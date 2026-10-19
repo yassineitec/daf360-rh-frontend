@@ -4,23 +4,25 @@ import {
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SelectComponent, SelectOption, SortDirection, TableColumn, TableConfig, TableRow,
-  PaginationComponent, ModalService, ModalRef, PermissionService,
+  PaginationComponent, ModalService, ModalRef, PermissionService, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
 import { RoleManagementService } from '../../roles/role-management.service';
 import { RoleListItem } from '../../roles/role.model';
-import { TableSort, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
+import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
 
-/** What each column sorts on. A role with no assignment has no regime / dates → sorts last. */
+/** What each column sorts on. A role with no assignment has no regime / dates → sorts last.
+ *  The regime sorts on the label shown — see `sortAccessors`. */
 const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | null> = {
   role:    r => r.roleName || null,
-  regime:  r => r.assignment?.regimeLabelFr || null,
   effFrom: r => r.assignment?.effectiveFrom?.slice(0, 10) || null, // ISO: string order = date order
   effTo:   r => r.assignment?.effectiveTo?.slice(0, 10) || null,
   notes:   r => r.assignment?.notes || null,
 };
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
+import { rememberAdminState } from '../../admin-section-state';
 
 @Component({
   selector: 'app-regime-role-assignment',
@@ -28,7 +30,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   imports: [
     DataTableComponent, DafCellDirective,
     ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
-    PaginationComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe,
   ],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
@@ -64,8 +66,26 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   // Pagination — 5 per page
   readonly PAGE_SIZE = 5;
   currentPage = signal(0);
-  /** Table header sort — applied to the whole list, before paging (`manualSort`). */
+  /** Table header sort — applied to the whole filtered list, before paging (`manualSort`). */
   readonly sort = signal<TableSort | null>(null);
+  /** Search over the roles (toolbar above the table). */
+  searchQuery = signal('');
+
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Recherche, tri et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('regimes.role-assignment', {
+    currentPage: this.currentPage, sort: this.sort, searchQuery: this.searchQuery,
+  });
+
+  /** The table (absent while loading) — fed to the toolbar's `[table]`. */
+  readonly table = viewChild(DataTableComponent);
+
+  /** New search → back to the first page (else one can sit on an empty page). */
+  onSearch(value: string): void {
+    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
+    this.searchQuery.set(value);
+    this.currentPage.set(0);
+  }
 
 
   // Merge roles + assignments
@@ -74,14 +94,45 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.assignments().forEach(a => assignMap.set(a.roleId, a));
     return this.allRoles().map(r => ({
       roleId: r.id,
-      roleName: r.frenchName,
+      roleName: roleLabel(r, this.translate),
       assignment: assignMap.get(r.id) ?? null,
     }));
   });
 
-  defaultRegimeName = computed(() =>
-    this.regimes().find(r => r.isDefault)?.labelFr ?? null
-  );
+  defaultRegimeName = computed(() => {
+    const r = this.regimes().find(r => r.isDefault);
+    return r ? adminLabel(r, this.translate) : null;
+  });
+
+  /**
+   * The assigned regime in the UI language. The assignment DTO carries only the French label,
+   * so the English one is looked up in the loaded catalog by id (French when not found).
+   */
+  regimeLabel(row: RoleRow): string | null {
+    const a = row.assignment;
+    if (!a) return null;
+    const r = this.regimes().find(r => r.id === a.regimeId);
+    return r ? adminLabel(r, this.translate) : a.regimeLabelFr;
+  }
+
+  private readonly sortAccessors: typeof ROLE_ASSIGNMENT_SORT = {
+    ...ROLE_ASSIGNMENT_SORT,
+    regime: r => this.regimeLabel(r) || null,
+  };
+
+  /** Searches what the row shows: role, regime (or the « Défaut (…) » fallback), dates, notes. */
+  readonly filteredRoles = computed(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const fallback = `${t('ADMIN.regimes.roleAssign.defaultLabel')} (${this.defaultRegimeName() ?? t('ADMIN.regimes.roleAssign.notConfigured')})`;
+    return searchRows(this.allRolesWithAssignment(), this.searchQuery(), row => [
+      row.roleName,
+      this.regimeLabel(row) || fallback,
+      row.assignment ? this.formatDate(row.assignment.effectiveFrom) : null,
+      row.assignment?.effectiveTo ? this.formatDate(row.assignment.effectiveTo) : null,
+      row.assignment?.notes,
+    ]);
+  });
 
   affectedCount = computed(() => {
     const row = this.selectedRow();
@@ -95,7 +146,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.translate.currentLang();
     return this.regimes().map(r => ({
       value: String(r.id),
-      label: `${r.labelFr} · ${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}${r.isFlexible ? this.translate.instant('ADMIN.regimes.roles.flexibleSuffix') : ''}`,
+      label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}${r.isFlexible ? this.translate.instant('ADMIN.regimes.roles.flexibleSuffix') : ''}`,
     }));
   });
 
@@ -107,27 +158,31 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.formRegimeId = value[0] ? Number(value[0]) : 0;
   }
 
-  readonly columns: TableColumn[] = [
-    { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role'), sortable: true },
-    { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime'), sortable: true },
-    { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom'), sortable: true },
-    { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo'), sortable: true },
-    { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes'), sortable: true },
-  ];
+  // Computed so the headers follow a language switch.
+  readonly columns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    return [
+      { key: 'role', label: this.translate.instant('ADMIN.regimes.roles.columns.role'), sortable: true },
+      { key: 'regime', label: this.translate.instant('ADMIN.regimes.roles.columns.regime'), sortable: true },
+      { key: 'effFrom', label: this.translate.instant('ADMIN.regimes.roles.columns.effFrom'), sortable: true },
+      { key: 'effTo', label: this.translate.instant('ADMIN.regimes.roles.columns.effTo'), sortable: true },
+      { key: 'notes', label: this.translate.instant('ADMIN.regimes.roles.columns.notes'), sortable: true },
+    ];
+  });
 
-  readonly totalElements = computed(() => this.allRolesWithAssignment().length);
+  readonly totalElements = computed(() => this.filteredRoles().length);
   readonly totalPages    = computed(() => Math.ceil(this.totalElements() / this.PAGE_SIZE));
 
   readonly pagedRoles = computed(() => {
     const start = this.currentPage() * this.PAGE_SIZE;
-    return sortByColumn(this.allRolesWithAssignment(), this.sort(), ROLE_ASSIGNMENT_SORT)
+    return sortByColumn(this.filteredRoles(), this.sort(), this.sortAccessors)
       .slice(start, start + this.PAGE_SIZE);
   });
 
   readonly rows = computed<TableRow[]>(() =>
     this.pagedRoles().map(row => ({
       role: row.roleName,
-      regime: row.assignment?.regimeLabelFr ?? null,
+      regime: this.regimeLabel(row),
       effFrom: row.assignment ? this.formatDate(row.assignment.effectiveFrom) : '—',
       effTo: row.assignment?.effectiveTo ? this.formatDate(row.assignment.effectiveTo) : '—',
       notes: row.assignment?.notes ?? '—',
@@ -192,15 +247,24 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['paysId']) { this.loadData(); }
+    if (changes['paysId']) {
+      // Premier passage : on garde la page restaurée (`rememberAdminState`) ; seul un vrai
+      // changement d'entité repart de la première page.
+      if (!changes['paysId'].firstChange) this.currentPage.set(0);
+      this.loadData();
+    }
   }
 
   loadData(): void {
     this.loading.set(true);
-    this.currentPage.set(0);
     // Load regimes, assignments, and roles in parallel
     let pending = 3;
-    const done = () => { if (--pending === 0) this.loading.set(false); };
+    const done = () => {
+      if (--pending > 0) return;
+      // Page restaurée (ou liste raccourcie) : on retombe sur la dernière page existante.
+      this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
+      this.loading.set(false);
+    };
 
     this.svc.getRegimes(this.paysId()).subscribe({ next: rs => { this.regimes.set(rs); done(); }, error: done });
     this.svc.getRoleAssignments(this.paysId()).subscribe({ next: as => { this.assignments.set(as); done(); }, error: done });

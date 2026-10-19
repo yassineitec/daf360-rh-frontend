@@ -12,7 +12,7 @@
           (ngModelChange)="regimeTemplateId.set($event); emit()"
         >
         <div class="regime-info">
-          <span class="regime-label">{{ r.labelFr }}</span>
+          <span class="regime-label">{{ regimeLabel(r) }}</span>
           <span class="regime-hours">{{ 'ONBOARDING.STEP_REGIME.HOURS_PER_WEEK' | translate:{ hours: r.hoursPerWeek } }}</span>
           @if (r.isDefault) {
             <span class="regime-default">{{ 'ONBOARDING.STEP_REGIME.DEFAULT' | translate }}</span>

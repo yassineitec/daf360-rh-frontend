@@ -46,7 +46,8 @@
     (filterApply)="applyFilters($event)"
     [views]="viewOptions()"
     [view]="viewMode()"
-    (viewChange)="setView($event)" />
+    (viewChange)="setView($event)"
+    [table]="tableSection()?.table() ?? null" />
 
   @if (actionError()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -97,6 +98,7 @@
       [actioningId]="actioningId()"
       [statusBadge]="statusBadgeCell()"
       [tools]="true"
+      [sort]="sort()"
       (sortChange)="onSortChange($event)"
       (open)="onView($event)"
       (rowActivate)="onView($event)"

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   AvatarComponent, AvatarData,
@@ -7,12 +7,15 @@ import {
   SearchToolbarFilterConfig, SelectComponent, SelectOption, StatusBadgeComponent,
   TableColumn, TableConfig, TableRow, ToggleComponent, ToolbarAction, ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../../environments/environment';
 import { ModalComponent } from '../../../shared/modal.component';
 import { TableActionComponent } from '../../../shared/table-action.component';
 import { NotificationService } from '../../../core/notification.service';
 import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
+import { BilingualRoleName, roleLabel } from '../../../shared/utils/admin-label.utils';
 import { flagDataUri } from '../flag-svgs';
+import { rememberAdminState } from '../admin-section-state';
 
 interface AdminUserRow {
   id: number;
@@ -120,6 +123,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
     MetricCardComponent, SearchToolbarComponent, PaginationComponent, DataTableComponent,
     DafCellDirective, StatusBadgeComponent, AvatarComponent, ButtonComponent,
     FormFieldComponent, SelectComponent, ToggleComponent, ModalComponent, TableActionComponent,
+    TranslatePipe,
   ],
   template: `
     <div class="flex min-w-0 flex-col gap-6">
@@ -128,25 +132,25 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
            these four are the shape of the register, not of the current search. -->
       <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-6">
         <daf-metric-card
-          label="Comptes" [value]="stats()?.total ?? '—'"
+          [label]="'ADMIN.users.stats.total' | translate" [value]="stats()?.total ?? '—'"
           [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10',
-                       help: 'Tous les comptes du registre, personnes et comptes techniques confondus.' }" />
+                       help: 'ADMIN.users.stats.totalHelp' | translate }" />
         <daf-metric-card
-          label="Personnes" [value]="stats()?.employees ?? '—'"
+          [label]="'ADMIN.users.stats.employees' | translate" [value]="stats()?.employees ?? '—'"
           [options]="{ icon: 'person', iconColor: 'text-secondary', iconBg: 'bg-secondary/10',
-                       help: 'Comptes marqués comme appartenant à une personne réelle. Seuls ceux-ci apparaissent dans les listes et les notifications.' }" />
+                       help: 'ADMIN.users.stats.employeesHelp' | translate }" />
         <daf-metric-card
-          label="Sans dossier RH" [value]="stats()?.missingProfile ?? '—'"
+          [label]="'ADMIN.users.stats.missingProfile' | translate" [value]="stats()?.missingProfile ?? '—'"
           [options]="{ icon: 'folder_off', iconColor: 'text-warning', iconBg: 'bg-warning/10',
-                       help: 'Comptes sans fiche employé. Ni congés, ni contrat, ni bulletins tant qu’elle n’existe pas.' }" />
+                       help: 'ADMIN.users.stats.missingProfileHelp' | translate }" />
         <daf-metric-card
-          label="Jamais connectés" [value]="stats()?.neverLoggedIn ?? '—'"
+          [label]="'ADMIN.users.stats.neverLoggedIn' | translate" [value]="stats()?.neverLoggedIn ?? '—'"
           [options]="{ icon: 'no_accounts', iconColor: 'text-outline', iconBg: 'bg-surface-container',
-                       help: 'Comptes qui ne se sont jamais authentifiés — souvent un import en double ou une adresse absente d’Azure AD.' }" />
+                       help: 'ADMIN.users.stats.neverLoggedInHelp' | translate }" />
       </section>
 
       <daf-search-toolbar
-        placeholder="Rechercher un nom, un e-mail, un identifiant…"
+        [placeholder]="'ADMIN.users.searchPlaceholder' | translate"
         [value]="search()"
         [debounce]="200"
         (valueChange)="onSearch($event)"
@@ -157,7 +161,8 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
         (filterApply)="applyFilters($event)"
         [views]="viewOptions()"
         [view]="viewMode()"
-        (viewChange)="viewMode.set($any($event))" />
+        (viewChange)="viewMode.set($any($event))"
+        [table]="table() ?? null" />
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -181,24 +186,24 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
                 </div>
               </div>
               <div class="flex flex-wrap gap-1.5">
-                <daf-badge [label]="u.employee ? 'Personne' : 'Compte technique'"
+                <daf-badge [label]="(u.employee ? 'ADMIN.users.badges.person' : 'ADMIN.users.badges.technicalAccount') | translate"
                            [options]="{ variant: u.employee ? 'info' : 'warning', size: 'sm', dot: true }" />
                 @if (!u.hasProfile) {
-                  <daf-badge label="Sans dossier RH" [options]="{ variant: 'warning', size: 'sm', dot: true }" />
+                  <daf-badge [label]="'ADMIN.users.badges.noProfile' | translate" [options]="{ variant: 'warning', size: 'sm', dot: true }" />
                 }
                 @if (!u.lastLoginAt) {
-                  <daf-badge label="Jamais connecté" [options]="{ variant: 'neutral', size: 'sm', dot: true }" />
+                  <daf-badge [label]="'ADMIN.users.badges.neverLoggedIn' | translate" [options]="{ variant: 'neutral', size: 'sm', dot: true }" />
                 }
               </div>
               <dl class="grid grid-cols-3 gap-2 text-center">
-                <div><dt class="text-body-sm text-on-surface-variant">Congés</dt>
+                <div><dt class="text-body-sm text-on-surface-variant">{{ 'ADMIN.users.balances.conge' | translate }}</dt>
                      <dd class="m-0 font-semibold tabular-nums">{{ days(u.soldeConge) }}</dd></div>
-                <div><dt class="text-body-sm text-on-surface-variant">Maladie</dt>
+                <div><dt class="text-body-sm text-on-surface-variant">{{ 'ADMIN.users.balances.maladie' | translate }}</dt>
                      <dd class="m-0 font-semibold tabular-nums">{{ days(u.soldeMaladie) }}</dd></div>
-                <div><dt class="text-body-sm text-on-surface-variant">Télétravail</dt>
+                <div><dt class="text-body-sm text-on-surface-variant">{{ 'ADMIN.users.balances.teletravail' | translate }}</dt>
                      <dd class="m-0 font-semibold tabular-nums">{{ days(u.soldeTeletravail) }}</dd></div>
               </dl>
-              <daf-button label="Modifier les soldes" variant="secondary"
+              <daf-button [label]="'ADMIN.users.editBalances' | translate" variant="secondary"
                           [options]="{ size: 'sm', iconStart: 'edit_calendar', fullWidth: true }"
                           (onClick)="openBalances(u)" />
             </div>
@@ -207,7 +212,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
                         border-dashed border-outline-variant/50 px-6 py-14 text-center
                         text-on-surface-variant">
               <span class="material-symbols-outlined text-[40px] text-outline-variant">group_off</span>
-              <p>Aucun compte ne correspond à ces critères.</p>
+              <p>{{ 'ADMIN.users.empty' | translate }}</p>
             </div>
           }
         </div>
@@ -226,13 +231,13 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
           <ng-template dafCell="account" let-row>
             <div class="flex flex-wrap items-center gap-1.5">
-              <daf-badge [label]="row['_s'].employee ? 'Personne' : 'Technique'"
+              <daf-badge [label]="(row['_s'].employee ? 'ADMIN.users.badges.person' : 'ADMIN.users.badges.technical') | translate"
                          [options]="{ variant: row['_s'].employee ? 'info' : 'warning', size: 'sm', dot: true }" />
               @if (!row['_s'].hasProfile) {
-                <daf-badge label="Sans dossier" [options]="{ variant: 'warning', size: 'sm', dot: true }" />
+                <daf-badge [label]="'ADMIN.users.badges.noProfileShort' | translate" [options]="{ variant: 'warning', size: 'sm', dot: true }" />
               }
               @if (!row['_s'].active) {
-                <daf-badge label="Désactivé" [options]="{ variant: 'danger', size: 'sm', dot: true }" />
+                <daf-badge [label]="'ADMIN.users.badges.disabled' | translate" [options]="{ variant: 'danger', size: 'sm', dot: true }" />
               }
             </div>
           </ng-template>
@@ -240,15 +245,15 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
           <ng-template dafCell="_actions" let-row>
             <div class="flex items-center justify-end gap-2">
               <!-- A calendar, not a piggy bank: these are days off, not money. -->
-              <rh-table-action id="edit" icon="edit_calendar" tooltip="Modifier les soldes de congés"
+              <rh-table-action id="edit" icon="edit_calendar" [tooltip]="'ADMIN.users.editBalancesTooltip' | translate"
                                (action)="openBalances(row['_s'])" />
               <!-- The icon shows what the click WILL DO, not what the row currently is:
                    on a person it offers to withdraw them, on a technical account to restore. -->
               <rh-table-action id="toggle"
                                [icon]="row['_s'].employee ? 'person_remove' : 'person_add'"
-                               [tooltip]="row['_s'].employee
-                                 ? 'Reclasser en compte technique — retire ce compte de toutes les listes de personnes'
-                                 : 'Reclasser en personne réelle — le compte réapparaîtra dans les listes'"
+                               [tooltip]="(row['_s'].employee
+                                 ? 'ADMIN.users.toTechnicalTooltip'
+                                 : 'ADMIN.users.toPersonTooltip') | translate"
                                (action)="onToggleEmployee(row['_s'])" />
             </div>
           </ng-template>
@@ -261,14 +266,14 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
           [currentPage]="currentPage()" [totalPages]="totalPages()"
           [totalElements]="filtered().length" [pageSize]="pageSize()"
           [pageSizeOptions]="pageSizeOptions"
-          perPageLabel="par page"
+          [perPageLabel]="'ADMIN.users.perPage' | translate"
           (pageChange)="currentPage.set($event)"
           (pageSizeChange)="onPageSize($event)" />
       }
     </div>
 
     <!-- ── Soldes ──────────────────────────────────────────────────────────── -->
-    <app-modal title="Soldes de congés" [visible]="showBalances()" size="md"
+    <app-modal [title]="'ADMIN.users.balanceModal.title' | translate" [visible]="showBalances()" size="md"
                [hasFooter]="true" (closed)="showBalances.set(false)">
       @if (balanceTarget(); as u) {
         <div class="flex flex-col gap-4">
@@ -282,21 +287,19 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
           <!-- Said explicitly, because the difference is invisible once saved and it is the
                one thing about this form somebody will get wrong. -->
-          <p class="rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant">
-            Laisser un champ vide enregistre « non renseigné ». Saisir <strong>0</strong>
-            enregistre « aucun jour restant » — ce n’est pas la même chose.
-          </p>
+          <p class="rounded-lg bg-surface-container-low px-3 py-2 text-body-sm text-on-surface-variant"
+             [innerHTML]="'ADMIN.users.balanceModal.help' | translate"></p>
 
           <daf-form-field
-            [options]="{ label: 'Solde congés (jours)', type: 'number', fullWidth: true }"
+            [options]="{ label: 'ADMIN.users.balanceModal.conge' | translate, type: 'number', fullWidth: true }"
             [value]="balanceForm().soldeConge"
             (valueChange)="patchBalance({ soldeConge: $any($event) ?? '' })" />
           <daf-form-field
-            [options]="{ label: 'Solde maladie (jours)', type: 'number', fullWidth: true }"
+            [options]="{ label: 'ADMIN.users.balanceModal.maladie' | translate, type: 'number', fullWidth: true }"
             [value]="balanceForm().soldeMaladie"
             (valueChange)="patchBalance({ soldeMaladie: $any($event) ?? '' })" />
           <daf-form-field
-            [options]="{ label: 'Solde télétravail (jours)', type: 'number', fullWidth: true }"
+            [options]="{ label: 'ADMIN.users.balanceModal.teletravail' | translate, type: 'number', fullWidth: true }"
             [value]="balanceForm().soldeTeletravail"
             (valueChange)="patchBalance({ soldeTeletravail: $any($event) ?? '' })" />
 
@@ -304,8 +307,8 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
         </div>
       }
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="showBalances.set(false)" />
-        <daf-button label="Enregistrer" variant="teal"
+        <daf-button [label]="'ADMIN.users.actions.cancel' | translate" variant="secondary" (onClick)="showBalances.set(false)" />
+        <daf-button [label]="'ADMIN.users.actions.save' | translate" variant="teal"
                     [options]="{ loading: savingBalances() }"
                     (onClick)="submitBalances()" />
       </div>
@@ -313,39 +316,36 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
     <!-- hasFooter is opt-in on app-modal: without it the footer slot is never rendered and
          the Créer button silently disappears. -->
-    <app-modal title="Nouvel utilisateur" [visible]="showCreate()" size="md"
+    <app-modal [title]="'ADMIN.users.createModal.title' | translate" [visible]="showCreate()" size="md"
                [hasFooter]="true"
                (closed)="showCreate.set(false)">
       <div class="flex flex-col gap-3">
         <!-- Stated up front, because otherwise the first support ticket is
              "I created a user and they cannot log in". -->
         <p class="text-[12px] leading-relaxed text-on-surface-variant">
-          Crée le compte DAF360 uniquement. La connexion se fait par Azure AD sur l’adresse
-          e-mail : la personne ne pourra pas se connecter tant qu’un compte Azure avec cette
-          même adresse n’existe pas. Aucune fiche RH n’est créée — le compte apparaîtra comme
-          « fiche RH manquante ».
+          {{ 'ADMIN.users.createModal.help' | translate }}
         </p>
-        <daf-form-field [options]="{ label: 'Nom complet', required: true, fullWidth: true }"
+        <daf-form-field [options]="{ label: 'ADMIN.users.createModal.fullName' | translate, required: true, fullWidth: true }"
                         [value]="form().fullName"
                         (valueChange)="patch({ fullName: $any($event) ?? '' })" />
-        <daf-form-field [options]="{ label: 'E-mail', type: 'email', required: true, fullWidth: true }"
+        <daf-form-field [options]="{ label: 'ADMIN.users.createModal.email' | translate, type: 'email', required: true, fullWidth: true }"
                         [value]="form().email"
                         (valueChange)="patch({ email: $any($event) ?? '' })" />
         <daf-select [selected]="selectedRoleValue()" [options]="roleOptions()"
-                    [config]="{ label: 'Rôle', required: true, searchable: true, fullWidth: true }"
+                    [config]="{ label: 'ADMIN.users.createModal.role' | translate, required: true, searchable: true, fullWidth: true }"
                     (selectedChange)="patch({ roleId: $event[0] ? +$event[0] : null })" />
         <daf-select [selected]="selectedPaysValue()" [options]="paysOptions()"
-                    [config]="{ label: 'Entité', required: true, fullWidth: true, searchable: true }"
+                    [config]="{ label: 'ADMIN.users.createModal.entity' | translate, required: true, fullWidth: true, searchable: true }"
                     (selectedChange)="patch({ paysId: $event[0] ? +$event[0] : null })" />
         <daf-toggle [checked]="form().isEmployee"
-                    [options]="{ label: 'Compte d’une personne réelle',
-                                 hint: 'Décochez pour un compte de test ou technique : il n’apparaîtra dans aucune liste de personnes.' }"
+                    [options]="{ label: 'ADMIN.users.createModal.isEmployee' | translate,
+                                 hint: 'ADMIN.users.createModal.isEmployeeHint' | translate }"
                     (checkedChange)="patch({ isEmployee: $event })" />
         @if (createError()) { <div class="text-[13px] text-danger">{{ createError() }}</div> }
       </div>
       <div slot="footer">
-        <daf-button label="Annuler" variant="secondary" (onClick)="showCreate.set(false)" />
-        <daf-button label="Créer" variant="teal"
+        <daf-button [label]="'ADMIN.users.actions.cancel' | translate" variant="secondary" (onClick)="showCreate.set(false)" />
+        <daf-button [label]="'ADMIN.users.actions.create' | translate" variant="teal"
                     [options]="{ loading: creating(), disabled: !canCreate() }"
                     (onClick)="submitCreate()" />
       </div>
@@ -355,6 +355,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 export class UsersAdminComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly notify = inject(NotificationService);
+  private readonly translate = inject(TranslateService);
   private readonly base = `${environment.hrApiUrl}/api/hr/admin/users`;
 
   readonly users = signal<AdminUserRow[]>([]);
@@ -372,6 +373,14 @@ export class UsersAdminComponent implements OnInit {
   readonly pageSize = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
+  // ── Mémoire de la section ──────────────────────────────────────────────────
+  /** Vue, recherche, filtres et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
+  private readonly memory = rememberAdminState('users', {
+    viewMode: this.viewMode, search: this.search, employeeFilter: this.employeeFilter,
+    paysFilter: this.paysFilter, roleFilter: this.roleFilter, onlyMissing: this.onlyMissing,
+    currentPage: this.currentPage, pageSize: this.pageSize,
+  });
+
   readonly propagating = signal(false);
 
   readonly showCreate = signal(false);
@@ -387,13 +396,19 @@ export class UsersAdminComponent implements OnInit {
   readonly balanceForm = signal<BalanceForm>(
     { soldeConge: '', soldeMaladie: '', soldeTeletravail: '' });
 
-  readonly roles = signal<{ id: number; frenchName: string }[]>([]);
+  readonly roles = signal<({ id: number } & BilingualRoleName)[]>([]);
   readonly paysList = signal<{ id: number; frenchLabel: string | null; isoCode: string | null }[]>([]);
 
   // ── Options ───────────────────────────────────────────────────────────────
 
   readonly roleOptions = computed<SelectOption[]>(() =>
-    this.roles().map(r => ({ value: String(r.id), label: r.frenchName })));
+    this.roles().map(r => ({ value: String(r.id), label: roleLabel(r, this.translate) })));
+
+  /** A user's role in the UI language — the row's roleLabel is French, so look it up by id. */
+  userRoleName(u: AdminUserRow): string | null {
+    const r = u.roleId != null ? this.roles().find(x => x.id === u.roleId) : undefined;
+    return r ? roleLabel(r, this.translate) : u.roleLabel;
+  }
   readonly paysOptions = computed<SelectOption[]>(() =>
     this.paysList().map(p => ({
       value: String(p.id),
@@ -415,43 +430,74 @@ export class UsersAdminComponent implements OnInit {
 
   // ── Toolbar ───────────────────────────────────────────────────────────────
 
-  readonly viewOptions = computed<ToolbarToggleOption[]>(() => [
-    { id: 'list', icon: 'view_list', tooltip: 'Tableau' },
-    { id: 'grid', icon: 'grid_view', tooltip: 'Cartes' },
-  ]);
+  // Every label below goes through `t()`. `instant` is not reactive on its own: reading
+  // `currentLang()` first makes each computed re-run when the language changes.
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translate.instant(key, params);
+  }
 
-  readonly toolbarActions = computed<ToolbarAction[]>(() => [
-    { id: 'create', label: 'Nouveau compte', icon: 'person_add', position: 'right', variant: 'primary' },
-    {
-      id: 'sync', label: 'Synchroniser', icon: 'sync', position: 'right',
-      tooltip: 'Pousse l’état des comptes vers finance et la paie sans attendre le rapprochement automatique',
-      disabled: this.propagating(),
-    },
-  ]);
+  readonly viewOptions = computed<ToolbarToggleOption[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'list', icon: 'view_list', tooltip: this.t('ADMIN.users.views.list') },
+      { id: 'grid', icon: 'grid_view', tooltip: this.t('ADMIN.users.views.grid') },
+    ];
+  });
 
-  readonly filterFields = computed<FilterField[]>(() => [
-    {
-      name: 'employee', label: 'Type de compte', type: 'select', placeholder: 'Tous',
-      options: [
-        { value: 'true', label: 'Personne réelle' },
-        { value: 'false', label: 'Compte technique' },
-      ],
-    },
-    {
-      name: 'pays', label: 'Entité', type: 'select', placeholder: 'Toutes',
-      options: this.paysOptions().map(o => ({ value: String(o.value), label: o.label })),
-    },
-    {
-      name: 'role', label: 'Rôle', type: 'select', searchable: true, placeholder: 'Tous',
-      options: this.roleOptions().map(o => ({ value: String(o.value), label: o.label })),
-    },
-    { name: 'missing', label: 'Sans dossier RH uniquement', type: 'checkbox' },
-  ]);
+  // "Nouveau compte" stays a primary toolbar action (blue), not a teal daf-button: the Filtres
+  // trigger right next to it is teal, and two teal buttons side by side read as one.
+  readonly toolbarActions = computed<ToolbarAction[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'create', label: this.t('ADMIN.users.toolbar.create'), icon: 'person_add', position: 'right', variant: 'primary' },
+      {
+        id: 'sync', label: this.t('ADMIN.users.toolbar.sync'), icon: 'sync', position: 'right',
+        tooltip: this.t('ADMIN.users.toolbar.syncTooltip'),
+        disabled: this.propagating(),
+      },
+    ];
+  });
 
-  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => ({
-    title: 'Filtres', applyLabel: 'Appliquer', cancelLabel: 'Annuler',
-    resetLabel: 'Réinitialiser', triggerLabel: 'Filtrer', align: 'right',
-  }));
+  readonly filterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    return [
+      {
+        name: 'employee', label: this.t('ADMIN.users.filters.accountType'), type: 'select',
+        placeholder: this.t('ADMIN.users.filters.all'),
+        options: [
+          { value: 'true', label: this.t('ADMIN.users.filters.realPerson') },
+          { value: 'false', label: this.t('ADMIN.users.filters.technicalAccount') },
+        ],
+      },
+      {
+        name: 'pays', label: this.t('ADMIN.users.filters.entity'), type: 'select',
+        placeholder: this.t('ADMIN.users.filters.allFem'),
+        options: this.paysOptions().map(o => ({ value: String(o.value), label: o.label })),
+      },
+      {
+        name: 'role', label: this.t('ADMIN.users.filters.role'), type: 'select', searchable: true,
+        placeholder: this.t('ADMIN.users.filters.all'),
+        options: this.roleOptions().map(o => ({ value: String(o.value), label: o.label })),
+      },
+      { name: 'missing', label: this.t('ADMIN.users.filters.onlyMissing'), type: 'checkbox' },
+    ];
+  });
+
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
+    this.translate.currentLang();
+    return {
+      title: this.t('ADMIN.users.filters.title'), applyLabel: this.t('ADMIN.users.filters.apply'),
+      cancelLabel: this.t('ADMIN.users.filters.cancel'), resetLabel: this.t('ADMIN.users.filters.reset'),
+      triggerLabel: this.t('ADMIN.users.filters.trigger'), align: 'right',
+      // Le panneau s'ouvre sur les filtres restaurés ; un `select` attend un `string[]`.
+      initialValues: {
+        employee: this.employeeFilter() ? [this.employeeFilter()] : [],
+        pays:     this.paysFilter()     ? [this.paysFilter()]     : [],
+        role:     this.roleFilter()     ? [this.roleFilter()]     : [],
+        missing:  this.onlyMissing(),
+      },
+    };
+  });
 
   // ── Projections ───────────────────────────────────────────────────────────
 
@@ -482,37 +528,38 @@ export class UsersAdminComponent implements OnInit {
     return this.filtered().slice(start, start + this.pageSize());
   });
 
-  readonly columns = computed<TableColumn[]>(() => [
-    { key: 'identity', label: 'Utilisateur', sortable: true,
+  readonly columns = computed<TableColumn[]>(() => { this.translate.currentLang(); return [
+    { key: 'identity', label: this.t('ADMIN.users.columns.user'), sortable: true,
       sortAccessor: (r) => String((r['_s'] as AdminUserRow).fullName) },
-    { key: 'roleLabel', label: 'Rôle', sortable: true, width: '150px' },
-    { key: 'paysLabel', label: 'Entité', sortable: true, width: '120px' },
+    { key: 'roleLabel', label: this.t('ADMIN.users.columns.role'), sortable: true, width: '150px' },
+    { key: 'paysLabel', label: this.t('ADMIN.users.columns.entity'), sortable: true, width: '120px' },
     // One column per balance: they are three independent allowances, each sortable on its
     // own — "who is running out of sick days" is a different question from "who has annual
     // leave left", and a single combined cell could answer neither.
     //
     // `?? -1` in the accessors, not `?? 0`: a null balance is NOT RECORDED and must not sort
     // in among the people who genuinely have none left.
-    { key: 'soldeConge', label: 'Congés', align: 'right', width: '100px',
+    { key: 'soldeConge', label: this.t('ADMIN.users.balances.conge'), align: 'right', width: '100px',
       sortable: true, sortAccessor: (r) => (r['_s'] as AdminUserRow).soldeConge ?? -1 },
-    { key: 'soldeMaladie', label: 'Maladie', align: 'right', width: '100px',
+    { key: 'soldeMaladie', label: this.t('ADMIN.users.balances.maladie'), align: 'right', width: '100px',
       sortable: true, sortAccessor: (r) => (r['_s'] as AdminUserRow).soldeMaladie ?? -1 },
-    { key: 'soldeTeletravail', label: 'Télétravail', align: 'right', width: '110px',
+    { key: 'soldeTeletravail', label: this.t('ADMIN.users.balances.teletravail'), align: 'right', width: '110px',
       sortable: true, sortAccessor: (r) => (r['_s'] as AdminUserRow).soldeTeletravail ?? -1 },
-    { key: 'account', label: 'Compte', width: '190px' },
-    { key: 'lastLogin', label: 'Dernière connexion', sortable: true, width: '150px',
+    { key: 'account', label: this.t('ADMIN.users.columns.account'), width: '190px' },
+    { key: 'lastLogin', label: this.t('ADMIN.users.columns.lastLogin'), sortable: true, width: '150px',
       sortAccessor: (r) => (r['_s'] as AdminUserRow).lastLoginAt ?? '' },
     // A real width, not `1%`: `resizableColumns` puts the table in `table-layout: fixed`,
     // where a declared width is honoured literally and 1% would collapse the icons.
     { key: '_actions', label: '', align: 'right', width: '104px' },
-  ]);
+  ]; });
 
-  readonly tableRows = computed<TableRow[]>(() =>
-    this.paged().map(u => ({
+  readonly tableRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return this.paged().map(u => ({
       id: u.id,
-      roleLabel: u.roleLabel ?? '—',
+      roleLabel: this.userRoleName(u) ?? '—',
       paysLabel: u.paysLabel ?? '—',
-      lastLogin: u.lastLoginAt ? this.formatDate(u.lastLoginAt) : 'Jamais',
+      lastLogin: u.lastLoginAt ? this.formatDate(u.lastLoginAt) : this.t('ADMIN.users.never'),
       // A dash for null, the figure for zero — the column picker can hide any of the three.
       soldeConge: this.days(u.soldeConge),
       soldeMaladie: this.days(u.soldeMaladie),
@@ -520,25 +567,39 @@ export class UsersAdminComponent implements OnInit {
       _avatar: this.avatarData(u),
       // `_s` keeps the source row reachable from the custom cells.
       _s: u,
-    })));
+    }));
+  });
 
-  readonly config = computed<TableConfig>(() => ({
-    showHeader: false,
-    hoverable: true,
-    loading: this.loading(),
-    skeletonRows: this.pageSize(),
-    emptyMessage: 'Aucun compte ne correspond à ces critères.',
-    resizableColumns: true,
-    columnPicker: true,
-    columnPickerLabel: 'Colonnes',
-    rowId: (row) => String(row['id']),
-  }));
+  readonly config = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      showHeader: false,
+      hoverable: true,
+      loading: this.loading(),
+      skeletonRows: this.pageSize(),
+      emptyMessage: this.t('ADMIN.users.empty'),
+      resizableColumns: true,
+      resizableRows: true,
+      columnPicker: true,
+      columnPickerLabel: this.t('ADMIN.users.table.columnPicker'),
+      // Sorting is client-side here (the whole register is loaded), so the lib's own reset
+      // is enough — no `resetClick` handler needed.
+      showReset: true,
+      resetLabel: this.t('ADMIN.users.table.reset'),
+      sortLabel: this.t('ADMIN.users.table.sortBy'),
+      rowId: (row) => String(row['id']),
+    };
+  });
+
+  /** Table view only (undefined in cards view) — goes to the toolbar's `[table]` so the
+   *  reset + column picker sit right of Filtres instead of above the card. */
+  readonly table = viewChild(DataTableComponent);
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
     this.load();
-    this.http.get<{ id: number; frenchName: string }[]>(`${environment.hrApiUrl}/api/hr/admin/roles`)
+    this.http.get<({ id: number } & BilingualRoleName)[]>(`${environment.hrApiUrl}/api/hr/admin/roles`)
       .subscribe({ next: r => this.roles.set(r ?? []), error: () => this.roles.set([]) });
     this.http.get<{ id: number; frenchLabel: string | null; isoCode: string | null }[]>(
       `${environment.hrApiUrl}/api/hr/ref/pays`)
@@ -550,11 +611,16 @@ export class UsersAdminComponent implements OnInit {
     this.error.set(null);
     this.loading.set(true);
     this.http.get<AdminUserRow[]>(this.base).subscribe({
-      next: list => { this.users.set(list ?? []); this.loading.set(false); },
+      next: list => {
+        this.users.set(list ?? []);
+        this.loading.set(false);
+        // Page restaurée (ou registre raccourci) : retour à la dernière page existante.
+        this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
+      },
       error: () => {
         this.users.set([]);
         this.loading.set(false);
-        this.error.set('Erreur lors du chargement des comptes.');
+        this.error.set(this.t('ADMIN.users.messages.loadError'));
       },
     });
     this.http.get<AdminUserStats>(`${this.base}/stats`)
@@ -613,7 +679,7 @@ export class UsersAdminComponent implements OnInit {
   }
 
   employeeLabel(isEmployee: boolean): string {
-    return isEmployee ? 'Employé' : 'Non-employé';
+    return this.t(isEmployee ? 'ADMIN.users.employee' : 'ADMIN.users.notEmployee');
   }
 
   formatDate(iso: string): string {
@@ -650,7 +716,7 @@ export class UsersAdminComponent implements OnInit {
       if (raw === '') { parsed[key] = null; continue; }   // cleared = not recorded
       const n = Number(raw);
       if (!Number.isFinite(n) || n < 0) {
-        this.balanceError.set('Les soldes doivent être des nombres positifs, ou vides.');
+        this.balanceError.set(this.t('ADMIN.users.messages.balancesInvalid'));
         return;
       }
       parsed[key] = n;
@@ -665,11 +731,11 @@ export class UsersAdminComponent implements OnInit {
         // Patched in place rather than reloading the register: the server returns the saved
         // row, and re-fetching several hundred accounts to move three numbers is waste.
         this.users.update(list => list.map(x => (x.id === updated.id ? updated : x)));
-        this.notify.success(`Soldes mis à jour pour ${updated.fullName}.`);
+        this.notify.success(this.t('ADMIN.users.messages.balancesSaved', { name: updated.fullName }));
       },
       error: err => {
         this.savingBalances.set(false);
-        this.balanceError.set(err?.error?.message ?? 'Erreur lors de l’enregistrement des soldes.');
+        this.balanceError.set(err?.error?.message ?? this.t('ADMIN.users.messages.balancesError'));
       },
     });
   }
@@ -686,14 +752,15 @@ export class UsersAdminComponent implements OnInit {
     const next = !row.employee;
     this.http.patch<void>(`${this.base}/${row.id}/is-employee`, { isEmployee: next }).subscribe({
       next: () => {
-        this.notify.success(`${row.fullName} : ${this.employeeLabel(next).toLowerCase()}.`);
+        this.notify.success(this.t('ADMIN.users.messages.toggled',
+          { name: row.fullName, status: this.employeeLabel(next).toLowerCase() }));
         this.load();
         // Propagé sans le demander, et c'est le point : la copie de finance et de la paie
         // se rafraîchit d'elle-même toutes les 15 minutes, ce qui est bien trop long pour
         // une exclusion. Attendre un clic supplémentaire serait attendre qu'on y pense.
         this.propagate({ silentOnSuccess: true });
       },
-      error: () => this.notify.error('Erreur lors du changement.'),
+      error: () => this.notify.error(this.t('ADMIN.users.messages.toggleError')),
     });
   }
 
@@ -717,22 +784,20 @@ export class UsersAdminComponent implements OnInit {
         this.propagating.set(false);
         const failed = results.filter(r => !r.ok && !r.skipped);
         if (failed.length) {
-          this.notify.error(
-            `Modules non joints : ${failed.map(r => `${r.module} (${r.message})`).join(', ')}. `
-            + 'La modification est enregistrée et sera reprise sous 15 min.');
+          this.notify.error(this.t('ADMIN.users.messages.syncFailed',
+            { modules: failed.map(r => `${r.module} (${r.message})`).join(', ') }));
           return;
         }
         if (!opts.silentOnSuccess) {
           const done = results.filter(r => r.ok).map(r => r.module);
           this.notify.success(done.length
-            ? `Modules synchronisés : ${done.join(', ')}.`
-            : 'Aucun module configuré pour la synchronisation.');
+            ? this.t('ADMIN.users.messages.syncDone', { modules: done.join(', ') })
+            : this.t('ADMIN.users.messages.syncNone'));
         }
       },
       error: () => {
         this.propagating.set(false);
-        this.notify.error('Synchronisation impossible. La reprise automatique aura lieu '
-                          + 'sous 15 min.');
+        this.notify.error(this.t('ADMIN.users.messages.syncError'));
       },
     });
   }
@@ -757,12 +822,12 @@ export class UsersAdminComponent implements OnInit {
       next: created => {
         this.creating.set(false);
         this.showCreate.set(false);
-        this.notify.success(`Compte créé pour ${created.fullName}.`);
+        this.notify.success(this.t('ADMIN.users.messages.created', { name: created.fullName }));
         this.load();
       },
       error: err => {
         this.creating.set(false);
-        this.createError.set(err?.error?.message ?? 'Erreur lors de la création du compte.');
+        this.createError.set(err?.error?.message ?? this.t('ADMIN.users.messages.createError'));
       },
     });
   }
