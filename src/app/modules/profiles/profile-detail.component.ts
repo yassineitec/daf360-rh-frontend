@@ -770,8 +770,8 @@ export class ProfileDetailComponent implements OnInit {
       nationalityId: p.nationalityId ?? null, nationalId: p.nationalId ?? '',
       passportNumber: p.passportNumber ?? '', maritalStatus: p.maritalStatus ?? '',
       numberOfChildren: p.numberOfChildren ?? null,
-      // Starts empty: only a newly typed matricule is sent (a saved one is read-only).
-      payrollMatricule: '',
+      // Prefilled so an admin can correct it; re-sending the stored value is a no-op server-side.
+      payrollMatricule: p.matricule ?? '',
       hireDate: p.hireDate ?? '', contractType: p.contractType ?? '',
       contractEndDate: p.contractEndDate ?? '', probationEndDate: p.probationEndDate ?? '',
       isOnProbation: p.isOnProbation ?? false,

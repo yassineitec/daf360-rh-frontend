@@ -1435,7 +1435,7 @@
       "SALARY_RH": "Salaire net RH",
       "SALARY_RH_MOVED_HINT": "Géré désormais dans l'onglet Rémunération.",
       "CONTRACT_TYPE_EMPTY_HINT": "Aucun type de contrat n'est disponible pour ce pays. Veuillez contacter l'administrateur.",
-      "MATRICULE_LOCK_HINT": "À saisir à réception du matricule transmis par le cabinet comptable. Une fois enregistré, il n'est plus modifiable.",
+      "MATRICULE_LOCK_HINT": "Matricule transmis par le cabinet comptable. Il sert à rattacher les bulletins de paie : à corriger avec précaution.",
       "SALARY_CANDIDATE_INPUT": "Prétention nette candidat (TND)",
       "SALARY_RH_INPUT": "Salaire net proposé RH (TND)",
       "REMUNERATION_COUNTRY": "Pays",

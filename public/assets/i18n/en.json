@@ -1435,7 +1435,7 @@
       "SALARY_RH": "HR net salary",
       "SALARY_RH_MOVED_HINT": "Now managed in the Remuneration tab.",
       "CONTRACT_TYPE_EMPTY_HINT": "No contract type is available for this country. Please contact your administrator.",
-      "MATRICULE_LOCK_HINT": "Enter it once received from the accounting firm. Once saved, it can no longer be changed.",
+      "MATRICULE_LOCK_HINT": "Number transmitted by the accounting firm. Payslips are matched on it: correct it with care.",
       "SALARY_CANDIDATE_INPUT": "Candidate net expectation (TND)",
       "SALARY_RH_INPUT": "HR proposed net salary (TND)",
       "REMUNERATION_COUNTRY": "Country",
