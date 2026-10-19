@@ -3,24 +3,29 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
+  ButtonComponent, FileUploadComponent, FormFieldComponent, MultiDatePickerComponent, UploadedFile,
 } from '@khalilrebhiitec/daf360';
 
 import { ModalComponent } from '../../shared/modal.component';
 import { dateToIso, isoToDate } from '../../shared/date-picker.utils';
 import { localeDate, localeOf } from '../missions/mission-display';
-import { SubmitCdiConversionPayload } from './cdi-conversion.model';
+import {
+  CDI_EVALUATION_ACCEPT, CDI_EVALUATION_MAX_MB, SubmitCdiConversionForm,
+} from './cdi-conversion.model';
 
 /**
- * Files a CIVP → CDI request from the profile's contract card. Three answers, all required
- * by the backend: when the CDI should start, the net salary proposed, and why — the
- * validator decides on the technical side (the managers' feedback) and the salary side.
+ * Files a CIVP → CDI request from the profile's contract card. Four answers, all required
+ * by the backend: when the CDI should start, the net salary proposed, why, and the CIVP's
+ * evaluation file (V120) — the validator decides on the technical side (the managers'
+ * feedback, the evaluation) and the salary side.
  */
 @Component({
   selector: 'rh-cdi-conversion-request-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent, TranslatePipe],
+  imports: [
+    ModalComponent, ButtonComponent, FileUploadComponent, FormFieldComponent, MultiDatePickerComponent, TranslatePipe,
+  ],
   template: `
     <app-modal
       [title]="'CDI_CONVERSION.REQUEST.TITLE' | translate"
@@ -69,6 +74,15 @@ import { SubmitCdiConversionPayload } from './cdi-conversion.model';
             placeholder: ('CDI_CONVERSION.FIELDS.JUSTIFICATION_PH' | translate)
           }"
           (valueChange)="onJustification($event)" />
+
+        <daf-file-upload
+          [files]="evaluation()"
+          (filesChange)="evaluation.set($event)"
+          [config]="{
+            label: ('CDI_CONVERSION.FIELDS.EVALUATION' | translate),
+            accept: accept, maxSizeMb: maxSizeMb, required: true,
+            hint: ('CDI_CONVERSION.FIELDS.EVALUATION_HINT' | translate)
+          }" />
       </div>
 
       <div slot="footer">
@@ -97,11 +111,15 @@ export class CdiConversionRequestModalComponent {
   readonly error         = input<string | null>(null);
 
   readonly closed = output<void>();
-  readonly submit = output<SubmitCdiConversionPayload>();
+  readonly submit = output<SubmitCdiConversionForm>();
 
   protected readonly startDate     = signal('');
   protected readonly salary        = signal<number | null>(null);
   protected readonly justification = signal('');
+  protected readonly evaluation    = signal<UploadedFile[]>([]);
+
+  protected readonly accept    = CDI_EVALUATION_ACCEPT;
+  protected readonly maxSizeMb = CDI_EVALUATION_MAX_MB;
 
   constructor() {
     // Cleared on every open: a draft typed for one contract must never land on another.
@@ -110,8 +128,15 @@ export class CdiConversionRequestModalComponent {
       this.startDate.set(this.contractEnd() ?? '');
       this.salary.set(null);
       this.justification.set('');
+      this.evaluation.set([]);
     });
   }
+
+  /** The one usable file — daf-file-upload keeps a rejected file in the list with its error. */
+  private readonly evaluationFile = computed(() => {
+    const f = this.evaluation().find(u => !u.error);
+    return f ? f.file : null;
+  });
 
   private readonly locale = computed(() => localeOf(this.translate.currentLang()));
   protected readonly localeDate = (iso: string | null) => localeDate(iso, this.locale());
@@ -119,7 +144,7 @@ export class CdiConversionRequestModalComponent {
   protected readonly fromDate = dateToIso;
 
   protected readonly canSubmit = computed(() =>
-    !!this.startDate() && (this.salary() ?? 0) > 0 && !!this.justification().trim());
+    !!this.startDate() && (this.salary() ?? 0) > 0 && !!this.justification().trim() && !!this.evaluationFile());
 
   protected onSalary(v: string | number | null): void {
     const n = v === null || v === '' ? null : Number(String(v).replace(',', '.'));
@@ -131,11 +156,15 @@ export class CdiConversionRequestModalComponent {
   }
 
   protected emit(): void {
-    if (!this.canSubmit()) return;
+    const evaluation = this.evaluationFile();
+    if (!this.canSubmit() || !evaluation) return;
     this.submit.emit({
-      requestedStartDate: this.startDate(),
-      proposedNetSalary: this.salary()!,
-      justification: this.justification().trim(),
+      payload: {
+        requestedStartDate: this.startDate(),
+        proposedNetSalary: this.salary()!,
+        justification: this.justification().trim(),
+      },
+      evaluation,
     });
   }
 }

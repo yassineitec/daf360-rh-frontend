@@ -4337,6 +4337,8 @@
       "SALARY_HINT": "Montant net mensuel, dans la devise du pays",
       "JUSTIFICATION": "Justification",
       "JUSTIFICATION_PH": "Affectations, retours des responsables, compétences acquises…",
+      "EVALUATION": "Fichier d'évaluation",
+      "EVALUATION_HINT": "Évaluation du CIVP, obligatoire — PDF, JPG ou PNG, 10 Mo max. Classée dans le dossier du collaborateur.",
       "REQUESTED_BY": "Demandé par",
       "REQUESTED_AT": "Déposée le",
       "CIVP_PERIOD": "Période CIVP",
@@ -4363,7 +4365,9 @@
       "REQUEST": "Demande",
       "DECISION": "Décision",
       "HISTORY": "Historique",
-      "TO_CONVERT": "Demande validée : établissez le contrat CDI depuis la fiche du collaborateur (onglet Historique)."
+      "TO_CONVERT": "Demande validée : établissez le contrat CDI depuis la fiche du collaborateur (onglet Historique).",
+      "OPEN_EVALUATION": "Ouvrir l'évaluation",
+      "NO_EVALUATION": "Aucun fichier d'évaluation joint"
     },
     "DECISION": {
       "TITLE_APPROVE": "Valider le passage en CDI",

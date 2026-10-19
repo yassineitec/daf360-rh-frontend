@@ -4337,6 +4337,8 @@
       "SALARY_HINT": "Monthly net amount, in the country's currency",
       "JUSTIFICATION": "Justification",
       "JUSTIFICATION_PH": "Assignments, managers' feedback, skills acquired…",
+      "EVALUATION": "Evaluation file",
+      "EVALUATION_HINT": "The CIVP's evaluation, required — PDF, JPG or PNG, 10 MB max. Filed in the employee's dossier.",
       "REQUESTED_BY": "Requested by",
       "REQUESTED_AT": "Filed on",
       "CIVP_PERIOD": "CIVP period",
@@ -4363,7 +4365,9 @@
       "REQUEST": "Request",
       "DECISION": "Decision",
       "HISTORY": "History",
-      "TO_CONVERT": "Request approved: create the CDI contract from the employee's profile (History tab)."
+      "TO_CONVERT": "Request approved: create the CDI contract from the employee's profile (History tab).",
+      "OPEN_EVALUATION": "Open the evaluation",
+      "NO_EVALUATION": "No evaluation file attached"
     },
     "DECISION": {
       "TITLE_APPROVE": "Approve the move to CDI",

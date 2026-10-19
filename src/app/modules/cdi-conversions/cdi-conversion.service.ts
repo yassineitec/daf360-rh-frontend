@@ -26,8 +26,20 @@ export class CdiConversionService {
       { observe: 'response' }).pipe(map(res => res.body ?? null));
   }
 
-  submit(contractId: number, payload: SubmitCdiConversionPayload): Observable<CdiConversion> {
-    return this.http.post<CdiConversion>(`${this.base}/api/hr/contracts/${contractId}/cdi-conversion`, payload);
+  /**
+   * Multipart, one call: the request (JSON part, typed so Spring binds it) and the mandatory
+   * evaluation file. No Content-Type header here — the browser sets the multipart boundary.
+   */
+  submit(contractId: number, payload: SubmitCdiConversionPayload, evaluation: File): Observable<CdiConversion> {
+    const form = new FormData();
+    form.append('request', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+    form.append('evaluation', evaluation, evaluation.name);
+    return this.http.post<CdiConversion>(`${this.base}/api/hr/contracts/${contractId}/cdi-conversion`, form);
+  }
+
+  /** The evaluation file as a blob — opened through an object URL, the endpoint needs the auth header. */
+  evaluation(id: number): Observable<Blob> {
+    return this.http.get(`${this.base}/api/hr/cdi-conversions/${id}/evaluation`, { responseType: 'blob' });
   }
 
   decide(id: number, payload: CdiDecisionPayload): Observable<CdiConversion> {

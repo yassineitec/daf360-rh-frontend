@@ -81,7 +81,7 @@ import { DocumentHistorySectionComponent } from './detail-sections/document-hist
 import { fromDate, toDate } from './detail-sections/field-bridges';
 import { CdiConversionService } from '../cdi-conversions/cdi-conversion.service';
 import {
-  CDI_PAGE_PERMISSIONS, CDI_PERMISSIONS, CdiConversion, SubmitCdiConversionPayload, isAwaitingConversion,
+  CDI_PAGE_PERMISSIONS, CDI_PERMISSIONS, CdiConversion, SubmitCdiConversionForm, isAwaitingConversion,
 } from '../cdi-conversions/cdi-conversion.model';
 import { CdiConversionRequestModalComponent } from '../cdi-conversions/cdi-conversion-request-modal.component';
 
@@ -1208,12 +1208,12 @@ export class ProfileDetailComponent implements OnInit {
     this.cdiRequestContract.set(this.lcContracts().find(c => c.id === contractId) ?? null);
   }
 
-  submitCdiRequest(payload: SubmitCdiConversionPayload): void {
+  submitCdiRequest(form: SubmitCdiConversionForm): void {
     const contract = this.cdiRequestContract();
     if (!contract || this.cdiSubmitting()) return;
     this.cdiSubmitting.set(true);
     this.cdiError.set(null);
-    this.cdiSvc.submit(contract.id, payload).subscribe({
+    this.cdiSvc.submit(contract.id, form.payload, form.evaluation).subscribe({
       next: () => {
         this.cdiSubmitting.set(false);
         this.cdiRequestContract.set(null);
