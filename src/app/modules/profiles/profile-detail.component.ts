@@ -79,6 +79,11 @@ import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.com
 import { RemunerationSectionComponent } from './detail-sections/remuneration-section.component';
 import { DocumentHistorySectionComponent } from './detail-sections/document-history-section.component';
 import { fromDate, toDate } from './detail-sections/field-bridges';
+import { CdiConversionService } from '../cdi-conversions/cdi-conversion.service';
+import {
+  CDI_PAGE_PERMISSIONS, CDI_PERMISSIONS, CdiConversion, SubmitCdiConversionPayload, isAwaitingConversion,
+} from '../cdi-conversions/cdi-conversion.model';
+import { CdiConversionRequestModalComponent } from '../cdi-conversions/cdi-conversion-request-modal.component';
 
 /**
  * One per section of the original page, minus Identité — the design keeps that
@@ -165,6 +170,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
     DocumentEditFormComponent,
     DocumentHistorySectionComponent,
     RemunerationSectionComponent,
+    CdiConversionRequestModalComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-detail.component.html',
@@ -612,6 +618,19 @@ export class ProfileDetailComponent implements OnInit {
   readonly lcError     = signal<string | null>(null);
   readonly showNewContractModal = signal(false);
   private lcLoaded = false;
+
+  // ── CIVP → CDI requests (V119) ─────────────────────────────────────────────
+  private cdiSvc = inject(CdiConversionService);
+  /** Latest request per CIVP contract id (null = none yet). */
+  readonly lcCdiRequests = signal<Record<number, CdiConversion | null>>({});
+  readonly canRequestCdi = computed(() => this.userStore.hasPermission(CDI_PERMISSIONS.REQUEST));
+  private readonly canReadCdi = computed(() => CDI_PAGE_PERMISSIONS.some(c => this.userStore.hasPermission(c)));
+  /** The CIVP contract the request modal is open for. */
+  readonly cdiRequestContract = signal<ContractListDto | null>(null);
+  readonly cdiSubmitting = signal(false);
+  readonly cdiError = signal<string | null>(null);
+  /** The approved request behind the CIVP contract being converted — shown in the modal. */
+  readonly selectedCdiApproval = signal<CdiConversion | null>(null);
 
   // ── IT equipment ledger (V76) ──────────────────────────────────────────────
   readonly itAssets       = signal<ItAssetAssignmentDto[]>([]);
@@ -1156,7 +1175,7 @@ export class ProfileDetailComponent implements OnInit {
     this.lcLoaded = true;
     this.lcLoading.set(true);
     this.lcSvc.getContracts(this.profileId).pipe(catchError(() => of([])))
-      .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); });
+      .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); this.loadCdiRequests(cs); });
     this.lcSvc.getLifecycleHistory(this.profileId).pipe(catchError(() => of([])))
       .subscribe(h => this.lcHistory.set(h));
     // The dossier log used to be fetched by app-contract-history itself. That component is
@@ -1169,6 +1188,43 @@ export class ProfileDetailComponent implements OnInit {
   private refreshContracts(): void {
     this.lcLoaded = false;
     this.loadContracts();
+  }
+
+  /** The latest CDI request of each CIVP contract — the contract card shows its status. */
+  private loadCdiRequests(contracts: ContractListDto[]): void {
+    if (!this.canReadCdi()) return;
+    const civp = contracts.filter(c => c.contractTypeCode === 'CIVP');
+    if (!civp.length) { this.lcCdiRequests.set({}); return; }
+    forkJoin(civp.map(c => this.cdiSvc.latestForContract(c.id).pipe(catchError(() => of(null)))))
+      .subscribe(reqs => {
+        const byContract: Record<number, CdiConversion | null> = {};
+        civp.forEach((c, i) => byContract[c.id] = reqs[i]);
+        this.lcCdiRequests.set(byContract);
+      });
+  }
+
+  openCdiRequestModal(contractId: number): void {
+    this.cdiError.set(null);
+    this.cdiRequestContract.set(this.lcContracts().find(c => c.id === contractId) ?? null);
+  }
+
+  submitCdiRequest(payload: SubmitCdiConversionPayload): void {
+    const contract = this.cdiRequestContract();
+    if (!contract || this.cdiSubmitting()) return;
+    this.cdiSubmitting.set(true);
+    this.cdiError.set(null);
+    this.cdiSvc.submit(contract.id, payload).subscribe({
+      next: () => {
+        this.cdiSubmitting.set(false);
+        this.cdiRequestContract.set(null);
+        this.notify.success(this.translate.instant('CDI_CONVERSION.REQUEST.SENT'));
+        this.loadCdiRequests(this.lcContracts());
+      },
+      error: err => {
+        this.cdiSubmitting.set(false);
+        this.cdiError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
+      },
+    });
   }
 
   // ── IT equipment ledger ────────────────────────────────────────────────────
@@ -1321,7 +1377,11 @@ export class ProfileDetailComponent implements OnInit {
 
   openConvertCDIModal(contractId: number): void {
     this.selectedContractId = contractId;
-    this.cdiStartDate = '';
+    // CIVP: start from what the validation retained (V119) — the backend refuses the
+    // conversion without an approved request anyway.
+    const approved = this.lcCdiRequests()[contractId];
+    this.selectedCdiApproval.set(isAwaitingConversion(approved) ? approved : null);
+    this.cdiStartDate = isAwaitingConversion(approved) ? (approved!.validatedStartDate ?? '') : '';
     this.cdiComment = '';
     this.lcError.set(null);
     const tpl = this.convertCDITpl();

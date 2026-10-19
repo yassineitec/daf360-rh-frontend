@@ -11,6 +11,8 @@ import {
 import { SectionCardComponent } from '../../../shared/detail/section-card.component';
 import { ContractHistoryDto } from '../contract-history/contract-history.model';
 import { fmtDate } from './field-bridges';
+import { CdiConversion, isInProgress } from '../../cdi-conversions/cdi-conversion.model';
+import { cdiStatusKey, cdiStatusVariant } from '../../cdi-conversions/cdi-conversion-display';
 
 /**
  * Contrats & cycle de vie tab — the contract list with its per-contract
@@ -122,19 +124,46 @@ import { fmtDate } from './field-bridges';
                 @if (c.referenceContrat) {
                   <span class="text-[11px] text-outline">{{ 'PROFILES.LC.REF' | translate:{ ref: c.referenceContrat } }}</span>
                 }
+
+                <!-- CIVP → CDI request (V119): its status and a link to the desk where it
+                     is decided. Only the latest request of the contract is shown. -->
+                @if (c.contractTypeCode === 'CIVP' && cdiRequest(c.id); as req) {
+                  <div class="flex flex-wrap items-center gap-2 text-[12px]">
+                    <span class="text-on-surface-variant">{{ 'CDI_CONVERSION.CARD.LABEL' | translate }} :</span>
+                    <daf-badge [label]="cdiStatusKey(req) | translate"
+                               [options]="{ variant: cdiStatusVariant(req), size: 'sm', pill: true }" />
+                    <a [routerLink]="['/rh/cdi-conversions', req.id]" class="font-semibold text-teal hover:underline">
+                      {{ 'CDI_CONVERSION.CARD.OPEN' | translate }}
+                    </a>
+                  </div>
+                }
               </div>
 
-              @if (canEdit() && c.isActive && !c.dossierLocked) {
+              @if (c.isActive && !c.dossierLocked) {
                 <div class="flex flex-col items-end gap-1.5">
-                  @if (c.currentStatusCode === 'PERIODE_ESSAI') {
-                    <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.VALIDATE_TRIAL' | translate), size: 'sm' }"
-                      (onClick)="validateTrial.emit(c.id)" />
+                  @if (canEdit()) {
+                    @if (c.currentStatusCode === 'PERIODE_ESSAI') {
+                      <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.VALIDATE_TRIAL' | translate), size: 'sm' }"
+                        (onClick)="validateTrial.emit(c.id)" />
+                    }
+                    @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
+                      <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.RENEW_CDD' | translate), size: 'sm' }"
+                        (onClick)="renewCdd.emit(c.id)" />
+                      <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
+                        (onClick)="convertCdi.emit(c.id)" />
+                    }
                   }
-                  @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
-                    <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.RENEW_CDD' | translate), size: 'sm' }"
-                      (onClick)="renewCdd.emit(c.id)" />
-                    <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
-                      (onClick)="convertCdi.emit(c.id)" />
+                  <!-- CIVP: requesting is its own permission (managers, not only RH); the
+                       conversion itself appears once the request is approved, for RH. -->
+                  @if (c.contractTypeCode === 'CIVP' && c.currentStatusCode === 'ACTIF') {
+                    @if (canRequestCdi() && !cdiInProgress(c.id)) {
+                      <daf-button variant="secondary" [options]="{ label: ('CDI_CONVERSION.CARD.REQUEST' | translate), size: 'sm', iconStart: 'workspace_premium' }"
+                        (onClick)="requestCdi.emit(c.id)" />
+                    }
+                    @if (cdiRequest(c.id)?.canConvert) {
+                      <daf-button [options]="{ variant: 'primary', label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
+                        (onClick)="convertCdi.emit(c.id)" />
+                    }
                   }
                 </div>
               }
@@ -252,13 +281,27 @@ export class LifecycleSectionComponent {
   readonly loading     = input(false);
   readonly canEdit     = input(false);
   readonly candidateId = input<number | null>(null);
+  /** Latest CIVP → CDI request per contract id (V119); null = none yet. */
+  readonly cdiRequests   = input<Record<number, CdiConversion | null>>({});
+  readonly canRequestCdi = input(false);
 
   readonly newContract   = output<void>();
   readonly validateTrial = output<number>();
   readonly renewCdd      = output<number>();
   readonly convertCdi    = output<number>();
+  readonly requestCdi    = output<number>();
 
   protected readonly fmtDate = fmtDate;
+  protected readonly cdiStatusKey = cdiStatusKey;
+  protected readonly cdiStatusVariant = cdiStatusVariant;
+
+  protected cdiRequest(contractId: number): CdiConversion | null {
+    return this.cdiRequests()[contractId] ?? null;
+  }
+
+  protected cdiInProgress(contractId: number): boolean {
+    return isInProgress(this.cdiRequest(contractId));
+  }
 
   protected statusLabel(code: string): string {
     return STATUS_CONFIG[code as keyof typeof STATUS_CONFIG]
