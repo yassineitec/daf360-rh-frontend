@@ -16,7 +16,12 @@ import {
 
 import { ItProvisioningService } from './it-provisioning.service';
 import { ItProvisioningStatus, ProvisioningListItem } from './it-provisioning.model';
-import { hardwareComplete, isOverdue, licCount, licencesComplete } from './it-provisioning-display';
+import {
+  hardwareComplete, isOverdue, licCount, licencesComplete,
+  matchesPosition, matchesProfile, positionOptions, profileOptions,
+} from './it-provisioning-display';
+import { ConfigurableListService } from '../../core/lists/configurable-list.service';
+import { ListValue } from '../../core/lists/configurable-list.model';
 import { ItProvisioningCardsSectionComponent } from './sections/it-provisioning-cards-section.component';
 import {
   ItProvisioningTableSectionComponent, ProvisioningSort,
@@ -26,8 +31,10 @@ import { ItProvisioningListStateService } from './it-provisioning-list-state.ser
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-/** Provisioning statuses in workflow order, for the status filter. */
+/** Provisioning statuses in workflow order — sort order of the status column. */
 const STATUS_CODES: ItProvisioningStatus[] = ['PENDING', 'IN_PROGRESS', 'EMAIL_CREATED', 'COMPLETED'];
+/** What this page lists — completed files live on `/rh/it-provisioning/historique`. */
+const OPEN_STATUS_CODES: ItProvisioningStatus[] = ['PENDING', 'IN_PROGRESS', 'EMAIL_CREATED'];
 
 type ViewMode = 'grid' | 'list';
 
@@ -128,19 +135,32 @@ export class ItProvisioningListComponent implements OnInit {
   readonly missingFilter = signal<MissingItem[]>([]);
   /** Expected-start-date range from the panel: one day or [from, to]; null = no bound. */
   readonly startRange   = signal<Date[] | null>(null);
+  /** AD profile codes (`NO_PROFILE` = none picked); empty = no constraint. */
+  readonly profileFilter  = signal<string[]>([]);
+  /** Applied positions (`NO_POSITION` = none); empty = no constraint. */
+  readonly positionFilter = signal<string[]>([]);
   readonly currentPage  = signal(0);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
+  /** The configured `AD_PROFILE_TYPE` list — labels for the "Profil AD" filter. */
+  private listService = inject(ConfigurableListService);
+  readonly adProfiles = signal<ListValue[]>([]);
+
+  /** Files still being worked on. `items` keeps the completed ones for the completion-rate deltas. */
+  readonly openItems = computed(() => this.items().filter(r => OPEN_STATUS_CODES.includes(r.status)));
 
   readonly filteredItems = computed(() => {
     const term   = this.search().trim().toLowerCase();
     const status = this.statusFilter();
     const overdueOnly = this.overdueOnly();
     const missing = this.missingFilter();
+    const profiles  = this.profileFilter();
+    const positions = this.positionFilter();
     const range = this.startRange();
     const from = range?.[0] ? toIsoDay(range[0]) : null;
     const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
-    return this.items().filter(r => {
+    return this.openItems().filter(r => {
       const matchesTerm = !term
         || r.candidateFullName.toLowerCase().includes(term)
         || (r.ms365Email ?? '').toLowerCase().includes(term)
@@ -151,6 +171,8 @@ export class ItProvisioningListComponent implements OnInit {
         && (!status || r.status === status)
         && (!overdueOnly || isOverdue(r))
         && (!missing.length || missing.some(m => isMissing(r, m)))
+        && matchesProfile(r, profiles)
+        && matchesPosition(r, positions)
         && (!from || (!!start && start >= from && start <= to!));
     });
   });
@@ -184,6 +206,8 @@ export class ItProvisioningListComponent implements OnInit {
       overdueOnly:   this.overdueOnly(),
       missingFilter: this.missingFilter(),
       startRange:    this.startRange(),
+      profileFilter:  this.profileFilter(),
+      positionFilter: this.positionFilter(),
       sort:          this.sort(),
       page:          this.currentPage(),
       pageSize:      this.pageSize(),
@@ -200,6 +224,8 @@ export class ItProvisioningListComponent implements OnInit {
     this.overdueOnly.set(s.overdueOnly);
     this.missingFilter.set(s.missingFilter);
     this.startRange.set(s.startRange);
+    this.profileFilter.set(s.profileFilter);
+    this.positionFilter.set(s.positionFilter);
     this.sort.set(s.sort);
     this.currentPage.set(s.page);
     this.pageSize.set(s.pageSize);
@@ -207,7 +233,7 @@ export class ItProvisioningListComponent implements OnInit {
 
   // ── KPIs ───────────────────────────────────────────────────────────────────
   readonly stats = computed(() => {
-    const open = this.items().filter(r => r.status !== 'COMPLETED');
+    const open = this.openItems();
     return {
       pending:       open.length,
       overdue:       open.filter(r => isOverdue(r)).length,
@@ -271,7 +297,7 @@ export class ItProvisioningListComponent implements OnInit {
         label: t('IT_PROVISIONING.LIST.COL_STATUS'),
         type: 'select',
         placeholder: t('IT_PROVISIONING.LIST.FILTER_ALL'),
-        options: STATUS_CODES.map(code => ({
+        options: OPEN_STATUS_CODES.map(code => ({
           value: code,
           label: t('IT_PROVISIONING.STATUS.' + code),
         })),
@@ -286,6 +312,22 @@ export class ItProvisioningListComponent implements OnInit {
           value: code,
           label: t('IT_PROVISIONING.LIST.FILTERS.MISSING_' + code),
         })),
+      },
+      {
+        name: 'profile',
+        label: t('IT_PROVISIONING.LIST.FILTERS.PROFILE'),
+        type: 'multiselect',
+        searchable: true,
+        placeholder: t('IT_PROVISIONING.LIST.FILTERS.PROFILE_ANY'),
+        options: profileOptions(this.adProfiles(), this.openItems(), this.translate),
+      },
+      {
+        name: 'position',
+        label: t('IT_PROVISIONING.LIST.FILTERS.POSITION'),
+        type: 'multiselect',
+        searchable: true,
+        placeholder: t('IT_PROVISIONING.LIST.FILTERS.POSITION_ANY'),
+        options: positionOptions(this.openItems(), this.translate),
       },
       {
         name: 'startDate',
@@ -317,6 +359,8 @@ export class ItProvisioningListComponent implements OnInit {
       initialValues: {
         status:    this.statusFilter() ? [this.statusFilter()] : [],
         missing:   this.missingFilter(),
+        profile:   this.profileFilter(),
+        position:  this.positionFilter(),
         startDate: this.startRange(),
         overdue:   this.overdueOnly(),
       },
@@ -335,6 +379,7 @@ export class ItProvisioningListComponent implements OnInit {
   ngOnInit(): void {
     this.restoreState();
     this.load();
+    this.listService.getListValues('AD_PROFILE_TYPE').subscribe(v => this.adProfiles.set(v));
   }
 
   load(): void {
@@ -372,6 +417,8 @@ export class ItProvisioningListComponent implements OnInit {
     this.statusFilter.set(typeof result['status'] === 'string' ? result['status'] : '');
     this.overdueOnly.set(result['overdue'] === true);
     this.missingFilter.set(Array.isArray(missing) ? missing as MissingItem[] : []);
+    this.profileFilter.set(Array.isArray(result['profile']) ? result['profile'] as string[] : []);
+    this.positionFilter.set(Array.isArray(result['position']) ? result['position'] as string[] : []);
     this.startRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
     this.currentPage.set(0);
   }

@@ -1,0 +1,77 @@
+<!-- /rh/it-provisioning/historique — canonical page shape (UI-PLAYBOOK §1), same as
+     /rh/missions/historique. -->
+<daf-page [loading]="firstLoad()" [kpis]="3">
+
+  <daf-page-header
+    [title]="'IT_PROVISIONING.HISTORY.TITLE' | translate"
+    [subtitle]="'IT_PROVISIONING.HISTORY.SUBTITLE' | translate" />
+
+  <!-- KPIs — one row at every width. Counted on the whole completed set, never on the
+       search, the date filter or the current page. -->
+  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'IT_PROVISIONING.HISTORY.KPI.TOTAL' | translate"
+      [value]="stats().total"
+      [options]="{ icon: 'task_alt', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
+
+    <daf-metric-card
+      [label]="'IT_PROVISIONING.HISTORY.KPI.THIS_MONTH' | translate"
+      [value]="stats().thisMonth"
+      [options]="{ icon: 'calendar_month', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+
+    <daf-metric-card
+      [label]="'IT_PROVISIONING.HISTORY.KPI.AVG_DAYS' | translate"
+      [value]="stats().avgDays"
+      [options]="{ icon: 'timer', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
+  </section>
+
+  <daf-search-toolbar
+    [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
+    [value]="search()"
+    [debounce]="300"
+    (valueChange)="onSearch($event)"
+    [filterFields]="filterFields()"
+    [filterConfig]="filterConfig()"
+    (filterApply)="applyFilters($event)"
+    [views]="viewOptions()"
+    [view]="viewMode()"
+    (viewChange)="setView($event)"
+    [table]="tableSection()?.table() ?? null" />
+
+  @if (error()) {
+    <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Same cards and table as /rh/it-provisioning — only the empty text differs. -->
+  @if (viewMode() === 'grid') {
+    <rh-it-provisioning-cards-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [emptyMessage]="emptyMessage()"
+      (open)="open($event)" />
+  } @else {
+    <rh-it-provisioning-table-section
+      [items]="pagedItems()"
+      [loading]="loading()"
+      [skeletonRows]="pageSize()"
+      [emptyMessage]="emptyMessage()"
+      [sort]="sort()"
+      (sortChange)="onSortChange($event)"
+      (open)="open($event)" />
+  }
+
+  @if (totalPages() > 0) {
+    <daf-pagination
+      [currentPage]="currentPage()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)" />
+  }
+
+</daf-page>

@@ -2,7 +2,7 @@ import { adminLabel } from '../../shared/utils/admin-label.utils';
 import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 import { ItProvisioningService }     from './it-provisioning.service';
 import { ConfirmEmailModalComponent } from './confirm-email-modal.component';
@@ -51,7 +51,6 @@ const STEP_CARD_INFO = [
 })
 export class ItProvisioningFormComponent implements OnInit {
   private route       = inject(ActivatedRoute);
-  private router      = inject(Router);
   private service     = inject(ItProvisioningService);
   private listService = inject(ConfigurableListService);
   private translate   = inject(TranslateService);
@@ -95,11 +94,16 @@ export class ItProvisioningFormComponent implements OnInit {
   readonly totalSteps = STEP_CARD_INFO.length;
   readonly wizardSteps = STEP_CARD_INFO;
 
+  /** Opened from the history page (`?from=historique`): the breadcrumb returns there. */
+  private readonly fromHistory = this.route.snapshot.queryParamMap.get('from') === 'historique';
+  private readonly backLink = this.fromHistory ? '/rh/it-provisioning/historique' : '/rh/it-provisioning';
+  readonly backLabelKey = this.fromHistory ? 'IT_PROVISIONING.HISTORY.TITLE' : 'IT_PROVISIONING.form.breadcrumb';
+
   readonly breadcrumbs = computed<BreadcrumbItem[]>(() => {
     this.translate.currentLang();
     const p = this.prov();
     return [
-      { label: this.translate.instant('IT_PROVISIONING.form.breadcrumb'), link: '/rh/it-provisioning' },
+      { label: this.translate.instant(this.backLabelKey), link: this.backLink },
       { label: p?.candidateFullName ?? `#${this.provId}` },
     ];
   });
@@ -456,6 +460,4 @@ export class ItProvisioningFormComponent implements OnInit {
     this.successMsg.set(msg);
     setTimeout(() => this.successMsg.set(null), 4000);
   }
-
-  goBack(): void { this.router.navigate(['/rh/it-provisioning']); }
 }

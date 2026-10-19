@@ -1640,6 +1640,8 @@
     "PIPELINE": "مسار التوظيف",
     "CANDIDATES": "المترشحون",
     "IT_PROVISIONING": "تجهيز المعلوماتية",
+    "IT_PROVISIONING_CURRENT": "الملفات الجارية",
+    "IT_PROVISIONING_HISTORY": "السجل",
     "ONBOARDING": "الاندماج",
     "OFFBOARDING": "إنهاء الخدمة",
     "OFFBOARDING_RESIGNATION": "استقالة",

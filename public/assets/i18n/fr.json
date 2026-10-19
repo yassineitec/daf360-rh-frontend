@@ -4134,7 +4134,12 @@
         "MISSING_LICENCES": "Licences",
         "MISSING_EMAIL": "Email MS365",
         "START_DATE": "Date de démarrage prévue",
-        "OVERDUE_ONLY": "En retard uniquement"
+        "OVERDUE_ONLY": "En retard uniquement",
+        "PROFILE": "Profil AD",
+        "PROFILE_ANY": "Tous les profils",
+        "NO_PROFILE": "Sans profil",
+        "POSITION": "Poste",
+        "POSITION_ANY": "Tous les postes"
       },
       "DELTA_COMPLETE": "{{pct}}% traités",
       "DELTA_OVERDUE": "{{count}} hors délai",
@@ -4168,6 +4173,20 @@
       "LICENSES_LABEL": "Licences",
       "COUNT_SUFFIX": "dossier(s)",
       "EMPTY": "Aucun dossier en attente de provisioning."
+    },
+    "HISTORY": {
+      "TITLE": "Historique du provisioning",
+      "SUBTITLE": "Dossiers de provisioning traités.",
+      "FILTER_COMPLETED": "Date de clôture",
+      "FILTER_COMPLETED_BY": "Clôturé par",
+      "FILTER_COMPLETED_BY_ANY": "Tout le monde",
+      "EMPTY": "Aucun dossier traité.",
+      "EMPTY_FILTERED": "Aucun dossier ne correspond à la recherche.",
+      "KPI": {
+        "TOTAL": "Dossiers traités",
+        "THIS_MONTH": "Traités ce mois-ci",
+        "AVG_DAYS": "Délai moyen (jours)"
+      }
     },
     "CONFIRM_EMAIL": {
       "TITLE": "Confirmer la création du compte",
@@ -4290,6 +4309,8 @@
     "PIPELINE": "Pipeline RH",
     "CANDIDATES": "Candidats",
     "IT_PROVISIONING": "Provisioning IT",
+    "IT_PROVISIONING_CURRENT": "Dossiers en cours",
+    "IT_PROVISIONING_HISTORY": "Historique",
     "ONBOARDING": "Onboarding",
     "OFFBOARDING": "Offboarding",
     "OFFBOARDING_RESIGNATION": "Démission",

@@ -54,7 +54,7 @@ interface ProvisioningCard {
         } @empty {
           <div class="col-span-full flex flex-col items-center gap-2 py-16 text-center text-outline">
             <span class="material-symbols-outlined text-[40px] opacity-30">inbox</span>
-            <p class="text-[13px]">{{ 'IT_PROVISIONING.LIST.EMPTY' | translate }}</p>
+            <p class="text-[13px]">{{ emptyMessage() ?? ('IT_PROVISIONING.LIST.EMPTY' | translate) }}</p>
           </div>
         }
       </div>
@@ -66,6 +66,8 @@ export class ItProvisioningCardsSectionComponent {
 
   readonly items   = input.required<ProvisioningListItem[]>();
   readonly loading = input(false);
+  /** Overrides the default "nothing pending" text (the history page has its own). */
+  readonly emptyMessage = input<string | null>(null);
 
   readonly open = output<number>();
 

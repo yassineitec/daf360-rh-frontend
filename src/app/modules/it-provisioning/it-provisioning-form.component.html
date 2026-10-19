@@ -14,13 +14,8 @@
       [subtitle]="p.appliedPosition ?? ('IT_PROVISIONING.LIST.POSITION_UNSPECIFIED' | translate)"
       [badges]="headerBadges()"
       [breadcrumbs]="breadcrumbs()"
-      [breadcrumbLabel]="'IT_PROVISIONING.form.breadcrumb' | translate">
-      <ng-container pageActions>
-        <daf-button
-          [options]="{ variant: 'ghost', iconStart: 'arrow_back', label: ('IT_PROVISIONING.form.breadcrumb' | translate) }"
-          (onClick)="goBack()" />
-      </ng-container>
-    </daf-page-header>
+      [breadcrumbLabel]="backLabelKey | translate" />
+    <!-- No back button: the breadcrumb leads back to the list or the history. -->
   }
 
   @if (prov(); as p) {

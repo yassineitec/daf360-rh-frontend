@@ -4134,7 +4134,12 @@
         "MISSING_LICENCES": "Licences",
         "MISSING_EMAIL": "MS365 email",
         "START_DATE": "Expected start date",
-        "OVERDUE_ONLY": "Overdue only"
+        "OVERDUE_ONLY": "Overdue only",
+        "PROFILE": "AD profile",
+        "PROFILE_ANY": "All profiles",
+        "NO_PROFILE": "No profile",
+        "POSITION": "Position",
+        "POSITION_ANY": "All positions"
       },
       "DELTA_COMPLETE": "{{pct}}% complete",
       "DELTA_OVERDUE": "{{count}} past deadline",
@@ -4168,6 +4173,20 @@
       "LICENSES_LABEL": "Licenses",
       "COUNT_SUFFIX": "file(s)",
       "EMPTY": "No files awaiting provisioning."
+    },
+    "HISTORY": {
+      "TITLE": "Provisioning history",
+      "SUBTITLE": "Completed provisioning files.",
+      "FILTER_COMPLETED": "Completion date",
+      "FILTER_COMPLETED_BY": "Completed by",
+      "FILTER_COMPLETED_BY_ANY": "Anyone",
+      "EMPTY": "No completed files.",
+      "EMPTY_FILTERED": "No file matches the search.",
+      "KPI": {
+        "TOTAL": "Completed files",
+        "THIS_MONTH": "Completed this month",
+        "AVG_DAYS": "Average lead time (days)"
+      }
     },
     "CONFIRM_EMAIL": {
       "TITLE": "Confirm account creation",
@@ -4290,6 +4309,8 @@
     "PIPELINE": "HR Pipeline",
     "CANDIDATES": "Candidates",
     "IT_PROVISIONING": "IT Provisioning",
+    "IT_PROVISIONING_CURRENT": "Open files",
+    "IT_PROVISIONING_HISTORY": "History",
     "ONBOARDING": "Onboarding",
     "OFFBOARDING": "Offboarding",
     "OFFBOARDING_RESIGNATION": "Resignation",

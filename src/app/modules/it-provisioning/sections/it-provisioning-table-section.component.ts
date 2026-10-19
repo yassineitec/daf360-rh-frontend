@@ -101,6 +101,8 @@ export class ItProvisioningTableSectionComponent {
   readonly skeletonRows = input(10);
   /** The page's current sort — seeds the header arrow when the table (re)mounts. */
   readonly sort         = input<ProvisioningSort | null>(null);
+  /** Overrides the default empty text (the history page has its own). */
+  readonly emptyMessage = input<string | null>(null);
 
   readonly open       = output<number>();
   readonly sortChange = output<ProvisioningSort | null>();
@@ -158,7 +160,7 @@ export class ItProvisioningTableSectionComponent {
       hoverable:    true,
       loading:      this.loading(),
       skeletonRows: Math.min(this.skeletonRows(), 20),
-      emptyMessage: t('IT_PROVISIONING.LIST.TABLE_EMPTY'),
+      emptyMessage: this.emptyMessage() ?? t('IT_PROVISIONING.LIST.TABLE_EMPTY'),
       // Stable row identity: row heights are keyed by it, not by render index.
       rowId:        (row) => (row['_source'] as ProvisioningListItem).id,
       resizableColumns:  true,
