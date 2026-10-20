@@ -180,6 +180,7 @@ export class HomeComponent implements OnInit {
       profileId:   d.profileId,
       fullName:    d.fullName,
       missingDocs: d.missingDocs,
+      missingDocLabels: d.missingDocLabels,
       urgency:     d.urgency,
     }))
   );

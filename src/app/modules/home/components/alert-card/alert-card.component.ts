@@ -17,7 +17,9 @@ export interface ProbationAlert {
 export interface MissingDocAlert {
   profileId:   number;
   fullName:    string;
-  missingDocs: ('CONTRACT' | 'ID_CARD' | 'RIB')[];
+  missingDocs: string[];
+  /** The country's labels, same order as `missingDocs` — absent from an older backend. */
+  missingDocLabels?: string[];
   urgency:     'HIGH' | 'MEDIUM' | 'LOW';
 }
 
@@ -145,7 +147,7 @@ export class ProbationCardComponent {
           <div class="flex items-center justify-between py-2 border-b border-outline-variant/60 last:border-0">
             <div class="min-w-0">
               <span class="text-[13px] text-on-surface font-medium truncate block">{{ doc.fullName }}</span>
-              <span class="text-[11px] text-outline">{{ docTypesLabel(doc.missingDocs) }}</span>
+              <span class="text-[11px] text-outline">{{ doc.missingDocLabels?.length ? doc.missingDocLabels!.join(', ') : docTypesLabel(doc.missingDocs) }}</span>
             </div>
             <span [class]="urgencyClass(doc.urgency)"
                   class="shrink-0 ml-2 text-[10px] font-bold px-2 py-0.5 rounded">

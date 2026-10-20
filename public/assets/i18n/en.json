@@ -1435,7 +1435,7 @@
       "SALARY_RH": "HR net salary",
       "SALARY_RH_MOVED_HINT": "Now managed in the Remuneration tab.",
       "CONTRACT_TYPE_EMPTY_HINT": "No contract type is available for this country. Please contact your administrator.",
-      "MATRICULE_LOCK_HINT": "Enter it once received from the accounting firm. Once saved, it can no longer be changed.",
+      "MATRICULE_LOCK_HINT": "Number transmitted by the accounting firm. Payslips are matched on it: correct it with care.",
       "SALARY_CANDIDATE_INPUT": "Candidate net expectation (TND)",
       "SALARY_RH_INPUT": "HR proposed net salary (TND)",
       "REMUNERATION_COUNTRY": "Country",
@@ -2789,8 +2789,46 @@
       },
       "panel": {
         "paths": "Paths by country",
+        "required": "Required documents",
         "employees": "Employee mapping",
         "diagnose": "Diagnostics"
+      },
+      "required": {
+        "hint": "The documents that make an employee's dossier complete in this country. They drive the HR home « Missing documents » card, the new employees' documents bar, and the nightly sync: each required document is read from the SharePoint folder configured for it under « Paths by country ».",
+        "colRequired": "Required",
+        "colCode": "Code",
+        "colFolder": "SharePoint folder read by the sync",
+        "noFolder": "No path configured: this document will not be synchronised from SharePoint.",
+        "sharedFolder": "Folder shared with another required document: the sync cannot tell them apart and skips it. Give each its own folder.",
+        "pickCountry": "Pick a country.",
+        "empty": "No document type for this country.",
+        "needsMigration": "This server's database refused the save (is migration V121 applied there?)"
+      },
+      "sync": {
+        "title": "SharePoint → dossiers sync",
+        "run": "Sync now",
+        "running": "Sync in progress…",
+        "last": "Last sync: {{date}} (runs automatically every night at 02:30)",
+        "never": "Never run (runs automatically every night at 02:30)",
+        "profiles": "Employees",
+        "imported": "Imported",
+        "restored": "Restored",
+        "removed": "Removed",
+        "unreadable": "Unreadable folders",
+        "ambiguous": "Ambiguous folders",
+        "error": "Could not start the sync.",
+        "preparing": "Preparing the employee list…",
+        "progress": "{{done}} / {{total}} employees",
+        "current": "Processing: {{name}}",
+        "failed": "Failed dossiers",
+        "listed": "Folders read",
+        "outcome": {
+          "SUCCESS": "Sync completed successfully.",
+          "PARTIAL": "Sync completed, with some failed dossiers.",
+          "FAILED": "The sync failed.",
+          "INTERRUPTED": "The sync was interrupted (service restart?) before it finished. The counts below are partial: run it again.",
+          "RUNNING": "Sync in progress…"
+        }
       },
       "status": {
         "FOUND": "Found",
@@ -4224,7 +4262,12 @@
         "MISSING_LICENCES": "Licences",
         "MISSING_EMAIL": "MS365 email",
         "START_DATE": "Expected start date",
-        "OVERDUE_ONLY": "Overdue only"
+        "OVERDUE_ONLY": "Overdue only",
+        "PROFILE": "AD profile",
+        "PROFILE_ANY": "All profiles",
+        "NO_PROFILE": "No profile",
+        "POSITION": "Position",
+        "POSITION_ANY": "All positions"
       },
       "DELTA_COMPLETE": "{{pct}}% complete",
       "DELTA_OVERDUE": "{{count}} past deadline",
@@ -4258,6 +4301,20 @@
       "LICENSES_LABEL": "Licenses",
       "COUNT_SUFFIX": "file(s)",
       "EMPTY": "No files awaiting provisioning."
+    },
+    "HISTORY": {
+      "TITLE": "Provisioning history",
+      "SUBTITLE": "Completed provisioning files.",
+      "FILTER_COMPLETED": "Completion date",
+      "FILTER_COMPLETED_BY": "Completed by",
+      "FILTER_COMPLETED_BY_ANY": "Anyone",
+      "EMPTY": "No completed files.",
+      "EMPTY_FILTERED": "No file matches the search.",
+      "KPI": {
+        "TOTAL": "Completed files",
+        "THIS_MONTH": "Completed this month",
+        "AVG_DAYS": "Average lead time (days)"
+      }
     },
     "CONFIRM_EMAIL": {
       "TITLE": "Confirm account creation",
@@ -4408,6 +4465,8 @@
       "SALARY_HINT": "Monthly net amount, in the country's currency",
       "JUSTIFICATION": "Justification",
       "JUSTIFICATION_PH": "Assignments, managers' feedback, skills acquired…",
+      "EVALUATION": "Evaluation file",
+      "EVALUATION_HINT": "The CIVP's evaluation, required — PDF, JPG or PNG, 10 MB max. Filed in the employee's dossier.",
       "REQUESTED_BY": "Requested by",
       "REQUESTED_AT": "Filed on",
       "CIVP_PERIOD": "CIVP period",
@@ -4434,7 +4493,9 @@
       "REQUEST": "Request",
       "DECISION": "Decision",
       "HISTORY": "History",
-      "TO_CONVERT": "Request approved: create the CDI contract from the employee's profile (History tab)."
+      "TO_CONVERT": "Request approved: create the CDI contract from the employee's profile (History tab).",
+      "OPEN_EVALUATION": "Open the evaluation",
+      "NO_EVALUATION": "No evaluation file attached"
     },
     "DECISION": {
       "TITLE_APPROVE": "Approve the move to CDI",
@@ -4472,6 +4533,8 @@
     "PIPELINE": "HR Pipeline",
     "CANDIDATES": "Candidates",
     "IT_PROVISIONING": "IT Provisioning",
+    "IT_PROVISIONING_CURRENT": "Open files",
+    "IT_PROVISIONING_HISTORY": "History",
     "ONBOARDING": "Onboarding",
     "OFFBOARDING": "Offboarding",
     "OFFBOARDING_RESIGNATION": "Resignation",

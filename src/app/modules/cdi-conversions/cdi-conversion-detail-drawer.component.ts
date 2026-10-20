@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonComponent, DrawerComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
@@ -6,8 +6,9 @@ import { ButtonComponent, DrawerComponent, StatusBadgeComponent } from '@khalilr
 import { SectionCardComponent } from '../../shared/detail/section-card.component';
 import { ProfileFieldComponent } from '../../shared/detail/profile-field.component';
 import { TimelineComponent, TimelineItem } from '../../shared/detail/timeline.component';
-import { formatAmount, localeDate, localeDateTime, localeOf } from '../missions/mission-display';
+import { errorMessage, formatAmount, localeDate, localeDateTime, localeOf } from '../missions/mission-display';
 import { CdiConversion, CdiDecisionAction } from './cdi-conversion.model';
+import { CdiConversionService } from './cdi-conversion.service';
 import { cdiStatusKey, cdiStatusVariant } from './cdi-conversion-display';
 
 export type CdiDrawerAction = CdiDecisionAction | 'CANCEL';
@@ -84,6 +85,23 @@ export type CdiDrawerAction = CdiDecisionAction | 'CANCEL';
             <rh-profile-field [label]="'CDI_CONVERSION.FIELDS.JUSTIFICATION' | translate"
                               [value]="r.justification" variant="stacked" />
           </div>
+          <!-- The evidence the validator decides on (V120). Null on requests filed before the
+               file was required, or when the document was since deleted from the dossier. -->
+          <div class="mt-6 flex flex-col gap-1">
+            <span class="text-body-sm text-on-surface-variant">{{ 'CDI_CONVERSION.FIELDS.EVALUATION' | translate }}</span>
+            @if (r.evaluationDocumentId != null) {
+              <button type="button" (click)="openEvaluation(r.id)" [disabled]="opening()"
+                      class="inline-flex w-fit items-center gap-1 text-body-md font-semibold text-teal hover:underline disabled:opacity-50">
+                <span class="material-symbols-outlined text-[18px]">description</span>
+                {{ r.evaluationFileName ?? ('CDI_CONVERSION.DETAIL.OPEN_EVALUATION' | translate) }}
+              </button>
+            } @else {
+              <span class="text-body-md text-on-surface-variant">{{ 'CDI_CONVERSION.DETAIL.NO_EVALUATION' | translate }}</span>
+            }
+            @if (fileError()) {
+              <span class="text-body-sm text-danger">{{ fileError() }}</span>
+            }
+          </div>
         </rh-section-card>
 
         @if (decisionRows().length) {
@@ -105,12 +123,48 @@ export type CdiDrawerAction = CdiDecisionAction | 'CANCEL';
 })
 export class CdiConversionDetailDrawerComponent {
   private translate = inject(TranslateService);
+  private svc = inject(CdiConversionService);
 
   readonly request = input<CdiConversion | null>(null);
   readonly open    = input(false);
 
   readonly closed = output<void>();
   readonly act    = output<CdiDrawerAction>();
+
+  protected readonly opening   = signal(false);
+  protected readonly fileError = signal<string | null>(null);
+
+  constructor() {
+    // An error about one request's file must not follow the drawer to the next request.
+    effect(() => {
+      this.request();
+      this.fileError.set(null);
+    });
+  }
+
+  /**
+   * Blob in a new tab, like the profile's documents: the endpoint needs the Authorization
+   * header a plain link would not send, and the permission check stays the server's.
+   */
+  protected openEvaluation(id: number): void {
+    this.opening.set(true);
+    this.fileError.set(null);
+    this.svc.evaluation(id).subscribe({
+      next: blob => {
+        this.opening.set(false);
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        // Revoked late: revoking immediately can race the new tab's own load.
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: err => {
+        this.opening.set(false);
+        this.fileError.set(err?.status === 404
+          ? this.translate.instant('CDI_CONVERSION.DETAIL.NO_EVALUATION')
+          : errorMessage(err, this.translate));
+      },
+    });
+  }
 
   protected readonly statusKey = cdiStatusKey;
   protected readonly statusVariant = cdiStatusVariant;

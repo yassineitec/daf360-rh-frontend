@@ -11,6 +11,8 @@ export interface ItProvisioningListState {
   overdueOnly:   boolean;
   missingFilter: ('HARDWARE' | 'LICENCES' | 'EMAIL')[];
   startRange:    Date[] | null;
+  profileFilter:  string[];
+  positionFilter: string[];
   sort:          ProvisioningSort | null;
   page:          number;
   pageSize:      number;

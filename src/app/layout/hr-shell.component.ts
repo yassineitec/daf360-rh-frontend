@@ -52,12 +52,28 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'candidates',
     permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'],
   },
+  // Same two-children shape as `missions`: open files to work on, completed ones to review.
   {
     id: 'it-provisioning',
     labelKey: 'NAV.IT_PROVISIONING',
     icon: 'devices',
-    route: 'it-provisioning',
     permissions: ['IT_PROVISIONING'],
+    children: [
+      {
+        id: 'it-provisioning-current',
+        labelKey: 'NAV.IT_PROVISIONING_CURRENT',
+        icon: 'devices',
+        route: 'it-provisioning',
+        permissions: ['IT_PROVISIONING'],
+      },
+      {
+        id: 'it-provisioning-history',
+        labelKey: 'NAV.IT_PROVISIONING_HISTORY',
+        icon: 'history',
+        route: 'it-provisioning/historique',
+        permissions: ['IT_PROVISIONING'],
+      },
+    ],
   },
   {
     id: 'onboarding',

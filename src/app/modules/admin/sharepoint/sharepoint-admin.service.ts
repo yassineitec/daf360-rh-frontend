@@ -41,6 +41,50 @@ export interface DocumentTypeRow {
   labelEn: string | null;
   active: boolean;
   sortOrder: number;
+  /** V121 — part of a complete dossier for this country (card, documents bar, nightly sync). */
+  requiredForCompletion: boolean;
+}
+
+/** One SharePoint → dossier sync run (sharepoint_document_sync_runs, V121). */
+export interface DocumentSyncRun {
+  id: number;
+  startedAt: string;
+  /** null while the run is still going. */
+  finishedAt: string | null;
+  profilesScanned: number;
+  foldersListed: number;
+  foldersUnreadable: number;
+  foldersAmbiguous: number;
+  imported: number;
+  restored: number;
+  removed: number;
+  lastError: string | null;
+  /** How it ended — the answer to "did it work?". Absent from an rh-service older than the field. */
+  outcome?: 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED';
+}
+
+/** Live state of the run in flight. */
+export interface DocumentSyncProgress {
+  /** Employees in scope (0 while the list is loading). */
+  total: number;
+  /** Employees reached so far (the current one included). */
+  done: number;
+  current: string | null;
+  startedAt: string;
+  imported: number;
+  restored: number;
+  removed: number;
+  foldersListed: number;
+  foldersUnreadable: number;
+  foldersAmbiguous: number;
+  failed: number;
+}
+
+export interface DocumentSyncStatus {
+  running: boolean;
+  /** null when no run is going. */
+  progress: DocumentSyncProgress | null;
+  lastRun: DocumentSyncRun | null;
 }
 
 export interface SharePointLocation {
@@ -135,6 +179,25 @@ export class SharePointAdminService {
    */
   deactivateDocumentType(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/document-types/${id}`);
+  }
+
+  /**
+   * RH's checklist (V121): whether a type is required for a complete dossier in this country.
+   * 404 = no such type for the country; 409 = V121 not applied on this server.
+   */
+  setRequired(paysId: number, code: string, required: boolean): Observable<void> {
+    return this.http.put<void>(`${this.base}/document-types/required`, { paysId, code, required });
+  }
+
+  // ── SharePoint → dossier sync (V121) ──────────────────────────────────────
+
+  documentSyncStatus(): Observable<DocumentSyncStatus> {
+    return this.http.get<DocumentSyncStatus>(`${this.base}/document-sync`);
+  }
+
+  /** Starts a full pass in the background (202). 409 = a run is already going. */
+  startDocumentSync(): Observable<void> {
+    return this.http.post<void>(`${this.base}/document-sync`, null);
   }
 
   // ── Paths ─────────────────────────────────────────────────────────────────

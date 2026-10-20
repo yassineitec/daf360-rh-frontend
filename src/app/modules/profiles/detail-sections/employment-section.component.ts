@@ -54,11 +54,11 @@ import { asNumber, asText, fmtDate, fromDate, toDate } from './field-bridges';
           </div>
         } @else {
           <div class="flex flex-col gap-4">
-            <!-- Matricule comes from the accounting firm and is write-once: an input
-                 while empty, read-only as soon as one is saved (the backend enforces it
-                 too). Contract end reappears here because it *is* editable; hiding it in
-                 edit mode would make the field unreachable. -->
-            @if (profile().matricule) {
+            <!-- Matricule comes from the accounting firm: only HR_ADMIN_ROLES holders may
+                 set or correct it (canEditMatricule, computed and enforced by the backend);
+                 everyone else sees it read-only. Contract end reappears here because it
+                 *is* editable; hiding it in edit mode would make the field unreachable. -->
+            @if (!profile().canEditMatricule) {
               <rh-profile-field variant="row" [last]="true"
                 [label]="'PROFILES.FIELDS.MATRICULE' | translate" [value]="profile().matricule" />
             } @else {

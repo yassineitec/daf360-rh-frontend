@@ -66,8 +66,10 @@ export interface EmployeeProfile {
 
   // ── Identité ─────────────────────────────────────────────────────────────
   /** employee_profiles.payroll_matricule — numéro transmis par le cabinet comptable ("01", "206").
-   *  Saisi une seule fois dans l'onglet Emploi, verrouillé ensuite. */
+   *  Saisi ou corrigé dans l'onglet Emploi, avec la permission HR_ADMIN_ROLES uniquement. */
   matricule: string | null;
+  /** Calculé par le backend : l'appelant a HR_ADMIN_ROLES et peut éditer le matricule. */
+  canEditMatricule?: boolean;
   fullName: string | null; // Users.fullName (enrichi par le service)
 
   // ── Employment ──────────────────────────────────────────────
@@ -181,7 +183,7 @@ export interface ProfileUpdateDto {
   contractEndDate?: string;
   probationEndDate?: string;
   isOnProbation?: boolean;
-  /** Matricule du cabinet comptable — accepté seulement tant que le profil n'en a pas. */
+  /** Matricule du cabinet comptable — accepté seulement avec la permission HR_ADMIN_ROLES. */
   payrollMatricule?: string;
   // Poste — FK IDs (dimension table migration)
   departmentId?: number | null;

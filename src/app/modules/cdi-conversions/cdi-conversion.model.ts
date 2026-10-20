@@ -49,6 +49,9 @@ export interface CdiConversion {
   requestedStartDate: string;
   proposedNetSalary: number;
   justification: string;
+  /** The CIVP evaluation file (V120) — null on older requests, or when the document was deleted. */
+  evaluationDocumentId: number | null;
+  evaluationFileName: string | null;
   validatedNetSalary: number | null;
   validatedStartDate: string | null;
   decidedBy: number | null;
@@ -71,6 +74,16 @@ export interface SubmitCdiConversionPayload {
   proposedNetSalary: number;
   justification: string;
 }
+
+/** What the request modal emits: the payload plus the mandatory evaluation file. */
+export interface SubmitCdiConversionForm {
+  payload: SubmitCdiConversionPayload;
+  evaluation: File;
+}
+
+/** What the document service accepts (EmployeeDocumentService.ALLOWED_TYPES), 10 MB max. */
+export const CDI_EVALUATION_ACCEPT = '.pdf,.jpg,.jpeg,.png';
+export const CDI_EVALUATION_MAX_MB = 10;
 
 export interface CdiDecisionPayload {
   action: CdiDecisionAction;

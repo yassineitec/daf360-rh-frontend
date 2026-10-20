@@ -34,6 +34,11 @@ export interface ProvisioningListItem {
   licenseAutodesk: boolean;
   licenseKaspersky: boolean;
   licenseOther: string | null;
+  // Historique : profil AD choisi et clôture du dossier
+  adProfileType: string | null;
+  completedAt: string | null;
+  completedBy: number | null;
+  completedByName: string | null;
   createdAt: string;
 }
 

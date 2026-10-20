@@ -103,7 +103,10 @@ export interface ProbationAlertDto {
 export interface MissingDocumentDto {
   profileId:   number;
   fullName:    string;
-  missingDocs: ('CONTRACT' | 'ID_CARD' | 'RIB')[];
+  /** Codes — the required list is chosen per country by RH (V121), so any type code. */
+  missingDocs: string[];
+  /** Same order, the country's own labels (document_types.label_fr). */
+  missingDocLabels?: string[];
   urgency:     'HIGH' | 'MEDIUM' | 'LOW';
 }
 
@@ -134,7 +137,7 @@ export interface NouveauEmployeDto {
    */
   docsPresent:         number;
   docsRequired:        number;
-  missingDocs:         ('CONTRACT' | 'ID_CARD' | 'RIB')[];
+  missingDocs:         string[];
   /** Per-section completeness in onboarding-wizard step order; documents last. */
   onboardingSections:  OnboardingSectionProgress[];
 }
