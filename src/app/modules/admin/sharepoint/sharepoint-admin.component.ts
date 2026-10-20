@@ -1,20 +1,20 @@
-import { Component, Input, OnInit, TemplateRef, computed, inject, signal, untracked, viewChild } from '@angular/core';
+import { Component, DestroyRef, Input, OnInit, TemplateRef, computed, inject, signal, untracked, viewChild } from '@angular/core';
 import {
   ButtonComponent, DataTableComponent, DafCellDirective, FormFieldComponent,
   ModalRef, ModalService, PaginationComponent, PaginationConfig, SelectComponent,
   SearchToolbarComponent, SortDirection, StatusBadgeComponent, TableColumn, TableConfig, TableRow,
-  TabItem, TabsComponent,
+  TabItem, TabsComponent, ToggleComponent,
 } from '@khalilrebhiitec/daf360';
 import type { BadgeVariant, SelectOption } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FolderPickerComponent } from './folder-picker.component';
 import { rememberAdminState } from '../admin-section-state';
 import {
-  Diagnosis, DocKindInfo, EmployeeFolderRow, SharePointAdminService,
+  Diagnosis, DocKindInfo, DocumentSyncRun, DocumentTypeRow, EmployeeFolderRow, SharePointAdminService,
   SharePointLocation, SharePointStatus,
 } from './sharepoint-admin.service';
 
-type Panel = 'paths' | 'employees' | 'diagnose';
+type Panel = 'paths' | 'required' | 'employees' | 'diagnose';
 
 /** Same client-side page size as the other admin catalog tables (ref-data-admin,
  * request-types-admin) — both lists here are fetched whole from the backend. */
@@ -57,7 +57,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent, StatusBadgeComponent,
     DataTableComponent, DafCellDirective, FolderPickerComponent, TabsComponent,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, ToggleComponent, TranslatePipe,
   ],
   template: `
     <div class="spa-wrap">
@@ -136,6 +136,83 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
               (pageChange)="onPathsPageChange($event)" />
           </div>
         }
+      }
+
+      <!-- ══ Panel 1b: documents required for a complete dossier (V121) ═══════
+           RH's checklist, per country. Drives the « Documents manquants » card, the
+           per-employee documents bar and the nightly SharePoint → dossier sync, which reads
+           each required type from the folder configured for it in « Chemins ». -->
+      @if (panel() === 'required') {
+        <div class="spa-panel-head">
+          <p class="spa-panel-hint">{{ 'ADMIN.sharepoint.required.hint' | translate }}</p>
+          <div class="spa-kind">
+            <daf-select
+              [options]="countryOptions()"
+              [config]="{ label: ('ADMIN.sharepoint.paths.country' | translate), fullWidth: false }"
+              [selected]="reqPaysId() != null ? [reqPaysId()!.toString()] : []"
+              (selectedChange)="onReqPaysChange($event)" />
+          </div>
+        </div>
+
+        <!-- Manual run of the nightly sync. Runs in the background (minutes of Graph calls,
+             past any proxy timeout): the summary below is polled until it finishes. -->
+        <div class="spa-sync">
+          <div class="spa-sync-text">
+            <strong class="spa-sync-title">{{ 'ADMIN.sharepoint.sync.title' | translate }}</strong>
+            @if (syncRunning()) {
+              <span class="spa-detail">{{ 'ADMIN.sharepoint.sync.running' | translate }}</span>
+            } @else if (syncLastRun(); as r) {
+              <span class="spa-detail">
+                {{ 'ADMIN.sharepoint.sync.last' | translate:{ date: formatRunDate(r.finishedAt ?? r.startedAt) } }}
+              </span>
+            } @else {
+              <span class="spa-detail">{{ 'ADMIN.sharepoint.sync.never' | translate }}</span>
+            }
+          </div>
+          <daf-button
+            [label]="(syncRunning() ? 'ADMIN.sharepoint.sync.running' : 'ADMIN.sharepoint.sync.run') | translate"
+            variant="teal"
+            [options]="{ iconStart: 'sync', disabled: syncRunning(), loading: syncRunning() }"
+            (onClick)="startSync()" />
+        </div>
+        @if (syncLastRun(); as r) {
+          <div class="spa-tally">
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.profiles' | translate }}</span><strong class="spa-tally-count">{{ r.profilesScanned }}</strong></div>
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.imported' | translate }}</span><strong class="spa-tally-count">{{ r.imported }}</strong></div>
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.restored' | translate }}</span><strong class="spa-tally-count">{{ r.restored }}</strong></div>
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.removed' | translate }}</span><strong class="spa-tally-count">{{ r.removed }}</strong></div>
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.unreadable' | translate }}</span><strong class="spa-tally-count">{{ r.foldersUnreadable }}</strong></div>
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.ambiguous' | translate }}</span><strong class="spa-tally-count">{{ r.foldersAmbiguous }}</strong></div>
+          </div>
+          @if (r.lastError) {
+            <div class="spa-warn spa-sync-error">{{ r.lastError }}</div>
+          }
+        }
+
+        <div class="table-scroll">
+          <daf-data-table [columns]="requiredColumns()" [rows]="requiredRows()" [config]="requiredTableConfig()">
+            <ng-template dafCell="required" let-row>
+              <daf-toggle
+                [checked]="row['_source'].requiredForCompletion"
+                [options]="{ disabled: savingRequired() === row['_source'].code }"
+                (checkedChange)="toggleRequired(row['_source'], $event)" />
+            </ng-template>
+            <ng-template dafCell="folder" let-row>
+              @if (row['_folder']) {
+                <code class="spa-path">{{ row['_folder'] }}</code>
+                @if (row['_shared']) {
+                  <div class="spa-problems">
+                    <span class="spa-problem">{{ 'ADMIN.sharepoint.required.sharedFolder' | translate }}</span>
+                  </div>
+                }
+              } @else if (row['_source'].requiredForCompletion) {
+                <span class="spa-problem">{{ 'ADMIN.sharepoint.required.noFolder' | translate }}</span>
+              } @else {
+                <span class="spa-detail">—</span>
+              }
+            </ng-template>
+          </daf-data-table>
+        </div>
       }
 
       <!-- ══ Panel 2: who resolves, who does not ════════════════════════════ -->
@@ -424,6 +501,12 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
 
     .spa-pagination { display:flex;justify-content:flex-end;padding:10px 0 }
 
+    .spa-sync { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+                margin-bottom:12px;padding:12px 14px;border:1px solid var(--color-outline-variant);border-radius:10px }
+    .spa-sync-text  { display:flex;flex-direction:column;gap:2px }
+    .spa-sync-title { font-size:var(--text-body-md);color:var(--color-on-surface) }
+    .spa-sync-error { margin-bottom:14px }
+
     .table-scroll { overflow-x:auto }
   `],
 })
@@ -444,6 +527,7 @@ export class SharePointAdminComponent implements OnInit {
 
   readonly panelTabs = computed<TabItem[]>(() => [
     { id: 'paths',     label: this.i18n.instant('ADMIN.sharepoint.panel.paths'),     icon: 'folder_open' },
+    { id: 'required',  label: this.i18n.instant('ADMIN.sharepoint.panel.required'),  icon: 'checklist' },
     { id: 'employees', label: this.i18n.instant('ADMIN.sharepoint.panel.employees'), icon: 'group' },
     { id: 'diagnose',  label: this.i18n.instant('ADMIN.sharepoint.panel.diagnose'),  icon: 'troubleshoot' },
   ]);
@@ -507,10 +591,159 @@ export class SharePointAdminComponent implements OnInit {
   readonly diagnosis     = signal<Diagnosis | null>(null);
   readonly diagnosing    = signal(false);
 
+  // Panel 1b — required documents (V121)
+  readonly reqPaysId        = signal<number | null>(null);
+  readonly docTypes         = signal<DocumentTypeRow[]>([]);
+  readonly loadingDocTypes  = signal(false);
+  /** Code being saved — its toggle is disabled until the server answers. */
+  readonly savingRequired   = signal<string | null>(null);
+
+  // SharePoint → dossier sync (manual run + last run summary)
+  readonly syncRunning = signal(false);
+  readonly syncLastRun = signal<DocumentSyncRun | null>(null);
+  private syncPoll: ReturnType<typeof setInterval> | null = null;
+  private readonly destroyRef = inject(DestroyRef);
+
   ngOnInit(): void {
     this.loadKinds();
     this.loadLocations();
     this.loadEmployees();
+    if (this.paysId != null) {
+      this.reqPaysId.set(this.paysId);
+      this.loadDocTypes();
+    }
+    this.loadSyncStatus();
+    this.destroyRef.onDestroy(() => this.stopSyncPoll());
+  }
+
+  // ── SharePoint → dossier sync ─────────────────────────────────────────────
+
+  startSync(): void {
+    this.syncRunning.set(true);
+    this.svc.startDocumentSync().subscribe({
+      // 409 = already running (nightly or another admin): follow that run instead.
+      next:  () => this.startSyncPoll(),
+      error: err => err?.status === 409 ? this.startSyncPoll() : (this.syncRunning.set(false), this.fail('ADMIN.sharepoint.sync.error')),
+    });
+  }
+
+  private loadSyncStatus(): void {
+    this.svc.documentSyncStatus().subscribe({
+      next: s => {
+        this.syncLastRun.set(s.lastRun);
+        this.syncRunning.set(s.running);
+        if (s.running) this.startSyncPoll(); else this.stopSyncPoll();
+      },
+      error: () => this.stopSyncPoll(),
+    });
+  }
+
+  private startSyncPoll(): void {
+    if (this.syncPoll) return;
+    this.syncPoll = setInterval(() => this.loadSyncStatus(), 3000);
+  }
+
+  private stopSyncPoll(): void {
+    if (this.syncPoll) { clearInterval(this.syncPoll); this.syncPoll = null; }
+  }
+
+  formatRunDate(iso: string | null): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(this.i18n.currentLang() === 'en' ? 'en-GB' : 'fr-FR',
+      { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  // ── Panel 1b: required documents ──────────────────────────────────────────
+
+  /** Countries that have SharePoint paths (the ones a sync can read), plus the admin's own. */
+  readonly countryOptions = computed<SelectOption[]>(() => {
+    const byId = new Map<number, string>();
+    for (const l of this.locations()) {
+      if (!byId.has(l.paysId)) byId.set(l.paysId, l.isoCode || ('#' + l.paysId));
+    }
+    if (this.paysId != null && !byId.has(this.paysId)) byId.set(this.paysId, '#' + this.paysId);
+    return [...byId].map(([value, label]) => ({ value: String(value), label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  });
+
+  onReqPaysChange(selected: string[]): void {
+    const id = selected[0] ? +selected[0] : null;
+    if (id === this.reqPaysId()) return;
+    this.reqPaysId.set(id);
+    this.loadDocTypes();
+  }
+
+  private loadDocTypes(): void {
+    const paysId = this.reqPaysId();
+    if (paysId == null) { this.docTypes.set([]); return; }
+    this.loadingDocTypes.set(true);
+    this.svc.listDocumentTypes(paysId).subscribe({
+      next: rows => { this.docTypes.set(rows); this.loadingDocTypes.set(false); },
+      error: () => { this.loadingDocTypes.set(false); this.fail('ADMIN.sharepoint.errors.load'); },
+    });
+  }
+
+  /** Folder configured for a type in this country, as the sync will read it. */
+  private folderFor(paysId: number, code: string): string | null {
+    const l = this.locations().find(x => x.paysId === paysId && x.docKind === code
+                                          && x.active && !x.problems.length);
+    return l?.pathTemplate ?? null;
+  }
+
+  readonly requiredColumns = computed<TableColumn[]>(() => [
+    { key: 'required', label: this.i18n.instant('ADMIN.sharepoint.required.colRequired'), width: '110px', type: 'custom' },
+    { key: 'label',    label: this.i18n.instant('ADMIN.sharepoint.kindLabel'),            width: '220px' },
+    { key: 'code',     label: this.i18n.instant('ADMIN.sharepoint.required.colCode'),     width: '170px' },
+    { key: 'folder',   label: this.i18n.instant('ADMIN.sharepoint.required.colFolder'),   type: 'custom' },
+  ]);
+
+  readonly requiredRows = computed<TableRow[]>(() => {
+    const paysId = this.reqPaysId();
+    if (paysId == null) return [];
+    const active = this.docTypes().filter(t => t.active);
+    // Two REQUIRED types on one folder: the sync cannot tell which a file is, and skips it.
+    const requiredFolders = new Map<string, number>();
+    for (const t of active) {
+      const f = t.requiredForCompletion ? this.folderFor(paysId, t.code) : null;
+      if (f) requiredFolders.set(f.toLowerCase(), (requiredFolders.get(f.toLowerCase()) ?? 0) + 1);
+    }
+    return active.map(t => {
+      const folder = this.folderFor(paysId, t.code);
+      return {
+        id: t.id,
+        label: t.labelFr,
+        code: t.code,
+        _folder: folder,
+        _shared: !!folder && t.requiredForCompletion && (requiredFolders.get(folder.toLowerCase()) ?? 0) > 1,
+        _source: t,
+      };
+    });
+  });
+
+  readonly requiredTableConfig = computed<TableConfig>(() => ({
+    showHeader:   false,
+    hoverable:    false,
+    loading:      this.loadingDocTypes(),
+    emptyMessage: this.i18n.instant(this.reqPaysId() == null
+      ? 'ADMIN.sharepoint.required.pickCountry' : 'ADMIN.sharepoint.required.empty'),
+    rowId: (row: TableRow) => (row['_source'] as DocumentTypeRow).id,
+  }));
+
+  toggleRequired(t: DocumentTypeRow, required: boolean): void {
+    const paysId = this.reqPaysId();
+    if (paysId == null || required === t.requiredForCompletion) return;
+    this.savingRequired.set(t.code);
+    this.svc.setRequired(paysId, t.code, required).subscribe({
+      next: () => {
+        this.savingRequired.set(null);
+        this.docTypes.update(rows => rows.map(r => r.code === t.code ? { ...r, requiredForCompletion: required } : r));
+      },
+      error: err => {
+        this.savingRequired.set(null);
+        this.fail(err?.status === 409 ? 'ADMIN.sharepoint.required.needsMigration' : 'ADMIN.sharepoint.errors.save');
+        this.loadDocTypes();   // put the toggle back where the server has it
+      },
+    });
   }
 
   /**

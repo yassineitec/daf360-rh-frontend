@@ -2782,8 +2782,34 @@
       },
       "panel": {
         "paths": "Chemins par pays",
+        "required": "Documents requis",
         "employees": "Correspondance employés",
         "diagnose": "Diagnostic"
+      },
+      "required": {
+        "hint": "Les documents qui rendent un dossier employé complet, pour ce pays. Ils alimentent la carte « Documents manquants » de l'accueil RH, la barre documents des nouveaux employés, et la synchronisation nocturne : chaque document requis est lu dans le dossier SharePoint configuré pour lui dans « Chemins par pays ».",
+        "colRequired": "Requis",
+        "colCode": "Code",
+        "colFolder": "Dossier SharePoint lu par la synchronisation",
+        "noFolder": "Aucun chemin configuré : ce document ne sera pas synchronisé depuis SharePoint.",
+        "sharedFolder": "Dossier partagé avec un autre document requis : la synchronisation ne peut pas savoir lequel est lequel et l'ignore. Donnez à chacun son propre dossier.",
+        "pickCountry": "Choisissez un pays.",
+        "empty": "Aucun type de document pour ce pays.",
+        "needsMigration": "La migration V121 n'est pas appliquée sur ce serveur : la liste des documents requis ne peut pas encore être enregistrée."
+      },
+      "sync": {
+        "title": "Synchronisation SharePoint → dossiers",
+        "run": "Synchroniser maintenant",
+        "running": "Synchronisation en cours…",
+        "last": "Dernière synchronisation : {{date}} (automatique chaque nuit à 02h30)",
+        "never": "Jamais exécutée (automatique chaque nuit à 02h30)",
+        "profiles": "Employés",
+        "imported": "Importés",
+        "restored": "Restaurés",
+        "removed": "Retirés",
+        "unreadable": "Dossiers illisibles",
+        "ambiguous": "Dossiers ambigus",
+        "error": "Impossible de lancer la synchronisation."
       },
       "status": {
         "FOUND": "Trouvé",

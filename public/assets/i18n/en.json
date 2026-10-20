@@ -2782,8 +2782,34 @@
       },
       "panel": {
         "paths": "Paths by country",
+        "required": "Required documents",
         "employees": "Employee mapping",
         "diagnose": "Diagnostics"
+      },
+      "required": {
+        "hint": "The documents that make an employee's dossier complete in this country. They drive the HR home « Missing documents » card, the new employees' documents bar, and the nightly sync: each required document is read from the SharePoint folder configured for it under « Paths by country ».",
+        "colRequired": "Required",
+        "colCode": "Code",
+        "colFolder": "SharePoint folder read by the sync",
+        "noFolder": "No path configured: this document will not be synchronised from SharePoint.",
+        "sharedFolder": "Folder shared with another required document: the sync cannot tell them apart and skips it. Give each its own folder.",
+        "pickCountry": "Pick a country.",
+        "empty": "No document type for this country.",
+        "needsMigration": "Migration V121 is not applied on this server: the required documents cannot be saved yet."
+      },
+      "sync": {
+        "title": "SharePoint → dossiers sync",
+        "run": "Sync now",
+        "running": "Sync in progress…",
+        "last": "Last sync: {{date}} (runs automatically every night at 02:30)",
+        "never": "Never run (runs automatically every night at 02:30)",
+        "profiles": "Employees",
+        "imported": "Imported",
+        "restored": "Restored",
+        "removed": "Removed",
+        "unreadable": "Unreadable folders",
+        "ambiguous": "Ambiguous folders",
+        "error": "Could not start the sync."
       },
       "status": {
         "FOUND": "Found",
