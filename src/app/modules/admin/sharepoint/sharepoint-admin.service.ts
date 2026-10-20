@@ -59,10 +59,30 @@ export interface DocumentSyncRun {
   restored: number;
   removed: number;
   lastError: string | null;
+  /** How it ended — the answer to "did it work?". */
+  outcome: 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED';
+}
+
+/** Live state of the run in flight. */
+export interface DocumentSyncProgress {
+  /** Employees in scope (0 while the list is loading). */
+  total: number;
+  /** Employees reached so far (the current one included). */
+  done: number;
+  current: string | null;
+  startedAt: string;
+  imported: number;
+  restored: number;
+  removed: number;
+  foldersUnreadable: number;
+  foldersAmbiguous: number;
+  failed: number;
 }
 
 export interface DocumentSyncStatus {
   running: boolean;
+  /** null when no run is going. */
+  progress: DocumentSyncProgress | null;
   lastRun: DocumentSyncRun | null;
 }
 

@@ -2809,7 +2809,18 @@
         "removed": "Retirés",
         "unreadable": "Dossiers illisibles",
         "ambiguous": "Dossiers ambigus",
-        "error": "Impossible de lancer la synchronisation."
+        "error": "Impossible de lancer la synchronisation.",
+        "preparing": "Préparation de la liste des employés…",
+        "progress": "{{done}} / {{total}} employés",
+        "current": "En cours : {{name}}",
+        "failed": "Dossiers en échec",
+        "outcome": {
+          "SUCCESS": "Synchronisation terminée avec succès.",
+          "PARTIAL": "Synchronisation terminée, avec des dossiers en échec.",
+          "FAILED": "La synchronisation a échoué.",
+          "INTERRUPTED": "La synchronisation a été interrompue (redémarrage du service ?) avant la fin. Les compteurs ci-dessous sont partiels : relancez-la.",
+          "RUNNING": "Synchronisation en cours…"
+        }
       },
       "status": {
         "FOUND": "Trouvé",

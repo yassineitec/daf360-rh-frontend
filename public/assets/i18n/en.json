@@ -2809,7 +2809,18 @@
         "removed": "Removed",
         "unreadable": "Unreadable folders",
         "ambiguous": "Ambiguous folders",
-        "error": "Could not start the sync."
+        "error": "Could not start the sync.",
+        "preparing": "Preparing the employee list…",
+        "progress": "{{done}} / {{total}} employees",
+        "current": "Processing: {{name}}",
+        "failed": "Failed dossiers",
+        "outcome": {
+          "SUCCESS": "Sync completed successfully.",
+          "PARTIAL": "Sync completed, with some failed dossiers.",
+          "FAILED": "The sync failed.",
+          "INTERRUPTED": "The sync was interrupted (service restart?) before it finished. The counts below are partial: run it again.",
+          "RUNNING": "Sync in progress…"
+        }
       },
       "status": {
         "FOUND": "Found",

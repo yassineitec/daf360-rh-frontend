@@ -10,7 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FolderPickerComponent } from './folder-picker.component';
 import { rememberAdminState } from '../admin-section-state';
 import {
-  Diagnosis, DocKindInfo, DocumentSyncRun, DocumentTypeRow, EmployeeFolderRow, SharePointAdminService,
+  Diagnosis, DocKindInfo, DocumentSyncProgress, DocumentSyncRun, DocumentTypeRow, EmployeeFolderRow, SharePointAdminService,
   SharePointLocation, SharePointStatus,
 } from './sharepoint-admin.service';
 
@@ -155,7 +155,8 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         </div>
 
         <!-- Manual run of the nightly sync. Runs in the background (minutes of Graph calls,
-             past any proxy timeout): the summary below is polled until it finishes. -->
+             past any proxy timeout), polled every 3 s: a progress bar while it runs, a clear
+             outcome (succès / terminé avec erreurs / échec / interrompue) once it ends. -->
         <div class="spa-sync">
           <div class="spa-sync-text">
             <strong class="spa-sync-title">{{ 'ADMIN.sharepoint.sync.title' | translate }}</strong>
@@ -175,7 +176,49 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
             [options]="{ iconStart: 'sync', disabled: syncRunning(), loading: syncRunning() }"
             (onClick)="startSync()" />
         </div>
-        @if (syncLastRun(); as r) {
+
+        @if (syncRunning()) {
+          <!-- ── In flight ── -->
+          <div class="spa-progress" role="status" aria-live="polite">
+            @if (syncProgress(); as p) {
+              <div class="spa-progress-head">
+                <span class="spa-sync-title">
+                  @if (p.total) {
+                    {{ 'ADMIN.sharepoint.sync.progress' | translate:{ done: p.done, total: p.total } }}
+                  } @else {
+                    {{ 'ADMIN.sharepoint.sync.preparing' | translate }}
+                  }
+                </span>
+                <span class="spa-detail">{{ syncPercent() }} % · {{ syncElapsed() }}</span>
+              </div>
+              <div class="spa-bar"><div class="spa-bar-fill" [style.width.%]="syncPercent()"></div></div>
+              @if (p.current) {
+                <span class="spa-detail">{{ 'ADMIN.sharepoint.sync.current' | translate:{ name: p.current } }}</span>
+              }
+              <div class="spa-tally spa-tally--flat">
+                <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.imported' | translate }}</span><strong class="spa-tally-count">{{ p.imported }}</strong></div>
+                <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.restored' | translate }}</span><strong class="spa-tally-count">{{ p.restored }}</strong></div>
+                <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.removed' | translate }}</span><strong class="spa-tally-count">{{ p.removed }}</strong></div>
+                <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.unreadable' | translate }}</span><strong class="spa-tally-count">{{ p.foldersUnreadable }}</strong></div>
+                <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.ambiguous' | translate }}</span><strong class="spa-tally-count">{{ p.foldersAmbiguous }}</strong></div>
+                @if (p.failed) {
+                  <div class="spa-tally-item"><span class="spa-problem">{{ 'ADMIN.sharepoint.sync.failed' | translate }}</span><strong class="spa-tally-count">{{ p.failed }}</strong></div>
+                }
+              </div>
+            } @else {
+              <span class="spa-detail">{{ 'ADMIN.sharepoint.sync.preparing' | translate }}</span>
+              <div class="spa-bar"><div class="spa-bar-fill spa-bar-fill--busy"></div></div>
+            }
+          </div>
+        } @else if (syncLastRun(); as r) {
+          <!-- ── Outcome of the last run ── -->
+          <div [class]="'spa-outcome spa-outcome--' + r.outcome">
+            <span class="material-symbols-outlined">{{ outcomeIcon(r.outcome) }}</span>
+            <div class="spa-sync-text">
+              <strong>{{ ('ADMIN.sharepoint.sync.outcome.' + r.outcome) | translate }}</strong>
+              @if (r.lastError) { <span>{{ cleanError(r.lastError) }}</span> }
+            </div>
+          </div>
           <div class="spa-tally">
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.profiles' | translate }}</span><strong class="spa-tally-count">{{ r.profilesScanned }}</strong></div>
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.imported' | translate }}</span><strong class="spa-tally-count">{{ r.imported }}</strong></div>
@@ -184,9 +227,6 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.unreadable' | translate }}</span><strong class="spa-tally-count">{{ r.foldersUnreadable }}</strong></div>
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.ambiguous' | translate }}</span><strong class="spa-tally-count">{{ r.foldersAmbiguous }}</strong></div>
           </div>
-          @if (r.lastError) {
-            <div class="spa-warn spa-sync-error">{{ r.lastError }}</div>
-          }
         }
 
         <div class="table-scroll">
@@ -507,6 +547,25 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
     .spa-sync-title { font-size:var(--text-body-md);color:var(--color-on-surface) }
     .spa-sync-error { margin-bottom:14px }
 
+    .spa-progress { display:flex;flex-direction:column;gap:8px;margin-bottom:14px;padding:12px 14px;
+                    background:var(--color-surface-container);border-radius:10px }
+    .spa-progress-head { display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px }
+    .spa-bar { position:relative;height:8px;border-radius:999px;overflow:hidden;
+               background:var(--color-outline-variant) }
+    .spa-bar-fill { height:100%;border-radius:999px;background:var(--color-tertiary);transition:width .4s ease }
+    .spa-bar-fill--busy { width:30%;position:absolute;animation:spa-busy 1.2s ease-in-out infinite }
+    @keyframes spa-busy { 0% { left:-30% } 100% { left:100% } }
+    .spa-tally--flat { margin:0;padding:0;background:none }
+
+    .spa-outcome { display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;padding:10px 14px;
+                   border-radius:10px;font-size:var(--text-body-sm) }
+    .spa-outcome .material-symbols-outlined { font-size:20px }
+    .spa-outcome--SUCCESS     { background:color-mix(in srgb, var(--color-success) 14%, transparent); color:var(--color-success) }
+    .spa-outcome--PARTIAL     { background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning) }
+    .spa-outcome--INTERRUPTED { background:color-mix(in srgb, var(--color-warning) 14%, transparent); color:var(--color-warning) }
+    .spa-outcome--FAILED      { background:var(--color-error-container); color:var(--color-on-error-container) }
+    .spa-outcome--RUNNING     { background:var(--color-surface-container); color:var(--color-on-surface) }
+
     .table-scroll { overflow-x:auto }
   `],
 })
@@ -599,8 +658,34 @@ export class SharePointAdminComponent implements OnInit {
   readonly savingRequired   = signal<string | null>(null);
 
   // SharePoint → dossier sync (manual run + last run summary)
-  readonly syncRunning = signal(false);
-  readonly syncLastRun = signal<DocumentSyncRun | null>(null);
+  readonly syncRunning  = signal(false);
+  readonly syncLastRun  = signal<DocumentSyncRun | null>(null);
+  readonly syncProgress = signal<DocumentSyncProgress | null>(null);
+  /** Ticks every poll so the elapsed time moves even when the counts do not. */
+  private readonly syncNow = signal(Date.now());
+
+  readonly syncPercent = computed(() => {
+    const p = this.syncProgress();
+    if (!p || !p.total) return 0;
+    return Math.min(100, Math.round((p.done / p.total) * 100));
+  });
+
+  readonly syncElapsed = computed(() => {
+    const p = this.syncProgress();
+    if (!p) return '';
+    const s = Math.max(0, Math.round((this.syncNow() - new Date(p.startedAt).getTime()) / 1000));
+    return Math.floor(s / 60) + ' min ' + String(s % 60).padStart(2, '0') + ' s';
+  });
+
+  outcomeIcon(outcome: DocumentSyncRun['outcome']): string {
+    return { SUCCESS: 'check_circle', PARTIAL: 'warning', FAILED: 'error',
+             INTERRUPTED: 'history_toggle_off', RUNNING: 'sync' }[outcome] ?? 'info';
+  }
+
+  /** The server's fatal marker is for the outcome, not for the reader. */
+  cleanError(error: string): string {
+    return error.replace(/^\[ÉCHEC\]\s*/, '');
+  }
   private syncPoll: ReturnType<typeof setInterval> | null = null;
   private readonly destroyRef = inject(DestroyRef);
 
@@ -632,6 +717,8 @@ export class SharePointAdminComponent implements OnInit {
       next: s => {
         this.syncLastRun.set(s.lastRun);
         this.syncRunning.set(s.running);
+        this.syncProgress.set(s.progress);
+        this.syncNow.set(Date.now());
         if (s.running) this.startSyncPoll(); else this.stopSyncPoll();
       },
       error: () => this.stopSyncPoll(),
