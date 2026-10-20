@@ -199,6 +199,8 @@
       "STATUS_REJECTED": "Rejected"
     },
     "COMMON": {
+      "exportExcel": "Export (Excel)",
+      "exportError": "The export failed.",
       "CANCEL": "Cancel",
       "SELECT": "Select",
       "SELECT_PLACEHOLDER": "— Select —",

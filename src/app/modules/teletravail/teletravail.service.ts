@@ -58,6 +58,11 @@ export class TeletravailService {
     return this.http.get<TeletravailPage>(`${this.base}/global`, { params: this.params(f, lang) });
   }
 
+  /** The global list with the same filters, as an Excel file (rh-service /global/export). */
+  exportGlobal(f: TeletravailFilter = {}, lang = 'fr'): Observable<Blob> {
+    return this.http.get(`${this.base}/global/export`, { params: this.params(f, lang), responseType: 'blob' });
+  }
+
   counts(scope: 'mine' | 'manager' | 'global' = 'mine'): Observable<TeletravailCounts> {
     return this.http.get<TeletravailCounts>(`${this.base}/counts`, {
       params: new HttpParams().set('scope', scope),

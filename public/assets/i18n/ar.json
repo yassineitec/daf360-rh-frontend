@@ -1699,6 +1699,8 @@
   },
   "MISSIONS": {
     "COMMON": {
+      "exportExcel": "تصدير (Excel)",
+      "exportError": "فشل التصدير.",
       "SELECT": "اختر…",
       "CANCEL": "إلغاء",
       "BACK": "رجوع",

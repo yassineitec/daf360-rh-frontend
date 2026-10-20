@@ -4,13 +4,14 @@ import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Observable } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  AvatarComponent, DafCellDirective, DataTableComponent, FilterField, FilterResult,
+  AvatarComponent, ButtonComponent, DafCellDirective, DataTableComponent, FilterField, FilterResult,
   FormFieldComponent, MetricCardComponent, ModalService, ModalRef, PageComponent,
   PageHeaderComponent, PaginationComponent, SearchToolbarComponent, SearchToolbarFilterConfig,
   SortDirection, StatusBadgeComponent, TableAction, TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 
 import { NotificationService } from '../../core/notification.service';
+import { saveBlob } from '../../shared/utils/file-download.utils';
 import { AutorisationsService } from './autorisations.service';
 import {
   AutorisationCounts, AutorisationEtat, AutorisationFilter, AutorisationPage, AutorisationRow,
@@ -44,7 +45,7 @@ export type AutorisationScope = 'queue' | 'mine' | 'team' | 'global';
   selector: 'app-autorisation-list',
   standalone: true,
   imports: [
-    PageComponent, PageHeaderComponent, MetricCardComponent, SearchToolbarComponent,
+    PageComponent, PageHeaderComponent, ButtonComponent, MetricCardComponent, SearchToolbarComponent,
     PaginationComponent, DataTableComponent, DafCellDirective, StatusBadgeComponent,
     AvatarComponent, FormFieldComponent, TranslatePipe, DatePipe, NgTemplateOutlet,
   ],
@@ -54,7 +55,17 @@ export type AutorisationScope = 'queue' | 'mine' | 'team' | 'global';
       <!-- No icon on the page header: platform convention. -->
       <daf-page-header
         [title]="titleKey() | translate"
-        [subtitle]="subtitleKey() | translate" />
+        [subtitle]="subtitleKey() | translate">
+        <!-- Country-wide view only: the export replaces the timesheet's, same filters as the list. -->
+        @if (scope === 'global') {
+          <ng-container pageActions>
+            <daf-button
+              [options]="{ variant: 'secondary', iconStart: 'download',
+                           label: ('COMMON.exportExcel' | translate), disabled: exporting() }"
+              (onClick)="exportExcel()" />
+          </ng-container>
+        }
+      </daf-page-header>
 
       <!-- Counted over the whole scope by its own endpoint, never over the current page. -->
       <section class="grid grid-cols-4 gap-2 sm:gap-6">
@@ -355,6 +366,24 @@ export class AutorisationListComponent implements OnInit {
   private get canWithdraw(): boolean { return this.scope === 'mine'; }
 
   // ── Data ──────────────────────────────────────────────────────────────────
+
+  readonly exporting = signal(false);
+
+  /** The global scope, with the filters on screen, as an Excel file. */
+  exportExcel(): void {
+    this.exporting.set(true);
+    const f: AutorisationFilter = {
+      etat: this.etatFilter(), from: this.fromFilter(), to: this.toFilter(),
+      sort: this.sortKey(), dir: this.sortDir(),
+    };
+    this.svc.exportGlobal(f, this.translate.currentLang() ?? 'fr').subscribe({
+      next: (blob) => { saveBlob(blob, 'autorisations.xlsx'); this.exporting.set(false); },
+      error: (e) => {
+        this.exporting.set(false);
+        this.notify.error(errorMessage(e, this.translate.instant('COMMON.exportError')));
+      },
+    });
+  }
 
   private fetch(): Observable<AutorisationPage> {
     const lang = this.translate.currentLang() ?? 'fr';
