@@ -2795,7 +2795,7 @@
         "sharedFolder": "Folder shared with another required document: the sync cannot tell them apart and skips it. Give each its own folder.",
         "pickCountry": "Pick a country.",
         "empty": "No document type for this country.",
-        "needsMigration": "Migration V121 is not applied on this server: the required documents cannot be saved yet."
+        "needsMigration": "This server's database refused the save (is migration V121 applied there?)"
       },
       "sync": {
         "title": "SharePoint → dossiers sync",
@@ -2814,6 +2814,7 @@
         "progress": "{{done}} / {{total}} employees",
         "current": "Processing: {{name}}",
         "failed": "Failed dossiers",
+        "listed": "Folders read",
         "outcome": {
           "SUCCESS": "Sync completed successfully.",
           "PARTIAL": "Sync completed, with some failed dossiers.",

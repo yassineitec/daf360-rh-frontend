@@ -59,8 +59,8 @@ export interface DocumentSyncRun {
   restored: number;
   removed: number;
   lastError: string | null;
-  /** How it ended — the answer to "did it work?". */
-  outcome: 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED';
+  /** How it ended — the answer to "did it work?". Absent from an rh-service older than the field. */
+  outcome?: 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'INTERRUPTED';
 }
 
 /** Live state of the run in flight. */
@@ -74,6 +74,7 @@ export interface DocumentSyncProgress {
   imported: number;
   restored: number;
   removed: number;
+  foldersListed: number;
   foldersUnreadable: number;
   foldersAmbiguous: number;
   failed: number;

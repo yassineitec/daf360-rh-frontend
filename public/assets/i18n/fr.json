@@ -2795,7 +2795,7 @@
         "sharedFolder": "Dossier partagé avec un autre document requis : la synchronisation ne peut pas savoir lequel est lequel et l'ignore. Donnez à chacun son propre dossier.",
         "pickCountry": "Choisissez un pays.",
         "empty": "Aucun type de document pour ce pays.",
-        "needsMigration": "La migration V121 n'est pas appliquée sur ce serveur : la liste des documents requis ne peut pas encore être enregistrée."
+        "needsMigration": "La base de données de ce serveur a refusé l'enregistrement (la migration V121 y est-elle appliquée ?)"
       },
       "sync": {
         "title": "Synchronisation SharePoint → dossiers",
@@ -2814,6 +2814,7 @@
         "progress": "{{done}} / {{total}} employés",
         "current": "En cours : {{name}}",
         "failed": "Dossiers en échec",
+        "listed": "Dossiers lus",
         "outcome": {
           "SUCCESS": "Synchronisation terminée avec succès.",
           "PARTIAL": "Synchronisation terminée, avec des dossiers en échec.",

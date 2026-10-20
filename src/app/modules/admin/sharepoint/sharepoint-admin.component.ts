@@ -196,6 +196,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
                 <span class="spa-detail">{{ 'ADMIN.sharepoint.sync.current' | translate:{ name: p.current } }}</span>
               }
               <div class="spa-tally spa-tally--flat">
+                <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.listed' | translate }}</span><strong class="spa-tally-count">{{ p.foldersListed }}</strong></div>
                 <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.imported' | translate }}</span><strong class="spa-tally-count">{{ p.imported }}</strong></div>
                 <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.restored' | translate }}</span><strong class="spa-tally-count">{{ p.restored }}</strong></div>
                 <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.removed' | translate }}</span><strong class="spa-tally-count">{{ p.removed }}</strong></div>
@@ -212,15 +213,18 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
           </div>
         } @else if (syncLastRun(); as r) {
           <!-- ── Outcome of the last run ── -->
-          <div [class]="'spa-outcome spa-outcome--' + r.outcome">
-            <span class="material-symbols-outlined">{{ outcomeIcon(r.outcome) }}</span>
+          <div [class]="'spa-outcome spa-outcome--' + outcomeOf(r)">
+            <span class="material-symbols-outlined">{{ outcomeIcon(outcomeOf(r)) }}</span>
             <div class="spa-sync-text">
-              <strong>{{ ('ADMIN.sharepoint.sync.outcome.' + r.outcome) | translate }}</strong>
+              <strong>{{ ('ADMIN.sharepoint.sync.outcome.' + outcomeOf(r)) | translate }}</strong>
               @if (r.lastError) { <span>{{ cleanError(r.lastError) }}</span> }
             </div>
           </div>
           <div class="spa-tally">
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.profiles' | translate }}</span><strong class="spa-tally-count">{{ r.profilesScanned }}</strong></div>
+            <!-- Folders actually read: without it "0 importés" cannot tell "read, nothing new"
+                 from "nothing was read at all". -->
+            <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.listed' | translate }}</span><strong class="spa-tally-count">{{ r.foldersListed }}</strong></div>
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.imported' | translate }}</span><strong class="spa-tally-count">{{ r.imported }}</strong></div>
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.restored' | translate }}</span><strong class="spa-tally-count">{{ r.restored }}</strong></div>
             <div class="spa-tally-item"><span class="spa-detail">{{ 'ADMIN.sharepoint.sync.removed' | translate }}</span><strong class="spa-tally-count">{{ r.removed }}</strong></div>
@@ -677,7 +681,18 @@ export class SharePointAdminComponent implements OnInit {
     return Math.floor(s / 60) + ' min ' + String(s % 60).padStart(2, '0') + ' s';
   });
 
-  outcomeIcon(outcome: DocumentSyncRun['outcome']): string {
+  /**
+   * The server's outcome, or the same rule applied here when it sent none (an rh-service
+   * deployed before the field existed) — never an untranslated "outcome.undefined".
+   */
+  outcomeOf(r: DocumentSyncRun): NonNullable<DocumentSyncRun['outcome']> {
+    if (r.outcome) return r.outcome;
+    if (!r.finishedAt) return this.syncRunning() ? 'RUNNING' : 'INTERRUPTED';
+    if (!r.lastError) return 'SUCCESS';
+    return r.lastError.startsWith('[ÉCHEC]') ? 'FAILED' : 'PARTIAL';
+  }
+
+  outcomeIcon(outcome: NonNullable<DocumentSyncRun['outcome']>): string {
     return { SUCCESS: 'check_circle', PARTIAL: 'warning', FAILED: 'error',
              INTERRUPTED: 'history_toggle_off', RUNNING: 'sync' }[outcome] ?? 'info';
   }
@@ -827,7 +842,15 @@ export class SharePointAdminComponent implements OnInit {
       },
       error: err => {
         this.savingRequired.set(null);
-        this.fail(err?.status === 409 ? 'ADMIN.sharepoint.required.needsMigration' : 'ADMIN.sharepoint.errors.save');
+        if (err?.status === 409) {
+          // The database's own words: "Invalid column name 'required_for_completion'" means
+          // V121 is missing from THIS server's database; anything else is a different problem.
+          const cause = err?.error?.message as string | undefined;
+          this.error.set(this.i18n.instant('ADMIN.sharepoint.required.needsMigration')
+            + (cause ? ' — ' + cause : ''));
+        } else {
+          this.fail('ADMIN.sharepoint.errors.save');
+        }
         this.loadDocTypes();   // put the toggle back where the server has it
       },
     });
