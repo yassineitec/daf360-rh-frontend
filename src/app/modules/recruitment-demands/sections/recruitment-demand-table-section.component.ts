@@ -1,10 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output, untracked, viewChild } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BadgeCell, DataTableComponent, TableColumn, TableConfig, TableRow } from '@khalilrebhiitec/daf360';
 
 import { RecruitmentDemandStatus, RecruitmentDemandSummary } from '../recruitment-demand.model';
 import { RecruitmentDemandAction, isStaleDemand } from './recruitment-demand-cards-section.component';
+import { demandDepartmentLabel, demandReasonLabel, demandUrgencyLabel } from '../recruitment-demand-labels';
+import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
+import { ListValue } from '../../../core/lists/configurable-list.model';
 import { initialsOf } from '../../it-provisioning/it-provisioning-display';
 
 /** Same traffic-light mapping as the recruitment-demand status badges elsewhere. */
@@ -70,6 +75,10 @@ export class RecruitmentDemandTableSectionComponent {
    *  picker sit right of Filtres instead of above the card. */
   readonly table = viewChild(DataTableComponent);
   private date = new DatePipe(inject(LOCALE_ID));
+  /** rh/admin URGENCY_LEVEL — the summary only carries the French label (cached by the service). */
+  private readonly urgencyLevels = toSignal(
+    inject(ConfigurableListService).getListValues('URGENCY_LEVEL').pipe(catchError(() => of([] as ListValue[]))),
+    { initialValue: [] as ListValue[] });
 
   readonly items = input.required<RecruitmentDemandSummary[]>();
   readonly loading = input(false);
@@ -115,12 +124,13 @@ export class RecruitmentDemandTableSectionComponent {
 
   protected readonly rows = computed<TableRow[]>(() => {
     this.translate.currentLang();
+    const levels = this.urgencyLevels();
     return this.items().map((d) => {
       const poste = d.jobExactTitle ?? d.jobTitle;
       return {
-        poste: { name: poste, initials: initialsOf(poste), subtitle: d.department ?? '' },
-        reason: d.recruitmentReasonLabel ?? '—',
-        urgency: d.urgencyLevelLabel ?? '—',
+        poste: { name: poste, initials: initialsOf(poste), subtitle: demandDepartmentLabel(d, this.translate) },
+        reason: demandReasonLabel(d, this.translate) || '—',
+        urgency: demandUrgencyLabel(d, levels, this.translate) || '—',
         headcount: String(d.headcount ?? 0),
         candidates: String(d.candidateCount ?? 0),
         status: {
