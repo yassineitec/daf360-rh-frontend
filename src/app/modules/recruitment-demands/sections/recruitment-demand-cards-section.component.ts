@@ -1,9 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { EntityCardAction, EntityCardComponent, EntityCardOptions, SkeletonComponent } from '@khalilrebhiitec/daf360';
 
 import { RecruitmentDemandStatus, RecruitmentDemandSummary } from '../recruitment-demand.model';
+import { demandDepartmentLabel, demandReasonLabel, demandUrgencyLabel } from '../recruitment-demand-labels';
+import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
+import { ListValue } from '../../../core/lists/configurable-list.model';
 import { initialsOf } from '../../it-provisioning/it-provisioning-display';
 
 export type RecruitmentDemandAction = 'view' | 'approve' | 'reject';
@@ -64,6 +69,10 @@ const CARD_STATUS: Record<RecruitmentDemandStatus, 'active' | 'pending' | 'inact
 export class RecruitmentDemandCardsSectionComponent {
   private translate = inject(TranslateService);
   private date = new DatePipe(inject(LOCALE_ID));
+  /** rh/admin URGENCY_LEVEL — the summary only carries the French label (cached by the service). */
+  private readonly urgencyLevels = toSignal(
+    inject(ConfigurableListService).getListValues('URGENCY_LEVEL').pipe(catchError(() => of([] as ListValue[]))),
+    { initialValue: [] as ListValue[] });
 
   readonly items = input.required<RecruitmentDemandSummary[]>();
   readonly loading = input(false);
@@ -77,6 +86,8 @@ export class RecruitmentDemandCardsSectionComponent {
   protected readonly cards = computed(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+
+    const levels = this.urgencyLevels();
 
     return this.items().map((d) => {
       const poste = d.jobExactTitle ?? d.jobTitle;
@@ -100,7 +111,7 @@ export class RecruitmentDemandCardsSectionComponent {
           },
           metadata: {
             title: poste,
-            subtitle: [d.department, d.recruitmentReasonLabel].filter(Boolean).join(' • ') || '—',
+            subtitle: [demandDepartmentLabel(d, this.translate), demandReasonLabel(d, this.translate)].filter(Boolean).join(' • ') || '—',
             status: CARD_STATUS[d.statut],
             statusLabel: t('RECRUITMENT_DEMANDS.STATUS.' + d.statut),
           },
@@ -108,7 +119,7 @@ export class RecruitmentDemandCardsSectionComponent {
           metrics: [
             { label: t('RECRUITMENT_DEMANDS.LIST.COL_HEADCOUNT'),  value: String(d.headcount ?? 0) },
             { label: t('RECRUITMENT_DEMANDS.LIST.COL_CANDIDATES'), value: String(d.candidateCount ?? 0) },
-            { label: t('RECRUITMENT_DEMANDS.LIST.COL_URGENCY'),    value: d.urgencyLevelLabel ?? '—' },
+            { label: t('RECRUITMENT_DEMANDS.LIST.COL_URGENCY'),    value: demandUrgencyLabel(d, levels, this.translate) || '—' },
             { label: t('RECRUITMENT_DEMANDS.LIST.COL_SUBMITTED'),  value: this.date.transform(d.submittedAt, 'dd/MM/yyyy') ?? '—' },
           ],
           actions,

@@ -54,6 +54,8 @@ export interface EmployeeRequest {
   typeDisplayNameEn?:  string | null;
   employeeName?:       string | null;
   paysName?:           string | null;
+  /** `pays.english_label` — null when absent (the UI then shows `paysName`). */
+  paysNameEn?:         string | null;
   approvals?:          ApprovalSummary[];
 }
 

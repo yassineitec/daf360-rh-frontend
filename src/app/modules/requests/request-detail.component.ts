@@ -122,7 +122,7 @@ interface TimelineStep {
                   </div>
                   <div class="flex items-center justify-between gap-3 text-[13px]">
                     <span class="text-on-surface-variant">{{ 'REQUESTS.DETAIL.COUNTRY_KEY' | translate }}</span>
-                    <span class="font-medium text-on-surface">{{ req()!.paysName ?? ('#' + req()!.paysId) }}</span>
+                    <span class="font-medium text-on-surface">{{ paysLabel() }}</span>
                   </div>
                   @if (req()!.assignedOfficerId) {
                     <div class="flex items-center justify-between gap-3 text-[13px]">
@@ -417,6 +417,13 @@ export class RequestDetailComponent implements OnInit {
   readonly employeeAvatarUrl = computed(() => {
     const r = this.req();
     return r ? `/api/hr/profiles/${r.employeeProfileId}/photo` : '';
+  });
+
+  /** Entity (pays) in the UI language — English label when the UI is English and one exists. */
+  readonly paysLabel = computed(() => {
+    const r = this.req();
+    if (!r) return '';
+    return (this.translate.currentLang() === 'en' && r.paysNameEn) || r.paysName || ('#' + r.paysId);
   });
 
   /** Falls back to "Demande #N" until the backend enriches `typeDisplayNameFr` — doubles
