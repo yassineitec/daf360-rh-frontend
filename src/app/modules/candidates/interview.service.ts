@@ -20,8 +20,10 @@ export class InterviewService {
 
   // ── Interview Types ─────────────────────────────────────────────────────────
 
-  getTypes(): Observable<InterviewType[]> {
-    return this.http.get<InterviewType[]>(this.typesBase);
+  /** `paysId` = pays choisi dans l'admin ; absent, le backend garde l'ancienne portée. */
+  getTypes(paysId?: number | null): Observable<InterviewType[]> {
+    const params = paysId != null ? new HttpParams().set('paysId', paysId) : undefined;
+    return this.http.get<InterviewType[]>(this.typesBase, { params });
   }
 
   getActiveTypes(paysId: number): Observable<InterviewType[]> {

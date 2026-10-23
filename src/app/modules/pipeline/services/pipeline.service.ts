@@ -58,6 +58,10 @@ export interface KanbanCandidate {
    * is visible as one. Null when the grade has no default configured.
    */
   gradeNoticePeriodDays?: number | null;
+  /** Raw parts of `nextEvent` (French-formatted server-side) — the card relabels them per language. */
+  nextInterviewAt?: string | null;
+  nextInterviewType?: string | null;
+  nextInterviewTypeEn?: string | null;
 }
 
 export interface KanbanColumn {
