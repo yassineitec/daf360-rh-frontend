@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 import { KanbanCardShellComponent } from '../../../shared/kanban-card-shell.component';
 import { KanbanCandidate } from '../services/pipeline.service';
 import { BoardStageKey, canSendOffer, isOfferPending } from '../board.model';
 import { badgeVariant, candidateAvatar, candidateInitials, fitScoreClass } from '../pipeline-display';
+import { interviewDateText } from '../../candidates/candidate-display';
+import { interviewTypeLabel } from '../../candidates/interview.model';
 
 /**
  * One pipeline candidate card — the single implementation used by BOTH the
@@ -128,7 +130,7 @@ import { badgeVariant, candidateAvatar, candidateInitials, fitScoreClass } from 
             <span class="flex items-center gap-1 min-w-0">
               <span class="material-symbols-outlined text-[14px] shrink-0">calendar_month</span>
               <span class="truncate">
-                {{ candidate().nextEvent || ('PIPELINE.CARD.INTERVIEW_TO_SCHEDULE' | translate) }}
+                {{ nextEventLabel() || ('PIPELINE.CARD.INTERVIEW_TO_SCHEDULE' | translate) }}
               </span>
             </span>
             <div class="flex items-center gap-2 shrink-0 min-w-0">
@@ -196,6 +198,8 @@ import { badgeVariant, candidateAvatar, candidateInitials, fitScoreClass } from 
   `,
 })
 export class PipelineKanbanCardComponent {
+  private translate = inject(TranslateService);
+
   readonly candidate = input.required<KanbanCandidate>();
   /** Board stage this card is rendered under — drives the footer and the extras. */
   readonly stage     = input.required<BoardStageKey>();
@@ -219,4 +223,14 @@ export class PipelineKanbanCardComponent {
   protected readonly fitClass      = computed(() => fitScoreClass(this.candidate().fitScore));
   protected readonly offerPending  = computed(() => isOfferPending(this.candidate()));
   protected readonly offerSendable = computed(() => canSendOffer(this.candidate()));
+
+  /** "Type · 12 juil. · 14:00" in the UI language; falls back to the server's French label. */
+  protected readonly nextEventLabel = computed(() => {
+    const c = this.candidate();
+    const lang = this.translate.currentLang();
+    const when = interviewDateText(c.nextInterviewAt, lang === 'en' ? 'en-GB' : 'fr-FR');
+    if (!when) return c.nextEvent ?? '';
+    const type = c.nextInterviewType ? interviewTypeLabel(c.nextInterviewType, c.nextInterviewTypeEn, lang) : '';
+    return type ? `${type} · ${when}` : when;
+  });
 }
