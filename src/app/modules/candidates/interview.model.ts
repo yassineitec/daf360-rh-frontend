@@ -2,6 +2,8 @@ export interface InterviewType {
   id: number;
   paysId: number;
   name: string;
+  /** Libellé anglais facultatif — voir `interviewTypeLabel`. */
+  nameEn: string | null;
   description: string | null;
   orderIndex: number;
   isActive: boolean;
@@ -10,14 +12,21 @@ export interface InterviewType {
 export interface CreateInterviewTypeRequest {
   paysId: number;
   name: string;
+  nameEn?: string;
   description?: string;
   orderIndex?: number;
 }
 
 export interface UpdateInterviewTypeRequest {
   name?: string;
+  nameEn?: string;
   description?: string;
   orderIndex?: number;
+}
+
+/** Libellé à afficher selon la langue : l'anglais quand il est saisi, sinon `name`. */
+export function interviewTypeLabel(name: string, nameEn: string | null | undefined, lang: string | null | undefined): string {
+  return lang === 'en' && nameEn ? nameEn : name;
 }
 
 export type InterviewStatus = 'PLANNED' | 'DONE' | 'CANCELLED';
@@ -33,6 +42,7 @@ export interface CandidateInterview {
   candidateId: number;
   interviewTypeId: number;
   interviewTypeName: string;
+  interviewTypeNameEn: string | null;
   scheduledAt: string;
   location: string | null;
   interviewerNotes: string | null;

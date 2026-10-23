@@ -20,6 +20,7 @@ import {
   CandidateInterview,
   CreateInterviewRequest,
   InterviewType,
+  interviewTypeLabel,
   UpdateInterviewRequest,
   UserPickerItem,
 } from './interview.model';
@@ -204,7 +205,7 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                   <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                       <span class="text-[13px] font-semibold text-on-surface">
-                        #{{ iv.sequenceNumber }} — {{ iv.interviewTypeName }}
+                        #{{ iv.sequenceNumber }} — {{ typeLabel(iv) }}
                       </span>
                       <daf-badge [label]="statusLabel(iv.status)" [options]="statusBadgeOptions(iv.status)" />
                       @if (iv.result) {
@@ -365,9 +366,14 @@ export class CandidateInterviewsComponent implements OnInit {
   users        = signal<UserPickerItem[]>([]);
   usersLoading = signal(false);
 
-  readonly typeOptions = computed<SelectOption[]>(() =>
-    this.activeTypes().map(t => ({ value: String(t.id), label: t.name })),
-  );
+  readonly typeOptions = computed<SelectOption[]>(() => {
+    const lang = this.translate.currentLang();
+    return this.activeTypes().map(t => ({ value: String(t.id), label: interviewTypeLabel(t.name, t.nameEn, lang) }));
+  });
+
+  typeLabel(iv: CandidateInterview): string {
+    return interviewTypeLabel(iv.interviewTypeName, iv.interviewTypeNameEn, this.translate.currentLang());
+  }
 
   readonly interviewerOptions = computed<SelectOption[]>(() =>
     this.users().map(u => ({ value: String(u.id), label: u.fullName })),
