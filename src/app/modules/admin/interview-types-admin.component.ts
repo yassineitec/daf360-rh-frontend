@@ -16,6 +16,7 @@ const PAGE_SIZE = 5;
 const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number | null> = {
   orderIndex: t => t.orderIndex ?? null,
   name:       t => t.name || null,
+  nameEn:     t => t.nameEn || null,
   isActive:   t => (t.isActive ? 1 : 0),   // inactive first on an ascending sort
 };
 
@@ -103,11 +104,15 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
                         (resetClick)="onSortChange('', null)">
           <ng-template dafCell="name" let-row>
             <div class="ita-row-name">{{ row['name'] }}</div>
-            @if (row['nameEn']) {
-              <div class="ita-row-desc">EN : {{ row['nameEn'] }}</div>
-            }
             @if (row['description']) {
               <div class="ita-row-desc">{{ row['description'] }}</div>
+            }
+          </ng-template>
+          <ng-template dafCell="nameEn" let-row>
+            @if (row['nameEn']) {
+              <div class="ita-row-name">{{ row['nameEn'] }}</div>
+            } @else {
+              <span class="ita-row-desc">—</span>
             }
           </ng-template>
           <ng-template dafCell="isActive" let-row>
@@ -227,7 +232,8 @@ export class InterviewTypesAdminComponent implements OnChanges {
     this.translate.currentLang();
     return [
       { key: 'orderIndex', label: this.translate.instant('ADMIN.docs.interviews.colOrder'), align: 'center', width: '70px', sortable: true },
-      { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colName'), sortable: true },
+      { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colNameFr'), sortable: true },
+      { key: 'nameEn', label: this.translate.instant('ADMIN.docs.interviews.colNameEn'), sortable: true },
       { key: 'isActive', label: this.translate.instant('ADMIN.docs.interviews.colStatus'), align: 'center', width: '110px', sortable: true },
     ];
   });
@@ -296,7 +302,7 @@ export class InterviewTypesAdminComponent implements OnChanges {
     this.loading.set(true);
     if (this.loadedOnce) this.currentPage.set(0);
     this.loadedOnce = true;
-    this.svc.getTypes().subscribe({
+    this.svc.getTypes(this.paysId).subscribe({
       next:  t  => {
         this.types.set(t); this.loading.set(false);
         // Page restaurée au-delà de la liste rechargée → dernière page existante.
