@@ -3000,6 +3000,8 @@
         "newTypeTitle": "Nouveau type d'entretien",
         "nameLabel": "Nom *",
         "namePlaceholder": "Ex : Entretien Technique",
+        "nameEnLabel": "Nom en anglais",
+        "nameEnPlaceholder": "Ex : Technical interview (sinon le nom français est affiché)",
         "orderLabel": "Ordre d'affichage",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Description optionnelle",

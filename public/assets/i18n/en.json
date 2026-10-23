@@ -3000,6 +3000,8 @@
         "newTypeTitle": "New interview type",
         "nameLabel": "Name *",
         "namePlaceholder": "E.g. Technical interview",
+        "nameEnLabel": "English name",
+        "nameEnPlaceholder": "E.g. Technical interview (falls back to the French name)",
         "orderLabel": "Display order",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optional description",

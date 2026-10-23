@@ -69,6 +69,12 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
             (valueChange)="form.orderIndex = $event === null || $event === '' ? 0 : +$event" />
           <div style="grid-column:1/-1">
             <daf-form-field
+              [options]="{ label: ('ADMIN.docs.interviews.nameEnLabel' | translate), placeholder: ('ADMIN.docs.interviews.nameEnPlaceholder' | translate), maxLength: 150, fullWidth: true }"
+              [value]="form.nameEn"
+              (valueChange)="form.nameEn = $any($event) ?? ''" />
+          </div>
+          <div style="grid-column:1/-1">
+            <daf-form-field
               [options]="{ label: ('ADMIN.docs.interviews.descriptionLabel' | translate), type: 'textarea', rows: 2, placeholder: ('ADMIN.docs.interviews.descriptionPlaceholder' | translate), maxLength: 500, fullWidth: true }"
               [value]="form.description"
               (valueChange)="form.description = $any($event) ?? ''" />
@@ -97,6 +103,9 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
                         (resetClick)="onSortChange('', null)">
           <ng-template dafCell="name" let-row>
             <div class="ita-row-name">{{ row['name'] }}</div>
+            @if (row['nameEn']) {
+              <div class="ita-row-desc">EN : {{ row['nameEn'] }}</div>
+            }
             @if (row['description']) {
               <div class="ita-row-desc">{{ row['description'] }}</div>
             }
@@ -164,7 +173,7 @@ export class InterviewTypesAdminComponent implements OnChanges {
   saving      = signal(false);
   modalError  = signal<string | null>(null);
 
-  form = { name: '', description: '', orderIndex: 1 };
+  form = { name: '', nameEn: '', description: '', orderIndex: 1 };
 
   // Pagination — 5 per page
   currentPage = signal(0);
@@ -192,7 +201,7 @@ export class InterviewTypesAdminComponent implements OnChanges {
   readonly filteredTypes = computed(() => {
     this.translate.currentLang();
     return searchRows(this.types(), this.searchQuery(), t => [
-      t.orderIndex, t.name, t.description,
+      t.orderIndex, t.name, t.nameEn, t.description,
       this.translate.instant(t.isActive ? 'ADMIN.docs.interviews.active' : 'ADMIN.docs.interviews.inactive'),
     ]);
   });
@@ -271,6 +280,7 @@ export class InterviewTypesAdminComponent implements OnChanges {
     this.pagedTypes().map(t => ({
       orderIndex: t.orderIndex,
       name: t.name,
+      nameEn: t.nameEn,
       description: t.description,
       isActive: t.isActive,
       _source: t,
@@ -300,14 +310,14 @@ export class InterviewTypesAdminComponent implements OnChanges {
   openAdd(): void {
     const maxOrder = this.types().reduce((m, t) => Math.max(m, t.orderIndex), 0);
     this.editTarget.set(null);
-    this.form = { name: '', description: '', orderIndex: maxOrder + 1 };
+    this.form = { name: '', nameEn: '', description: '', orderIndex: maxOrder + 1 };
     this.modalError.set(null);
     this.openModal(this.translate.instant('ADMIN.docs.interviews.newTypeTitle'));
   }
 
   openEdit(t: InterviewType): void {
     this.editTarget.set(t);
-    this.form = { name: t.name, description: t.description ?? '', orderIndex: t.orderIndex };
+    this.form = { name: t.name, nameEn: t.nameEn ?? '', description: t.description ?? '', orderIndex: t.orderIndex };
     this.modalError.set(null);
     this.openModal(this.translate.instant('ADMIN.docs.interviews.editTitle'));
   }
@@ -328,6 +338,8 @@ export class InterviewTypesAdminComponent implements OnChanges {
     const target = this.editTarget();
     const dto = {
       name: this.form.name.trim(),
+      // Chaîne vide (et non undefined) pour qu'une modification puisse effacer le libellé.
+      nameEn: this.form.nameEn.trim(),
       description: this.form.description.trim() || undefined,
       orderIndex: this.form.orderIndex,
     };

@@ -1315,6 +1315,8 @@
         "newTypeTitle": "نوع مقابلة جديد",
         "nameLabel": "الاسم *",
         "namePlaceholder": "مثال: مقابلة تقنية",
+        "nameEnLabel": "الاسم بالإنجليزية",
+        "nameEnPlaceholder": "مثال: Technical interview (وإلا يُعرض الاسم الفرنسي)",
         "orderLabel": "ترتيب العرض",
         "descriptionLabel": "الوصف",
         "descriptionPlaceholder": "وصف اختياري",
