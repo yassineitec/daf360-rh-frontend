@@ -241,11 +241,12 @@ export class CandidateDetailComponent implements OnInit {
       variant: statusBadge(c.status).options.variant,
       size:    'sm',
     }];
-    if (c.employmentTypeLabel) {
-      badges.push({ label: c.employmentTypeLabel, variant: 'neutral', size: 'sm' });
+    const labels = this.readLabels();
+    if (labels.employmentType) {
+      badges.push({ label: labels.employmentType, variant: 'neutral', size: 'sm' });
     }
-    if (c.appliedGrade) {
-      badges.push({ label: c.appliedGrade, variant: 'secondary', size: 'sm', icon: 'badge' });
+    if (labels.grade) {
+      badges.push({ label: labels.grade, variant: 'secondary', size: 'sm', icon: 'badge' });
     }
     return badges;
   });
@@ -259,8 +260,9 @@ export class CandidateDetailComponent implements OnInit {
       label:   this.translate.instant('CANDIDATES.STATUS.' + c.status),
       variant: statusBadge(c.status).options.variant ?? 'neutral',
     }];
-    if (c.employmentTypeLabel) pills.push({ label: c.employmentTypeLabel, variant: 'secondary' });
-    if (c.appliedDiscipline)   pills.push({ label: c.appliedDiscipline,   variant: 'neutral'   });
+    const labels = this.readLabels();
+    if (labels.employmentType) pills.push({ label: labels.employmentType, variant: 'secondary' });
+    if (labels.discipline)     pills.push({ label: labels.discipline,     variant: 'neutral'   });
     return pills;
   });
 
