@@ -120,6 +120,18 @@
               (valueChange)="setTextValue('identity.nationalId', $event)"
             />
 
+            <!-- Its own field, not folded into the CIN: onboarding pre-fills each into its
+                 own column of the employee profile. -->
+            <daf-form-field
+              [options]="{
+                label: ('CANDIDATES.FORM.PASSPORT_NUMBER' | translate),
+                placeholder: ('CANDIDATES.FORM.PASSPORT_NUMBER_PH' | translate),
+                prefixIcon: 'travel_explore',
+              }"
+              [value]="getTextValue('identity.passportNumber')"
+              (valueChange)="setTextValue('identity.passportNumber', $event)"
+            />
+
             <daf-form-field
               [options]="{
                 label: ('CANDIDATES.FORM.LOCATION' | translate),

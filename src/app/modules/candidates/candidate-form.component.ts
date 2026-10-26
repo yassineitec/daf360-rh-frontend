@@ -175,6 +175,7 @@ export class CandidateFormComponent implements OnInit {
       dateOfBirth:   [null as string | null],
       gender:        [null as string | null],
       nationalId:    [null as string | null],
+      passportNumber: [null as string | null],
       location:      [null as string | null],
     }),
     position: this.fb.group({
@@ -449,6 +450,7 @@ export class CandidateFormComponent implements OnInit {
       dateOfBirth:         identity.dateOfBirth         || null,
       gender:              identity.gender              || null,
       nationalId:          identity.nationalId          || null,
+      passportNumber:      identity.passportNumber      || null,
       appliedPosition:     position.appliedPosition     || null,
       departmentId:        position.departmentId        ?? null,
       employmentTypeId:    position.employmentTypeId    ?? null,

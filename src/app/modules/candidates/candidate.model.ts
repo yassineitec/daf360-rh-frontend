@@ -65,6 +65,7 @@ export interface CandidateDetail {
   nationality: string | null;
   nationalityId: number | null;
   nationalId: string | null;
+  passportNumber: string | null;
   appliedPosition: string | null;
   appliedGrade: string | null;
   appliedGradeId: number | null;
@@ -112,6 +113,7 @@ export interface CreateCandidateRequest {
   gender?: string | null;
   nationalityId?: number | null;
   nationalId?: string | null;
+  passportNumber?: string | null;
   appliedPosition?: string | null;
   appliedGradeId?: number | null;
   appliedDisciplineId?: number | null;
@@ -148,8 +150,10 @@ export interface UpdateCandidateRequest {
   phone?: string | null;
   dateOfBirth?: string | null;
   gender?: string | null;
-  /** CIN / passport number — `candidates.national_id`. */
+  /** CIN — `candidates.national_id`. */
   nationalId?: string | null;
+  /** Passport — `candidates.passport_number`, pre-filled into the profile at onboarding. */
+  passportNumber?: string | null;
   appliedPosition?: string | null;
   appliedGradeId?: number | null;
   appliedDisciplineId?: number | null;

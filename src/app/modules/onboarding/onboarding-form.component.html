@@ -135,7 +135,9 @@
                   [value]="fd.ms365LicenseType ?? ('ONBOARDING.FORM.LICENSE_ASSIGNED' | translate)" />
                 <rh-profile-field
                   [label]="'ONBOARDING.FORM.IT_STATUS' | translate"
-                  [value]="fd.itProvisioningStatus ?? ('ONBOARDING.FORM.PROVISIONED' | translate)" />
+                  [value]="fd.itProvisioningStatus
+                           ? (('IT_PROVISIONING.STATUS.' + fd.itProvisioningStatus) | translate)
+                           : ('ONBOARDING.FORM.PROVISIONED' | translate)" />
               </div>
             </div>
 
