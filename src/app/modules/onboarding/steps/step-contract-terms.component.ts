@@ -8,6 +8,7 @@ import {
 import { OnboardingFormData, OnboardingProfileDto } from '../onboarding.model';
 import { OnboardingService } from '../onboarding.service';
 import { NotificationService } from '../../../core/notification.service';
+import { interviewTypeLabel } from '../../candidates/interview.model';
 
 /**
  * Step 3 — Contrat.
@@ -59,7 +60,13 @@ export class StepContractTermsComponent implements OnInit {
   readonly recruitment = computed(() => this.formInfo()?.recruitment ?? null);
   readonly offer       = computed(() => this.recruitment()?.offer ?? null);
   readonly approvals   = computed(() => this.recruitment()?.costApprovals ?? []);
-  readonly interviews  = computed(() => this.recruitment()?.interviewNotes ?? []);
+  readonly interviews  = computed(() => {
+    const lang = this.translate.currentLang();
+    return (this.recruitment()?.interviewNotes ?? []).map(i => ({
+      ...i,
+      interviewType: i.interviewType ? interviewTypeLabel(i.interviewType, i.interviewTypeEn, lang) : null,
+    }));
+  });
 
   readonly gradeDefault = computed<number | null>(
     () => this.recruitment()?.gradeNoticePeriodDays ?? null);
