@@ -92,7 +92,7 @@ export class CandidateItSectionComponent {
 
   protected readonly assets = computed(() => {
     const prov = this.provisioning();
-    return prov ? `${prov.assetsProvided} / ${ASSET_SLOTS}` : null;
+    return prov ? `${prov.assetsProvided ?? 0} / ${ASSET_SLOTS}` : null;
   });
 
   /** Provisioned licences read as a positive state; the rest stay neutral. */
