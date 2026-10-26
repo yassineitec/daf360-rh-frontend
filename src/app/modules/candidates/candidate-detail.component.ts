@@ -359,6 +359,7 @@ export class CandidateDetailComponent implements OnInit {
       emailPersonal: c.emailPersonal ?? '', phone: c.phone ?? '',
       dateOfBirth: c.dateOfBirth ?? '', gender: c.gender ?? '',
       nationalityId: c.nationalityId ?? null, nationalId: c.nationalId ?? '',
+      passportNumber: c.passportNumber ?? '',
       location: c.location ?? '',
       appliedPosition: c.appliedPosition ?? '',
       employmentTypeId: c.employmentTypeId ?? null,

@@ -176,6 +176,17 @@ export interface CandidatePill {
               (valueChange)="patch.emit({ nationalId: asText($event) })" />
           }
 
+          @if (!editMode()) {
+            <rh-profile-field
+              [label]="'CANDIDATES.DETAIL.PASSPORT_NUMBER' | translate"
+              [value]="candidate().passportNumber" />
+          } @else {
+            <daf-form-field
+              [options]="{ label: ('CANDIDATES.DETAIL.PASSPORT_NUMBER' | translate) }"
+              [value]="editForm().passportNumber ?? ''"
+              (valueChange)="patch.emit({ passportNumber: asText($event) })" />
+          }
+
           <!-- Hidden when empty while reading, always shown while editing —
                otherwise a candidate with no location has no way to gain one. -->
           @if (!editMode()) {
