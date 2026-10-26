@@ -699,6 +699,15 @@
       "OFFRE": "Offre",
       "RECRUTE": "Recruté"
     },
+    "BADGE_TYPE": {
+      "urgent": "Urgent",
+      "new": "Nouveau",
+      "in_progress": "En cours",
+      "offer": "Offre envoyée",
+      "hired": "Confirmé",
+      "rejected": "Rejeté",
+      "top": "Top profil"
+    },
     "CARD": {
       "SPONTANEOUS": "Candidature spontanée",
       "PENDING_SIGNATURE": "En attente de signature",
