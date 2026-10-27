@@ -36,9 +36,9 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
       [surface]="'white'"
       (click)="open.emit()">
 
-      <!-- Badge (backend-supplied) + fit score -->
+      <!-- Badge (translated from the backend's badgeType) + fit score -->
       <div class="flex items-center justify-between gap-2 mb-3">
-        <daf-badge [label]="candidate().badge" [options]="{ variant: badge(), size: 'sm' }" />
+        <daf-badge [label]="badgeLabel()"[options]="{ variant: badge(), size: 'sm' }" />
         @if (candidate().fitScore != null) {
           <span class="text-sm font-bold shrink-0" [class]="fitClass()">
             {{ 'PIPELINE.FIT_SCORE' | translate:{ score: candidate().fitScore } }}
@@ -218,6 +218,14 @@ export class PipelineKanbanCardComponent {
   protected readonly avatarFailed = signal(false);
 
   protected readonly badge         = computed(() => badgeVariant(this.candidate().badgeType));
+  /** Badge text in the UI language, keyed on `badgeType`; falls back to the server's French label. */
+  protected readonly badgeLabel    = computed(() => {
+    const c = this.candidate();
+    this.translate.currentLang();
+    const key = `PIPELINE.BADGE_TYPE.${c.badgeType}`;
+    const label = this.translate.instant(key);
+    return label && label !== key ? label : c.badge;
+  });
   protected readonly avatar        = computed(() => candidateAvatar(this.candidate()));
   protected readonly initials      = computed(() => this.candidate().initials || candidateInitials(this.candidate().fullName));
   protected readonly fitClass      = computed(() => fitScoreClass(this.candidate().fitScore));

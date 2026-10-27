@@ -151,6 +151,7 @@ export interface OnboardingRecruitment {
   interviewNotes?: {
     sequenceNumber?:   number | null;
     interviewType?:    string | null;
+    interviewTypeEn?:  string | null;
     result?:           string | null;
     interviewerNotes?: string | null;
     scheduledAt?:      string | null;
