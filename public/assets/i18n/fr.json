@@ -4545,6 +4545,9 @@
     "CONVERT_INFO": "Passage validé par {{by}} — salaire net retenu : {{salary}}. Le contrat CDI sera créé à la date ci-dessous."
   },
   "NAV": {
+    "ABSENCES": "Absences",
+    "ABSENCES_REPORTING": "Suivi",
+    "ABSENCES_STATS": "Statistiques",
     "SECTION_LABEL": "NAVIGATION RH",
     "ACCUEIL": "Accueil",
     "PROFILES": "Profils",
@@ -5312,5 +5315,44 @@
       "notGeneratedYet": "Le document n'a pas encore été généré. Générez-le d'abord.",
       "downloadError": "Erreur lors du téléchargement du fichier."
     }
+  },
+  "LEAVE_STATS": {
+    "TITLE": "Statistiques des absences",
+    "SUBTITLE": "Jours de congé et de maladie validés, par collaborateur et par mois.",
+    "EXPORT": "Exporter (Excel)",
+    "SEARCH": "Rechercher un collaborateur…",
+    "KPI": {
+      "PEOPLE": "Collaborateurs",
+      "CONGE": "Jours de congé",
+      "MALADIE": "Jours de maladie",
+      "TOTAL": "Total des absences"
+    },
+    "FILTER": {
+      "TITLE": "Filtres",
+      "TRIGGER": "Filtres",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "RESET": "Réinitialiser",
+      "PEOPLE": "Collaborateur",
+      "MONTH": "Mois",
+      "YEAR": "Année"
+    },
+    "COL": {
+      "PEOPLE": "Collaborateur",
+      "PERIOD": "Période",
+      "CONGE": "Congés (j)",
+      "MALADIE": "Maladie (j)",
+      "TOTAL": "Total (j)"
+    },
+    "TABLE": {
+      "COLUMNS": "Colonnes",
+      "RESET": "Réinitialiser"
+    },
+    "VIEW_GRID": "Cartes",
+    "VIEW_LIST": "Tableau",
+    "EMPTY": "Aucune absence validée pour le moment.",
+    "EMPTY_FILTERED": "Aucune absence validée pour ces critères.",
+    "ERR_LOAD": "Impossible de charger les statistiques.",
+    "ERR_EXPORT": "L’export a échoué."
   }
 }

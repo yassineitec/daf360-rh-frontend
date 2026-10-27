@@ -213,6 +213,19 @@ export const routes: Routes = [
           import('./modules/teletravail/teletravail.routes').then(m => m.TELETRAVAIL_ROUTES),
       },
       {
+        /**
+         * Statistiques des absences — approved congé and maladie days per employee and
+         * month. Moved from the timesheet's « Statistiques RH », which only relayed RH's
+         * numbers; same permission code. Under « Absences » in the sidebar with the three
+         * kinds of leave.
+         */
+        path: 'absences/statistiques',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_HR_STATS'] },
+        loadComponent: () =>
+          import('./modules/absences/leave-stats.component').then(m => m.LeaveStatsComponent),
+      },
+      {
         path: 'requests-history',
         canActivate: [permissionGuard],
         data: { permissions: ['RH_VIEW_RECRUITMENT_DEMAND', 'RH_CREATE_RECRUITMENT_DEMAND', 'RH_APPROVE_RECRUITMENT_DEMAND'] },

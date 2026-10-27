@@ -4545,6 +4545,9 @@
     "CONVERT_INFO": "Approved by {{by}} — retained net salary: {{salary}}. The CDI contract will start on the date below."
   },
   "NAV": {
+    "ABSENCES": "Absences",
+    "ABSENCES_REPORTING": "Reporting",
+    "ABSENCES_STATS": "Statistics",
     "SECTION_LABEL": "HR NAVIGATION",
     "ACCUEIL": "Home",
     "PROFILES": "Profiles",
@@ -5312,5 +5315,44 @@
       "notGeneratedYet": "The document has not been generated yet. Generate it first.",
       "downloadError": "Error while downloading the file."
     }
+  },
+  "LEAVE_STATS": {
+    "TITLE": "Absence statistics",
+    "SUBTITLE": "Approved leave and sick days, per employee and month.",
+    "EXPORT": "Export (Excel)",
+    "SEARCH": "Search an employee…",
+    "KPI": {
+      "PEOPLE": "Employees",
+      "CONGE": "Leave days",
+      "MALADIE": "Sick days",
+      "TOTAL": "Total absences"
+    },
+    "FILTER": {
+      "TITLE": "Filters",
+      "TRIGGER": "Filters",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "RESET": "Reset",
+      "PEOPLE": "Employee",
+      "MONTH": "Month",
+      "YEAR": "Year"
+    },
+    "COL": {
+      "PEOPLE": "Employee",
+      "PERIOD": "Period",
+      "CONGE": "Leave (d)",
+      "MALADIE": "Sick (d)",
+      "TOTAL": "Total (d)"
+    },
+    "TABLE": {
+      "COLUMNS": "Columns",
+      "RESET": "Reset"
+    },
+    "VIEW_GRID": "Cards",
+    "VIEW_LIST": "Table",
+    "EMPTY": "No approved absence yet.",
+    "EMPTY_FILTERED": "No approved absence for these criteria.",
+    "ERR_LOAD": "The statistics could not be loaded.",
+    "ERR_EXPORT": "The export failed."
   }
 }

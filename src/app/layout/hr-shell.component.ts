@@ -33,6 +33,8 @@ interface AppNavDef {
    * so it holds several segments where a top-level entry holds one.
    */
   children?: AppNavDef[];
+  /** A heading inside a group (lib NavItem.heading): a label, never an entry — no route. */
+  heading?: boolean;
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
@@ -151,22 +153,27 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'billeterie',
     permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
   },
-  // Congés — un groupe et non une entrée simple, parce que les trois écrans répondent à
-  // trois questions différentes (ce que je dois traiter / ce que mon équipe a pris / ce que
-  // le pays a pris) et se gagnent par trois permissions distinctes. Un responsable ne verra
-  // que « À traiter » : le groupe se réduit tout seul, `navItems` masquant les enfants sans
-  // droit.
+  // Absences — ONE group for the three kinds of leave and their statistics, split by
+  // headings (NavItem.heading, lib 5.8): congés, autorisations, télétravail and the HR
+  // statistics answer the same question — who is away, and how much — and were three
+  // sibling groups plus a page left behind in the timesheet. The rail draws one level of
+  // children only; the headings are what keep the families apart inside it.
   //
-  // Deux écrans n'ont DÉLIBÉRÉMENT pas leur porte ici : la demande de l'employé, qui est une
-  // carte du self-service du shell, et le catalogue des types, qui est un onglet
-  // d'Administration avec les autres listes configurables.
+  // Headings carry no permission: the lib hides one that ends up with no entry under it, so
+  // a manager who only has the queues sees three short blocks and nothing empty.
+  //
+  // Two screens DELIBERATELY have no door here: the employee's own congé request, a card of
+  // the shell's self-service, and the type catalogue, a tab of Administration.
   {
-    id: 'conges',
-    labelKey: 'NAV.CONGES',
-    icon: 'beach_access',
-    permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES',
-                  'RESPOND_MODIFICATION_MANAGER', 'RESPOND_MODIFICATION_HR'],
+    id: 'absences',
+    labelKey: 'NAV.ABSENCES',
+    icon: 'event_busy',
+    permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES',
+                  'SETTLE_LEAVES', 'RESPOND_MODIFICATION_MANAGER', 'RESPOND_MODIFICATION_HR', 'GET_HR_STATS'],
     children: [
+      // Congés — three questions (what I must handle / what my team took / what the country
+      // took), each behind its own permission.
+      { id: 'absences-h-conges', labelKey: 'NAV.CONGES', icon: '', heading: true, permissions: [] },
       {
         id: 'conges-inbox',
         labelKey: 'NAV.CONGES_INBOX',
@@ -216,17 +223,9 @@ const APP_NAV_DEFS: AppNavDef[] = [
         route: 'conges/global',
         permissions: ['GET_GLOBAL_LEAVES'],
       },
-    ],
-  },
-  {
-    // Autorisations — short paid absences in minutes. Its own group beside Congés: the two
-    // share a workflow and no model, and a child of Congés would imply a kind of congé.
-    id: 'autorisations',
-    labelKey: 'NAV.AUTORISATIONS',
-    icon: 'schedule',
-    permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
-                  'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
-    children: [
+      // Autorisations — short paid absences in minutes. A workflow shared with congés, no
+      // model shared: its own block rather than a kind of congé.
+      { id: 'absences-h-autorisations', labelKey: 'NAV.AUTORISATIONS', icon: '', heading: true, permissions: [] },
       {
         id: 'autorisations-queue',
         labelKey: 'NAV.AUTORISATIONS_QUEUE',
@@ -255,16 +254,8 @@ const APP_NAV_DEFS: AppNavDef[] = [
         route: 'autorisations/global',
         permissions: ['GET_GLOBAL_LEAVES'],
       },
-    ],
-  },
-  {
-    // Télétravail — a day or half a day of remote work. Its own group, like autorisations.
-    id: 'teletravail',
-    labelKey: 'NAV.TELETRAVAIL',
-    icon: 'home_work',
-    permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
-                  'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
-    children: [
+      // Télétravail — a day or half a day of remote work.
+      { id: 'absences-h-teletravail', labelKey: 'NAV.TELETRAVAIL', icon: '', heading: true, permissions: [] },
       {
         id: 'teletravail-queue',
         labelKey: 'NAV.TELETRAVAIL_QUEUE',
@@ -292,6 +283,15 @@ const APP_NAV_DEFS: AppNavDef[] = [
         icon: 'public',
         route: 'teletravail/global',
         permissions: ['GET_GLOBAL_LEAVES'],
+      },
+      // Approved congé and maladie days per employee and month (moved from the timesheet).
+      { id: 'absences-h-suivi', labelKey: 'NAV.ABSENCES_REPORTING', icon: '', heading: true, permissions: [] },
+      {
+        id: 'absences-stats',
+        labelKey: 'NAV.ABSENCES_STATS',
+        icon: 'bar_chart',
+        route: 'absences/statistiques',
+        permissions: ['GET_HR_STATS'],
       },
     ],
   },
@@ -408,6 +408,7 @@ export class HrShellComponent implements OnInit {
         id: def.id,
         label: this.translate.instant(def.labelKey),
         icon: def.icon,
+        ...(def.heading ? { heading: true } : {}),
         // Jamais de route sur un groupe — le clic ne doit que déplier.
         ...(children.length ? {} : { route: def.route }),
         // Omitted when empty: `children: []` would still make the lib treat the item as
