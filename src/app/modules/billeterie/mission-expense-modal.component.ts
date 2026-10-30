@@ -6,7 +6,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import type { SelectOption } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { dateToIso, isoToDate } from '../../shared/date-picker.utils';
 import {
   Mission, MissionExpense, MissionExpensePayload, MissionPaymentMethod,
@@ -39,11 +39,11 @@ const DEFAULT_CURRENCY = 'TND';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    ModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
+    DafModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
     SectionCardComponent, SelectComponent, TranslatePipe,
   ],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="'MISSIONS.EXPENSES.TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -300,7 +300,7 @@ const DEFAULT_CURRENCY = 'TND';
           }"
           (onClick)="submit.emit(form())" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class MissionExpenseModalComponent {

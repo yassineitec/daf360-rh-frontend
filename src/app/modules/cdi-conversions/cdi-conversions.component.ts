@@ -7,7 +7,7 @@ import {
   TabsComponent, tabParam,
 } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { errorMessage, formatAmount, initialsOf, localeDate, localeOf } from '../missions/mission-display';
 import { CdiConversionService } from './cdi-conversion.service';
 import { CdiConversion, CdiDecisionAction, CdiDecisionPayload, isAwaitingConversion } from './cdi-conversion.model';
@@ -31,7 +31,7 @@ type TabKey = 'todo' | 'all';
   standalone: true,
   imports: [
     PageComponent, PageHeaderComponent, MetricCardComponent, TabsComponent, DataTableComponent,
-    ButtonComponent, FormFieldComponent, ModalComponent,
+    ButtonComponent, FormFieldComponent, DafModalComponent,
     CdiConversionDetailDrawerComponent, CdiConversionDecisionModalComponent, TranslatePipe,
   ],
   templateUrl: './cdi-conversions.component.html',

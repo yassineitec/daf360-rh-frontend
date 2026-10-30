@@ -6,7 +6,7 @@ import {
   ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
 } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { dateToIso, isoToDate } from '../../shared/date-picker.utils';
 import { formatAmount, localeDate, localeOf } from '../missions/mission-display';
 import { CdiConversion, CdiDecisionAction, CdiDecisionPayload } from './cdi-conversion.model';
@@ -21,9 +21,9 @@ import { CdiConversion, CdiDecisionAction, CdiDecisionPayload } from './cdi-conv
   selector: 'rh-cdi-conversion-decision-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent, TranslatePipe],
+  imports: [DafModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent, TranslatePipe],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="('CDI_CONVERSION.DECISION.TITLE_' + action()) | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -95,7 +95,7 @@ import { CdiConversion, CdiDecisionAction, CdiDecisionPayload } from './cdi-conv
           }"
           (onClick)="emit()" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class CdiConversionDecisionModalComponent {

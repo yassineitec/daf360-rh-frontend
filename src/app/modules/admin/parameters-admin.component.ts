@@ -375,6 +375,10 @@ export class ParametersAdminComponent implements OnChanges {
   startAdd() {
     this.newCle = ''; this.newValeur = ''; this.newDesc = '';
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.t.instant('ADMIN.data.parameters.ADD_TITLE'),
       body: this.bodyTpl(),
       closeOnBackdrop: false,

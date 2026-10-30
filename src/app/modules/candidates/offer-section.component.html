@@ -161,7 +161,7 @@
 </rh-section-card>
 
 <!-- ── Send / renegotiate modal ─────────────────────────────────────────────── -->
-<app-modal
+<app-daf-modal
   [title]="(offerMode() === 'renegotiate' ? 'CANDIDATES.OFFER.MODAL_RENEGOTIATE_TITLE' : 'CANDIDATES.OFFER.MODAL_SEND_TITLE') | translate"
   [visible]="showOfferModal()"
   [hasFooter]="true"
@@ -257,10 +257,10 @@
       [title]="canSave() ? '' : ('CANDIDATES.OFFER.SAVE_BLOCKED' | translate)"
       (onClick)="submitOffer()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Refuse modal ─────────────────────────────────────────────────────────── -->
-<app-modal
+<app-daf-modal
   [title]="'CANDIDATES.OFFER.MODAL_REJECT_TITLE' | translate"
   [visible]="showRejectModal()"
   [hasFooter]="true"
@@ -283,4 +283,4 @@
       [options]="{ iconStart: 'cancel', disabled: rejectSubmitting() || !rejectReason.trim(), loading: rejectSubmitting() }"
       (onClick)="submitReject()" />
   </div>
-</app-modal>
+</app-daf-modal>

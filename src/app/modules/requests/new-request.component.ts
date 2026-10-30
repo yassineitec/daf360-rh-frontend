@@ -12,7 +12,7 @@ import {
   FieldDef, RequestCategory, RequestType,
   CATEGORY_LABELS, getFieldsForType, isFileField, TYPE_FIELDS,
 } from './models/request.model';
-import { ModalComponent }  from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { StatusBadgeComponent, ButtonComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -37,9 +37,9 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
 @Component({
   selector: 'app-new-request',
   standalone: true,
-  imports: [ModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent, TranslatePipe],
+  imports: [DafModalComponent, SpinnerComponent, ReactiveFormsModule, StatusBadgeComponent, ButtonComponent, TranslatePipe],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="selectedType() ? (selectedType()!.displayNameFr) : ('REQUESTS.NEW.TITLE' | translate)"
       [visible]="visible()"
       [hasFooter]="true"
@@ -175,7 +175,7 @@ function groupByCategory(types: RequestType[]): Map<RequestCategory, RequestType
           />
         }
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
   styles: [`
     .new-request-body { min-height: 200px; }

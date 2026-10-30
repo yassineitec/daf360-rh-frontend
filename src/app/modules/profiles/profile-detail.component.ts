@@ -851,6 +851,10 @@ export class ProfileDetailComponent implements OnInit {
     this.modalService.open({
       title: this.translate.instant('PROFILES.TRANSITION.MODAL_TITLE'),
       body: tpl,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         { label: this.translate.instant('PROFILES.COMMON.CANCEL'),  variant: 'secondary', action: ref => ref.close() },
         { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary',   action: ref => this.confirmTransition(ref) },
@@ -911,6 +915,10 @@ export class ProfileDetailComponent implements OnInit {
     this.modalService.open({
       title: this.translate.instant('PROFILES.OFFBOARDING.MODAL_TITLE'),
       body: tpl,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: ref => ref.close() },
         {
@@ -1319,6 +1327,10 @@ export class ProfileDetailComponent implements OnInit {
     this.modalService.open({
       title: this.translate.instant('PROFILES.TRIAL.MODAL_TITLE'),
       body: tpl,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         { label: this.translate.instant('PROFILES.COMMON.CANCEL'),  variant: 'secondary', action: ref => ref.close() },
         { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary',   action: ref => this.confirmValidateTrial(ref) },
@@ -1350,6 +1362,10 @@ export class ProfileDetailComponent implements OnInit {
     this.modalService.open({
       title: this.translate.instant('PROFILES.RENEW.MODAL_TITLE'),
       body: tpl,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         { label: this.translate.instant('PROFILES.COMMON.CANCEL'), variant: 'secondary', action: ref => ref.close() },
         { label: this.translate.instant('PROFILES.RENEW.CONFIRM'), variant: 'primary',   action: ref => this.confirmRenewCDD(ref) },
@@ -1389,6 +1405,10 @@ export class ProfileDetailComponent implements OnInit {
     this.modalService.open({
       title: this.translate.instant('PROFILES.CONVERT.MODAL_TITLE'),
       body: tpl,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         { label: this.translate.instant('PROFILES.COMMON.CANCEL'),   variant: 'secondary', action: ref => ref.close() },
         { label: this.translate.instant('PROFILES.CONVERT.CONFIRM'), variant: 'primary',   action: ref => this.confirmConvertCDI(ref) },

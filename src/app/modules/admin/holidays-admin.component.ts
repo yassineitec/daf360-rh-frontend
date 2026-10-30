@@ -494,7 +494,7 @@ export class HolidaysAdminComponent implements OnChanges {
   }
 
   private openModal(title: string): void {
-    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), closeOnBackdrop: false });
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), closeOnBackdrop: false, minWidth: '360px', minHeight: '260px', resizable: true, maximizable: true });
   }
 
   cancel(): void {

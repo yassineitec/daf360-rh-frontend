@@ -355,6 +355,10 @@ export class RegimeCatalogComponent implements OnChanges {
 
   openCreateModal(): void {
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.regimes.catalog.createModalTitle'),
       body: this.bodyTpl(),
       closeOnBackdrop: false,

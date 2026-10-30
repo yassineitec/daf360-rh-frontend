@@ -539,6 +539,10 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
     this.previewProfileId = null;
     this.formError.set(null);
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.docs.templates.newTemplate'),
       body: this.bodyTpl(),
       size: 'xl',
@@ -559,6 +563,10 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
     this.previewProfileId = null;
     this.formError.set(null);
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.docs.templates.editTitle'),
       body: this.bodyTpl(),
       size: 'xl',

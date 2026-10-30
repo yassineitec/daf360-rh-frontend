@@ -1,20 +1,20 @@
-import { Component, input, output, signal, inject, computed } from '@angular/core';
-import { ModalComponent } from '../../shared/modal.component';
+import { Component, DestroyRef, input, output, signal, inject, computed, effect, untracked, viewChild, TemplateRef } from '@angular/core';
 import { CandidateService } from './candidate.service';
-import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilrebhiitec/daf360';
+import { FormFieldComponent, FormFieldOptions, ModalButton, ModalRef, ModalService } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
+/**
+ * Pop-up « Refuser le candidat » — daf modal (ModalService), resizable and maximizable.
+ *
+ * The inputs/outputs are unchanged, so the three pages that host it (recrutement board,
+ * candidate list, candidate detail) still drive it with `visible` / `target`.
+ */
 @Component({
   selector: 'app-reject-modal',
   standalone: true,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent, TranslatePipe],
+  imports: [FormFieldComponent, TranslatePipe],
   template: `
-    <app-modal
-      [title]="'CANDIDATES.REJECT.TITLE' | translate"
-      [visible]="visible()"
-      (closed)="onClose()"
-      [hasFooter]="true"
-    >
+    <ng-template #bodyTpl>
       @if (candidateName) {
         <p class="text-sm font-semibold text-on-surface mb-4">{{ candidateName }}</p>
       }
@@ -32,20 +32,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
           <p class="text-xs text-danger">{{ error() }}</p>
         }
       </div>
-      <div slot="footer">
-        <daf-button
-          [label]="'CANDIDATES.COMMON.CANCEL' | translate"
-          variant="secondary"
-          (onClick)="onClose()"
-        />
-        <daf-button
-          [label]="saving() ? ('CANDIDATES.REJECT.SUBMITTING' | translate) : ('CANDIDATES.REJECT.CONFIRM' | translate)"
-          variant="danger"
-          [options]="{ iconStart: 'cancel', disabled: saving() || reason().trim().length < 10, loading: saving() }"
-          (onClick)="onConfirm()"
-        />
-      </div>
-    </app-modal>
+    </ng-template>
   `,
 })
 export class RejectModalComponent {
@@ -56,6 +43,10 @@ export class RejectModalComponent {
 
   private candidateService = inject(CandidateService);
   private translate = inject(TranslateService);
+  private modalService = inject(ModalService);
+
+  private bodyTpl = viewChild<TemplateRef<unknown>>('bodyTpl');
+  private modalRef: ModalRef | null = null;
 
   reason  = signal('');
   error   = signal<string | null>(null);
@@ -71,6 +62,16 @@ export class RejectModalComponent {
     };
   });
 
+  constructor() {
+    // The host pages still say "open" / "closed" through `visible`.
+    effect(() => {
+      const show = this.visible();
+      untracked(() => (show ? this.open() : this.modalRef?.close()));
+    });
+    // The modal lives in <body>: leaving the page must not leave it behind.
+    inject(DestroyRef).onDestroy(() => this.modalRef?.close());
+  }
+
   get candidateName(): string {
     const t = this.target();
     return t ? t.firstName + ' ' + t.lastName : '';
@@ -80,10 +81,45 @@ export class RejectModalComponent {
     this.reason.set(typeof value === 'string' ? value : '');
   }
 
-  onClose(): void {
-    this.reason.set('');
-    this.error.set(null);
-    this.closed.emit();
+  private open(): void {
+    const tpl = this.bodyTpl();
+    if (!tpl || this.modalRef) return;
+
+    // Getters, not values: the modal host re-reads them on every check, so the button
+    // follows the typed reason and the saving state like the old [options] binding did.
+    const self = this;
+    const confirm: ModalButton = {
+      get label()    { return self.translate.instant(self.saving() ? 'CANDIDATES.REJECT.SUBMITTING' : 'CANDIDATES.REJECT.CONFIRM'); },
+      get disabled() { return self.saving() || self.reason().trim().length < 10; },
+      variant: 'primary',
+      icon:    'cancel',
+      action:  () => this.onConfirm(),
+    };
+
+    const ref = this.modalService.open({
+      title: this.translate.instant('CANDIDATES.REJECT.TITLE'),
+      body:  tpl,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
+      buttons: [
+        { label: this.translate.instant('CANDIDATES.COMMON.CANCEL'), variant: 'secondary', action: r => r.close() },
+        confirm,
+      ],
+    });
+
+    // ✕, backdrop and Annuler all end in _destroy(): reset the form there and tell the
+    // host page, otherwise its `visible` would stay true on a modal that is gone.
+    const destroy = ref._destroy.bind(ref);
+    ref._destroy = () => {
+      destroy();
+      this.modalRef = null;
+      this.reason.set('');
+      this.error.set(null);
+      if (this.visible()) this.closed.emit();
+    };
+    this.modalRef = ref;
   }
 
   onConfirm(): void {

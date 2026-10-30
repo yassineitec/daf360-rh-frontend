@@ -467,6 +467,10 @@ export class AbsenceTypesAdminComponent implements OnInit {
   private openForm(): void {
     const isEdit = this.editing() !== null;
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant(isEdit ? 'CONGES.TYPES.EDIT_TITLE' : 'CONGES.TYPES.NEW_TITLE'),
       subtitle: isEdit ? this.editing()!.code : this.translate.instant('CONGES.TYPES.NEW_SUB'),
       body: this.formTpl(),

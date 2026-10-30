@@ -139,6 +139,10 @@ export class AssetAssignFormComponent implements AfterViewInit {
         : 'PROFILES.IT_ASSETS.FORM.TITLE_ASSIGN'),
       body: this.formTpl(),
       closeOnBackdrop: false,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         {
           label: this.translate.instant('PROFILES.COMMON.CANCEL'),

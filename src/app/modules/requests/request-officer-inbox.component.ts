@@ -14,7 +14,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { statusBadge } from '../../shared/status-badge.utils';
 import { SlaCountdownPipe, SlaLevel } from '../../shared/sla-countdown.pipe';
-import { ModalComponent }        from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { UserStore }             from '../../core/user.store';
 import { ConfirmService } from '../../core/confirm.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -41,7 +41,7 @@ const SERVER_SORT_FIELD: Record<string, string> = {
   selector: 'app-request-officer-inbox',
   standalone: true,
   imports: [
-    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, ModalComponent, CardComponent,
+    RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, DafModalComponent, CardComponent,
     DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe,
   ],
   template: `
@@ -108,7 +108,7 @@ const SERVER_SORT_FIELD: Record<string, string> = {
     </daf-card>
 
     <!-- Refuse modal -->
-    <app-modal
+    <app-daf-modal
       [title]="'REQUESTS.INBOX.REFUSE_TITLE' | translate"
       [visible]="!!refuseTarget()"
       [hasFooter]="true"
@@ -135,7 +135,7 @@ const SERVER_SORT_FIELD: Record<string, string> = {
           (onClick)="confirmRefuse()"
         />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
   styleUrl: './request-officer-inbox.component.scss',
 })

@@ -440,6 +440,10 @@ export class CongeInboxComponent extends CongeListBase implements OnInit {
       });
     }
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.DETAIL.TITLE'),
       subtitle: this.translate.instant('CONGES.DETAIL.SUBTITLE'),
       icon: 'beach_access',
@@ -458,6 +462,10 @@ export class CongeInboxComponent extends CongeListBase implements OnInit {
   private confirmApprove(row: CongeRow): void {
     this.primeDetail(row);
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.INBOX.APPROVE_TITLE'),
       subtitle: row.collaborateurName ?? '',
       icon: 'check_circle',
@@ -480,6 +488,10 @@ export class CongeInboxComponent extends CongeListBase implements OnInit {
     this.motif.set('');
     this.motifError.set('');
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.INBOX.REFUSE_TITLE'),
       subtitle: row.collaborateurName ?? '',
       icon: 'cancel',
@@ -526,6 +538,10 @@ export class CongeInboxComponent extends CongeListBase implements OnInit {
 
   private confirmBulk(): void {
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.INBOX.BULK_TITLE'),
       subtitle: this.translate.instant('CONGES.INBOX.BULK_SUB'),
       icon: 'done_all',

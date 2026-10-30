@@ -1052,6 +1052,10 @@ export class SharePointAdminComponent implements OnInit {
     this.formKind.set(existing?.docKind ?? this.docKind());
     this.formTemplate.set(existing?.pathTemplate ?? '');
     this.pathModalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.i18n.instant('ADMIN.sharepoint.paths.formTitle'),
       body: this.pathFormTpl(),
       size: 'md',
@@ -1242,6 +1246,10 @@ export class SharePointAdminComponent implements OnInit {
     this.pinSegment.set(row.folderSegment ?? row.fullName);
     this.pinProblem.set(null);
     this.pinModalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.i18n.instant('ADMIN.sharepoint.pin.title'),
       body: this.pinFormTpl(),
       size: 'md',
