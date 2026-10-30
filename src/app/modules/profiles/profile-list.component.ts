@@ -10,12 +10,14 @@ import {
   PageComponent, PageHeaderComponent,
   PaginationComponent,
   SearchToolbarComponent, SearchToolbarFilterConfig,
+  SplitValueCardComponent, SplitValueCardItem,
   FilterField, FilterResult,
+  MetricCardComponent,
   ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
-import { ProfileListService, FilterOptions, ProfileFilterOption } from './services/profile-list.service';
+import { ProfileListService, FilterOptions, ProfileFilterOption, EmployeeStats } from './services/profile-list.service';
 import { EmployeeListItem } from './models/profile.model';
 import { ProfilesCardsSectionComponent } from './sections/profiles-cards-section.component';
 import { ProfilesTableSectionComponent } from './sections/profiles-table-section.component';
@@ -53,6 +55,8 @@ const EMPTY_OPTIONS: FilterOptions = {
   imports: [
     PageComponent,
     PageHeaderComponent,
+    MetricCardComponent,
+    SplitValueCardComponent,
     SearchToolbarComponent,
     PaginationComponent,
     BulkActionBarComponent,
@@ -84,6 +88,28 @@ export class ProfileListComponent implements OnInit {
   readonly employees     = signal<EmployeeListItem[]>([]);
   readonly filterOptions = signal<FilterOptions>(EMPTY_OPTIONS);
   readonly error         = signal<string | null>(null);
+  /** KPI row; null until loaded or when the call fails — the cards then show "—". */
+  readonly stats         = signal<EmployeeStats | null>(null);
+
+  /** On leave / on mission, for the right half of the status card (Actifs is the headline). */
+  readonly statusSplit = computed<[SplitValueCardItem, SplitValueCardItem]>(() => {
+    this.translate.currentLang();
+    const s = this.stats();
+    return [
+      { label: this.translate.instant('PROFILES.KPI.ON_LEAVE'),   value: s ? s.onLeave   : '—' },
+      { label: this.translate.instant('PROFILES.KPI.ON_MISSION'), value: s ? s.onMission : '—' },
+    ];
+  });
+
+  /** CDD / every other contract, for the right half of the contract card (CDI is the headline). */
+  readonly contractSplit = computed<[SplitValueCardItem, SplitValueCardItem]>(() => {
+    this.translate.currentLang();
+    const s = this.stats();
+    return [
+      { label: this.translate.instant('PROFILES.KPI.CDD'),    value: s ? s.cdd : '—' },
+      { label: this.translate.instant('PROFILES.KPI.OTHERS'), value: s ? s.withContract - s.cdi - s.cdd : '—' },
+    ];
+  });
 
   /** Whole-page skeleton — first load only (§5). */
   readonly firstLoad = signal(true);
@@ -282,6 +308,18 @@ export class ProfileListComponent implements OnInit {
       this.filterOptions.set(opts);
       this.firstLoad.set(false);
     });
+    this.loadStats();
+  }
+
+  /**
+   * On load, then whenever the pays filter changes — the only filter the cards follow;
+   * the search and the other filters leave them alone. A failure blanks the cards
+   * rather than the page.
+   */
+  private loadStats(): void {
+    this.svc.getStats(this.filters().pays)
+      .pipe(catchError(() => of(null)))
+      .subscribe(s => this.stats.set(s));
   }
 
   loadEmployees(): void {
@@ -350,6 +388,7 @@ export class ProfileListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
+    const previousPays = this.filters().pays;
     this.filters.set({
       pays:       this.asString(result['pays']),
       department: this.asString(result['department']),
@@ -362,6 +401,7 @@ export class ProfileListComponent implements OnInit {
       includeInactive: result['includeInactive'] === true ? 'true' : undefined,
     });
     this.resetToFirstPage();
+    if (this.filters().pays !== previousPays) this.loadStats();
   }
 
   /** A new order is a new result set — back to page 0, selection cleared (like a filter). */

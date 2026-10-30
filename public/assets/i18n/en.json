@@ -1309,6 +1309,18 @@
       "BREADCRUMB_ARIA": "Breadcrumb",
       "GENERIC_ERROR": "Error."
     },
+    "KPI": {
+      "TOTAL": "Total employees",
+      "TOTAL_HELP": "Employees in service (active, on leave, on mission) and accounts with no HR file, within your scope. Follows the list's Country filter only.",
+      "RECENT_HIRES": "Recent hires",
+      "RECENT_HIRES_HELP": "Employees hired over the last 3 months, today included.",
+      "CDI": "Permanent",
+      "CDD": "Fixed-term",
+      "OTHERS": "Others",
+      "ACTIVE": "Active",
+      "ON_LEAVE": "On leave",
+      "ON_MISSION": "On mission"
+    },
     "LIST": {
       "TITLE": "Profiles",
       "SEARCH_PLACEHOLDER": "Search by name, email…",
@@ -1373,7 +1385,6 @@
     "LIFECYCLE": {
       "PRE_ONBOARDING": "Pre-onboarding",
       "ACTIVE": "Active",
-      "ON_LEAVE": "On leave",
       "ON_MISSION": "On mission",
       "OFFBOARDING": "Offboarding",
       "TERMINATED": "Terminated",
@@ -1558,7 +1569,7 @@
     "LC": {
       "FROM_CANDIDATE": "Recruited via application",
       "VIEW_CANDIDATE": "View candidate file →",
-      "NEW_CONTRACT": "+ New contract",
+      "NEW_CONTRACT": "New contract",
       "NONE": "No lifecycle contract recorded.",
       "NOTICE_PERIOD": "Notice period",
       "NOTICE_DAYS": "{{days}} calendar days",

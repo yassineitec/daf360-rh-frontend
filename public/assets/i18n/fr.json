@@ -1309,6 +1309,18 @@
       "BREADCRUMB_ARIA": "Fil d'Ariane",
       "GENERIC_ERROR": "Erreur."
     },
+    "KPI": {
+      "TOTAL": "Total collaborateurs",
+      "TOTAL_HELP": "Collaborateurs en service (actifs, en congé, en mission) et comptes sans fiche RH, sur votre périmètre. Suit uniquement le filtre Pays de la liste.",
+      "RECENT_HIRES": "Arrivées récentes",
+      "RECENT_HIRES_HELP": "Collaborateurs embauchés au cours des 3 derniers mois, aujourd'hui compris.",
+      "CDI": "CDI",
+      "CDD": "CDD",
+      "OTHERS": "Autres",
+      "ACTIVE": "Actifs",
+      "ON_LEAVE": "En congé",
+      "ON_MISSION": "En mission"
+    },
     "LIST": {
       "TITLE": "Profils",
       "SEARCH_PLACEHOLDER": "Rechercher par nom, email…",
@@ -1373,7 +1385,6 @@
     "LIFECYCLE": {
       "PRE_ONBOARDING": "Pré-onboarding",
       "ACTIVE": "Actif",
-      "ON_LEAVE": "En congé",
       "ON_MISSION": "En mission",
       "OFFBOARDING": "Offboarding",
       "TERMINATED": "Terminé",
@@ -1558,7 +1569,7 @@
     "LC": {
       "FROM_CANDIDATE": "Recruté via candidature",
       "VIEW_CANDIDATE": "Voir le dossier candidat →",
-      "NEW_CONTRACT": "+ Nouveau contrat",
+      "NEW_CONTRACT": "Nouveau contrat",
       "NONE": "Aucun contrat lifecycle enregistré.",
       "NOTICE_PERIOD": "Préavis",
       "NOTICE_DAYS": "{{days}} j calendaires",

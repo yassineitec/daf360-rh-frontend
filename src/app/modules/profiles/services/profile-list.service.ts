@@ -50,6 +50,25 @@ export interface FilterOptions {
   contractTypes: string[];
 }
 
+/**
+ * `GET /profiles/employees/stats` — counted over the list's default perimeter, pays filter only.
+ */
+export interface EmployeeStats {
+  total:   number;
+  /** Hired over the last 3 months, today included. */
+  recentHires: number;
+  /** Rows with a contract type — CDI + CDD + the others. */
+  withContract: number;
+  /** Contract of CDI nature (an admin-made type flagged as CDI counts). */
+  cdi:     number;
+  /** Contract of CDD nature, same rule. */
+  cdd:     number;
+  /** The three in-service statuses; a profile-less account counts in none of them. */
+  active:    number;
+  onLeave:   number;
+  onMission: number;
+}
+
 const EMPTY_OPTIONS: FilterOptions = {
   departments: [], grades: [], pays: [], contractTypes: [],
 };
@@ -60,9 +79,23 @@ export class ProfileListService {
   private base = `${environment.hrApiUrl}/api/hr`;
 
   getEmployees(params: EmployeeListParams): Observable<PageResponse<EmployeeListItem>> {
-    let p = new HttpParams()
+    let p = this.filterParams(params)
       .set('page', params.page)
       .set('size', params.size);
+    if (params.sort)         p = p.set('sort',         params.sort);
+    return this.http.get<PageResponse<EmployeeListItem>>(
+      `${this.base}/profiles/employees`, { params: p });
+  }
+
+  /** The KPI row — follows the pays filter only (`pays` is the numeric pays_id, as for the list). */
+  getStats(pays?: string): Observable<EmployeeStats> {
+    const params = pays ? new HttpParams().set('pays', pays) : undefined;
+    return this.http.get<EmployeeStats>(`${this.base}/profiles/employees/stats`, { params });
+  }
+
+  /** Everything but paging and sort. */
+  private filterParams(params: EmployeeListParams): HttpParams {
+    let p = new HttpParams();
     if (params.search)       p = p.set('search',       params.search);
     if (params.pays)         p = p.set('pays',         params.pays);
     if (params.department)   p = p.set('department',   params.department);
@@ -72,9 +105,7 @@ export class ProfileListService {
     if (params.hireDateFrom) p = p.set('hireDateFrom', params.hireDateFrom);
     if (params.hireDateTo)   p = p.set('hireDateTo',   params.hireDateTo);
     if (params.includeInactive) p = p.set('includeInactive', true);
-    if (params.sort)         p = p.set('sort',         params.sort);
-    return this.http.get<PageResponse<EmployeeListItem>>(
-      `${this.base}/profiles/employees`, { params: p });
+    return p;
   }
 
   getFilterOptions(): Observable<FilterOptions> {
