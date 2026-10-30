@@ -68,7 +68,7 @@
   (closed)="deciding.set(null)"
   (submit)="applyDecision($event)" />
 
-<app-modal
+<app-daf-modal
   [title]="'CDI_CONVERSION.CANCEL.TITLE' | translate"
   [visible]="cancelling()"
   [hasFooter]="true"
@@ -96,4 +96,4 @@
                    loading: submitting(), disabled: submitting() }"
       (onClick)="confirmCancel()" />
   </div>
-</app-modal>
+</app-daf-modal>

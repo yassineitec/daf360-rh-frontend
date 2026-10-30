@@ -92,6 +92,10 @@ export class CreateRoleModalComponent {
   open(): void {
     this.reset();
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.roles.create.TITLE'),
       body: this.bodyTpl(),
       size: 'md',

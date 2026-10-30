@@ -109,6 +109,10 @@ export class DocumentEditFormComponent implements AfterViewInit {
       title: this.translate.instant('PROFILES.DOCUMENTS.EDIT_TITLE'),
       body: this.formTpl(),
       closeOnBackdrop: false,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         {
           label: this.translate.instant('PROFILES.COMMON.CANCEL'),

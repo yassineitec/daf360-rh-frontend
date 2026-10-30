@@ -27,6 +27,7 @@ import {
   tasksOfStage,
 } from './offboarding-display';
 import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 // Aliased: this component already exposes an 'employeeAvatar' signal to the template.
 import { employeeAvatar as resolveEmployeeAvatar } from '../../shared/utils/avatar.utils';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
@@ -63,7 +64,7 @@ import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
     PageComponent, PageHeaderComponent, CardComponent, ButtonComponent,
     StepperComponent, ProgressBarComponent, StatusBadgeComponent,
     FormFieldComponent, SelectComponent, CheckboxComponent, MultiDatePickerComponent,
-    ToggleComponent, ModalComponent, TranslatePipe,
+    ToggleComponent, ModalComponent, DafModalComponent, TranslatePipe,
     StageDeclarationComponent, StageValidationComponent, StageHandoverComponent,
     StageItAssetsComponent, StageHrDocsComponent, StagePayrollComponent, StageClosureComponent,
     StageReservedComponent,

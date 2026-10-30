@@ -7,7 +7,7 @@ import {
   type FilterField, type FilterResult, type SearchToolbarFilterConfig, type ToolbarToggleOption,
 } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { NotificationService } from '../../core/notification.service';
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
@@ -77,7 +77,7 @@ function distinctOptions(
   selector: 'app-recruitment-validation-section',
   standalone: true,
   imports: [
-    ButtonComponent, PaginationComponent, FormFieldComponent, SearchToolbarComponent, ModalComponent,
+    ButtonComponent, PaginationComponent, FormFieldComponent, SearchToolbarComponent, DafModalComponent,
     RecruitmentDemandCardsSectionComponent, RecruitmentDemandTableSectionComponent,
     TranslatePipe,
   ],
@@ -159,7 +159,7 @@ function distinctOptions(
     </div>
 
     <!-- ── Verdict modal ──────────────────────────────────────────────── -->
-    <app-modal
+    <app-daf-modal
       [title]="(approving() ? 'RECRUITMENT_VALIDATION.APPROVE_TITLE' : 'RECRUITMENT_VALIDATION.REJECT_TITLE') | translate"
       [visible]="target() !== null"
       [hasFooter]="true"
@@ -194,7 +194,7 @@ function distinctOptions(
           }"
           (onClick)="submitVerdict()" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class RecruitmentValidationSectionComponent implements OnInit {

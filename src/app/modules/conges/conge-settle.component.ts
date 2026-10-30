@@ -349,6 +349,10 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
     this.employeeId.set(null);
     this.headers.set(null);
     this.formRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.SETTLE.NEW'),
       subtitle: this.translate.instant('CONGES.SETTLE.NEW_SUB'),
       body: this.formTpl(),
@@ -629,6 +633,10 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
   openDetail(row: CongeRow): void {
     this.detailRow.set(row);
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.DETAIL.TITLE'),
       subtitle: this.translate.instant('CONGES.DETAIL.SUBTITLE'),
       icon: 'beach_access',

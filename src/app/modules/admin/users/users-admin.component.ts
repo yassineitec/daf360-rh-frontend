@@ -9,7 +9,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../../environments/environment';
-import { ModalComponent } from '../../../shared/modal.component';
+import { DafModalComponent } from '../../../shared/daf-modal.component';
 import { TableActionComponent } from '../../../shared/table-action.component';
 import { NotificationService } from '../../../core/notification.service';
 import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
@@ -122,7 +122,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
   imports: [
     MetricCardComponent, SearchToolbarComponent, PaginationComponent, DataTableComponent,
     DafCellDirective, StatusBadgeComponent, AvatarComponent, ButtonComponent,
-    FormFieldComponent, SelectComponent, ToggleComponent, ModalComponent, TableActionComponent,
+    FormFieldComponent, SelectComponent, ToggleComponent, DafModalComponent, TableActionComponent,
     TranslatePipe,
   ],
   template: `
@@ -273,7 +273,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
     </div>
 
     <!-- ── Soldes ──────────────────────────────────────────────────────────── -->
-    <app-modal [title]="'ADMIN.users.balanceModal.title' | translate" [visible]="showBalances()" size="md"
+    <app-daf-modal [title]="'ADMIN.users.balanceModal.title' | translate" [visible]="showBalances()" size="md"
                [hasFooter]="true" (closed)="showBalances.set(false)">
       @if (balanceTarget(); as u) {
         <div class="flex flex-col gap-4">
@@ -312,11 +312,11 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
                     [options]="{ loading: savingBalances() }"
                     (onClick)="submitBalances()" />
       </div>
-    </app-modal>
+    </app-daf-modal>
 
     <!-- hasFooter is opt-in on app-modal: without it the footer slot is never rendered and
          the Créer button silently disappears. -->
-    <app-modal [title]="'ADMIN.users.createModal.title' | translate" [visible]="showCreate()" size="md"
+    <app-daf-modal [title]="'ADMIN.users.createModal.title' | translate" [visible]="showCreate()" size="md"
                [hasFooter]="true"
                (closed)="showCreate.set(false)">
       <div class="flex flex-col gap-3">
@@ -349,7 +349,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
                     [options]="{ loading: creating(), disabled: !canCreate() }"
                     (onClick)="submitCreate()" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class UsersAdminComponent implements OnInit {

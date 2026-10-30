@@ -6,7 +6,7 @@ import {
   ButtonComponent, FileUploadComponent, FormFieldComponent, MultiDatePickerComponent, UploadedFile,
 } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { dateToIso, isoToDate } from '../../shared/date-picker.utils';
 import { localeDate, localeOf } from '../missions/mission-display';
 import {
@@ -24,10 +24,10 @@ import {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    ModalComponent, ButtonComponent, FileUploadComponent, FormFieldComponent, MultiDatePickerComponent, TranslatePipe,
+    DafModalComponent, ButtonComponent, FileUploadComponent, FormFieldComponent, MultiDatePickerComponent, TranslatePipe,
   ],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="'CDI_CONVERSION.REQUEST.TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -97,7 +97,7 @@ import {
           }"
           (onClick)="emit()" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class CdiConversionRequestModalComponent {

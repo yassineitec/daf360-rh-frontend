@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonComponent, FormFieldComponent, FormFieldOptions } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../../shared/modal.component';
+import { DafModalComponent } from '../../../shared/daf-modal.component';
 import { KanbanCandidate } from '../services/pipeline.service';
 
 /**
@@ -13,9 +13,9 @@ import { KanbanCandidate } from '../services/pipeline.service';
   selector: 'rh-refuse-offer-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent, TranslatePipe],
+  imports: [DafModalComponent, ButtonComponent, FormFieldComponent, TranslatePipe],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="'PIPELINE.OFFER.REFUSE_TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -51,7 +51,7 @@ import { KanbanCandidate } from '../services/pipeline.service';
           }"
           (onClick)="submit.emit(reason().trim())" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class RefuseOfferModalComponent {

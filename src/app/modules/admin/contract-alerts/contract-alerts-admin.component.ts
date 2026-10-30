@@ -233,6 +233,10 @@ export class ContractAlertsAdminComponent implements OnChanges {
     };
     this.modalError.set(null);
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.contractAlerts.editTitle'),
       body: this.bodyTpl(),
       closeOnBackdrop: false,

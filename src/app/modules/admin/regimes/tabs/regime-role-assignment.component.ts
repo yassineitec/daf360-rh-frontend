@@ -280,6 +280,10 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     this.noEndDate.set(!row.assignment?.effectiveTo);
     this.errorMsg.set(null);
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.regimes.roleAssign.assignModalTitle'),
       body: this.bodyTplAssign(),
       closeOnBackdrop: false,

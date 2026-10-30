@@ -4,7 +4,7 @@ import {
   ButtonComponent, CheckboxComponent, FormFieldComponent, MultiDatePickerComponent,
 } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../../shared/modal.component';
+import { DafModalComponent } from '../../../shared/daf-modal.component';
 import { dateToIso, isoToDate } from '../../../shared/date-picker.utils';
 import { HireCandidateRequest } from '../candidate.model';
 
@@ -23,11 +23,11 @@ import { HireCandidateRequest } from '../candidate.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    ModalComponent, ButtonComponent, CheckboxComponent, FormFieldComponent,
+    DafModalComponent, ButtonComponent, CheckboxComponent, FormFieldComponent,
     MultiDatePickerComponent, TranslatePipe,
   ],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="'CANDIDATES.DETAIL.HIRE_MODAL_TITLE' | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -91,7 +91,7 @@ import { HireCandidateRequest } from '../candidate.model';
           }"
           (onClick)="submit.emit(form())" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class CandidateHireModalComponent {

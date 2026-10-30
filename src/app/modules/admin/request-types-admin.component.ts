@@ -417,7 +417,7 @@ export class RequestTypesAdminComponent implements OnChanges {
   private openModal(title: string): void {
     // closeOnBackdrop: false — the form has unsaved input the moment it's open, unlike the
     // plain confirm dialog `deactivate()` opens below.
-    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), size: 'md', closeOnBackdrop: false });
+    this.modalRef = this.modal.open({ title, body: this.bodyTpl(), size: 'md', closeOnBackdrop: false, minWidth: '360px', minHeight: '260px', resizable: true, maximizable: true });
   }
 
   cancel(): void {

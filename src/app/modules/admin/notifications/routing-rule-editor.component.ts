@@ -287,6 +287,10 @@ export class RoutingRuleEditorComponent {
         this.testActiveTab.set('inapp');
         this.testLoading.set(false);
         this.testModalRef = this.modal.open({
+          minWidth:    '360px',
+          minHeight:   '260px',
+          resizable:   true,
+          maximizable: true,
           title: this.translate.instant('ADMIN.notifications.previewTitle', { name: adminLabel(this.eventType(), this.translate) }),
           body: this.testBodyTpl(),
           size: 'lg',

@@ -10,7 +10,7 @@ import { searchRows } from '../../shared/table-sort.utils';
 import { rememberAdminState } from './admin-section-state';
 
 import { environment } from '../../../environments/environment';
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { TableActionComponent } from '../../shared/table-action.component';
 import { NotificationService } from '../../core/notification.service';
 
@@ -65,7 +65,7 @@ const DAYS = [
   standalone: true,
   imports: [
     DataTableComponent, DafCellDirective, StatusBadgeComponent, ButtonComponent,
-    SearchToolbarComponent, SelectComponent, ModalComponent, TableActionComponent, TranslatePipe,
+    SearchToolbarComponent, SelectComponent, DafModalComponent, TableActionComponent, TranslatePipe,
   ],
   template: `
     <div class="flex min-w-0 flex-col gap-4">
@@ -119,7 +119,7 @@ const DAYS = [
       </daf-data-table>
     </div>
 
-    <app-modal [title]="('ADMIN.paysCalendar.modalTitle' | translate)"
+    <app-daf-modal [title]="('ADMIN.paysCalendar.modalTitle' | translate)"
                [visible]="showEdit()" size="md" [hasFooter]="true"
                (closed)="showEdit.set(false)">
       @if (target(); as p) {
@@ -164,7 +164,7 @@ const DAYS = [
                     [options]="{ loading: saving(), disabled: weekend().length === 0 }"
                     (onClick)="save()" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class PaysCalendarAdminComponent implements OnInit {

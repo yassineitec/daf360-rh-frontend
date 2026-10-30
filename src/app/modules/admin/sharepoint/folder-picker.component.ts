@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal } from '@angular/core';
 import { ButtonComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ModalComponent } from '../../../shared/modal.component';
+import { DafModalComponent } from '../../../shared/daf-modal.component';
 import { SharePointAdminService } from './sharepoint-admin.service';
 
 /**
@@ -20,9 +20,9 @@ import { SharePointAdminService } from './sharepoint-admin.service';
   selector: 'app-folder-picker',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ModalComponent, ButtonComponent, TranslatePipe],
+  imports: [DafModalComponent, ButtonComponent, TranslatePipe],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="'ADMIN.sharepoint.picker.title' | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -78,7 +78,7 @@ import { SharePointAdminService } from './sharepoint-admin.service';
                     [options]="{ disabled: !path() }"
                     (onClick)="choose.emit(path())" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
   styles: [`
     .fp-crumbs { display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:12px }

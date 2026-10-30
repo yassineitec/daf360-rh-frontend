@@ -7,7 +7,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import type { SelectOption } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { dateToIso, isoToDate } from '../../shared/date-picker.utils';
 import { Mission, MissionEligibleEmployee, MissionPayload, MissionScope } from './mission.model';
 import { durationDays } from './mission-display';
@@ -28,11 +28,11 @@ import { durationDays } from './mission-display';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    ModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
+    DafModalComponent, ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
     SelectComponent, TranslatePipe,
   ],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="(mission() ? 'MISSIONS.FORM.TITLE_EDIT' : 'MISSIONS.FORM.TITLE_NEW') | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -188,7 +188,7 @@ import { durationDays } from './mission-display';
           }"
           (onClick)="submit.emit(form())" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class MissionFormModalComponent {

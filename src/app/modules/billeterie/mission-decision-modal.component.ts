@@ -4,7 +4,7 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
 
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { Mission } from '../missions/mission.model';
 import { destination, formatAmount, localeDate, localeOf } from '../missions/mission-display';
 
@@ -25,9 +25,9 @@ export interface MissionDecision {
   selector: 'rh-mission-decision-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ModalComponent, ButtonComponent, FormFieldComponent, TranslatePipe],
+  imports: [DafModalComponent, ButtonComponent, FormFieldComponent, TranslatePipe],
   template: `
-    <app-modal
+    <app-daf-modal
       [title]="(approve() ? 'MISSIONS.DECISION.APPROVE_TITLE' : 'MISSIONS.DECISION.REJECT_TITLE') | translate"
       [visible]="visible()"
       [hasFooter]="true"
@@ -86,7 +86,7 @@ export interface MissionDecision {
           }"
           (onClick)="submit.emit({ notes: notes() })" />
       </div>
-    </app-modal>
+    </app-daf-modal>
   `,
 })
 export class MissionDecisionModalComponent {

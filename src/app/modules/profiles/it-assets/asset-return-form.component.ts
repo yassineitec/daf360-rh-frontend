@@ -120,6 +120,10 @@ export class AssetReturnFormComponent implements AfterViewInit {
       title: this.translate.instant('PROFILES.IT_ASSETS.FORM.TITLE_RETURN'),
       body: this.formTpl(),
       closeOnBackdrop: false,
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       buttons: [
         {
           label: this.translate.instant('PROFILES.COMMON.CANCEL'),

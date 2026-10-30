@@ -281,6 +281,10 @@ export class ListManagerComponent implements OnInit {
   openAddForm(): void {
     this.addForm.reset({ sortOrder: 0 });
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.data.lists.MODAL_ADD_TITLE'),
       body: this.bodyTpl(),
       closeOnBackdrop: false,

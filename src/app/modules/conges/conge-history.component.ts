@@ -173,6 +173,10 @@ export class CongeHistoryComponent extends CongeListBase implements OnInit {
   openDetail(row: CongeRow): void {
     this.detailRow.set(row);
     this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('CONGES.DETAIL.TITLE'),
       subtitle: this.translate.instant('CONGES.DETAIL.SUBTITLE'),
       icon: 'beach_access',

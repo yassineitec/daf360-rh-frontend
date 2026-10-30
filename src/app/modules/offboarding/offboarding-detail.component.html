@@ -424,7 +424,7 @@
 }
 
 <!-- ── Complete task modal ─────────────────────────────────────────────────── -->
-<app-modal [title]="'OFFBOARDING.MODAL.COMPLETE_TITLE' | translate" [visible]="showCompleteModal()"
+<app-daf-modal [title]="'OFFBOARDING.MODAL.COMPLETE_TITLE' | translate" [visible]="showCompleteModal()"
            [hasFooter]="true" (closed)="showCompleteModal.set(false)">
   @if (activeTask(); as t) {
     <p class="mb-3.5 text-[14px] font-semibold text-on-surface">{{ t.taskLabel }}</p>
@@ -439,10 +439,10 @@
     <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.MODAL.MARK_DONE' | translate), loading: actioning() }"
                 (onClick)="confirmComplete()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Skip task modal ────────────────────────────────────────────────────── -->
-<app-modal [title]="'OFFBOARDING.MODAL.SKIP_TITLE' | translate" [visible]="showSkipModal()"
+<app-daf-modal [title]="'OFFBOARDING.MODAL.SKIP_TITLE' | translate" [visible]="showSkipModal()"
            [hasFooter]="true" (closed)="showSkipModal.set(false)">
   @if (activeTask(); as t) {
     <p class="mb-3.5 text-[14px] font-semibold text-on-surface">{{ t.taskLabel }}</p>
@@ -458,7 +458,7 @@
                              loading: actioning(), disabled: !skipReason.trim() }"
                 (onClick)="confirmSkip()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Validate modal ─────────────────────────────────────────────────────── -->
 <app-modal [title]="'OFFBOARDING.MODAL.VALIDATE_TITLE' | translate" [visible]="showValidateModal()"
@@ -473,7 +473,7 @@
 </app-modal>
 
 <!-- ── Cancel modal ───────────────────────────────────────────────────────── -->
-<app-modal [title]="'OFFBOARDING.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()"
+<app-daf-modal [title]="'OFFBOARDING.MODAL.CANCEL_TITLE' | translate" [visible]="showCancelModal()"
            [hasFooter]="true" (closed)="showCancelModal.set(false)">
   <p class="mb-3.5 text-[14px] leading-relaxed text-on-surface">{{ 'OFFBOARDING.MODAL.CANCEL_BODY' | translate }}</p>
   <daf-form-field
@@ -486,12 +486,12 @@
     <daf-button [options]="{ variant: 'danger', label: ('OFFBOARDING.MODAL.CANCEL_CONFIRM' | translate), loading: cancelling() }"
                 (onClick)="confirmCancel()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 5 · book the exit interview ─────────────────────────────────────
      Date AND time: an interview is at a wall-clock moment, and an invitation without one is
      useless. Separate from the record-it form — booking is a promise, not an outcome. -->
-<app-modal [title]="'OFFBOARDING.KIT.SCHEDULE_TITLE' | translate" [visible]="showScheduleModal()"
+<app-daf-modal [title]="'OFFBOARDING.KIT.SCHEDULE_TITLE' | translate" [visible]="showScheduleModal()"
            [hasFooter]="true" (closed)="showScheduleModal.set(false)">
   <div class="flex flex-col gap-3.5">
     @if (scheduleError()) {
@@ -513,12 +513,12 @@
                              loading: savingSchedule(), disabled: !schedDate }"
                 (onClick)="saveSchedule()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 6 · a settlement line ───────────────────────────────────────────
      Negative amounts are valid — a STC carries deductions (avance sur salaire, matériel non
      restitué) as well as payments. -->
-<app-modal [title]="(editingLine() ? 'OFFBOARDING.SETTLEMENT.EDIT_TITLE'
+<app-daf-modal [title]="(editingLine() ? 'OFFBOARDING.SETTLEMENT.EDIT_TITLE'
                                    : 'OFFBOARDING.SETTLEMENT.ADD_TITLE') | translate"
            [visible]="showLineModal()" [hasFooter]="true" (closed)="showLineModal.set(false)">
   <div class="flex flex-col gap-3.5">
@@ -544,12 +544,12 @@
                              loading: savingLine(), disabled: !lineLabel.trim() }"
                 (onClick)="saveLine()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 7 · reopen ──────────────────────────────────────────────────────
      A reason is mandatory: this un-closes a record that has been treated as final, and the
      audit trail keeps both the original closure and this. -->
-<app-modal [title]="'OFFBOARDING.CLOSURE.REOPEN_TITLE' | translate" [visible]="showReopenModal()"
+<app-daf-modal [title]="'OFFBOARDING.CLOSURE.REOPEN_TITLE' | translate" [visible]="showReopenModal()"
            [hasFooter]="true" (closed)="showReopenModal.set(false)">
   <div class="flex flex-col gap-3.5">
     @if (reopenError()) {
@@ -568,7 +568,7 @@
                              loading: reopening(), disabled: !reopenReason.trim() }"
                 (onClick)="confirmReopen()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 7 · archive ─────────────────────────────────────────────────────
      Retention, not deletion: every row stays, the file leaves the working set. -->
@@ -590,7 +590,7 @@
      A search rather than a dropdown: the successor can be anyone in the company, and the
      employee list is paged server-side. The person leaving is filtered out of the results
      because the API refuses that case anyway. -->
-<app-modal [title]="'OFFBOARDING.HANDOVER.SUCCESSOR_MODAL_TITLE' | translate" [visible]="showSuccessorModal()"
+<app-daf-modal [title]="'OFFBOARDING.HANDOVER.SUCCESSOR_MODAL_TITLE' | translate" [visible]="showSuccessorModal()"
            [hasFooter]="true" (closed)="showSuccessorModal.set(false)">
   <div class="flex flex-col gap-3.5">
     @if (handoverError()) {
@@ -640,12 +640,12 @@
                              loading: savingHandover(), disabled: !selectedSuccessor() }"
                 (onClick)="saveSuccessor()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 3 · add a handover line ─────────────────────────────────────────
      HANDOVER is the one checklist group with no seeded rows: every departure hands over
      different work, so the list is built here per file. -->
-<app-modal [title]="'OFFBOARDING.HANDOVER.ADD_ITEM_TITLE' | translate" [visible]="showAddItemModal()"
+<app-daf-modal [title]="'OFFBOARDING.HANDOVER.ADD_ITEM_TITLE' | translate" [visible]="showAddItemModal()"
            [hasFooter]="true" (closed)="showAddItemModal.set(false)">
   <div class="flex flex-col gap-3.5">
     @if (handoverError()) {
@@ -663,12 +663,12 @@
                              loading: savingItem(), disabled: !newItemLabel.trim() }"
                 (onClick)="addChecklistItem('HANDOVER')" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 2 · manager decision ────────────────────────────────────────────
      The comment is optional: a manager with nothing to add still has to be able to
      validate, and requiring a sentence only ever produces "ok". -->
-<app-modal [title]="'OFFBOARDING.VALIDATION.MANAGER_MODAL_TITLE' | translate" [visible]="showManagerModal()"
+<app-daf-modal [title]="'OFFBOARDING.VALIDATION.MANAGER_MODAL_TITLE' | translate" [visible]="showManagerModal()"
            [hasFooter]="true" (closed)="showManagerModal.set(false)">
   @if (wf(); as w) {
     <div class="flex flex-col gap-3.5">
@@ -701,12 +701,12 @@
                              loading: savingManager() }"
                 (onClick)="saveManagerValidation()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Stage 2 · RH validation & adjustment ───────────────────────────────────
      This is where the departure date becomes final. Leaving the picker on the declared
      date means "confirm as declared"; changing it re-dates the pending asset returns. -->
-<app-modal [title]="'OFFBOARDING.VALIDATION.HR_MODAL_TITLE' | translate" [visible]="showHrModal()"
+<app-daf-modal [title]="'OFFBOARDING.VALIDATION.HR_MODAL_TITLE' | translate" [visible]="showHrModal()"
            [hasFooter]="true" (closed)="showHrModal.set(false)">
   <div class="flex flex-col gap-3.5">
     @if (hrError()) {
@@ -736,7 +736,7 @@
                              loading: savingHr(), disabled: !hrLastWorkingDay }"
                 (onClick)="saveHrValidation()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Declaration modal (stage 1) ───────────────────────────────────────────
      The only required field is the departure date: it is what marks the stage done and
@@ -744,7 +744,7 @@
      uploads through the employee's own documents (type RESIGNATION) and is reported
      separately, because that endpoint has its own permission and can fail on its own
      while the rest of the declaration still saves. -->
-<app-modal [title]="'OFFBOARDING.DECLARATION.MODAL_TITLE' | translate" [visible]="showDeclarationModal()"
+<app-daf-modal [title]="'OFFBOARDING.DECLARATION.MODAL_TITLE' | translate" [visible]="showDeclarationModal()"
            [hasFooter]="true" size="lg" (closed)="showDeclarationModal.set(false)">
   <div class="flex flex-col gap-3.5">
     @if (declarationError()) {
@@ -815,10 +815,10 @@
                              loading: savingDeclaration(), disabled: !declLastWorkingDay }"
                 (onClick)="saveDeclaration()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Confirm asset return modal — opened by the switch on an asset row ──── -->
-<app-modal [title]="'OFFBOARDING.MODAL.ASSET_TITLE' | translate" [visible]="showConfirmAssetModal()"
+<app-daf-modal [title]="'OFFBOARDING.MODAL.ASSET_TITLE' | translate" [visible]="showConfirmAssetModal()"
            [hasFooter]="true" (closed)="showConfirmAssetModal.set(false)">
   @if (activeAsset(); as a) {
     <p class="mb-3.5 text-[14px] font-semibold text-on-surface">{{ a.assetDescription }}</p>
@@ -833,10 +833,10 @@
     <daf-button [options]="{ variant: 'teal', label: ('OFFBOARDING.MODAL.ASSET_CONFIRM' | translate), loading: confirmingAsset() }"
                 (onClick)="confirmAssetReturn()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Add asset modal — was an inline form under the assets section ──────── -->
-<app-modal [title]="'OFFBOARDING.DETAIL.ASSETS_ADD' | translate" [visible]="showAssetModal()"
+<app-daf-modal [title]="'OFFBOARDING.DETAIL.ASSETS_ADD' | translate" [visible]="showAssetModal()"
            [hasFooter]="true" (closed)="showAssetModal.set(false)">
   <div class="flex flex-col gap-3.5">
     <daf-form-field
@@ -864,12 +864,12 @@
                              loading: savingAsset(), disabled: !assetDesc.trim() || !assetExpectedDate }"
                 (onClick)="saveAsset()" />
   </div>
-</app-modal>
+</app-daf-modal>
 
 <!-- ── Exit interview modal ───────────────────────────────────────────────────
      V62 — the interview is schedulable; this modal records what was said. Booking it
      scheduled date this records the interview instead, which is what it can do. -->
-<app-modal [title]="'OFFBOARDING.DETAIL.INTERVIEW_TITLE' | translate" [visible]="showInterviewModal()"
+<app-daf-modal [title]="'OFFBOARDING.DETAIL.INTERVIEW_TITLE' | translate" [visible]="showInterviewModal()"
            [hasFooter]="true" size="lg" (closed)="showInterviewModal.set(false)">
   <div class="flex flex-col gap-3.5">
     <daf-multi-date-picker
@@ -908,4 +908,4 @@
                              loading: savingInterview(), disabled: !ivDate }"
                 (onClick)="saveInterview()" />
   </div>
-</app-modal>
+</app-daf-modal>

@@ -270,6 +270,10 @@ export class RegimeOverviewComponent implements OnChanges {
     this.overrideReason   = '';
     this.noEndDate.set(true);
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.employeeName(emp),
       body: this.bodyTpl(),
       closeOnBackdrop: false,

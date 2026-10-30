@@ -341,6 +341,10 @@ export class RefDataAdminComponent implements OnChanges {
     this.noticeDays = g.noticePeriodDays ?? null;
     this.noticeTarget.set(g);
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant('ADMIN.data.refData.MODAL_NOTICE_PERIOD'),
       body: this.bodyTplNotice(),
       closeOnBackdrop: false,
@@ -580,6 +584,10 @@ export class RefDataAdminComponent implements OnChanges {
 
   openAddModal(): void {
     this.modalRef = this.modal.open({
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
       title: this.translate.instant(this.isTypeContratTab() ? 'ADMIN.data.refData.MODAL_ADD_TC' : 'ADMIN.data.refData.MODAL_ADD_ENTRY'),
       body: this.isTypeContratTab() ? this.bodyTplTypeContrat() : this.bodyTplGeneric(),
       closeOnBackdrop: false,

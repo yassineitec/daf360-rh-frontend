@@ -253,6 +253,10 @@ export class HomeComponent implements OnInit {
       icon:  DETAIL_ICONS[card],
       body:  this.detailTpl(),
       size:  'lg',
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
     });
   }
 

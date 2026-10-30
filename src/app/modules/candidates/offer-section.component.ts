@@ -7,7 +7,7 @@ import {
   StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ModalComponent } from '../../shared/modal.component';
+import { DafModalComponent } from '../../shared/daf-modal.component';
 import { SectionCardComponent } from '../../shared/detail/section-card.component';
 import { OfferService, OfferResponse, CreateOfferRequest } from '../pipeline/services/offer.service';
 import {
@@ -37,7 +37,7 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
   selector: 'app-offer-section',
   standalone: true,
   imports: [
-    ModalComponent, SectionCardComponent, ButtonComponent, FormFieldComponent,
+    DafModalComponent, SectionCardComponent, ButtonComponent, FormFieldComponent,
     MultiDatePickerComponent, StatusBadgeComponent, TranslatePipe,
   ],
   templateUrl: './offer-section.component.html',
