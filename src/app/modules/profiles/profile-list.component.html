@@ -7,14 +7,47 @@
      search text, filters, selection and paging all live in the component, which
      is why switching view keeps every one of them.
 
-     `kpis="0"` because this page has no KPI row — the default of 4 would draw
-     tiles that never resolve into anything, shifting the layout on load. -->
-<daf-page [loading]="firstLoad()" [kpis]="0">
+     `kpis="4"` (the default, spelled out) so the first-load skeleton matches the
+     KPI row below. -->
+<daf-page [loading]="firstLoad()" [kpis]="4">
 
   <!-- No `icon` — page headers carry no icon (UI-PLAYBOOK §1). -->
   <daf-page-header
     [title]="'PROFILES.LIST.TITLE' | translate"
     [subtitle]="'PROFILES.LIST.SUBTITLE' | translate" />
+
+  <!-- All four come from /employees/stats and follow the pays filter only: the search
+       and the other filters leave them alone. -->
+  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+    <daf-metric-card
+      [label]="'PROFILES.KPI.TOTAL' | translate"
+      [value]="stats()?.total ?? '—'"
+      [options]="{ icon: 'groups', iconColor: 'text-primary', iconBg: 'bg-primary/10',
+                   help: ('PROFILES.KPI.TOTAL_HELP' | translate) }" />
+
+    <!-- Hired over the last 3 months, today included. -->
+    <daf-metric-card
+      [label]="'PROFILES.KPI.RECENT_HIRES' | translate"
+      [value]="stats()?.recentHires ?? '—'"
+      [options]="{ icon: 'person_add', iconColor: 'text-secondary', iconBg: 'bg-secondary/10',
+                   help: ('PROFILES.KPI.RECENT_HIRES_HELP' | translate) }" />
+
+    <!-- The three in-service statuses: who is at their post, then who is away from it.
+         Profile-less accounts have no status, so the three can sum below card 1. -->
+    <daf-split-value-card
+      [primaryLabel]="'PROFILES.KPI.ACTIVE' | translate"
+      [primaryValue]="stats()?.active ?? '—'"
+      [secondaryValues]="statusSplit()"
+      [options]="{ icon: 'badge', iconColor: 'text-tertiary', iconBg: 'bg-tertiary/10' }" />
+
+    <!-- Contracts by nature: CDI as the headline, CDD and every other type beside it.
+         Profile-less accounts have no contract, so the three can sum below card 1. -->
+    <daf-split-value-card
+      [primaryLabel]="'PROFILES.KPI.CDI' | translate"
+      [primaryValue]="stats()?.cdi ?? '—'"
+      [secondaryValues]="contractSplit()"
+      [options]="{ icon: 'contract', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
+  </section>
 
   <daf-search-toolbar
     [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
