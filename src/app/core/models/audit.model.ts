@@ -1,11 +1,12 @@
 export interface AuditLog {
   id: number;
-  actorId: string;
+  source: 'EVENT_LOG' | 'GENERIC';
+  actor: string | null;
   action: string;
-  entity: string;
-  entityId: number | null;
-  beforeValue: string | null;
-  afterValue: string | null;
+  entityType: string;
+  entityId: string | null;
+  oldValue: string | null;
+  newValue: string | null;
   ip: string | null;
-  createdAt: string;
+  timestamp: string;
 }

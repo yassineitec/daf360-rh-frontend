@@ -10,7 +10,7 @@ import { Page } from '../../core/models/page.model';
     <div class="page-header">
       <div>
         <h2 class="page-title">Audit Log</h2>
-        <p class="page-subtitle">Full history of HR actions</p>
+        <p class="page-subtitle">Full history of HR actions — business events and raw field changes</p>
       </div>
     </div>
 
@@ -27,6 +27,7 @@ import { Page } from '../../core/models/page.model';
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Source</th>
                 <th>Actor</th>
                 <th>Action</th>
                 <th>Entity</th>
@@ -35,16 +36,21 @@ import { Page } from '../../core/models/page.model';
               </tr>
             </thead>
             <tbody>
-              @for (log of page()!.content; track log.id) {
+              @for (log of page()!.content; track log.source + ':' + log.id) {
                 <tr>
-                  <td class="text-muted mono">{{ log.createdAt.slice(0,16).replace('T',' ') }}</td>
+                  <td class="text-muted mono">{{ log.timestamp.slice(0,16).replace('T',' ') }}</td>
                   <td>
-                    <span class="mono" style="font-size:0.75rem">{{ log.actorId }}</span>
+                    <span class="badge" [class.badge-dark]="log.source === 'EVENT_LOG'">
+                      {{ log.source === 'EVENT_LOG' ? 'Event' : 'Field change' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="mono" style="font-size:0.75rem">{{ log.actor ?? '—' }}</span>
                   </td>
                   <td>
                     <span class="badge badge-dark">{{ log.action }}</span>
                   </td>
-                  <td>{{ log.entity }}</td>
+                  <td>{{ log.entityType }}</td>
                   <td class="mono">{{ log.entityId ?? '—' }}</td>
                   <td class="text-muted">{{ log.ip ?? '—' }}</td>
                 </tr>
