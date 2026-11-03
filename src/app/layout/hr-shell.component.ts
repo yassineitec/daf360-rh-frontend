@@ -39,6 +39,13 @@ const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'accueil', labelKey: 'NAV.ACCUEIL', icon: 'home', route: 'accueil', permissions: [] },
   { id: 'profiles', labelKey: 'NAV.PROFILES', icon: 'account_circle', route: 'profiles', permissions: [] },
   {
+    id: 'audit',
+    labelKey: 'NAV.AUDIT',
+    icon: 'history',
+    route: 'audit',
+    permissions: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'],
+  },
+  {
     id: 'recrutement',
     labelKey: 'NAV.PIPELINE',
     icon: 'analytics',

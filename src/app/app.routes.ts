@@ -156,6 +156,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/requests/requests.routes').then(m => m.REQUESTS_ROUTES),
       },
+      {
+        path: 'audit',
+        canActivate: [permissionGuard],
+        data: { permissions: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'] },
+        loadChildren: () =>
+          import('./features/audit/audit.routes').then(m => m.AUDIT_ROUTES),
+      },
       // Historique des demandes (HR requests + recruitment demands). Was /rh/recruitment-demands —
       // the old URL still redirects, so bookmarks and already-sent notification links keep working.
       { path: 'recruitment-demands', redirectTo: 'requests-history', pathMatch: 'full' },
