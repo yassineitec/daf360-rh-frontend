@@ -5105,8 +5105,18 @@
       "APPROVERS_HINT": "Si aucun rôle n'est choisi, la hiérarchie habituelle s'applique.",
       "APPROVERS_NONE": "Aucun — hiérarchie par défaut",
       "APPROVERS_DEFAULT": "Hiérarchie",
-      "SEC_INERT": "Stocké, non appliqué",
-      "INERT_HINT": "Ces deux champs sont enregistrés mais ne sont appliqués par aucun contrôle aujourd'hui.",
+      "GENDER_HINT": "Le type n'est proposé qu'à ce genre (profil RH). Un collaborateur sans genre renseigné le voit quand même.",
+      "STRATEGY_NO_ROLE": "Choisissez au moins un rôle validateur : sans rôle, la hiérarchie habituelle s'applique et la stratégie n'a pas d'effet.",
+      "STRATEGIES": {
+        "TOP_OF_HIERARCHY": "Hiérarchie (au-dessus du collaborateur)",
+        "ROLE_MATCH": "Rôle, même entité",
+        "SAME_COUNTRY_FIRST": "Rôle, même entité d'abord"
+      },
+      "STRATEGIES_HINT": {
+        "TOP_OF_HIERARCHY": "Proposés : les titulaires de ces rôles situés AU-DESSUS du collaborateur dans l'organigramme, dans son entité. Un rôle racine (ex. PDG) compte quelle que soit l'entité.",
+        "ROLE_MATCH": "Proposés : tous les titulaires de ces rôles dans l'entité du collaborateur, qu'ils soient au-dessus de lui ou non (ex. RH pour la maladie).",
+        "SAME_COUNTRY_FIRST": "Proposés : les titulaires de ces rôles dans l'entité du collaborateur ; s'il n'y en a aucun, ceux des autres entités."
+      },
       "ALLOWED_GENDER": "Genre autorisé",
       "STRATEGY": "Stratégie de validation",
       "GENDER": {

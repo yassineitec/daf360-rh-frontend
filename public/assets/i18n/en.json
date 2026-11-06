@@ -5105,8 +5105,18 @@
       "APPROVERS_HINT": "With no role chosen, the usual hierarchy applies.",
       "APPROVERS_NONE": "None — default hierarchy",
       "APPROVERS_DEFAULT": "Hierarchy",
-      "SEC_INERT": "Stored, not enforced",
-      "INERT_HINT": "Both fields are saved but checked by nothing today.",
+      "GENDER_HINT": "The type is offered to this gender only (HR profile). An employee with no gender recorded still sees it.",
+      "STRATEGY_NO_ROLE": "Pick at least one approver role: with none, the usual hierarchy applies and the strategy has no effect.",
+      "STRATEGIES": {
+        "TOP_OF_HIERARCHY": "Hierarchy (above the employee)",
+        "ROLE_MATCH": "Role, same entity",
+        "SAME_COUNTRY_FIRST": "Role, same entity first"
+      },
+      "STRATEGIES_HINT": {
+        "TOP_OF_HIERARCHY": "Offered: holders of these roles ABOVE the employee in the org chart, in their entity. A root role (e.g. CEO) counts whatever the entity.",
+        "ROLE_MATCH": "Offered: every holder of these roles in the employee's entity, above them or not (e.g. HR for sick leave).",
+        "SAME_COUNTRY_FIRST": "Offered: holders of these roles in the employee's entity; if there are none, those of other entities."
+      },
       "ALLOWED_GENDER": "Allowed gender",
       "STRATEGY": "Approval strategy",
       "GENDER": {
