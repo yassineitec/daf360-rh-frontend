@@ -17,7 +17,7 @@
 
   <!-- KPIs — one row at every width, never wraps. The bespoke mobile stat strip
        is gone: three metric cards at grid-cols-3 gap-2 cover both widths. -->
-  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-3 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'PIPELINE.KPI_TOTAL' | translate"
       [value]="totalMetricValue()"
@@ -40,6 +40,7 @@
   <!-- Search + filters + view toggle: one lib toolbar, one card. Replaces the
        hand-rolled search card, its mobile search toggle and the bespoke
        kanban/list button pair. The stage dropdown lives inside the filter panel. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'PIPELINE.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -52,6 +53,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (actionError()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -73,6 +75,7 @@
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
        Each section renders only at its own breakpoint (host class), so there is
        no duplicated desktop/mobile tree here (§8b). -->
+  <div data-guide="board">
   @if (viewMode() === 'kanban') {
     <rh-pipeline-board-section
       [columns]="boardColumns()"
@@ -92,6 +95,7 @@
       (sortChange)="listSort.set($event)"
       (open)="onView($event)" />
   }
+  </div>
 
   <!-- Mobile is always the card list: a horizontal board and a data table are
        both unusable at that width. -->
@@ -126,3 +130,5 @@
   [error]="refuseError()"
   (closed)="closeRefuseModal()"
   (submit)="submitRefuse($event)" />
+
+<rh-page-guide storageKey="candidates" [steps]="guideSteps" />

@@ -2,6 +2,8 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import { catchError, of } from 'rxjs';
 import {
   BreadcrumbItem,
@@ -73,6 +75,14 @@ interface DetailField {
   iconBg: string;
 }
 
+/** Steps of the page guide, started from « Aide & guides » on a hiring request. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'REQUESTS_GUIDE.DEMAND.WELCOME.TITLE', textKey: 'REQUESTS_GUIDE.DEMAND.WELCOME.TEXT' },
+  { icon: 'work', titleKey: 'REQUESTS_GUIDE.DEMAND.HEADER.TITLE', textKey: 'REQUESTS_GUIDE.DEMAND.HEADER.TEXT', target: 'header' },
+  { icon: 'gavel', titleKey: 'REQUESTS_GUIDE.DEMAND.DECIDE.TITLE', textKey: 'REQUESTS_GUIDE.DEMAND.DECIDE.TEXT' },
+  { icon: 'help', titleKey: 'REQUESTS_GUIDE.DEMAND.END.TITLE', textKey: 'REQUESTS_GUIDE.DEMAND.END.TEXT' },
+];
+
 /** One icon + tone per field, so the KPI-style cards read as illustrated tiles rather
  *  than a plain label/value list. */
 const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: string }> = {
@@ -94,6 +104,7 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
   imports: [
     ButtonComponent, CardComponent, FormFieldComponent, PageComponent, PageHeaderComponent,
     StatusBadgeComponent, DatePipe, TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     <!-- Same daf-page/daf-page-header scaffold as the other detail pages (candidates,
@@ -101,7 +112,7 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
          on the title line — no hand-rolled header markup. -->
     <daf-page [loading]="loading()" [kpis]="0" [breadcrumbs]="true">
 
-      <daf-page-header
+      <daf-page-header data-guide="header"
         [title]="demand()?.jobTitle ?? ('RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate)"
         [subtitle]="departmentLabel()"
         [badges]="headerBadges()"
@@ -285,6 +296,8 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
         </div>
       }
     </daf-page>
+
+    <rh-page-guide storageKey="recruitment-demand" [steps]="guideSteps" />
   `,
   styles: [`
     /* Airy, high-end feel: a very light grey canvas behind the white/glass cards, same
@@ -301,6 +314,8 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
   `],
 })
 export class RecruitmentDemandDetailComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   private route     = inject(ActivatedRoute);
   private router    = inject(Router);
   private svc       = inject(RecruitmentDemandService);

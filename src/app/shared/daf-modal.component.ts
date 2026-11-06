@@ -62,17 +62,22 @@ export class DafModalComponent {
   private modalRef: ModalRef | null = null;
 
   constructor() {
+    // bodyTpl read here, not in open(): created already visible, the modal waits for the
+    // view query to resolve instead of never opening.
     effect(() => {
       const show = this.visible();
-      untracked(() => (show ? this.open() : this.modalRef?.close()));
+      const tpl  = this.bodyTpl();
+      untracked(() => {
+        if (show && tpl) this.open(tpl);
+        else if (!show) this.modalRef?.close();
+      });
     });
     // The modal lives in <body>: leaving the page must not leave it behind.
     inject(DestroyRef).onDestroy(() => this.modalRef?.close());
   }
 
-  private open(): void {
-    const tpl = this.bodyTpl();
-    if (!tpl || this.modalRef) return;
+  private open(tpl: TemplateRef<unknown>): void {
+    if (this.modalRef) return;
 
     // Getter, not a value: the modal host re-reads it, so a title that depends on the
     // caller's state (approve / reject, add / edit) follows it like the old binding did.

@@ -34,6 +34,7 @@
          (rgba(0,193,173,.12) + #00c1ad on the tile, rgba(121,215,190,.06) behind
          it), none of which any token backed (§4). -->
     <rh-wizard-step-card
+      data-guide="form"
       class="flex-1 min-w-0"
       variant="outlined"
       accent="tertiary"
@@ -175,7 +176,6 @@
               <daf-form-field
                 [options]="{
                   label: ('CANDIDATES.FORM.POSITION' | translate),
-                  required: true,
                   placeholder: ('CANDIDATES.FORM.POSITION_PH' | translate),
                   prefixIcon: 'work_outline',
                   error: getFieldError('position.appliedPosition'),
@@ -306,7 +306,7 @@
             [(files)]="cvFiles"
             [config]="{
               accept: '.pdf,.doc,.docx',
-              maxSizeMb: 5,
+              maxSizeMb: 10,
               hint: ('CANDIDATES.FORM.CV_HINT' | translate),
             }"
           />
@@ -347,7 +347,7 @@
     <!-- ══════════════════ Sidebar (desktop) ══════════════════ -->
     <aside class="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 gap-4 lg:sticky lg:top-6">
       <!-- Nav buttons -->
-      <div class="flex items-stretch gap-2">
+      <div data-guide="actions" class="flex items-stretch gap-2">
         <div class="flex-1">
           @if (currentStep() > 1) {
             <daf-button
@@ -392,7 +392,7 @@
       </div>
 
       <!-- Progression -->
-      <daf-card class="block" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
+      <daf-card data-guide="progress" class="block" [options]="{ variant: 'outlined', padding: 'none', radius: 'xl' }">
         <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low">
           <p class="text-[10px] font-bold uppercase tracking-wider text-outline">
             {{ 'CANDIDATES.FORM.PROGRESS' | translate }}
@@ -581,3 +581,6 @@
     />
   </div>
 </div>
+
+<!-- The guide shows each wizard step in turn (tabChange carries the step number). -->
+<rh-page-guide storageKey="candidate-new" [steps]="guideSteps" (tabChange)="onGuideStep($event)" />

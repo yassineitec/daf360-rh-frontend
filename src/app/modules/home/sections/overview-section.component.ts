@@ -38,19 +38,19 @@ export type WorkforceCardKey = 'workforce' | 'ingproj' | 'seniority';
          at the top of a two-row-tall box and left the rest blank. Split in two, each card
          is one row tall and follows its stat-card neighbours. -->
     <div class="hidden md:grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-1">
+      <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-1" data-guide="missing-docs">
         <rh-missing-docs-card
           [alerts]="missingDocsAlerts()"
           [total]="missingDocsTotal()" />
       </div>
-      <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-2">
+      <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-2" data-guide="probation">
         <rh-probation-card
           [alerts]="probationAlerts()"
           [total]="probationTotal()" />
       </div>
       <!-- The three workforce cards open a detail pop-up (owned by the page) where they
            can be filtered by department. -->
-      <div class="min-w-0 cursor-pointer" role="button" tabindex="0"
+      <div class="min-w-0 cursor-pointer" role="button" tabindex="0" data-guide="workforce"
            [attr.aria-label]="'HOME.OPEN_DETAIL' | translate"
            (click)="cardOpen.emit('workforce')" (keydown.enter)="cardOpen.emit('workforce')">
         <rh-workforce-stats
@@ -83,7 +83,7 @@ export type WorkforceCardKey = 'workforce' | 'ingproj' | 'seniority';
           [confirmes]="confirmes()"
           [seniors]="seniors()" />
       </div>
-      <div class="min-w-0">
+      <div class="min-w-0" data-guide="completion">
         <rh-profile-completion
           [tauxGlobalPct]="tauxGlobalPct()"
           [dossiersIncomplets]="dossiersIncomplets()" />

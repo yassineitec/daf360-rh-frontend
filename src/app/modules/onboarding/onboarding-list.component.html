@@ -10,7 +10,7 @@
 
   <!-- KPIs — one row at every width. The "temps moyen" tile used `text-amber` /
        `bg-amber/10`, which renders nothing: `amber` is not a token (§4). -->
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'ONBOARDING.LIST.KPI_PENDING' | translate"
       [value]="kpiPending()"
@@ -39,6 +39,7 @@
   <!-- Search + status filter + view toggle: one lib toolbar, one card, one
        breakpoint. Replaces the hand-built card that held a desktop search box, a
        mobile search toggle, a square refresh button and a grid/list button pair. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'ONBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -51,6 +52,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
@@ -62,6 +64,7 @@
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
        Both views render at every width now: the cards grid goes 1 → 2 → 3
        columns, and the table scrolls horizontally inside daf-data-table. -->
+  <div data-guide="items">
   @if (viewMode() === 'grid') {
     <rh-onboarding-cards-section
       [items]="pagedItems()"
@@ -76,6 +79,7 @@
       (sortChange)="onSortChange($event)"
       (open)="open($event)" />
   }
+  </div>
 
   @if (totalPages() > 0) {
     <daf-pagination
@@ -89,3 +93,5 @@
   }
 
 </daf-page>
+
+<rh-page-guide storageKey="onboarding" [steps]="guideSteps" />

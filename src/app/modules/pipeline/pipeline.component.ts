@@ -17,6 +17,8 @@ import {
 } from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../core/user.store';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   BOARD_STAGES,
   BoardColumn,
@@ -40,6 +42,19 @@ const SPONTANEOUS = 'SPONTANEOUS';
 
 /** Minimum fit-score choices of the filter panel (percent). */
 const MIN_FIT_OPTIONS = [50, 70, 85];
+
+/**
+ * Steps of the page guide, started from « Aide & guides ». Each `target` is a
+ * `data-guide` anchor in the template; the board steps point at whichever view is shown.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand',  titleKey: 'CANDIDATES_BOARD.GUIDE.WELCOME.TITLE', textKey: 'CANDIDATES_BOARD.GUIDE.WELCOME.TEXT' },
+  { icon: 'monitoring',   titleKey: 'CANDIDATES_BOARD.GUIDE.KPIS.TITLE',    textKey: 'CANDIDATES_BOARD.GUIDE.KPIS.TEXT',    target: 'kpis' },
+  { icon: 'search',       titleKey: 'CANDIDATES_BOARD.GUIDE.TOOLBAR.TITLE', textKey: 'CANDIDATES_BOARD.GUIDE.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'view_kanban',  titleKey: 'CANDIDATES_BOARD.GUIDE.BOARD.TITLE',   textKey: 'CANDIDATES_BOARD.GUIDE.BOARD.TEXT',   target: 'board' },
+  { icon: 'send',         titleKey: 'CANDIDATES_BOARD.GUIDE.ACTIONS.TITLE', textKey: 'CANDIDATES_BOARD.GUIDE.ACTIONS.TEXT', target: 'board' },
+  { icon: 'help',         titleKey: 'CANDIDATES_BOARD.GUIDE.END.TITLE',     textKey: 'CANDIDATES_BOARD.GUIDE.END.TEXT' },
+];
 
 /**
  * /rh/candidates — the recruitment board (Préqualification / Entretien / Offre /
@@ -74,6 +89,7 @@ const MIN_FIT_OPTIONS = [50, 70, 85];
     PipelineTableSectionComponent,
     PipelineMobileSectionComponent,
     RefuseOfferModalComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './pipeline.component.html',
@@ -84,6 +100,8 @@ export class PipelineComponent implements OnInit {
   private userStore       = inject(UserStore);
   private router          = inject(Router);
   private translate       = inject(TranslateService);
+
+  readonly guideSteps = GUIDE_STEPS;
 
   // ── Data ───────────────────────────────────────────────────────────────────
   private readonly rawColumns = signal<KanbanColumn[]>([]);

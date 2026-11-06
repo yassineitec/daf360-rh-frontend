@@ -54,7 +54,7 @@
     <div class="flex flex-col gap-8 pb-32 lg:flex-row">
 
       <!-- ── Left: identity + tracker, always on screen ── -->
-      <div class="lg:w-[32%] lg:shrink-0">
+      <div data-guide="card" class="lg:w-[32%] lg:shrink-0">
         <div class="flex flex-col gap-6 lg:sticky lg:top-6">
 
           <!-- Identity card — the profile page's shell: photo with the circular
@@ -265,7 +265,7 @@
              three lines — which is what knocked the circles off the progress track.
              `min-w-[640px]` is 8 × 80px, the same per-step budget those two rails get;
              below that the rail scrolls instead of crushing itself. -->
-        <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
+        <daf-card data-guide="stepper" [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
           <div class="overflow-x-auto">
             <div class="min-w-[640px]">
               <daf-stepper
@@ -282,7 +282,7 @@
 
              --color-primary is scoped to tertiary so every daf360 control inside
              (form-field / select / date-picker) renders green borders & lines. -->
-        <rh-section-card
+        <rh-section-card data-guide="step"
           [title]="currentStepLabel()" [icon]="currentStepIcon()" tone="text-primary"
           accent="primary">
           <div class="min-h-64" style="--color-primary: var(--color-tertiary);">
@@ -329,7 +329,7 @@
      /rh/profiles/:id (§10f): pin to the viewport, centre the content on the page's
      own max-width, and let `pointer-events` keep the gutters click-through. -->
 <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
-  <div class="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3
+  <div data-guide="actions" class="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3
               rounded-xl border border-outline-variant bg-surface-container-lowest p-4
               shadow-[0_-4px_24px_rgba(0,0,0,0.12)]">
     <div class="flex items-center gap-2">
@@ -373,3 +373,6 @@
     (closed)="showConfirmModal.set(false)"
   />
 }
+
+<!-- The guide shows each wizard step in turn (tabChange carries the step number). -->
+<rh-page-guide storageKey="onboarding-file" [steps]="guideSteps" (tabChange)="onGuideStep($event)" />

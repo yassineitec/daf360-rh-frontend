@@ -1,6 +1,8 @@
 import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
   FilterResult,
@@ -46,6 +48,19 @@ type ViewMode = 'grid' | 'list';
 /** The pricing filter — replaces a status filter, meaningless on a single-status queue. */
 type PricedFilter = '' | 'priced' | 'unpriced';
 
+/** Steps of the page guide; `tab` opens « À traiter » ('queue') or « Demandes » ('requests'). */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'BILLETERIE_GUIDE.WELCOME.TITLE', textKey: 'BILLETERIE_GUIDE.WELCOME.TEXT', tab: 'queue' },
+  { icon: 'monitoring', titleKey: 'BILLETERIE_GUIDE.KPIS.TITLE', textKey: 'BILLETERIE_GUIDE.KPIS.TEXT', target: 'kpis', tab: 'queue' },
+  { icon: 'tab', titleKey: 'BILLETERIE_GUIDE.TABS.TITLE', textKey: 'BILLETERIE_GUIDE.TABS.TEXT', target: 'tabs', tab: 'queue' },
+  { icon: 'search', titleKey: 'BILLETERIE_GUIDE.TOOLBAR.TITLE', textKey: 'BILLETERIE_GUIDE.TOOLBAR.TEXT', target: 'toolbar', tab: 'queue' },
+  { icon: 'flight_takeoff', titleKey: 'BILLETERIE_GUIDE.ITEMS.TITLE', textKey: 'BILLETERIE_GUIDE.ITEMS.TEXT', target: 'items', tab: 'queue' },
+  { icon: 'payments', titleKey: 'BILLETERIE_GUIDE.PRICE.TITLE', textKey: 'BILLETERIE_GUIDE.PRICE.TEXT', tab: 'queue' },
+  { icon: 'gavel', titleKey: 'BILLETERIE_GUIDE.DECIDE.TITLE', textKey: 'BILLETERIE_GUIDE.DECIDE.TEXT', tab: 'queue' },
+  { icon: 'edit_calendar', titleKey: 'BILLETERIE_GUIDE.REQUESTS.TITLE', textKey: 'BILLETERIE_GUIDE.REQUESTS.TEXT', target: 'requests', tab: 'requests' },
+  { icon: 'help', titleKey: 'BILLETERIE_GUIDE.END.TITLE', textKey: 'BILLETERIE_GUIDE.END.TEXT', tab: 'queue' },
+];
+
 /**
  * `/rh/billeterie` — RH's desk, in the canonical list shape (§1) so it reads like
  * `/rh/it-provisioning`: KPI row, `daf-search-toolbar` with a filter panel and a
@@ -67,11 +82,18 @@ type PricedFilter = '' | 'priced' | 'unpriced';
     SearchToolbarComponent, TabsComponent, BilleterieCardsSectionComponent,
     BilleterieTableSectionComponent, ChangeRequestsTableSectionComponent,
     MissionExpenseModalComponent, MissionDecisionModalComponent,
-    MissionDetailDrawerComponent, TranslatePipe,
+    MissionDetailDrawerComponent, TranslatePipe, PageGuideComponent,
   ],
   templateUrl: './billeterie.component.html',
 })
 export class BilleterieComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** The guide opens a step's tab (its `tab`). */
+  onGuideTab(id: string): void {
+    if (id === 'queue' || id === 'requests') this.activeTab.set(id);
+  }
+
   /** Table view only (undefined in cards view and on the change-requests tab) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(BilleterieTableSectionComponent);
 

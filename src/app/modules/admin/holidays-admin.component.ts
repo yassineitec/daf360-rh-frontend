@@ -23,8 +23,23 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const PAGE_SIZE = 10;
+
+/**
+ * Guide of the « Jours fériés » card, started from « Aide & guides ». `tab` = the view
+ * ('table' | 'calendar') the step needs — see `onGuideTab`.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'event', titleKey: 'ADMIN_HOLIDAYS_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_HOLIDAYS_GUIDE.WELCOME.TEXT' },
+  { icon: 'search', titleKey: 'ADMIN_HOLIDAYS_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_HOLIDAYS_GUIDE.TOOLBAR.TEXT', target: 'holidays-toolbar' },
+  { icon: 'add', titleKey: 'ADMIN_HOLIDAYS_GUIDE.ADD.TITLE', textKey: 'ADMIN_HOLIDAYS_GUIDE.ADD.TEXT', target: 'holidays-add' },
+  { icon: 'table_rows', titleKey: 'ADMIN_HOLIDAYS_GUIDE.TABLE.TITLE', textKey: 'ADMIN_HOLIDAYS_GUIDE.TABLE.TEXT', target: 'holidays-table', tab: 'table' },
+  { icon: 'calendar_month', titleKey: 'ADMIN_HOLIDAYS_GUIDE.CALENDAR.TITLE', textKey: 'ADMIN_HOLIDAYS_GUIDE.CALENDAR.TEXT', target: 'holidays-calendar', tab: 'calendar' },
+  { icon: 'help', titleKey: 'ADMIN_HOLIDAYS_GUIDE.END.TITLE', textKey: 'ADMIN_HOLIDAYS_GUIDE.END.TEXT' },
+];
 
 /**
  * What each holiday column sorts on. No entry for "Pays": the table always shows one
@@ -47,9 +62,11 @@ const DEFAULT_BADGE_COLOR = '#b45309';
     SpinnerComponent, MultiDatePickerComponent, HolidayCalendarComponent,
     FormFieldComponent, ToggleComponent, ButtonComponent, SelectComponent,
     DataTableComponent, DafCellDirective, PaginationComponent, SearchToolbarComponent,
-    TranslatePipe,
+    TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-holidays" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />
+
     <div class="section-header">
       <div>
         <h3 class="col-title">{{ 'ADMIN.catalog.holidays.title' | translate }}</h3>
@@ -75,7 +92,7 @@ const DEFAULT_BADGE_COLOR = '#b45309';
          toggle, « Ajouter », and [table] puts reset + column picker on the right. The bar
          handles its own mobile layout — no separate search toggle any more. The search filters
          the table only; the calendar always shows the whole year. -->
-    <daf-search-toolbar class="mb-4 block"
+    <daf-search-toolbar class="mb-4 block" data-guide="holidays-toolbar"
       [placeholder]="'ADMIN.catalog.holidays.searchPlaceholder' | translate"
       [value]="searchQuery()"
       [debounce]="200"
@@ -84,7 +101,7 @@ const DEFAULT_BADGE_COLOR = '#b45309';
       [view]="viewMode()"
       (viewChange)="viewMode.set($any($event))"
       [table]="table() ?? null">
-      <daf-button
+      <daf-button data-guide="holidays-add"
         [label]="'ADMIN.catalog.holidays.add' | translate"
         variant="teal"
         [options]="{ iconStart: 'add' }"
@@ -96,7 +113,7 @@ const DEFAULT_BADGE_COLOR = '#b45309';
       <!-- Calendar view — month-grid, same visual language as the portal's /home calendar.
            Clicking an empty date opens "Ajouter" prefilled with that date; clicking an
            already-marked day opens it directly for editing. -->
-      <div class="calendar-wrap">
+      <div class="calendar-wrap" data-guide="holidays-calendar">
         <app-holiday-calendar
           [holidays]="holidays()"
           [paysIsoCode]="paysIsoCode()"
@@ -111,7 +128,7 @@ const DEFAULT_BADGE_COLOR = '#b45309';
         <div class="empty-state"><p>{{ 'ADMIN.catalog.holidays.empty' | translate:{ year: selectedYear } }}</p></div>
       } @else {
         <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
-        <div class="table-scroll">
+        <div class="table-scroll" data-guide="holidays-table">
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                         (sortChange)="onSortChange($event.key, $event.dir)"
                         (resetClick)="onSortChange('', null)">
@@ -277,6 +294,14 @@ export class HolidaysAdminComponent implements OnChanges {
   searchQuery = signal('');
   selectedYear = new Date().getFullYear();
   viewMode = signal<'table' | 'calendar'>('table');
+
+  /** Steps of the card's page guide. */
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** A guide step asks for a view (its `tab`): switch to it before the target is measured. */
+  onGuideTab(id: string): void {
+    if (id === 'table' || id === 'calendar') this.viewMode.set(id);
+  }
 
   /** The table (absent while loading, empty or in calendar view) — fed to the toolbar's `[table]`. */
   readonly table = viewChild(DataTableComponent);

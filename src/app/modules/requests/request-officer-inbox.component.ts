@@ -18,6 +18,8 @@ import { DafModalComponent } from '../../shared/daf-modal.component';
 import { UserStore }             from '../../core/user.store';
 import { ConfirmService } from '../../core/confirm.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const SLA_VARIANTS: Record<SlaLevel, BadgeOptions['variant']> = {
   ok: 'success', warning: 'warning', critical: 'danger', none: 'neutral',
@@ -37,12 +39,21 @@ const SERVER_SORT_FIELD: Record<string, string> = {
   status:    'status',
 };
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'inbox', titleKey: 'REQ_INBOX_GUIDE.WELCOME.TITLE', textKey: 'REQ_INBOX_GUIDE.WELCOME.TEXT' },
+  { icon: 'filter_list', titleKey: 'REQ_INBOX_GUIDE.FILTERS.TITLE', textKey: 'REQ_INBOX_GUIDE.FILTERS.TEXT', target: 'filters' },
+  { icon: 'table_rows', titleKey: 'REQ_INBOX_GUIDE.TABLE.TITLE', textKey: 'REQ_INBOX_GUIDE.TABLE.TEXT', target: 'table' },
+  { icon: 'help', titleKey: 'REQ_INBOX_GUIDE.END.TITLE', textKey: 'REQ_INBOX_GUIDE.END.TEXT' },
+];
+
 @Component({
   selector: 'app-request-officer-inbox',
   standalone: true,
   imports: [
     RouterLink, FormsModule, StatusBadgeComponent, ButtonComponent, DafModalComponent, CardComponent,
     DataTableComponent, DafCellDirective, PaginationComponent, TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     <div class="page-header">
@@ -54,7 +65,7 @@ const SERVER_SORT_FIELD: Record<string, string> = {
     </div>
 
     <!-- Filters -->
-    <div class="filters-bar">
+    <div class="filters-bar" data-guide="filters">
       <select class="filter-select" [(ngModel)]="filterStatus" (ngModelChange)="reload()">
         <option value="">{{ 'REQUESTS.INBOX.FILTER_ALL' | translate }}</option>
         <option value="SUBMITTED">{{ 'REQUESTS.INBOX.FILTER_SUBMITTED' | translate }}</option>
@@ -71,7 +82,7 @@ const SERVER_SORT_FIELD: Record<string, string> = {
     }
 
     <!-- Table -->
-    <daf-card class="table-card" [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
+    <daf-card class="table-card" data-guide="table" [options]="{ variant: 'glass', padding: 'none', radius: 'xl' }">
       @if (loading()) {
         <div class="loading-rows">
           @for (_ of [1,2,3,4]; track $index) { <div class="skeleton-row"></div> }
@@ -136,10 +147,14 @@ const SERVER_SORT_FIELD: Record<string, string> = {
         />
       </div>
     </app-daf-modal>
+
+    <rh-page-guide storageKey="requests-inbox" [steps]="guideSteps" />
   `,
   styleUrl: './request-officer-inbox.component.scss',
 })
 export class RequestOfficerInboxComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   private svc       = inject(RequestsService);
   private confirm = inject(ConfirmService);
   private userStore = inject(UserStore);

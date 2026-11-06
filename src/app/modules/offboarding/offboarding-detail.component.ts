@@ -43,6 +43,29 @@ import { StagePayrollComponent } from './stages/stage-payroll.component';
 import { StageClosureComponent } from './stages/stage-closure.component';
 import { StageReservedComponent } from './stages/stage-reserved.component';
 import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/**
+ * Steps of the page guide, started from « Aide & guides » on a departure file. `tab` is a
+ * stage code to show (see `onGuideStage`); 'START' / 'RESTORE' bracket the tour so the
+ * file is left on the stage it was opened on.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'OFFBOARDING_GUIDE.FILE.WELCOME.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.WELCOME.TEXT', tab: 'START' },
+  { icon: 'bolt', titleKey: 'OFFBOARDING_GUIDE.FILE.HEADER.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.HEADER.TEXT', target: 'header' },
+  { icon: 'badge', titleKey: 'OFFBOARDING_GUIDE.FILE.CARD.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.CARD.TEXT', target: 'card' },
+  { icon: 'linear_scale', titleKey: 'OFFBOARDING_GUIDE.FILE.RAIL.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.RAIL.TEXT', target: 'rail' },
+  { icon: 'edit_document', titleKey: 'OFFBOARDING_GUIDE.FILE.DECLARATION.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.DECLARATION.TEXT', target: 'stage', tab: 'DECLARATION' },
+  { icon: 'verified', titleKey: 'OFFBOARDING_GUIDE.FILE.VALIDATION.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.VALIDATION.TEXT', target: 'stage', tab: 'VALIDATION' },
+  { icon: 'swap_horiz', titleKey: 'OFFBOARDING_GUIDE.FILE.HANDOVER.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.HANDOVER.TEXT', target: 'stage', tab: 'HANDOVER' },
+  { icon: 'devices', titleKey: 'OFFBOARDING_GUIDE.FILE.IT_ASSETS.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.IT_ASSETS.TEXT', target: 'stage', tab: 'IT_ASSETS' },
+  { icon: 'folder_shared', titleKey: 'OFFBOARDING_GUIDE.FILE.HR_DOCS.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.HR_DOCS.TEXT', target: 'stage', tab: 'HR_DOCS' },
+  { icon: 'payments', titleKey: 'OFFBOARDING_GUIDE.FILE.PAYROLL.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.PAYROLL.TEXT', target: 'stage', tab: 'PAYROLL' },
+  { icon: 'task_alt', titleKey: 'OFFBOARDING_GUIDE.FILE.CLOSURE.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.CLOSURE.TEXT', target: 'stage', tab: 'CLOSURE' },
+  { icon: 'swap_vert', titleKey: 'OFFBOARDING_GUIDE.FILE.BAR.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.BAR.TEXT', target: 'bar' },
+  { icon: 'help', titleKey: 'OFFBOARDING_GUIDE.FILE.END.TITLE', textKey: 'OFFBOARDING_GUIDE.FILE.END.TEXT', tab: 'RESTORE' },
+];
 
 /**
  * `/rh/offboarding/:id` — the canonical record page (UI-PLAYBOOK §1, §10f) laid out
@@ -69,6 +92,7 @@ import { OffboardingAuditDrawerComponent } from './audit-drawer.component';
     StageItAssetsComponent, StageHrDocsComponent, StagePayrollComponent, StageClosureComponent,
     StageReservedComponent,
     OffboardingAuditDrawerComponent,
+    PageGuideComponent,
   ],
   templateUrl: './offboarding-detail.component.html',
   // No `styles` any more: the ~45 lines here drew the vertical stage tracker, which
@@ -458,6 +482,25 @@ export class OffboardingDetailComponent implements OnInit {
 
   /** Index into STAGES of the stage on screen. */
   readonly currentStageIndex = signal(0);
+
+  readonly guideSteps = GUIDE_STEPS;
+  /** The stage the file was on when the guide started — restored at its last step. */
+  private guideReturnIndex: number | null = null;
+
+  /**
+   * The guide shows a stage (its `tab`). Display only, so it sets the index directly and
+   * may show a locked stage — which is what the tour explains; nothing is saved.
+   */
+  onGuideStage(tab: string): void {
+    if (tab === 'START') { this.guideReturnIndex = this.currentStageIndex(); return; }
+    if (tab === 'RESTORE') {
+      if (this.guideReturnIndex !== null) this.currentStageIndex.set(this.guideReturnIndex);
+      this.guideReturnIndex = null;
+      return;
+    }
+    const i = STAGES.findIndex(st => st.code === tab);
+    if (i >= 0) this.currentStageIndex.set(i);
+  }
   /** Exposed for the action bar's "Étape x sur y" counter. */
   protected readonly totalStages = STAGES.length;
 

@@ -29,6 +29,19 @@ import {
 import { searchRows } from '../../shared/table-sort.utils';
 import { roleLabel } from '../../shared/utils/admin-label.utils';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/** Guide of the « Tâches offboarding » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'logout', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.WELCOME.TEXT' },
+  { icon: 'verified_user', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.VALIDATOR.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.VALIDATOR.TEXT', target: 'offboarding-catalog-validator' },
+  { icon: 'tab', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.TYPES.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.TYPES.TEXT', target: 'offboarding-catalog-types' },
+  { icon: 'add', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.ADD.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.ADD.TEXT', target: 'offboarding-catalog-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.TABLE.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.TABLE.TEXT', target: 'offboarding-catalog-table' },
+  { icon: 'block', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.FLAGS.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.FLAGS.TEXT', target: 'offboarding-catalog-table' },
+  { icon: 'help', titleKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.END.TITLE', textKey: 'ADMIN_OFFBOARDING_CATALOG_GUIDE.END.TEXT' },
+];
 
 @Component({
   selector: 'app-offboarding-catalog-admin',
@@ -36,9 +49,11 @@ import { rememberAdminState } from './admin-section-state';
   imports: [
     ButtonComponent, StatusBadgeComponent,
     FormFieldComponent, SelectComponent, ToggleComponent,
-    DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe,
+    DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-offboarding-catalog" [steps]="guideSteps" />
+
     <div class="cat-header">
       <h3 class="section-title">{{ 'ADMIN.docs.offboarding.title' | translate }}</h3>
       <p class="section-sub">{{ 'ADMIN.docs.offboarding.subtitle' | translate }}</p>
@@ -47,7 +62,7 @@ import { rememberAdminState } from './admin-section-state';
     <!-- Validator role for this country (V66) — kept in this tab rather than in one of its
          own: it is offboarding configuration for the same pays the catalog below is scoped to,
          and a whole tab for a single select would be harder to find, not easier. -->
-    <div class="validator-card">
+    <div class="validator-card" data-guide="offboarding-catalog-validator">
       <div class="validator-head">
         <span class="material-symbols-outlined">verified_user</span>
         <div>
@@ -79,7 +94,7 @@ import { rememberAdminState } from './admin-section-state';
 
     <!-- Contract-type tabs, same convention as "Listes configurables": one window per
          type, shown one after another, instead of a dropdown filter + grouped view. -->
-    <nav class="cat-tab-bar" role="tablist">
+    <nav class="cat-tab-bar" role="tablist" data-guide="offboarding-catalog-types">
       @for (ct of contractTypes(); track ct.code) {
         <button
           class="cat-tab-btn"
@@ -93,7 +108,7 @@ import { rememberAdminState } from './admin-section-state';
 
     <!-- Same bar as the other lists: search (within the selected contract type),
          "Ajouter une tâche", and [table] puts the table's reset + column picker on the right. -->
-    <daf-search-toolbar class="mb-4 block"
+    <daf-search-toolbar class="mb-4 block" data-guide="offboarding-catalog-toolbar"
       [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
       [value]="searchQuery()"
       [debounce]="200"
@@ -108,17 +123,17 @@ import { rememberAdminState } from './admin-section-state';
 
     <!-- Loading / empty state -->
     @if (loading()) {
-      <div class="skeleton-wrap">
+      <div class="skeleton-wrap" data-guide="offboarding-catalog-table">
         @for (_ of [1,2,3,4,5]; track $index) { <div class="skeleton-row"></div> }
       </div>
     } @else if (tableRows().length === 0) {
-      <div class="empty-state">
+      <div class="empty-state" data-guide="offboarding-catalog-table">
         <span class="material-symbols-outlined">list_alt</span>
         <p>{{ 'ADMIN.docs.offboarding.empty' | translate }} {{ 'ADMIN.docs.offboarding.emptyForContract' | translate }}.</p>
       </div>
     } @else {
       <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
-      <div class="table-scroll">
+      <div class="table-scroll" data-guide="offboarding-catalog-table">
       <daf-data-table #catTable [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
         <ng-template dafCell="taskCode" let-row>
           <code class="code-chip">{{ row['_source'].taskCode }}</code>
@@ -255,6 +270,8 @@ export class OffboardingCatalogAdminComponent implements OnChanges {
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   paysId = input.required<number>();
+
+  readonly guideSteps = GUIDE_STEPS;
 
   readonly contractTypes = signal<CatalogContractType[]>([]);
 

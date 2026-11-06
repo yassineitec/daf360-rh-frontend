@@ -45,6 +45,8 @@ import { CandidatesBoardSectionComponent } from './sections/candidates-board-sec
 import { CandidatesTableSectionComponent } from './sections/candidates-table-section.component';
 import { CandidatesMobileSectionComponent } from './sections/candidates-mobile-section.component';
 import { RecruitmentInsightsPanelComponent } from './sections/recruitment-insights-panel.component';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -59,6 +61,21 @@ const STATUS_CODES: CandidateStatus[] = [
 ];
 
 type ViewMode = 'list' | 'kanban';
+
+/**
+ * Guided tour of the page, started from the help center. `target` names a
+ * `data-guide` anchor in the template; the board steps point at whichever view is shown.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand',  titleKey: 'RECRUITMENT.GUIDE.WELCOME.TITLE',  textKey: 'RECRUITMENT.GUIDE.WELCOME.TEXT' },
+  { icon: 'monitoring',   titleKey: 'RECRUITMENT.GUIDE.KPIS.TITLE',     textKey: 'RECRUITMENT.GUIDE.KPIS.TEXT',     target: 'kpis' },
+  { icon: 'search',       titleKey: 'RECRUITMENT.GUIDE.TOOLBAR.TITLE',  textKey: 'RECRUITMENT.GUIDE.TOOLBAR.TEXT',  target: 'toolbar' },
+  { icon: 'view_kanban',  titleKey: 'RECRUITMENT.GUIDE.BOARD.TITLE',    textKey: 'RECRUITMENT.GUIDE.BOARD.TEXT',    target: 'board' },
+  { icon: 'drag_pan',     titleKey: 'RECRUITMENT.GUIDE.MOVES.TITLE',    textKey: 'RECRUITMENT.GUIDE.MOVES.TEXT',    target: 'board' },
+  { icon: 'check_circle', titleKey: 'RECRUITMENT.GUIDE.ACTIONS.TITLE',  textKey: 'RECRUITMENT.GUIDE.ACTIONS.TEXT',  target: 'board' },
+  { icon: 'insights',     titleKey: 'RECRUITMENT.GUIDE.INSIGHTS.TITLE', textKey: 'RECRUITMENT.GUIDE.INSIGHTS.TEXT' },
+  { icon: 'help',         titleKey: 'RECRUITMENT.GUIDE.END.TITLE',      textKey: 'RECRUITMENT.GUIDE.END.TEXT' },
+];
 
 /** Demand filter value for "no recruitment demand" — never a real demand id. */
 const SPONTANEOUS = 'SPONTANEOUS';
@@ -113,6 +130,7 @@ function sameRange(a: Date[] | null, b: Date[] | null): boolean {
     CandidatesTableSectionComponent,
     CandidatesMobileSectionComponent,
     RecruitmentInsightsPanelComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './candidates.component.html',
@@ -169,6 +187,7 @@ export class CandidatesComponent implements OnInit {
   readonly sort         = signal<string | null>(null);
   readonly pageSize     = signal(PAGE_SIZE);
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  readonly guideSteps = GUIDE_STEPS;
 
   readonly candidates    = computed(() => this.page()?.content ?? []);
   readonly totalElements = computed(() => this.page()?.totalElements ?? 0);

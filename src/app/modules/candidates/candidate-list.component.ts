@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import { catchError, forkJoin, of } from 'rxjs';
 import {
   BadgeCell,
@@ -56,6 +58,15 @@ function toIsoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'CAND_LIST_GUIDE.WELCOME.TITLE', textKey: 'CAND_LIST_GUIDE.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'CAND_LIST_GUIDE.KPIS.TITLE', textKey: 'CAND_LIST_GUIDE.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'CAND_LIST_GUIDE.TOOLBAR.TITLE', textKey: 'CAND_LIST_GUIDE.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'table_rows', titleKey: 'CAND_LIST_GUIDE.TABLE.TITLE', textKey: 'CAND_LIST_GUIDE.TABLE.TEXT', target: 'table' },
+  { icon: 'help', titleKey: 'CAND_LIST_GUIDE.END.TITLE', textKey: 'CAND_LIST_GUIDE.END.TEXT' },
+];
+
 /**
  * /rh/candidates/list — the flat, server-paginated candidate register.
  *
@@ -83,10 +94,13 @@ function toIsoDay(d: Date): string {
     CandidateDossierPanelComponent,
     RejectModalComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   templateUrl: './candidate-list.component.html',
 })
 export class CandidateListComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** The candidate table — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(CandidatesTableSectionComponent);
 

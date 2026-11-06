@@ -16,7 +16,7 @@
 }
 
 @if (!loading()) {
-  <div class="table-scroll">
+  <div class="table-scroll" data-guide="regimes-roles-table">
   <daf-data-table [columns]="columns()"[rows]="rows()" [config]="tableConfig()"
         (sortChange)="onSortChange($event.key, $event.dir)"
         (resetClick)="onSortChange('', null)">

@@ -47,7 +47,7 @@
 
 <!-- Same bar as the other lists (daf-search-toolbar): search, the source pills projected
      on the right, and [table] puts reset + column picker beside them. -->
-<daf-search-toolbar class="mb-4 block"
+<daf-search-toolbar class="mb-4 block" data-guide="regimes-overview-toolbar"
   [placeholder]="'ADMIN.regimes.overview.searchPlaceholder' | translate"
   [value]="searchTerm()"
   [debounce]="200"
@@ -65,7 +65,7 @@
 </daf-search-toolbar>
 
 <!-- Table -->
-<div class="table-scroll">
+<div class="table-scroll" data-guide="regimes-overview-table">
 <daf-data-table #overviewTable [columns]="columns()"[rows]="rows()" [config]="tableConfig()"
                 (sortChange)="onSortChange($event.key, $event.dir)"
                 (resetClick)="onSortChange('', null)">

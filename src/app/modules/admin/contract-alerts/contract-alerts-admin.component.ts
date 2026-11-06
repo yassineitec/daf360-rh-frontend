@@ -9,6 +9,18 @@ import { UserStore } from '../../../core/user.store';
 import {
   AlertRunSummary, ContractAlertsService, ContractTypeConfig, LeadTimes,
 } from './contract-alerts.service';
+import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
+import { GuideStep } from '../../../shared/guide/page-guide.types';
+
+/** Guide of the « Échéances de contrat » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'event_upcoming', titleKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.WELCOME.TEXT' },
+  { icon: 'table_rows', titleKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.TABLE.TITLE', textKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.TABLE.TEXT', target: 'contract-alerts-table' },
+  { icon: 'edit', titleKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.EDIT.TITLE', textKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.EDIT.TEXT', target: 'contract-alerts-table' },
+  { icon: 'info', titleKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.STATUS.TITLE', textKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.STATUS.TEXT', target: 'contract-alerts-note' },
+  { icon: 'play_arrow', titleKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.RUN.TITLE', textKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.RUN.TEXT', target: 'contract-alerts-run' },
+  { icon: 'help', titleKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.END.TITLE', textKey: 'ADMIN_CONTRACT_ALERTS_GUIDE.END.TEXT' },
+];
 
 /**
  * The lifecycle contract types (employee_contracts.contract_type_code). A type with no row
@@ -40,9 +52,11 @@ interface Line {
   standalone: true,
   imports: [
     ButtonComponent, FormFieldComponent, StatusBadgeComponent,
-    DataTableComponent, DafCellDirective, TranslatePipe,
+    DataTableComponent, DafCellDirective, TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-contract-alerts" [steps]="guideSteps" />
+
     <div class="caa-wrap">
       <div class="caa-header">
         <div>
@@ -50,7 +64,7 @@ interface Line {
           <p class="caa-sub">{{ 'ADMIN.contractAlerts.subtitle' | translate }}</p>
         </div>
         @if (canRunNow()) {
-          <daf-button
+          <daf-button data-guide="contract-alerts-run"
             [label]="'ADMIN.contractAlerts.runNow' | translate"
             variant="secondary"
             [options]="{ iconStart: 'play_arrow', loading: running(), disabled: running() }"
@@ -96,7 +110,7 @@ interface Line {
         </div>
       </ng-template>
 
-      <div class="table-scroll">
+      <div class="table-scroll" data-guide="contract-alerts-table">
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
           <ng-template dafCell="code" let-row>
             <span class="caa-code">{{ row['code'] }}</span>
@@ -114,7 +128,7 @@ interface Line {
           </ng-template>
         </daf-data-table>
       </div>
-      <p class="caa-note">{{ 'ADMIN.contractAlerts.note' | translate }}</p>
+      <p class="caa-note" data-guide="contract-alerts-note">{{ 'ADMIN.contractAlerts.note' | translate }}</p>
     </div>
   `,
   styles: [`
@@ -136,6 +150,8 @@ interface Line {
 })
 export class ContractAlertsAdminComponent implements OnChanges {
   @Input() paysId!: number;
+
+  readonly guideSteps = GUIDE_STEPS;
 
   private svc       = inject(ContractAlertsService);
   private translate = inject(TranslateService);

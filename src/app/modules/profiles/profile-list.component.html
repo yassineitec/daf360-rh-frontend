@@ -18,7 +18,7 @@
 
   <!-- All four come from /employees/stats and follow the pays filter only: the search
        and the other filters leave them alone. -->
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section class="grid grid-cols-4 gap-2 sm:gap-6" data-guide="kpis">
     <daf-metric-card
       [label]="'PROFILES.KPI.TOTAL' | translate"
       [value]="stats()?.total ?? '—'"
@@ -49,18 +49,22 @@
       [options]="{ icon: 'contract', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
   </section>
 
-  <daf-search-toolbar
-    [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
-    [value]="searchText()"
-    [debounce]="300"
-    (valueChange)="onSearchChange($event)"
-    [filterFields]="filterFields()"
-    [filterConfig]="filterConfig()"
-    (filterApply)="applyFilters($event)"
-    [views]="viewOptions()"
-    [view]="viewMode()"
-    (viewChange)="viewMode.set($any($event))"
-    [table]="tableSection()?.table() ?? null" />
+  <!-- The wrapper only carries the guide's anchor: it measures the toolbar's whole box
+       whatever display the toolbar's own host has. -->
+  <div data-guide="toolbar">
+    <daf-search-toolbar
+      [placeholder]="'PROFILES.LIST.SEARCH_PLACEHOLDER' | translate"
+      [value]="searchText()"
+      [debounce]="300"
+      (valueChange)="onSearchChange($event)"
+      [filterFields]="filterFields()"
+      [filterConfig]="filterConfig()"
+      (filterApply)="applyFilters($event)"
+      [views]="viewOptions()"
+      [view]="viewMode()"
+      (viewChange)="viewMode.set($any($event))"
+      [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
@@ -69,7 +73,9 @@
     </div>
   }
 
-  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1) -->
+  <!-- Content sits free in the page — never wrapped in an outer daf-card (§1). The
+       plain div is the guide's anchor for whichever view is shown, not a card. -->
+  <div data-guide="list">
   @if (viewMode() === 'grid') {
     <rh-profiles-cards-section
       [employees]="employees()"
@@ -96,7 +102,9 @@
       (sortChange)="onSortChange($event)"
       (edit)="onEdit($event)" />
   }
+  </div>
 
+  <div data-guide="pagination">
   <daf-pagination
     [currentPage]="currentPage()"
     [totalPages]="totalPages()"
@@ -107,8 +115,13 @@
     [summaryLabel]="'PROFILES.LIST.RANGE_SUMMARY' | translate"
     (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)" />
+  </div>
 
 </daf-page>
+
+<!-- Page guide, started from the header's « Aide » or the sidebar's « Centre d'aide ».
+     Steps point at the `data-guide` attributes above. -->
+<rh-page-guide storageKey="profiles" [steps]="guideSteps" />
 
 <!-- Bulk bar: the @if unmounts it (rather than hiding it) once the count hits 0.
      `totalCount` is the loaded page length, so "Tout sélectionner (N)" can only

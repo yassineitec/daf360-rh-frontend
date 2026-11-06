@@ -4,7 +4,7 @@
      draws the crumb row the header shows. -->
 <daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
 
-  <daf-page-header
+  <daf-page-header data-guide="header"
     [title]="headerTitle()"
     [subtitle]="headerSubtitle()"
     [badges]="headerBadges()"
@@ -79,7 +79,7 @@
     <div class="flex flex-col gap-8 lg:flex-row" [class.pb-32]="editMode()">
 
       <!-- ── Left: identity + where the candidate stands, always on screen ── -->
-      <div class="lg:w-[32%] lg:shrink-0">
+      <div data-guide="identity" class="lg:w-[32%] lg:shrink-0">
         <div class="flex flex-col gap-6 lg:sticky lg:top-6">
           <rh-candidate-identity-card
             [candidate]="c"
@@ -102,7 +102,9 @@
         <!-- The rail sits above the tabs, as on /rh/offboarding/:id — it describes the
              whole file, not one tab, and it used to be vertical in the left column where
              there was no room for its dates, progress or next step. -->
-        <rh-candidate-pipeline-card [status]="c.status" [history]="history()" />
+        <div data-guide="rail">
+          <rh-candidate-pipeline-card [status]="c.status" [history]="history()" />
+        </div>
 
         <!-- daf-tabs is strip-only; the panel below is ours, which is what keeps
              the offer and interview panels owning their own fetching. -->
@@ -114,7 +116,7 @@
           [tabsLabel]="'CANDIDATES.DETAIL.TABS_ARIA' | translate"
           idPrefix="candidate-detail" />
 
-        <div role="tabpanel"
+        <div role="tabpanel" data-guide="panel"
              [id]="tabsRef.panelId(activeTab())"
              [attr.aria-labelledby]="tabsRef.tabId(activeTab())">
           @switch (activeTab()) {
@@ -254,3 +256,6 @@
     (closed)="showHireModal.set(false)"
     (submit)="confirmHire($event)" />
 }
+
+<!-- The guide opens each tab before highlighting its panel (tabChange). -->
+<rh-page-guide storageKey="candidate-detail" [steps]="guideSteps()" (tabChange)="onGuideTab($event)" />

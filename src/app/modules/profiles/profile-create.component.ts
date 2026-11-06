@@ -3,6 +3,8 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 import {
   BreadcrumbItem,
@@ -32,6 +34,14 @@ import { toDate, fromDate, toSelected, fromSelected, asText } from './detail-sec
 /** Same rules the backend's `uploadPhoto` enforces — caught here so the user is told at once. */
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
+
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'person_add', titleKey: 'PROFILE_NEW_GUIDE.WELCOME.TITLE', textKey: 'PROFILE_NEW_GUIDE.WELCOME.TEXT' },
+  { icon: 'badge', titleKey: 'PROFILE_NEW_GUIDE.HEADER.TITLE', textKey: 'PROFILE_NEW_GUIDE.HEADER.TEXT', target: 'header' },
+  { icon: 'edit_note', titleKey: 'PROFILE_NEW_GUIDE.FORM.TITLE', textKey: 'PROFILE_NEW_GUIDE.FORM.TEXT', target: 'form' },
+  { icon: 'help', titleKey: 'PROFILE_NEW_GUIDE.END.TITLE', textKey: 'PROFILE_NEW_GUIDE.END.TEXT' },
+];
 
 /**
  * /rh/profiles/user/:userId — open the dossier of someone who has none yet.
@@ -69,10 +79,13 @@ const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
     PageComponent, PageHeaderComponent, SectionCardComponent, NewProfileIdentityCardComponent,
     ButtonComponent, FormFieldComponent, SelectComponent, MultiDatePickerComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   templateUrl: './profile-create.component.html',
 })
 export class ProfileCreateComponent implements OnInit, OnDestroy {
+  readonly guideSteps = GUIDE_STEPS;
+
   private route     = inject(ActivatedRoute);
   private router    = inject(Router);
   private svc       = inject(ProfileService);
@@ -352,7 +365,9 @@ export class ProfileCreateComponent implements OnInit, OnDestroy {
     if (this.disciplineId() != null) dto.disciplineId = this.disciplineId()!;
     if (this.nogLevelId()   != null) dto.nogLevelId   = this.nogLevelId()!;
     if (this.personalEmail())        dto.personalEmail = this.personalEmail();
-    if (this.personalPhone())        dto.phone         = this.personalPhone();
+    // The form's phone and address are the PERSONAL ones: `phone` is the work number.
+    if (this.personalPhone())        dto.personalPhone   = this.personalPhone();
+    if (this.personalAddress().trim()) dto.personalAddress = this.personalAddress().trim();
 
     this.saving.set(true);
     this.svc.create(dto).subscribe({

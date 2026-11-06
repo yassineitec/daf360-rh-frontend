@@ -11,7 +11,7 @@
 <daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
 
   <!-- No `icon` — page headers carry none (§1). -->
-  <daf-page-header
+  <daf-page-header data-guide="header"
     [title]="headerTitle()"
     [subtitle]="'PROFILES.CREATE.SUBTITLE' | translate"
     [badges]="headerBadges()"
@@ -27,7 +27,7 @@
 
     <!-- pb-32 clears the fixed save bar, so the last section and the card's own controls
          stay reachable — same trick as the dossier's edit mode. -->
-    <div class="flex flex-col gap-8 pb-32 lg:flex-row">
+    <div data-guide="form" class="flex flex-col gap-8 pb-32 lg:flex-row">
 
       <!-- ── Left: identity, always on screen ── -->
       <div class="lg:w-[32%] lg:shrink-0">
@@ -212,3 +212,5 @@
     </div>
   </div>
 }
+
+<rh-page-guide storageKey="profile-new" [steps]="guideSteps" />

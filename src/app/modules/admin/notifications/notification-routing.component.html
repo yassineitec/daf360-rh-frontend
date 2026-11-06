@@ -1,3 +1,5 @@
+<rh-page-guide storageKey="admin-notifications" [steps]="guideSteps()" />
+
 <div class="nr-layout">
 
 @if (selectedType()) {
@@ -38,7 +40,7 @@
   <!-- Same bar as the other lists (daf-search-toolbar): search, and [table] puts reset +
        column picker on the right. The bar handles its own mobile layout — no separate
        search toggle any more. -->
-  <daf-search-toolbar
+  <daf-search-toolbar data-guide="notifications-toolbar"
     [placeholder]="'ADMIN.notifications.searchPlaceholder' | translate"
     [value]="searchQuery()"
     [debounce]="200"
@@ -46,7 +48,7 @@
     [table]="eventTable" />
 
   <!-- Event table -->
-  <div class="table-scroll">
+  <div class="table-scroll" data-guide="notifications-table">
   <daf-data-table #eventTable
     [columns]="columns()"
     [rows]="rows()"

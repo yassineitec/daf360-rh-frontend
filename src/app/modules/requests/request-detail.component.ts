@@ -16,6 +16,8 @@ import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pd
 import { UserStore }       from '../../core/user.store';
 import { ConfirmService }  from '../../core/confirm.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const STATUS_VARIANTS: Record<string, BadgeOptions['variant']> = {
   SUBMITTED:  'info',
@@ -44,6 +46,15 @@ interface TimelineStep {
   estimatedDelay?: string;
 }
 
+/** Steps of the page guide, started from « Aide & guides » on a request. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'REQUESTS_GUIDE.DETAIL.WELCOME.TITLE', textKey: 'REQUESTS_GUIDE.DETAIL.WELCOME.TEXT' },
+  { icon: 'bolt', titleKey: 'REQUESTS_GUIDE.DETAIL.HEADER.TITLE', textKey: 'REQUESTS_GUIDE.DETAIL.HEADER.TEXT', target: 'header' },
+  { icon: 'gavel', titleKey: 'REQUESTS_GUIDE.DETAIL.ACTION.TITLE', textKey: 'REQUESTS_GUIDE.DETAIL.ACTION.TEXT', target: 'action' },
+  { icon: 'description', titleKey: 'REQUESTS_GUIDE.DETAIL.CONTENT.TITLE', textKey: 'REQUESTS_GUIDE.DETAIL.CONTENT.TEXT' },
+  { icon: 'help', titleKey: 'REQUESTS_GUIDE.DETAIL.END.TITLE', textKey: 'REQUESTS_GUIDE.DETAIL.END.TEXT' },
+];
+
 @Component({
   selector: 'app-request-detail',
   standalone: true,
@@ -51,6 +62,7 @@ interface TimelineStep {
     RouterLink, SlicePipe, PdfDownloadButtonComponent,
     AvatarComponent, ButtonComponent, CardComponent, FormFieldComponent, PageComponent,
     PageHeaderComponent, TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     <!-- Same daf-page/daf-page-header scaffold as the other detail pages (candidates,
@@ -58,7 +70,7 @@ interface TimelineStep {
          badges show status on the title line — no hand-rolled header markup. -->
     <daf-page [loading]="loading()" [kpis]="0" [breadcrumbs]="true">
 
-      <daf-page-header
+      <daf-page-header data-guide="header"
         [title]="requestTypeLabel() || ('REQUESTS.DETAIL.NOT_FOUND' | translate)"
         [subtitle]="headerSubtitle()"
         [badges]="headerBadges()"
@@ -134,7 +146,7 @@ interface TimelineStep {
                   }
                 </div>
                 @if (isOfficer()) {
-                  <a [routerLink]="['/profiles', req()!.employeeProfileId]"
+                  <a [routerLink]="['/rh/profiles', req()!.employeeProfileId]"
                      class="mt-4 inline-block w-fit cursor-pointer text-[13px] font-medium text-tertiary underline underline-offset-2 hover:text-teal">
                     {{ 'REQUESTS.DETAIL.VIEW_FULL_PROFILE' | translate }}
                   </a>
@@ -146,7 +158,7 @@ interface TimelineStep {
 
               <!-- Action panel (officer, processable) — right under the Requérant card. -->
               @if (canProcess()) {
-                <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" id="rd-action-panel">
+                <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }" id="rd-action-panel" data-guide="action">
                   <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
                     <span class="material-symbols-outlined text-[18px] text-warning">gavel</span>
                     {{ 'REQUESTS.DETAIL.ACTION_TITLE' | translate }}
@@ -355,9 +367,13 @@ interface TimelineStep {
         </div>
       }
     </daf-page>
+
+    <rh-page-guide storageKey="request-detail" [steps]="guideSteps" />
   `,
 })
 export class RequestDetailComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   private route     = inject(ActivatedRoute);
   private router    = inject(Router);
   private confirm   = inject(ConfirmService);

@@ -1,7 +1,7 @@
 <div class="re-container">
   <!-- Real daf-tabs strip, same convention as /rh/profiles/:id — [hidden] panels below
        (rather than @switch) so tab state stays mounted across switches. -->
-  <daf-tabs #tabsRef
+  <daf-tabs #tabsRef data-guide="role-tabs"
     class="re-tabs"
     variant="underline"
     [tabs]="tabs()"
@@ -10,7 +10,7 @@
     [tabsLabel]="'ADMIN.roles.editor.TABS_ARIA' | translate"
     idPrefix="role-editor" />
 
-  <div class="re-content" role="tabpanel"
+  <div class="re-content" role="tabpanel" data-guide="role-panel"
        [id]="tabsRef.panelId(activeTab())"
        [attr.aria-labelledby]="tabsRef.tabId(activeTab())">
     <!-- Use [hidden] not @if so components stay mounted and preserve state between tab switches -->

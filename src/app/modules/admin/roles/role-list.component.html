@@ -8,13 +8,13 @@
            (daf-button teal projeté, vert comme les autres boutons d'ajout), et `[table]` place
            réinitialiser + choix des colonnes à droite. La barre gère elle-même le passage en
            colonne sur mobile — plus de bascule de recherche à part. -->
-      <daf-search-toolbar class="mb-4 block"
+      <daf-search-toolbar class="mb-4 block" data-guide="roles-toolbar"
         [placeholder]="'ADMIN.roles.list.SEARCH_PLACEHOLDER' | translate"
         [value]="searchQuery()"
         [debounce]="200"
         (valueChange)="onSearch($event)"
         [table]="table() ?? null">
-        <daf-button
+        <daf-button data-guide="roles-new"
           [label]="'ADMIN.roles.list.NEW_ROLE' | translate"
           variant="teal"
           [options]="{ iconStart: 'add' }"
@@ -25,7 +25,7 @@
         <p class="rl-loading">{{ 'ADMIN.roles.list.LOADING' | translate }}</p>
       } @else {
         <!-- Real daf-data-table, same as the "Utilisateurs" tab of this same module. -->
-        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+        <daf-data-table data-guide="roles-table" [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                          (rowClick)="roleSelected.emit($event['_source'])"
                          (sortChange)="onSortChange($event.key, $event.dir)"
                          (resetClick)="onSortChange('', null)">

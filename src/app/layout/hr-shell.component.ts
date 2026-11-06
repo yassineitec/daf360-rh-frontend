@@ -13,7 +13,9 @@ import en from '@public/assets/i18n/en.json';
 import fr from '@public/assets/i18n/fr.json';
 import ar from '@public/assets/i18n/ar.json';
 import { resolveInitialLang } from '../core/language-preference';
-
+import { HelpCenterComponent } from '../shared/guide/help-center.component';
+import { HelpChatComponent } from '../shared/guide/help-chat.component';
+import { GuideHintComponent } from '../shared/guide/guide-hint.component';
 interface AppNavDef {
   id: string;
   /** i18n key under NAV.*, resolved in `navItems` — never a literal label. */
@@ -225,14 +227,15 @@ const APP_NAV_DEFS: AppNavDef[] = [
     labelKey: 'NAV.ADMIN',
     icon: 'admin_panel_settings',
     route: 'admin',
-    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS'],
+    // Same codes as the route guard: CREATE_ABSENCE_TYPE opens the « Types de congés » tab.
+    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE'],
   },
 ];
 
 @Component({
   selector: 'app-hr-shell',
   standalone: true,
-  imports: [RouterOutlet, SideNavComponent],
+  imports: [RouterOutlet, SideNavComponent, HelpCenterComponent, HelpChatComponent, GuideHintComponent],
   templateUrl: './hr-shell.component.html',
   styleUrl: './hr-shell.component.scss',
   host: { style: 'display:block;height:100%' },

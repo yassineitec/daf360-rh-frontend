@@ -39,6 +39,8 @@ import { CandidateSalarySectionComponent } from './detail-sections/candidate-sal
 import { CandidateCvSectionComponent } from './detail-sections/candidate-cv-section.component';
 import { CandidateItSectionComponent } from './detail-sections/candidate-it-section.component';
 import { CandidateHireModalComponent } from './detail-sections/candidate-hire-modal.component';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const HIREABLE_STATUSES = ['ACCEPTED', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
 /** Contract codes the backend requires an end date for (also enforced server-side). */
@@ -52,6 +54,25 @@ const CV_ALLOWED_TYPES = [
 const CV_MAX_BYTES = 10 * 1024 * 1024;
 
 type TabId = 'profil' | 'salaire' | 'entretiens' | 'offre' | 'cv' | 'it';
+
+/**
+ * Steps of the page guide, started from « Aide & guides » (« Candidats » tab). `target` is
+ * a `data-guide` anchor; `tab` is opened first. A step whose tab this candidate doesn't
+ * have (status, rights) is dropped — see `guideSteps`.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand',      titleKey: 'CANDIDATE_DETAIL.GUIDE.WELCOME.TITLE',    textKey: 'CANDIDATE_DETAIL.GUIDE.WELCOME.TEXT' },
+  { icon: 'bolt',             titleKey: 'CANDIDATE_DETAIL.GUIDE.HEADER.TITLE',     textKey: 'CANDIDATE_DETAIL.GUIDE.HEADER.TEXT',     target: 'header' },
+  { icon: 'badge',            titleKey: 'CANDIDATE_DETAIL.GUIDE.IDENTITY.TITLE',   textKey: 'CANDIDATE_DETAIL.GUIDE.IDENTITY.TEXT',   target: 'identity' },
+  { icon: 'linear_scale',     titleKey: 'CANDIDATE_DETAIL.GUIDE.RAIL.TITLE',       textKey: 'CANDIDATE_DETAIL.GUIDE.RAIL.TEXT',       target: 'rail' },
+  { icon: 'person',           titleKey: 'CANDIDATE_DETAIL.GUIDE.PROFILE.TITLE',    textKey: 'CANDIDATE_DETAIL.GUIDE.PROFILE.TEXT',    target: 'panel', tab: 'profil' },
+  { icon: 'payments',         titleKey: 'CANDIDATE_DETAIL.GUIDE.SALARY.TITLE',     textKey: 'CANDIDATE_DETAIL.GUIDE.SALARY.TEXT',     target: 'panel', tab: 'salaire' },
+  { icon: 'record_voice_over', titleKey: 'CANDIDATE_DETAIL.GUIDE.INTERVIEWS.TITLE', textKey: 'CANDIDATE_DETAIL.GUIDE.INTERVIEWS.TEXT', target: 'panel', tab: 'entretiens' },
+  { icon: 'handshake',        titleKey: 'CANDIDATE_DETAIL.GUIDE.OFFER.TITLE',      textKey: 'CANDIDATE_DETAIL.GUIDE.OFFER.TEXT',      target: 'panel', tab: 'offre' },
+  { icon: 'description',      titleKey: 'CANDIDATE_DETAIL.GUIDE.CV.TITLE',         textKey: 'CANDIDATE_DETAIL.GUIDE.CV.TEXT',         target: 'panel', tab: 'cv' },
+  { icon: 'computer',         titleKey: 'CANDIDATE_DETAIL.GUIDE.IT.TITLE',         textKey: 'CANDIDATE_DETAIL.GUIDE.IT.TEXT',         target: 'panel', tab: 'it' },
+  { icon: 'help',             titleKey: 'CANDIDATE_DETAIL.GUIDE.END.TITLE',        textKey: 'CANDIDATE_DETAIL.GUIDE.END.TEXT',        tab: 'profil' },
+];
 
 /**
  * Which `UpdateCandidateRequest` keys belong to which tab. Drives the per-tab
@@ -108,6 +129,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof UpdateCandidateRequest)[]>> = {
     OfferSectionComponent,
     RejectModalComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   templateUrl: './candidate-detail.component.html',
 })
@@ -303,6 +325,17 @@ export class CandidateDetailComponent implements OnInit {
     if (this.showItSection())         items.push({ id: 'it',         label: t('CANDIDATES.DETAIL.TABS.IT')         });
     return items;
   });
+
+  /** The guide's steps for this candidate: only the tabs it actually shows. */
+  readonly guideSteps = computed(() => {
+    const ids = new Set(this.tabs().map(t => t.id));
+    return GUIDE_STEPS.filter(s => !s.tab || ids.has(s.tab));
+  });
+
+  /** The guide opens a step's tab before highlighting it. */
+  onGuideTab(id: string): void {
+    this.activeTab.set(id as TabId);
+  }
 
   /** Tabs whose fields differ from the loaded candidate. Empty outside edit mode. */
   private readonly dirtyTabs = computed<Set<TabId>>(() => {

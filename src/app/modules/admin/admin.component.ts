@@ -5,6 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   CardComponent, PageComponent, PageHeaderComponent, SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
@@ -31,6 +33,7 @@ import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
 import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
+import { HelpFaqAdminComponent }            from './help-faq/help-faq-admin.component';
 import { AdminSectionStateService }         from './admin-section-state';
 
 /**
@@ -128,6 +131,17 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // How many days ahead HR hears about a contract end / a trial-period end. ADMIN_ROLES
   // because that is what the backend's config update checks.
   { key: 'contract-alerts',       labelKey: 'ADMIN.shell.tabs.contractAlerts',      permission: 'ADMIN_ROLES',                icon: 'event_upcoming',        tone: 'danger' },
+  // Questions / answers typed by HR, shown by the help assistant and « Aide & guides » next
+  // to the FAQ shipped with the app. HR_ADMIN_ROLES: what the backend's HelpFaqService checks.
+  { key: 'help-faq',              labelKey: 'ADMIN.shell.tabs.helpFaq',             permission: 'HR_ADMIN_ROLES',             icon: 'smart_toy',             tone: 'teal' },
+];
+
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'admin_panel_settings', titleKey: 'ADMIN_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_GUIDE.WELCOME.TEXT' },
+  { icon: 'public', titleKey: 'ADMIN_GUIDE.HEADER.TITLE', textKey: 'ADMIN_GUIDE.HEADER.TEXT', target: 'header' },
+  { icon: 'dashboard', titleKey: 'ADMIN_GUIDE.CARDS.TITLE', textKey: 'ADMIN_GUIDE.CARDS.TEXT', target: 'cards' },
+  { icon: 'help', titleKey: 'ADMIN_GUIDE.END.TITLE', textKey: 'ADMIN_GUIDE.END.TEXT' },
 ];
 
 @Component({
@@ -157,7 +171,9 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
     ContractAlertsAdminComponent,
+    HelpFaqAdminComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     @if (!isAdmin()) {
@@ -171,7 +187,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
       </div>
     } @else {
       @if (activeTab() === null) {
-        <div class="page-header">
+        <div class="page-header" data-guide="header">
           <div>
             <h2 class="page-title">{{ 'ADMIN.shell.title' | translate }}</h2>
             <p class="page-sub">{{ 'ADMIN.shell.entity' | translate:{ pays: currentPays() } }}</p>
@@ -198,7 +214,7 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
       @if (activeTab() === null) {
         <!-- Same module-card recipe as /finance/home: a flex-wrap grid of clickable
              daf-card tiles, one per admin section, instead of a side-nav + tab strip. -->
-        <section class="admin-cards">
+        <section class="admin-cards" data-guide="cards">
           @for (tab of visibleTabs(); track tab.key) {
             <daf-card
               class="admin-card"
@@ -255,11 +271,15 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
             <!-- No [paysId]: this screen configures every entity, not the caller's own. -->
             @if (activeTab() === 'pays-calendar')         { <app-pays-calendar-admin /> }
             @if (activeTab() === 'contract-alerts')       { <app-contract-alerts-admin [paysId]="paysId()" /> }
+            <!-- No [paysId]: the help questions are company-wide. -->
+            @if (activeTab() === 'help-faq')              { <app-help-faq-admin /> }
             }
           </daf-page>
         </div>
       }
     }
+
+    <rh-page-guide storageKey="admin" [steps]="guideSteps" />
   `,
   styles: [`
     /* Cancel the shell's page padding so this page fills the full content area edge-to-edge.
@@ -317,6 +337,8 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   `],
 })
 export class AdminComponent {
+  readonly guideSteps = GUIDE_STEPS;
+
   private userStore = inject(UserStore);
   private refData   = inject(RefDataService);
 
@@ -338,7 +360,13 @@ export class AdminComponent {
 
   rolesDetailOpen = signal(false);
   notificationDetailOpen = signal(false);
-  isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager());
+  /**
+   * Opens the panel. Also true for someone who holds one section's own permission (a
+   * CREATE_ABSENCE_TYPE or ADMIN_LISTS holder): the route lets them in, and they would
+   * otherwise land on « Accès refusé » with their section a click away.
+   */
+  isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager()
+    || TABS.some(t => this.userStore.hasPermission(t.permission)));
 
   availablePays  = signal<PaysTimezone[]>([]);
 

@@ -6,7 +6,7 @@
      No `icon` on the header (§1). -->
 <daf-page [loading]="firstLoad()" [kpis]="0" [breadcrumbs]="true">
 
-  <daf-page-header
+  <daf-page-header data-guide="header"
     [title]="employeeName()"
     [subtitle]="headerSubtitle()"
     [badges]="headerBadges()"
@@ -70,7 +70,7 @@
     <div class="flex flex-col gap-8 pb-32 lg:flex-row">
 
       <!-- ── Left: who is leaving ───────────────────────────────────────────── -->
-      <div class="lg:w-[32%] lg:shrink-0">
+      <div data-guide="card" class="lg:w-[32%] lg:shrink-0">
         <div class="flex flex-col gap-6 lg:sticky lg:top-6">
 
           <!-- Employee identity -->
@@ -143,7 +143,7 @@
            from the same resolver, so one of them was noise — and the progress ended up
            below the fold in the column nobody was reading. Both now live here, directly
            under the rail they describe. -->
-      <daf-card [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
+      <daf-card data-guide="rail" [options]="{ variant: 'glass', padding: 'md', radius: 'xl' }">
         <div class="overflow-x-auto">
           <div class="min-w-[560px]">
             <!-- `currentStageIndex`, not `railIndex`: "current step" means the step you are
@@ -192,7 +192,7 @@
          same panel header (number, title, state pill), body withheld. So a stage owner
          sees the file's whole progress in the rail but only reads their own step.
          `canActOnStage` (not the file-wide `canEdit`) drives the controls inside. -->
-    <div id="stage-wizard" class="flex flex-col gap-4">
+    <div id="stage-wizard" data-guide="stage" class="flex flex-col gap-4">
 
       @if (isCurrent('DECLARATION')) {
       <div id="stage-DECLARATION">
@@ -377,7 +377,7 @@
      unmet, and the panel would only show dead controls. -->
 @if (!loadFailed() && wf()) {
   <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
-    <div class="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3
+    <div data-guide="bar" class="pointer-events-auto mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3
                 rounded-xl border border-outline-variant bg-surface-container-lowest p-4
                 shadow-[0_-4px_24px_rgba(0,0,0,0.12)]">
       <daf-button
@@ -909,3 +909,6 @@
                 (onClick)="saveInterview()" />
   </div>
 </app-daf-modal>
+
+<!-- The guide opens each stage before highlighting it (tabChange carries the stage code). -->
+<rh-page-guide storageKey="offboarding-file" [steps]="guideSteps" (tabChange)="onGuideStage($event)" />

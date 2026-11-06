@@ -84,6 +84,8 @@ import {
   CDI_PAGE_PERMISSIONS, CDI_PERMISSIONS, CdiConversion, SubmitCdiConversionForm, isAwaitingConversion,
 } from '../cdi-conversions/cdi-conversion.model';
 import { CdiConversionRequestModalComponent } from '../cdi-conversions/cdi-conversion-request-modal.component';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 /**
  * One per section of the original page, minus Identité — the design keeps that
@@ -116,6 +118,24 @@ type TabId =
  * a single-entry list still renders as a chooser so the type is always a deliberate pick.
  */
 const OFFERED_DEPARTURE_REASONS: readonly DepartureReason[] = ['RESIGNATION'];
+
+/**
+ * Guided tour of the file, started from the help center. The tab steps are built from
+ * `tabs()` (see `guideSteps`), so a tab the user can't see has no step either; each one
+ * switches to its tab and highlights the panel (`data-guide="panel"`).
+ */
+const GUIDE_TAB_STEPS: Record<TabId, { key: string; icon: string }> = {
+  emploi:         { key: 'EMPLOI',       icon: 'work' },
+  contact:        { key: 'CONTACT',      icon: 'contact_phone' },
+  bancaire:       { key: 'BANK',         icon: 'account_balance' },
+  historique:     { key: 'CONTRACTS',    icon: 'history_edu' },
+  materiel:       { key: 'IT_ASSETS',    icon: 'devices' },
+  documents:      { key: 'DOCUMENTS',    icon: 'folder_open' },
+  remuneration:   { key: 'REMUNERATION', icon: 'payments' },
+  'docs-history': { key: 'DOC_HISTORY',  icon: 'cloud' },
+};
+const guideStep = (key: string, icon: string, target?: string, tab?: string): GuideStep =>
+  ({ icon, target, tab, titleKey: `PROFILES.DETAIL_GUIDE.${key}.TITLE`, textKey: `PROFILES.DETAIL_GUIDE.${key}.TEXT` });
 
 /**
  * Which `ProfileUpdateDto` keys belong to which tab. Drives the per-tab dirty
@@ -160,7 +180,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   selector: 'app-profile-detail',
   standalone: true,
   imports: [
-    PageComponent, PageHeaderComponent, TabsComponent, ButtonComponent,
+    PageComponent, PageHeaderComponent, TabsComponent, ButtonComponent, PageGuideComponent,
     FormFieldComponent, MultiDatePickerComponent, RadioGroupComponent, StatusBadgeComponent,
     IdentityCardComponent, EmploymentSectionComponent,
     PositionSectionComponent, RegimeSectionComponent, ContactSectionComponent,
@@ -235,6 +255,25 @@ export class ProfileDetailComponent implements OnInit {
    */
   readonly activeTab = tabParam<TabId>(
     computed(() => this.tabs().map(t => t.id as TabId)), 'emploi');
+
+  /** Guided tour: the file's frame, then one step per tab the user can see. */
+  readonly guideSteps = computed<GuideStep[]>(() => [
+    guideStep('WELCOME', 'waving_hand'),
+    guideStep('IDENTITY', 'badge', 'identity'),
+    guideStep('ACTIONS', 'touch_app', 'identity'),
+    guideStep('EDIT', 'edit', 'identity'),
+    guideStep('TABS', 'tab', 'tabs'),
+    ...this.tabs().map(t => {
+      const { key, icon } = GUIDE_TAB_STEPS[t.id as TabId];
+      return guideStep(key, icon, 'panel', t.id);
+    }),
+    guideStep('DRAWER', 'description'),
+    guideStep('END', 'help'),
+  ]);
+
+  onGuideTab(id: string): void {
+    this.activeTab.set(id as TabId);
+  }
 
   readonly tabs = computed<TabItem[]>(() => {
     this.translate.currentLang();
