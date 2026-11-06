@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonComponent, FormFieldComponent } from '@khalilrebhiitec/daf360';
@@ -7,7 +7,7 @@ import { SectionCardComponent } from '../../../shared/detail/section-card.compon
 import { EmployeeProfile } from '../models/profile.model';
 import { contractLabel } from '../profile-labels';
 import {
-  BenefitCatalogueDto, EmployeePayrollBonusDto, EmployeePayrollConfigDto, RemunerationService,
+  BenefitCatalogueDto, EmployeePayrollBonusDto, EmployeePayrollConfigDto, FxRateDto, RemunerationService,
 } from '../services/remuneration.service';
 
 const BONUS_CURRENCIES = ['TND', 'EUR', 'USD', 'EGP', 'SAR', 'AED'];
@@ -55,10 +55,29 @@ const BONUS_CURRENCIES = ['TND', 'EUR', 'USD', 'EGP', 'SAR', 'AED'];
             <span class="text-[13px]">{{ contractTypeLabel() }}</span>
           </div>
 
-          <daf-form-field
-            [value]="cfg.currentGrossSalary"
-            [options]="{ type: 'number', label: ('PROFILES.FIELDS.REMUNERATION_GROSS_SALARY' | translate), fullWidth: true }"
-            (valueChange)="patchConfig({ currentGrossSalary: asNumber($event) })" />
+          <div class="flex flex-col gap-1.5">
+            <daf-form-field
+              [value]="cfg.currentGrossSalary"
+              [options]="{ type: 'number', label: ('PROFILES.FIELDS.REMUNERATION_GROSS_SALARY' | translate), fullWidth: true }"
+              (valueChange)="patchConfig({ currentGrossSalary: asNumber($event) })" />
+            <div class="flex flex-col gap-1">
+              <label class="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                {{ 'PROFILES.FIELDS.REMUNERATION_CURRENCY_LABEL' | translate }}
+              </label>
+              <select class="rounded-lg border border-outline-variant px-2 py-1.5 text-[13px]"
+                [ngModel]="cfg.inputCurrency ?? cfg.workingCurrency"
+                (ngModelChange)="patchConfig({ inputCurrency: $event !== cfg.workingCurrency ? $event : null })">
+                @for (c of currencyOptions(); track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+            @if (cfg.inputCurrency && cfg.inputAmountOriginal != null) {
+              <span class="text-[12.5px] text-on-surface-variant">
+                {{ 'PROFILES.FIELDS.REMUNERATION_ENTERED_AS' | translate: { amount: cfg.inputAmountOriginal + ' ' + cfg.inputCurrency } }}
+              </span>
+            }
+          </div>
 
           <div class="flex flex-col gap-1.5">
             <label class="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">&nbsp;</label>
@@ -205,6 +224,19 @@ export class RemunerationSectionComponent implements OnInit {
   readonly error    = signal<string | null>(null);
   readonly success  = signal<string | null>(null);
 
+  readonly fxRates = signal<FxRateDto[]>([]);
+
+  /** Working currency first (once known from the loaded config), then every other
+   *  currency payroll has a cached rate for, alphabetically. */
+  readonly currencyOptions = computed((): string[] => {
+    const working = this.config()?.workingCurrency ?? null;
+    const others = this.fxRates()
+      .map(r => r.currencyCode)
+      .filter(c => c !== working)
+      .sort();
+    return [working, ...others].filter((c): c is string => !!c);
+  });
+
   readonly bonusCurrencies = BONUS_CURRENCIES;
   readonly bonuses = signal<EmployeePayrollBonusDto[]>([]);
   readonly newBonusAmount = signal<number | null>(null);
@@ -241,6 +273,10 @@ export class RemunerationSectionComponent implements OnInit {
       next: list => this.bonuses.set(list),
       error: () => this.bonusError.set(this.translate.instant('PROFILES.FIELDS.REMUNERATION_BONUS_LOAD_ERROR')),
     });
+    this.svc.getFxRates().subscribe({
+      next: rates => this.fxRates.set(rates),
+      error: () => { /* currency picker just offers the working currency alone */ },
+    });
   }
 
   calculateNet(): void {
@@ -248,7 +284,7 @@ export class RemunerationSectionComponent implements OnInit {
     if (!cfg || cfg.currentGrossSalary == null) return;
     this.calculatingNet.set(true);
     this.error.set(null);
-    this.svc.calculateNet(this.profile().userId, cfg.currentGrossSalary).subscribe({
+    this.svc.calculateNet(this.profile().userId, cfg.currentGrossSalary, cfg.inputCurrency).subscribe({
       next: res => {
         this.calculatingNet.set(false);
         this.config.set({ ...cfg, currentNetSalary: res.netInHand });
@@ -337,6 +373,7 @@ export class RemunerationSectionComponent implements OnInit {
       currentGrossSalary: cfg.currentGrossSalary,
       currentNetSalary: cfg.currentNetSalary,
       reason: this.reason(),
+      inputCurrency: cfg.inputCurrency,
     }).subscribe({
       next: updated => {
         this.saving.set(false);
