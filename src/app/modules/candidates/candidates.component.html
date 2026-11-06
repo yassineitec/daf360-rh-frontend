@@ -16,7 +16,7 @@
   </daf-page-header>
 
   <!-- KPIs — one row at every width, never wraps -->
-  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-3 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'CANDIDATES.PIPELINE_RH.KPI_ACTIVE' | translate"
       [value]="activeMetricValue()"
@@ -35,7 +35,9 @@
   </section>
 
   <!-- Search + filters + view toggle: one lib toolbar, one card. The status
-       dropdown lives inside the filter panel, not loose beside the search. -->
+       dropdown lives inside the filter panel, not loose beside the search.
+       The wrapper only anchors the guide's « toolbar » step. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'CANDIDATES.PIPELINE_RH.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -48,6 +50,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (actionError()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -68,7 +71,9 @@
 
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
        Each section renders only at its own breakpoint (host class), so there is
-       no duplicated desktop/mobile tree here (§8b). -->
+       no duplicated desktop/mobile tree here (§8b). The wrapper only anchors the
+       guide's board steps (board, list or mobile cards — whichever is shown). -->
+  <div data-guide="board" class="flex flex-col gap-8">
   @if (viewMode() === 'kanban') {
     <rh-candidates-board-section
       [columns]="kanbanColumns()"
@@ -126,6 +131,7 @@
     (openOffboarding)="onViewOffboarding($event)"
     (accept)="quickAccept($event)"
     (reject)="openRejectModal($event)" />
+  </div>
 
   <!-- List view only — the board holds the whole tenant set in one fetch. -->
   @if (viewMode() === 'list' && totalPages() > 0) {
@@ -151,6 +157,8 @@
   [objective]="currentObjective()"
   [progress]="objectiveProgress()"
   [loading]="extrasLoading()" />
+
+<rh-page-guide storageKey="recruitment" [steps]="guideSteps" />
 
 <!-- Reject modal -->
 <app-reject-modal

@@ -1,7 +1,7 @@
 <!-- Same bar as the other lists (daf-search-toolbar), full width above the two panels: the
      search filters the regime list, « Nouveau régime » (ADMIN_REGIMES only) sits on the right,
      and [table] puts the list's reset + column picker beside it. -->
-<daf-search-toolbar class="mb-4 block"
+<daf-search-toolbar class="mb-4 block" data-guide="regimes-catalog-toolbar"
   [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
   [value]="searchQuery()"
   [debounce]="200"
@@ -63,7 +63,7 @@
   </div>
 
   <!-- RIGHT PANEL: Editor -->
-  <div>
+  <div data-guide="regimes-catalog-editor">
     @if (!selectedId()) {
       <div class="rc-placeholder">
         <span class="material-symbols-outlined rc-placeholder-icon">schedule</span>

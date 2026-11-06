@@ -31,7 +31,7 @@
   <!-- ─────────────────────────────────────────────────────────────────────
        SECTION 1 — Paramètres généraux
   ──────────────────────────────────────────────────────────────────────── -->
-  <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+  <daf-card class="block" data-guide="notifications-general" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
       <h3 class="editor-section-title">{{ 'ADMIN.notifications.generalSettings' | translate }}</h3>
 
@@ -72,7 +72,7 @@
        SECTION 2 — Modèles in-app
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendInapp()) {
-    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <daf-card class="block" data-guide="notifications-templates" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
       <h3 class="editor-section-title">{{ 'ADMIN.notifications.inappTemplates' | translate }}</h3>
 
@@ -117,7 +117,7 @@
        SECTION 3 — Modèles email
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendEmail() && eventType().supportsEmail) {
-    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <daf-card class="block" data-guide="notifications-templates" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
       <h3 class="editor-section-title">{{ 'ADMIN.notifications.emailTemplates' | translate }}</h3>
 
@@ -175,7 +175,7 @@
        SECTION 4 — Destinataires in-app
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendInapp() && detail()) {
-    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <daf-card class="block" data-guide="notifications-recipients" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
       <h3 class="editor-section-title">{{ 'ADMIN.notifications.inappRecipients' | translate }}</h3>
       <app-recipient-tags
@@ -194,7 +194,7 @@
        SECTION 5 — Destinataires email (TO / CC / BCC)
   ──────────────────────────────────────────────────────────────────────── -->
   @if (sendEmail() && eventType().supportsEmail && detail()) {
-    <daf-card class="block" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <daf-card class="block" data-guide="notifications-recipients" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
       <h3 class="editor-section-title">{{ 'ADMIN.notifications.emailRecipients' | translate }}</h3>
 
@@ -246,7 +246,7 @@
        SECTION 6 — Test
   ──────────────────────────────────────────────────────────────────────── -->
   @if (detail()) {
-    <daf-card class="block editor-section--test" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+    <daf-card class="block editor-section--test" data-guide="notifications-test" [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
     <div class="editor-section-body">
       <h3 class="editor-section-title">{{ 'ADMIN.notifications.testTitle' | translate }}</h3>
       <p class="test-description">

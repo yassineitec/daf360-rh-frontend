@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
   FilterResult,
@@ -84,6 +86,15 @@ function toIsoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'IT_GUIDE.LIST.WELCOME.TITLE', textKey: 'IT_GUIDE.LIST.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'IT_GUIDE.LIST.KPIS.TITLE', textKey: 'IT_GUIDE.LIST.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'IT_GUIDE.LIST.TOOLBAR.TITLE', textKey: 'IT_GUIDE.LIST.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'devices', titleKey: 'IT_GUIDE.LIST.ITEMS.TITLE', textKey: 'IT_GUIDE.LIST.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'IT_GUIDE.LIST.END.TITLE', textKey: 'IT_GUIDE.LIST.END.TEXT' },
+];
+
 /**
  * /rh/it-provisioning — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
@@ -105,11 +116,14 @@ function toIsoDay(d: Date): string {
     SearchToolbarComponent,
     ItProvisioningCardsSectionComponent,
     ItProvisioningTableSectionComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './it-provisioning-list.component.html',
 })
 export class ItProvisioningListComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(ItProvisioningTableSectionComponent);
 

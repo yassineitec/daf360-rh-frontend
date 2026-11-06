@@ -18,6 +18,21 @@ import { RefDataService }      from '../../core/ref/ref-data.service';
 import { RefDataItem, CreateRefDataRequest } from '../../core/ref/ref-data.model';
 import { ContractHistoryService } from '../profiles/contract-history/contract-history.service';
 import { TypeContratDto } from '../profiles/contract-history/contract-history.model';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/**
+ * Guide of the « Données de référence » card, started from « Aide & guides ». The préavis
+ * step asks for the « Grades » tab (`tab` = a RefTab key, see `onGuideTab`).
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'storage', titleKey: 'ADMIN_REF_DATA_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_REF_DATA_GUIDE.WELCOME.TEXT' },
+  { icon: 'tab', titleKey: 'ADMIN_REF_DATA_GUIDE.TABS.TITLE', textKey: 'ADMIN_REF_DATA_GUIDE.TABS.TEXT', target: 'ref-data-tabs' },
+  { icon: 'add', titleKey: 'ADMIN_REF_DATA_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_REF_DATA_GUIDE.TOOLBAR.TEXT', target: 'ref-data-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_REF_DATA_GUIDE.TABLE.TITLE', textKey: 'ADMIN_REF_DATA_GUIDE.TABLE.TEXT', target: 'ref-data-table' },
+  { icon: 'timelapse', titleKey: 'ADMIN_REF_DATA_GUIDE.NOTICE.TITLE', textKey: 'ADMIN_REF_DATA_GUIDE.NOTICE.TEXT', target: 'ref-data-table', tab: 'grades' },
+  { icon: 'help', titleKey: 'ADMIN_REF_DATA_GUIDE.END.TITLE', textKey: 'ADMIN_REF_DATA_GUIDE.END.TEXT' },
+];
 
 /** What each reference-data column sorts on (grades, departments, banks… tabs). */
 const REF_ITEM_SORT: Record<string, (i: RefDataItem) => string | number | null> = {
@@ -60,11 +75,13 @@ const TABS: TabConfig[] = [
 @Component({
   selector: 'app-ref-data-admin',
   standalone: true,
-  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, SearchToolbarComponent, TranslatePipe],
+  imports: [ButtonComponent, FormFieldComponent, DataTableComponent, DafCellDirective, PaginationComponent, SearchToolbarComponent, TranslatePipe, PageGuideComponent],
   template: `
+<rh-page-guide storageKey="admin-ref-data" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />
+
 <div>
   <!-- Sub-tab bar -->
-  <nav class="rda-tab-bar" role="tablist">
+  <nav class="rda-tab-bar" role="tablist" data-guide="ref-data-tabs">
     @for (tab of tabs; track tab.key) {
       <button
         class="rda-tab-btn"
@@ -96,7 +113,7 @@ const TABS: TabConfig[] = [
   <!-- Same toolbar as the other list pages: search over the active tab's rows, « Ajouter »,
        and [table] puts the table's reset + column picker on the right. One bar for both
        tables — only one is rendered at a time (and none while loading). -->
-  <daf-search-toolbar class="mb-4 block"
+  <daf-search-toolbar class="mb-4 block" data-guide="ref-data-toolbar"
     [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
     [value]="searchQuery()"
     [debounce]="200"
@@ -114,7 +131,7 @@ const TABS: TabConfig[] = [
     @if (loading()) {
       <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
-      <div class="table-scroll">
+      <div class="table-scroll" data-guide="ref-data-table">
       <daf-data-table [columns]="itemColumns()" [rows]="itemRows()" [config]="itemTableConfig()"
                       (sortChange)="onSortChange($event.key, $event.dir)"
                       (resetClick)="onSortChange('', null)">
@@ -157,7 +174,7 @@ const TABS: TabConfig[] = [
     @if (loading()) {
       <p style="font-size:var(--text-body-sm,13px);color:var(--color-on-surface-variant,#6B7280);">{{ 'ADMIN.data.refData.LOADING' | translate }}</p>
     } @else {
-      <div class="table-scroll">
+      <div class="table-scroll" data-guide="ref-data-table">
       <daf-data-table [columns]="tcColumns()" [rows]="tcRows()" [config]="itemTableConfig()"
                       (sortChange)="onSortChange($event.key, $event.dir)"
                       (resetClick)="onSortChange('', null)">
@@ -318,6 +335,15 @@ export class RefDataAdminComponent implements OnChanges {
   isGradesTab      = computed(() => this.activeTab().key === 'grades');
 
   readonly tabs = TABS;
+
+  /** Steps of the card's page guide. */
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** A guide step asks for a sub-tab (the préavis step → « Grades »): switch to it if needed. */
+  onGuideTab(key: string): void {
+    const tab = TABS.find(t => t.key === key);
+    if (tab && this.activeTab().key !== tab.key) this.selectTab(tab);
+  }
 
   activeTab = signal<TabConfig>(TABS[0]);
   items     = signal<RefDataItem[]>([]);

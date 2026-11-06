@@ -30,6 +30,8 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import { ConfirmService } from '../../core/confirm.service';
 import { NotificationService } from '../../core/notification.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   RecruitmentValidationSectionComponent,
   RECRUITMENT_APPROVE_PERMISSION,
@@ -51,6 +53,16 @@ const SLA_BADGE_VARIANT: Record<SlaLevel, 'success' | 'warning' | 'danger' | 'ne
   critical: 'danger',
   none: 'neutral',
 };
+
+/** Steps of the page guide; `tab` opens the « Demande RH » or recruitment tab first. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'REQUESTS_GUIDE.LIST.WELCOME.TITLE', textKey: 'REQUESTS_GUIDE.LIST.WELCOME.TEXT', tab: 'other' },
+  { icon: 'monitoring', titleKey: 'REQUESTS_GUIDE.LIST.KPIS.TITLE', textKey: 'REQUESTS_GUIDE.LIST.KPIS.TEXT', target: 'kpis', tab: 'other' },
+  { icon: 'search', titleKey: 'REQUESTS_GUIDE.LIST.TOOLBAR.TITLE', textKey: 'REQUESTS_GUIDE.LIST.TOOLBAR.TEXT', target: 'toolbar', tab: 'other' },
+  { icon: 'inbox', titleKey: 'REQUESTS_GUIDE.LIST.ITEMS.TITLE', textKey: 'REQUESTS_GUIDE.LIST.ITEMS.TEXT', target: 'items', tab: 'other' },
+  { icon: 'work', titleKey: 'REQUESTS_GUIDE.LIST.RECRUITMENT.TITLE', textKey: 'REQUESTS_GUIDE.LIST.RECRUITMENT.TEXT', tab: 'recruitment' },
+  { icon: 'help', titleKey: 'REQUESTS_GUIDE.LIST.END.TITLE', textKey: 'REQUESTS_GUIDE.LIST.END.TEXT', tab: 'other' },
+];
 
 /** Card/row-ready view model — one per visible request, shared by both views. */
 interface RequestCard {
@@ -86,6 +98,7 @@ interface RequestCard {
     RequestTableSectionComponent,
     TabsComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     <!-- Canonical page per UI-PLAYBOOK §1: daf-page owns the 32px rhythm, so there are no
@@ -102,7 +115,7 @@ interface RequestCard {
            only the four values (and what they mean) swap with the active tab, read straight
            off the "Demande de recrutement" section via viewChild when that tab is active, so
            the cards never disappear/reappear the way a per-tab block would. -->
-      <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
+      <section data-guide="kpis" class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
         @if (canValidateRecruitment() && mainTab() === 'recruitment') {
           <daf-metric-card
             [label]="'RECRUITMENT_VALIDATION.KPI_TOTAL' | translate"
@@ -165,7 +178,7 @@ interface RequestCard {
              response (approuvée/rejetée/annulée) moves to the /rh/requests-history
              historique instead. The "Filtres" panel narrows by urgency instead, same
              breakdown as the KPI row above. -->
-        <daf-search-toolbar
+        <daf-search-toolbar data-guide="toolbar"
           [placeholder]="'REQUESTS.LIST.SEARCH_PLACEHOLDER' | translate"
           [(value)]="searchQuery"
           [debounce]="200"
@@ -180,7 +193,7 @@ interface RequestCard {
         <!-- Both views render at every width: the card grid goes 1 → 2 → 3 columns, the
              table scrolls horizontally inside daf-data-table (same as /rh/it-provisioning). -->
         @if (viewMode() === 'grid') {
-          <app-request-cards-section
+          <app-request-cards-section data-guide="items"
             [items]="cards()"
             [loading]="loading()"
             [canApprove]="canViewInbox()"
@@ -189,7 +202,7 @@ interface RequestCard {
             [emptyHint]="emptyHint()"
             (action)="onItemAction($event.action, $event.item)" />
         } @else {
-          <app-request-table-section
+          <app-request-table-section data-guide="items"
             [items]="cards()"
             [loading]="loading()"
             [skeletonRows]="pageSize()"
@@ -217,9 +230,16 @@ interface RequestCard {
       }
 
     </daf-page>
+
+    <!-- The guide opens the tab each step is about (tabChange carries the tab id). -->
+    <rh-page-guide storageKey="requests" [steps]="guideSteps()" (tabChange)="onMainTabChange($event)" />
   `,
 })
 export class RequestListComponent implements OnInit {
+  /** Without the recruitment right there is no recruitment tab: its step is dropped. */
+  readonly guideSteps = computed(() =>
+    GUIDE_STEPS.filter(st => st.tab !== 'recruitment' || this.canValidateRecruitment()));
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(RequestTableSectionComponent);
 

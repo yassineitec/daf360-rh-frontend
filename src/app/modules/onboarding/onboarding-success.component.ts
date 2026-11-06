@@ -1,15 +1,26 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'celebration', titleKey: 'ONB_SUCCESS_GUIDE.WELCOME.TITLE', textKey: 'ONB_SUCCESS_GUIDE.WELCOME.TEXT' },
+  { icon: 'arrow_forward', titleKey: 'ONB_SUCCESS_GUIDE.CARD.TITLE', textKey: 'ONB_SUCCESS_GUIDE.CARD.TEXT', target: 'card' },
+  { icon: 'help', titleKey: 'ONB_SUCCESS_GUIDE.END.TITLE', textKey: 'ONB_SUCCESS_GUIDE.END.TEXT' },
+];
 
 @Component({
   selector: 'app-onboarding-success',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, PageGuideComponent],
   templateUrl: './onboarding-success.component.html',
   styleUrls: ['./onboarding-success.component.scss'],
 })
 export class OnboardingSuccessComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 

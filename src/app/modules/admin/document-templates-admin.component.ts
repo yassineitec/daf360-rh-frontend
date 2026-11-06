@@ -18,6 +18,19 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { searchRows } from '../../shared/table-sort.utils';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/** Guide of the « Maquettes documents » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'article', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.WELCOME.TEXT' },
+  { icon: 'search', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.TOOLBAR.TEXT', target: 'document-templates-toolbar' },
+  { icon: 'add', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.NEW.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.NEW.TEXT', target: 'document-templates-toolbar' },
+  { icon: 'code', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.CONTENT.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.CONTENT.TEXT', target: 'document-templates-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.TABLE.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.TABLE.TEXT', target: 'document-templates-table' },
+  { icon: 'picture_as_pdf', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.USAGE.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.USAGE.TEXT', target: 'document-templates-table' },
+  { icon: 'help', titleKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.END.TITLE', textKey: 'ADMIN_DOCUMENT_TEMPLATES_GUIDE.END.TEXT' },
+];
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="fr">
@@ -59,8 +72,10 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 @Component({
   selector: 'app-document-templates-admin',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe],
+  imports: [FormsModule, ButtonComponent, StatusBadgeComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe, PageGuideComponent],
   template: `
+    <rh-page-guide storageKey="admin-document-templates" [steps]="guideSteps" />
+
     <!-- Header -->
     <div class="tmpl-header">
       <h3 class="section-title">{{ 'ADMIN.docs.templates.title' | translate }}</h3>
@@ -70,7 +85,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     <!-- Same bar as the other lists: search, the category / inactive filters (server-side,
          they reload the list) in the Filtres panel, "Nouvelle maquette", and [table] puts
          the table's reset + column picker right of Filtres. -->
-    <daf-search-toolbar class="mb-4 block"
+    <daf-search-toolbar class="mb-4 block" data-guide="document-templates-toolbar"
       [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
       [value]="searchQuery()"
       [debounce]="200"
@@ -84,17 +99,17 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
     <!-- List -->
     @if (loading()) {
-      <div class="skeleton-wrap">
+      <div class="skeleton-wrap" data-guide="document-templates-table">
         @for (_ of [1,2,3]; track $index) { <div class="skeleton-row"></div> }
       </div>
     } @else if (tableRows().length === 0) {
-      <div class="empty-state">
+      <div class="empty-state" data-guide="document-templates-table">
         <span class="material-symbols-outlined">description</span>
         <p>{{ 'ADMIN.docs.templates.empty' | translate }}</p>
       </div>
     } @else {
       <!-- Real daf-data-table, same convention as the other admin catalog pages. -->
-      <div class="table-scroll">
+      <div class="table-scroll" data-guide="document-templates-table">
       <daf-data-table #tmplTable [columns]="columns()" [rows]="tableRows()" [config]="tableConfig()">
         <ng-template dafCell="name" let-row>
           <span class="tmpl-name">{{ row['_source'].name }}</span>
@@ -310,6 +325,8 @@ export class DocumentTemplatesAdminComponent implements OnInit, OnChanges {
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   paysId = input.required<number>();
+
+  readonly guideSteps = GUIDE_STEPS;
 
   @ViewChild('htmlEditor') htmlEditorRef!: ElementRef<HTMLTextAreaElement>;
 

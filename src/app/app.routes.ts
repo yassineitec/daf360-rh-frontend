@@ -248,6 +248,12 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),
       },
+      {
+        // Centre d'aide — open to every user, like the home page it documents.
+        path: 'aide',
+        loadComponent: () =>
+          import('./modules/help/help.component').then(m => m.HelpComponent),
+      },
     ],
   },
 

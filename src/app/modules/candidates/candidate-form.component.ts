@@ -31,6 +31,26 @@ import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { genderOptions } from '../../shared/utils/gender.utils';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WizardStepCardComponent } from '../../shared/wizard/wizard-step-card.component';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/**
+ * Steps of the page guide, started from « Aide & guides » (« Candidats » tab). Each
+ * `target` is a `data-guide` anchor in the template; the sidebar ones are desktop-only, so
+ * on mobile those steps show centred.
+ *
+ * `tab` is the wizard step to show (see `onGuideStep`): the guide walks the form itself,
+ * since clicking the form's « Suivant » under the guide's backdrop would close the guide.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'CANDIDATE_FORM.GUIDE.WELCOME.TITLE',  textKey: 'CANDIDATE_FORM.GUIDE.WELCOME.TEXT',  tab: '1' },
+  { icon: 'person',      titleKey: 'CANDIDATE_FORM.GUIDE.IDENTITY.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.IDENTITY.TEXT', target: 'form', tab: '1' },
+  { icon: 'work',        titleKey: 'CANDIDATE_FORM.GUIDE.POSITION.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.POSITION.TEXT', target: 'form', tab: '2' },
+  { icon: 'description', titleKey: 'CANDIDATE_FORM.GUIDE.CV_NOTES.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.CV_NOTES.TEXT', target: 'form', tab: '3' },
+  { icon: 'checklist',   titleKey: 'CANDIDATE_FORM.GUIDE.PROGRESS.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.PROGRESS.TEXT', target: 'progress', tab: '3' },
+  { icon: 'save',        titleKey: 'CANDIDATE_FORM.GUIDE.ACTIONS.TITLE',  textKey: 'CANDIDATE_FORM.GUIDE.ACTIONS.TEXT',  target: 'actions', tab: '4' },
+  { icon: 'help',        titleKey: 'CANDIDATE_FORM.GUIDE.END.TITLE',      textKey: 'CANDIDATE_FORM.GUIDE.END.TEXT',      tab: '1' },
+];
 
 @Component({
   selector: 'app-candidate-form',
@@ -47,6 +67,7 @@ import { WizardStepCardComponent } from '../../shared/wizard/wizard-step-card.co
     SelectComponent,
     SliderComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   templateUrl: './candidate-form.component.html',
 })
@@ -61,6 +82,8 @@ export class CandidateFormComponent implements OnInit {
   private demandSvc        = inject(RecruitmentDemandService);
   private router           = inject(Router);
   private translate        = inject(TranslateService);
+
+  readonly guideSteps = GUIDE_STEPS;
 
   saving          = signal(false);
   error           = signal<string | null>(null);
@@ -405,6 +428,18 @@ export class CandidateFormComponent implements OnInit {
 
   onCancel(): void {
     this.router.navigate(['/rh/candidates']);
+  }
+
+  /**
+   * The guide shows a wizard step (its `tab`). Display only: it skips the step validation,
+   * since nothing is saved, and the guide's last step brings the form back to step 1.
+   */
+  onGuideStep(step: string): void {
+    const n = Number(step);
+    if (n >= 1 && n <= this.STEP_INFO.length) {
+      this.error.set(null);
+      this.currentStep.set(n);
+    }
   }
 
   goNext(): void {

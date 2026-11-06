@@ -7,7 +7,7 @@
 
   <!-- KPIs — one row at every width, 24px gaps (§1). Counted on the whole closed set,
        never on the current page or search filter. -->
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'MISSIONS.HISTORY.KPI.TOTAL' | translate"
       [value]="stats().total"
@@ -31,6 +31,7 @@
 
   <!-- Search + status filter + view toggle: both are client-side projections — the
        endpoint returns the manager's whole list in one call. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'MISSIONS.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -43,6 +44,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -54,7 +56,7 @@
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
        `allowCancel="false"`: a closed mission cannot be cancelled, only reviewed. -->
   @if (viewMode() === 'grid') {
-    <rh-missions-cards-section
+    <rh-missions-cards-section data-guide="items"
       [items]="pagedItems()"
       [loading]="loading()"
       [skeletonCount]="pageSize()"
@@ -62,7 +64,7 @@
       [allowCancel]="false"
       (open)="openDetail($event)" />
   } @else {
-    <rh-missions-table-section
+    <rh-missions-table-section data-guide="items"
       [items]="pagedItems()"
       [loading]="loading()"
       [skeletonRows]="pageSize()"
@@ -94,3 +96,5 @@
   [mission]="selected()"
   [open]="!!selected()"
   (closed)="selected.set(null)" />
+
+<rh-page-guide storageKey="missions-history" [steps]="guideSteps" />

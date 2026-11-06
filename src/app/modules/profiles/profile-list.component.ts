@@ -24,6 +24,19 @@ import { ProfilesTableSectionComponent } from './sections/profiles-table-section
 import { CONTRACT_CODES, LIFECYCLE_CODES, contractLabel, lifecycleLabel } from './profile-labels';
 import { UserStore } from '../../core/user.store';
 import { ProfileListStateService } from './services/profile-list-state.service';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/** Page guide — each `target` is a `data-guide` attribute of the template. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand',    titleKey: 'PROFILES.GUIDE.WELCOME.TITLE',    textKey: 'PROFILES.GUIDE.WELCOME.TEXT' },
+  { icon: 'monitoring',     titleKey: 'PROFILES.GUIDE.KPIS.TITLE',       textKey: 'PROFILES.GUIDE.KPIS.TEXT',       target: 'kpis' },
+  { icon: 'search',         titleKey: 'PROFILES.GUIDE.SEARCH.TITLE',     textKey: 'PROFILES.GUIDE.SEARCH.TEXT',     target: 'toolbar' },
+  { icon: 'badge',          titleKey: 'PROFILES.GUIDE.LIST.TITLE',       textKey: 'PROFILES.GUIDE.LIST.TEXT',       target: 'list' },
+  { icon: 'check_box',      titleKey: 'PROFILES.GUIDE.SELECTION.TITLE',  textKey: 'PROFILES.GUIDE.SELECTION.TEXT',  target: 'list' },
+  { icon: 'last_page',      titleKey: 'PROFILES.GUIDE.PAGINATION.TITLE', textKey: 'PROFILES.GUIDE.PAGINATION.TEXT', target: 'pagination' },
+  { icon: 'help',           titleKey: 'PROFILES.GUIDE.END.TITLE',        textKey: 'PROFILES.GUIDE.END.TEXT' },
+];
 
 const DEFAULT_PAGE_SIZE = 12;
 const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
@@ -62,6 +75,7 @@ const EMPTY_OPTIONS: FilterOptions = {
     BulkActionBarComponent,
     ProfilesCardsSectionComponent,
     ProfilesTableSectionComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './profile-list.component.html',
@@ -83,6 +97,8 @@ export class ProfileListComponent implements OnInit {
     const v = this.contractTypes().find(t => t.valueCode === code);
     return v ? adminLabel(v, this.translate) : contractLabel(code, this.translate);
   }
+
+  readonly guideSteps = GUIDE_STEPS;
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly employees     = signal<EmployeeListItem[]>([]);

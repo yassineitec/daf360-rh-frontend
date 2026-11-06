@@ -11,8 +11,19 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const PAGE_SIZE = 10;
+
+/** Guide of the « Paramètres de paie » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'tune', titleKey: 'ADMIN_PARAMETERS_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_PARAMETERS_GUIDE.WELCOME.TEXT' },
+  { icon: 'add', titleKey: 'ADMIN_PARAMETERS_GUIDE.ACTIONS.TITLE', textKey: 'ADMIN_PARAMETERS_GUIDE.ACTIONS.TEXT', target: 'parameters-actions' },
+  { icon: 'search', titleKey: 'ADMIN_PARAMETERS_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_PARAMETERS_GUIDE.TOOLBAR.TEXT', target: 'parameters-toolbar' },
+  { icon: 'edit', titleKey: 'ADMIN_PARAMETERS_GUIDE.TABLE.TITLE', textKey: 'ADMIN_PARAMETERS_GUIDE.TABLE.TEXT', target: 'parameters-table' },
+  { icon: 'help', titleKey: 'ADMIN_PARAMETERS_GUIDE.END.TITLE', textKey: 'ADMIN_PARAMETERS_GUIDE.END.TEXT' },
+];
 
 /** What each parameter column sorts on. */
 const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null> = {
@@ -27,15 +38,17 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
   standalone: true,
   imports: [
     SpinnerComponent, FormFieldComponent, ButtonComponent, DataTableComponent, DafCellDirective,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-parameters" [steps]="guideSteps" />
+
     <div class="section-header">
       <div>
         <h3 class="col-title">{{ 'ADMIN.data.parameters.TITLE' | translate }}</h3>
         <p class="col-sub">{{ 'ADMIN.data.parameters.SUBTITLE' | translate }}</p>
       </div>
-      <div class="header-actions">
+      <div class="header-actions" data-guide="parameters-actions">
         <!-- Desktop/tablet: full labeled buttons -->
         <daf-button
           [label]="'ADMIN.data.parameters.INIT_DEFAULT' | translate"
@@ -77,14 +90,14 @@ const PARAMETER_SORT: Record<string, (p: ParameterSet) => string | number | null
     } @else {
       <!-- Same toolbar as the other list pages: the search filters the rows, and [table]
            puts the table's reset + column picker on the right of the bar. -->
-      <daf-search-toolbar class="mb-4 block"
+      <daf-search-toolbar class="mb-4 block" data-guide="parameters-toolbar"
         [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
         [value]="searchQuery()"
         [debounce]="200"
         (valueChange)="onSearch($event)"
         [table]="paramsTable" />
 
-      <div class="table-scroll">
+      <div class="table-scroll" data-guide="parameters-table">
       <daf-data-table #paramsTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
         (sortChange)="onSortChange($event.key, $event.dir)"
         (resetClick)="onSortChange('', null)">
@@ -194,6 +207,9 @@ export class ParametersAdminComponent implements OnChanges {
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   paysId = input(179);
+
+  /** Steps of the card's page guide. */
+  readonly guideSteps = GUIDE_STEPS;
 
   loading  = signal(false);
   seeding  = signal(false);

@@ -16,6 +16,19 @@ import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
 import { BilingualRoleName, roleLabel } from '../../../shared/utils/admin-label.utils';
 import { flagDataUri } from '../flag-svgs';
 import { rememberAdminState } from '../admin-section-state';
+import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
+import { GuideStep } from '../../../shared/guide/page-guide.types';
+
+/** Guide of the « Utilisateurs » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'person', titleKey: 'ADMIN_USERS_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_USERS_GUIDE.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'ADMIN_USERS_GUIDE.STATS.TITLE', textKey: 'ADMIN_USERS_GUIDE.STATS.TEXT', target: 'users-stats' },
+  { icon: 'search', titleKey: 'ADMIN_USERS_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_USERS_GUIDE.TOOLBAR.TEXT', target: 'users-toolbar' },
+  { icon: 'person_add', titleKey: 'ADMIN_USERS_GUIDE.CREATE.TITLE', textKey: 'ADMIN_USERS_GUIDE.CREATE.TEXT', target: 'users-toolbar' },
+  { icon: 'edit_calendar', titleKey: 'ADMIN_USERS_GUIDE.BALANCES.TITLE', textKey: 'ADMIN_USERS_GUIDE.BALANCES.TEXT', target: 'users-table' },
+  { icon: 'person_remove', titleKey: 'ADMIN_USERS_GUIDE.TYPE.TITLE', textKey: 'ADMIN_USERS_GUIDE.TYPE.TEXT', target: 'users-table' },
+  { icon: 'help', titleKey: 'ADMIN_USERS_GUIDE.END.TITLE', textKey: 'ADMIN_USERS_GUIDE.END.TEXT' },
+];
 
 interface AdminUserRow {
   id: number;
@@ -123,14 +136,16 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
     MetricCardComponent, SearchToolbarComponent, PaginationComponent, DataTableComponent,
     DafCellDirective, StatusBadgeComponent, AvatarComponent, ButtonComponent,
     FormFieldComponent, SelectComponent, ToggleComponent, DafModalComponent, TableActionComponent,
-    TranslatePipe,
+    TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-users" [steps]="guideSteps" />
+
     <div class="flex min-w-0 flex-col gap-6">
 
       <!-- Counted over the WHOLE register by its own endpoint, never over the filtered view:
            these four are the shape of the register, not of the current search. -->
-      <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-6">
+      <section class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-6" data-guide="users-stats">
         <daf-metric-card
           [label]="'ADMIN.users.stats.total' | translate" [value]="stats()?.total ?? '—'"
           [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10',
@@ -149,7 +164,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
                        help: 'ADMIN.users.stats.neverLoggedInHelp' | translate }" />
       </section>
 
-      <daf-search-toolbar
+      <daf-search-toolbar data-guide="users-toolbar"
         [placeholder]="'ADMIN.users.searchPlaceholder' | translate"
         [value]="search()"
         [debounce]="200"
@@ -171,7 +186,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
       }
 
       @if (viewMode() === 'grid') {
-        <div class="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-3" data-guide="users-table">
           @for (u of paged(); track u.id) {
             <div class="flex flex-col gap-3 rounded-xl border border-outline-variant/30
                         bg-surface-container-lowest p-4">
@@ -217,7 +232,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
           }
         </div>
       } @else {
-        <daf-data-table [columns]="columns()" [rows]="tableRows()" [config]="config()">
+        <daf-data-table data-guide="users-table" [columns]="columns()" [rows]="tableRows()" [config]="config()">
 
           <ng-template dafCell="identity" let-row>
             <div class="flex items-center gap-2.5">
@@ -357,6 +372,9 @@ export class UsersAdminComponent implements OnInit {
   private readonly notify = inject(NotificationService);
   private readonly translate = inject(TranslateService);
   private readonly base = `${environment.hrApiUrl}/api/hr/admin/users`;
+
+  /** Steps of the card's page guide (one view: table and cards share the same anchors). */
+  readonly guideSteps = GUIDE_STEPS;
 
   readonly users = signal<AdminUserRow[]>([]);
   readonly stats = signal<AdminUserStats | null>(null);

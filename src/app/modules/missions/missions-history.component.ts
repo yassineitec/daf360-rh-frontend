@@ -1,6 +1,8 @@
 import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
   FilterResult,
@@ -34,6 +36,15 @@ type ViewMode = 'grid' | 'list';
 
 const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'MISSIONS_GUIDE.HISTORY.WELCOME.TITLE', textKey: 'MISSIONS_GUIDE.HISTORY.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'MISSIONS_GUIDE.HISTORY.KPIS.TITLE', textKey: 'MISSIONS_GUIDE.HISTORY.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'MISSIONS_GUIDE.HISTORY.TOOLBAR.TITLE', textKey: 'MISSIONS_GUIDE.HISTORY.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'history', titleKey: 'MISSIONS_GUIDE.HISTORY.ITEMS.TITLE', textKey: 'MISSIONS_GUIDE.HISTORY.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'MISSIONS_GUIDE.HISTORY.END.TITLE', textKey: 'MISSIONS_GUIDE.HISTORY.END.TEXT' },
+];
+
 /**
  * `/rh/missions/historique` — read-only record of the manager's own missions that are no
  * longer pending a decision. Same list shape as `/rh/missions` minus what only applies to
@@ -49,11 +60,13 @@ const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
   imports: [
     MetricCardComponent, PageComponent, PageHeaderComponent, PaginationComponent,
     SearchToolbarComponent, MissionsCardsSectionComponent, MissionsTableSectionComponent,
-    MissionDetailDrawerComponent, TranslatePipe,
+    MissionDetailDrawerComponent, TranslatePipe, PageGuideComponent,
   ],
   templateUrl: './missions-history.component.html',
 })
 export class MissionsHistoryComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(MissionsTableSectionComponent);
 

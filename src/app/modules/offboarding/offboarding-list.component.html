@@ -17,7 +17,7 @@
 
   <!-- KPIs — one row at every width. The page had none; these read off the same
        list, so no extra request. -->
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'OFFBOARDING.LIST.KPI_ACTIVE' | translate"
       [value]="stats().active"
@@ -46,6 +46,7 @@
   <!-- Search + status filter + view toggle: one lib toolbar. Replaces the
        `.filters-bar` with its loose `daf-select` and its "Réinitialiser" button —
        the filter panel applies and resets itself (§10c). -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'OFFBOARDING.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -58,10 +59,12 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   <!-- Content sits free in the page — never wrapped in an outer card (§1).
        The board renders every filtered file across its status columns, so it owns no
        pagination; the grid and table views stay paged. -->
+  <div data-guide="items">
   @if (viewMode() === 'kanban') {
     <rh-offboarding-board-section
       [columns]="boardColumns()"
@@ -87,6 +90,7 @@
       (sortChange)="onTableSortChange($event)"
       (open)="open($event)" />
   }
+  </div>
 
   @if (viewMode() !== 'kanban' && totalPages() > 0) {
     <daf-pagination
@@ -100,3 +104,5 @@
   }
 
 </daf-page>
+
+<rh-page-guide storageKey="offboarding" [steps]="guideSteps" />

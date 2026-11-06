@@ -63,7 +63,7 @@
 
         <!-- Each step is its OWN component; the shared shell owns the icon head,
              the padding and the hover treatment, so the six cannot drift apart. -->
-        <rh-wizard-step-card
+        <rh-wizard-step-card data-guide="form"
           [icon]="cardIcon()"
           [title]="cardTitle()"
           [subtitle]="cardSub()">
@@ -118,7 +118,7 @@
                The host div must be a STATIC root node of the projected content —
                an element inside an @if never matches ng-content select (§10f). -->
           <div stepFooter>
-            <div class="flex flex-wrap items-center justify-between gap-4 border-t border-outline-variant
+            <div data-guide="actions" class="flex flex-wrap items-center justify-between gap-4 border-t border-outline-variant
                         bg-surface-container-lowest px-4 py-4 sm:px-8 sm:py-5">
               <daf-button
                 [options]="{ variant: 'ghost', label: ('IT_PROVISIONING.form.previous' | translate), iconStart: 'arrow_back', disabled: currentStep() === 1 }"
@@ -163,7 +163,7 @@
            keep the six steps reachable on a short viewport instead of clipping
            them off the bottom of the sticky box. -->
       <aside class="hidden lg:block">
-        <div class="lg:sticky lg:top-6">
+        <div data-guide="progress" class="lg:sticky lg:top-6">
           <daf-card [options]="{ variant: 'default', padding: 'none', radius: 'xl' }">
             <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
               <p class="text-label-caps font-bold uppercase tracking-widest text-outline">{{ 'IT_PROVISIONING.form.progression' | translate }}</p>
@@ -218,3 +218,6 @@
     </div>
   </app-modal>
 }
+
+<!-- The guide shows each wizard step in turn (tabChange carries the step number). -->
+<rh-page-guide storageKey="it-provisioning-file" [steps]="guideSteps" (tabChange)="onGuideStep($event)" />

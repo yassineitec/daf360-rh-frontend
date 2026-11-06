@@ -2,6 +2,8 @@ import { Component, Input, OnInit, TemplateRef, inject, signal, viewChild } from
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   ButtonComponent, MetricCardComponent, ModalService, PageComponent, PageHeaderComponent,
   PaginationComponent, SearchToolbarComponent,
@@ -18,6 +20,22 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
 
 /** Which history this page is showing. The two differ only in scope and permission. */
 export type HistoryScope = 'team' | 'global';
+
+/** Steps of the page guides (« Mon équipe », « Tous les congés »); `target` = a `data-guide` anchor. */
+const GUIDE_STEPS_TEAM: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'CONGES_GUIDE.TEAM.WELCOME.TITLE', textKey: 'CONGES_GUIDE.TEAM.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'CONGES_GUIDE.TEAM.KPIS.TITLE', textKey: 'CONGES_GUIDE.TEAM.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'CONGES_GUIDE.TEAM.TOOLBAR.TITLE', textKey: 'CONGES_GUIDE.TEAM.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'event_available', titleKey: 'CONGES_GUIDE.TEAM.ITEMS.TITLE', textKey: 'CONGES_GUIDE.TEAM.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'CONGES_GUIDE.TEAM.END.TITLE', textKey: 'CONGES_GUIDE.TEAM.END.TEXT' },
+];
+const GUIDE_STEPS_GLOBAL: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'CONGES_GUIDE.GLOBAL.WELCOME.TITLE', textKey: 'CONGES_GUIDE.GLOBAL.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'CONGES_GUIDE.GLOBAL.KPIS.TITLE', textKey: 'CONGES_GUIDE.GLOBAL.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'CONGES_GUIDE.GLOBAL.TOOLBAR.TITLE', textKey: 'CONGES_GUIDE.GLOBAL.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'event_available', titleKey: 'CONGES_GUIDE.GLOBAL.ITEMS.TITLE', textKey: 'CONGES_GUIDE.GLOBAL.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'CONGES_GUIDE.GLOBAL.END.TITLE', textKey: 'CONGES_GUIDE.GLOBAL.END.TEXT' },
+];
 
 /**
  * `/rh/conges/team` and `/rh/conges/global` — the two read-only histories.
@@ -45,6 +63,7 @@ export type HistoryScope = 'team' | 'global';
     PageComponent, PageHeaderComponent, ButtonComponent, MetricCardComponent, SearchToolbarComponent,
     PaginationComponent, CongesTableSectionComponent, CongesCardsSectionComponent,
     CongeDetailComponent, TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     <daf-page [loading]="firstLoad()" [kpis]="4">
@@ -65,7 +84,7 @@ export type HistoryScope = 'team' | 'global';
       </daf-page-header>
 
       <!-- Counted over the whole scope by its own endpoint, never over the current page. -->
-      <section class="grid grid-cols-4 gap-2 sm:gap-6">
+      <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
         <daf-metric-card
           [label]="'CONGES.KPI.TOTAL' | translate" [value]="kpi().total"
           [options]="{ icon: 'beach_access', iconColor: 'text-primary', iconBg: 'bg-primary/10',
@@ -81,6 +100,7 @@ export type HistoryScope = 'team' | 'global';
           [options]="{ icon: 'archive', iconColor: 'text-outline', iconBg: 'bg-surface-container' }" />
       </section>
 
+      <div data-guide="toolbar">
       <daf-search-toolbar
         [placeholder]="'CONGES.SEARCH_PLACEHOLDER' | translate"
         [value]="search()"
@@ -93,6 +113,7 @@ export type HistoryScope = 'team' | 'global';
         [view]="viewMode()"
         (viewChange)="setView($event)"
         [table]="tableSection()?.table() ?? null" />
+      </div>
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -102,12 +123,12 @@ export type HistoryScope = 'team' | 'global';
       }
 
       @if (viewMode() === 'grid') {
-        <rh-conges-cards-section
+        <rh-conges-cards-section data-guide="items"
           [items]="rows()" [loading]="loading()" [skeletonCount]="pageSize()"
           [emptyMessage]="emptyMessage()" [allowArchive]="canArchive"
           (open)="openDetail($event)" (act)="onRowAction($event)" />
       } @else {
-        <rh-conges-table-section
+        <rh-conges-table-section data-guide="items"
           [items]="rows()" [loading]="loading()" [skeletonRows]="pageSize()"
           [emptyMessage]="emptyMessage()" [allowArchive]="canArchive" [busy]="working()"
           [sortKey]="sortKey()" [sortDir]="sortDir()"
@@ -130,9 +151,16 @@ export type HistoryScope = 'team' | 'global';
       </ng-template>
 
     </daf-page>
+
+    <!-- One component, two pages: the guide (and its steps) follow the scope. -->
+    <rh-page-guide [storageKey]="scope === 'global' ? 'conges-global' : 'conges-team'"
+                   [steps]="scope === 'global' ? guideStepsGlobal : guideStepsTeam" />
   `,
 })
 export class CongeHistoryComponent extends CongeListBase implements OnInit {
+  readonly guideStepsTeam = GUIDE_STEPS_TEAM;
+  readonly guideStepsGlobal = GUIDE_STEPS_GLOBAL;
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(CongesTableSectionComponent);
 

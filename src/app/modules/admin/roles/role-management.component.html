@@ -35,6 +35,8 @@
   }
 </div>
 
+<rh-page-guide storageKey="admin-roles" [steps]="guideSteps()" (tabChange)="onGuideTab($event)" />
+
 <app-create-role-modal #createRoleModal
   [allRoles]="roles()"
   (roleCreated)="onRoleCreated($event)"

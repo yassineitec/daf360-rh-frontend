@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, inject, signal, TemplateRef, viewChild } from '@angular/core';
 import { Observable, of, switchMap } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   ButtonComponent, FileUploadComponent, UploadedFile,
   FormFieldComponent, MetricCardComponent, ModalRef, ModalService, PageComponent,
@@ -20,6 +22,16 @@ import { errorMessage, formatDays, localeOf } from './conge-display';
 import { CongesTableSectionComponent } from './sections/conges-table-section.component';
 import { CongesCardsSectionComponent } from './sections/conges-cards-section.component';
 import { CongeDetailComponent } from './sections/conge-detail.component';
+
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'CONGES_GUIDE.SETTLE.WELCOME.TITLE', textKey: 'CONGES_GUIDE.SETTLE.WELCOME.TEXT' },
+  { icon: 'add', titleKey: 'CONGES_GUIDE.SETTLE.NEW.TITLE', textKey: 'CONGES_GUIDE.SETTLE.NEW.TEXT', target: 'header' },
+  { icon: 'monitoring', titleKey: 'CONGES_GUIDE.SETTLE.KPIS.TITLE', textKey: 'CONGES_GUIDE.SETTLE.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'CONGES_GUIDE.SETTLE.TOOLBAR.TITLE', textKey: 'CONGES_GUIDE.SETTLE.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'event_available', titleKey: 'CONGES_GUIDE.SETTLE.ITEMS.TITLE', textKey: 'CONGES_GUIDE.SETTLE.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'CONGES_GUIDE.SETTLE.END.TITLE', textKey: 'CONGES_GUIDE.SETTLE.END.TEXT' },
+];
 
 /**
  * `/rh/conges/settle` — régularisations: HR filing a congé on someone else's behalf, and the
@@ -61,6 +73,7 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
     MultiDatePickerComponent, ButtonComponent, FileUploadComponent,
     CongesTableSectionComponent, CongesCardsSectionComponent, CongeDetailComponent,
     TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
     <daf-page [loading]="firstLoad()" [kpis]="4">
@@ -69,7 +82,7 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
            The primary action lives in the header's own pageActions slot — the page's one
            creating act belongs beside its title, not among the filters that only narrow what
            is already there. -->
-      <daf-page-header
+      <daf-page-header data-guide="header"
         [title]="'CONGES.SETTLE.TITLE' | translate"
         [subtitle]="'CONGES.SETTLE.SUBTITLE' | translate">
         <ng-container pageActions>
@@ -81,7 +94,7 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
         </ng-container>
       </daf-page-header>
 
-      <section class="grid grid-cols-4 gap-2 sm:gap-6">
+      <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
         <daf-metric-card
           [label]="'CONGES.SETTLE.KPI.TOTAL' | translate" [value]="kpi().total"
           [options]="{ icon: 'sync', iconColor: 'text-primary', iconBg: 'bg-primary/10',
@@ -97,6 +110,7 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
           [options]="{ icon: 'cancel', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
       </section>
 
+      <div data-guide="toolbar">
       <daf-search-toolbar
         [placeholder]="'CONGES.SEARCH_PLACEHOLDER' | translate"
         [value]="search()"
@@ -111,6 +125,7 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
         [view]="viewMode()"
         (viewChange)="setView($event)"
         [table]="tableSection()?.table() ?? null" />
+      </div>
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -120,12 +135,12 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
       }
 
       @if (viewMode() === 'grid') {
-        <rh-conges-cards-section
+        <rh-conges-cards-section data-guide="items"
           [items]="rows()" [loading]="loading()" [skeletonCount]="pageSize()"
           [emptyMessage]="emptyMessage()" [showFiledBy]="true"
           (open)="openDetail($event)" />
       } @else {
-        <rh-conges-table-section
+        <rh-conges-table-section data-guide="items"
           [items]="rows()" [loading]="loading()" [skeletonRows]="pageSize()"
           [emptyMessage]="emptyMessage()" [showFiledBy]="true" [busy]="working()"
           [sortKey]="sortKey()" [sortDir]="sortDir()"
@@ -261,9 +276,13 @@ import { CongeDetailComponent } from './sections/conge-detail.component';
       </ng-template>
 
     </daf-page>
+
+    <rh-page-guide storageKey="conges-settle" [steps]="guideSteps" />
   `,
 })
 export class CongeSettleComponent extends CongeListBase implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(CongesTableSectionComponent);
 

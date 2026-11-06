@@ -15,7 +15,7 @@
 
   <!-- KPIs — one row at every width. `text-amber` / `bg-amber/10` on the middle
        tile rendered nothing: `amber` is not a token (§4). It is `warning` now. -->
-  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-3 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'CANDIDATES.STATS.TOTAL' | translate"
       [value]="totalMetricValue()"
@@ -35,6 +35,7 @@
   <!-- Search + filters: one lib toolbar. Replaces the "Afficher/Masquer les
        filtres" row, the search bar, the loose status select and the
        Appliquer / Réinitialiser pair — the panel applies and resets itself. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'CANDIDATES.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -44,6 +45,7 @@
     [filterConfig]="filterConfig()"
     (filterApply)="applyFilters($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (actionError()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -54,7 +56,7 @@
 
   <!-- The table sits free in the page (§1) and is shared with /rh/recrutement.
        A row click opens the dossier drawer; "Voir" opens the candidate. -->
-  <rh-candidates-table-section
+  <rh-candidates-table-section data-guide="table"
     [candidates]="candidates()"
     [loading]="loading()"
     [skeletonRows]="pageSize()"
@@ -98,3 +100,5 @@
   [target]="rejectTarget()"
   (closed)="rejectTarget.set(null)"
   (rejected)="onRejected()" />
+
+<rh-page-guide storageKey="candidate-list" [steps]="guideSteps" />

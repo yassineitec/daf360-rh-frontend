@@ -19,6 +19,8 @@ import { flagDataUri } from '../admin/flag-svgs';
 import {
   ModalRef, ModalService, PageComponent, PageHeaderComponent, SelectComponent, SelectOption,
 } from '@khalilrebhiitec/daf360';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import { WorkforceDetailComponent } from './components/workforce-detail/workforce-detail.component';
 import { MissingDocAlert, ProbationAlert } from './components/alert-card/alert-card.component';
 import { EmployeeCardData, EmployeeCardSection } from './components/employee-card/employee-card.component';
@@ -43,6 +45,18 @@ const DETAIL_ICONS: Record<WorkforceCardKey, string> = {
   seniority: 'military_tech',
 };
 
+/** Page guide — each `target` is a `data-guide` attribute of the page or its sections. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand',   titleKey: 'HOME.GUIDE.WELCOME.TITLE',       textKey: 'HOME.GUIDE.WELCOME.TEXT' },
+  { icon: 'bolt',          titleKey: 'HOME.GUIDE.QUICK_ACTIONS.TITLE', textKey: 'HOME.GUIDE.QUICK_ACTIONS.TEXT', target: 'quick-actions' },
+  { icon: 'description',   titleKey: 'HOME.GUIDE.MISSING_DOCS.TITLE',  textKey: 'HOME.GUIDE.MISSING_DOCS.TEXT',  target: 'missing-docs' },
+  { icon: 'hourglass_top', titleKey: 'HOME.GUIDE.PROBATION.TITLE',     textKey: 'HOME.GUIDE.PROBATION.TEXT',     target: 'probation' },
+  { icon: 'groups',        titleKey: 'HOME.GUIDE.WORKFORCE.TITLE',     textKey: 'HOME.GUIDE.WORKFORCE.TEXT',     target: 'workforce' },
+  { icon: 'task_alt',      titleKey: 'HOME.GUIDE.COMPLETION.TITLE',    textKey: 'HOME.GUIDE.COMPLETION.TEXT',    target: 'completion' },
+  { icon: 'person_add',    titleKey: 'HOME.GUIDE.JOINERS.TITLE',       textKey: 'HOME.GUIDE.JOINERS.TEXT',       target: 'joiners' },
+  { icon: 'help',          titleKey: 'HOME.GUIDE.END.TITLE',           textKey: 'HOME.GUIDE.END.TEXT' },
+];
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -51,6 +65,7 @@ const DETAIL_ICONS: Record<WorkforceCardKey, string> = {
     PageComponent,
     PageHeaderComponent,
     SelectComponent,
+    PageGuideComponent,
     WorkforceDetailComponent,
     QuickActionsSectionComponent,
     OverviewSectionComponent,
@@ -80,6 +95,8 @@ export class HomeComponent implements OnInit {
   readonly nouveauxEmployes         = signal<NouveauEmployeDto[]>([]);
 
   readonly currentUser = this.userStore.currentUser;
+
+  readonly guideSteps = GUIDE_STEPS;
 
   // ── Country picker of the detail pop-up (same options as /rh/admin) ────────
   // The page itself has no country filter: its cards show every entity to a

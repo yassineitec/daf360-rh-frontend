@@ -12,6 +12,27 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { rememberAdminState } from '../admin-section-state';
+import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
+import { GuideStep } from '../../../shared/guide/page-guide.types';
+
+/**
+ * Guide of the « Notifications & Emails » card, started from « Aide & guides ». Two sets:
+ * the event list, or — when an event is open — its routing rule (anchors in the rule editor).
+ */
+const LIST_STEPS: GuideStep[] = [
+  { icon: 'notifications', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.WELCOME.TEXT' },
+  { icon: 'search', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.TOOLBAR.TEXT', target: 'notifications-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.TABLE.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.TABLE.TEXT', target: 'notifications-table' },
+  { icon: 'help', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.END.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.END_LIST.TEXT' },
+];
+const RULE_STEPS: GuideStep[] = [
+  { icon: 'notifications', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.RULE.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.RULE.TEXT' },
+  { icon: 'tune', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.GENERAL.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.GENERAL.TEXT', target: 'notifications-general' },
+  { icon: 'edit_note', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.TEMPLATES.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.TEMPLATES.TEXT', target: 'notifications-templates' },
+  { icon: 'group', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.RECIPIENTS.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.RECIPIENTS.TEXT', target: 'notifications-recipients' },
+  { icon: 'science', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.TEST.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.TEST.TEXT', target: 'notifications-test' },
+  { icon: 'help', titleKey: 'ADMIN_NOTIFICATIONS_GUIDE.END.TITLE', textKey: 'ADMIN_NOTIFICATIONS_GUIDE.END.TEXT' },
+];
 
 /** What each event-type column sorts on. "Canaux" sorts on how many channels are on.
  *  The event label sorts on the label shown — see `sortAccessors`. */
@@ -27,7 +48,7 @@ const EVENT_TYPE_SORT: Record<string, (t: NotificationEventTypeWithRule) => stri
     FormsModule, RoutingRuleEditorComponent,
     StatusBadgeComponent, PaginationComponent, PageComponent, PageHeaderComponent,
     DataTableComponent, DafCellDirective, SearchToolbarComponent,
-    TranslatePipe,
+    TranslatePipe, PageGuideComponent,
   ],
   templateUrl: './notification-routing.component.html',
   styleUrl: './notification-routing.component.scss',
@@ -62,6 +83,9 @@ export class NotificationRoutingComponent implements OnInit {
   });
 
   readonly pageSizeOptions = [10, 20, 50];
+
+  /** The event list's guide, or the open rule's. */
+  readonly guideSteps = computed(() => (this.selectedType() ? RULE_STEPS : LIST_STEPS));
 
   /** An event's label in the UI language (English when the UI is English and one exists). */
   label(t: NotificationEventTypeWithRule): string {

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { unsavedChangesGuard } from '../../shared/guards/unsaved-changes.guard';
 
 export const IT_PROVISIONING_ROUTES: Routes = [
   {
@@ -16,5 +17,7 @@ export const IT_PROVISIONING_ROUTES: Routes = [
     path: ':id',
     loadComponent: () =>
       import('./it-provisioning-form.component').then(m => m.ItProvisioningFormComponent),
+    // Asks before leaving with typed values that were never saved.
+    canDeactivate: [unsavedChangesGuard],
   },
 ];

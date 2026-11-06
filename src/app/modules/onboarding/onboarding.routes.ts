@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { unsavedChangesGuard } from '../../shared/guards/unsaved-changes.guard';
 
 export const ONBOARDING_ROUTES: Routes = [
   {
@@ -15,5 +16,7 @@ export const ONBOARDING_ROUTES: Routes = [
     path: ':candidateId',
     loadComponent: () =>
       import('./onboarding-form.component').then(m => m.OnboardingFormComponent),
+    // Asks before leaving with a draft, a photo or a certificate that were never saved.
+    canDeactivate: [unsavedChangesGuard],
   },
 ];

@@ -1,6 +1,8 @@
 import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
   FilterOption,
@@ -84,6 +86,15 @@ function completedByOptions(items: ProvisioningListItem[]): FilterOption[] {
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 }
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'IT_GUIDE.HISTORY.WELCOME.TITLE', textKey: 'IT_GUIDE.HISTORY.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'IT_GUIDE.HISTORY.KPIS.TITLE', textKey: 'IT_GUIDE.HISTORY.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'IT_GUIDE.HISTORY.TOOLBAR.TITLE', textKey: 'IT_GUIDE.HISTORY.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'devices', titleKey: 'IT_GUIDE.HISTORY.ITEMS.TITLE', textKey: 'IT_GUIDE.HISTORY.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'IT_GUIDE.HISTORY.END.TITLE', textKey: 'IT_GUIDE.HISTORY.END.TEXT' },
+];
+
 /**
  * `/rh/it-provisioning/historique` — read-only record of the completed provisioning files.
  * Same shape as `/rh/missions/historique`: KPI row, toolbar, cards/table, pagination — and
@@ -98,11 +109,14 @@ function completedByOptions(items: ProvisioningListItem[]): FilterOption[] {
   imports: [
     MetricCardComponent, PageComponent, PageHeaderComponent, PaginationComponent,
     SearchToolbarComponent, ItProvisioningCardsSectionComponent, ItProvisioningTableSectionComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './it-provisioning-history.component.html',
 })
 export class ItProvisioningHistoryComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(ItProvisioningTableSectionComponent);
 

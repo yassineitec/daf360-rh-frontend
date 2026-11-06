@@ -7,7 +7,7 @@
     [subtitle]="'BILLETERIE.SUBTITLE' | translate"
     [badges]="headerBadges()" />
 
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'BILLETERIE.KPI_QUEUE' | translate"
       [value]="stats().queue"
@@ -34,7 +34,7 @@
   <!-- Two queues, one page: the missions to price, and the employees' asks. daf-tabs is
        strip-only, so the panel below is ours — which is what keeps each tab's own view
        mode and paging in this component. -->
-  <daf-tabs #tabsRef
+  <daf-tabs #tabsRef data-guide="tabs"
     variant="underline"
     style="--daf-tabs-fade: var(--color-background)"
     [tabs]="tabs()"
@@ -47,6 +47,7 @@
        class="flex flex-col gap-8">
 
     @if (activeTab() === 'queue') {
+      <div data-guide="toolbar">
       <daf-search-toolbar
         [placeholder]="'BILLETERIE.SEARCH_PLACEHOLDER' | translate"
         [value]="search()"
@@ -59,6 +60,7 @@
         [view]="viewMode()"
         (viewChange)="setView($event)"
         [table]="tableSection()?.table() ?? null" />
+      </div>
 
       @if (error()) {
         <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -68,14 +70,14 @@
       }
 
       @if (viewMode() === 'grid') {
-        <rh-billeterie-cards-section
+        <rh-billeterie-cards-section data-guide="items"
           [items]="pagedItems()"
           [loading]="loading()"
           [skeletonCount]="pageSize()"
           [emptyMessage]="queueEmptyMessage()"
           (act)="onQueueAction($event)" />
       } @else {
-        <rh-billeterie-table-section
+        <rh-billeterie-table-section data-guide="items"
           [items]="pagedItems()"
           [loading]="loading()"
           [skeletonRows]="pageSize()"
@@ -97,7 +99,7 @@
       }
 
     } @else {
-      <rh-change-requests-table-section
+      <rh-change-requests-table-section data-guide="requests"
         [items]="requests()"
         [loading]="loading()"
         [emptyMessage]="'BILLETERIE.EMPTY_REQUESTS' | translate"
@@ -130,3 +132,6 @@
   [mission]="selected()"
   [open]="!!selected()"
   (closed)="selected.set(null)" />
+
+<!-- The guide opens the tab each step is about (tabChange carries the tab id). -->
+<rh-page-guide storageKey="billeterie" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />

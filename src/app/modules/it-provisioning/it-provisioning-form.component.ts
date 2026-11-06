@@ -3,6 +3,7 @@ import {
   Component, computed, inject, OnInit, signal,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { HasUnsavedChanges } from '../../shared/guards/unsaved-changes.guard';
 
 import { ItProvisioningService }     from './it-provisioning.service';
 import { ConfirmEmailModalComponent } from './confirm-email-modal.component';
@@ -27,6 +28,8 @@ import { LicenceFlags, StepLicensesComponent } from './steps/step-licenses.compo
 import { StepAdComponent } from './steps/step-ad.component';
 import { StepNotesComponent } from './steps/step-notes.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const STEP_CARD_INFO = [
   { key: 'identity',  icon: 'person'        },
@@ -37,19 +40,39 @@ const STEP_CARD_INFO = [
   { key: 'notes',     icon: 'flag'          },
 ];
 
+/**
+ * Steps of the page guide, started from « Aide & guides » on an IT file. `tab` is the
+ * wizard step to show (see `onGuideStep`); the « Progression » rail is desktop-only, so
+ * on mobile that step shows centred.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'IT_GUIDE.FILE.WELCOME.TITLE', textKey: 'IT_GUIDE.FILE.WELCOME.TEXT', tab: '1' },
+  { icon: 'checklist', titleKey: 'IT_GUIDE.FILE.PROGRESS.TITLE', textKey: 'IT_GUIDE.FILE.PROGRESS.TEXT', target: 'progress', tab: '1' },
+  { icon: 'person', titleKey: 'IT_GUIDE.FILE.IDENTITY.TITLE', textKey: 'IT_GUIDE.FILE.IDENTITY.TEXT', target: 'form', tab: '1' },
+  { icon: 'cloud', titleKey: 'IT_GUIDE.FILE.MS365.TITLE', textKey: 'IT_GUIDE.FILE.MS365.TEXT', target: 'form', tab: '2' },
+  { icon: 'laptop_mac', titleKey: 'IT_GUIDE.FILE.HARDWARE.TITLE', textKey: 'IT_GUIDE.FILE.HARDWARE.TEXT', target: 'form', tab: '3' },
+  { icon: 'verified_user', titleKey: 'IT_GUIDE.FILE.LICENSES.TITLE', textKey: 'IT_GUIDE.FILE.LICENSES.TEXT', target: 'form', tab: '4' },
+  { icon: 'lan', titleKey: 'IT_GUIDE.FILE.AD.TITLE', textKey: 'IT_GUIDE.FILE.AD.TEXT', target: 'form', tab: '5' },
+  { icon: 'flag', titleKey: 'IT_GUIDE.FILE.NOTES.TITLE', textKey: 'IT_GUIDE.FILE.NOTES.TEXT', target: 'form', tab: '6' },
+  { icon: 'save', titleKey: 'IT_GUIDE.FILE.ACTIONS.TITLE', textKey: 'IT_GUIDE.FILE.ACTIONS.TEXT', target: 'actions', tab: '6' },
+  { icon: 'help', titleKey: 'IT_GUIDE.FILE.END.TITLE', textKey: 'IT_GUIDE.FILE.END.TEXT', tab: '1' },
+];
+
 @Component({
   selector: 'app-it-provisioning-form',
   standalone: true,
+  host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
     ButtonComponent, CardComponent, ModalComponent, ConfirmEmailModalComponent,
     PageComponent, PageHeaderComponent, StepperComponent, TranslatePipe,
     WizardStepCardComponent,
     StepIdentityComponent, StepMs365Component, StepHardwareComponent,
     StepLicensesComponent, StepAdComponent, StepNotesComponent,
+    PageGuideComponent,
   ],
   templateUrl: './it-provisioning-form.component.html',
 })
-export class ItProvisioningFormComponent implements OnInit {
+export class ItProvisioningFormComponent implements OnInit, HasUnsavedChanges {
   private route       = inject(ActivatedRoute);
   private service     = inject(ItProvisioningService);
   private listService = inject(ConfigurableListService);
@@ -160,6 +183,14 @@ export class ItProvisioningFormComponent implements OnInit {
   goNext(): void { this.currentStep.update(s => Math.min(this.totalSteps, s + 1)); }
   goPrev(): void { this.currentStep.update(s => Math.max(1, s - 1)); }
   goToStep(step: number): void { this.currentStep.set(step); }
+
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** The guide shows a wizard step (its `tab`): plain navigation, nothing is saved. */
+  onGuideStep(step: string): void {
+    const n = Number(step);
+    if (n >= 1 && n <= this.totalSteps) this.goToStep(n);
+  }
 
   /** Circle classes for the progression panel — active / done / upcoming. */
   stepCircleClasses(i: number): string {
@@ -314,6 +345,31 @@ export class ItProvisioningFormComponent implements OnInit {
     this.adAccountCreated.set(p.adAccountCreated);
     this.adProfileType.set(p.adProfileType ?? '');
     this.notes.set(p.notes ?? '');
+    this.savedState.set(this.editState());
+  }
+
+  // ── Unsaved changes ───────────────────────────────────────────────────────
+  /** Everything the page lets the user type, as one comparable string. */
+  private editState(): string {
+    return JSON.stringify([
+      this.emailInput(), this.editableAssets(), this.hardwareNotes(),
+      this.licenseOffice365(), this.licenseAutocad(), this.licenseRevit(),
+      this.licenseAutodesk(), this.licenseKaspersky(), this.licenseOther(),
+      this.adAccountCreated(), this.adProfileType(), this.notes(),
+    ]);
+  }
+  /** The state last loaded or saved — `initFromProv` runs after every load and save. */
+  private readonly savedState = signal<string | null>(null);
+
+  /** Read by `unsavedChangesGuard` and on `beforeunload`: typed values the server doesn't have. */
+  hasUnsavedChanges(): boolean {
+    const saved = this.savedState();
+    return saved !== null && saved !== this.editState();
+  }
+
+  /** Closing the tab or reloading: the browser's own « leave the page? » prompt. */
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) event.preventDefault();
   }
 
   // ── Asset helpers ─────────────────────────────────────────────────────────

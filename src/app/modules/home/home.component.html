@@ -21,6 +21,7 @@
   }
 
   <rh-quick-actions-section
+    data-guide="quick-actions"
     class="order-2 md:order-1"
     [pendingRequests]="stats()?.pendingRequests ?? 0"
     (navigate)="onQuickAction($event)" />
@@ -54,6 +55,7 @@
     (cardOpen)="onCardOpen($event)" />
 
   <rh-joiners-section
+    data-guide="joiners"
     class="order-3"
     [employees]="employeeCards()"
     [anniversaires]="anniversaires()"
@@ -61,6 +63,9 @@
     (viewProfile)="onViewProfile($event)" />
 
 </daf-page>
+
+<!-- Page guide, started from the header's « Aide » or the sidebar's « Centre d'aide ». Steps point at the `data-guide` attributes above and in the sections. -->
+<rh-page-guide storageKey="home" [steps]="guideSteps" />
 
 <!-- Detail pop-up of a workforce card — projected into daf-modal-host by ModalService
      (onCardOpen). rh-workforce-detail (KPI tiles, ring, one library chart) is fed by
