@@ -8,7 +8,7 @@
 
   <!-- KPIs — one row at every width. Counted on the whole completed set, never on the
        search, the date filter or the current page. -->
-  <section class="grid grid-cols-3 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-3 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'IT_PROVISIONING.HISTORY.KPI.TOTAL' | translate"
       [value]="stats().total"
@@ -25,6 +25,7 @@
       [options]="{ icon: 'timer', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
   </section>
 
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -37,6 +38,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -46,6 +48,7 @@
   }
 
   <!-- Same cards and table as /rh/it-provisioning — only the empty text differs. -->
+  <div data-guide="items">
   @if (viewMode() === 'grid') {
     <rh-it-provisioning-cards-section
       [items]="pagedItems()"
@@ -62,6 +65,7 @@
       (sortChange)="onSortChange($event)"
       (open)="open($event)" />
   }
+  </div>
 
   @if (totalPages() > 0) {
     <daf-pagination
@@ -75,3 +79,5 @@
   }
 
 </daf-page>
+
+<rh-page-guide storageKey="it-provisioning-history" [steps]="guideSteps" />

@@ -6,22 +6,43 @@ import { EntityTimezoneCardComponent } from './regimes/entity-timezone-card.comp
 import { TabItem, TabsComponent } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 type RegimeTab = 'catalog' | 'roles' | 'overview';
+
+/**
+ * Guide of the « Régimes horaires » card, started from « Aide & guides ». The fuseau card
+ * sits above the tabs; each later step names the tab it needs (`tab` = a RegimeTab).
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'schedule',        titleKey: 'ADMIN_REGIMES_GUIDE.WELCOME.TITLE',  textKey: 'ADMIN_REGIMES_GUIDE.WELCOME.TEXT' },
+  { icon: 'public',          titleKey: 'ADMIN_REGIMES_GUIDE.TIMEZONE.TITLE', textKey: 'ADMIN_REGIMES_GUIDE.TIMEZONE.TEXT', target: 'regimes-timezone' },
+  { icon: 'add',             titleKey: 'ADMIN_REGIMES_GUIDE.CATALOG.TITLE',  textKey: 'ADMIN_REGIMES_GUIDE.CATALOG.TEXT',  target: 'regimes-catalog-toolbar', tab: 'catalog' },
+  { icon: 'edit',            titleKey: 'ADMIN_REGIMES_GUIDE.EDITOR.TITLE',   textKey: 'ADMIN_REGIMES_GUIDE.EDITOR.TEXT',   target: 'regimes-catalog-editor',  tab: 'catalog' },
+  { icon: 'manage_accounts', titleKey: 'ADMIN_REGIMES_GUIDE.ROLES.TITLE',    textKey: 'ADMIN_REGIMES_GUIDE.ROLES.TEXT',    target: 'regimes-roles-table',     tab: 'roles' },
+  { icon: 'dashboard',       titleKey: 'ADMIN_REGIMES_GUIDE.OVERVIEW.TITLE', textKey: 'ADMIN_REGIMES_GUIDE.OVERVIEW.TEXT', target: 'regimes-overview-toolbar', tab: 'overview' },
+  { icon: 'person',          titleKey: 'ADMIN_REGIMES_GUIDE.OVERRIDE.TITLE', textKey: 'ADMIN_REGIMES_GUIDE.OVERRIDE.TEXT', target: 'regimes-overview-table',  tab: 'overview' },
+  { icon: 'help',            titleKey: 'ADMIN_REGIMES_GUIDE.END.TITLE',      textKey: 'ADMIN_REGIMES_GUIDE.END.TEXT' },
+];
 
 @Component({
   selector: 'app-regimes-admin',
   standalone: true,
   imports: [
     RegimeCatalogComponent, RegimeRoleAssignmentComponent, RegimeOverviewComponent,
-    EntityTimezoneCardComponent, TabsComponent, TranslatePipe,
+    EntityTimezoneCardComponent, TabsComponent, TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-regimes" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />
+
     <div>
       <!-- The entity's clock. Above the tabs because every regime, break window and
            pointage transition below is read in this zone — without it the entity has no
            presence automation at all. -->
-      <app-entity-timezone-card [paysId]="paysId()" />
+      <div data-guide="regimes-timezone">
+        <app-entity-timezone-card [paysId]="paysId()" />
+      </div>
 
       <!-- Real daf-tabs strip, same convention as role-editor. -->
       <daf-tabs
@@ -53,6 +74,14 @@ export class RegimesAdminComponent {
 
   readonly paysId = input<number>(179);
   activeTab = signal<RegimeTab>('catalog');
+
+  /** Steps of this card's guide (see `GUIDE_STEPS`). */
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** A guide step asks for its tab: show it. */
+  onGuideTab(id: string): void {
+    if (id === 'catalog' || id === 'roles' || id === 'overview') this.activeTab.set(id);
+  }
 
   // ── Mémoire de la section ──────────────────────────────────────────────────
   /** Onglet actif gardé tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */

@@ -16,8 +16,21 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 import { adminLabel } from '../../../shared/utils/admin-label.utils';
 import { rememberAdminState } from '../admin-section-state';
+import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
+import { GuideStep } from '../../../shared/guide/page-guide.types';
 
 const PAGE_SIZE = 10;
+
+/** Guide of the « Listes configurables » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'list_alt', titleKey: 'ADMIN_LISTS_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_LISTS_GUIDE.WELCOME.TEXT' },
+  { icon: 'tab', titleKey: 'ADMIN_LISTS_GUIDE.TABS.TITLE', textKey: 'ADMIN_LISTS_GUIDE.TABS.TEXT', target: 'lists-tabs' },
+  { icon: 'search', titleKey: 'ADMIN_LISTS_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_LISTS_GUIDE.TOOLBAR.TEXT', target: 'lists-toolbar' },
+  { icon: 'add', titleKey: 'ADMIN_LISTS_GUIDE.ADD.TITLE', textKey: 'ADMIN_LISTS_GUIDE.ADD.TEXT', target: 'lists-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_LISTS_GUIDE.TABLE.TITLE', textKey: 'ADMIN_LISTS_GUIDE.TABLE.TEXT', target: 'lists-table' },
+  { icon: 'lock', titleKey: 'ADMIN_LISTS_GUIDE.SYSTEM.TITLE', textKey: 'ADMIN_LISTS_GUIDE.SYSTEM.TEXT', target: 'lists-table' },
+  { icon: 'help', titleKey: 'ADMIN_LISTS_GUIDE.END.TITLE', textKey: 'ADMIN_LISTS_GUIDE.END.TEXT' },
+];
 
 /**
  * Lists kept in the DB but no longer administered here. EMPLOYMENT_TYPE was replaced by
@@ -40,7 +53,7 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe, PageGuideComponent,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -61,6 +74,9 @@ export class ListManagerComponent implements OnInit {
    */
   readonly paysId = input<number | null>(null);
   adding  = signal(false);
+
+  /** Steps of the card's page guide (one view: the lists and their values). */
+  readonly guideSteps = GUIDE_STEPS;
 
   listTypes       = signal<ListType[]>([]);
   selectedType    = signal<ListType | null>(null);

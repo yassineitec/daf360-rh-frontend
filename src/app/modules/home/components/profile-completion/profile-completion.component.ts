@@ -24,12 +24,8 @@ import { CardComponent, ProgressBarComponent } from '@khalilrebhiitec/daf360';
           [value]="tauxGlobalPct()"
           [options]="{ variant: 'tertiary', animated: true }" />
       </div>
-      <button
-        type="button"
-        class="mt-6 flex items-center gap-1 text-[13px] text-secondary font-bold hover:underline">
-        <span class="material-symbols-outlined text-[18px]">notifications_active</span>
-        {{ 'HOME.PROFILE_COMPLETION.REMIND' | translate }}
-      </button>
+      <!-- No « Relancer les employés » button: it had no handler, and the backend has no
+           reminder to send. HOME.PROFILE_COMPLETION.REMIND is kept for when it does. -->
       </div>
     </daf-card>
   `,

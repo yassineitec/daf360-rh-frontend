@@ -1,6 +1,8 @@
 import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import {
@@ -76,6 +78,15 @@ const STATUS_VARIANT: Record<RecruitmentDemandStatus, 'success' | 'warning' | 'd
   CLOTUREE:   'info',
 };
 
+/** Steps of the page guide; `tab` opens the « Demande RH » or recruitment tab first. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'REQUESTS_GUIDE.HISTORY.WELCOME.TITLE', textKey: 'REQUESTS_GUIDE.HISTORY.WELCOME.TEXT', tab: 'other' },
+  { icon: 'tab', titleKey: 'REQUESTS_GUIDE.HISTORY.TABS.TITLE', textKey: 'REQUESTS_GUIDE.HISTORY.TABS.TEXT', target: 'tabs', tab: 'other' },
+  { icon: 'search', titleKey: 'REQUESTS_GUIDE.HISTORY.OTHER.TITLE', textKey: 'REQUESTS_GUIDE.HISTORY.OTHER.TEXT', target: 'toolbar', tab: 'other' },
+  { icon: 'work', titleKey: 'REQUESTS_GUIDE.HISTORY.RECRUITMENT.TITLE', textKey: 'REQUESTS_GUIDE.HISTORY.RECRUITMENT.TEXT', target: 'toolbar', tab: 'recruitment' },
+  { icon: 'help', titleKey: 'REQUESTS_GUIDE.HISTORY.END.TITLE', textKey: 'REQUESTS_GUIDE.HISTORY.END.TEXT', tab: 'other' },
+];
+
 /** One KPI tile per decided status, same icon/colour language as the status badge above. */
 const STATUS_KPI: Record<DecidedStatus, { labelKey: string; icon: string; iconColor: string; iconBg: string }> = {
   APPROUVEE:  { labelKey: 'RECRUITMENT_DEMANDS.FILTER.APPROUVEE',  icon: 'check_circle',    iconColor: 'text-success', iconBg: 'bg-success/10' },
@@ -100,6 +111,7 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
     RecruitmentDemandTableSectionComponent,
     RequestCardsSectionComponent,
     RequestTableSectionComponent,
+    PageGuideComponent,
   ],
   template: `
     <daf-page [loading]="firstLoad()" [kpis]="0">
@@ -145,7 +157,7 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
       <!-- Two tabs: this page is "Historique de demande" now, not just recruitment —
            its history must cover both demand types, same daf-tabs pattern as the
            Demandes page's own "Demande" / "Demande de recrutement" split. -->
-      <daf-tabs
+      <daf-tabs data-guide="tabs"
         variant="underline"
         [tabs]="mainTabs()"
         [active]="mainTab()"
@@ -155,7 +167,7 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
       @if (mainTab() === 'recruitment') {
         <!-- Same daf-search-toolbar as the "Demande de recrutement" tab on the Demandes
              page — search on the left, the cards/table switch then "Filtres" on the right. -->
-        <daf-search-toolbar
+        <daf-search-toolbar data-guide="toolbar"
           [placeholder]="'RECRUITMENT_DEMANDS.LIST.SEARCH_PLACEHOLDER' | translate"
           [(value)]="searchQuery"
           [debounce]="200"
@@ -206,7 +218,7 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
              see everyone's requests here, everyone else sees only their own. -->
         <!-- Same "Filtres" button folded into the toolbar as everywhere else on this page
              (and on the Demandes page's own "Demande" tab), with the same view switch. -->
-        <daf-search-toolbar
+        <daf-search-toolbar data-guide="toolbar"
           [placeholder]="'RECRUITMENT_DEMANDS.LIST.OTHER_SEARCH_PLACEHOLDER' | translate"
           [(value)]="otherSearchQuery"
           [debounce]="200"
@@ -257,9 +269,14 @@ const STATUS_KPI_ORDER: DecidedStatus[] = ['APPROUVEE', 'REJETEE', 'ANNULEE', 'C
       }
 
     </daf-page>
+
+    <!-- The guide opens the tab each step is about (tabChange carries the tab id). -->
+    <rh-page-guide storageKey="requests-history" [steps]="guideSteps" (tabChange)="onMainTabChange($event)" />
   `,
 })
 export class RecruitmentDemandListComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** "Demande de recrutement" tab, table view only — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly recruitmentTableSection = viewChild(RecruitmentDemandTableSectionComponent);
   /** "Demande" tab, table view only — its `daf-data-table` goes to the toolbar's `[table]`. */

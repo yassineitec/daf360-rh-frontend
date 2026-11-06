@@ -26,7 +26,7 @@
 
       <!-- ── Left: identity, always on screen ── -->
       <div class="lg:w-[32%] lg:shrink-0">
-        <div class="lg:sticky lg:top-6">
+        <div data-guide="identity" class="lg:sticky lg:top-6">
           <rh-identity-card
             [profile]="p"
             [editMode]="editMode()"
@@ -53,7 +53,9 @@
       <div class="flex min-w-0 flex-1 flex-col gap-6">
 
         <!-- daf-tabs is strip-only; the panel below is ours, which is what keeps
-             the per-tab lazy loading (contracts) in this component. -->
+             the per-tab lazy loading (contracts) in this component. The wrapper only
+             anchors the guide's « tabs » step. -->
+        <div data-guide="tabs">
         <daf-tabs #tabsRef
           variant="underline"
           style="--daf-tabs-fade: var(--color-background)"
@@ -61,8 +63,9 @@
           [(active)]="activeTab"
           [tabsLabel]="'PROFILES.DETAIL.TABS_ARIA' | translate"
           idPrefix="profile-detail" />
+        </div>
 
-        <div role="tabpanel"
+        <div role="tabpanel" data-guide="panel"
              [id]="tabsRef.panelId(activeTab())"
              [attr.aria-labelledby]="tabsRef.tabId(activeTab())">
           @switch (activeTab()) {
@@ -191,6 +194,10 @@
   }
 
 </daf-page>
+
+<!-- Guided tour, started from the help center: one step per visible tab, each switching
+     to its tab (tabChange) before highlighting the panel. -->
+<rh-page-guide storageKey="profile-detail" [steps]="guideSteps()" (tabChange)="onGuideTab($event)" />
 
 <!-- ── Document-generation drawer ────────────────────────────────────────────
      At the page root, not inside daf-page: the panel is `position: fixed` and any

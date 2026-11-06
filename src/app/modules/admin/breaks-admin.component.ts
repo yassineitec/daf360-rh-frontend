@@ -23,8 +23,24 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { rankIn, searchRows } from '../../shared/table-sort.utils';
 import { adminLabel } from '../../shared/utils/admin-label.utils';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 type BreakTab = 'templates' | 'legal-rules';
+
+/**
+ * Guide of the « Gestion des pauses » card, started from « Aide & guides ». Each step names
+ * the sub-tab it needs (`tab` = a BreakTab): the templates first, then the legal rules.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'free_breakfast', titleKey: 'ADMIN_BREAKS_GUIDE.WELCOME.TITLE',     textKey: 'ADMIN_BREAKS_GUIDE.WELCOME.TEXT' },
+  { icon: 'filter_list',    titleKey: 'ADMIN_BREAKS_GUIDE.TOOLBAR.TITLE',     textKey: 'ADMIN_BREAKS_GUIDE.TOOLBAR.TEXT',     target: 'breaks-toolbar',       tab: 'templates' },
+  { icon: 'add',            titleKey: 'ADMIN_BREAKS_GUIDE.NEW.TITLE',         textKey: 'ADMIN_BREAKS_GUIDE.NEW.TEXT',         target: 'breaks-toolbar',       tab: 'templates' },
+  { icon: 'table_rows',     titleKey: 'ADMIN_BREAKS_GUIDE.TABLE.TITLE',       textKey: 'ADMIN_BREAKS_GUIDE.TABLE.TEXT',       target: 'breaks-table',         tab: 'templates' },
+  { icon: 'gavel',          titleKey: 'ADMIN_BREAKS_GUIDE.LEGAL.TITLE',       textKey: 'ADMIN_BREAKS_GUIDE.LEGAL.TEXT',       target: 'breaks-legal-toolbar', tab: 'legal-rules' },
+  { icon: 'rule',           titleKey: 'ADMIN_BREAKS_GUIDE.LEGAL_TABLE.TITLE', textKey: 'ADMIN_BREAKS_GUIDE.LEGAL_TABLE.TEXT', target: 'breaks-legal-table',   tab: 'legal-rules' },
+  { icon: 'help',           titleKey: 'ADMIN_BREAKS_GUIDE.END.TITLE',         textKey: 'ADMIN_BREAKS_GUIDE.END.TEXT' },
+];
 
 @Component({
   selector: 'app-breaks-admin',
@@ -32,9 +48,11 @@ type BreakTab = 'templates' | 'legal-rules';
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent, SearchToolbarComponent,
     LegalRulesAdminComponent, StatusBadgeComponent,
-    DataTableComponent, DafCellDirective, TranslatePipe,
+    DataTableComponent, DafCellDirective, TranslatePipe, PageGuideComponent,
   ],
   template: `
+<rh-page-guide storageKey="admin-breaks" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />
+
 <div>
   <!-- Sub-tab bar -->
   <nav class="ba-tab-bar" role="tablist">
@@ -59,7 +77,7 @@ type BreakTab = 'templates' | 'legal-rules';
            panel — one régime's table shown at a time instead of every régime stacked —
            "Nouveau modèle" (ADMIN_BREAKS only), and [table] puts the table's reset +
            column picker right of Filtres. -->
-      <daf-search-toolbar class="mb-4 block"
+      <daf-search-toolbar class="mb-4 block" data-guide="breaks-toolbar"
         [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
         [value]="searchQuery()"
         [debounce]="200"
@@ -168,7 +186,7 @@ type BreakTab = 'templates' | 'legal-rules';
             <p style="font-size:var(--text-body-sm);margin:6px 0 0;color:var(--color-outline);">{{ 'ADMIN.regimes.breaks.emptyHint' | translate }}</p>
           </div>
         } @else {
-          <div class="table-scroll">
+          <div class="table-scroll" data-guide="breaks-table">
           <daf-data-table #breaksTable [columns]="columns()" [rows]="filteredRows()" [config]="tableConfig()">
             <ng-template dafCell="deductionType" let-row>
               <daf-badge [label]="row['deductionType']" [options]="deductionBadgeOptions(row['deductionType'])" />
@@ -229,6 +247,15 @@ export class BreaksAdminComponent implements OnChanges {
     this.availablePays().map(p => ({ value: String(p.id), label: p.frenchLabel })));
 
   activeTab     = signal<BreakTab>('templates');
+
+  /** Steps of this card's guide (see `GUIDE_STEPS`). */
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** A guide step asks for its sub-tab: show it. */
+  onGuideTab(id: string): void {
+    if (id === 'templates' || id === 'legal-rules') this.activeTab.set(id);
+  }
+
   templates     = signal<BreakTemplateDto[]>([]);
   regimes       = signal<WorkingTimeRegime[]>([]);
   isLoading     = signal(true);

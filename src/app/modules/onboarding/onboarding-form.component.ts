@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HasUnsavedChanges } from '../../shared/guards/unsaved-changes.guard';
 import { FormsModule } from '@angular/forms';
 import { Observable, forkJoin, of, catchError } from 'rxjs';
 
@@ -27,10 +28,33 @@ import { isFemale } from '../../shared/utils/avatar.utils';
 import { NotificationService } from '../../core/notification.service';
 import { ProfileFieldComponent } from '../../shared/detail/profile-field.component';
 import { SectionCardComponent } from '../../shared/detail/section-card.component';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/**
+ * Steps of the page guide, started from « Aide & guides » on an onboarding file. `tab` is
+ * the wizard step to show (see `onGuideStep`): the guide walks the wizard, saving nothing.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'ONBOARDING_GUIDE.FILE.WELCOME.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.WELCOME.TEXT', tab: '1' },
+  { icon: 'badge', titleKey: 'ONBOARDING_GUIDE.FILE.CARD.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.CARD.TEXT', target: 'card', tab: '1' },
+  { icon: 'linear_scale', titleKey: 'ONBOARDING_GUIDE.FILE.STEPPER.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.STEPPER.TEXT', target: 'stepper', tab: '1' },
+  { icon: 'badge', titleKey: 'ONBOARDING_GUIDE.FILE.IDENTITY.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.IDENTITY.TEXT', target: 'step', tab: '1' },
+  { icon: 'work', titleKey: 'ONBOARDING_GUIDE.FILE.POSITION.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.POSITION.TEXT', target: 'step', tab: '2' },
+  { icon: 'description', titleKey: 'ONBOARDING_GUIDE.FILE.CONTRACT.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.CONTRACT.TEXT', target: 'step', tab: '3' },
+  { icon: 'schedule', titleKey: 'ONBOARDING_GUIDE.FILE.REGIME.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.REGIME.TEXT', target: 'step', tab: '4' },
+  { icon: 'person', titleKey: 'ONBOARDING_GUIDE.FILE.PERSONAL.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.PERSONAL.TEXT', target: 'step', tab: '5' },
+  { icon: 'account_balance', titleKey: 'ONBOARDING_GUIDE.FILE.BANK.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.BANK.TEXT', target: 'step', tab: '6' },
+  { icon: 'emergency', titleKey: 'ONBOARDING_GUIDE.FILE.EMERGENCY.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.EMERGENCY.TEXT', target: 'step', tab: '7' },
+  { icon: 'fact_check', titleKey: 'ONBOARDING_GUIDE.FILE.SUMMARY.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.SUMMARY.TEXT', target: 'step', tab: '8' },
+  { icon: 'save', titleKey: 'ONBOARDING_GUIDE.FILE.ACTIONS.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.ACTIONS.TEXT', target: 'actions', tab: '8' },
+  { icon: 'help', titleKey: 'ONBOARDING_GUIDE.FILE.END.TITLE', textKey: 'ONBOARDING_GUIDE.FILE.END.TEXT', tab: '1' },
+];
 
 @Component({
   selector: 'app-onboarding-form',
   standalone: true,
+  host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
     CardComponent,
     ButtonComponent,
@@ -50,12 +74,13 @@ import { SectionCardComponent } from '../../shared/detail/section-card.component
     StepEmergencyComponent,
     StepSummaryComponent,
     ConfirmSubmitModalComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './onboarding-form.component.html',
   styleUrl: './onboarding-form.component.scss',
 })
-export class OnboardingFormComponent implements OnInit {
+export class OnboardingFormComponent implements OnInit, HasUnsavedChanges {
   private route   = inject(ActivatedRoute);
   private router  = inject(Router);
   private service = inject(OnboardingService);
@@ -245,6 +270,7 @@ export class OnboardingFormComponent implements OnInit {
           emergencyContactRelation: data.emergencyContactRelation ?? undefined,
           emergencyContactPhone:   data.emergencyContactPhone   ?? undefined,
         });
+        this.savedDraft.set(JSON.stringify(this.draftData()));
         this.loading.set(false);
         this.firstLoad.set(false);
       },
@@ -254,6 +280,28 @@ export class OnboardingFormComponent implements OnInit {
         this.firstLoad.set(false);
       },
     });
+  }
+
+  // ── Unsaved changes ───────────────────────────────────────────────────────
+  /** The draft as last loaded or saved; null until the form is loaded. */
+  private readonly savedDraft = signal<string | null>(null);
+  /** Set once the file is created, so the guard lets the success page open. */
+  private submitted = false;
+
+  /**
+   * Read by `unsavedChangesGuard` and on `beforeunload`. The photo and the bank
+   * certificate count too: they are never part of the draft, so leaving loses them.
+   */
+  hasUnsavedChanges(): boolean {
+    const saved = this.savedDraft();
+    if (this.submitted || saved === null) return false;
+    return saved !== JSON.stringify(this.draftData())
+      || !!this.selectedPhoto() || !!this.selectedCertification();
+  }
+
+  /** Closing the tab or reloading: the browser's own « leave the page? » prompt. */
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) event.preventDefault();
   }
 
   onStepChanged(partial: Partial<OnboardingProfileDto>): void {
@@ -276,10 +324,20 @@ export class OnboardingFormComponent implements OnInit {
     this.currentStep.set(n);
   }
 
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** The guide shows a wizard step (its `tab`): plain navigation, nothing is saved. */
+  onGuideStep(step: string): void {
+    const n = Number(step);
+    if (n >= 1 && n <= this.totalSteps) this.goToStep(n);
+  }
+
   onSaveDraft(): void {
     this.saving.set(true);
+    const sent = JSON.stringify(this.draftData());
     this.service.saveDraft(this.candidateId(), this.draftData()).subscribe({
       next: () => {
+        this.savedDraft.set(sent);
         this.saving.set(false);
         this.flash(this.translate.instant('ONBOARDING.FORM.DRAFT_SAVED'));
       },
@@ -367,6 +425,7 @@ export class OnboardingFormComponent implements OnInit {
   }
 
   private goToSuccess(result: { employeeProfileId: number; userId: number; ms365Email: string }): void {
+    this.submitted = true;   // the file exists now: nothing left to lose
     this.router.navigate(['../success'], {
       relativeTo: this.route,
       queryParams: {

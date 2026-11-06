@@ -20,6 +20,19 @@ import { AbsenceTypesService, RoleOption } from '../conges/absence-types.service
 import {
   AbsenceTypeRow, AbsenceTypeUpsert, BALANCE_FIELDS,
 } from '../conges/models/absence-type.model';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/** Guide of the « Types de congés » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'beach_access', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.WELCOME.TEXT' },
+  { icon: 'search', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.TOOLBAR.TEXT', target: 'absence-types-toolbar' },
+  { icon: 'add', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.NEW.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.NEW.TEXT', target: 'absence-types-new' },
+  { icon: 'rule', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.RULES.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.RULES.TEXT', target: 'absence-types-new' },
+  { icon: 'table_rows', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.TABLE.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.TABLE.TEXT', target: 'absence-types-table' },
+  { icon: 'toggle_on', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.ACTIONS.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.ACTIONS.TEXT', target: 'absence-types-table' },
+  { icon: 'help', titleKey: 'ADMIN_ABSENCE_TYPES_GUIDE.END.TITLE', textKey: 'ADMIN_ABSENCE_TYPES_GUIDE.END.TEXT' },
+];
 
 /**
  * Administering what a congé IS.
@@ -42,22 +55,25 @@ import {
  *   and refuses to save without it — a type that claims to debit an allowance and silently
  *   does not is the kind of bug an employee discovers months later in their own figures.
  *
- * TWO FIELDS ARE LABELLED AS INERT. `allowedGender` and `approverResolutionStrategy` are
- * stored and round-tripped but enforced by no code — verified in the source, not assumed.
- * The form says so beside them. Presenting them as working rules would be a lie the screen
- * tells convincingly.
+ * GENDER AND STRATEGY ARE ENFORCED since 2026-11-04 (they were stored-only before):
+ * `allowedGender` hides the type from, and refuses it for, the other gender;
+ * `approverResolutionStrategy` decides which holders of the approver roles are offered —
+ * see ApproverResolutionStrategy in rh-service. The hint under the strategy says what the
+ * chosen one does.
  */
 @Component({
   selector: 'app-absence-types-admin',
   standalone: true,
   imports: [
     DataTableComponent, SearchToolbarComponent, ButtonComponent,
-    FormFieldComponent, SelectComponent, ToggleComponent, TranslatePipe,
+    FormFieldComponent, SelectComponent, ToggleComponent, TranslatePipe, PageGuideComponent,
   ],
   // No `daf-page` / `daf-page-header` here: AdminComponent already wraps every tab in one
   // and renders the breadcrumb header. A second pair would nest a page inside a page and
   // print the title twice.
   template: `
+    <rh-page-guide storageKey="admin-absence-types" [steps]="guideSteps" />
+
     @if (loading()) {
       <p class="at-loading">{{ 'CONGES.TYPES.LOADING' | translate }}</p>
     }
@@ -66,20 +82,20 @@ import {
 
     <!-- Same bar as the other lists: search, "Nouveau type", and \`[table]\` puts the
          table's reset + column picker on the right. -->
-    <daf-search-toolbar class="mb-4 block"
+    <daf-search-toolbar class="mb-4 block" data-guide="absence-types-toolbar"
       [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
       [value]="searchQuery()"
       [debounce]="200"
       (valueChange)="onSearch($event)"
       [table]="atTable">
-      <daf-button
+      <daf-button data-guide="absence-types-new"
         [label]="'CONGES.TYPES.NEW' | translate"
         variant="teal"
         [options]="{ iconStart: 'add' }"
         (onClick)="openCreate()" />
     </daf-search-toolbar>
 
-      <daf-data-table #atTable
+      <daf-data-table #atTable data-guide="absence-types-table"
         [columns]="columns()"
         [rows]="tableRows()"
         [config]="tableConfig()" />
@@ -196,35 +212,38 @@ import {
               [checked]="active()"
               [options]="{ label: ('CONGES.TYPES.ACTIVE' | translate) }"
               (checkedChange)="active.set($event)" />
-          </div>
 
-          <!-- ── Approvers ───────────────────────────────────────────── -->
-          <p class="at-sec">{{ 'CONGES.TYPES.SEC_APPROVERS' | translate }}</p>
-          <p class="at-hint">{{ 'CONGES.TYPES.APPROVERS_HINT' | translate }}</p>
-          <daf-select
-            [options]="roleOptions()"
-            [selected]="approverRoleIds()"
-            [config]="{ label: ('CONGES.TYPES.APPROVER_ROLES' | translate), multiple: true,
-                        placeholder: ('CONGES.TYPES.APPROVERS_NONE' | translate),
-                        fullWidth: true, searchable: true }"
-            (selectedChange)="approverRoleIds.set($event)" />
-
-          <!-- ── Stored but not enforced ─────────────────────────────── -->
-          <p class="at-sec">{{ 'CONGES.TYPES.SEC_INERT' | translate }}</p>
-          <p class="at-warn">{{ 'CONGES.TYPES.INERT_HINT' | translate }}</p>
-          <div class="at-grid">
+            <!-- Enforced: the type is hidden from, and refused for, the other gender. -->
             <daf-select
               [options]="genderOptions()"
               [selected]="sel(allowedGender())"
-              [config]="{ label: ('CONGES.TYPES.ALLOWED_GENDER' | translate), fullWidth: true }"
+              [config]="{ label: ('CONGES.TYPES.ALLOWED_GENDER' | translate), fullWidth: true,
+                          hint: ('CONGES.TYPES.GENDER_HINT' | translate) }"
               (selectedChange)="allowedGender.set(str($event[0]))" />
+          </div>
+
+          <!-- ── Approvers ───────────────────────────────────────────────
+               The roles, then how they resolve to people (the strategy). The
+               strategy only matters once a role is chosen. -->
+          <p class="at-sec">{{ 'CONGES.TYPES.SEC_APPROVERS' | translate }}</p>
+          <p class="at-hint">{{ 'CONGES.TYPES.APPROVERS_HINT' | translate }}</p>
+          <div class="at-grid">
+            <daf-select
+              [options]="roleOptions()"
+              [selected]="approverRoleIds()"
+              [config]="{ label: ('CONGES.TYPES.APPROVER_ROLES' | translate), multiple: true,
+                          placeholder: ('CONGES.TYPES.APPROVERS_NONE' | translate),
+                          fullWidth: true, searchable: true }"
+              (selectedChange)="approverRoleIds.set($event)" />
 
             <daf-select
               [options]="strategyOptions()"
               [selected]="sel(strategy())"
-              [config]="{ label: ('CONGES.TYPES.STRATEGY' | translate), fullWidth: true }"
+              [config]="{ label: ('CONGES.TYPES.STRATEGY' | translate), fullWidth: true,
+                          disabled: !approverRoleIds().length }"
               (selectedChange)="strategy.set(str($event[0]))" />
           </div>
+          <p class="at-hint">{{ strategyHint() }}</p>
 
           @if (formError()) { <p class="at-error">{{ formError() }}</p> }
         </div>
@@ -250,6 +269,9 @@ export class AbsenceTypesAdminComponent implements OnInit {
   private readonly translate = inject(TranslateService);
 
   private readonly formTpl = viewChild.required<TemplateRef<unknown>>('formTpl');
+
+  /** Steps of the card's page guide. */
+  readonly guideSteps = GUIDE_STEPS;
 
   readonly rows = signal<AbsenceTypeRow[]>([]);
   readonly roles = signal<RoleOption[]>([]);
@@ -294,8 +316,19 @@ export class AbsenceTypesAdminComponent implements OnInit {
     }));
   });
 
-  readonly strategyOptions = computed<SelectOption[]>(() =>
-    ['TOP_OF_HIERARCHY', 'ROLE_MATCH', 'SAME_COUNTRY_FIRST'].map((s) => ({ value: s, label: s })));
+  readonly strategyOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return ['TOP_OF_HIERARCHY', 'ROLE_MATCH', 'SAME_COUNTRY_FIRST'].map((s) => ({
+      value: s, label: this.translate.instant('CONGES.TYPES.STRATEGIES.' + s),
+    }));
+  });
+
+  /** What the chosen strategy does — or why it does nothing yet (no role chosen). */
+  readonly strategyHint = computed(() => {
+    this.translate.currentLang();
+    if (!this.approverRoleIds().length) return this.translate.instant('CONGES.TYPES.STRATEGY_NO_ROLE');
+    return this.translate.instant('CONGES.TYPES.STRATEGIES_HINT.' + (this.strategy() ?? 'TOP_OF_HIERARCHY'));
+  });
 
   readonly roleOptions = computed<SelectOption[]>(() =>
     this.roles().map((r) => ({ value: String(r.id), label: roleLabel(r, this.translate) })));

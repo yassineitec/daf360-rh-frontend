@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CardComponent } from '@khalilrebhiitec/daf360';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
@@ -62,7 +62,13 @@ const MISSING_DOCS_LIMIT = 5;
         }
 
         @for (alert of visible(); track alert.profileId) {
-          <div class="flex items-center gap-3 py-2 border-b border-outline-variant/60 last:border-0">
+          <div class="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg cursor-pointer
+                      border-b border-outline-variant/60 last:border-0
+                      hover:bg-surface-container-low transition-colors"
+               role="button" tabindex="0"
+               [attr.aria-label]="alert.fullName"
+               (click)="viewProfile.emit(alert.profileId)"
+               (keydown.enter)="viewProfile.emit(alert.profileId)">
             <div class="w-8 h-8 rounded-full bg-red-100 overflow-hidden shrink-0
                         flex items-center justify-center text-[10px] font-bold text-red-600">
               @if (!failed().has(alert.profileId)) {
@@ -97,6 +103,9 @@ export class ProbationCardComponent {
   readonly alerts = input.required<ProbationAlert[]>();
   readonly total  = input.required<number>();
   readonly getAvatarUrl = getAvatarUrl;
+
+  /** A row was clicked — the page opens that employee's profile (/rh/profiles/:id). */
+  readonly viewProfile = output<number>();
 
   readonly failed  = signal(new Set<number>());
   readonly visible = computed(() => this.alerts().slice(0, PROBATION_LIMIT));

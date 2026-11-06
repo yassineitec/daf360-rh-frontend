@@ -9,6 +9,8 @@ import type { BadgeVariant, SelectOption } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FolderPickerComponent } from './folder-picker.component';
 import { rememberAdminState } from '../admin-section-state';
+import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
+import { GuideStep } from '../../../shared/guide/page-guide.types';
 import {
   Diagnosis, DocKindInfo, DocumentSyncProgress, DocumentSyncRun, DocumentTypeRow, EmployeeFolderRow, SharePointAdminService,
   SharePointLocation, SharePointStatus,
@@ -21,6 +23,21 @@ type Panel = 'paths' | 'required' | 'employees' | 'diagnose';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
 
 const PAGE_SIZE = 10;
+
+/**
+ * Guide of the « SharePoint » card, started from « Aide & guides ». `tab` = a panel id:
+ * the guide switches panels through onGuideTab before measuring each target.
+ */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'folder_shared', titleKey: 'ADMIN_SHAREPOINT_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.WELCOME.TEXT', tab: 'paths' },
+  { icon: 'folder_open', titleKey: 'ADMIN_SHAREPOINT_GUIDE.PATHS.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.PATHS.TEXT', target: 'sharepoint-paths-toolbar', tab: 'paths' },
+  { icon: 'checklist', titleKey: 'ADMIN_SHAREPOINT_GUIDE.REQUIRED.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.REQUIRED.TEXT', target: 'sharepoint-required-table', tab: 'required' },
+  { icon: 'sync', titleKey: 'ADMIN_SHAREPOINT_GUIDE.SYNC.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.SYNC.TEXT', target: 'sharepoint-sync', tab: 'required' },
+  { icon: 'description', titleKey: 'ADMIN_SHAREPOINT_GUIDE.KIND.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.KIND.TEXT', target: 'sharepoint-kind', tab: 'employees' },
+  { icon: 'group', titleKey: 'ADMIN_SHAREPOINT_GUIDE.EMPLOYEES.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.EMPLOYEES.TEXT', target: 'sharepoint-employees-table', tab: 'employees' },
+  { icon: 'troubleshoot', titleKey: 'ADMIN_SHAREPOINT_GUIDE.DIAGNOSE.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.DIAGNOSE.TEXT', target: 'sharepoint-diagnose-form', tab: 'diagnose' },
+  { icon: 'help', titleKey: 'ADMIN_SHAREPOINT_GUIDE.END.TITLE', textKey: 'ADMIN_SHAREPOINT_GUIDE.END.TEXT' },
+];
 
 /** What each "chemins" (paths) column sorts on. */
 const PATH_SORT: Record<string, (l: SharePointLocation) => string | number | null> = {
@@ -57,9 +74,11 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
   imports: [
     ButtonComponent, FormFieldComponent, SelectComponent, StatusBadgeComponent,
     DataTableComponent, DafCellDirective, FolderPickerComponent, TabsComponent,
-    PaginationComponent, SearchToolbarComponent, ToggleComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, ToggleComponent, TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-sharepoint" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />
+
     <div class="spa-wrap">
 
       <div class="spa-header">
@@ -67,7 +86,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
           <h2 class="spa-title">{{ 'ADMIN.sharepoint.title' | translate }}</h2>
           <p class="spa-sub">{{ 'ADMIN.sharepoint.subtitle' | translate }}</p>
         </div>
-        <div class="spa-kind">
+        <div class="spa-kind" data-guide="sharepoint-kind">
           <daf-select
             [options]="kindOptions()"
             [config]="{ label: ('ADMIN.sharepoint.kindLabel' | translate), fullWidth: false }"
@@ -96,7 +115,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
 
         <!-- Same toolbar as the other list pages: search, « Ajouter un chemin », and [table]
              puts the table's reset + column picker on the right of the bar. -->
-        <daf-search-toolbar class="spa-toolbar"
+        <daf-search-toolbar class="spa-toolbar" data-guide="sharepoint-paths-toolbar"
           [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
           [value]="pathsSearch()"
           [debounce]="200"
@@ -157,7 +176,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
         <!-- Manual run of the nightly sync. Runs in the background (minutes of Graph calls,
              past any proxy timeout), polled every 3 s: a progress bar while it runs, a clear
              outcome (succès / terminé avec erreurs / échec / interrompue) once it ends. -->
-        <div class="spa-sync">
+        <div class="spa-sync" data-guide="sharepoint-sync">
           <div class="spa-sync-text">
             <strong class="spa-sync-title">{{ 'ADMIN.sharepoint.sync.title' | translate }}</strong>
             @if (syncRunning()) {
@@ -233,7 +252,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
           </div>
         }
 
-        <div class="table-scroll">
+        <div class="table-scroll" data-guide="sharepoint-required-table">
           <daf-data-table [columns]="requiredColumns()" [rows]="requiredRows()" [config]="requiredTableConfig()">
             <ng-template dafCell="required" let-row>
               <daf-toggle
@@ -291,7 +310,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
           (valueChange)="onEmployeesSearch($event)"
           [table]="employeesTable" />
 
-        <div class="table-scroll">
+        <div class="table-scroll" data-guide="sharepoint-employees-table">
           <daf-data-table #employeesTable [columns]="employeeColumns()" [rows]="employeeRows()" [config]="employeeTableConfig()"
                           (sortChange)="onEmployeesSortChange($event.key, $event.dir)"
                           (resetClick)="onEmployeesSortChange('', null)">
@@ -335,7 +354,7 @@ const STATUS_VARIANTS: Record<SharePointStatus, BadgeVariant> = {
       @if (panel() === 'diagnose') {
         <p class="spa-panel-hint">{{ 'ADMIN.sharepoint.diagnose.hint' | translate }}</p>
 
-        <div class="spa-diag-form">
+        <div class="spa-diag-form" data-guide="sharepoint-diagnose-form">
           <daf-form-field
             [options]="{ label: ('ADMIN.sharepoint.diagnose.profileId' | translate),
                          type: 'number', fullWidth: false }"
@@ -587,6 +606,13 @@ export class SharePointAdminComponent implements OnInit {
   private pinModalRef:  ModalRef | null = null;
 
   readonly panel = signal<Panel>('paths');
+
+  readonly guideSteps = GUIDE_STEPS;
+
+  /** A guide step asks for its panel: switch to it. */
+  onGuideTab(id: string): void {
+    this.panel.set(id as Panel);
+  }
 
   readonly panelTabs = computed<TabItem[]>(() => [
     { id: 'paths',     label: this.i18n.instant('ADMIN.sharepoint.panel.paths'),     icon: 'folder_open' },

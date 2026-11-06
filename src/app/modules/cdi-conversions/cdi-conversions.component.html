@@ -5,7 +5,7 @@
     [title]="'CDI_CONVERSION.TITLE' | translate"
     [subtitle]="'CDI_CONVERSION.SUBTITLE' | translate" />
 
-  <section class="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-4">
+  <section data-guide="kpis" class="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-4">
     <daf-metric-card
       [label]="'CDI_CONVERSION.KPI.TODO' | translate"
       [value]="stats().todo"
@@ -24,7 +24,7 @@
       [options]="{ icon: 'workspace_premium', iconColor: 'text-success', iconBg: 'bg-success/10' }" />
   </section>
 
-  <daf-tabs #tabsRef
+  <daf-tabs #tabsRef data-guide="tabs"
     variant="underline"
     style="--daf-tabs-fade: var(--color-background)"
     [tabs]="tabs()"
@@ -43,7 +43,7 @@
       </div>
     }
 
-    <daf-data-table
+    <daf-data-table data-guide="table"
       [columns]="columns()"
       [rows]="rows()"
       [config]="config()"
@@ -97,3 +97,5 @@
       (onClick)="confirmCancel()" />
   </div>
 </app-daf-modal>
+
+<rh-page-guide storageKey="cdi-conversions" [steps]="guideSteps" />

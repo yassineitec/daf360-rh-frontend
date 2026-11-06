@@ -18,6 +18,18 @@ import {
 } from './overtime.model';
 import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
+import { GuideStep } from '../../../shared/guide/page-guide.types';
+
+/** Guide of the « Heures supplémentaires » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'more_time',  titleKey: 'ADMIN_OVERTIME_GUIDE.WELCOME.TITLE',   textKey: 'ADMIN_OVERTIME_GUIDE.WELCOME.TEXT' },
+  { icon: 'calculate',  titleKey: 'ADMIN_OVERTIME_GUIDE.SIMULATOR.TITLE', textKey: 'ADMIN_OVERTIME_GUIDE.SIMULATOR.TEXT', target: 'overtime-simulator' },
+  { icon: 'add',        titleKey: 'ADMIN_OVERTIME_GUIDE.NEW.TITLE',       textKey: 'ADMIN_OVERTIME_GUIDE.NEW.TEXT',       target: 'overtime-toolbar' },
+  { icon: 'tune',       titleKey: 'ADMIN_OVERTIME_GUIDE.TYPES.TITLE',     textKey: 'ADMIN_OVERTIME_GUIDE.TYPES.TEXT',     target: 'overtime-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_OVERTIME_GUIDE.TABLE.TITLE',     textKey: 'ADMIN_OVERTIME_GUIDE.TABLE.TEXT',     target: 'overtime-table' },
+  { icon: 'help',       titleKey: 'ADMIN_OVERTIME_GUIDE.END.TITLE',       textKey: 'ADMIN_OVERTIME_GUIDE.END.TEXT' },
+];
 
 @Component({
   selector: 'app-overtime-admin',
@@ -25,8 +37,11 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   imports: [
     DecimalPipe, ButtonComponent, FormFieldComponent, SelectComponent, CardComponent,
     StatusBadgeComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent, TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
+<rh-page-guide storageKey="admin-overtime" [steps]="guideSteps" />
+
 <div>
 
   <!-- Header -->
@@ -36,7 +51,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   </div>
 
   <!-- Simulator -->
-  <daf-card style="display:block;margin-bottom:20px;" [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
+  <daf-card data-guide="overtime-simulator" style="display:block;margin-bottom:20px;" [options]="{ variant: 'glass', padding: 'lg', radius: 'lg' }">
     <h3 style="font-size:var(--text-body-lg);font-weight:700;color:var(--color-primary);margin:0 0 16px;display:flex;align-items:center;gap:8px;">
       <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-secondary);">calculate</span>
       {{ 'ADMIN.regimes.overtime.simulatorTitle' | translate }}
@@ -91,7 +106,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
   <!-- Same bar as the other lists: search, "Nouvelle règle", and [table] puts the rules
        table's reset + column picker on the right. -->
-  <daf-search-toolbar class="mb-4 block"
+  <daf-search-toolbar class="mb-4 block" data-guide="overtime-toolbar"
     [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
     [value]="searchQuery()"
     [debounce]="200"
@@ -110,7 +125,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
   }
 
   @if (!isLoading() && rules().length > 0) {
-    <div class="table-scroll">
+    <div class="table-scroll" data-guide="overtime-table">
     <daf-data-table #ovaTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
       <ng-template dafCell="paysIsoCode" let-row>
         <daf-badge [label]="row['paysIsoCode']" [options]="{ variant: 'teal' }" />
@@ -206,6 +221,9 @@ export class OvertimeAdminComponent implements OnChanges {
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
 
   readonly paysId = input<number>(179);
+
+  /** Steps of this card's guide (see `GUIDE_STEPS`). */
+  readonly guideSteps = GUIDE_STEPS;
 
   rules        = signal<ParametrageHSDto[]>([]);
   isLoading    = signal(true);

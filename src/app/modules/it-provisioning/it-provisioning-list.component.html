@@ -9,7 +9,7 @@
 
   <!-- KPIs — one row at every width. The two right-hand tiles used `text-amber` /
        `bg-amber/10`, which renders nothing: `amber` is not a token (§4). -->
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'IT_PROVISIONING.LIST.KPI_PENDING' | translate"
       [value]="stats().pending"
@@ -39,6 +39,7 @@
        one breakpoint. This replaces two separate hand-built cards (a desktop one
        and a mobile one with its own search toggle), the loose status `daf-select`
        and the bespoke refresh and grid/list buttons. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'IT_PROVISIONING.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -51,6 +52,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -62,6 +64,7 @@
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
        Both views render at every width now: the cards grid goes 1 → 2 → 3
        columns, and the table scrolls horizontally inside daf-data-table. -->
+  <div data-guide="items">
   @if (viewMode() === 'grid') {
     <rh-it-provisioning-cards-section
       [items]="pagedItems()"
@@ -76,6 +79,7 @@
       (sortChange)="onSortChange($event)"
       (open)="open($event)" />
   }
+  </div>
 
   @if (totalPages() > 0) {
     <daf-pagination
@@ -89,3 +93,5 @@
   }
 
 </daf-page>
+
+<rh-page-guide storageKey="it-provisioning" [steps]="guideSteps" />

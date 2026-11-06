@@ -13,6 +13,17 @@ import { environment } from '../../../environments/environment';
 import { DafModalComponent } from '../../shared/daf-modal.component';
 import { TableActionComponent } from '../../shared/table-action.component';
 import { NotificationService } from '../../core/notification.service';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
+
+/** Guide of the « Calendrier des entités » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'calendar_month', titleKey: 'ADMIN_PAYS_CALENDAR_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_PAYS_CALENDAR_GUIDE.WELCOME.TEXT' },
+  { icon: 'search', titleKey: 'ADMIN_PAYS_CALENDAR_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_PAYS_CALENDAR_GUIDE.TOOLBAR.TEXT', target: 'pays-calendar-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_PAYS_CALENDAR_GUIDE.TABLE.TITLE', textKey: 'ADMIN_PAYS_CALENDAR_GUIDE.TABLE.TEXT', target: 'pays-calendar-table' },
+  { icon: 'edit_calendar', titleKey: 'ADMIN_PAYS_CALENDAR_GUIDE.EDIT.TITLE', textKey: 'ADMIN_PAYS_CALENDAR_GUIDE.EDIT.TEXT', target: 'pays-calendar-table' },
+  { icon: 'help', titleKey: 'ADMIN_PAYS_CALENDAR_GUIDE.END.TITLE', textKey: 'ADMIN_PAYS_CALENDAR_GUIDE.END.TEXT' },
+];
 
 /** An entity's working calendar, as the API returns it. */
 interface PaysScheduling {
@@ -66,8 +77,11 @@ const DAYS = [
   imports: [
     DataTableComponent, DafCellDirective, StatusBadgeComponent, ButtonComponent,
     SearchToolbarComponent, SelectComponent, DafModalComponent, TableActionComponent, TranslatePipe,
+    PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-pays-calendar" [steps]="guideSteps" />
+
     <div class="flex min-w-0 flex-col gap-4">
 
       <p class="text-body-sm text-on-surface-variant">
@@ -82,14 +96,14 @@ const DAYS = [
 
       <!-- Same toolbar as the other list pages: the search filters the rows, and [table]
            puts the table's reset + column picker on the right of the bar. -->
-      <daf-search-toolbar
+      <daf-search-toolbar data-guide="pays-calendar-toolbar"
         [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
         [value]="searchQuery()"
         [debounce]="200"
         (valueChange)="onSearch($event)"
         [table]="calendarTable" />
 
-      <daf-data-table #calendarTable [columns]="columns()" [rows]="rows()" [config]="config()">
+      <daf-data-table #calendarTable data-guide="pays-calendar-table" [columns]="columns()" [rows]="rows()" [config]="config()">
 
         <ng-template dafCell="weekend" let-row>
           @if (row['_s'].usingDefaultWeekend) {
@@ -172,6 +186,9 @@ export class PaysCalendarAdminComponent implements OnInit {
   private readonly notify = inject(NotificationService);
   private readonly translate = inject(TranslateService);
   private readonly base = `${environment.hrApiUrl}/api/hr/ref`;
+
+  /** Steps of the card's page guide. */
+  readonly guideSteps = GUIDE_STEPS;
 
   readonly items = signal<PaysScheduling[]>([]);
   readonly loading = signal(true);

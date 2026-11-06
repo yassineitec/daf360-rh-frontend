@@ -13,7 +13,9 @@ import en from '@public/assets/i18n/en.json';
 import fr from '@public/assets/i18n/fr.json';
 import ar from '@public/assets/i18n/ar.json';
 import { resolveInitialLang } from '../core/language-preference';
-
+import { HelpCenterComponent } from '../shared/guide/help-center.component';
+import { HelpChatComponent } from '../shared/guide/help-chat.component';
+import { GuideHintComponent } from '../shared/guide/guide-hint.component';
 interface AppNavDef {
   id: string;
   /** i18n key under NAV.*, resolved in `navItems` — never a literal label. */
@@ -33,6 +35,8 @@ interface AppNavDef {
    * so it holds several segments where a top-level entry holds one.
    */
   children?: AppNavDef[];
+  /** A heading inside a group (lib NavItem.heading): a label, never an entry — no route. */
+  heading?: boolean;
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
@@ -158,21 +162,27 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'billeterie',
     permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
   },
-  // Congés — un groupe et non une entrée simple, parce que les trois écrans répondent à
-  // trois questions différentes (ce que je dois traiter / ce que mon équipe a pris / ce que
-  // le pays a pris) et se gagnent par trois permissions distinctes. Un responsable ne verra
-  // que « À traiter » : le groupe se réduit tout seul, `navItems` masquant les enfants sans
-  // droit.
+  // Absences — ONE group for the three kinds of leave and their statistics, split by
+  // headings (NavItem.heading, lib 5.8): congés, autorisations, télétravail and the HR
+  // statistics answer the same question — who is away, and how much — and were three
+  // sibling groups plus a page left behind in the timesheet. The rail draws one level of
+  // children only; the headings are what keep the families apart inside it.
   //
-  // Deux écrans n'ont DÉLIBÉRÉMENT pas leur porte ici : la demande de l'employé, qui est une
-  // carte du self-service du shell, et le catalogue des types, qui est un onglet
-  // d'Administration avec les autres listes configurables.
+  // Headings carry no permission: the lib hides one that ends up with no entry under it, so
+  // a manager who only has the queues sees three short blocks and nothing empty.
+  //
+  // Two screens DELIBERATELY have no door here: the employee's own congé request, a card of
+  // the shell's self-service, and the type catalogue, a tab of Administration.
   {
-    id: 'conges',
-    labelKey: 'NAV.CONGES',
-    icon: 'beach_access',
-    permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'],
+    id: 'absences',
+    labelKey: 'NAV.ABSENCES',
+    icon: 'event_busy',
+    permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES',
+                  'SETTLE_LEAVES', 'RESPOND_MODIFICATION_MANAGER', 'RESPOND_MODIFICATION_HR', 'GET_HR_STATS'],
     children: [
+      // Congés — three questions (what I must handle / what my team took / what the country
+      // took), each behind its own permission.
+      { id: 'absences-h-conges', labelKey: 'NAV.CONGES', icon: '', heading: true, permissions: [] },
       {
         id: 'conges-inbox',
         labelKey: 'NAV.CONGES_INBOX',
@@ -190,6 +200,25 @@ const APP_NAV_DEFS: AppNavDef[] = [
         permissions: ['SETTLE_LEAVES'],
       },
       {
+        // Stage 1 of a change request: the manager who granted the congé agrees to the new
+        // dates. Right after the queue, because it is the same desk — the second thing that
+        // can land on a manager about a congé they already decided.
+        id: 'conges-modif-manager',
+        labelKey: 'NAV.CONGES_MODIF_MANAGER',
+        icon: 'edit_calendar',
+        route: 'conges/modifications/manager',
+        permissions: ['RESPOND_MODIFICATION_MANAGER'],
+      },
+      {
+        // Stage 2, and the only one that writes. Next to Régularisations rather than to the
+        // manager stage above: both are HR applying a change to a settled congé.
+        id: 'conges-modif-hr',
+        labelKey: 'NAV.CONGES_MODIF_HR',
+        icon: 'published_with_changes',
+        route: 'conges/modifications/hr',
+        permissions: ['RESPOND_MODIFICATION_HR'],
+      },
+      {
         id: 'conges-team',
         labelKey: 'NAV.CONGES_TEAM',
         icon: 'groups',
@@ -202,6 +231,76 @@ const APP_NAV_DEFS: AppNavDef[] = [
         icon: 'public',
         route: 'conges/global',
         permissions: ['GET_GLOBAL_LEAVES'],
+      },
+      // Autorisations — short paid absences in minutes. A workflow shared with congés, no
+      // model shared: its own block rather than a kind of congé.
+      { id: 'absences-h-autorisations', labelKey: 'NAV.AUTORISATIONS', icon: '', heading: true, permissions: [] },
+      {
+        id: 'autorisations-queue',
+        labelKey: 'NAV.AUTORISATIONS_QUEUE',
+        icon: 'inbox',
+        route: 'autorisations/queue',
+        permissions: ['GET_LEAVES', 'RESPONSE_LEAVE'],
+      },
+      {
+        id: 'autorisations-mine',
+        labelKey: 'NAV.AUTORISATIONS_MINE',
+        icon: 'person',
+        route: 'autorisations/mine',
+        permissions: ['ADD_LEAVE', 'GET_LEAVES'],
+      },
+      {
+        id: 'autorisations-team',
+        labelKey: 'NAV.AUTORISATIONS_TEAM',
+        icon: 'groups',
+        route: 'autorisations/team',
+        permissions: ['GET_EMPLOYEES_LEAVES'],
+      },
+      {
+        id: 'autorisations-global',
+        labelKey: 'NAV.AUTORISATIONS_GLOBAL',
+        icon: 'public',
+        route: 'autorisations/global',
+        permissions: ['GET_GLOBAL_LEAVES'],
+      },
+      // Télétravail — a day or half a day of remote work.
+      { id: 'absences-h-teletravail', labelKey: 'NAV.TELETRAVAIL', icon: '', heading: true, permissions: [] },
+      {
+        id: 'teletravail-queue',
+        labelKey: 'NAV.TELETRAVAIL_QUEUE',
+        icon: 'inbox',
+        route: 'teletravail/queue',
+        permissions: ['GET_LEAVES', 'RESPONSE_LEAVE'],
+      },
+      {
+        id: 'teletravail-mine',
+        labelKey: 'NAV.TELETRAVAIL_MINE',
+        icon: 'person',
+        route: 'teletravail/mine',
+        permissions: ['ADD_LEAVE', 'GET_LEAVES'],
+      },
+      {
+        id: 'teletravail-team',
+        labelKey: 'NAV.TELETRAVAIL_TEAM',
+        icon: 'groups',
+        route: 'teletravail/team',
+        permissions: ['GET_EMPLOYEES_LEAVES'],
+      },
+      {
+        id: 'teletravail-global',
+        labelKey: 'NAV.TELETRAVAIL_GLOBAL',
+        icon: 'public',
+        route: 'teletravail/global',
+        permissions: ['GET_GLOBAL_LEAVES'],
+      },
+      // Approved congé and maladie days per employee and month (moved from the timesheet).
+      { id: 'absences-h-suivi', labelKey: 'NAV.ABSENCES_REPORTING', icon: '', heading: true, permissions: [] },
+      {
+        id: 'absences-stats',
+        labelKey: 'NAV.ABSENCES_STATS',
+        icon: 'bar_chart',
+        route: 'absences/statistiques',
+        permissions: ['GET_HR_STATS'],
       },
     ],
   },
@@ -232,14 +331,15 @@ const APP_NAV_DEFS: AppNavDef[] = [
     labelKey: 'NAV.ADMIN',
     icon: 'admin_panel_settings',
     route: 'admin',
-    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS'],
+    // Same codes as the route guard: CREATE_ABSENCE_TYPE opens the « Types de congés » tab.
+    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE'],
   },
 ];
 
 @Component({
   selector: 'app-hr-shell',
   standalone: true,
-  imports: [RouterOutlet, SideNavComponent],
+  imports: [RouterOutlet, SideNavComponent, HelpCenterComponent, HelpChatComponent, GuideHintComponent],
   templateUrl: './hr-shell.component.html',
   styleUrl: './hr-shell.component.scss',
   host: { style: 'display:block;height:100%' },
@@ -318,6 +418,7 @@ export class HrShellComponent implements OnInit {
         id: def.id,
         label: this.translate.instant(def.labelKey),
         icon: def.icon,
+        ...(def.heading ? { heading: true } : {}),
         // Jamais de route sur un groupe — le clic ne doit que déplier.
         ...(children.length ? {} : { route: def.route }),
         // Omitted when empty: `children: []` would still make the lib treat the item as

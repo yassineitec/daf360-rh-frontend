@@ -3,6 +3,8 @@ import { Component, OnInit, computed, effect, inject, signal, viewChild } from '
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import { catchError, map, of } from 'rxjs';
 import {
   FilterField,
@@ -48,6 +50,15 @@ function toIsoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'OFFBOARDING_GUIDE.LIST.WELCOME.TITLE', textKey: 'OFFBOARDING_GUIDE.LIST.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'OFFBOARDING_GUIDE.LIST.KPIS.TITLE', textKey: 'OFFBOARDING_GUIDE.LIST.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'OFFBOARDING_GUIDE.LIST.TOOLBAR.TITLE', textKey: 'OFFBOARDING_GUIDE.LIST.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'view_kanban', titleKey: 'OFFBOARDING_GUIDE.LIST.BOARD.TITLE', textKey: 'OFFBOARDING_GUIDE.LIST.BOARD.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'OFFBOARDING_GUIDE.LIST.END.TITLE', textKey: 'OFFBOARDING_GUIDE.LIST.END.TEXT' },
+];
+
 /**
  * /rh/offboarding — canonical page shape (UI-PLAYBOOK §1): `daf-page` +
  * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per view +
@@ -74,11 +85,14 @@ function toIsoDay(d: Date): string {
     OffboardingCardsSectionComponent,
     OffboardingTableSectionComponent,
     OffboardingBoardSectionComponent,
+    PageGuideComponent,
     TranslatePipe,
   ],
   templateUrl: './offboarding-list.component.html',
 })
 export class OffboardingListComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** Table view only (undefined in kanban / cards views) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(OffboardingTableSectionComponent);
 

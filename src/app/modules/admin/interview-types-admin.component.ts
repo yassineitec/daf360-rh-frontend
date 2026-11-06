@@ -9,8 +9,20 @@ import { InterviewService } from '../candidates/interview.service';
 import { InterviewType } from '../candidates/interview.model';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 import { rememberAdminState } from './admin-section-state';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 
 const PAGE_SIZE = 5;
+
+/** Guide of the « Types d'entretiens » card, started from « Aide & guides ». */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'forum', titleKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.WELCOME.TITLE', textKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.WELCOME.TEXT' },
+  { icon: 'search', titleKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.TOOLBAR.TITLE', textKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.TOOLBAR.TEXT', target: 'interview-types-toolbar' },
+  { icon: 'add', titleKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.NEW.TITLE', textKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.NEW.TEXT', target: 'interview-types-toolbar' },
+  { icon: 'table_rows', titleKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.TABLE.TITLE', textKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.TABLE.TEXT', target: 'interview-types-table' },
+  { icon: 'toggle_on', titleKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.STATUS.TITLE', textKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.STATUS.TEXT', target: 'interview-types-table' },
+  { icon: 'help', titleKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.END.TITLE', textKey: 'ADMIN_INTERVIEW_TYPES_GUIDE.END.TEXT' },
+];
 
 /** What each interview-type column sorts on. No sort = the stored order (`orderIndex`). */
 const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number | null> = {
@@ -26,9 +38,11 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
   imports: [
     ButtonComponent, FormFieldComponent,
     StatusBadgeComponent, PaginationComponent, DataTableComponent, DafCellDirective,
-    SearchToolbarComponent, TranslatePipe,
+    SearchToolbarComponent, TranslatePipe, PageGuideComponent,
   ],
   template: `
+    <rh-page-guide storageKey="admin-interview-types" [steps]="guideSteps" />
+
     <div class="ita-wrap">
 
       <!-- Header -->
@@ -39,7 +53,7 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
 
       <!-- Same bar as the other lists: search, "Nouveau type", and [table] puts the
            table's reset + column picker on the right. -->
-      <daf-search-toolbar class="mb-4 block"
+      <daf-search-toolbar class="mb-4 block" data-guide="interview-types-toolbar"
         [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
         [value]="searchQuery()"
         [debounce]="200"
@@ -98,7 +112,7 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
       @if (types().length === 0 && !loading()) {
         <p class="ita-empty">{{ 'ADMIN.docs.interviews.empty' | translate }}</p>
       } @else {
-        <div class="table-scroll">
+        <div class="table-scroll" data-guide="interview-types-table">
         <daf-data-table #itaTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
                         (sortChange)="onSortChange($event.key, $event.dir)"
                         (resetClick)="onSortChange('', null)">
@@ -179,6 +193,9 @@ export class InterviewTypesAdminComponent implements OnChanges {
   modalError  = signal<string | null>(null);
 
   form = { name: '', nameEn: '', description: '', orderIndex: 1 };
+
+  /** Steps of the card's page guide. */
+  readonly guideSteps = GUIDE_STEPS;
 
   // Pagination — 5 per page
   currentPage = signal(0);

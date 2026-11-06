@@ -30,7 +30,7 @@ import { rememberAdminState } from '../admin-section-state';
 
   <!-- Same bar as the other lists: search, "Nouvelle règle" (ADMIN_BREAKS only), and
        [table] puts the table's reset + column picker on the right. -->
-  <daf-search-toolbar class="mb-4 block"
+  <daf-search-toolbar class="mb-4 block" data-guide="breaks-legal-toolbar"
     [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
     [value]="searchQuery()"
     [debounce]="200"
@@ -93,11 +93,13 @@ import { rememberAdminState } from '../admin-section-state';
   }
 
   <!-- Rules table -->
+  <div data-guide="breaks-legal-table">
   <daf-data-table #lrTable [columns]="columns()" [rows]="rows()" [config]="tableConfig()">
     <ng-template dafCell="deductionMin" let-row>
       <daf-badge [label]="row['deductionMin'] + ' ' + ('ADMIN.regimes.common.minUnit' | translate)" [options]="{ variant: 'teal' }" />
     </ng-template>
   </daf-data-table>
+  </div>
 </div>
   `,
 })

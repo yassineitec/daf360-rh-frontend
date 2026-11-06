@@ -43,3 +43,6 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 .npmrc
+
+# Vidéos de test du centre d aide (lourdes, servies en local uniquement)
+public/assets/videos/

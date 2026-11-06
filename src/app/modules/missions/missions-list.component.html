@@ -3,7 +3,7 @@
      there is no wrapper and no gap between sections. `kpis="4"` matches the four tiles. -->
 <daf-page [loading]="firstLoad()" [kpis]="4">
 
-  <daf-page-header
+  <daf-page-header data-guide="header"
     [title]="'MISSIONS.LIST.TITLE' | translate"
     [subtitle]="'MISSIONS.LIST.SUBTITLE' | translate"
     [badges]="headerBadges()">
@@ -13,7 +13,7 @@
   </daf-page-header>
 
   <!-- KPIs — one row at every width, 24px gaps (§1). -->
-  <section class="grid grid-cols-4 gap-2 sm:gap-6">
+  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
     <daf-metric-card
       [label]="'MISSIONS.KPI.PENDING_HR' | translate"
       [value]="stats().pendingHr"
@@ -41,6 +41,7 @@
   <!-- Search + status filter + view toggle: one lib toolbar, which renders its own
        glass card and anchored filter panel. Both are client-side projections — the
        endpoint returns the manager's whole list in one call. -->
+  <div data-guide="toolbar">
   <daf-search-toolbar
     [placeholder]="'MISSIONS.LIST.SEARCH_PLACEHOLDER' | translate"
     [value]="search()"
@@ -53,6 +54,7 @@
     [view]="viewMode()"
     (viewChange)="setView($event)"
     [table]="tableSection()?.table() ?? null" />
+  </div>
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -63,7 +65,7 @@
 
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1). -->
   @if (viewMode() === 'grid') {
-    <rh-missions-cards-section
+    <rh-missions-cards-section data-guide="items"
       [items]="pagedItems()"
       [loading]="loading()"
       [skeletonCount]="pageSize()"
@@ -71,7 +73,7 @@
       (open)="openDetail($event)"
       (act)="onCardAction($event)" />
   } @else {
-    <rh-missions-table-section
+    <rh-missions-table-section data-guide="items"
       [items]="pagedItems()"
       [loading]="loading()"
       [skeletonRows]="pageSize()"
@@ -109,3 +111,5 @@
   [mission]="selected()"
   [open]="!!selected()"
   (closed)="selected.set(null)" />
+
+<rh-page-guide storageKey="missions" [steps]="guideSteps" />

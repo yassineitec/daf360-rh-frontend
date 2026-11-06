@@ -164,7 +164,9 @@ export interface ProfileCreateDto {
   nationalityId?: number;
   bankId?: number;
   personalEmail?: string;
-  phone?: string;
+  phone?: string;          // professionnel
+  personalPhone?: string;
+  personalAddress?: string;
 }
 
 export interface ProfileUpdateDto {

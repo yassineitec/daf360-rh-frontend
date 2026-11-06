@@ -1,6 +1,8 @@
 import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   ButtonComponent,
   FilterField,
@@ -47,6 +49,16 @@ type ViewMode = 'grid' | 'list';
 
 const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
 
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'MISSIONS_GUIDE.LIST.WELCOME.TITLE', textKey: 'MISSIONS_GUIDE.LIST.WELCOME.TEXT' },
+  { icon: 'add', titleKey: 'MISSIONS_GUIDE.LIST.NEW.TITLE', textKey: 'MISSIONS_GUIDE.LIST.NEW.TEXT', target: 'header' },
+  { icon: 'monitoring', titleKey: 'MISSIONS_GUIDE.LIST.KPIS.TITLE', textKey: 'MISSIONS_GUIDE.LIST.KPIS.TEXT', target: 'kpis' },
+  { icon: 'search', titleKey: 'MISSIONS_GUIDE.LIST.TOOLBAR.TITLE', textKey: 'MISSIONS_GUIDE.LIST.TOOLBAR.TEXT', target: 'toolbar' },
+  { icon: 'flight_takeoff', titleKey: 'MISSIONS_GUIDE.LIST.ITEMS.TITLE', textKey: 'MISSIONS_GUIDE.LIST.ITEMS.TEXT', target: 'items' },
+  { icon: 'help', titleKey: 'MISSIONS_GUIDE.LIST.END.TITLE', textKey: 'MISSIONS_GUIDE.LIST.END.TEXT' },
+];
+
 /**
  * `/rh/missions` — the manager's own missions, in the canonical list shape (§1):
  * `daf-page` + `daf-page-header` + the KPI row + `daf-search-toolbar` + one section per
@@ -72,11 +84,13 @@ const SCOPES: MissionScope[] = ['NATIONAL', 'INTERNATIONAL'];
     ButtonComponent, MetricCardComponent, PageComponent, PageHeaderComponent,
     PaginationComponent, SearchToolbarComponent, MissionsCardsSectionComponent,
     MissionsTableSectionComponent, MissionFormModalComponent, MissionDetailDrawerComponent,
-    TranslatePipe,
+    TranslatePipe, PageGuideComponent,
   ],
   templateUrl: './missions-list.component.html',
 })
 export class MissionsListComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar's `[table]`. */
   readonly tableSection = viewChild(MissionsTableSectionComponent);
 

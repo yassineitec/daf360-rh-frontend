@@ -1,6 +1,8 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   BadgeCell, ButtonComponent, DataTableComponent, FormFieldComponent, MetricCardComponent,
   PageComponent, PageHeaderComponent, TabItem, TableColumn, TableConfig, TableRow,
@@ -16,6 +18,16 @@ import { CdiConversionDetailDrawerComponent, CdiDrawerAction } from './cdi-conve
 import { CdiConversionDecisionModalComponent } from './cdi-conversion-decision-modal.component';
 
 type TabKey = 'todo' | 'all';
+
+/** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
+const GUIDE_STEPS: GuideStep[] = [
+  { icon: 'waving_hand', titleKey: 'CDI_GUIDE.WELCOME.TITLE', textKey: 'CDI_GUIDE.WELCOME.TEXT' },
+  { icon: 'monitoring', titleKey: 'CDI_GUIDE.KPIS.TITLE', textKey: 'CDI_GUIDE.KPIS.TEXT', target: 'kpis' },
+  { icon: 'tab', titleKey: 'CDI_GUIDE.TABS.TITLE', textKey: 'CDI_GUIDE.TABS.TEXT', target: 'tabs' },
+  { icon: 'workspace_premium', titleKey: 'CDI_GUIDE.TABLE.TITLE', textKey: 'CDI_GUIDE.TABLE.TEXT', target: 'table' },
+  { icon: 'visibility', titleKey: 'CDI_GUIDE.DRAWER.TITLE', textKey: 'CDI_GUIDE.DRAWER.TEXT' },
+  { icon: 'help', titleKey: 'CDI_GUIDE.END.TITLE', textKey: 'CDI_GUIDE.END.TEXT' },
+];
 
 /**
  * `/rh/cdi-conversions` — CIVP → CDI requests, canonical page shape (§1).
@@ -33,10 +45,13 @@ type TabKey = 'todo' | 'all';
     PageComponent, PageHeaderComponent, MetricCardComponent, TabsComponent, DataTableComponent,
     ButtonComponent, FormFieldComponent, DafModalComponent,
     CdiConversionDetailDrawerComponent, CdiConversionDecisionModalComponent, TranslatePipe,
+    PageGuideComponent,
   ],
   templateUrl: './cdi-conversions.component.html',
 })
 export class CdiConversionsComponent implements OnInit {
+  readonly guideSteps = GUIDE_STEPS;
+
   private svc = inject(CdiConversionService);
   private translate = inject(TranslateService);
   private route = inject(ActivatedRoute);

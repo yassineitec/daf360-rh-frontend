@@ -1,3 +1,5 @@
+<rh-page-guide storageKey="admin-lists" [steps]="guideSteps" />
+
 <div class="list-manager">
 
   <!-- Type tabs -->
@@ -8,7 +10,7 @@
   @if (loadingTypes()) {
     <p class="lm-loading">{{ 'ADMIN.data.lists.LOADING' | translate }}</p>
   } @else {
-    <nav class="lm-tab-bar" role="tablist">
+    <nav class="lm-tab-bar" role="tablist" data-guide="lists-tabs">
       @for (type of listTypes(); track type.id) {
         <button
           class="lm-tab-btn"
@@ -46,7 +48,7 @@
 
       <!-- Same bar as the other lists (daf-search-toolbar): search over the values,
            « Ajouter une valeur », and [table] puts reset + column picker on the right. -->
-      <daf-search-toolbar class="mb-4 block"
+      <daf-search-toolbar class="mb-4 block" data-guide="lists-toolbar"
         [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
         [value]="searchQuery()"
         [debounce]="200"
@@ -65,7 +67,7 @@
       @if (loadingValues()) {
         <p class="lm-loading">{{ 'ADMIN.data.lists.LOADING' | translate }}</p>
       } @else {
-        <div class="table-scroll">
+        <div class="table-scroll" data-guide="lists-table">
         <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
         (sortChange)="onSortChange($event.key, $event.dir)"
         (resetClick)="onSortChange('', null)">
