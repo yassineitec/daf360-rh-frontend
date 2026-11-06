@@ -52,7 +52,8 @@
     [seniors]="workforce()?.seniors"
     [tauxGlobalPct]="completion()?.tauxGlobalPct ?? 0"
     [dossiersIncomplets]="completion()?.dossiersIncomplets ?? 0"
-    (cardOpen)="onCardOpen($event)" />
+    (cardOpen)="onCardOpen($event)"
+    (viewProfile)="onViewProfile($event)" />
 
   <rh-joiners-section
     data-guide="joiners"

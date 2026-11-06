@@ -46,7 +46,8 @@ export type WorkforceCardKey = 'workforce' | 'ingproj' | 'seniority';
       <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-2" data-guide="probation">
         <rh-probation-card
           [alerts]="probationAlerts()"
-          [total]="probationTotal()" />
+          [total]="probationTotal()"
+          (viewProfile)="viewProfile.emit($event)" />
       </div>
       <!-- The three workforce cards open a detail pop-up (owned by the page) where they
            can be filtered by department. -->
@@ -136,6 +137,9 @@ export class OverviewSectionComponent {
 
   /** A workforce card was clicked — the page opens its detail pop-up. */
   readonly cardOpen = output<WorkforceCardKey>();
+
+  /** A probation row was clicked — the page opens that profile. */
+  readonly viewProfile = output<number>();
 
   readonly tiles = computed(() => [
     { icon: 'event_busy',  value: this.probationTotal(),         labelKey: 'HOME.ALERT_CARD.PROBATION_TITLE' },
