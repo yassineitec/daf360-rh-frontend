@@ -91,7 +91,7 @@ const BONUS_CURRENCIES = ['TND', 'EUR', 'USD', 'EGP', 'SAR', 'AED'];
           </div>
 
           <daf-form-field
-            [value]="cfg.currentNetSalary"
+            [value]="roundedNet(cfg.currentNetSalary)"
             [options]="{ type: 'number', label: ('PROFILES.FIELDS.REMUNERATION_CURRENT_SALARY' | translate), fullWidth: true }"
             (valueChange)="patchConfig({ currentNetSalary: asNumber($event) })" />
         </div>
@@ -355,6 +355,13 @@ export class RemunerationSectionComponent implements OnInit {
 
   asNumber(v: unknown): number | null {
     return v === null || v === undefined || v === '' ? null : Number(v);
+  }
+
+  /** Net salary is always shown rounded to a whole number -- display only, the stored value
+   *  (`currentNetSalary`, what the "Calculer le net" button computes and what gets saved)
+   *  keeps full precision. */
+  roundedNet(v: number | null | undefined): number | null {
+    return v == null ? null : Math.round(v);
   }
 
   save(): void {
