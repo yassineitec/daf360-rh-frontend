@@ -44,6 +44,25 @@ export const CONGES_ROUTES: Routes = [
     loadComponent: () =>
       import('./conge-history.component').then(m => m.CongeHistoryComponent),
   },
+  {
+    /**
+     * Stage 1 of a modification — the manager who granted the congé agrees to the new dates.
+     * Only MODIFICATION requests arrive here; an annulation is filed straight at the HR stage.
+     */
+    path: 'modifications/manager',
+    canActivate: [permissionGuard],
+    data: { permissions: ['RESPOND_MODIFICATION_MANAGER'], stage: 'manager' },
+    loadComponent: () =>
+      import('./conge-modifications.component').then(m => m.CongeModificationsComponent),
+  },
+  {
+    /** Stage 2 — HR, and the only stage that moves a congé or a balance. */
+    path: 'modifications/hr',
+    canActivate: [permissionGuard],
+    data: { permissions: ['RESPOND_MODIFICATION_HR'], stage: 'hr' },
+    loadComponent: () =>
+      import('./conge-modifications.component').then(m => m.CongeModificationsComponent),
+  },
   // Administering the catalogue is NOT here. It is an Administration tab
   // (`/rh/admin?tab=absence-types`), with the holidays, the request types and the other
   // configurable lists — the screen answers "what is a congé", not "who is off next week",

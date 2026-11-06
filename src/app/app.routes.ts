@@ -156,6 +156,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/requests/requests.routes').then(m => m.REQUESTS_ROUTES),
       },
+      {
+        path: 'audit',
+        canActivate: [permissionGuard],
+        data: { permissions: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'] },
+        loadChildren: () =>
+          import('./features/audit/audit.routes').then(m => m.AUDIT_ROUTES),
+      },
       // Historique des demandes (HR requests + recruitment demands). Was /rh/recruitment-demands —
       // the old URL still redirects, so bookmarks and already-sent notification links keep working.
       { path: 'recruitment-demands', redirectTo: 'requests-history', pathMatch: 'full' },
@@ -174,9 +181,56 @@ export const routes: Routes = [
          */
         path: 'conges',
         canActivate: [permissionGuard],
-        data: { permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        // MUST carry the UNION of every child's codes. The parent guard runs first, so a
+        // code listed on a child but not here bounces its own audience to /forbidden before
+        // the child guard is ever reached — which is what happened to the two modification
+        // pages: they were added to the sidebar's parent and not to this one.
+        data: { permissions: ['GET_LEAVES', 'RESPONSE_LEAVE', 'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES',
+                              'RESPOND_MODIFICATION_MANAGER', 'RESPOND_MODIFICATION_HR'] },
         loadChildren: () =>
           import('./modules/conges/conges.routes').then(m => m.CONGES_ROUTES),
+      },
+      {
+        /**
+         * Autorisations — short paid absences in minutes. Beside congés rather than inside
+         * them: the two share a workflow and no model, and nesting would imply a type of
+         * congé that debits no balance and counts no days.
+         *
+         * The parent carries the UNION of its children's codes: the guard runs first, so a
+         * code on a child and not here bounces its own audience before the child guard runs.
+         */
+        path: 'autorisations',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
+                              'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        loadChildren: () =>
+          import('./modules/autorisations/autorisations.routes').then(m => m.AUTORISATIONS_ROUTES),
+      },
+      {
+        /**
+         * Télétravail — a day or half a day of remote work. Its own tree beside congés and
+         * autorisations, for the same reason: a shared workflow, not a shared model.
+         * The parent carries the UNION of its children's codes (see autorisations above).
+         */
+        path: 'teletravail',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_LEAVES', 'ADD_LEAVE', 'RESPONSE_LEAVE',
+                              'GET_EMPLOYEES_LEAVES', 'GET_GLOBAL_LEAVES', 'SETTLE_LEAVES'] },
+        loadChildren: () =>
+          import('./modules/teletravail/teletravail.routes').then(m => m.TELETRAVAIL_ROUTES),
+      },
+      {
+        /**
+         * Statistiques des absences — approved congé and maladie days per employee and
+         * month. Moved from the timesheet's « Statistiques RH », which only relayed RH's
+         * numbers; same permission code. Under « Absences » in the sidebar with the three
+         * kinds of leave.
+         */
+        path: 'absences/statistiques',
+        canActivate: [permissionGuard],
+        data: { permissions: ['GET_HR_STATS'] },
+        loadComponent: () =>
+          import('./modules/absences/leave-stats.component').then(m => m.LeaveStatsComponent),
       },
       {
         path: 'requests-history',

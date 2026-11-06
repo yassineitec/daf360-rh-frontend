@@ -4610,10 +4610,47 @@
       }
     }
   },
+  "AUDIT": {
+    "TITLE": "سجل التدقيق",
+    "SUBTITLE": "السجل الكامل لإجراءات الموارد البشرية — الأحداث والتغييرات على الحقول",
+    "COL_DATE": "التاريخ",
+    "COL_SOURCE": "المصدر",
+    "COL_ACTOR": "المستخدم",
+    "COL_ACTION": "الإجراء",
+    "COL_ENTITY": "العنصر",
+    "COL_ENTITY_ID": "المرجع",
+    "COL_DOMAIN": "المجال",
+    "COL_EMPLOYEE": "الموظف",
+    "EMPLOYEE_PLACEHOLDER": "الموظف رقم {{id}}",
+    "COL_IP": "عنوان IP",
+    "SOURCE_EVENT": "حدث",
+    "SOURCE_FIELD_CHANGE": "تعديل حقل",
+    "EMPTY": "لا توجد سجلات تدقيق.",
+    "ERROR": "تعذر تحميل سجل التدقيق.",
+    "PAGE_INFO": "الصفحة {{current}} من {{total}} — {{count}} سجل",
+    "ACTION_I": "إنشاء",
+    "ACTION_U": "تعديل",
+    "ACTION_D": "حذف",
+    "ACTOR_SYSTEM": "مهمة مجدولة",
+    "GROUP_LABEL": "{{count}} تعديلات مجمّعة",
+    "GROUP_HINT": "تغييرات تلقائية (مزامنة) دون مستخدم محدد. انقر لعرض التفاصيل.",
+    "GROUP_MODAL_TITLE": "التعديلات المجمّعة",
+    "GROUP_MODAL_HINT": "انقر على سطر لعرض تفاصيل هذا التعديل.",
+    "DETAIL_TITLE": "تفاصيل التعديل",
+    "DETAIL_FIELD": "الحقل",
+    "DETAIL_BEFORE": "قبل",
+    "DETAIL_AFTER": "بعد",
+    "DETAIL_NO_FIELDS": "لا توجد بيانات متاحة لهذا التعديل.",
+    "CLOSE": "إغلاق"
+  },
   "NAV": {
+    "ABSENCES": "الغيابات",
+    "ABSENCES_REPORTING": "المتابعة",
+    "ABSENCES_STATS": "الإحصائيات",
     "SECTION_LABEL": "تنقل الموارد البشرية",
     "ACCUEIL": "الرئيسية",
     "PROFILES": "الملفات",
+    "AUDIT": "سجل التدقيق",
     "PIPELINE": "مسار التوظيف",
     "CANDIDATES": "المترشحون",
     "IT_PROVISIONING": "تجهيز المعلوماتية",
@@ -4638,6 +4675,8 @@
   },
   "MISSIONS": {
     "COMMON": {
+      "exportExcel": "تصدير (Excel)",
+      "exportError": "فشل التصدير.",
       "SELECT": "اختر…",
       "CANCEL": "إلغاء",
       "BACK": "رجوع",
@@ -4862,5 +4901,44 @@
     "COL_SUBMITTED": "أُرسلت في",
     "REQUESTS_HISTORY": "سجل الطلبات",
     "ADMIN": "الإدارة"
+  },
+  "LEAVE_STATS": {
+    "TITLE": "إحصائيات الغياب",
+    "SUBTITLE": "أيام الإجازة والمرض المعتمدة، لكل موظف ولكل شهر.",
+    "EXPORT": "تصدير (Excel)",
+    "SEARCH": "البحث عن موظف…",
+    "KPI": {
+      "PEOPLE": "الموظفون",
+      "CONGE": "أيام الإجازة",
+      "MALADIE": "أيام المرض",
+      "TOTAL": "إجمالي الغياب"
+    },
+    "FILTER": {
+      "TITLE": "عوامل التصفية",
+      "TRIGGER": "تصفية",
+      "APPLY": "تطبيق",
+      "CANCEL": "إلغاء",
+      "RESET": "إعادة تعيين",
+      "PEOPLE": "الموظف",
+      "MONTH": "الشهر",
+      "YEAR": "السنة"
+    },
+    "COL": {
+      "PEOPLE": "الموظف",
+      "PERIOD": "الفترة",
+      "CONGE": "إجازة (يوم)",
+      "MALADIE": "مرض (يوم)",
+      "TOTAL": "المجموع (يوم)"
+    },
+    "TABLE": {
+      "COLUMNS": "الأعمدة",
+      "RESET": "إعادة تعيين"
+    },
+    "VIEW_GRID": "بطاقات",
+    "VIEW_LIST": "جدول",
+    "EMPTY": "لا يوجد غياب معتمد حتى الآن.",
+    "EMPTY_FILTERED": "لا يوجد غياب معتمد لهذه المعايير.",
+    "ERR_LOAD": "تعذر تحميل الإحصائيات.",
+    "ERR_EXPORT": "فشل التصدير."
   }
 }

@@ -5,7 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
-  MetricCardComponent, ModalService, PageComponent, PageHeaderComponent,
+  ButtonComponent, MetricCardComponent, ModalService, PageComponent, PageHeaderComponent,
   PaginationComponent, SearchToolbarComponent,
 } from '@khalilrebhiitec/daf360';
 
@@ -13,6 +13,7 @@ import { NotificationService } from '../../core/notification.service';
 import { CongeListBase } from './conge-list-base';
 import { CongeCounts, CongeFilter, CongePage, CongeRow } from './models/conge.model';
 import { errorMessage } from './conge-display';
+import { saveBlob } from '../../shared/utils/file-download.utils';
 import { CongeRowAction, CongesTableSectionComponent } from './sections/conges-table-section.component';
 import { CongesCardsSectionComponent } from './sections/conges-cards-section.component';
 import { CongeDetailComponent } from './sections/conge-detail.component';
@@ -59,7 +60,7 @@ const GUIDE_STEPS_GLOBAL: GuideStep[] = [
   selector: 'app-conge-history',
   standalone: true,
   imports: [
-    PageComponent, PageHeaderComponent, MetricCardComponent, SearchToolbarComponent,
+    PageComponent, PageHeaderComponent, ButtonComponent, MetricCardComponent, SearchToolbarComponent,
     PaginationComponent, CongesTableSectionComponent, CongesCardsSectionComponent,
     CongeDetailComponent, TranslatePipe,
     PageGuideComponent,
@@ -70,7 +71,17 @@ const GUIDE_STEPS_GLOBAL: GuideStep[] = [
       <!-- No icon on the page header: platform convention. -->
       <daf-page-header
         [title]="(scope === 'global' ? 'CONGES.HISTORY.TITLE_GLOBAL' : 'CONGES.HISTORY.TITLE_TEAM') | translate"
-        [subtitle]="(scope === 'global' ? 'CONGES.HISTORY.SUB_GLOBAL' : 'CONGES.HISTORY.SUB_TEAM') | translate" />
+        [subtitle]="(scope === 'global' ? 'CONGES.HISTORY.SUB_GLOBAL' : 'CONGES.HISTORY.SUB_TEAM') | translate">
+        <!-- Country-wide view only: the export replaces the timesheet's, same filters as the list. -->
+        @if (scope === 'global') {
+          <ng-container pageActions>
+            <daf-button
+              [options]="{ variant: 'secondary', iconStart: 'download',
+                           label: ('COMMON.exportExcel' | translate), disabled: exporting() }"
+              (onClick)="exportExcel()" />
+          </ng-container>
+        }
+      </daf-page-header>
 
       <!-- Counted over the whole scope by its own endpoint, never over the current page. -->
       <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
@@ -171,6 +182,20 @@ export class CongeHistoryComponent extends CongeListBase implements OnInit {
   private readonly detailTpl = viewChild.required<TemplateRef<unknown>>('detailTpl');
   /** The row the open modal is about — see CongeInboxComponent for why it is a signal. */
   readonly detailRow = signal<CongeRow | null>(null);
+
+  readonly exporting = signal(false);
+
+  /** The country-wide list, with the filters on screen, as an Excel file. */
+  exportExcel(): void {
+    this.exporting.set(true);
+    this.svc.exportGlobal(this.currentFilter(), this.translate.currentLang() ?? 'fr').subscribe({
+      next: (blob) => { saveBlob(blob, 'conges.xlsx'); this.exporting.set(false); },
+      error: (e) => {
+        this.exporting.set(false);
+        this.notify.error(errorMessage(e, this.translate.instant('COMMON.exportError')));
+      },
+    });
+  }
 
   protected fetch(filter: CongeFilter): Observable<CongePage> {
     const lang = this.translate.currentLang() ?? 'fr';

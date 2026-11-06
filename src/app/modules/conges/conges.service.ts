@@ -33,6 +33,11 @@ export class CongesService {
     return this.http.get<CongePage>(`${this.base}/global`, { params: this.params(filter, lang) });
   }
 
+  /** The global list with the same filters, as an Excel file (rh-service /global/export). */
+  exportGlobal(f: CongeFilter = {}, lang = 'fr'): Observable<Blob> {
+    return this.http.get(`${this.base}/global/export`, { params: this.params(f, lang), responseType: 'blob' });
+  }
+
   /**
    * The leave-type catalogue, for the filter dropdown.
    *

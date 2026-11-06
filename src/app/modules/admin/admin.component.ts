@@ -14,6 +14,8 @@ import { UserStore }   from '../../core/user.store';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone } from '../../core/ref/ref-data.model';
 import { AdminTab }    from './models/admin.model';
+import { AutorisationRulesAdminComponent } from './autorisation-rules-admin.component';
+import { TeletravailRulesAdminComponent } from './teletravail-rules-admin.component';
 import { flagDataUri } from './flag-svgs';
 import { RolesAdminComponent }        from './roles-admin.component';
 import { UsersAdminComponent }        from './users/users-admin.component';
@@ -128,6 +130,12 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // setting it sits beside — configuring an entity's hours and configuring which days it
   // works at all are the same job.
   { key: 'pays-calendar',         labelKey: 'ADMIN.shell.tabs.paysCalendar',        permission: 'ADMIN_REGIMES',              icon: 'calendar_month',        tone: 'warning' },
+  // Autorisation quotas per entity. Same gate as the calendar beside it — both decide what
+  // an entity's working rules ARE, rather than acting on one person's request.
+  { key: 'autorisation-rules',    labelKey: 'ADMIN.shell.tabs.autorisationRules',   permission: 'ADMIN_REGIMES',              icon: 'schedule',              tone: 'warning' },
+  // Télétravail rules per entity — durations (the half-day option), caps, notice, balance.
+  // Same gate as the autorisation rules beside it, for the same reason.
+  { key: 'teletravail-rules',     labelKey: 'ADMIN.shell.tabs.teletravailRules',    permission: 'ADMIN_REGIMES',              icon: 'home_work',             tone: 'warning' },
   // How many days ahead HR hears about a contract end / a trial-period end. ADMIN_ROLES
   // because that is what the backend's config update checks.
   { key: 'contract-alerts',       labelKey: 'ADMIN.shell.tabs.contractAlerts',      permission: 'ADMIN_ROLES',                icon: 'event_upcoming',        tone: 'danger' },
@@ -170,6 +178,8 @@ const GUIDE_STEPS: GuideStep[] = [
     SharePointAdminComponent,
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
+    AutorisationRulesAdminComponent,
+    TeletravailRulesAdminComponent,
     ContractAlertsAdminComponent,
     HelpFaqAdminComponent,
     TranslatePipe,
@@ -270,6 +280,9 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
             <!-- No [paysId]: this screen configures every entity, not the caller's own. -->
             @if (activeTab() === 'pays-calendar')         { <app-pays-calendar-admin /> }
+            <!-- No [paysId]: this screen configures every entity in the caller's perimeter. -->
+            @if (activeTab() === 'autorisation-rules')    { <app-autorisation-rules-admin /> }
+            @if (activeTab() === 'teletravail-rules')     { <app-teletravail-rules-admin /> }
             @if (activeTab() === 'contract-alerts')       { <app-contract-alerts-admin [paysId]="paysId()" /> }
             <!-- No [paysId]: the help questions are company-wide. -->
             @if (activeTab() === 'help-faq')              { <app-help-faq-admin /> }
