@@ -14,6 +14,13 @@ export interface EmployeePayrollConfigDto {
   currentNetSalary: number | null;
   updatedBy: number | null;
   updatedAt: string | null;
+  /** Set only when the stored gross salary was originally typed in a different currency
+   *  than the working one — null in the common case. */
+  inputCurrency: string | null;
+  inputAmountOriginal: number | null;
+  /** The country's working currency, resolved server-side — this app has no `pays_ref`
+   *  lookup of its own, so this is the only source for it on this screen. */
+  workingCurrency: string | null;
 }
 
 export interface UpsertEmployeePayrollConfigRequest {
@@ -23,6 +30,12 @@ export interface UpsertEmployeePayrollConfigRequest {
   currentGrossSalary: number | null;
   currentNetSalary: number | null;
   reason: string;
+  inputCurrency?: string | null;
+}
+
+export interface FxRateDto {
+  currencyCode: string;
+  rateToEur: number;
 }
 
 export interface BenefitCatalogueDto {
@@ -77,8 +90,8 @@ export class RemunerationService {
     return this.http.put<EmployeePayrollConfigDto>(`${this.base}/${profileUserId}`, req);
   }
 
-  calculateNet(profileUserId: number, grossSalary: number): Observable<CalculateNetResponse> {
-    return this.http.post<CalculateNetResponse>(`${this.base}/${profileUserId}/calculate-net`, { grossSalary });
+  calculateNet(profileUserId: number, grossSalary: number, inputCurrency?: string | null): Observable<CalculateNetResponse> {
+    return this.http.post<CalculateNetResponse>(`${this.base}/${profileUserId}/calculate-net`, { grossSalary, inputCurrency });
   }
 
   getBonuses(profileUserId: number): Observable<EmployeePayrollBonusDto[]> {
@@ -102,5 +115,13 @@ export class RemunerationService {
     return this.http.get<{ benefits: BenefitCatalogueDto[] }>(`${this.paramSetBase}/active`, {
       params: { paysId: paysId.toString() },
     });
+  }
+
+  /** Currencies the gross-salary field's picker can offer, with their cached rate-to-EUR —
+   *  same source daf360-payroll-frontend's employee-config screen and Simulator already use.
+   *  Requires PAYROLL_VIEW_EMPLOYEE_CONFIG/MANAGE_EMPLOYEE_CONFIG on top of the existing
+   *  employee-config permissions (already widened for this on the backend). */
+  getFxRates(): Observable<FxRateDto[]> {
+    return this.http.get<FxRateDto[]>(`${environment.payrollApiUrl}/api/payroll/ref/fx-rates`);
   }
 }
