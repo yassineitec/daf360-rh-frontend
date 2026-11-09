@@ -4,12 +4,6 @@
   display: block;
 }
 
-// Room for « Centre d'aide » (rh-help-center), laid over the bottom of the rail: without
-// it the last nav entries would scroll under it. daf-side-nav has no footer slot
-// (lib 5.10.0), so this targets its rail.
-:host ::ng-deep .daf-nav-rail {
-  padding-bottom: 6.5rem;
-}
 // ── Main content area ─────────────────────────────────────────────────────────
 // NOTE: no `height` + `overflow-y: auto` here. This used to be a scroll container
 // (`height: calc(100vh - header)`), which nested a second scrollbar inside the

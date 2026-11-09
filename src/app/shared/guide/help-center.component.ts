@@ -40,10 +40,10 @@ interface HelpChoice {
  * (`?sub=`), on the half picked (`?section=`), and for a page whose URL carries an id, with
  * that URL as `?page=` so its guide can be started there.
  *
- * `daf-side-nav` (lib 5.10.0) has no footer slot, so the entry is laid over the bottom of
- * the rail (same fixed geometry: left 0, 16rem wide) and hr-shell.component.scss reserves
- * that space at the bottom of the rail's list. Desktop only — the rail itself turns into
- * the mobile bottom bar below `sm`, so the help center has no entry point on mobile yet.
+ * Projected into `daf-side-nav`'s footer slot (`dafSideNavFooter`, lib 5.13.0), under the
+ * item list: the list scrolls above it, nothing passes under it. Desktop only — the rail
+ * itself turns into the mobile bottom bar below `sm`, so the help center has no entry point
+ * on mobile yet.
  */
 @Component({
   selector: 'rh-help-center',
@@ -62,8 +62,7 @@ interface HelpChoice {
   // `iconVariation`, lib 5.10.0) and the same divider as a `divider: true` entry, so the
   // help center reads as one more item of the rail, only pinned to its bottom.
   template: `
-    <div class="fixed bottom-0 left-0 z-[41] hidden w-[calc(16rem-1px)] px-4 pb-4 sm:block"
-         style="background: var(--color-surface, #fff)">
+    <div class="hidden sm:block">
       <div class="border-t border-surface-container pt-4">
         <button type="button" [class]="itemClasses()" [attr.aria-current]="active() ? 'page' : null"
                 [attr.aria-haspopup]="'dialog'"
