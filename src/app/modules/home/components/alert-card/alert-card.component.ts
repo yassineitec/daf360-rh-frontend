@@ -1,7 +1,8 @@
-import { Component, computed, input, output, signal } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CardComponent } from '@khalilrebhiitec/daf360';
 import { getAvatarUrl } from '../../../../shared/utils/avatar.utils';
+import { missingDocLabels } from '../../missing-doc-labels';
 
 export interface ProbationAlert {
   profileId:       number;
@@ -139,10 +140,16 @@ export class ProbationCardComponent {
           <h3 class="text-[11px] font-bold text-on-surface uppercase tracking-wider">
             {{ 'HOME.ALERT_CARD.MISSING_DOCS_TITLE' | translate }}
           </h3>
+          <!-- The « +N » count opens the full list in a pop-up. -->
           @if (extra() > 0) {
-            <span class="text-[11px] font-bold bg-on-surface text-surface px-2 py-0.5 rounded-full leading-none">
+            <button type="button"
+                    class="text-[11px] font-bold bg-on-surface text-surface px-2 py-0.5 rounded-full leading-none
+                           cursor-pointer hover:opacity-80"
+                    [title]="'HOME.ALERT_CARD.SEE_ALL' | translate"
+                    [attr.aria-label]="'HOME.ALERT_CARD.SEE_ALL' | translate"
+                    (click)="openAll.emit()">
               +{{ extra() }}
-            </span>
+            </button>
           }
         </div>
 
@@ -153,14 +160,18 @@ export class ProbationCardComponent {
         }
 
         @for (doc of visible(); track doc.profileId) {
-          <div class="flex items-center justify-between py-2 border-b border-outline-variant/60 last:border-0">
+          <div class="flex items-center justify-between py-2 border-b border-outline-variant/60 last:border-0
+                      cursor-pointer hover:bg-surface-container-low rounded -mx-1 px-1"
+               role="button" tabindex="0"
+               [attr.aria-label]="'HOME.MISSING_DOCS_MODAL.FIX' | translate"
+               (click)="openProfile.emit(doc.profileId)" (keydown.enter)="openProfile.emit(doc.profileId)">
             <div class="min-w-0">
               <span class="text-[13px] text-on-surface font-medium truncate block">{{ doc.fullName }}</span>
-              <span class="text-[11px] text-outline">{{ doc.missingDocLabels?.length ? doc.missingDocLabels!.join(', ') : docTypesLabel(doc.missingDocs) }}</span>
+              <span class="text-[11px] text-outline">{{ docTypesLabel(doc) }}</span>
             </div>
             <span [class]="urgencyClass(doc.urgency)"
                   class="shrink-0 ml-2 text-[10px] font-bold px-2 py-0.5 rounded">
-              {{ urgencyLabel(doc.urgency) }}
+              {{ ('HOME.MISSING_DOCS_MODAL.URGENCY_' + doc.urgency) | translate }}
             </span>
           </div>
         }
@@ -172,16 +183,19 @@ export class MissingDocsCardComponent {
   readonly alerts = input.required<MissingDocAlert[]>();
   readonly total  = input.required<number>();
 
+  /** « Voir tout » — the page opens the full list in a pop-up. */
+  readonly openAll     = output<void>();
+  /** A row was clicked — the page opens that profile's Documents tab. */
+  readonly openProfile = output<number>();
+
   readonly visible = computed(() => this.alerts().slice(0, MISSING_DOCS_LIMIT));
   readonly extra   = computed(() => Math.max(0, this.total() - MISSING_DOCS_LIMIT));
 
-  docTypesLabel(types: string[]): string {
-    const map: Record<string, string> = {
-      CONTRACT: 'Contrat',
-      ID_CARD:  "CIN",
-      RIB:      'RIB',
-    };
-    return types.map(t => map[t] ?? t).join(', ');
+  private readonly translate = inject(TranslateService);
+
+  /** « Contrat de travail, CIN, RIB bancaire » / « Employment contract, ID card, Bank details ». */
+  docTypesLabel(doc: MissingDocAlert): string {
+    return missingDocLabels(this.translate, doc).join(', ');
   }
 
   // `bg-danger` / `bg-warning` are declared in the lib's own @theme, so these can't
@@ -193,14 +207,5 @@ export class MissingDocsCardComponent {
       LOW:    'bg-surface-container-high text-outline',
     };
     return map[urgency] ?? 'bg-surface-container-high text-outline';
-  }
-
-  urgencyLabel(urgency: string): string {
-    const map: Record<string, string> = {
-      HIGH:   'Urgent',
-      MEDIUM: 'Moyen',
-      LOW:    'Faible',
-    };
-    return map[urgency] ?? urgency;
   }
 }

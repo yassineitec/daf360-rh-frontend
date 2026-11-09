@@ -108,7 +108,14 @@ export interface MissingDocumentDto {
   /** Same order, the country's own labels (document_types.label_fr). */
   missingDocLabels?: string[];
   urgency:     'HIGH' | 'MEDIUM' | 'LOW';
+  /** The employee's country — « Pays » filter of the pop-up (absent from an older backend). */
+  paysId?:     number | null;
+  /** Same order as `missingDocs`: true = required by the country (absent from an older backend). */
+  missingDocRequired?: boolean[];
 }
+
+/** Which documents the pop-up checks: the required ones, or every type of the country. */
+export type MissingDocsScope = 'REQUIRED' | 'ALL';
 
 export interface AnniversaireDto {
   profileId:   number;
@@ -212,8 +219,14 @@ export class HomeService {
     return this.http.get<PreviewResponse<ProbationAlertDto>>(`${this.base}/dashboard/fin-periode-essai`, { params: paysParams(paysId) });
   }
 
-  getMissingDocs(paysId: number | null = null): Observable<PreviewResponse<MissingDocumentDto>> {
-    return this.http.get<PreviewResponse<MissingDocumentDto>>(`${this.base}/dashboard/missing-documents`, { params: paysParams(paysId) });
+  /**
+   * `all` = every employee concerned (pop-up); otherwise the card's top 5.
+   * `scope` = REQUIRED (the country's required documents, default) or ALL (every document type).
+   */
+  getMissingDocs(paysId: number | null = null, all = false,
+                 scope: MissingDocsScope = 'REQUIRED'): Observable<PreviewResponse<MissingDocumentDto>> {
+    const params = all ? { ...paysParams(paysId), all: true, scope } : paysParams(paysId);
+    return this.http.get<PreviewResponse<MissingDocumentDto>>(`${this.base}/dashboard/missing-documents`, { params });
   }
 
   getAnniversaires(paysId: number | null = null): Observable<AnniversaireDto[]> {

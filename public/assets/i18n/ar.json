@@ -1539,7 +1539,8 @@
       "MISSING_DOCS_TITLE": "وثائق مفقودة",
       "MISSING_DOCS_EMPTY": "لا توجد وثائق مفقودة",
       "URGENT": "عاجل",
-      "REMINDER_SENT": "تم إرسال التذكير"
+      "REMINDER_SENT": "تم إرسال التذكير",
+      "SEE_ALL": "عرض الكل"
     },
     "EMPLOYEE_CARD": {
       "VIEW_PROFILE": "عرض الملف",
@@ -1640,7 +1641,29 @@
       "COUNTRIES": "البلدان"
     },
     "PARTIAL_LOAD_ERROR": "تعذر تحميل بعض البيانات ({{count}}). المعلومات المعروضة غير كاملة.",
-    "LOAD_ERROR": "فشل تحميل لوحة المعلومات."
+    "LOAD_ERROR": "فشل تحميل لوحة المعلومات.",
+    "MISSING_DOCS_MODAL": {
+      "SCOPE": "الوثائق",
+      "SCOPE_REQUIRED": "الإلزامية فقط",
+      "SCOPE_ALL": "كل الوثائق",
+      "REQUIRED_HINT": "وثيقة إلزامية لهذا البلد",
+      "COUNTRY": "البلد",
+      "COL_EMPLOYEE": "الموظف",
+      "COL_DOCS": "الوثائق الناقصة",
+      "FILTERS": "الفلاتر",
+      "APPLY": "تطبيق",
+      "CANCEL": "إلغاء",
+      "SEARCH_PLACEHOLDER": "اسم الموظف…",
+      "URGENCY": "الأولوية",
+      "URGENCY_HIGH": "عاجل",
+      "URGENCY_MEDIUM": "متوسط",
+      "URGENCY_LOW": "منخفض",
+      "DOC_TYPE": "الوثيقة",
+      "COUNT": "{{shown}} من {{total}} موظف",
+      "RESET": "إعادة تعيين الفلاتر",
+      "NO_RESULT": "لا يوجد موظف يطابق الفلاتر.",
+      "FIX": "تصحيح"
+    }
   },
   "CANDIDATES_BOARD": {
     "GUIDE": {

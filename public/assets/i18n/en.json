@@ -1539,7 +1539,8 @@
       "MISSING_DOCS_TITLE": "Missing documents",
       "MISSING_DOCS_EMPTY": "No missing documents",
       "URGENT": "Urgent",
-      "REMINDER_SENT": "Reminder sent"
+      "REMINDER_SENT": "Reminder sent",
+      "SEE_ALL": "See all"
     },
     "EMPLOYEE_CARD": {
       "ROLE": "Role",
@@ -1644,7 +1645,29 @@
       "COUNTRIES": "Countries"
     },
     "PARTIAL_LOAD_ERROR": "Some data could not be loaded ({{count}}). The information shown is incomplete.",
-    "LOAD_ERROR": "Failed to load the dashboard."
+    "LOAD_ERROR": "Failed to load the dashboard.",
+    "MISSING_DOCS_MODAL": {
+      "SCOPE": "Documents",
+      "SCOPE_REQUIRED": "Required only",
+      "SCOPE_ALL": "All documents",
+      "REQUIRED_HINT": "Required document for this country",
+      "COUNTRY": "Country",
+      "COL_EMPLOYEE": "Employee",
+      "COL_DOCS": "Missing documents",
+      "FILTERS": "Filters",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "SEARCH_PLACEHOLDER": "Employee name…",
+      "URGENCY": "Urgency",
+      "URGENCY_HIGH": "Urgent",
+      "URGENCY_MEDIUM": "Medium",
+      "URGENCY_LOW": "Low",
+      "DOC_TYPE": "Document",
+      "COUNT": "{{shown}} of {{total}} employee(s)",
+      "RESET": "Reset filters",
+      "NO_RESULT": "No employee matches the filters.",
+      "FIX": "Fix"
+    }
   },
   "CANDIDATES": {
     "COST_SIM": {

@@ -53,7 +53,9 @@
     [tauxGlobalPct]="completion()?.tauxGlobalPct ?? 0"
     [dossiersIncomplets]="completion()?.dossiersIncomplets ?? 0"
     (cardOpen)="onCardOpen($event)"
-    (viewProfile)="onViewProfile($event)" />
+    (viewProfile)="onViewProfile($event)"
+    (missingDocsOpen)="onMissingDocsOpen()"
+    (missingDocProfile)="onFixDocuments($event)" />
 
   <rh-joiners-section
     data-guide="joiners"
@@ -102,5 +104,61 @@
         <p class="text-body-sm text-danger">{{ 'HOME.LOAD_ERROR' | translate }}</p>
       }
     </div>
+  </div>
+</ng-template>
+
+<!-- Pop-up « Documents manquants » — every employee concerned (the card only shows 5),
+     filtered client side; « Corriger » opens the profile on its Documents tab. -->
+<ng-template #missingDocsTpl>
+  <div class="flex flex-col gap-4">
+    <!-- Name search + « Filtres » button (urgency, document type) — same bar as the list pages. -->
+    <daf-search-toolbar
+      [placeholder]="'HOME.MISSING_DOCS_MODAL.SEARCH_PLACEHOLDER' | translate"
+      [value]="missingDocsSearch()"
+      [debounce]="200"
+      (valueChange)="onMissingDocsSearch($event)"
+      [filterFields]="missingDocsFilterFields()"
+      [filterConfig]="missingDocsFilterConfig()"
+      (filterApply)="onMissingDocsFilter($event)" />
+
+    <p class="text-[12px] text-outline">
+      {{ 'HOME.MISSING_DOCS_MODAL.COUNT' | translate:{ shown: filteredMissingDocs().length, total: allMissingDocs().length } }}
+    </p>
+
+    @if (missingDocsError()) {
+      <p class="py-6 text-center text-body-sm text-danger">{{ 'HOME.LOAD_ERROR' | translate }}</p>
+    } @else {
+      <!-- Lib table, like the list pages: sorted over the whole filtered list, then paged. -->
+      <daf-data-table
+        [columns]="missingDocsColumns()"
+        [rows]="missingDocsRows()"
+        [config]="missingDocsTableConfig()"
+        (rowClick)="onFixDocuments($any($event['_source']).profileId)"
+        (sortChange)="onMissingDocsSort($event)">
+        <ng-template dafCell="docs" let-row>
+          <div class="flex flex-wrap gap-1">
+            @for (doc of $any(row['docs']); track $index) {
+              @if (doc.required) {
+                <span class="rounded bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger"
+                      [title]="'HOME.MISSING_DOCS_MODAL.REQUIRED_HINT' | translate">{{ doc.label }} *</span>
+              } @else {
+                <span class="rounded bg-surface-container-high px-1.5 py-0.5 text-[11px] text-on-surface-variant">{{ doc.label }}</span>
+              }
+            }
+          </div>
+        </ng-template>
+      </daf-data-table>
+
+      @if (missingDocsTotalPages() > 0) {
+        <daf-pagination
+          [currentPage]="missingDocsPage()"
+          [totalPages]="missingDocsTotalPages()"
+          [totalElements]="filteredMissingDocs().length"
+          [pageSize]="missingDocsPageSize()"
+          [pageSizeOptions]="missingDocsPageSizeOptions"
+          (pageChange)="missingDocsPage.set($event)"
+          (pageSizeChange)="onMissingDocsPageSize($event)" />
+      }
+    }
   </div>
 </ng-template>

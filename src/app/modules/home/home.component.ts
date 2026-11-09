@@ -1,4 +1,4 @@
-import { Component, OnInit, TemplateRef, inject, signal, computed, viewChild } from '@angular/core';
+import { Component, OnInit, TemplateRef, inject, signal, computed, untracked, viewChild } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -8,6 +8,7 @@ import {
   ProfileCompletionData,
   ProbationAlertDto,
   MissingDocumentDto,
+  MissingDocsScope,
   AnniversaireDto,
   NouveauEmployeDto,
   OnboardingSectionProgress,
@@ -17,12 +18,16 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone, RefDataItem } from '../../core/ref/ref-data.model';
 import { flagDataUri } from '../admin/flag-svgs';
 import {
-  ModalRef, ModalService, PageComponent, PageHeaderComponent, SelectComponent, SelectOption,
+  AvatarCell, BadgeCell, BadgeVariant, DafCellDirective, DataTableComponent, FilterField, FilterResult,
+  ModalRef, ModalService, PageComponent, PageHeaderComponent, PaginationComponent,
+  SearchToolbarComponent, SearchToolbarFilterConfig, SelectComponent, SelectOption,
+  TableColumn, TableConfig, TableRow,
 } from '@khalilrebhiitec/daf360';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
 import { WorkforceDetailComponent } from './components/workforce-detail/workforce-detail.component';
 import { MissingDocAlert, ProbationAlert } from './components/alert-card/alert-card.component';
+import { missingDocLabels } from './missing-doc-labels';
 import { EmployeeCardData, EmployeeCardSection } from './components/employee-card/employee-card.component';
 import { AnniversaireItem } from './components/anniversary-widget/anniversary-widget.component';
 import { NouveauItem } from './components/new-employees-widget/new-employees-widget.component';
@@ -45,6 +50,16 @@ const DETAIL_ICONS: Record<WorkforceCardKey, string> = {
   seniority: 'military_tech',
 };
 
+/** Missing-documents pop-up: what each table column sorts on (urgency: most urgent first on « desc »). */
+const URGENCY_RANK: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+const MISSING_DOCS_SORT: Record<string, (d: MissingDocumentDto) => string | number> = {
+  employee: d => d.fullName,
+  docs:     d => d.missingDocs.length,
+  urgency:  d => URGENCY_RANK[d.urgency] ?? 0,
+};
+/** Same colours as the card's chips. */
+const URGENCY_BADGE: Record<string, BadgeVariant> = { HIGH: 'danger', MEDIUM: 'warning', LOW: 'neutral' };
+
 /** Page guide — each `target` is a `data-guide` attribute of the page or its sections. */
 const GUIDE_STEPS: GuideStep[] = [
   { icon: 'waving_hand',   titleKey: 'HOME.GUIDE.WELCOME.TITLE',       textKey: 'HOME.GUIDE.WELCOME.TEXT' },
@@ -65,6 +80,10 @@ const GUIDE_STEPS: GuideStep[] = [
     PageComponent,
     PageHeaderComponent,
     SelectComponent,
+    SearchToolbarComponent,
+    DataTableComponent,
+    DafCellDirective,
+    PaginationComponent,
     PageGuideComponent,
     WorkforceDetailComponent,
     QuickActionsSectionComponent,
@@ -174,6 +193,164 @@ export class HomeComponent implements OnInit {
 
   readonly selectedDepartmentValue = computed<string[]>(() =>
     [this.selectedDepartmentId() != null ? String(this.selectedDepartmentId()) : HomeComponent.ALL_DEPTS]);
+
+  // ── Pop-up « Documents manquants » (full list, client-side filters) ───────
+  private readonly missingDocsTpl = viewChild.required<TemplateRef<unknown>>('missingDocsTpl');
+  /** Every employee concerned — fetched with `all=true` on each opening. */
+  readonly allMissingDocs     = signal<MissingDocumentDto[]>([]);
+  readonly missingDocsLoading = signal(false);
+  readonly missingDocsError   = signal(false);
+  /** Name search of the pop-up's toolbar. */
+  readonly missingDocsSearch  = signal('');
+  /** « Filtres » panel — empty = every urgency / every document type. */
+  readonly missingDocsUrgency = signal<string[]>([]);
+  readonly missingDocsType    = signal<string[]>([]);
+  /** Country ids (as strings) — empty = every country. */
+  readonly missingDocsPays    = signal<string[]>([]);
+  /** « Documents » filter: the country's required ones (card's rule) or every type — reloads. */
+  readonly missingDocsScope   = signal<MissingDocsScope>('REQUIRED');
+
+  /** Fields of the « Filtres » button: country, urgency, then the document types actually
+   *  missing in the list (the required set is per country). */
+  readonly missingDocsFilterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+
+    // Countries present in the list. Names come from the page's country list (loaded for
+    // cross-country admins); anyone else only ever has their own entity here.
+    const known = new Map(this.availablePays().map(p => [p.id, `${p.frenchLabel} (${p.isoCode})`]));
+    const paysIds = [...new Set(this.allMissingDocs().map(d => d.paysId).filter((id): id is number => id != null))];
+    const paysOptions = paysIds.map(id => ({ value: String(id), label: known.get(id) ?? `#${id}` }))
+                               .sort((a, b) => a.label.localeCompare(b.label));
+
+    const types = new Map<string, string>();
+    for (const d of this.allMissingDocs()) {
+      const labels = this.docLabels(d);
+      d.missingDocs.forEach((code, i) => {
+        if (!types.has(code)) types.set(code, labels[i]);
+      });
+    }
+    const docOptions = [...types].map(([value, label]) => ({ value, label }))
+                                 .sort((a, b) => a.label.localeCompare(b.label));
+    return [
+      { name: 'scope', label: t('HOME.MISSING_DOCS_MODAL.SCOPE'), type: 'select', options: [
+        { value: 'REQUIRED', label: t('HOME.MISSING_DOCS_MODAL.SCOPE_REQUIRED') },
+        { value: 'ALL',      label: t('HOME.MISSING_DOCS_MODAL.SCOPE_ALL') },
+      ] },
+      { name: 'pays', label: t('HOME.MISSING_DOCS_MODAL.COUNTRY'), type: 'multiselect',
+        searchable: paysOptions.length > 6, options: paysOptions },
+      { name: 'urgency', label: t('HOME.MISSING_DOCS_MODAL.URGENCY'), type: 'multiselect', options: [
+        { value: 'HIGH',   label: t('HOME.MISSING_DOCS_MODAL.URGENCY_HIGH') },
+        { value: 'MEDIUM', label: t('HOME.MISSING_DOCS_MODAL.URGENCY_MEDIUM') },
+        { value: 'LOW',    label: t('HOME.MISSING_DOCS_MODAL.URGENCY_LOW') },
+      ] },
+      { name: 'docType', label: t('HOME.MISSING_DOCS_MODAL.DOC_TYPE'), type: 'multiselect',
+        searchable: docOptions.length > 6, options: docOptions },
+    ];
+  });
+
+  readonly missingDocsFilterConfig = computed<SearchToolbarFilterConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return {
+      title:        t('HOME.MISSING_DOCS_MODAL.FILTERS'),
+      triggerLabel: t('HOME.MISSING_DOCS_MODAL.FILTERS'),
+      applyLabel:   t('HOME.MISSING_DOCS_MODAL.APPLY'),
+      cancelLabel:  t('HOME.MISSING_DOCS_MODAL.CANCEL'),
+      resetLabel:   t('HOME.MISSING_DOCS_MODAL.RESET'),
+      align: 'right',
+      // Read once by the panel, when the pop-up opens — and every opening starts on REQUIRED.
+      initialValues: { scope: 'REQUIRED' },
+    };
+  });
+
+  readonly filteredMissingDocs = computed<MissingDocumentDto[]>(() => {
+    const q       = HomeComponent.normalize(this.missingDocsSearch().trim());
+    const urgency = this.missingDocsUrgency();
+    const types   = this.missingDocsType();
+    const pays    = this.missingDocsPays();
+    return this.allMissingDocs().filter(d =>
+      (!q || HomeComponent.normalize(d.fullName).includes(q)) &&
+      (pays.length === 0 || (d.paysId != null && pays.includes(String(d.paysId)))) &&
+      (urgency.length === 0 || urgency.includes(d.urgency)) &&
+      (types.length === 0 || d.missingDocs.some(code => types.includes(code))));
+  });
+
+  // ── Pop-up table: sort over the whole filtered list, then one page (`manualSort`) ──
+  readonly missingDocsSort     = signal<{ key: string; dir: 'asc' | 'desc' } | null>(null);
+  readonly missingDocsPage     = signal(0);
+  readonly missingDocsPageSize = signal(10);
+  readonly missingDocsPageSizeOptions = [10, 20, 50, 100];
+
+  private readonly sortedMissingDocs = computed<MissingDocumentDto[]>(() => {
+    const sort  = this.missingDocsSort();
+    const value = sort && MISSING_DOCS_SORT[sort.key];
+    const items = this.filteredMissingDocs();
+    if (!sort || !value) return items;
+    const sign = sort.dir === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => {
+      const va = value(a), vb = value(b);
+      const cmp = typeof va === 'number' && typeof vb === 'number'
+        ? va - vb
+        : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base' });
+      return cmp * sign;
+    });
+  });
+
+  readonly missingDocsTotalPages = computed(() =>
+    Math.ceil(this.filteredMissingDocs().length / this.missingDocsPageSize()));
+
+  readonly missingDocsColumns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    return [
+      { key: 'employee', label: t('HOME.MISSING_DOCS_MODAL.COL_EMPLOYEE'), type: 'avatar', sortable: true },
+      { key: 'docs',     label: t('HOME.MISSING_DOCS_MODAL.COL_DOCS'),     sortable: true },
+      { key: 'urgency',  label: t('HOME.MISSING_DOCS_MODAL.URGENCY'),      type: 'badge', sortable: true },
+    ];
+  });
+
+  readonly missingDocsRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const start = this.missingDocsPage() * this.missingDocsPageSize();
+    return this.sortedMissingDocs().slice(start, start + this.missingDocsPageSize()).map(d => ({
+      employee: { name: d.fullName, initials: HomeComponent.initials(d.fullName) } satisfies AvatarCell,
+      // `required` marks the country's required ones — they stand out in « Tous les documents ».
+      docs: this.docLabels(d).map((label, i) => ({
+        label,
+        required: this.missingDocsScope() === 'ALL' && d.missingDocRequired?.[i] === true,
+      })),
+      urgency: {
+        label: t('HOME.MISSING_DOCS_MODAL.URGENCY_' + d.urgency),
+        options: { variant: URGENCY_BADGE[d.urgency] ?? 'neutral', size: 'sm', dot: true },
+      } satisfies BadgeCell,
+      _source: d,
+    }));
+  });
+
+  readonly missingDocsTableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant(k);
+    const profileId = (row: TableRow) => (row['_source'] as MissingDocumentDto).profileId;
+    // A seed read once by the table — tracking it would rebuild the config on every header click.
+    const sort = untracked(this.missingDocsSort);
+    return {
+      showHeader: false,
+      hoverable: true,
+      loading: this.missingDocsLoading(),
+      skeletonRows: 5,
+      emptyMessage: t('HOME.MISSING_DOCS_MODAL.NO_RESULT'),
+      rowId: (row) => profileId(row),
+      manualSort: true,
+      sortLabel: t('REQUESTS.TABLE.SORT_BY'),
+      ...(sort ? { defaultSort: sort } : {}),
+      actions: [
+        { id: 'fix', icon: 'edit_document', tooltip: t('HOME.MISSING_DOCS_MODAL.FIX'),
+          onClick: (row) => this.onFixDocuments(profileId(row)) },
+      ],
+    };
+  });
 
   // ── Computed for template ──────────────────────────────────────────────────
   readonly userName = computed(() => this.currentUser()?.fullName ?? 'Collaborateur');
@@ -368,6 +545,115 @@ export class HomeComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  /** « Voir tout » of the missing-documents card: the full list, filters reset. */
+  onMissingDocsOpen(): void {
+    this.resetMissingDocsFilters();
+    this.allMissingDocs.set(this.missingDocItems());   // the 5 already loaded, meanwhile
+    this.loadAllMissingDocs();
+    this.modalRef?.close();
+    this.modalRef = this.modal.open({
+      title: this.translate.instant('HOME.ALERT_CARD.MISSING_DOCS_TITLE'),
+      icon:  'description',
+      body:  this.missingDocsTpl(),
+      // Same opening size as the facturation pop-ups (email au client, /finance/affaires) —
+      // smaller than full screen, so the maximise button still does something.
+      width:  'min(1200px, 80vw)',
+      height: '75vh',
+      minWidth:    '360px',
+      minHeight:   '260px',
+      resizable:   true,
+      maximizable: true,
+    });
+  }
+
+  /** Bumped on each fetch: a slow answer for a previous « Documents » choice is dropped. */
+  private missingDocsRequest = 0;
+
+  /** The full list for the current « Documents » choice (required / every type). */
+  private loadAllMissingDocs(): void {
+    const request = ++this.missingDocsRequest;
+    this.missingDocsError.set(false);
+    this.missingDocsLoading.set(true);
+    this.homeSvc.getMissingDocs(null, true, this.missingDocsScope()).subscribe({
+      next: res => {
+        if (request !== this.missingDocsRequest) return;
+        this.allMissingDocs.set(res.items);
+        this.missingDocsLoading.set(false);
+      },
+      error: () => {
+        if (request !== this.missingDocsRequest) return;
+        this.missingDocsError.set(true);
+        this.missingDocsLoading.set(false);
+      },
+    });
+  }
+
+  resetMissingDocsFilters(): void {
+    this.missingDocsSearch.set('');
+    this.missingDocsScope.set('REQUIRED');
+    this.missingDocsUrgency.set([]);
+    this.missingDocsType.set([]);
+    this.missingDocsPays.set([]);
+    this.missingDocsSort.set(null);
+    this.missingDocsPage.set(0);
+  }
+
+  private static initials(name: string): string {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
+  }
+
+  onMissingDocsSearch(value: string): void {
+    const next = value ?? '';
+    if (next === this.missingDocsSearch()) return;   // daf-search-toolbar re-emits on blur
+    this.missingDocsSearch.set(next);
+    this.missingDocsPage.set(0);
+  }
+
+  /** Apply / reset / chip removal of the « Filtres » panel. */
+  onMissingDocsFilter(result: FilterResult): void {
+    const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : v ? [String(v)] : []);
+    this.missingDocsUrgency.set(list(result['urgency']));
+    this.missingDocsType.set(list(result['docType']));
+    this.missingDocsPays.set(list(result['pays']));
+    this.missingDocsPage.set(0);
+    // No value (reset, chip removed) = back to the card's rule.
+    const scope: MissingDocsScope = result['scope'] === 'ALL' ? 'ALL' : 'REQUIRED';
+    if (scope !== this.missingDocsScope()) {
+      this.missingDocsScope.set(scope);
+      this.loadAllMissingDocs();
+    }
+  }
+
+  onMissingDocsSort(e: { key: string; dir: 'asc' | 'desc' | null }): void {
+    this.missingDocsSort.set(e.dir ? { key: e.key, dir: e.dir } : null);
+    this.missingDocsPage.set(0);
+  }
+
+  onMissingDocsPageSize(size: number): void {
+    this.missingDocsPageSize.set(size);
+    this.missingDocsPage.set(0);
+  }
+
+  /** « Corriger » — the profile, straight on its Documents tab (`?tab=` of tabParam). */
+  onFixDocuments(profileId: number): void {
+    this.modalRef?.close();
+    this.modalRef = undefined;
+    this.router.navigate(['../profiles', profileId], {
+      relativeTo: this.activatedRoute,
+      queryParams: { tab: 'documents' },
+    });
+  }
+
+  /** Labels in the UI language — see `missingDocLabels`. */
+  docLabels(d: MissingDocumentDto): string[] {
+    return missingDocLabels(this.translate, d);
+  }
+
+  /** Case- and accent-insensitive search (« Hélène » ↔ « helene »). */
+  private static normalize(s: string): string {
+    return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
   }
 
   onViewProfile(id: number | null): void {

@@ -41,7 +41,9 @@ export type WorkforceCardKey = 'workforce' | 'ingproj' | 'seniority';
       <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-1" data-guide="missing-docs">
         <rh-missing-docs-card
           [alerts]="missingDocsAlerts()"
-          [total]="missingDocsTotal()" />
+          [total]="missingDocsTotal()"
+          (openAll)="missingDocsOpen.emit()"
+          (openProfile)="missingDocProfile.emit($event)" />
       </div>
       <div class="min-w-0 xl:col-span-2 xl:col-start-1 xl:row-start-2" data-guide="probation">
         <rh-probation-card
@@ -137,6 +139,10 @@ export class OverviewSectionComponent {
 
   /** A workforce card was clicked — the page opens its detail pop-up. */
   readonly cardOpen = output<WorkforceCardKey>();
+  /** « Voir tout » of the missing-documents card — the page opens the full list. */
+  readonly missingDocsOpen = output<void>();
+  /** A missing-documents row — the page opens that profile's Documents tab. */
+  readonly missingDocProfile = output<number>();
 
   /** A probation row was clicked — the page opens that profile. */
   readonly viewProfile = output<number>();

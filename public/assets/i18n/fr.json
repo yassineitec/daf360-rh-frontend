@@ -1539,7 +1539,8 @@
       "MISSING_DOCS_TITLE": "Documents manquants",
       "MISSING_DOCS_EMPTY": "Aucun document manquant",
       "URGENT": "Urgent",
-      "REMINDER_SENT": "Relance envoyée"
+      "REMINDER_SENT": "Relance envoyée",
+      "SEE_ALL": "Voir tout"
     },
     "EMPLOYEE_CARD": {
       "ROLE": "Poste",
@@ -1644,7 +1645,29 @@
       "COUNTRIES": "Pays"
     },
     "PARTIAL_LOAD_ERROR": "Certaines données n'ont pas pu être chargées ({{count}}). Les informations affichées sont incomplètes.",
-    "LOAD_ERROR": "Erreur lors du chargement du tableau de bord."
+    "LOAD_ERROR": "Erreur lors du chargement du tableau de bord.",
+    "MISSING_DOCS_MODAL": {
+      "SCOPE": "Documents",
+      "SCOPE_REQUIRED": "Obligatoires uniquement",
+      "SCOPE_ALL": "Tous les documents",
+      "REQUIRED_HINT": "Document obligatoire pour ce pays",
+      "COUNTRY": "Pays",
+      "COL_EMPLOYEE": "Collaborateur",
+      "COL_DOCS": "Documents manquants",
+      "FILTERS": "Filtres",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "SEARCH_PLACEHOLDER": "Nom du collaborateur…",
+      "URGENCY": "Urgence",
+      "URGENCY_HIGH": "Urgent",
+      "URGENCY_MEDIUM": "Moyen",
+      "URGENCY_LOW": "Faible",
+      "DOC_TYPE": "Document",
+      "COUNT": "{{shown}} collaborateur(s) sur {{total}}",
+      "RESET": "Réinitialiser les filtres",
+      "NO_RESULT": "Aucun collaborateur ne correspond aux filtres.",
+      "FIX": "Corriger"
+    }
   },
   "CANDIDATES": {
     "COST_SIM": {
