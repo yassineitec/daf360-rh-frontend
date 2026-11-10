@@ -32,6 +32,7 @@ import { InterviewTypesAdminComponent }      from './interview-types-admin.compo
 import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.component';
 import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
 import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
+import { DocumentTypesAdminComponent }      from './document-types/document-types-admin.component';
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
 import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
@@ -121,6 +122,11 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // every employee folder on the HR SharePoint site, which is a different capability from
   // editing roles even though the same people hold both today.
   { key: 'sharepoint',            labelKey: 'ADMIN.shell.tabs.sharepoint',          permission: 'ADMIN_SHAREPOINT',           icon: 'folder_shared',         tone: 'primary' },
+  // The per-country catalogue of what may be uploaded into a dossier (document_types). Its
+  // own card, not a SharePoint tab: a type exists whether or not it has a SharePoint folder.
+  // HR_ADMIN_ROLES: one of the three authorities the backend endpoints accept, and the one
+  // that already opens « Modèles de documents ».
+  { key: 'document-types',        labelKey: 'ADMIN.shell.tabs.documentTypes',       permission: 'HR_ADMIN_ROLES',             icon: 'topic',                 tone: 'teal' },
   // The leave-type catalogue: what a congé IS, as opposed to the congés themselves, which
   // live under /rh/conges. It belongs with the other configurable lists and not in its own
   // nav group — someone adding a leave type is doing the same thing as someone adding a
@@ -176,6 +182,7 @@ const GUIDE_STEPS: GuideStep[] = [
     OffboardingCatalogAdminComponent,
     DocumentTemplatesAdminComponent,
     SharePointAdminComponent,
+    DocumentTypesAdminComponent,
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
     AutorisationRulesAdminComponent,
@@ -276,6 +283,7 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'offboarding-catalog')  { <app-offboarding-catalog-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'document-templates')   { <app-document-templates-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'sharepoint')            { <app-sharepoint-admin [paysId]="paysId()" /> }
+            @if (activeTab() === 'document-types')        { <app-document-types-admin [paysId]="paysId()" /> }
             <!-- No [paysId]: the leave-type catalogue is company-wide, not per-country. -->
             @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
             <!-- No [paysId]: this screen configures every entity, not the caller's own. -->

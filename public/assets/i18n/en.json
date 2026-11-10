@@ -5590,7 +5590,8 @@
         "autorisationRules": "Permissions",
         "teletravailRules": "Remote work",
         "contractAlerts": "Contract deadlines",
-        "helpFaq": "Assistant & FAQ"
+        "helpFaq": "Assistant & FAQ",
+        "documentTypes": "Document types"
       }
     },
     "users": {
@@ -5759,6 +5760,59 @@
         "FRIDAY": "Friday",
         "SATURDAY": "Saturday",
         "SUNDAY": "Sunday"
+      }
+    },
+    "documentTypes": {
+      "title": "Document types",
+      "subtitle": "The types offered for upload in this country's employee dossiers ({{count}}). A type is never deleted: once deactivated it is no longer offered, but documents already filed stay readable. Required documents and SharePoint folders are set in the « SharePoint » card.",
+      "add": "New type",
+      "addTitle": "New document type",
+      "editTitle": "Edit document type",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "colOrder": "Order",
+      "colLabelFr": "Label",
+      "colLabelEn": "Label (English)",
+      "colCode": "Code",
+      "colRequired": "Required",
+      "colStatus": "Status",
+      "colFolder": "SharePoint folder",
+      "noFolder": "No folder configured: files will go to « Administrative Documents ». Set it in SharePoint › Paths by country.",
+      "system": {
+        "badge": "Used by the app",
+        "usedBy": "Used by the application ({{flow}}): cannot be deactivated.",
+        "cannotDeactivate": "Used by the application: cannot be deactivated",
+        "missing": "Types used by the application are missing or inactive for this country: {{codes}}. Uploads from those steps will be refused until they are created or reactivated.",
+        "ONBOARDING": "onboarding — RIB certificate",
+        "OFFBOARDING": "offboarding — resignation letter",
+        "CIVP_CDI": "CIVP → CDI conversion — evaluation file"
+      },
+      "active": "Active",
+      "inactive": "Inactive",
+      "requiredYes": "Required",
+      "code": "Code",
+      "codeHint": "Upper-case letters, digits and _ only (e.g. CNSS_CERTIFICATE). Cannot be changed afterwards.",
+      "labelFr": "Label (French)",
+      "labelEn": "Label (English)",
+      "labelEnHint": "Optional — the French label is shown otherwise.",
+      "sortOrder": "Display order",
+      "sortOrderHint": "Lowest first.",
+      "activeToggle": "Active (offered for upload)",
+      "requiredToggle": "Required for a complete dossier",
+      "empty": "No document type for this country.",
+      "typesWord": "types",
+      "cancel": "Cancel",
+      "save": "Save",
+      "loadError": "Could not load the document types.",
+      "saveError": "Could not save.",
+      "needsMigration": "The type is saved, but this server's database refused the « required » flag (is migration V121 applied there?)",
+      "unconfigured": "This country has no configured type yet: it uses the default list (every known type, CONTRACT / ID CARD / RIB required). As soon as the first type is added, only the types in this table will be offered for this country — add them all.",
+      "errors": {
+        "CODE_BLANK": "The code is required.",
+        "CODE_INVALID": "Invalid code: upper-case letters, digits and _ only, 100 characters max.",
+        "CODE_TAKEN": "This code already exists for this country (maybe inactive): edit or reactivate it.",
+        "LABEL_BLANK": "The French label is required."
       }
     },
     "sharepoint": {

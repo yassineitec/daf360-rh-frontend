@@ -5590,7 +5590,8 @@
         "autorisationRules": "Autorisations",
         "teletravailRules": "Télétravail",
         "contractAlerts": "Échéances de contrat",
-        "helpFaq": "Assistant & FAQ"
+        "helpFaq": "Assistant & FAQ",
+        "documentTypes": "Types de documents"
       }
     },
     "users": {
@@ -5759,6 +5760,59 @@
         "FRIDAY": "Vendredi",
         "SATURDAY": "Samedi",
         "SUNDAY": "Dimanche"
+      }
+    },
+    "documentTypes": {
+      "title": "Types de documents",
+      "subtitle": "Les types proposés au téléversement dans les dossiers employés de ce pays ({{count}}). Un type n'est jamais supprimé : désactivé, il n'est plus proposé mais les documents déjà classés restent lisibles. Les documents requis et les dossiers SharePoint se règlent dans la carte « SharePoint ».",
+      "add": "Nouveau type",
+      "addTitle": "Nouveau type de document",
+      "editTitle": "Modifier le type de document",
+      "edit": "Modifier",
+      "deactivate": "Désactiver",
+      "reactivate": "Réactiver",
+      "colOrder": "Ordre",
+      "colLabelFr": "Libellé",
+      "colLabelEn": "Libellé (anglais)",
+      "colCode": "Code",
+      "colRequired": "Requis",
+      "colStatus": "Statut",
+      "colFolder": "Dossier SharePoint",
+      "noFolder": "Aucun dossier configuré : les fichiers iront dans « Administrative Documents ». À régler dans SharePoint › Chemins par pays.",
+      "system": {
+        "badge": "Utilisé par l'app",
+        "usedBy": "Utilisé par l'application ({{flow}}) : ne peut pas être désactivé.",
+        "cannotDeactivate": "Utilisé par l'application : ne peut pas être désactivé",
+        "missing": "Types utilisés par l'application absents ou désactivés pour ce pays : {{codes}}. Les téléversements de ces étapes seront refusés tant qu'ils ne sont pas créés ou réactivés.",
+        "ONBOARDING": "onboarding — attestation RIB",
+        "OFFBOARDING": "offboarding — lettre de démission",
+        "CIVP_CDI": "passage CIVP → CDI — fiche d'évaluation"
+      },
+      "active": "Actif",
+      "inactive": "Désactivé",
+      "requiredYes": "Requis",
+      "code": "Code",
+      "codeHint": "Majuscules, chiffres et _ uniquement (ex. ATTESTATION_CNSS). Ne peut plus être changé ensuite.",
+      "labelFr": "Libellé (français)",
+      "labelEn": "Libellé (anglais)",
+      "labelEnHint": "Facultatif — le libellé français est affiché à défaut.",
+      "sortOrder": "Ordre d'affichage",
+      "sortOrderHint": "Les plus petits en premier.",
+      "activeToggle": "Actif (proposé au téléversement)",
+      "requiredToggle": "Requis pour un dossier complet",
+      "empty": "Aucun type de document pour ce pays.",
+      "typesWord": "types",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "loadError": "Impossible de charger les types de documents.",
+      "saveError": "Enregistrement impossible.",
+      "needsMigration": "Le type est enregistré, mais la base de ce serveur a refusé l'indicateur « requis » (la migration V121 y est-elle appliquée ?)",
+      "unconfigured": "Ce pays n'a encore aucun type configuré : il utilise la liste par défaut (tous les types connus, CONTRAT / PIÈCE D'IDENTITÉ / RIB requis). Dès le premier type ajouté, seuls les types de ce tableau seront proposés pour ce pays — ajoutez-les tous.",
+      "errors": {
+        "CODE_BLANK": "Le code est obligatoire.",
+        "CODE_INVALID": "Code invalide : majuscules, chiffres et _ uniquement, 100 caractères maximum.",
+        "CODE_TAKEN": "Ce code existe déjà pour ce pays (peut-être désactivé) : modifiez-le ou réactivez-le.",
+        "LABEL_BLANK": "Le libellé français est obligatoire."
       }
     },
     "sharepoint": {
