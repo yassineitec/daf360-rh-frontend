@@ -7,6 +7,7 @@ import {
   PayrollSimulationResult,
   SubmitCostApprovalRequest,
   CandidateCostApprovalDto,
+  payrollContractOf,
 } from './payroll-simulation.service';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { UserStore } from '../../core/user.store';
@@ -163,7 +164,10 @@ export class CandidateCostSimulationComponent implements OnInit {
   private contractCode = signal<string>('CDI');
   private fxRateEur    = signal<number | null>(null);
 
-  readonly localCurrency = computed(() => this.result()?.localCurrency ?? 'TND');
+  /** Devise du pays du candidat (par son code ISO — voir `currencyFor`) ; avant : celle du
+   *  résultat, sinon TND pour tout le monde. */
+  private readonly paysCurrency = signal<string | null>(null);
+  readonly localCurrency = computed(() => this.paysCurrency() ?? this.result()?.localCurrency ?? '');
 
   readonly resultRows = computed(() => {
     this.translate.currentLang();
@@ -185,10 +189,10 @@ export class CandidateCostSimulationComponent implements OnInit {
     const paysId = this.candidate.paysId;
     this.listSvc.getListValues('CONTRACT_TYPE', paysId).subscribe(values => {
       const match = values.find(v => v.id === this.candidate.employmentTypeId);
-      if (match?.payrollContractCode) {
-        this.contractCode.set(match.payrollContractCode);
-      }
+      // payrollContractCode, sinon le code de la valeur : plus de CDI par défaut silencieux.
+      if (match) this.contractCode.set(payrollContractOf(match));
     });
+    this.simulationSvc.currencyFor(paysId).subscribe(c => this.paysCurrency.set(c));
 
     this.loadApprovals();
   }
