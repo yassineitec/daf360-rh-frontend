@@ -10,7 +10,7 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue }               from '../../core/lists/configurable-list.model';
-import { PayrollSimulationService } from './payroll-simulation.service';
+import { PayrollSimulationService, payrollContractOf } from './payroll-simulation.service';
 import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
 import { ApprovedDemandOption }     from '../recruitment-demands/recruitment-demand.model';
 import { catchError, of }           from 'rxjs';
@@ -534,7 +534,7 @@ export class CandidateFormComponent implements OnInit {
     if (!paysId || net == null || net <= 0) return;
 
     const typeId = this.positionGroup.get('employmentTypeId')?.value as number | null;
-    const code   = this.employmentTypes().find(t => t.id === typeId)?.payrollContractCode ?? 'CDI';
+    const code   = payrollContractOf(this.employmentTypes().find(t => t.id === typeId));
 
     this.simulationSvc.simulateFromNet({ paysId, inputNet: net, contractType: code })
       .pipe(catchError(() => of(null)))

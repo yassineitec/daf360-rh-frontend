@@ -11,7 +11,7 @@ import { DafModalComponent } from '../../shared/daf-modal.component';
 import { SectionCardComponent } from '../../shared/detail/section-card.component';
 import { OfferService, OfferResponse, CreateOfferRequest } from '../pipeline/services/offer.service';
 import {
-  CandidateCostApprovalDto, PayrollSimulationResult, PayrollSimulationService,
+  CandidateCostApprovalDto, PayrollSimulationResult, PayrollSimulationService, payrollContractOf,
 } from './payroll-simulation.service';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
@@ -111,10 +111,19 @@ export class OfferSectionComponent {
       if (!pays || typeId == null) return;
       this.listSvc.getListValues('CONTRACT_TYPE', pays).subscribe(values => {
         const match = values.find(v => v.id === typeId);
-        if (match?.payrollContractCode) this.contractCode.set(match.payrollContractCode);
+        // payrollContractCode, sinon le code de la valeur : plus de CDI par défaut silencieux.
+        if (match) this.contractCode.set(payrollContractOf(match));
       });
     });
+    // Devise du pays du candidat pour l'affichage des montants (avant : « DT » partout).
+    effect(() => {
+      const pays = this.paysId();
+      this.simulationSvc.currencyFor(pays).subscribe(c => this.currency.set(c));
+    });
   }
+
+  /** Devise du pays du candidat (TND, EGP…) ; `null` tant qu'elle n'est pas connue. */
+  private readonly currency = signal<string | null>(null);
 
   private load(id: number): void {
     this.loading.set(true);
@@ -309,8 +318,10 @@ export class OfferSectionComponent {
   }
   formatSalary(v: number | null): string {
     if (v == null) return '—';
-    // "DT" is the French abbreviation of the dinar; English reads the ISO code.
-    const unit = this.translate.currentLang() === 'en' ? ' TND' : ' DT';
+    // Devise du pays du candidat. « DT » reste l'abréviation française du dinar ; les autres
+    // devises (et l'anglais) lisent le code ISO.
+    const cur = this.currency();
+    const unit = !cur ? '' : (cur === 'TND' && this.translate.currentLang() !== 'en' ? ' DT' : ` ${cur}`);
     return v.toLocaleString(this.locale(), { maximumFractionDigits: 0 }) + unit;
   }
   formatDate(d: string | null): string {
