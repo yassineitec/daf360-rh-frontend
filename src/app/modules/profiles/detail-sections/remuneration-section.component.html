@@ -1,0 +1,332 @@
+<!-- Rémunération — 3 sections (actuelle, historique, primes) + 2 pop-ups redimensionnables.
+     Lib components only; the data and the rules are payroll-service's. -->
+<div class="flex flex-col gap-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <daf-section-title [title]="'PROFILES.REMUNERATION_TAB.TITLE' | translate" />
+    @if (canManage()) {
+      <daf-button
+        [label]="(pendingChange() ? 'PROFILES.REMUNERATION_TAB.EDIT_REQUEST' : 'PROFILES.REMUNERATION_TAB.NEW') | translate"
+        variant="teal"
+        [options]="{ iconStart: pendingChange() ? 'edit' : 'add', disabled: loading() || !config() }"
+        (onClick)="openNewRemuneration()" />
+    }
+  </div>
+
+  @if (loadError()) {
+    <div class="rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger" role="alert">{{ loadError() }}</div>
+  }
+  @if (notice()) {
+    <div class="rounded-lg bg-teal/10 px-3.5 py-2.5 text-[13px] text-on-surface" role="status">{{ notice() }}</div>
+  }
+
+  <!-- Demande de révision en attente du Directeur Pays (payroll V38) : rien n'est appliqué
+       avant son approbation. -->
+  @if (pendingChange(); as p) {
+    <daf-section-card
+      [title]="'PROFILES.REMUNERATION_TAB.PENDING_TITLE' | translate"
+      [hint]="'PROFILES.REMUNERATION_TAB.PENDING_HINT' | translate: { by: p.submittedByName ?? ('#' + p.submittedBy), on: date(p.submittedAt) }">
+      <div class="flex flex-col gap-4 p-5">
+        <div class="flex flex-wrap items-center gap-2">
+          <daf-badge [label]="'PROFILES.REMUNERATION_TAB.STATUS.PENDING' | translate" [options]="{ variant: 'warning', icon: 'hourglass_empty' }" />
+          <span class="text-[13px] text-on-surface-variant">
+            {{ 'PROFILES.REMUNERATION_TAB.EFFECTIVE_DATE' | translate }} : {{ date(p.effectiveDate) }} · {{ contractText(p.contractType) }}
+          </span>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <daf-metric-card
+            [label]="'PROFILES.REMUNERATION_TAB.BASE_SALARY' | translate"
+            [value]="money(p.newGrossSalary, p.workingCurrency)"
+            [delta]="{ value: ('PROFILES.REMUNERATION_TAB.WAS' | translate: { value: money(p.currentGrossSalary, p.workingCurrency) }), direction: 'neutral' }"
+            [options]="{ icon: 'payments', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+          <daf-metric-card
+            [label]="'PROFILES.REMUNERATION_TAB.NET_SIMULATED' | translate"
+            [value]="money(p.newNetSalary, p.workingCurrency, 0)"
+            [options]="{ icon: 'account_balance_wallet', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+          <daf-metric-card
+            [label]="'PROFILES.REMUNERATION_TAB.MONTHLY_COST' | translate"
+            [value]="money(p.monthlyCostAfter, p.workingCurrency)"
+            [delta]="p.monthlyCostBefore != null && p.monthlyCostAfter != null
+              ? { value: ('PROFILES.REMUNERATION_TAB.WAS' | translate: { value: money(p.monthlyCostBefore, p.workingCurrency) }),
+                  direction: p.monthlyCostAfter > p.monthlyCostBefore ? 'up' : (p.monthlyCostAfter < p.monthlyCostBefore ? 'down' : 'neutral') }
+              : null"
+            [options]="{ icon: 'account_balance', iconColor: 'text-secondary', iconBg: 'bg-secondary/10' }" />
+        </div>
+        <p class="text-[13px] text-on-surface"><span class="text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.REASON' | translate }} :</span> {{ p.reason }}</p>
+        @if (canManage()) {
+          <div class="flex flex-wrap gap-2">
+            <daf-button [label]="'PROFILES.REMUNERATION_TAB.EDIT_REQUEST' | translate" variant="secondary"
+              [options]="{ iconStart: 'edit', size: 'sm' }" (onClick)="openNewRemuneration()" />
+            <daf-button [label]="'PROFILES.REMUNERATION_TAB.CANCEL_REQUEST' | translate" variant="ghost"
+              [options]="{ iconStart: 'undo', size: 'sm' }" (onClick)="confirmCancelChange()" />
+          </div>
+        }
+      </div>
+    </daf-section-card>
+  } @else if (lastRejected(); as r) {
+    <div class="flex flex-col gap-1 rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-on-surface" role="status">
+      <span class="font-semibold text-danger">
+        {{ 'PROFILES.REMUNERATION_TAB.REJECTED_TITLE' | translate: { by: r.decidedByName ?? '—', on: date(r.decidedAt) } }}
+      </span>
+      <span>{{ r.decisionNotes }}</span>
+    </div>
+  }
+
+  <!-- ══ 1. Rémunération actuelle ══ -->
+  <daf-section-card
+    [title]="'PROFILES.REMUNERATION_TAB.CURRENT_TITLE' | translate"
+    [hint]="(saved() ? 'PROFILES.REMUNERATION_TAB.CURRENT_HINT' : 'PROFILES.REMUNERATION_TAB.NEVER_SAVED') | translate">
+    <div class="flex flex-col gap-5 p-5">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <daf-metric-card
+          [label]="'PROFILES.REMUNERATION_TAB.BASE_SALARY' | translate"
+          [value]="grossText()"
+          [delta]="enteredAsText() ? { value: enteredAsText()!, direction: 'neutral' } : null"
+          [options]="{ icon: 'payments', iconColor: 'text-teal', iconBg: 'bg-teal/10', help: ('PROFILES.REMUNERATION_TAB.BASE_SALARY_HELP' | translate) }" />
+        <daf-metric-card
+          [label]="'PROFILES.REMUNERATION_TAB.NET_SALARY' | translate"
+          [value]="netText()"
+          [options]="{ icon: 'account_balance_wallet', iconColor: 'text-primary', iconBg: 'bg-primary/10', help: ('PROFILES.REMUNERATION_TAB.NET_SALARY_HELP' | translate) }" />
+        <daf-metric-card
+          [label]="'PROFILES.REMUNERATION_TAB.MONTH_BONUSES' | translate"
+          [value]="monthBonusesText()"
+          [delta]="{ value: ('PROFILES.REMUNERATION_TAB.BONUS_COUNT' | translate: { count: monthBonuses().length }), direction: 'neutral' }"
+          [options]="{ icon: 'redeem', iconColor: 'text-warning', iconBg: 'bg-warning/10', help: ('PROFILES.REMUNERATION_TAB.MONTH_BONUSES_HELP' | translate) }" />
+        <daf-metric-card
+          [label]="'PROFILES.REMUNERATION_TAB.BENEFITS' | translate"
+          [value]="money(benefitsTotal(), workingCurrency())"
+          [delta]="{ value: ('PROFILES.REMUNERATION_TAB.BENEFIT_COUNT' | translate: { count: currentBenefits().length }), direction: 'neutral' }"
+          [options]="{ icon: 'card_giftcard', iconColor: 'text-secondary', iconBg: 'bg-secondary/10', help: ('PROFILES.REMUNERATION_TAB.BENEFITS_HELP' | translate) }" />
+      </div>
+
+      <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="flex flex-col gap-1">
+          <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.CONTRACT' | translate }}</dt>
+          <dd class="text-[13px] text-on-surface">{{ contractText(config()?.contractType) }}</dd>
+        </div>
+        <div class="flex flex-col gap-1">
+          <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.EFFECTIVE_DATE' | translate }}</dt>
+          <dd class="text-[13px] text-on-surface">{{ effectiveDateText() }}</dd>
+        </div>
+        <div class="flex flex-col gap-1">
+          <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.CURRENCY' | translate }}</dt>
+          <dd class="text-[13px] text-on-surface">{{ workingCurrency() ?? '—' }}</dd>
+        </div>
+        <div class="flex flex-col gap-1">
+          <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.FAMILY' | translate }}</dt>
+          <dd class="text-[13px] text-on-surface">{{ familyText() }}</dd>
+          <dd class="text-[11.5px] text-on-surface-variant">
+            {{ (config()?.familyFromHr === false ? 'PROFILES.REMUNERATION_TAB.FAMILY_STALE' : 'PROFILES.REMUNERATION_TAB.FAMILY_HINT') | translate }}
+          </dd>
+        </div>
+      </dl>
+
+      <div class="flex flex-col gap-2">
+        <span class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.BENEFITS_DETAIL' | translate }}</span>
+        @if (currentBenefits().length) {
+          <ul class="flex flex-col divide-y divide-outline-variant rounded-xl border border-outline-variant">
+            @for (b of currentBenefits(); track b.code) {
+              <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-[13px]">
+                <span class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-on-surface-variant" aria-hidden="true">{{ b.meal ? 'restaurant' : 'card_giftcard' }}</span>
+                  {{ b.label }}
+                  @if (b.taxable === false) {
+                    <daf-badge [label]="'PROFILES.REMUNERATION_TAB.NON_TAXABLE' | translate" [options]="{ variant: 'info', size: 'sm' }" />
+                  }
+                </span>
+                <span class="font-semibold tabular-nums">{{ money(b.value, workingCurrency()) }} / {{ 'PROFILES.REMUNERATION_TAB.PER_MONTH' | translate }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="text-[13px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.NO_BENEFIT' | translate }}</p>
+        }
+        <p class="text-[11.5px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.BENEFITS_INFO' | translate }}</p>
+      </div>
+    </div>
+  </daf-section-card>
+
+  <!-- ══ 2. Historique des modifications ══ -->
+  <daf-section-card
+    [title]="'PROFILES.REMUNERATION_TAB.HISTORY_TITLE' | translate"
+    [hint]="'PROFILES.REMUNERATION_TAB.HISTORY_HINT' | translate">
+    <div class="flex flex-col gap-3 p-5">
+      <daf-search-toolbar
+        [card]="false"
+        [showFilter]="false"
+        [placeholder]="'PROFILES.REMUNERATION_TAB.SEARCH' | translate"
+        [value]="historySearch()" [debounce]="200" (valueChange)="historySearch.set($event)"
+        [table]="historyTable" />
+      <daf-data-table #historyTable
+        [columns]="historyColumns()" [rows]="historyView()" [config]="historyTableConfig()" />
+    </div>
+  </daf-section-card>
+
+  <!-- ══ 3. Primes exceptionnelles ══ -->
+  <daf-section-card
+    [title]="'PROFILES.REMUNERATION_TAB.BONUSES_TITLE' | translate"
+    [hint]="'PROFILES.REMUNERATION_TAB.BONUSES_INFO' | translate">
+    <div class="flex flex-col gap-3 p-5">
+      <daf-search-toolbar
+        [card]="false"
+        [showFilter]="false"
+        [placeholder]="'PROFILES.REMUNERATION_TAB.SEARCH' | translate"
+        [value]="bonusSearch()" [debounce]="200" (valueChange)="bonusSearch.set($event)"
+        [table]="bonusTable">
+        @if (canManage()) {
+          <daf-button
+            [label]="'PROFILES.REMUNERATION_TAB.ADD_BONUS' | translate"
+            variant="teal"
+            [options]="{ iconStart: 'add' }"
+            (onClick)="openAddBonus()" />
+        }
+      </daf-search-toolbar>
+      <daf-data-table #bonusTable
+        [columns]="bonusColumns()" [rows]="bonusView()" [config]="bonusTableConfig()" />
+    </div>
+  </daf-section-card>
+</div>
+
+<!-- Pop-up « Nouvelle rémunération » (ModalService, redimensionnable). -->
+<ng-template #remunerationFormTpl>
+  @if (draft(); as d) {
+    <div class="flex flex-col gap-5">
+      @if (draftError()) {
+        <div class="rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger" role="alert">{{ draftError() }}</div>
+      }
+
+      <div class="flex flex-col gap-3">
+        <daf-section-title [title]="'PROFILES.REMUNERATION_TAB.SECTION_APPLICATION' | translate" />
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <daf-multi-date-picker
+              [config]="{ label: ('PROFILES.REMUNERATION_TAB.EFFECTIVE_DATE' | translate), selectionMode: 'single', required: true }"
+              [value]="toDate(d.effectiveDate)" (valueChange)="onEffectiveDate($event)" />
+            <p class="mt-1 text-[11px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.EFFECTIVE_DATE_HINT' | translate }}</p>
+          </div>
+          <daf-select
+            [options]="contractOptions()"
+            [selected]="d.contractType ? [d.contractType] : []"
+            [config]="{
+              label: ('PROFILES.REMUNERATION_TAB.CONTRACT' | translate),
+              fullWidth: true,
+              error: contractUnpriced() ? ('PROFILES.REMUNERATION_TAB.CONTRACT_UNPRICED' | translate) : ''
+            }"
+            (selectedChange)="$event[0] && patchDraft({ contractType: $event[0] }, true)" />
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <daf-section-title [title]="'PROFILES.REMUNERATION_TAB.SECTION_SALARY' | translate" />
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <daf-form-field
+            [options]="{ label: ('PROFILES.REMUNERATION_TAB.GROSS' | translate), type: 'number', align: 'end', suffixText: d.currency, placeholder: '0.00', fullWidth: true, required: true }"
+            [value]="d.gross"
+            (valueChange)="patchDraft({ gross: asNumber($event) }, true)" />
+          <daf-select
+            [options]="currencyOptions()"
+            [selected]="d.currency ? [d.currency] : []"
+            [config]="{ label: ('PROFILES.REMUNERATION_TAB.CURRENCY' | translate), fullWidth: true, hint: ('PROFILES.REMUNERATION_TAB.CURRENCY_HINT' | translate: { working: workingCurrency() ?? '—' }) }"
+            (selectedChange)="$event[0] && patchDraft({ currency: $event[0] }, true)" />
+          <daf-form-field
+            [options]="{
+              label: ('PROFILES.REMUNERATION_TAB.NET_SIMULATED' | translate), type: 'number', align: 'end', readonly: true, fullWidth: true,
+              suffixText: workingCurrency() ?? '', placeholder: '—',
+              hint: (calculatingNet() ? 'PROFILES.REMUNERATION_TAB.NET_CALCULATING' : 'PROFILES.REMUNERATION_TAB.NET_SIMULATED_HINT') | translate
+            }"
+            [value]="rounded(d.net)" />
+        </div>
+        @if (changeSummary()) {
+          <p class="text-[12.5px] text-on-surface-variant">{{ changeSummary() }}</p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <daf-section-title [title]="'PROFILES.REMUNERATION_TAB.BENEFITS' | translate" />
+        @if (benefits().length) {
+          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+            @for (b of benefits(); track b.benefitCode) {
+              <daf-checkbox
+                [options]="{ label: benefitLabel(b), hint: money(b.monthlyValue, workingCurrency()) + ' / ' + ('PROFILES.REMUNERATION_TAB.PER_MONTH' | translate) }"
+                [checked]="d.benefitCodes.includes(b.benefitCode)"
+                (checkedChange)="toggleDraftBenefit(b.benefitCode)" />
+            }
+          </div>
+          <p class="text-[11.5px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.BENEFITS_INFO' | translate }}</p>
+        } @else {
+          <p class="text-[13px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.NO_BENEFIT_CATALOGUE' | translate }}</p>
+        }
+      </div>
+
+      <!-- Simulation : moteur de simulation de paie, avantages et primes du mois inclus. -->
+      <div class="flex flex-col gap-3">
+        <daf-section-title [title]="'PROFILES.REMUNERATION_TAB.SIM.TITLE' | translate" />
+        <p class="text-[12.5px] text-on-surface-variant">
+          {{ (simulation()?.withBonuses ? 'PROFILES.REMUNERATION_TAB.SIM.HINT_BONUSES' : 'PROFILES.REMUNERATION_TAB.SIM.HINT') | translate }}
+        </p>
+        <daf-data-table
+          [columns]="simulationColumns()" [rows]="simulationRows()" [config]="simulationTableConfig()" />
+        @if (simulation(); as sim) {
+          @if (!sim.monthly.convergenceOk || (sim.withBonuses && !sim.withBonuses.convergenceOk)) {
+            <p class="text-[12px] text-warning">{{ 'PROFILES.REMUNERATION_TAB.SIM.NO_CONVERGENCE' | translate }}</p>
+          }
+        }
+        <p class="text-[11.5px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.SIM.STORED_NET_NOTE' | translate }}</p>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <daf-section-title [title]="'PROFILES.REMUNERATION_TAB.SECTION_REASON' | translate" />
+        <p class="text-[12.5px] text-on-surface-variant">
+          {{ 'PROFILES.REMUNERATION_TAB.FAMILY' | translate }} : {{ familyText() }}
+        </p>
+        <p class="text-[12.5px] text-on-surface-variant">
+          {{ (requiresApproval() ? 'PROFILES.REMUNERATION_TAB.APPROVAL_HINT' : 'PROFILES.REMUNERATION_TAB.FIRST_SALARY_HINT') | translate }}
+        </p>
+        <daf-form-field
+          [options]="{ label: ('PROFILES.REMUNERATION_TAB.REASON' | translate), type: 'textarea', rows: 2, required: true, fullWidth: true, placeholder: ('PROFILES.REMUNERATION_TAB.REASON_PLACEHOLDER' | translate), error: reasonError() }"
+          [value]="d.reason"
+          (valueChange)="patchDraft({ reason: ($event ?? '') + '' })" />
+      </div>
+    </div>
+  }
+</ng-template>
+
+<!-- Pop-up « Ajouter une prime » (ModalService, redimensionnable). -->
+<ng-template #bonusFormTpl>
+  @if (bonusDraft(); as b) {
+    <div class="flex flex-col gap-4">
+      @if (bonusError()) {
+        <div class="rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger" role="alert">{{ bonusError() }}</div>
+      }
+      <daf-form-field
+        [options]="{ label: ('PROFILES.REMUNERATION_TAB.COL.LABEL' | translate), required: true, fullWidth: true }"
+        [value]="b.label"
+        (valueChange)="patchBonus({ label: ($event ?? '') + '' })" />
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <daf-form-field
+          [options]="{ label: ('PROFILES.REMUNERATION_TAB.COL.AMOUNT' | translate), type: 'number', align: 'end', required: true, fullWidth: true, suffixText: b.currency }"
+          [value]="b.amount"
+          (valueChange)="patchBonus({ amount: asNumber($event) })" />
+        <daf-select
+          [options]="currencyOptions()"
+          [selected]="b.currency ? [b.currency] : []"
+          [config]="{ label: ('PROFILES.REMUNERATION_TAB.COL.CURRENCY' | translate), fullWidth: true }"
+          (selectedChange)="$event[0] && patchBonus({ currency: $event[0] })" />
+        <daf-select
+          [options]="monthOptions()"
+          [selected]="['' + b.month]"
+          [config]="{ label: ('PROFILES.REMUNERATION_TAB.MONTH' | translate), fullWidth: true }"
+          (selectedChange)="$event[0] && patchBonus({ month: +$event[0] })" />
+        <daf-form-field
+          [options]="{ label: ('PROFILES.REMUNERATION_TAB.YEAR' | translate), type: 'number', align: 'end', required: true, fullWidth: true }"
+          [value]="b.year"
+          (valueChange)="patchBonus({ year: asNumber($event) })" />
+      </div>
+      <daf-form-field
+        [options]="{ label: ('PROFILES.REMUNERATION_TAB.COL.COMMENT' | translate), type: 'textarea', rows: 2, fullWidth: true }"
+        [value]="b.comment"
+        (valueChange)="patchBonus({ comment: ($event ?? '') + '' })" />
+      <p class="text-[11.5px] text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.BONUSES_INFO' | translate }}</p>
+    </div>
+  }
+</ng-template>
