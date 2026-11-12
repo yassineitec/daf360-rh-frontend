@@ -14,6 +14,7 @@ import { TableActionComponent } from '../../../shared/table-action.component';
 import { NotificationService } from '../../../core/notification.service';
 import { getAvatarUrl, getInitials } from '../../../shared/utils/avatar.utils';
 import { BilingualRoleName, roleLabel } from '../../../shared/utils/admin-label.utils';
+import { formatFirstName, formatLastName } from '../../../shared/utils/person-name.utils';
 import { flagDataUri } from '../flag-svgs';
 import { rememberAdminState } from '../admin-section-state';
 import { PageGuideComponent } from '../../../shared/guide/page-guide.component';
@@ -59,7 +60,9 @@ interface AdminUserRow {
 
 /** The create-user form. Named rather than inlined so `patch` can take a Partial of it. */
 interface CreateForm {
-  fullName: string;
+  /** Prénom and Nom — the backend joins them into Users.fullName as "Prénom NOM". */
+  firstName: string;
+  lastName: string;
   email: string;
   roleId: number | null;
   paysId: number | null;
@@ -340,9 +343,18 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
         <p class="text-[12px] leading-relaxed text-on-surface-variant">
           {{ 'ADMIN.users.createModal.help' | translate }}
         </p>
-        <daf-form-field [options]="{ label: 'ADMIN.users.createModal.fullName' | translate, required: true, fullWidth: true }"
-                        [value]="form().fullName"
-                        (valueChange)="patch({ fullName: $any($event) ?? '' })" />
+        <!-- Prénom / Nom put in form when the field loses focus (daf-form-field has no blur
+             output, so the native focusout bubbling from its input is used). -->
+        <div class="grid gap-3 sm:grid-cols-2">
+          <daf-form-field [options]="{ label: 'ADMIN.users.createModal.firstName' | translate, required: true, fullWidth: true }"
+                          [value]="form().firstName"
+                          (valueChange)="patch({ firstName: $any($event) ?? '' })"
+                          (focusout)="patch({ firstName: formatFirstName(form().firstName) })" />
+          <daf-form-field [options]="{ label: 'ADMIN.users.createModal.lastName' | translate, required: true, fullWidth: true }"
+                          [value]="form().lastName"
+                          (valueChange)="patch({ lastName: $any($event) ?? '' })"
+                          (focusout)="patch({ lastName: formatLastName(form().lastName) })" />
+        </div>
         <daf-form-field [options]="{ label: 'ADMIN.users.createModal.email' | translate, type: 'email', required: true, fullWidth: true }"
                         [value]="form().email"
                         (valueChange)="patch({ email: $any($event) ?? '' })" />
@@ -405,7 +417,7 @@ export class UsersAdminComponent implements OnInit {
   readonly creating = signal(false);
   readonly createError = signal<string | null>(null);
   readonly form = signal<CreateForm>(
-    { fullName: '', email: '', roleId: null, paysId: null, isEmployee: true });
+    { firstName: '', lastName: '', email: '', roleId: null, paysId: null, isEmployee: true });
 
   readonly showBalances = signal(false);
   readonly savingBalances = signal(false);
@@ -443,7 +455,8 @@ export class UsersAdminComponent implements OnInit {
 
   readonly canCreate = computed(() => {
     const f = this.form();
-    return !!f.fullName.trim() && !!f.email.trim() && f.roleId != null && f.paysId != null;
+    return !!f.firstName.trim() && !!f.lastName.trim() && !!f.email.trim()
+      && f.roleId != null && f.paysId != null;
   });
 
   // ── Toolbar ───────────────────────────────────────────────────────────────
@@ -823,10 +836,13 @@ export class UsersAdminComponent implements OnInit {
   // ── Create ────────────────────────────────────────────────────────────────
 
   openCreate(): void {
-    this.form.set({ fullName: '', email: '', roleId: null, paysId: null, isEmployee: true });
+    this.form.set({ firstName: '', lastName: '', email: '', roleId: null, paysId: null, isEmployee: true });
     this.createError.set(null);
     this.showCreate.set(true);
   }
+
+  protected readonly formatFirstName = formatFirstName;
+  protected readonly formatLastName  = formatLastName;
 
   patch(part: Partial<CreateForm>): void {
     this.form.update(f => ({ ...f, ...part }));

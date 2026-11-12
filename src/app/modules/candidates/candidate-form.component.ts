@@ -29,6 +29,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { isoToDate, dateToIso } from '../../shared/date-picker.utils';
 import { genderOptions } from '../../shared/utils/gender.utils';
+import { formatFirstName, formatLastName } from '../../shared/utils/person-name.utils';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { WizardStepCardComponent } from '../../shared/wizard/wizard-step-card.component';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -396,6 +397,21 @@ export class CandidateFormComponent implements OnInit {
   setTextValue(path: string, value: string | number | null): void {
     this.form.get(path)?.setValue(value);
     this.form.get(path)?.markAsTouched();
+  }
+
+  protected readonly formatFirstName = formatFirstName;
+  protected readonly formatLastName  = formatLastName;
+
+  /**
+   * Prénom / Nom put in form when the field loses focus (daf-form-field has no blur output,
+   * so the template listens to the native focusout bubbling from its input). The backend
+   * applies the same rule on create.
+   */
+  formatNameField(path: string, format: (raw: string) => string): void {
+    const ctrl = this.form.get(path);
+    if (!ctrl) return;
+    const next = format(String(ctrl.value ?? ''));
+    if (next !== ctrl.value) ctrl.setValue(next);
   }
 
   getFieldError(path: string): string {

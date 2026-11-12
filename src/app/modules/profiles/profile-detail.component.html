@@ -134,11 +134,10 @@
                 [loading]="lcLoading()"
                 [canEdit]="canEdit()"
                 [candidateId]="p.candidateId"
-                [cdiRequests]="lcCdiRequests()"
+                [cdiRequests]="lcCdiRequests()"
                 [canRequestCdi]="canRequestCdi()"
                 (newContract)="showNewContractModal.set(true)"
-                (validateTrial)="openValidateTrialModal($event)"
-                (renewCdd)="openRenewCDDModal($event)"
+                (decide)="openDecisionModal($event)"
                 (convertCdi)="openConvertCDIModal($event)"
                 (requestCdi)="openCdiRequestModal($event)" />
             }
@@ -364,23 +363,44 @@
   }
 </ng-template>
 
-<ng-template #validateTrialTpl>
+<!-- « Décider » — end of trial / end of contract. Choices = list « Décision de contrat »
+     filtered by the contract type's rules (Administration › Échéances de contrat). -->
+<ng-template #decisionTpl>
   <div class="flex flex-col gap-3.5">
     @if (lcError()) {
       <div class="rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">{{ lcError() }}</div>
     }
-    <daf-radio-group
-      [options]="[
-        { value: 'true',  label: ('PROFILES.TRIAL.APPROVE' | translate) },
-        { value: 'false', label: ('PROFILES.TRIAL.REFUSE'  | translate) }
-      ]"
-      [config]="{ layout: 'vertical' }"
-      [selected]="trialApproved ? 'true' : 'false'"
-      (selectedChange)="trialApproved = $event === 'true'" />
-    <daf-form-field
-      [options]="{ label: ('PROFILES.COMMON.COMMENT' | translate), type: 'textarea', rows: 3,
-                   placeholder: ('PROFILES.PLACEHOLDERS.TRIAL_COMMENT' | translate) }"
-      [value]="trialComment" (valueChange)="onTrialComment($event)" />
+    @if (decisionOptions(); as o) {
+      @if (o.deadline) {
+        <p class="m-0 text-[13px] text-on-surface-variant">
+          {{ (o.moment === 'TRIAL_END' ? 'PROFILES.DECISION.DEADLINE_TRIAL' : 'PROFILES.DECISION.DEADLINE_END')
+             | translate:{ date: fmtDate(o.deadline) } }}
+        </p>
+      }
+      @if (o.options.length) {
+        <daf-radio-group
+          [options]="decisionRadio()"
+          [config]="{ layout: 'vertical' }"
+          [selected]="decisionId() !== null ? '' + decisionId() : ''"
+          (selectedChange)="onDecisionPick($event)" />
+      } @else {
+        <p class="m-0 rounded-lg bg-surface-container px-3.5 py-2.5 text-[13px] text-on-surface-variant">
+          {{ 'PROFILES.DECISION.NONE' | translate }}
+        </p>
+      }
+      @if (decisionPicked()?.requiresDate) {
+        <daf-multi-date-picker
+          [config]="{ label: ('PROFILES.DECISION.NEW_DATE' | translate), selectionMode: 'single' }"
+          [value]="toDate(decisionDate)"
+          (valueChange)="decisionDate = fromDate($event) || ''" />
+      }
+      <daf-form-field
+        [options]="{ label: ('PROFILES.COMMON.COMMENT' | translate), type: 'textarea', rows: 3,
+                     placeholder: ('PROFILES.PLACEHOLDERS.TRIAL_COMMENT' | translate) }"
+        [value]="decisionComment" (valueChange)="onDecisionComment($event)" />
+    } @else {
+      <p class="m-0 text-[13px] text-on-surface-variant">{{ 'PROFILES.DECISION.LOADING' | translate }}</p>
+    }
   </div>
 </ng-template>
 

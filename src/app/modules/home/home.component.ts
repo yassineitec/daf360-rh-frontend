@@ -657,7 +657,11 @@ export class HomeComponent implements OnInit {
   }
 
   onViewProfile(id: number | null): void {
-    if (id != null) this.router.navigate(['../profiles', id], { relativeTo: this.activatedRoute });
+    // Ouvre directement l'onglet Historique (`?tab=` de tabParam).
+    if (id != null) this.router.navigate(['../profiles', id], {
+      relativeTo: this.activatedRoute,
+      queryParams: { tab: 'historique' },
+    });
   }
 
   onQuickAction(route: string): void {

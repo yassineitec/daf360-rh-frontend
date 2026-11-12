@@ -54,6 +54,7 @@
               }"
               [value]="getTextValue('identity.firstName')"
               (valueChange)="setTextValue('identity.firstName', $event)"
+              (focusout)="formatNameField('identity.firstName', formatFirstName)"
             />
 
             <daf-form-field
@@ -65,6 +66,7 @@
               }"
               [value]="getTextValue('identity.lastName')"
               (valueChange)="setTextValue('identity.lastName', $event)"
+              (focusout)="formatNameField('identity.lastName', formatLastName)"
             />
 
             <daf-form-field

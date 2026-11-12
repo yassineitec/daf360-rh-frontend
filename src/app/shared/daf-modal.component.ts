@@ -54,6 +54,9 @@ export class DafModalComponent {
   visible   = input(false);
   hasFooter = input(false);
   size      = input<ModalSize>('md');
+  /** Explicit opening size (CSS values) — overrides `size` when set. */
+  width     = input<string | undefined>(undefined);
+  height    = input<string | undefined>(undefined);
 
   closed = output<void>();
 
@@ -86,6 +89,8 @@ export class DafModalComponent {
       get title() { return self.title(); },
       body:        tpl,
       size:        this.size(),
+      ...(this.width()  ? { width:  this.width()  } : {}),
+      ...(this.height() ? { height: this.height() } : {}),
       minWidth:    '360px',
       minHeight:   '260px',
       resizable:   true,

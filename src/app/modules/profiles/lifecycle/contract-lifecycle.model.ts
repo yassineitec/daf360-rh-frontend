@@ -36,6 +36,17 @@ export interface ContractListDto {
   dateDebut:            string;
   dateFinPrevue:        string | null;
   dateFinPeriodeEssai:  string | null;
+  /** Trial renewed (decision RENEW_TRIAL) — it then ends on `dateFinPeRenouvellement`. */
+  periodeEssaiRenouvelee?:  boolean | null;
+  dateFinPeRenouvellement?: string | null;
+  /** Times the trial was renewed. */
+  trialRenewalCount?:       number | null;
+  /** Resolved « Décider » rules: the type's own, else its nature's (backend ContractRules). */
+  trialRenewable?:          boolean | null;
+  trialMaxRenewals?:        number | null;
+  /** No préavis frozen on the contract: the grade's default, shown as a hint. */
+  defaultNoticeDays?:       number | null;
+  dateFinReelle?:           string | null;
   /** Préavis frozen on this contract; null on contracts created before V69. */
   noticePeriodDays:     number | null;
   /** GRADE_DEFAULT | NEGOTIATED | MANUAL — explains the figure rather than just showing it. */
@@ -105,6 +116,11 @@ export interface ContractTransitionHistoryDto {
   triggeredAt:        string;
   commentaire:        string | null;
   documentReference:  string | null;
+  /** Users.fullName of who triggered it. */
+  triggeredByName?:   string | null;
+  /** Date moves (renewal, extension): end date before → after. */
+  previousDate?:      string | null;
+  newDate?:           string | null;
 }
 
 export interface LifecycleAlertDto {
@@ -163,6 +179,41 @@ export interface TransitionRequest {
 
 export interface ValidateTrialRequest {
   approved:     boolean;
+  commentaire?: string | null;
+}
+
+/**
+ * What a decision does — fixed by the backend (ContractDecisionAction). The admin names the
+ * choices (list CONTRACT_DECISION) and picks which ones each contract type offers.
+ */
+export type ContractDecisionAction =
+  | 'CONFIRM_TRIAL' | 'RENEW_TRIAL' | 'BREAK_TRIAL'
+  | 'RENEW_CDD' | 'EXTEND' | 'END_CONTRACT';
+
+export const TRIAL_DECISION_ACTIONS: ContractDecisionAction[] = ['CONFIRM_TRIAL', 'RENEW_TRIAL', 'BREAK_TRIAL'];
+export const END_DECISION_ACTIONS:   ContractDecisionAction[] = ['RENEW_CDD', 'EXTEND', 'END_CONTRACT'];
+
+export interface ContractDecisionOption {
+  /** CONTRACT_DECISION list value id — what /decide takes. */
+  id:            number;
+  action:        ContractDecisionAction;
+  labelFr:       string;
+  labelEn:       string;
+  requiresDate:  boolean;
+  /** Why it cannot be taken now; null = available. */
+  blockedReason: string | null;
+}
+
+/** GET /api/hr/contracts/{id}/decisions. `moment` null = nothing to decide. */
+export interface ContractDecisionOptions {
+  moment:   'TRIAL_END' | 'CONTRACT_END' | null;
+  deadline: string | null;
+  options:  ContractDecisionOption[];
+}
+
+export interface ContractDecisionRequest {
+  decisionId:   number;
+  newDate?:     string | null;
   commentaire?: string | null;
 }
 

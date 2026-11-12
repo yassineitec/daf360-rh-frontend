@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import {
-  ButtonComponent, CardComponent, SelectOption, StatusBadgeComponent, BadgeVariant,
+  ButtonComponent, CardComponent, FormFieldComponent, SelectOption, StatusBadgeComponent, BadgeVariant,
 } from '@khalilrebhiitec/daf360';
 
 import { EmployeeProfile, ProfileUpdateDto } from '../models/profile.model';
 import { IdentitySectionComponent } from './identity-section.component';
 import { avatarUrl } from '../../../shared/utils/avatar.utils';
+import { asText } from './field-bridges';
+import { formatFirstName, formatLastName } from '../../../shared/utils/person-name.utils';
 
 export interface IdentityPill {
   label: string;
@@ -30,7 +32,7 @@ export interface IdentityPill {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CardComponent, ButtonComponent, StatusBadgeComponent,
+    CardComponent, ButtonComponent, FormFieldComponent, StatusBadgeComponent,
     IdentitySectionComponent, TranslatePipe,
   ],
   host: { class: 'block' },
@@ -82,9 +84,27 @@ export interface IdentityPill {
 
         <!-- wrap-break-word: the card is only ~32% of the page, so a long name or a
              wordy grade label has to wrap rather than run past the rounded edge. -->
-        <p class="max-w-full wrap-break-word text-[20px] font-black leading-tight text-on-surface">
-          {{ profile().fullName ?? '—' }}
-        </p>
+        @if (editMode() && canEdit()) {
+          <!-- Prénom + Nom; the backend joins them into Users.fullName as "Prénom NOM".
+               Each field is put in form when it loses focus (daf-form-field has no blur
+               output, so the native focusout bubbling from its input is used). -->
+          <div class="flex w-full flex-col gap-3 text-left">
+            <daf-form-field
+              [options]="{ label: ('PROFILES.FIELDS.FIRST_NAME' | translate) }"
+              [value]="editForm().firstName ?? ''"
+              (valueChange)="patch.emit({ firstName: asText($event) })"
+              (focusout)="patch.emit({ firstName: formatFirstName(editForm().firstName) })" />
+            <daf-form-field
+              [options]="{ label: ('PROFILES.FIELDS.LAST_NAME' | translate) }"
+              [value]="editForm().lastName ?? ''"
+              (valueChange)="patch.emit({ lastName: asText($event) })"
+              (focusout)="patch.emit({ lastName: formatLastName(editForm().lastName) })" />
+          </div>
+        } @else {
+          <p class="max-w-full wrap-break-word text-[20px] font-black leading-tight text-on-surface">
+            {{ profile().fullName ?? '—' }}
+          </p>
+        }
         @if (gradeLabel() ?? profile().grade; as grade) {
           <p class="max-w-full wrap-break-word text-[14px] font-medium text-outline">{{ grade }}</p>
         }
@@ -176,6 +196,10 @@ export class IdentityCardComponent {
   readonly changeStatus = output<void>();
   readonly toggleEdit   = output<void>();
   readonly startOffboarding = output<void>();
+
+  protected readonly asText = asText;
+  protected readonly formatFirstName = formatFirstName;
+  protected readonly formatLastName = formatLastName;
 
   /** Which step of the photo → avatar → initials chain has failed to load. */
   private readonly photoFailed  = signal(false);

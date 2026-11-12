@@ -122,6 +122,28 @@
             }
           </ng-template>
 
+          <!-- « Décision de contrat » only: what the choice does when HR picks it. -->
+          <ng-template dafCell="decisionAction" let-row>
+            @if (editingId() === row['_source'].id) {
+              <daf-select
+                [options]="actionOptions()"
+                [selected]="editForm.controls['decisionAction'].value ? [editForm.controls['decisionAction'].value] : []"
+                [config]="{ fullWidth: true }"
+                (selectedChange)="editForm.controls['decisionAction'].setValue($any($event)[0] ?? '')" />
+            } @else {
+              <daf-badge [label]="actionLabel(row['_source'].decisionAction)" [options]="{ variant: 'info' }" />
+            }
+          </ng-template>
+
+          <!-- « Type de contrat » only: where the type's « Décider » rules come from, and what they offer. -->
+          <ng-template dafCell="decisions" let-row>
+            @let cell = decisionsCell(row['_source']);
+            <div class="lm-dec-cell">
+              <daf-badge [label]="cell.badge" [options]="{ variant: cell.own ? 'info' : 'neutral', size: 'sm' }" />
+              <span class="lm-dec-text">{{ cell.text }}</span>
+            </div>
+          </ng-template>
+
           <!-- Per-pays lists only (see `columns`): a shared value is offered to EVERY entity,
                which is the thing to spot before adding an entity-specific one next to it. -->
           <ng-template dafCell="scope" let-row>
@@ -170,8 +192,24 @@
         [options]="{ label: ('ADMIN.data.lists.FIELD_ORDER' | translate), type: 'number', fullWidth: true }"
         [value]="addForm.controls['sortOrder'].value"
         (valueChange)="addForm.controls['sortOrder'].setValue($any($event))" />
+      @if (isContractTypeList()) {
+        <div class="lm-rules-span">
+          <ng-container [ngTemplateOutlet]="rulesFieldsTpl" />
+        </div>
+      }
+      @if (isDecisionList()) {
+        <daf-select
+          [options]="actionOptions()"
+          [selected]="addForm.controls['decisionAction'].value ? [addForm.controls['decisionAction'].value] : []"
+          [config]="{ label: ('ADMIN.data.lists.FIELD_ACTION' | translate), required: true, fullWidth: true,
+                      hint: ('ADMIN.data.lists.HINT_ACTION' | translate) }"
+          (selectedChange)="addForm.controls['decisionAction'].setValue($any($event)[0] ?? '')" />
+      }
     </div>
   </form>
+  @if (isContractTypeList() && rulesError()) {
+    <p class="lm-rules-error">{{ rulesError() }}</p>
+  }
   <div class="lm-modal-footer">
     <daf-button [label]="'ADMIN.data.lists.CANCEL' | translate" variant="secondary" [options]="{ disabled: adding() }" (onClick)="cancelAdd()" />
     <daf-button
@@ -179,5 +217,80 @@
       variant="teal"
       [options]="{ disabled: addForm.invalid || adding(), loading: adding() }"
       (onClick)="addValue()" />
+  </div>
+</ng-template>
+
+<!-- « Type de contrat » › Décisions: the type's own « Décider » rules, or its nature's. -->
+<ng-template #rulesTpl>
+  <ng-container [ngTemplateOutlet]="rulesFieldsTpl" />
+  @if (rulesError()) {
+    <p class="lm-rules-error">{{ rulesError() }}</p>
+  }
+  <div class="lm-modal-footer">
+    <daf-button [label]="'ADMIN.data.lists.CANCEL' | translate" variant="secondary"
+      [options]="{ disabled: rulesSaving() }" (onClick)="cancelAdd()" />
+    <daf-button [label]="'ADMIN.data.lists.SAVE' | translate" variant="teal"
+      [options]="{ disabled: rulesSaving() || !rulesValid(), loading: rulesSaving() }" (onClick)="saveRules()" />
+  </div>
+</ng-template>
+
+<!-- Shared by the add modal and the rules modal. Unchecked « propres » = inherited (read-only). -->
+<ng-template #rulesFieldsTpl>
+  <div class="lm-rules">
+    <h4 class="lm-rules-title">{{ 'ADMIN.data.lists.RULES.TITLE' | translate }}</h4>
+    <daf-select
+      [options]="natureOptions"
+      [selected]="[rules.nature]"
+      [config]="{ label: ('ADMIN.data.lists.RULES.NATURE' | translate), fullWidth: true,
+                  hint: ('ADMIN.data.lists.RULES.NATURE_HINT' | translate) }"
+      (selectedChange)="onNaturePick($any($event)[0])" />
+    <div class="lm-rules-custom">
+      <daf-checkbox
+        [options]="{ label: ('ADMIN.data.lists.RULES.CUSTOM' | translate) }"
+        [checked]="rules.custom"
+        (checkedChange)="onCustomToggle($event)" />
+    </div>
+
+    @if (!rules.custom) {
+      <div class="lm-rules-inherited">
+        <p class="lm-rules-inherited-title">{{ 'ADMIN.data.lists.RULES.INHERITED' | translate:{ nature: rules.nature } }}</p>
+        <p>{{ summaryOf(rules) }}</p>
+        <p>{{ (rules.renewable ? 'ADMIN.data.lists.RULES.RENEWABLE_YES' : 'ADMIN.data.lists.RULES.RENEWABLE_NO')
+              | translate:{ n: rules.max } }}</p>
+      </div>
+    } @else {
+      <div class="lm-rules-grid">
+        <daf-checkbox
+          [options]="{ label: ('ADMIN.contractAlerts.renewable' | translate) }"
+          [checked]="rules.renewable"
+          (checkedChange)="rules.renewable = $event" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.contractAlerts.maxRenewals' | translate), type: 'number', fullWidth: true,
+                       disabled: !rules.renewable }"
+          [value]="rules.max"
+          (valueChange)="setMax($event)" />
+      </div>
+      <div class="lm-rules-grid lm-rules-checks">
+        <div>
+          <p class="lm-rules-group">{{ 'ADMIN.contractAlerts.trialDecisions' | translate }}</p>
+          @for (a of trialActions; track a) {
+            <daf-checkbox
+              [options]="{ label: ('ADMIN.contractAlerts.action.' + a | translate) }"
+              [checked]="rules.trial.includes(a)"
+              (checkedChange)="toggleAction(rules.trial, a, $event)" />
+          }
+        </div>
+        <div>
+          <p class="lm-rules-group">{{ 'ADMIN.contractAlerts.endDecisions' | translate }}</p>
+          @for (a of endActions; track a) {
+            <daf-checkbox
+              [options]="{ label: ('ADMIN.contractAlerts.action.' + a | translate) }"
+              [checked]="rules.end.includes(a)"
+              (checkedChange)="toggleAction(rules.end, a, $event)" />
+          }
+        </div>
+      </div>
+    }
+    <p class="lm-rules-hint">{{ 'ADMIN.data.lists.RULES.HINT' | translate }}</p>
   </div>
 </ng-template>

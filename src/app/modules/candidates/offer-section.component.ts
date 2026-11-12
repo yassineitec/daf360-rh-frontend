@@ -300,6 +300,7 @@ export class OfferSectionComponent {
   onProposedChange(v: string | number | null): void {
     this.offerForm.proposedSalary = this.asNum(v);
     this.simResult.set(null);
+    this.showRubriques.set(false);
     this.simError.set(null);
   }
   onNoteChange(v: string | number | null):     void { this.offerForm.salaryNote = this.asStr(v); }
@@ -310,6 +311,81 @@ export class OfferSectionComponent {
   setHireDate(v: Date | Date[] | null): void { this.offerForm.expectedHireDate = dateToIso(v) || null; }
   getExpiryDate(): Date | null { return isoToDate(this.offerForm.expiryDate ?? null); }
   setExpiryDate(v: Date | Date[] | null): void { this.offerForm.expiryDate = dateToIso(v) || null; }
+
+  // ── Simulation detail ────────────────────────────────────────────────────────
+  /** Show / hide the applied-rubriques table under the cost breakdown. */
+  readonly showRubriques = signal(false);
+
+  /**
+   * Net → gross → loaded cost, as a cascade: each line says what it adds and the two
+   * totals close it, so finance and the recruiter read the same path the engine took.
+   */
+  readonly simSteps = computed(() => {
+    this.translate.currentLang();
+    const r = this.simResult();
+    if (!r) return [];
+    const t = (k: string) => this.translate.instant('CANDIDATES.OFFER.' + k);
+    return [
+      // Lib tokens. Colour by who the money goes to: teal = the candidate, amber/orange = withheld
+      // from the employee, slate = paid on top by the company.
+      { kind: 'base',  label: t('SIM_NET'),              value: r.inputNet,        color: 'var(--color-on-tertiary-container)' },
+      { kind: 'add',   label: t('SIM_IRPP'),             value: r.irppAmount,      color: 'var(--color-warning)' },
+      { kind: 'add',   label: t('SIM_EMPLOYEE_CHARGES'), value: r.employeeCharges, color: 'var(--color-chart-pending)' },
+      { kind: 'total', label: t('SIM_GROSS'),            value: r.gross,           color: null },
+      { kind: 'add',   label: t('SIM_EMPLOYER_CHARGES'), value: r.employerCharges, color: 'var(--color-outline)' },
+      { kind: 'grand', label: t('SIM_LOADED_COST'),      value: r.loadedCost,      color: null },
+    ] as { kind: 'base' | 'add' | 'total' | 'grand'; label: string; value: number; color: string | null }[];
+  });
+
+  /** Share of the loaded cost per component — feeds the stacked bar and its legend. */
+  readonly simShares = computed(() => {
+    const r = this.simResult();
+    if (!r || !r.loadedCost) return [];
+    return this.simSteps()
+      .filter(s => s.color !== null)
+      .map(s => ({ ...s, pct: Math.max(0, (s.value / r.loadedCost) * 100) }));
+  });
+
+  /** `rubriquesApplied` is a JSON string from the payroll engine; tolerate it being absent or malformed. */
+  readonly simRubriques = computed(() => {
+    const raw = this.simResult()?.rubriquesApplied;
+    if (!raw) return [];
+    try {
+      const list = JSON.parse(raw) as {
+        code: string; labelFr?: string | null; labelEn?: string | null;
+        nature?: string; calcMode?: string; direction?: string; amount?: number;
+      }[];
+      const en = this.translate.currentLang() === 'en';
+      return (Array.isArray(list) ? list : [])
+        .filter(x => x && x.amount != null && Number(x.amount) !== 0)
+        .map(x => ({
+          code:   x.code,
+          label:  (en ? x.labelEn || x.labelFr : x.labelFr || x.labelEn) || x.code,
+          nature: x.nature ?? '',
+          debit:  x.direction === 'DEBIT',
+          amount: Number(x.amount),
+        }));
+    } catch {
+      return [];
+    }
+  });
+
+  /** Two decimals, for the detail lines where rounding to the unit would hide the charges. */
+  formatAmount(v: number | null | undefined): string {
+    if (v == null) return '—';
+    const cur = this.currency() ?? this.simResult()?.localCurrency ?? '';
+    const unit = !cur ? '' : (cur === 'TND' && this.translate.currentLang() !== 'en' ? ' DT' : ` ${cur}`);
+    return v.toLocaleString(this.locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + unit;
+  }
+  formatForeign(v: number | null | undefined, cur: string): string {
+    if (v == null) return '';
+    return '≈ ' + v.toLocaleString(this.locale(), { maximumFractionDigits: 0 }) + ' ' + cur;
+  }
+  formatDateTime(d: string | null | undefined): string {
+    if (!d) return '—';
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? d : dt.toLocaleString(this.locale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
 
   // ── Display ──────────────────────────────────────────────────────────────────
   /** Display locale follows the UI language (dates and digit grouping). */

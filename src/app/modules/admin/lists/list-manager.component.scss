@@ -111,3 +111,25 @@
   .lm-add-grid { grid-template-columns: 1fr; }
 }
 
+// « Type de contrat » › Décisions
+.lm-rules-span { grid-column: 1 / -1; }
+.lm-rules { margin-top: 4px; }
+.lm-rules-title {
+  font-size: var(--text-body-md); font-weight: 600; color: var(--color-on-surface);
+  margin: 8px 0 10px; padding-top: 14px; border-top: 1px solid var(--color-outline-variant);
+}
+.lm-rules-custom { margin: 12px 0 8px; }
+.lm-rules-inherited {
+  background: var(--color-surface-container); border-radius: 8px; padding: 10px 14px;
+  font-size: var(--text-body-sm); color: var(--color-on-surface-variant);
+  p { margin: 0 0 4px; }
+}
+.lm-rules-inherited-title { font-weight: 600; color: var(--color-on-surface); }
+.lm-rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lm-rules-checks { margin-top: 12px; daf-checkbox { display: block; margin-bottom: 6px; } }
+.lm-rules-group { font-size: var(--text-body-sm); font-weight: 600; color: var(--color-on-surface-variant); margin: 0 0 6px; }
+.lm-rules-hint { font-size: var(--text-body-sm); color: var(--color-on-surface-variant); margin: 10px 0 0; }
+.lm-rules-error { font-size: var(--text-body-sm); color: var(--color-danger); margin: 8px 0 0; }
+.lm-dec-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.lm-dec-text { font-size: var(--text-body-sm); color: var(--color-on-surface-variant); }
+@media (max-width: 480px) { .lm-rules-grid { grid-template-columns: 1fr; } }

@@ -172,6 +172,12 @@ export interface ProfileCreateDto {
 export interface ProfileUpdateDto {
   reason: string; // mandatory for audit log
   // Identité
+  /**
+   * Prénom and NOM — the backend joins them into Users.fullName as "Prénom NOM" (no separate
+   * columns exist). Both '' / undefined = name unchanged.
+   */
+  firstName?: string;
+  lastName?: string;
   dateOfBirth?: string;
   gender?: string;
   nationalityId?: number | null; // FK — replaces text nationality

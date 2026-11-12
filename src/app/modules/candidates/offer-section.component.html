@@ -165,6 +165,8 @@
   [title]="(offerMode() === 'renegotiate' ? 'CANDIDATES.OFFER.MODAL_RENEGOTIATE_TITLE' : 'CANDIDATES.OFFER.MODAL_SEND_TITLE') | translate"
   [visible]="showOfferModal()"
   [hasFooter]="true"
+  width="min(1200px, 80vw)"
+  height="75vh"
   (closed)="showOfferModal.set(false)">
 
   <p class="text-[13px] text-outline mb-4">{{ candidateName() }}</p>
@@ -184,46 +186,184 @@
        No longer the disabled "bientôt" placeholder: this IS the gate. The round
        cannot be saved without a result, and changing the proposed salary clears it,
        so the cost finance approves always belongs to the figure being offered. -->
-  <div class="mt-3 rounded-xl border border-outline-variant p-3"
-       style="background:var(--color-surface-container-low)">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <p class="text-[12px] font-semibold text-on-surface">
-        {{ 'CANDIDATES.OFFER.SIMULATOR' | translate }}
-      </p>
-      <daf-button [label]="'CANDIDATES.OFFER.SIMULATE' | translate" variant="secondary"
-        [options]="{ iconStart: 'calculate', size: 'sm',
+  <div class="mt-4 rounded-xl border border-outline-variant overflow-hidden">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant"
+         style="background:var(--color-surface-container-low)">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0"
+              style="background:var(--color-tertiary-container);color:var(--color-on-tertiary-container)">
+          <span class="material-symbols-outlined text-[20px]">calculate</span>
+        </span>
+        <div class="min-w-0">
+          <p class="text-[13px] font-semibold text-on-surface">{{ 'CANDIDATES.OFFER.SIMULATOR' | translate }}</p>
+          <p class="text-[11px] text-outline">
+            @if (simResult(); as r) {
+              {{ 'CANDIDATES.OFFER.SIM_DONE_AT' | translate }} {{ formatDateTime(r.simulatedAt) }}
+              · {{ r.contractType }}
+            } @else {
+              {{ 'CANDIDATES.OFFER.SIM_SUBTITLE' | translate }}
+            }
+          </p>
+        </div>
+      </div>
+      <daf-button [label]="(simResult() ? 'CANDIDATES.OFFER.SIM_RECALC' : 'CANDIDATES.OFFER.SIMULATE') | translate"
+        [variant]="simResult() ? 'secondary' : 'teal'"
+        [options]="{ iconStart: simResult() ? 'refresh' : 'calculate', size: 'sm',
                      loading: simulating(),
                      disabled: simulating() || (offerForm.proposedSalary ?? null) === null }"
         (onClick)="simulate()" />
     </div>
 
-    @if (simError()) {
-      <p class="text-[12px] text-danger mt-2">{{ simError() }}</p>
-    } @else if (simResult(); as r) {
-      <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-        <div>
-          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_GROSS' | translate }}</p>
-          <p class="text-[13px] font-semibold text-on-surface">{{ formatSalary(r.gross) }}</p>
+    <div class="p-4">
+      @if (simError()) {
+        <div class="flex items-start gap-2 rounded-lg px-3 py-2.5 text-[12.5px] text-danger"
+             style="background:var(--color-error-container)">
+          <span class="material-symbols-outlined text-[18px]">error</span>
+          <span>{{ simError() }}</span>
         </div>
-        <div>
-          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_EMPLOYEE_CHARGES' | translate }}</p>
-          <p class="text-[13px] font-semibold text-on-surface">{{ formatSalary(r.employeeCharges) }}</p>
+      } @else if (simResult(); as r) {
+
+        <!-- Headline figures -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="rounded-lg border border-outline-variant px-3 py-2.5">
+            <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_NET' | translate }}</p>
+            <p class="text-[16px] font-semibold text-on-surface">{{ formatAmount(r.inputNet) }}</p>
+          </div>
+          <div class="rounded-lg border border-outline-variant px-3 py-2.5">
+            <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_GROSS' | translate }}</p>
+            <p class="text-[16px] font-semibold text-on-surface">{{ formatAmount(r.gross) }}</p>
+          </div>
+          <div class="rounded-lg px-3 py-2.5" style="background:var(--color-tertiary-container);border:1px solid var(--color-tertiary)">
+            <p class="text-label-caps" style="color:var(--color-on-tertiary-container)">{{ 'CANDIDATES.OFFER.SIM_LOADED_COST' | translate }}</p>
+            <p class="text-[16px] font-bold" style="color:var(--color-on-tertiary-container)">{{ formatAmount(r.loadedCost) }}</p>
+            @if (r.loadedCostEur || r.loadedCostUsd) {
+              <p class="text-[11px] text-outline">
+                {{ formatForeign(r.loadedCostEur, '€') }}
+                @if (r.loadedCostEur && r.loadedCostUsd) { · }
+                {{ formatForeign(r.loadedCostUsd, '$') }}
+              </p>
+            }
+          </div>
         </div>
-        <div>
-          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_EMPLOYER_CHARGES' | translate }}</p>
-          <p class="text-[13px] font-semibold text-on-surface">{{ formatSalary(r.employerCharges) }}</p>
+
+        <!-- Cost split -->
+        @if (simShares().length) {
+          <div class="mt-4">
+            <p class="text-label-caps text-outline mb-1.5">{{ 'CANDIDATES.OFFER.SIM_SPLIT' | translate }}</p>
+            <div class="flex h-2.5 w-full overflow-hidden rounded-full" style="background:var(--color-surface-container-high)">
+              @for (s of simShares(); track s.label) {
+                <div [style.width.%]="s.pct" [style.background]="s.color" [title]="s.label"></div>
+              }
+            </div>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+              @for (s of simShares(); track s.label) {
+                <span class="flex items-center gap-1.5 text-[11.5px] text-on-surface-variant">
+                  <span class="w-2 h-2 rounded-full" [style.background]="s.color"></span>
+                  {{ s.label }} <strong class="text-on-surface">{{ s.pct.toFixed(1) }} %</strong>
+                </span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Cascade net → gross → loaded cost -->
+        <div class="mt-4 rounded-lg border border-outline-variant overflow-hidden">
+          <p class="px-3 py-2 text-label-caps text-outline border-b border-outline-variant"
+             style="background:var(--color-surface-container-low)">{{ 'CANDIDATES.OFFER.SIM_DETAIL' | translate }}</p>
+          @for (s of simSteps(); track s.label) {
+            <div class="flex items-center justify-between gap-3 px-3 py-2 text-[12.5px]"
+                 [class.border-t]="s.kind === 'total' || s.kind === 'grand'"
+                 [class.border-outline-variant]="s.kind === 'total' || s.kind === 'grand'"
+                 [style.background]="s.kind === 'grand' ? 'var(--color-tertiary-container)' : (s.kind === 'total' ? 'var(--color-surface-container-low)' : null)">
+              <span class="flex items-center gap-2 min-w-0"
+                    [class.font-semibold]="s.kind !== 'add'"
+                    [class.text-on-surface]="s.kind !== 'add'"
+                    [class.text-on-surface-variant]="s.kind === 'add'">
+                <span class="w-4 text-center text-outline font-mono">{{ s.kind === 'add' ? '+' : (s.kind === 'base' ? '' : '=') }}</span>
+                @if (s.color) { <span class="w-2 h-2 rounded-full shrink-0" [style.background]="s.color"></span> }
+                {{ s.label }}
+              </span>
+              <span class="tabular-nums whitespace-nowrap"
+                    [class.font-bold]="s.kind === 'grand'"
+                    [class.font-semibold]="s.kind !== 'add'"
+                    [style.color]="s.kind === 'grand' ? 'var(--color-on-tertiary-container)' : null">
+                {{ formatAmount(s.value) }}
+              </span>
+            </div>
+          }
         </div>
-        <div>
-          <p class="text-label-caps text-outline">{{ 'CANDIDATES.OFFER.SIM_LOADED_COST' | translate }}</p>
-          <p class="text-[13px] font-bold" style="color:var(--color-teal)">{{ formatSalary(r.loadedCost) }}</p>
+
+        <!-- Tax bases -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-[12px]">
+          <div>
+            <p class="text-outline">{{ 'CANDIDATES.OFFER.SIM_NET_TAXABLE' | translate }}</p>
+            <p class="font-semibold text-on-surface tabular-nums">{{ formatAmount(r.netTaxable) }}</p>
+          </div>
+          <div>
+            <p class="text-outline">{{ 'CANDIDATES.OFFER.SIM_TAXABLE_BASE' | translate }}</p>
+            <p class="font-semibold text-on-surface tabular-nums">{{ formatAmount(r.taxableBase) }}</p>
+          </div>
+          <div>
+            <p class="text-outline">{{ 'CANDIDATES.OFFER.SIM_EMPLOYER_RATE' | translate }}</p>
+            <p class="font-semibold text-on-surface tabular-nums">
+              {{ r.gross ? ((r.employerCharges / r.gross) * 100).toFixed(1) + ' %' : '—' }}
+            </p>
+          </div>
+          <div>
+            <p class="text-outline">{{ 'CANDIDATES.OFFER.SIM_COST_RATIO' | translate }}</p>
+            <p class="font-semibold text-on-surface tabular-nums">
+              {{ r.inputNet ? '× ' + (r.loadedCost / r.inputNet).toFixed(2) : '—' }}
+            </p>
+          </div>
         </div>
-      </div>
-      @if (!r.convergenceOk) {
-        <p class="text-[11px] text-warning mt-2">{{ 'CANDIDATES.OFFER.SIM_NO_CONVERGENCE' | translate }}</p>
+
+        <!-- Applied rubriques -->
+        @if (simRubriques().length) {
+          <button type="button"
+                  class="mt-4 flex items-center gap-1 text-[12px] font-semibold"
+                  style="color:var(--color-teal)"
+                  (click)="showRubriques.set(!showRubriques())">
+            <span class="material-symbols-outlined text-[18px]">{{ showRubriques() ? 'expand_less' : 'expand_more' }}</span>
+            {{ 'CANDIDATES.OFFER.SIM_RUBRIQUES' | translate }} ({{ simRubriques().length }})
+          </button>
+          @if (showRubriques()) {
+            <div class="mt-2 rounded-lg border border-outline-variant overflow-hidden">
+              @for (rb of simRubriques(); track rb.code; let first = $first) {
+                <div class="flex items-center justify-between gap-3 px-3 py-1.5 text-[12px]"
+                     [class.border-t]="!first" [class.border-outline-variant]="!first">
+                  <span class="min-w-0 truncate text-on-surface">
+                    {{ rb.label }}
+                    @if (rb.nature) { <span class="ml-1 text-[10.5px] text-outline uppercase">{{ rb.nature }}</span> }
+                  </span>
+                  <span class="tabular-nums whitespace-nowrap font-semibold"
+                        [class.text-danger]="rb.debit" [class.text-on-surface]="!rb.debit">
+                    {{ rb.debit ? '−' : '+' }} {{ formatAmount(rb.amount) }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        @if (!r.convergenceOk) {
+          <div class="mt-4 flex items-start gap-2 rounded-lg px-3 py-2 text-[12px]"
+               style="background:color-mix(in srgb, var(--color-warning) 12%, transparent);color:var(--color-warning)">
+            <span class="material-symbols-outlined text-[16px]">warning</span>
+            {{ 'CANDIDATES.OFFER.SIM_NO_CONVERGENCE' | translate }}
+          </div>
+        }
+      } @else {
+        <!-- Empty state -->
+        <div class="flex flex-col items-center text-center gap-2 py-5 rounded-lg border border-dashed border-outline-variant">
+          <span class="material-symbols-outlined text-[28px] text-outline">request_quote</span>
+          <p class="text-[12.5px] text-on-surface-variant max-w-[420px]">{{ 'CANDIDATES.OFFER.SIMULATE_HINT' | translate }}</p>
+          @if ((offerForm.proposedSalary ?? null) === null) {
+            <p class="text-[11px] text-outline">{{ 'CANDIDATES.OFFER.SIM_NEED_SALARY' | translate }}</p>
+          }
+        </div>
       }
-    } @else {
-      <p class="text-[11px] text-outline mt-2">{{ 'CANDIDATES.OFFER.SIMULATE_HINT' | translate }}</p>
-    }
+    </div>
   </div>
 
   <div class="flex flex-col gap-1 mt-3">
