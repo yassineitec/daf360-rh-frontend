@@ -6248,7 +6248,7 @@
           "NONE": "No choice",
           "RENEWABLE_YES": "Probation renewable (max. {{n}} times)",
           "RENEWABLE_NO": "Probation not renewable",
-          "HINT": "Without its own choices, the type follows its nature. The choices' labels are edited in the « Contract decision » list.",
+          "HINT": "Without its own choices, the type follows its nature. The choices are the values of the « Contract decision » list: a value added there shows up here, under its action's moment.",
           "ERR_MAX": "The number of renewals must be between 0 and 10.",
           "SAVED": "Decisions saved."
         }

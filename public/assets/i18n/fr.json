@@ -6248,7 +6248,7 @@
           "NONE": "Aucun choix",
           "RENEWABLE_YES": "Période d'essai renouvelable (max. {{n}} fois)",
           "RENEWABLE_NO": "Période d'essai non renouvelable",
-          "HINT": "Sans choix propres, le type suit sa nature. Les libellés des choix se modifient dans la liste « Décision de contrat ».",
+          "HINT": "Sans choix propres, le type suit sa nature. Les choix sont les valeurs de la liste « Décision de contrat » : une valeur ajoutée là apparaît ici, sous le moment de son action.",
           "ERR_MAX": "Le nombre de renouvellements doit être compris entre 0 et 10.",
           "SAVED": "Décisions enregistrées."
         }

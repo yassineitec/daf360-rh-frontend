@@ -273,20 +273,24 @@
       <div class="lm-rules-grid lm-rules-checks">
         <div>
           <p class="lm-rules-group">{{ 'ADMIN.contractAlerts.trialDecisions' | translate }}</p>
-          @for (a of trialActions; track a) {
+          @for (c of trialChoices(); track c.id) {
             <daf-checkbox
-              [options]="{ label: ('ADMIN.contractAlerts.action.' + a | translate) }"
-              [checked]="rules.trial.includes(a)"
-              (checkedChange)="toggleAction(rules.trial, a, $event)" />
+              [options]="{ label: choiceLabel(c) }"
+              [checked]="rules.trial.includes(c.valueCode)"
+              (checkedChange)="toggleChoice(rules.trial, c.valueCode, $event)" />
+          } @empty {
+            <p class="lm-rules-hint">{{ 'ADMIN.data.lists.RULES.NONE' | translate }}</p>
           }
         </div>
         <div>
           <p class="lm-rules-group">{{ 'ADMIN.contractAlerts.endDecisions' | translate }}</p>
-          @for (a of endActions; track a) {
+          @for (c of endChoices(); track c.id) {
             <daf-checkbox
-              [options]="{ label: ('ADMIN.contractAlerts.action.' + a | translate) }"
-              [checked]="rules.end.includes(a)"
-              (checkedChange)="toggleAction(rules.end, a, $event)" />
+              [options]="{ label: choiceLabel(c) }"
+              [checked]="rules.end.includes(c.valueCode)"
+              (checkedChange)="toggleChoice(rules.end, c.valueCode, $event)" />
+          } @empty {
+            <p class="lm-rules-hint">{{ 'ADMIN.data.lists.RULES.NONE' | translate }}</p>
           }
         </div>
       </div>

@@ -66,7 +66,10 @@ function defaultDecisions(nature: string): { trial: string[]; end: string[] } {
   };
 }
 
-/** What the « Décisions » section edits for one contract type. */
+/**
+ * What the « Décisions » section edits for one contract type. `trial` / `end` hold codes of
+ * « Décision de contrat » values (the choices), not actions.
+ */
 interface RulesForm {
   nature: string;
   custom: boolean;
@@ -337,12 +340,67 @@ export class ListManagerComponent implements OnInit {
   /** The selected list is « Type de contrat » — each type may carry its own « Décider » rules. */
   readonly isContractTypeList = computed(() => this.selectedType()?.code === CONTRACT_TYPE_LIST_CODE);
 
-  readonly trialActions = TRIAL_ACTIONS;
-  readonly endActions   = END_ACTIONS;
   readonly natureOptions: SelectOption[] = NATURES.map(n => ({ value: n, label: n }));
 
   /** The entity's Échéances de contrat rows: what a type without rules of its own inherits. */
   readonly natureConfigs = signal<ContractTypeConfig[]>([]);
+
+  /** Every list type, hidden ones included — to find « Décision de contrat » by code. */
+  private allListTypes: ListType[] = [];
+
+  /** Every « Décision de contrat » value (all entities) — the choices a type can offer. */
+  private readonly decisionValues = signal<ListValue[]>([]);
+
+  /** Active choices of the entity being edited (its own + shared), in list order. */
+  private readonly decisionChoices = computed(() => {
+    const pays = this.paysId();
+    return this.decisionValues().filter(v => v.isActive && (v.paysId === null || v.paysId === pays));
+  });
+  readonly trialChoices = computed(() =>
+    this.decisionChoices().filter(c => TRIAL_ACTIONS.includes(c.decisionAction ?? '')));
+  readonly endChoices = computed(() =>
+    this.decisionChoices().filter(c => END_ACTIONS.includes(c.decisionAction ?? '')));
+
+  private loadDecisionChoices(): void {
+    const type = this.allListTypes.find(t => t.code === DECISION_LIST_CODE);
+    if (!type) { this.decisionValues.set([]); return; }
+    this.listService.getAllValuesForAdmin(type.id).subscribe({
+      next: vals => this.decisionValues.set(vals),
+      error: () => this.decisionValues.set([]),
+    });
+  }
+
+  /** A choice's label in the UI language. */
+  choiceLabel(c: ListValue): string {
+    const en = (this.translate.currentLang() ?? '').toString().startsWith('en');
+    return (en ? c.labelEn || c.labelFr : c.labelFr || c.labelEn) || c.valueCode;
+  }
+
+  /** Every choice carrying one of these actions — what a nature's rules (actions) offer. */
+  private choicesOfActions(actions: string[]): string[] {
+    return this.decisionChoices().filter(c => actions.includes(c.decisionAction ?? '')).map(c => c.valueCode);
+  }
+
+  /**
+   * A type's stored codes → choice codes. Types saved before choices existed hold action codes
+   * (« BREAK_TRIAL »): such a code means every choice of that action, unless a choice is itself
+   * coded so (backend ContractRules.offers). Codes of deleted choices are dropped.
+   */
+  private normalizeChoices(codes: string[]): string[] {
+    const choices = this.decisionChoices();
+    const out: string[] = [];
+    for (const code of codes) {
+      const own = choices.filter(c => c.valueCode === code);
+      const picked = own.length ? own : choices.filter(c => c.decisionAction === code);
+      for (const c of picked) if (!out.includes(c.valueCode)) out.push(c.valueCode);
+    }
+    return this.sortChoices(out);
+  }
+
+  private sortChoices(codes: string[]): string[] {
+    const order = this.decisionChoices().map(c => c.valueCode);
+    return codes.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  }
 
   /** What the « Décisions » section is editing (add modal or rules modal). */
   rules: RulesForm = this.emptyRules('CDI');
@@ -374,8 +432,8 @@ export class ListManagerComponent implements OnInit {
     return {
       renewable: cfg?.trialPeriodRenewable ?? false,
       max:       cfg?.trialMaxRenewals ?? 1,
-      trial:     [...(cfg?.trialDecisions ?? d.trial)],
-      end:       [...(cfg?.endDecisions ?? d.end)],
+      trial:     this.choicesOfActions(cfg?.trialDecisions ?? d.trial),
+      end:       this.choicesOfActions(cfg?.endDecisions ?? d.end),
     };
   }
 
@@ -392,8 +450,8 @@ export class ListManagerComponent implements OnInit {
       custom:    true,
       renewable: v.trialRenewable ?? inherited.renewable,
       max:       v.trialMaxRenewals ?? inherited.max,
-      trial:     [...(v.trialDecisions ?? inherited.trial)],
-      end:       [...(v.endDecisions ?? inherited.end)],
+      trial:     v.trialDecisions ? this.normalizeChoices(v.trialDecisions) : inherited.trial,
+      end:       v.endDecisions ? this.normalizeChoices(v.endDecisions) : inherited.end,
     };
   }
 
@@ -411,12 +469,12 @@ export class ListManagerComponent implements OnInit {
       : this.emptyRules(this.rules.nature);
   }
 
-  /** Checkbox → keeps the list in the engine's order. */
-  toggleAction(list: string[], action: string, on: boolean): void {
-    const i = list.indexOf(action);
-    if (on && i < 0) list.push(action);
+  /** Checkbox → keeps the choices in the list's order. */
+  toggleChoice(list: string[], code: string, on: boolean): void {
+    const i = list.indexOf(code);
+    if (on && i < 0) list.push(code);
     if (!on && i >= 0) list.splice(i, 1);
-    list.sort((a, b) => DECISION_ACTIONS.indexOf(a) - DECISION_ACTIONS.indexOf(b));
+    this.sortChoices(list);
   }
 
   setMax(v: unknown): void {
@@ -437,9 +495,13 @@ export class ListManagerComponent implements OnInit {
       : { lifecycleNature: r.nature, customDecisions: false };
   }
 
-  /** « Essai : Confirmer, Rompre · Fin : Prolonger » */
+  /** « Essai : Confirmer la période d'essai, Rompre… · Fin : Prolonger le contrat » */
   summaryOf(r: { trial: string[]; end: string[] }): string {
-    const t = (a: string) => this.translate.instant('ADMIN.contractAlerts.short.' + a);
+    const choices = this.decisionChoices();
+    const t = (code: string) => {
+      const c = choices.find(x => x.valueCode === code);
+      return c ? this.choiceLabel(c) : code;
+    };
     const trial = r.trial.map(t).join(', ');
     const end   = r.end.map(t).join(', ');
     return [trial && `${this.translate.instant('ADMIN.contractAlerts.shortTrial')} : ${trial}`,
@@ -505,6 +567,7 @@ export class ListManagerComponent implements OnInit {
   ngOnInit(): void {
     this.listService.getListTypes().subscribe({
       next: all => {
+        this.allListTypes = all;
         const types = all.filter(t => !HIDDEN_LIST_CODES.has(t.code));
         this.listTypes.set(types);
         this.loadingTypes.set(false);
@@ -514,7 +577,7 @@ export class ListManagerComponent implements OnInit {
         if (restored) {
           this.selectedType.set(restored);
           this.loadValues(restored.id, false);
-          if (restored.code === CONTRACT_TYPE_LIST_CODE) this.loadNatureConfigs();
+          if (restored.code === CONTRACT_TYPE_LIST_CODE) { this.loadNatureConfigs(); this.loadDecisionChoices(); }
         } else if (types.length) this.selectType(types[0]);
       },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_TYPES')); this.loadingTypes.set(false); },
@@ -527,7 +590,7 @@ export class ListManagerComponent implements OnInit {
     this.editingId.set(null);
     this.searchQuery.set('');   // a search typed for one list means nothing in the next
     this.loadValues(type.id);
-    if (type.code === CONTRACT_TYPE_LIST_CODE) this.loadNatureConfigs();
+    if (type.code === CONTRACT_TYPE_LIST_CODE) { this.loadNatureConfigs(); this.loadDecisionChoices(); }
   }
 
   openAddForm(): void {
