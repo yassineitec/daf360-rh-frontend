@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, TemplateRef, computed, inject, input, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
@@ -5,12 +6,13 @@ import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SortDirection, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
-  SearchToolbarComponent,
+  SearchToolbarComponent, SelectComponent, type SelectOption,
 } from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
-  CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
+  ContractTypeDecisionRules, CreateListValueRequest, ListType, ListValue, UpdateListValueRequest,
 } from '../../../core/lists/configurable-list.model';
+import { ContractAlertsService, ContractTypeConfig } from '../contract-alerts/contract-alerts.service';
 import { UserStore } from '../../../core/user.store';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../../shared/table-sort.utils';
@@ -38,6 +40,42 @@ const GUIDE_STEPS: GuideStep[] = [
  */
 const HIDDEN_LIST_CODES = new Set(['EMPLOYMENT_TYPE']);
 
+/**
+ * « Décision de contrat » (CONTRACT_DECISION): each value is a choice offered by « Décider »
+ * on a contract, and carries the action the engine performs. The label is free; the action
+ * is one of these (backend ContractDecisionAction).
+ */
+const DECISION_LIST_CODE = 'CONTRACT_DECISION';
+const DECISION_ACTIONS = ['CONFIRM_TRIAL', 'RENEW_TRIAL', 'BREAK_TRIAL', 'RENEW_CDD', 'EXTEND', 'END_CONTRACT'];
+const TRIAL_ACTIONS = ['CONFIRM_TRIAL', 'RENEW_TRIAL', 'BREAK_TRIAL'];
+const END_ACTIONS   = ['RENEW_CDD', 'EXTEND', 'END_CONTRACT'];
+
+/**
+ * « Type de contrat » (CONTRACT_TYPE): each type follows the lifecycle rules of a nature, and
+ * may define its own « Décider » rules — otherwise it inherits its nature's (Échéances de
+ * contrat). Backend: ContractRules.
+ */
+const CONTRACT_TYPE_LIST_CODE = 'CONTRACT_TYPE';
+const NATURES = ['CDI', 'CDD', 'CIVP', 'STAGE', 'FREELANCE', 'DETACHEMENT'];
+
+/** A nature with no contract_type_config row offers the backend's defaults (ContractDecisionAction.defaults). */
+function defaultDecisions(nature: string): { trial: string[]; end: string[] } {
+  return {
+    trial: nature === 'CDI' ? [...TRIAL_ACTIONS] : ['CONFIRM_TRIAL', 'BREAK_TRIAL'],
+    end:   nature === 'CDI' ? [] : nature === 'CDD' ? ['RENEW_CDD', 'END_CONTRACT'] : ['EXTEND', 'END_CONTRACT'],
+  };
+}
+
+/** What the « Décisions » section edits for one contract type. */
+interface RulesForm {
+  nature: string;
+  custom: boolean;
+  renewable: boolean;
+  max: number;
+  trial: string[];
+  end: string[];
+}
+
 /** What each list-value column sorts on. No sort = the list's own `sortOrder`. */
 const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> = {
   valueCode: v => v.valueCode || null,
@@ -53,7 +91,8 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe, PageGuideComponent,
+    PaginationComponent, SearchToolbarComponent, SelectComponent, TranslatePipe, PageGuideComponent,
+    NgTemplateOutlet,
   ],
   templateUrl: './list-manager.component.html',
   styleUrl: './list-manager.component.scss',
@@ -66,6 +105,8 @@ export class ListManagerComponent implements OnInit {
   private modal       = inject(ModalService);
   private modalRef?: ModalRef;
   bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
+  rulesTpl = viewChild.required<TemplateRef<unknown>>('rulesTpl');
+  private alertsSvc = inject(ContractAlertsService);
 
   /**
    * The entity picked in /rh/admin. A per-pays list (CONTRACT_TYPE…) shows and creates the
@@ -150,6 +191,12 @@ export class ListManagerComponent implements OnInit {
       { key: 'isActive', label: this.translate.instant('ADMIN.data.lists.COL_ACTIVE'), sortable: true },
       { key: 'isSystem', label: this.translate.instant('ADMIN.data.lists.COL_SYSTEM'), sortable: true },
       // Only where it means something: a global list has no entity to tell apart.
+      ...(this.isDecisionList()
+        ? [{ key: 'decisionAction', label: this.translate.instant('ADMIN.data.lists.COL_ACTION'), sortable: false }]
+        : []),
+      ...(this.isContractTypeList()
+        ? [{ key: 'decisions', label: this.translate.instant('ADMIN.data.lists.RULES.COL'), sortable: false }]
+        : []),
       ...(this.isPerPaysView()
         ? [{ key: 'scope', label: this.translate.instant('ADMIN.data.lists.COL_SCOPE'), sortable: false }]
         : []),
@@ -180,6 +227,8 @@ export class ListManagerComponent implements OnInit {
       labelEn:   v.labelEn,
       isActive:  v.isActive,
       isSystem:  v.isSystem,
+      decisionAction: v.decisionAction ?? null,
+      decisions: null,
       _source:   v,
     })),
   );
@@ -227,6 +276,14 @@ export class ListManagerComponent implements OnInit {
           onClick: (row: TableRow) => this.startEdit(row['_source'] as ListValue),
         },
         {
+          // « Type de contrat » only: the type's « Décider » rules (own or inherited).
+          id: 'rules', icon: 'rule',
+          tooltip: this.translate.instant('ADMIN.data.lists.RULES.ACTION'),
+          hidden: (row: TableRow) => !this.isContractTypeList()
+            || this.editingId() === (row['_source'] as ListValue).id,
+          onClick: (row: TableRow) => this.openRulesModal(row['_source'] as ListValue),
+        },
+        {
           id: 'delete', icon: 'delete', variant: 'danger',
           tooltip: this.translate.instant('ADMIN.data.lists.DELETE'),
           hidden: (row: TableRow) => this.editingId() === (row['_source'] as ListValue).id,
@@ -259,13 +316,190 @@ export class ListManagerComponent implements OnInit {
     labelEn:   ['', Validators.required],
     sortOrder: [0],
     isActive:  [true],
+    decisionAction: [''],
   });
+
+  /** The selected list is « Décision de contrat » — its values carry an action. */
+  readonly isDecisionList = computed(() => this.selectedType()?.code === DECISION_LIST_CODE);
+
+  /** The engine's actions, in the UI language (same wording as Échéances de contrat). */
+  readonly actionOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return DECISION_ACTIONS.map(a => ({ value: a, label: this.actionLabel(a) }));
+  });
+
+  actionLabel(a: string | null | undefined): string {
+    return a ? this.translate.instant('ADMIN.contractAlerts.action.' + a) : '—';
+  }
+
+  // ── « Type de contrat » : décisions propres ou héritées ────────────────────
+
+  /** The selected list is « Type de contrat » — each type may carry its own « Décider » rules. */
+  readonly isContractTypeList = computed(() => this.selectedType()?.code === CONTRACT_TYPE_LIST_CODE);
+
+  readonly trialActions = TRIAL_ACTIONS;
+  readonly endActions   = END_ACTIONS;
+  readonly natureOptions: SelectOption[] = NATURES.map(n => ({ value: n, label: n }));
+
+  /** The entity's Échéances de contrat rows: what a type without rules of its own inherits. */
+  readonly natureConfigs = signal<ContractTypeConfig[]>([]);
+
+  /** What the « Décisions » section is editing (add modal or rules modal). */
+  rules: RulesForm = this.emptyRules('CDI');
+  rulesEditing = signal<ListValue | null>(null);
+  rulesSaving  = signal(false);
+  rulesError   = signal<string | null>(null);
+
+  private loadNatureConfigs(): void {
+    const pays = this.paysId();
+    if (pays == null) { this.natureConfigs.set([]); return; }
+    this.alertsSvc.list(pays).subscribe({
+      next: list => this.natureConfigs.set(list),
+      error: () => this.natureConfigs.set([]),   // the defaults below still apply
+    });
+  }
+
+  /** The nature a type follows: its lifecycle_nature, else its own code when it is one, else CDI. */
+  natureOf(v: ListValue): string {
+    const n = (v.lifecycleNature ?? '').trim().toUpperCase();
+    if (NATURES.includes(n)) return n;
+    const c = (v.valueCode ?? '').trim().toUpperCase();
+    return NATURES.includes(c) ? c : 'CDI';
+  }
+
+  /** The rules a nature gives a type that has none of its own (Échéances de contrat, else defaults). */
+  inheritedRules(nature: string): Omit<RulesForm, 'nature' | 'custom'> {
+    const cfg = this.natureConfigs().find(c => c.contractTypeCode === nature) ?? null;
+    const d = defaultDecisions(nature);
+    return {
+      renewable: cfg?.trialPeriodRenewable ?? false,
+      max:       cfg?.trialMaxRenewals ?? 1,
+      trial:     [...(cfg?.trialDecisions ?? d.trial)],
+      end:       [...(cfg?.endDecisions ?? d.end)],
+    };
+  }
+
+  private emptyRules(nature: string): RulesForm {
+    return { nature, custom: false, ...this.inheritedRules(nature) };
+  }
+
+  private rulesOfValue(v: ListValue): RulesForm {
+    const nature = this.natureOf(v);
+    if (!v.customDecisions) return this.emptyRules(nature);
+    const inherited = this.inheritedRules(nature);
+    return {
+      nature,
+      custom:    true,
+      renewable: v.trialRenewable ?? inherited.renewable,
+      max:       v.trialMaxRenewals ?? inherited.max,
+      trial:     [...(v.trialDecisions ?? inherited.trial)],
+      end:       [...(v.endDecisions ?? inherited.end)],
+    };
+  }
+
+  /** New nature: an inheriting type now shows that nature's rules. */
+  onNaturePick(nature: string | undefined): void {
+    if (!nature) return;
+    this.rules.nature = nature;
+    if (!this.rules.custom) this.rules = this.emptyRules(nature);
+  }
+
+  /** Switching to own rules starts from what the type inherited until now. */
+  onCustomToggle(on: boolean): void {
+    this.rules = on
+      ? { ...this.rules, ...this.inheritedRules(this.rules.nature), custom: true }
+      : this.emptyRules(this.rules.nature);
+  }
+
+  /** Checkbox → keeps the list in the engine's order. */
+  toggleAction(list: string[], action: string, on: boolean): void {
+    const i = list.indexOf(action);
+    if (on && i < 0) list.push(action);
+    if (!on && i >= 0) list.splice(i, 1);
+    list.sort((a, b) => DECISION_ACTIONS.indexOf(a) - DECISION_ACTIONS.indexOf(b));
+  }
+
+  setMax(v: unknown): void {
+    const n = Number(v);
+    this.rules.max = Number.isFinite(n) ? Math.trunc(n) : NaN;
+  }
+
+  rulesValid(): boolean {
+    return !this.rules.custom || (Number.isInteger(this.rules.max) && this.rules.max >= 0 && this.rules.max <= 10);
+  }
+
+  /** What is sent to the backend for the section. */
+  private rulesPayload(): ContractTypeDecisionRules & { lifecycleNature: string } {
+    const r = this.rules;
+    return r.custom
+      ? { lifecycleNature: r.nature, customDecisions: true, trialRenewable: r.renewable,
+          trialMaxRenewals: r.max, trialDecisions: [...r.trial], endDecisions: [...r.end] }
+      : { lifecycleNature: r.nature, customDecisions: false };
+  }
+
+  /** « Essai : Confirmer, Rompre · Fin : Prolonger » */
+  summaryOf(r: { trial: string[]; end: string[] }): string {
+    const t = (a: string) => this.translate.instant('ADMIN.contractAlerts.short.' + a);
+    const trial = r.trial.map(t).join(', ');
+    const end   = r.end.map(t).join(', ');
+    return [trial && `${this.translate.instant('ADMIN.contractAlerts.shortTrial')} : ${trial}`,
+            end   && `${this.translate.instant('ADMIN.contractAlerts.shortEnd')} : ${end}`]
+      .filter(Boolean).join(' · ') || this.translate.instant('ADMIN.data.lists.RULES.NONE');
+  }
+
+  /** Table cell of a contract type: where its rules come from, and what they offer. */
+  decisionsCell(v: ListValue): { own: boolean; badge: string; text: string } {
+    const r = this.rulesOfValue(v);
+    return {
+      own: r.custom,
+      badge: r.custom
+        ? this.translate.instant('ADMIN.data.lists.RULES.OWN')
+        : this.translate.instant('ADMIN.data.lists.RULES.INHERITED_SHORT', { nature: r.nature }),
+      text: this.summaryOf(r),
+    };
+  }
+
+  openRulesModal(v: ListValue): void {
+    this.rulesEditing.set(v);
+    this.rules = this.rulesOfValue(v);
+    this.rulesError.set(null);
+    this.modalRef = this.modal.open({
+      minWidth:    '560px',
+      minHeight:   '440px',
+      resizable:   true,
+      maximizable: true,
+      title: this.translate.instant('ADMIN.data.lists.RULES.MODAL_TITLE', { label: v.labelFr }),
+      body: this.rulesTpl(),
+      closeOnBackdrop: false,
+    });
+  }
+
+  saveRules(): void {
+    const v = this.rulesEditing();
+    if (!v) return;
+    if (!this.rulesValid()) { this.rulesError.set(this.translate.instant('ADMIN.data.lists.RULES.ERR_MAX')); return; }
+    this.rulesSaving.set(true);
+    this.rulesError.set(null);
+    this.listService.updateValue(v.id, this.rulesPayload()).subscribe({
+      next: () => {
+        this.rulesSaving.set(false);
+        this.modalRef?.close();
+        this.flash(this.translate.instant('ADMIN.data.lists.RULES.SAVED'));
+        this.loadValues(v.listTypeId, false);
+      },
+      error: err => {
+        this.rulesSaving.set(false);
+        this.rulesError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_GENERIC'));
+      },
+    });
+  }
 
   addForm: FormGroup = this.fb.group({
     valueCode: ['', [Validators.required, Validators.maxLength(100)]],
     labelFr:   ['', Validators.required],
     labelEn:   ['', Validators.required],
     sortOrder: [0],
+    decisionAction: [''],
   });
 
   ngOnInit(): void {
@@ -280,6 +514,7 @@ export class ListManagerComponent implements OnInit {
         if (restored) {
           this.selectedType.set(restored);
           this.loadValues(restored.id, false);
+          if (restored.code === CONTRACT_TYPE_LIST_CODE) this.loadNatureConfigs();
         } else if (types.length) this.selectType(types[0]);
       },
       error: () => { this.error.set(this.translate.instant('ADMIN.data.lists.ERR_LOAD_TYPES')); this.loadingTypes.set(false); },
@@ -292,13 +527,16 @@ export class ListManagerComponent implements OnInit {
     this.editingId.set(null);
     this.searchQuery.set('');   // a search typed for one list means nothing in the next
     this.loadValues(type.id);
+    if (type.code === CONTRACT_TYPE_LIST_CODE) this.loadNatureConfigs();
   }
 
   openAddForm(): void {
-    this.addForm.reset({ sortOrder: 0 });
+    this.addForm.reset({ sortOrder: 0, decisionAction: this.isDecisionList() ? DECISION_ACTIONS[0] : '' });
+    this.rules = this.emptyRules('CDI');
+    this.rulesError.set(null);
     this.modalRef = this.modal.open({
-      minWidth:    '360px',
-      minHeight:   '260px',
+      minWidth:    this.isContractTypeList() ? '560px' : '360px',
+      minHeight:   this.isContractTypeList() ? '520px' : '260px',
       resizable:   true,
       maximizable: true,
       title: this.translate.instant('ADMIN.data.lists.MODAL_ADD_TITLE'),
@@ -330,6 +568,7 @@ export class ListManagerComponent implements OnInit {
     this.editForm.patchValue({
       labelFr: value.labelFr, labelEn: value.labelEn,
       sortOrder: value.sortOrder, isActive: value.isActive,
+      decisionAction: value.decisionAction ?? '',
     });
   }
 
@@ -338,7 +577,10 @@ export class ListManagerComponent implements OnInit {
   saveEdit(value: ListValue): void {
     if (this.editForm.invalid) return;
     // No nature sent: the backend keeps the value's current one.
-    const dto: UpdateListValueRequest = this.editForm.value;
+    const { decisionAction, ...rest } = this.editForm.value;
+    // The action only means something on « Décision de contrat »; other lists never send it.
+    const dto: UpdateListValueRequest = this.isDecisionList() && decisionAction
+      ? { ...rest, decisionAction } : rest;
     this.listService.updateValue(value.id, dto).subscribe({
       next: () => { this.editingId.set(null); this.flash(this.translate.instant('ADMIN.data.lists.MSG_UPDATED')); this.loadValues(value.listTypeId); },
       error: err => this.error.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('ADMIN.data.lists.ERR_GENERIC')),
@@ -373,14 +615,22 @@ export class ListManagerComponent implements OnInit {
 
   addValue(): void {
     if (this.addForm.invalid || !this.selectedType()) return;
+    if (this.isContractTypeList() && !this.rulesValid()) {
+      this.rulesError.set(this.translate.instant('ADMIN.data.lists.RULES.ERR_MAX'));
+      return;
+    }
     const type = this.selectedType()!;
     this.adding.set(true);
     // A per-pays list gets the value for the entity picked in /rh/admin; a global one stays
     // shared (null), as before.
     const paysId = type.isPerPays ? this.paysId() : null;
-    // No nature asked here: the backend gives a new contract type the nature of its code
-    // (CDD → CDD), else CDI.
-    const dto: CreateListValueRequest = { listTypeId: type.id, paysId, ...this.addForm.value };
+    // « Type de contrat »: its nature and, if asked, its own « Décider » rules.
+    const { decisionAction, ...rest } = this.addForm.value;
+    const dto: CreateListValueRequest = {
+      listTypeId: type.id, paysId, ...rest,
+      ...(this.isDecisionList() && decisionAction ? { decisionAction } : {}),
+      ...(this.isContractTypeList() ? this.rulesPayload() : {}),
+    };
     this.listService.createValue(dto).subscribe({
       next: () => {
         this.adding.set(false);

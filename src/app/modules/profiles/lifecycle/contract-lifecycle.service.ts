@@ -6,6 +6,7 @@ import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto,
   LifecycleAlertDto, CreateContractRequest, TransitionRequest,
   ValidateTrialRequest, RenewCDDRequest, ConvertToCDIRequest,
+  ContractDecisionOptions, ContractDecisionRequest,
 } from './contract-lifecycle.model';
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +36,15 @@ export class ContractLifecycleService {
 
   validateTrial(contractId: number, req: ValidateTrialRequest): Observable<ContractDetailDto> {
     return this.http.post<ContractDetailDto>(`${this.base}/api/hr/contracts/${contractId}/validate-trial`, req);
+  }
+
+  /** The choices offered on the contract's current deadline (end of trial / of contract). */
+  getDecisions(contractId: number): Observable<ContractDecisionOptions> {
+    return this.http.get<ContractDecisionOptions>(`${this.base}/api/hr/contracts/${contractId}/decisions`);
+  }
+
+  decide(contractId: number, req: ContractDecisionRequest): Observable<ContractDetailDto> {
+    return this.http.post<ContractDetailDto>(`${this.base}/api/hr/contracts/${contractId}/decide`, req);
   }
 
   renewCDD(contractId: number, req: RenewCDDRequest): Observable<ContractDetailDto> {

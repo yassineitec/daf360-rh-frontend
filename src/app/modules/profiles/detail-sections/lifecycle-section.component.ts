@@ -2,7 +2,9 @@ import { Component, inject, input, output } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ButtonComponent, SkeletonComponent, StatusBadgeComponent } from '@khalilrebhiitec/daf360';
+import {
+  ButtonComponent, ProgressBarComponent, SectionTitleComponent, SkeletonComponent, StatusBadgeComponent,
+} from '@khalilrebhiitec/daf360';
 
 import {
   ContractListDto, ContractTransitionHistoryDto,
@@ -29,7 +31,8 @@ import { cdiStatusKey, cdiStatusVariant } from '../../cdi-conversions/cdi-conver
   standalone: true,
   imports: [
     SectionCardComponent, ButtonComponent, SkeletonComponent,
-    StatusBadgeComponent, RouterLink, DecimalPipe, TranslatePipe,
+    StatusBadgeComponent, ProgressBarComponent, SectionTitleComponent,
+    RouterLink, DecimalPipe, TranslatePipe,
   ],
   host: { class: 'block' },
   template: `
@@ -67,110 +70,216 @@ import { cdiStatusKey, cdiStatusVariant } from '../../cdi-conversions/cdi-conver
           </div>
         }
 
-        @for (c of contracts(); track c.id) {
-          <div class="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3.5">
-            <div class="flex flex-wrap items-start justify-between gap-2.5">
-              <div class="flex flex-1 flex-col gap-1.5">
+        <!-- ── Contrats ─────────────────────────────────────────────────────── -->
+        <section class="flex flex-col gap-3">
+          <daf-section-title [title]="'PROFILES.LC.SECTION_CONTRACTS' | translate" />
 
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-[13px] font-bold text-on-surface">{{ c.contractTypeLabel || typeLabel(c.contractTypeCode) }}</span>
-                  <daf-badge [label]="statusLabel(c.currentStatusCode)"
-                             [options]="{ variant: statusVariant(c.currentStatusCode), size: 'sm' }" />
-                  @if (c.isActive) {
-                    <daf-badge [label]="'PROFILES.LC.ACTIVE' | translate" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
-                  }
-                  @if (c.dossierLocked) {
-                    <daf-badge [label]="'PROFILES.LC.LOCKED' | translate" [options]="{ variant: 'danger', pill: true, size: 'sm' }" />
-                  }
-                </div>
+          @for (c of contracts(); track c.id) {
+            <article class="flex flex-col gap-3.5 rounded-xl border border-outline-variant bg-surface-container-low p-4"
+                     [class.opacity-80]="!c.isActive">
 
-                <div class="flex flex-wrap gap-3.5 text-[12px] text-on-surface-variant">
-                  <span>{{ 'PROFILES.LC.START' | translate:{ date: fmtDate(c.dateDebut) } }}</span>
-                  @if (c.dateFinPrevue) {
-                    <span>{{ 'PROFILES.LC.END_EXPECTED' | translate:{ date: fmtDate(c.dateFinPrevue) } }}</span>
-                    @if ((daysUntil(c.dateFinPrevue) ?? 999) <= 30 && c.isActive) {
-                      <span class="font-semibold text-warning">
-                        {{ 'PROFILES.LC.DAYS_LEFT' | translate:{ days: daysUntil(c.dateFinPrevue) } }}
-                      </span>
+              <!-- En-tête : type + statuts | actions -->
+              <header class="flex flex-wrap items-start justify-between gap-3">
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <h4 class="m-0 text-[14px] font-bold text-on-surface">{{ c.contractTypeLabel || typeLabel(c.contractTypeCode) }}</h4>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <daf-badge [label]="statusLabel(c.currentStatusCode)"
+                               [options]="{ variant: statusVariant(c.currentStatusCode), size: 'sm' }" />
+                    @if (c.isActive) {
+                      <daf-badge [label]="'PROFILES.LC.ACTIVE' | translate" [options]="{ variant: 'teal', pill: true, size: 'sm' }" />
                     }
-                  }
-                  @if (c.dateFinPeriodeEssai && c.currentStatusCode === 'PERIODE_ESSAI') {
-                    <span class="font-semibold text-warning">
-                      {{ 'PROFILES.LC.TRIAL_UNTIL' | translate:{ date: fmtDate(c.dateFinPeriodeEssai), days: daysUntil(c.dateFinPeriodeEssai) } }}
-                    </span>
-                  }
-                </div>
-
-                <!-- Préavis (V69). Shown per contract because that is where it lives: it was
-                     agreed for THIS contract and cannot be edited — a different figure means a
-                     new contract. The source is spelled out so a number nobody remembers
-                     agreeing to is still explainable. -->
-                <div class="flex flex-wrap items-center gap-2 text-[12px]">
-                  <span class="text-on-surface-variant">{{ 'PROFILES.LC.NOTICE_PERIOD' | translate }} :</span>
-                  @if (c.noticePeriodDays !== null && c.noticePeriodDays !== undefined) {
-                    <span class="font-semibold text-on-surface">
-                      {{ 'PROFILES.LC.NOTICE_DAYS' | translate:{ days: c.noticePeriodDays } }}
-                    </span>
-                    @if (c.noticePeriodSource) {
-                      <span class="text-[11px] text-outline">
-                        {{ 'PROFILES.LC.NOTICE_SOURCE.' + c.noticePeriodSource | translate }}
-                      </span>
+                    @if (c.dossierLocked) {
+                      <daf-badge [label]="'PROFILES.LC.LOCKED' | translate" [options]="{ variant: 'danger', pill: true, size: 'sm' }" />
                     }
-                  } @else {
-                    <span class="text-[11px] text-outline">{{ 'PROFILES.LC.NOTICE_NONE' | translate }}</span>
-                  }
+                  </div>
                 </div>
 
-                @if (c.referenceContrat) {
-                  <span class="text-[11px] text-outline">{{ 'PROFILES.LC.REF' | translate:{ ref: c.referenceContrat } }}</span>
-                }
-
-                <!-- CIVP → CDI request (V119): its status and a link to the desk where it
-                     is decided. Only the latest request of the contract is shown. -->
-                @if (c.contractTypeCode === 'CIVP' && cdiRequest(c.id); as req) {
-                  <div class="flex flex-wrap items-center gap-2 text-[12px]">
-                    <span class="text-on-surface-variant">{{ 'CDI_CONVERSION.CARD.LABEL' | translate }} :</span>
-                    <daf-badge [label]="cdiStatusKey(req) | translate"
-                               [options]="{ variant: cdiStatusVariant(req), size: 'sm', pill: true }" />
-                    <a [routerLink]="['/rh/cdi-conversions', req.id]" class="font-semibold text-teal hover:underline">
-                      {{ 'CDI_CONVERSION.CARD.OPEN' | translate }}
-                    </a>
+                @if (c.isActive && !c.dossierLocked) {
+                  <div class="flex flex-col items-end gap-1.5">
+                    @if (canEdit()) {
+                      <!-- One « Décider » button for both deadlines (end of trial, end of
+                           contract): the choices come from the backend, as configured in
+                           Administration (Type de contrat / Échéances de contrat). -->
+                      @if (hasDeadline(c)) {
+                        <daf-button [options]="{ variant: 'primary', size: 'sm', iconStart: 'gavel',
+                                                 label: ((c.currentStatusCode === 'PERIODE_ESSAI'
+                                                   ? 'PROFILES.DECISION.BUTTON_TRIAL' : 'PROFILES.DECISION.BUTTON_END') | translate) }"
+                          (onClick)="decide.emit(c.id)" />
+                      }
+                      @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
+                        <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
+                          (onClick)="convertCdi.emit(c.id)" />
+                      }
+                    }
+                    <!-- CIVP: requesting is its own permission (managers, not only RH); the
+                         conversion itself appears once the request is approved, for RH. -->
+                    @if (c.contractTypeCode === 'CIVP' && c.currentStatusCode === 'ACTIF') {
+                      @if (canRequestCdi() && !cdiInProgress(c.id)) {
+                        <daf-button variant="secondary" [options]="{ label: ('CDI_CONVERSION.CARD.REQUEST' | translate), size: 'sm', iconStart: 'workspace_premium' }"
+                          (onClick)="requestCdi.emit(c.id)" />
+                      }
+                      @if (cdiRequest(c.id)?.canConvert) {
+                        <daf-button [options]="{ variant: 'primary', label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
+                          (onClick)="convertCdi.emit(c.id)" />
+                      }
+                    }
                   </div>
                 }
-              </div>
+              </header>
 
-              @if (c.isActive && !c.dossierLocked) {
-                <div class="flex flex-col items-end gap-1.5">
-                  @if (canEdit()) {
-                    @if (c.currentStatusCode === 'PERIODE_ESSAI') {
-                      <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.VALIDATE_TRIAL' | translate), size: 'sm' }"
-                        (onClick)="validateTrial.emit(c.id)" />
-                    }
-                    @if (c.contractTypeCode === 'CDD' && c.currentStatusCode === 'ACTIF') {
-                      <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.RENEW_CDD' | translate), size: 'sm' }"
-                        (onClick)="renewCdd.emit(c.id)" />
-                      <daf-button variant="secondary" [options]="{ label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
-                        (onClick)="convertCdi.emit(c.id)" />
-                    }
+              <!-- Période d'essai en cours : échéance, avancement, renouvellement. -->
+              @if (c.currentStatusCode === 'PERIODE_ESSAI' && trialEnd(c)) {
+                <div class="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3.5 py-3">
+                  <div class="flex flex-wrap items-center gap-2 text-[12px]">
+                    <span class="material-symbols-outlined text-[16px] text-warning">hourglass_top</span>
+                    <span class="font-semibold text-on-surface">{{ 'PROFILES.LC.TRIAL_LINE' | translate }}</span>
+                    <span class="text-on-surface-variant">
+                      @if (c.periodeEssaiRenouvelee && c.dateFinPeRenouvellement) {
+                        {{ 'PROFILES.LC.TRIAL_RENEWED_END' | translate:{ date: fmtDate(c.dateFinPeRenouvellement), initial: fmtDate(c.dateFinPeriodeEssai) } }}
+                      } @else {
+                        {{ 'PROFILES.LC.TRIAL_END' | translate:{ date: fmtDate(trialEnd(c)) } }}
+                      }
+                    </span>
+                    <span [class]="daysChipClass(daysUntil(trialEnd(c))!)"
+                          class="ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold">
+                      {{ daysChipLabel(daysUntil(trialEnd(c))!) }}
+                    </span>
+                  </div>
+
+                  @if (trialProgress(c); as p) {
+                    <daf-progress-bar class="block w-full"
+                      [value]="p.pct"
+                      [options]="{ max: 100, size: 'sm', variant: progressVariant(daysUntil(trialEnd(c))!), showPercent: false }" />
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-on-surface-variant">
+                      <span>{{ 'PROFILES.LC.TRIAL_ELAPSED' | translate:{ done: p.done, total: p.total } }}</span>
+                      @if (trialDays(c); as d) {
+                        <span class="text-outline">·</span>
+                        <span>
+                          {{ 'PROFILES.LC.TRIAL_DAYS' | translate:{ n: d.initial } }}
+                          @if (d.renewal) { {{ 'PROFILES.LC.TRIAL_PLUS_RENEWAL' | translate:{ n: d.renewal } }} }
+                        </span>
+                      }
+                      <span class="text-outline">·</span>
+                      @if (c.trialRenewable) {
+                        <span [class]="(c.trialRenewalCount ?? 0) >= (c.trialMaxRenewals ?? 1) ? 'text-outline' : 'font-semibold text-success'">
+                          {{ 'PROFILES.LC.TRIAL_RENEWABLE' | translate:{ used: c.trialRenewalCount ?? 0, max: c.trialMaxRenewals ?? 1 } }}
+                        </span>
+                      } @else {
+                        <span class="text-outline">{{ 'PROFILES.LC.TRIAL_NOT_RENEWABLE' | translate }}</span>
+                      }
+                    </div>
                   }
-                  <!-- CIVP: requesting is its own permission (managers, not only RH); the
-                       conversion itself appears once the request is approved, for RH. -->
-                  @if (c.contractTypeCode === 'CIVP' && c.currentStatusCode === 'ACTIF') {
-                    @if (canRequestCdi() && !cdiInProgress(c.id)) {
-                      <daf-button variant="secondary" [options]="{ label: ('CDI_CONVERSION.CARD.REQUEST' | translate), size: 'sm', iconStart: 'workspace_premium' }"
-                        (onClick)="requestCdi.emit(c.id)" />
+                </div>
+              }
+
+              <!-- Informations du contrat -->
+              <dl class="m-0 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                <div class="flex flex-col gap-0.5">
+                  <dt class="text-[10px] font-semibold uppercase tracking-[0.4px] text-outline">{{ 'PROFILES.LC.F_START' | translate }}</dt>
+                  <dd class="m-0 text-[13px] font-medium text-on-surface">{{ fmtDate(c.dateDebut) }}</dd>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <dt class="text-[10px] font-semibold uppercase tracking-[0.4px] text-outline">{{ 'PROFILES.LC.F_END' | translate }}</dt>
+                  <dd class="m-0 flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-on-surface">
+                    @if (c.dateFinReelle) {
+                      {{ fmtDate(c.dateFinReelle) }}
+                    } @else if (c.dateFinPrevue) {
+                      {{ fmtDate(c.dateFinPrevue) }}
+                      @if ((daysUntil(c.dateFinPrevue) ?? 999) <= 30 && c.isActive) {
+                        <span [class]="daysChipClass(daysUntil(c.dateFinPrevue)!)"
+                              class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold">
+                          {{ daysChipLabel(daysUntil(c.dateFinPrevue)!) }}
+                        </span>
+                      }
+                    } @else {
+                      <span class="text-on-surface-variant">{{ 'PROFILES.LC.F_END_NONE' | translate }}</span>
                     }
-                    @if (cdiRequest(c.id)?.canConvert) {
-                      <daf-button [options]="{ variant: 'primary', label: ('PROFILES.LC.CONVERT_CDI' | translate), size: 'sm' }"
-                        (onClick)="convertCdi.emit(c.id)" />
+                  </dd>
+                </div>
+                <!-- Préavis (V69): frozen on THIS contract; the source explains the figure. -->
+                <div class="flex flex-col gap-0.5">
+                  <dt class="text-[10px] font-semibold uppercase tracking-[0.4px] text-outline">{{ 'PROFILES.LC.NOTICE_PERIOD' | translate }}</dt>
+                  <dd class="m-0 text-[13px] font-medium text-on-surface">
+                    @if (c.noticePeriodDays !== null && c.noticePeriodDays !== undefined) {
+                      {{ 'PROFILES.LC.NOTICE_DAYS' | translate:{ days: c.noticePeriodDays } }}
+                      @if (c.noticePeriodSource) {
+                        <span class="block text-[11px] font-normal text-outline">{{ 'PROFILES.LC.NOTICE_SOURCE.' + c.noticePeriodSource | translate }}</span>
+                      }
+                    } @else if (c.defaultNoticeDays !== null && c.defaultNoticeDays !== undefined) {
+                      {{ 'PROFILES.LC.NOTICE_DAYS' | translate:{ days: c.defaultNoticeDays } }}
+                      <span class="block text-[11px] font-normal text-outline">{{ 'PROFILES.LC.NOTICE_DEFAULT_GRADE' | translate }}</span>
+                    } @else {
+                      <span class="text-on-surface-variant">{{ 'PROFILES.LC.NOTICE_NONE' | translate }}</span>
+                      <span class="block text-[11px] font-normal text-outline">{{ 'PROFILES.LC.NOTICE_NONE_HINT' | translate }}</span>
                     }
-                  }
+                  </dd>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <dt class="text-[10px] font-semibold uppercase tracking-[0.4px] text-outline">{{ 'PROFILES.LC.F_REF' | translate }}</dt>
+                  <dd class="m-0 text-[13px] font-medium text-on-surface">{{ c.referenceContrat || '—' }}</dd>
+                </div>
+              </dl>
+
+              <!-- CIVP → CDI request (V119): its status and a link to the desk where it is decided. -->
+              @if (c.contractTypeCode === 'CIVP' && cdiRequest(c.id); as req) {
+                <div class="flex flex-wrap items-center gap-2 border-t border-outline-variant pt-3 text-[12px]">
+                  <span class="text-on-surface-variant">{{ 'CDI_CONVERSION.CARD.LABEL' | translate }} :</span>
+                  <daf-badge [label]="cdiStatusKey(req) | translate"
+                             [options]="{ variant: cdiStatusVariant(req), size: 'sm', pill: true }" />
+                  <a [routerLink]="['/rh/cdi-conversions', req.id]" class="font-semibold text-teal hover:underline">
+                    {{ 'CDI_CONVERSION.CARD.OPEN' | translate }}
+                  </a>
+                </div>
+              }
+            </article>
+          } @empty {
+            <p class="m-0 text-[13px] text-on-surface-variant">{{ 'PROFILES.LC.NONE' | translate }}</p>
+          }
+        </section>
+
+        <!-- Lifecycle transition history -->
+        @if (history().length) {
+          <div>
+            <daf-section-title class="mb-3 block" [title]="'PROFILES.LC.TRANSITIONS_HISTORY' | translate" />
+            <div class="relative flex flex-col">
+              @for (h of history(); track h.id; let last = $last) {
+                <div class="flex gap-2.5">
+                  <div class="flex w-4 shrink-0 flex-col items-center">
+                    <div class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-tertiary"></div>
+                    @if (!last) { <div class="mt-0.5 w-0.5 flex-1 bg-outline-variant"></div> }
+                  </div>
+                  <div class="mb-2 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-3.5 py-2.5">
+                    <div class="mb-1 flex flex-wrap items-center gap-2">
+                      <span class="material-symbols-outlined text-[16px] text-on-surface-variant">{{ actionIcon(h.actionCode) }}</span>
+                      @if (actionLabel(h.actionCode); as a) {
+                        <span class="text-[12px] font-semibold text-on-surface">{{ a }}</span>
+                      }
+                      <!-- No « before » badge for a creation: there was no status yet. -->
+                      @if (h.statutAvant && h.statutAvant !== h.statutApres) {
+                        <daf-badge [label]="statusLabel(h.statutAvant)" [options]="{ variant: statusVariant(h.statutAvant), size: 'sm' }" />
+                        <span class="text-[11px] text-outline">→</span>
+                      }
+                      @if (!h.statutAvant || h.statutAvant !== h.statutApres) {
+                        <daf-badge [label]="statusLabel(h.statutApres)" [options]="{ variant: statusVariant(h.statutApres), size: 'sm' }" />
+                      }
+                      @if (h.previousDate || h.newDate) {
+                        <span class="text-[11px] font-semibold text-warning">
+                          {{ fmtDate(h.previousDate) || '—' }} → {{ fmtDate(h.newDate) || '—' }}
+                        </span>
+                      }
+                      <span class="ml-auto whitespace-nowrap text-[10px] text-outline">
+                        {{ fmtDate(h.triggeredAt) }}
+                        @if (h.triggeredByName) { · {{ 'PROFILES.LC.BY' | translate:{ name: h.triggeredByName } }} }
+                      </span>
+                    </div>
+                    @if (h.commentaire) {
+                      <p class="m-0 mt-0.5 text-[11px] italic text-on-surface-variant">{{ h.commentaire }}</p>
+                    }
+                  </div>
                 </div>
               }
             </div>
           </div>
-        } @empty {
-          <p class="m-0 text-[13px] text-on-surface-variant">{{ 'PROFILES.LC.NONE' | translate }}</p>
         }
 
         <!-- ── Dossier log (historique_contrat) ─────────────────────────────
@@ -180,9 +289,7 @@ import { cdiStatusKey, cdiStatusVariant } from '../../cdi-conversions/cdi-conver
              Nouveau contrat form, which creates the contract and logs it in one submit. -->
         @if (contractLog().length) {
           <div>
-            <p class="mt-0 mb-2.5 text-[11px] font-bold uppercase tracking-[0.4px] text-on-surface-variant">
-              {{ 'PROFILES.HISTORY.TITLE' | translate }}
-            </p>
+            <daf-section-title class="mb-3 block" [title]="'PROFILES.HISTORY.TITLE' | translate" />
             <div class="flex flex-col gap-2.5">
               @for (c of contractLog(); track c.id) {
                 <div class="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3.5">
@@ -230,36 +337,6 @@ import { cdiStatusKey, cdiStatusVariant } from '../../cdi-conversions/cdi-conver
             </div>
           </div>
         }
-
-        <!-- Lifecycle transition history -->
-        @if (history().length) {
-          <div>
-            <p class="mt-0 mb-2.5 text-[11px] font-bold uppercase tracking-[0.4px] text-on-surface-variant">
-              {{ 'PROFILES.LC.TRANSITIONS_HISTORY' | translate }}
-            </p>
-            <div class="relative flex flex-col">
-              @for (h of history(); track h.id; let last = $last) {
-                <div class="flex gap-2.5">
-                  <div class="flex w-4 shrink-0 flex-col items-center">
-                    <div class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-tertiary"></div>
-                    @if (!last) { <div class="mt-0.5 w-0.5 flex-1 bg-outline-variant"></div> }
-                  </div>
-                  <div class="mb-2 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-3.5 py-2.5">
-                    <div class="mb-1 flex items-center gap-2">
-                      <daf-badge [label]="statusLabel(h.statutAvant)" [options]="{ variant: statusVariant(h.statutAvant), size: 'sm' }" />
-                      <span class="text-[11px] text-outline">→</span>
-                      <daf-badge [label]="statusLabel(h.statutApres)" [options]="{ variant: statusVariant(h.statutApres), size: 'sm' }" />
-                      <span class="ml-auto text-[10px] text-outline-variant">{{ fmtDate(h.triggeredAt) }}</span>
-                    </div>
-                    @if (h.commentaire) {
-                      <p class="m-0 mt-0.5 text-[11px] italic text-on-surface-variant">{{ h.commentaire }}</p>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
       }
     </div>
     </rh-section-card>
@@ -286,8 +363,8 @@ export class LifecycleSectionComponent {
   readonly canRequestCdi = input(false);
 
   readonly newContract   = output<void>();
-  readonly validateTrial = output<number>();
-  readonly renewCdd      = output<number>();
+  /** « Décider » on a contract deadline — the page opens the decision modal. */
+  readonly decide        = output<number>();
   readonly convertCdi    = output<number>();
   readonly requestCdi    = output<number>();
 
@@ -319,8 +396,86 @@ export class LifecycleSectionComponent {
       : code;
   }
 
+  /** End of the trial as it stands — the renewal's date once renewed (backend effectiveTrialEnd). */
+  protected trialEnd(c: ContractListDto): string | null {
+    return c.periodeEssaiRenouvelee && c.dateFinPeRenouvellement
+      ? c.dateFinPeRenouvellement
+      : c.dateFinPeriodeEssai;
+  }
+
+  /**
+   * Whether the contract is at a deadline something can be decided on — mirrors the
+   * backend's ContractDecisionService.momentOf: in trial, or an active contract that has an
+   * end (any non-CDI, or a CDI with a planned end).
+   */
+  protected hasDeadline(c: ContractListDto): boolean {
+    if (!c.isActive || c.dossierLocked) return false;
+    if (c.currentStatusCode === 'PERIODE_ESSAI') return true;
+    if ((c.currentStatusCode as string) === 'RECRUTEMENT') return false;
+    return !!c.dateFinPrevue || c.contractTypeCode !== 'CDI';
+  }
+
+  /** Trial length in days: initial, and the renewal on top of it (0 when not renewed). */
+  protected trialDays(c: ContractListDto): { initial: number; renewal: number } | null {
+    if (!c.dateDebut || !c.dateFinPeriodeEssai) return null;
+    const days = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
+    const initial = days(c.dateDebut, c.dateFinPeriodeEssai);
+    const renewal = c.periodeEssaiRenouvelee && c.dateFinPeRenouvellement
+      ? days(c.dateFinPeriodeEssai, c.dateFinPeRenouvellement) : 0;
+    return initial > 0 ? { initial, renewal } : null;
+  }
+
+  /** How far into the trial we are: days elapsed / total (renewal included), as a %. */
+  protected trialProgress(c: ContractListDto): { pct: number; done: number; total: number } | null {
+    const end = this.trialEnd(c);
+    if (!c.dateDebut || !end) return null;
+    const day = 86_400_000;
+    const total = Math.round((new Date(end).getTime() - new Date(c.dateDebut).getTime()) / day);
+    if (total <= 0) return null;
+    const done = Math.min(total, Math.max(0, Math.floor((Date.now() - new Date(c.dateDebut).getTime()) / day)));
+    return { pct: Math.round((done / total) * 100), done, total };
+  }
+
+  /** Same thresholds as the J–N chip. */
+  protected progressVariant(days: number): 'danger' | 'warning' | 'teal' {
+    return days <= 7 ? 'danger' : days <= 14 ? 'warning' : 'teal';
+  }
+
+  /** An icon per kind of event, so the timeline reads at a glance. */
+  protected actionIcon(code: string | null): string {
+    switch (code) {
+      case 'CREATE_CONTRACT':                 return 'note_add';
+      case 'RENEW_TRIAL': case 'RENEWAL_CDD':
+      case 'RENEW_CDD':   case 'EXTEND':      return 'update';
+      case 'VALIDATE_PE': case 'CONFIRM_TRIAL': return 'verified';
+      case 'RUPTURE_PE':  case 'BREAK_TRIAL':
+      case 'END_CONTRACT':                    return 'block';
+      default:                                return 'swap_horiz';
+    }
+  }
+
+  /** Label of a decision in the timeline (null for plain transitions — the badges say it all). */
+  protected actionLabel(code: string | null): string | null {
+    if (!code) return null;
+    const key = 'PROFILES.DECISION.ACTION.' + code;
+    const label = this.translate.instant(key);
+    return label !== key ? label : null;
+  }
+
   protected daysUntil(date: string | null): number | null {
     if (!date) return null;
     return Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
+  }
+
+  /** « J–16 » comme sur l'accueil ; « J+3 » une fois l'échéance dépassée. */
+  protected daysChipLabel(days: number): string {
+    return days >= 0 ? `J–${days}` : `J+${-days}`;
+  }
+
+  /** Mêmes seuils et couleurs que `ProbationCardComponent.daysChipClass` (accueil). */
+  protected daysChipClass(days: number): string {
+    if (days <= 7)  return 'bg-red-600 text-white';
+    if (days <= 14) return 'bg-orange-400 text-white';
+    return 'bg-yellow-300 text-yellow-900';
   }
 }

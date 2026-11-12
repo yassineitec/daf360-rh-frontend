@@ -39,6 +39,7 @@ import {
 import { statusBadge } from '../../shared/status-badge.utils';
 import { genderOptions } from '../../shared/utils/gender.utils';
 import { profilePhotoUrlFresh } from '../../shared/utils/avatar.utils';
+import { splitPersonName } from '../../shared/utils/person-name.utils';
 import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
@@ -54,6 +55,7 @@ import { contractLabel } from './profile-labels';
 import { ContractLifecycleService } from './lifecycle/contract-lifecycle.service';
 import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto,
+  ContractDecisionOptions, ContractDecisionOption,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
 import { DocumentEditFormComponent } from './documents/document-edit-form.component';
@@ -78,7 +80,7 @@ import { ItAssetsSectionComponent } from './detail-sections/it-assets-section.co
 import { DocumentsDrawerComponent } from './detail-sections/documents-drawer.component';
 import { RemunerationSectionComponent } from './detail-sections/remuneration-section.component';
 import { DocumentHistorySectionComponent } from './detail-sections/document-history-section.component';
-import { fromDate, toDate } from './detail-sections/field-bridges';
+import { fmtDate, fromDate, toDate } from './detail-sections/field-bridges';
 import { CdiConversionService } from '../cdi-conversions/cdi-conversion.service';
 import {
   CDI_PAGE_PERMISSIONS, CDI_PERMISSIONS, CdiConversion, SubmitCdiConversionForm, isAwaitingConversion,
@@ -466,6 +468,7 @@ export class ProfileDetailComponent implements OnInit {
    */
   protected readonly toDate   = toDate;
   protected readonly fromDate = fromDate;
+  protected readonly fmtDate  = fmtDate;
 
   // ── Ref data for the edit dropdowns ────────────────────────────────────────
   private readonly grades        = signal<RefDataItem[]>([]);
@@ -697,8 +700,25 @@ export class ProfileDetailComponent implements OnInit {
   );
 
   private selectedContractId: number | null = null;
-  trialApproved = true;
-  trialComment  = '';
+  // ── « Décider » (end of trial / end of contract) ──
+  /** Choices offered on the selected contract — null while loading. */
+  readonly decisionOptions = signal<ContractDecisionOptions | null>(null);
+  readonly decisionId      = signal<number | null>(null);
+  decisionDate    = '';
+  decisionComment = '';
+  /** The picked choice, or null. */
+  readonly decisionPicked = computed<ContractDecisionOption | null>(() =>
+    this.decisionOptions()?.options.find(o => o.id === this.decisionId()) ?? null);
+  /** Radio options: blocked choices stay visible, greyed, with the reason as hint. */
+  readonly decisionRadio = computed(() => {
+    const en = this.translate.currentLang() === 'en';
+    return (this.decisionOptions()?.options ?? []).map(o => ({
+      value: String(o.id),
+      label: (en ? o.labelEn : o.labelFr) || o.labelFr,
+      disabled: !!o.blockedReason,
+      hint: o.blockedReason ?? undefined,
+    }));
+  });
   renewDateFin  = '';
   renewComment  = '';
   cdiStartDate  = '';
@@ -707,7 +727,7 @@ export class ProfileDetailComponent implements OnInit {
   // ── Modal bodies, opened imperatively via ModalService ─────────────────────
   transitionTpl    = viewChild<TemplateRef<unknown>>('transitionTpl');
   offboardingTpl   = viewChild<TemplateRef<unknown>>('offboardingTpl');
-  validateTrialTpl = viewChild<TemplateRef<unknown>>('validateTrialTpl');
+  decisionTpl      = viewChild<TemplateRef<unknown>>('decisionTpl');
   renewCDDTpl      = viewChild<TemplateRef<unknown>>('renewCDDTpl');
   convertCDITpl    = viewChild<TemplateRef<unknown>>('convertCDITpl');
 
@@ -805,6 +825,7 @@ export class ProfileDetailComponent implements OnInit {
     if (!p || !this.canEdit()) return;
     this.editForm.set({
       reason: '',
+      ...splitPersonName(p.fullName),
       dateOfBirth: p.dateOfBirth ?? '', gender: p.gender ?? '',
       nationalityId: p.nationalityId ?? null, nationalId: p.nationalId ?? '',
       passportNumber: p.passportNumber ?? '', maritalStatus: p.maritalStatus ?? '',
@@ -1222,7 +1243,10 @@ export class ProfileDetailComponent implements OnInit {
     this.lcLoaded = true;
     this.lcLoading.set(true);
     this.lcSvc.getContracts(this.profileId).pipe(catchError(() => of([])))
-      .subscribe(cs => { this.lcContracts.set(cs); this.lcLoading.set(false); this.loadCdiRequests(cs); });
+      .subscribe(cs => {
+        this.lcContracts.set(cs); this.lcLoading.set(false);
+        this.loadCdiRequests(cs);
+      });
     this.lcSvc.getLifecycleHistory(this.profileId).pipe(catchError(() => of([])))
       .subscribe(h => this.lcHistory.set(h));
     // The dossier log used to be fetched by app-contract-history itself. That component is
@@ -1356,32 +1380,62 @@ export class ProfileDetailComponent implements OnInit {
     this.refreshContracts();
   }
 
-  openValidateTrialModal(contractId: number): void {
+  /**
+   * « Décider » — the choices come from the backend (GET /decisions): the admin names them
+   * (list « Décision de contrat ») and picks which ones each contract type offers
+   * (Échéances de contrat). The modal opens at once and fills when they arrive.
+   */
+  openDecisionModal(contractId: number): void {
     this.selectedContractId = contractId;
-    this.trialApproved = true;
-    this.trialComment = '';
+    this.decisionOptions.set(null);
+    this.decisionId.set(null);
+    this.decisionDate = '';
+    this.decisionComment = '';
     this.lcError.set(null);
-    const tpl = this.validateTrialTpl();
+    const tpl = this.decisionTpl();
     if (!tpl) return;
+    const contract = this.lcContracts().find(c => c.id === contractId);
     this.modalService.open({
-      title: this.translate.instant('PROFILES.TRIAL.MODAL_TITLE'),
+      title: this.translate.instant(contract?.currentStatusCode === 'PERIODE_ESSAI'
+        ? 'PROFILES.DECISION.TITLE_TRIAL' : 'PROFILES.DECISION.TITLE_END'),
       body: tpl,
-      minWidth:    '360px',
-      minHeight:   '260px',
+      minWidth:    '420px',
+      minHeight:   '300px',
       resizable:   true,
       maximizable: true,
       buttons: [
         { label: this.translate.instant('PROFILES.COMMON.CANCEL'),  variant: 'secondary', action: ref => ref.close() },
-        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary',   action: ref => this.confirmValidateTrial(ref) },
+        { label: this.translate.instant('PROFILES.COMMON.CONFIRM'), variant: 'primary',   action: ref => this.confirmDecision(ref) },
       ],
+    });
+    this.lcSvc.getDecisions(contractId).pipe(catchError(err => {
+      this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
+      return of<ContractDecisionOptions>({ moment: null, deadline: null, options: [] });
+    })).subscribe(o => {
+      this.decisionOptions.set(o);
+      // A single available choice is pre-selected; otherwise RH picks explicitly.
+      const available = o.options.filter(x => !x.blockedReason);
+      if (available.length === 1) this.decisionId.set(available[0].id);
     });
   }
 
-  confirmValidateTrial(ref: ModalRef): void {
+  confirmDecision(ref: ModalRef): void {
+    const picked = this.decisionPicked();
     if (this.selectedContractId === null || this.lcSaving()) return;
+    if (!picked) {
+      this.lcError.set(this.translate.instant('PROFILES.DECISION.ERR_PICK'));
+      return;
+    }
+    if (picked.requiresDate && !this.decisionDate) {
+      this.lcError.set(this.translate.instant('PROFILES.DECISION.ERR_DATE'));
+      return;
+    }
     this.lcSaving.set(true);
-    this.lcSvc.validateTrial(this.selectedContractId, {
-      approved: this.trialApproved, commentaire: this.trialComment || null,
+    this.lcError.set(null);
+    this.lcSvc.decide(this.selectedContractId, {
+      decisionId:  picked.id,
+      newDate:     picked.requiresDate ? this.decisionDate : null,
+      commentaire: this.decisionComment || null,
     }).pipe(catchError(err => {
       this.lcError.set(this.extractErrorMessage(err, this.translate.instant('PROFILES.COMMON.GENERIC_ERROR')));
       this.lcSaving.set(false);
@@ -1390,6 +1444,13 @@ export class ProfileDetailComponent implements OnInit {
       if (r) { this.lcSaving.set(false); this.refreshContracts(); ref.close(); }
     });
   }
+
+  onDecisionPick(v: string): void {
+    this.decisionId.set(v ? Number(v) : null);
+    this.lcError.set(null);
+  }
+
+  onDecisionComment(v: string | number | null): void { this.decisionComment = v == null ? '' : String(v); }
 
   openRenewCDDModal(contractId: number): void {
     this.selectedContractId = contractId;
@@ -1474,7 +1535,6 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Modal-body field bridges ───────────────────────────────────────────────
-  onTrialComment(v: string | number | null): void { this.trialComment = v == null ? '' : String(v); }
   onRenewComment(v: string | number | null): void { this.renewComment = v == null ? '' : String(v); }
   onCdiComment(v: string | number | null): void   { this.cdiComment   = v == null ? '' : String(v); }
 }

@@ -12,11 +12,24 @@ export interface ContractTypeConfig {
   alertDaysBeforeTrialEnd: number;
   trialPeriodDaysStandard: number | null;
   trialPeriodDaysManager: number | null;
+  trialPeriodRenewable: boolean | null;
+  trialMaxRenewals: number | null;
+  /** Effective choices (the type's defaults when not configured) — ContractDecisionAction codes. */
+  trialDecisions: string[];
+  endDecisions: string[];
 }
 
 export interface LeadTimes {
   alertDaysBeforeExpiry: number;
   alertDaysBeforeTrialEnd: number;
+}
+
+/** Everything this screen edits on a contract type: lead times + decision rules. */
+export interface ContractRules extends LeadTimes {
+  trialPeriodRenewable: boolean;
+  trialMaxRenewals: number;
+  trialDecisions: string[];
+  endDecisions: string[];
 }
 
 /** What one run of the daily alert job did. `ran` is false when a run was already in progress. */
@@ -38,13 +51,13 @@ export class ContractAlertsService {
     });
   }
 
-  create(paysId: number, contractTypeCode: string, lead: LeadTimes): Observable<ContractTypeConfig> {
+  create(paysId: number, contractTypeCode: string, lead: LeadTimes | ContractRules): Observable<ContractTypeConfig> {
     return this.http.post<ContractTypeConfig>(`${this.base}/configs`, lead, {
       params: new HttpParams().set('paysId', paysId).set('contractTypeCode', contractTypeCode),
     });
   }
 
-  update(id: number, lead: LeadTimes): Observable<ContractTypeConfig> {
+  update(id: number, lead: LeadTimes | ContractRules): Observable<ContractTypeConfig> {
     return this.http.patch<ContractTypeConfig>(`${this.base}/config/${id}`, lead);
   }
 
