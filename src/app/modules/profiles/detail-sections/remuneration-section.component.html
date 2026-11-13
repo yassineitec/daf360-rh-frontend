@@ -153,11 +153,12 @@
     <div class="flex flex-col gap-3 p-5">
       <daf-search-toolbar
         [card]="false"
-        [showFilter]="false"
         [placeholder]="'PROFILES.REMUNERATION_TAB.SEARCH' | translate"
         [value]="historySearch()" [debounce]="200" (valueChange)="historySearch.set($event)"
+        [filterFields]="historyFilterFields()" [filterConfig]="filterConfig()"
+        (filterApply)="historyFilters.set($event)"
         [table]="historyTable" />
-      <daf-data-table #historyTable
+      <daf-data-table #historyTable class="block min-w-0"
         [columns]="historyColumns()" [rows]="historyView()" [config]="historyTableConfig()" />
     </div>
   </daf-section-card>
@@ -169,9 +170,10 @@
     <div class="flex flex-col gap-3 p-5">
       <daf-search-toolbar
         [card]="false"
-        [showFilter]="false"
         [placeholder]="'PROFILES.REMUNERATION_TAB.SEARCH' | translate"
         [value]="bonusSearch()" [debounce]="200" (valueChange)="bonusSearch.set($event)"
+        [filterFields]="bonusFilterFields()" [filterConfig]="filterConfig()"
+        (filterApply)="bonusFilters.set($event)"
         [table]="bonusTable">
         @if (canManage()) {
           <daf-button
@@ -181,7 +183,7 @@
             (onClick)="openAddBonus()" />
         }
       </daf-search-toolbar>
-      <daf-data-table #bonusTable
+      <daf-data-table #bonusTable class="block min-w-0"
         [columns]="bonusColumns()" [rows]="bonusView()" [config]="bonusTableConfig()" />
     </div>
   </daf-section-card>
@@ -288,6 +290,73 @@
           (valueChange)="patchDraft({ reason: ($event ?? '') + '' })" />
       </div>
     </div>
+  }
+</ng-template>
+
+<!-- Pop-up « Détails » d'une ligne d'historique : tout ce que le tableau ne montre pas. -->
+<ng-template #historyDetailTpl>
+  @if (historyDetail(); as h) {
+    <div class="flex flex-col gap-5">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <daf-metric-card
+          [label]="'PROFILES.REMUNERATION_TAB.COL.NEW_GROSS' | translate"
+          [value]="money(h['gross'], h['currency'])"
+          [delta]="{ value: ('PROFILES.REMUNERATION_TAB.BEFORE' | translate: { value: money(h['previousGross'], h['currency']) }), direction: h['variation'] > 0 ? 'up' : (h['variation'] < 0 ? 'down' : 'neutral') }"
+          [options]="{ icon: 'payments', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
+        <daf-metric-card
+          [label]="'PROFILES.REMUNERATION_TAB.COL.NEW_NET' | translate"
+          [value]="money(h['net'], h['currency'], 0)"
+          [delta]="{ value: ('PROFILES.REMUNERATION_TAB.BEFORE' | translate: { value: money(h['previousNet'], h['currency'], 0) }), direction: 'neutral' }"
+          [options]="{ icon: 'account_balance_wallet', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+      </div>
+
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+        @for (item of [
+          ['EFFECTIVE_DATE', date(h['effectiveDate'])],
+          ['CONTRACT', h['contract']],
+          ['CURRENCY', h['currency']],
+          ['ENTERED_AS', h['enteredAs']],
+          ['MEAL_TICKETS', h['mealTickets'] != null ? money(h['mealTickets'], h['currency']) : '—'],
+          ['OTHER_BENEFITS', h['otherBenefits']],
+          ['CHANGED_BY', h['changedByName']],
+          ['APPROVED_BY', h['approvedByName']],
+          ['CHANGED_AT', date(h['changedAt'])]
+        ]; track item[0]) {
+          <div class="flex min-w-0 flex-col gap-1">
+            <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ ('PROFILES.REMUNERATION_TAB.COL.' + item[0]) | translate }}</dt>
+            <dd class="wrap-break-word text-[13px] text-on-surface">{{ item[1] || '—' }}</dd>
+          </div>
+        }
+      </dl>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.COL.REASON' | translate }}</span>
+        <p class="whitespace-pre-line wrap-break-word text-[13px] text-on-surface">{{ h['reason'] || '—' }}</p>
+      </div>
+    </div>
+  }
+</ng-template>
+
+<!-- Pop-up « Détails » d'une prime. -->
+<ng-template #bonusDetailTpl>
+  @if (bonusDetail(); as b) {
+    <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+      @for (item of [
+        ['LABEL', b['label']],
+        ['PERIOD', b['period']],
+        ['AMOUNT', b['amountText']],
+        ['RECORDED_AT', date(b['createdAt'])]
+      ]; track item[0]) {
+        <div class="flex min-w-0 flex-col gap-1">
+          <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ ('PROFILES.REMUNERATION_TAB.COL.' + item[0]) | translate }}</dt>
+          <dd class="wrap-break-word text-[13px] text-on-surface">{{ item[1] || '—' }}</dd>
+        </div>
+      }
+      <div class="flex min-w-0 flex-col gap-1 sm:col-span-2">
+        <dt class="text-label-caps font-semibold uppercase tracking-wider text-on-surface-variant">{{ 'PROFILES.REMUNERATION_TAB.COL.COMMENT' | translate }}</dt>
+        <dd class="whitespace-pre-line wrap-break-word text-[13px] text-on-surface">{{ b['comment'] || '—' }}</dd>
+      </div>
+    </dl>
   }
 </ng-template>
 

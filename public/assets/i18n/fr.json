@@ -4352,7 +4352,34 @@
         "LABEL": "Libellé",
         "COMMENT": "Commentaire",
         "AMOUNT": "Montant",
-        "RECORDED_AT": "Enregistrée le"
+        "RECORDED_AT": "Enregistrée le",
+        "VARIATION": "Variation brut"
+      },
+      "SHOW_DETAILS": "Voir les détails",
+      "HISTORY_DETAIL_TITLE": "Détail de la modification",
+      "BONUS_DETAIL_TITLE": "Détail de la prime",
+      "CLOSE": "Fermer",
+      "BEFORE": "Avant : {{value}}",
+      "FILTER": {
+        "TITLE": "Filtrer",
+        "TRIGGER": "Filtres",
+        "APPLY": "Appliquer",
+        "CANCEL": "Annuler",
+        "RESET": "Réinitialiser",
+        "CLEAR_ALL": "Tout effacer",
+        "REMOVE": "Retirer le filtre",
+        "ACTIVE": "Filtres appliqués",
+        "EFFECTIVE_PERIOD": "Date d'effet",
+        "CHANGE": "Type de changement",
+        "CHANGE_UP": "Augmentation",
+        "CHANGE_DOWN": "Baisse",
+        "CHANGE_SAME": "Brut inchangé",
+        "CHANGE_FIRST": "Première rémunération",
+        "CONTRACT": "Contrat",
+        "CHANGED_BY": "Modifié par",
+        "YEAR": "Année",
+        "MONTH": "Mois",
+        "CURRENCY": "Devise"
       }
     },
     "COMMON": {

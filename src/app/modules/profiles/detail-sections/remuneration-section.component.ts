@@ -6,7 +6,8 @@ import {
   ButtonComponent, CheckboxComponent, DataTableComponent, FormFieldComponent, MetricCardComponent,
   ModalService, MultiDatePickerComponent, SearchToolbarComponent, SectionCardComponent, SectionTitleComponent,
   SelectComponent, StatusBadgeComponent,
-  type ModalRef, type SelectOption, type TableColumn, type TableConfig, type TableRow,
+  type FilterField, type FilterResult, type ModalRef, type SearchToolbarFilterConfig, type SelectOption,
+  type TableColumn, type TableConfig, type TableRow,
 } from '@khalilrebhiitec/daf360';
 
 import { UserStore } from '../../../core/user.store';
@@ -214,25 +215,19 @@ export class RemunerationSectionComponent implements OnInit {
   });
 
   // ── 2. Historique des modifications ────────────────────────────────────────
+  /** Only what tells the change at a glance; everything else is in « Détails ». */
   readonly historyColumns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant('PROFILES.REMUNERATION_TAB.COL.' + k);
-    const amount = { maximumFractionDigits: 3, locale: this.locale() };
+    const cur = this.workingCurrency();
+    const amount = { maximumFractionDigits: 0, locale: this.locale(), suffix: cur ? ' ' + cur : '' };
     return [
       { key: 'effectiveDate', label: t('EFFECTIVE_DATE'), type: 'date', sortable: true, format: { locale: this.locale(), dateStyle: 'medium' } },
-      { key: 'previousGross', label: t('PREVIOUS_GROSS'), type: 'number', sortable: true, format: amount },
-      { key: 'previousNet',   label: t('PREVIOUS_NET'),   type: 'number', sortable: true, format: amount },
       { key: 'gross',         label: t('NEW_GROSS'),      type: 'number', sortable: true, format: amount },
       { key: 'net',           label: t('NEW_NET'),        type: 'number', sortable: true, format: amount },
-      { key: 'currency',      label: t('CURRENCY') },
-      { key: 'enteredAs',     label: t('ENTERED_AS') },
-      { key: 'contract',      label: t('CONTRACT'),       sortable: true },
-      { key: 'mealTickets',   label: t('MEAL_TICKETS'),   type: 'number', format: amount },
-      { key: 'otherBenefits', label: t('OTHER_BENEFITS') },
-      { key: 'reason',        label: t('REASON') },
+      { key: 'variation',     label: t('VARIATION'),      type: 'percent', sortable: true,
+        format: { locale: this.locale(), signColor: true, signDisplay: true } },
       { key: 'changedByName', label: t('CHANGED_BY'),     sortable: true },
-      { key: 'approvedByName', label: t('APPROVED_BY'),   sortable: true },
-      { key: 'changedAt',     label: t('CHANGED_AT'),     type: 'date', sortable: true, format: { locale: this.locale(), dateStyle: 'short', timeStyle: 'short' } },
     ];
   });
 
@@ -245,13 +240,16 @@ export class RemunerationSectionComponent implements OnInit {
       const meal = benefits.find(b => b.code === MEAL_BENEFIT_CODE);
       const others = benefits.filter(b => b.code !== MEAL_BENEFIT_CODE)
         .map(b => b.monthlyValue != null ? this.benefitLabel(b) + ' (' + this.money(b.monthlyValue, null) + ')' : this.benefitLabel(b));
+      const prev = h.previousGrossSalary, next = h.currentGrossSalary;
       return {
         id: h.id,
         effectiveDate: h.effectiveDate ?? h.changedAt,
-        previousGross: h.previousGrossSalary,
+        previousGross: prev,
         previousNet: h.previousNetSalary,
-        gross: h.currentGrossSalary,
+        gross: next,
         net: h.currentNetSalary,
+        // Gross variation in %, none for the first salary (nothing to compare with).
+        variation: prev && next != null ? Math.round(((next - prev) / prev) * 1000) / 10 : null,
         currency: h.workingCurrency ?? this.workingCurrency() ?? '—',
         enteredAs: h.inputCurrency && h.inputAmountOriginal != null ? this.money(h.inputAmountOriginal, h.inputCurrency) : '—',
         contract: this.contractText(h.contractType),
@@ -268,30 +266,111 @@ export class RemunerationSectionComponent implements OnInit {
     });
   });
 
-  readonly historyView = computed(() => filterRows(this.historyRows(), this.historySearch()));
+  readonly historyFilters = signal<FilterResult>({});
+
+  readonly historyFilterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant('PROFILES.REMUNERATION_TAB.FILTER.' + k);
+    const rows = this.historyRows();
+    return [
+      { name: 'period', label: t('EFFECTIVE_PERIOD'), type: 'daterange' },
+      { name: 'change', label: t('CHANGE'), type: 'select', options: [
+        { value: 'up',    label: t('CHANGE_UP') },
+        { value: 'down',  label: t('CHANGE_DOWN') },
+        { value: 'same',  label: t('CHANGE_SAME') },
+        { value: 'first', label: t('CHANGE_FIRST') },
+      ] },
+      { name: 'contract',  label: t('CONTRACT'),   type: 'multiselect', options: distinctOptions(rows, 'contract') },
+      { name: 'changedBy', label: t('CHANGED_BY'), type: 'multiselect', searchable: true, options: distinctOptions(rows, 'changedByName') },
+    ];
+  });
+
+  readonly historyView = computed(() => {
+    const f = this.historyFilters();
+    const [from, to] = dateRange(f['period']);
+    const change = first(f['change']);
+    const contracts = many(f['contract']), authors = many(f['changedBy']);
+    return filterRows(this.historyRows(), this.historySearch()).filter(r => {
+      const eff = isoToDate(r['effectiveDate'] as string);
+      if (from && (!eff || eff < from)) return false;
+      if (to && (!eff || eff > to)) return false;
+      if (contracts.length && !contracts.includes(r['contract'])) return false;
+      if (authors.length && !authors.includes(r['changedByName'])) return false;
+      if (change) {
+        const v = r['variation'] as number | null;
+        const kind = v == null ? 'first' : v > 0 ? 'up' : v < 0 ? 'down' : 'same';
+        if (kind !== change) return false;
+      }
+      return true;
+    });
+  });
 
   readonly historyTableConfig = computed<TableConfig>(() => ({
     loading: this.historyLoading(),
     emptyMessage: this.translate.instant('PROFILES.REMUNERATION_TAB.HISTORY_EMPTY'),
-    columnPicker: true,
-    columnPickerLabel: this.translate.instant('PROFILES.REMUNERATION_TAB.COLUMNS'),
-    resizableColumns: true,
     stickyHeader: true,
     maxHeight: '60vh',
-    defaultSort: { key: 'changedAt', dir: 'desc' },
+    defaultSort: { key: 'effectiveDate', dir: 'desc' },
+    actions: [{
+      id: 'details',
+      icon: 'visibility',
+      tooltip: this.translate.instant('PROFILES.REMUNERATION_TAB.SHOW_DETAILS'),
+      onClick: (row: TableRow) => this.openHistoryDetails(row),
+    }],
   }));
+
+  readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant('PROFILES.REMUNERATION_TAB.FILTER.' + k);
+    return {
+      title: t('TITLE'), triggerLabel: t('TRIGGER'), applyLabel: t('APPLY'), cancelLabel: t('CANCEL'),
+      resetLabel: t('RESET'), clearAllLabel: t('CLEAR_ALL'), removeFilterLabel: t('REMOVE'),
+      activeFiltersLabel: t('ACTIVE'), locale: this.locale(), align: 'right',
+    };
+  });
+
+  // ── « Détails » pop-ups ────────────────────────────────────────────────────
+  private readonly historyDetailTpl = viewChild.required<TemplateRef<unknown>>('historyDetailTpl');
+  private readonly bonusDetailTpl = viewChild.required<TemplateRef<unknown>>('bonusDetailTpl');
+  readonly historyDetail = signal<TableRow | null>(null);
+  readonly bonusDetail = signal<TableRow | null>(null);
+
+  private openHistoryDetails(row: TableRow): void {
+    this.historyDetail.set(row);
+    this.modal.open({
+      title: this.translate.instant('PROFILES.REMUNERATION_TAB.HISTORY_DETAIL_TITLE'),
+      subtitle: this.date(row['effectiveDate'] as string),
+      icon: 'history',
+      body: this.historyDetailTpl(),
+      width: '720px',
+      resizable: true,
+      buttons: [{ label: this.translate.instant('PROFILES.REMUNERATION_TAB.CLOSE'), variant: 'secondary', action: ref => ref.close() }],
+    });
+  }
+
+  private openBonusDetails(row: TableRow): void {
+    this.bonusDetail.set(row);
+    this.modal.open({
+      title: this.translate.instant('PROFILES.REMUNERATION_TAB.BONUS_DETAIL_TITLE'),
+      subtitle: row['label'] as string,
+      icon: 'redeem',
+      body: this.bonusDetailTpl(),
+      width: '560px',
+      resizable: true,
+      buttons: [{ label: this.translate.instant('PROFILES.REMUNERATION_TAB.CLOSE'), variant: 'secondary', action: ref => ref.close() }],
+    });
+  }
 
   // ── 3. Primes exceptionnelles ──────────────────────────────────────────────
   readonly bonusColumns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant('PROFILES.REMUNERATION_TAB.COL.' + k);
+    // Amount + currency in one cell (bonuses may be in several currencies); comment and
+    // recording date are in « Détails ».
     return [
-      { key: 'period',  label: t('PERIOD'), sortable: true, sortAccessor: r => r['periodSort'] },
-      { key: 'label',   label: t('LABEL'), sortable: true },
-      { key: 'comment', label: t('COMMENT') },
-      { key: 'amount',  label: t('AMOUNT'), type: 'number', sortable: true, format: { maximumFractionDigits: 3, locale: this.locale() } },
-      { key: 'currency', label: t('CURRENCY'), sortable: true },
-      { key: 'createdAt', label: t('RECORDED_AT'), type: 'date', sortable: true, format: { locale: this.locale(), dateStyle: 'medium' } },
+      { key: 'period',     label: t('PERIOD'), sortable: true, sortAccessor: r => r['periodSort'] },
+      { key: 'label',      label: t('LABEL'), sortable: true },
+      { key: 'amountText', label: t('AMOUNT'), type: 'number', sortable: true, sortAccessor: r => r['amount'] },
     ];
   });
 
@@ -304,24 +383,56 @@ export class RemunerationSectionComponent implements OnInit {
       label: b.label,
       comment: b.comment ?? '—',
       amount: b.amount,
+      amountText: this.money(b.amount, b.currency, 3),
       currency: b.currency,
+      year: String(b.periodYear),
       createdAt: b.createdAt,
     }));
   });
 
-  readonly bonusView = computed(() => filterRows(this.bonusRows(), this.bonusSearch()));
+  readonly bonusFilters = signal<FilterResult>({});
+
+  readonly bonusFilterFields = computed<FilterField[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant('PROFILES.REMUNERATION_TAB.FILTER.' + k);
+    const rows = this.bonusRows();
+    const years = distinctOptions(rows, 'year').sort((a, b) => b.value.localeCompare(a.value));
+    return [
+      { name: 'year',     label: t('YEAR'),     type: 'select', options: years },
+      { name: 'month',    label: t('MONTH'),    type: 'multiselect', options: this.monthOptions() },
+      { name: 'currency', label: t('CURRENCY'), type: 'multiselect', options: distinctOptions(rows, 'currency') },
+    ];
+  });
+
+  readonly bonusView = computed(() => {
+    const f = this.bonusFilters();
+    const year = first(f['year']);
+    const months = many(f['month']), currencies = many(f['currency']);
+    return filterRows(this.bonusRows(), this.bonusSearch()).filter(r =>
+      (!year || r['year'] === year)
+      && (!months.length || months.includes(String((r['periodSort'] as number) % 100)))
+      && (!currencies.length || currencies.includes(r['currency'])));
+  });
 
   readonly bonusTableConfig = computed<TableConfig>(() => ({
     loading: this.bonusesLoading(),
     emptyMessage: this.translate.instant('PROFILES.REMUNERATION_TAB.BONUSES_EMPTY'),
     defaultSort: { key: 'period', dir: 'desc' },
-    actions: this.canManage() ? [{
-      id: 'delete',
-      icon: 'delete',
-      variant: 'danger',
-      tooltip: this.translate.instant('PROFILES.REMUNERATION_TAB.DELETE_BONUS'),
-      onClick: (row: TableRow) => this.confirmDeleteBonus(row['id'] as number, row['label'] as string),
-    }] : [],
+    actions: [
+      {
+        id: 'details',
+        icon: 'visibility',
+        tooltip: this.translate.instant('PROFILES.REMUNERATION_TAB.SHOW_DETAILS'),
+        onClick: (row: TableRow) => this.openBonusDetails(row),
+      },
+      ...(this.canManage() ? [{
+        id: 'delete',
+        icon: 'delete',
+        variant: 'danger' as const,
+        tooltip: this.translate.instant('PROFILES.REMUNERATION_TAB.DELETE_BONUS'),
+        onClick: (row: TableRow) => this.confirmDeleteBonus(row['id'] as number, row['label'] as string),
+      }] : []),
+    ],
   }));
 
   // ── Load ───────────────────────────────────────────────────────────────────
@@ -856,6 +967,31 @@ function filterRows(rows: TableRow[], q: string): TableRow[] {
   if (!needle) return rows;
   return rows.filter(r => Object.values(r).some(v =>
     (typeof v === 'string' || typeof v === 'number') && normalize(String(v)).includes(needle)));
+}
+
+/** One filter option per distinct non-empty value of `key`, alphabetical. */
+function distinctOptions(rows: TableRow[], key: string): { value: string; label: string }[] {
+  const values = [...new Set(rows.map(r => r[key]).filter((v): v is string => typeof v === 'string' && !!v && v !== '—'))];
+  return values.sort((a, b) => a.localeCompare(b)).map(v => ({ value: v, label: v }));
+}
+
+/** A select's value (daf-filter may hand it over as a one-item array). */
+function first(v: unknown): string | null {
+  const x = Array.isArray(v) ? v[0] : v;
+  return typeof x === 'string' && x ? x : null;
+}
+
+function many(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+/** A daterange value as [start-of-day, end-of-day] bounds; either may be missing. */
+function dateRange(v: unknown): [Date | null, Date | null] {
+  const list = Array.isArray(v) ? v.filter((x): x is Date => x instanceof Date) : v instanceof Date ? [v] : [];
+  if (!list.length) return [null, null];
+  const from = new Date(list[0]); from.setHours(0, 0, 0, 0);
+  const to = new Date(list[list.length - 1]); to.setHours(23, 59, 59, 999);
+  return [from, to];
 }
 
 function normalize(s: string): string {

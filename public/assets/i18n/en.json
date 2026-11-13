@@ -4352,7 +4352,34 @@
         "LABEL": "Label",
         "COMMENT": "Comment",
         "AMOUNT": "Amount",
-        "RECORDED_AT": "Recorded on"
+        "RECORDED_AT": "Recorded on",
+        "VARIATION": "Gross change"
+      },
+      "SHOW_DETAILS": "Show details",
+      "HISTORY_DETAIL_TITLE": "Change details",
+      "BONUS_DETAIL_TITLE": "Bonus details",
+      "CLOSE": "Close",
+      "BEFORE": "Before: {{value}}",
+      "FILTER": {
+        "TITLE": "Filter",
+        "TRIGGER": "Filters",
+        "APPLY": "Apply",
+        "CANCEL": "Cancel",
+        "RESET": "Reset",
+        "CLEAR_ALL": "Clear all",
+        "REMOVE": "Remove filter",
+        "ACTIVE": "Applied filters",
+        "EFFECTIVE_PERIOD": "Effective date",
+        "CHANGE": "Type of change",
+        "CHANGE_UP": "Raise",
+        "CHANGE_DOWN": "Decrease",
+        "CHANGE_SAME": "Gross unchanged",
+        "CHANGE_FIRST": "First salary",
+        "CONTRACT": "Contract",
+        "CHANGED_BY": "Changed by",
+        "YEAR": "Year",
+        "MONTH": "Month",
+        "CURRENCY": "Currency"
       }
     },
     "COMMON": {
