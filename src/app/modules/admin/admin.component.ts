@@ -273,7 +273,7 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'parameters')    { <app-parameters-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'holidays')      { <app-holidays-admin [paysId]="paysId()" [paysLabel]="currentPays()" [paysIsoCode]="currentPaysIso()" /> }
             @if (activeTab() === 'request-types') { <app-request-types-admin [paysId]="paysId()" /> }
-            @if (activeTab() === 'regimes')       { <app-regimes-admin [paysId]="paysId()" /> }
+            @if (activeTab() === 'regimes')       { <app-regimes-admin [paysId]="paysId()" [paysLabel]="currentPays()" /> }
             @if (activeTab() === 'lists')         { <app-list-manager [paysId]="paysId()" /> }
             @if (activeTab() === 'notifications') { <app-notification-routing (backToAdmin)="activeTab.set(null)" (detailOpen)="notificationDetailOpen.set($event)" /> }
             @if (activeTab() === 'breaks')        { <app-breaks-admin [paysId]="paysId()" /> }

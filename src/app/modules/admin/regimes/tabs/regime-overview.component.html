@@ -122,7 +122,9 @@
       variant="secondary"
       [options]="{ fullWidth: true, iconStart: 'add' }"
       (onClick)="showOverrideForm.set(!showOverrideForm())" />
-    @if (selectedEmployee()?.assignmentLevel === 'EMPLOYEE_OVERRIDE') {
+    <!-- On the personal regime itself, not on the winning level: while a seasonal regime
+         is active the personal one is hidden behind it but can still be removed. -->
+    @if (selectedEmployee()?.personalRegimeId) {
       <daf-button
         [label]="'ADMIN.regimes.overview.removeOverride' | translate"
         variant="danger"
@@ -142,15 +144,19 @@
           [config]="{ label: ('ADMIN.regimes.overview.fieldRegime' | translate), required: true, fullWidth: true }"
           (selectedChange)="onOverrideRegimeChange($event)" />
         <div class="ro-form-row-2">
-          <daf-form-field
-            [options]="{ label: ('ADMIN.regimes.overview.effFrom' | translate), type: 'date', required: true, fullWidth: true }"
-            [value]="overrideEffFrom"
-            (valueChange)="overrideEffFrom = $any($event)" />
+          <daf-multi-date-picker
+            [config]="{ label: ('ADMIN.regimes.overview.effFrom' | translate), selectionMode: 'single', required: true,
+                        allowPastDays: true, allowWeekends: true, fullWidth: true,
+                        placeholder: ('ADMIN.regimes.catalog.pickDate' | translate) }"
+            [value]="overrideEffFromDate"
+            (valueChange)="onOverrideEffFrom($event)" />
           <div>
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.overview.effTo' | translate), type: 'date', disabled: noEndDate(), fullWidth: true }"
-              [value]="overrideEffTo"
-              (valueChange)="overrideEffTo = $any($event)" />
+            <daf-multi-date-picker
+              [config]="{ label: ('ADMIN.regimes.overview.effTo' | translate), selectionMode: 'single', disabled: noEndDate(),
+                          allowPastDays: true, allowWeekends: true, fullWidth: true,
+                          placeholder: ('ADMIN.regimes.catalog.pickDate' | translate) }"
+              [value]="overrideEffToDate"
+              (valueChange)="onOverrideEffTo($event)" />
             <daf-checkbox
               class="ro-no-end-checkbox"
               [options]="{ label: ('ADMIN.regimes.overview.noEnd' | translate) }"

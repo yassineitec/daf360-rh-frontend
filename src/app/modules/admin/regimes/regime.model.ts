@@ -3,7 +3,8 @@ export interface WorkingTimeRegime {
   code: string;
   labelFr: string;
   labelEn: string;
-  descriptionFr?: string;
+  descriptionFr?: string | null;
+  descriptionEn?: string | null;
   hoursPerWeek: number;
   daysPerWeek: number;
   startTime?: string;
@@ -11,6 +12,9 @@ export interface WorkingTimeRegime {
   isFlexible: boolean;
   isDefault: boolean;
   isActive: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  updatedBy?: number | null;
   breakDurationMin?: number;
   overtimeAllowed?: boolean;
   maxHoursPerDay?: number;
@@ -48,7 +52,31 @@ export interface RegimeRoleAssignmentResponse {
   notes?: string;
   assignedBy?: number;
   assignedAt: string;
+  /** Starts after the entity's today — scheduled, not yet in force. */
+  upcoming?: boolean;
 }
+
+/** One personal regime assignment (employee_regime_assignments, V127). */
+export interface EmployeeRegimeAssignment {
+  id: number;
+  regimeId: number;
+  regimeLabelFr: string;
+  regimeLabelEn?: string | null;
+  effectiveFrom: string;
+  /** null = open-ended */
+  effectiveTo?: string | null;
+  reason?: string | null;
+  source: 'MANUAL' | 'ONBOARDING' | 'MIGRATION';
+  inForce: boolean;
+  upcoming: boolean;
+}
+
+/** Outcome of reading an employee's resolved regime — 403 is not "nothing configured". */
+export type ResolvedRegimeResult =
+  | { status: 'ok'; regime: ResolvedRegimeDto }
+  | { status: 'none' }
+  | { status: 'forbidden' }
+  | { status: 'error' };
 
 export interface ResolvedRegimeDto {
   regimeId: number;
@@ -70,6 +98,10 @@ export interface ResolvedRegimeDto {
   paysId?: number;
   /** Resolved zone: the regime's own override, else the entity's. */
   timezone?: string | null;
+  /** Working day labels from the entity's weekend (the real days, not just a count). */
+  joursOuvrables?: string[] | null;
+  /** Calendar date this answer is for (today unless asked otherwise). */
+  resolvedForDate?: string | null;
 }
 
 export interface CreateRegimeRequest {
@@ -77,6 +109,7 @@ export interface CreateRegimeRequest {
   labelFr: string;
   labelEn: string;
   descriptionFr?: string;
+  descriptionEn?: string;
   hoursPerWeek: number;
   daysPerWeek: number;
   startTime?: string;
@@ -108,7 +141,10 @@ export interface AssignRegimeToRoleRequest {
 export interface RoleRow {
   roleId: number;
   roleName: string;
+  /** The assignment in force today (else the next scheduled one when nothing is in force). */
   assignment: RegimeRoleAssignmentResponse | null;
+  /** The next scheduled change, when one is planned after the current assignment. */
+  upcoming: RegimeRoleAssignmentResponse | null;
 }
 
 export interface RegimeOverviewStats {
@@ -130,6 +166,8 @@ export interface EmployeeRegimeOverview {
   resolvedRegimeId: number | null;
   resolvedRegimeLabelFr: string | null;
   assignmentLevel: 'SEASONAL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | null;
+  /** Personal regime in force today — set even while a seasonal regime outranks it. */
+  personalRegimeId?: number | null;
   hoursPerWeek?: number;
   daysPerWeek?: number;
 }

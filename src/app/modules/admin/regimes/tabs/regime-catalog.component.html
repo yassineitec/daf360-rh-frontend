@@ -1,262 +1,260 @@
-<!-- Same bar as the other lists (daf-search-toolbar), full width above the two panels: the
-     search filters the regime list, « Nouveau régime » (ADMIN_REGIMES only) sits on the right,
-     and [table] puts the list's reset + column picker beside it. -->
+<!-- What applies to an employee with no seasonal, personal or role régime: the entity's
+     default. Shown first because it is what the screen is mostly opened to check. -->
+<div class="rc-banners">
+  @if (activeSeasonal(); as s) {
+    <div class="rc-banner rc-banner-warning">
+      <span class="material-symbols-outlined">wb_sunny</span>
+      <p>{{ 'ADMIN.regimes.catalog.seasonalActiveBanner' | translate:{
+            name: regimeName(s),
+            to: s.seasonalTo ?? ('ADMIN.regimes.catalog.untilFurther' | translate) } }}</p>
+    </div>
+  }
+
+  @if (!loading()) {
+    @if (defaultRegime(); as d) {
+      <div class="rc-banner" [class.rc-banner-danger]="defaultHasNoTimes()">
+        <span class="material-symbols-outlined">{{ defaultHasNoTimes() ? 'error' : 'verified' }}</span>
+        <div class="rc-banner-body">
+          <p class="rc-banner-title">
+            {{ 'ADMIN.regimes.catalog.defaultBannerTitle' | translate:{ pays: entityName() } }}
+            <strong>{{ regimeName(d) }}</strong>
+            @if (timesLabel(d)) { <span class="rc-banner-meta">· {{ timesLabel(d) }} · {{ d.hoursPerWeek }} h/{{ d.daysPerWeek }} j</span> }
+          </p>
+          <p class="rc-banner-help">
+            {{ (defaultHasNoTimes() ? 'ADMIN.regimes.catalog.defaultNoTimes' : 'ADMIN.regimes.catalog.defaultBannerHelp') | translate }}
+          </p>
+        </div>
+        @if (canManage() && defaultHasNoTimes()) {
+          <daf-button [label]="'ADMIN.regimes.common.edit' | translate" variant="secondary"
+                      [options]="{ size: 'sm', iconStart: 'edit' }" (onClick)="openEdit(d)" />
+        }
+      </div>
+    } @else {
+      <div class="rc-banner rc-banner-danger">
+        <span class="material-symbols-outlined">error</span>
+        <p>{{ 'ADMIN.regimes.catalog.defaultMissing' | translate:{ pays: entityName() } }}</p>
+      </div>
+    }
+  }
+</div>
+
 <daf-search-toolbar class="mb-4 block" data-guide="regimes-catalog-toolbar"
   [placeholder]="'REQUESTS.TABLE.SEARCH' | translate"
   [value]="searchQuery()"
   [debounce]="200"
   (valueChange)="onSearch($event)"
   [table]="table() ?? null">
-  @if (perms.has('ADMIN_REGIMES')) {
+  @if (canManage()) {
     <daf-button
       [label]="'ADMIN.regimes.catalog.newRegime' | translate"
       variant="teal"
       [options]="{ iconStart: 'add' }"
-      (onClick)="openCreateModal()" />
+      (onClick)="openCreate()" />
   }
 </daf-search-toolbar>
 
-<div class="rc-layout">
+<div class="table-scroll" data-guide="regimes-catalog-editor">
+  <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
+                  (rowClick)="openEdit($event['_source'])">
 
-  <!-- LEFT PANEL: Regime list -->
-  <div class="rc-list-panel">
+    <ng-template dafCell="name" let-row>
+      <div class="rc-name">
+        <span class="rc-name-label">{{ row['name'] }}</span>
+        <span class="rc-name-code">{{ row['_source'].code }}</span>
+      </div>
+    </ng-template>
 
-    <!-- Loading skeletons -->
-    @if (loading()) {
-      @for (i of skeletonRows; track i) {
-        <div class="rc-skeleton"></div>
-      }
-    }
-
-    <!-- Regime list — real daf-data-table, same convention as the other admin catalog
-         pages, instead of a hand-rolled card list. Row click selects, same as role-list. -->
-    @if (!loading()) {
-      @if (regimes().length === 0) {
-        <div class="rc-empty">{{ 'ADMIN.regimes.catalog.emptyList' | translate }}</div>
+    <ng-template dafCell="times" let-row>
+      @if (row['times']) {
+        <span>{{ row['times'] }}</span>
+      } @else if (row['_source'].isFlexible) {
+        <daf-badge [label]="'ADMIN.regimes.catalog.badgeFlexible' | translate" [options]="{ variant: 'info', size: 'sm' }" />
       } @else {
-        <daf-data-table [columns]="columns()" [rows]="rows()" [config]="tableConfig()"
-                         (rowClick)="selectRegime($event['_source'])">
-          <ng-template dafCell="name" let-row>
-            <span class="rc-row-title" [class.rc-row-active]="selectedId() === row['_source'].id">{{ regimeName(row['_source']) }}</span>
-            <span class="rc-row-code">{{ row['_source'].code }}</span>
-          </ng-template>
-
-          <ng-template dafCell="meta" let-row>
-            <span class="rc-row-meta">{{ 'ADMIN.regimes.catalog.hoursPerWeek' | translate:{ h: row['_source'].hoursPerWeek } }}</span>
-            <span class="rc-row-meta">{{ 'ADMIN.regimes.catalog.daysPerWeek' | translate:{ d: row['_source'].daysPerWeek } }}</span>
-          </ng-template>
-
-          <ng-template dafCell="badges" let-row>
-            <div class="rc-card-badges">
-              @if (row['_source'].isDefault) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeDefault' | translate" [options]="{ variant: 'teal', size: 'sm' }" /> }
-              <!-- A currently-active seasonal window overrides every other assignment,
-                   so it must be obvious at a glance which regime is in force. -->
-              @if (isSeasonalActive(row['_source'])) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonalActive' | translate" [options]="{ variant: 'warning', size: 'sm' }" /> }
-              @else if (row['_source'].seasonalFrom) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonal' | translate" [options]="{ variant: 'neutral', size: 'sm' }" /> }
-              @if (row['_source'].isFlexible) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeFlexible' | translate" [options]="{ variant: 'info', size: 'sm' }" /> }
-              @if (!row['_source'].isActive) { <daf-badge [label]="'ADMIN.regimes.catalog.badgeInactive' | translate" [options]="{ variant: 'neutral', size: 'sm' }" /> }
-            </div>
-          </ng-template>
-        </daf-data-table>
+        <daf-badge [label]="'ADMIN.regimes.catalog.noTimes' | translate" [options]="{ variant: 'danger', size: 'sm' }" />
       }
-    }
-  </div>
+    </ng-template>
 
-  <!-- RIGHT PANEL: Editor -->
-  <div data-guide="regimes-catalog-editor">
-    @if (!selectedId()) {
-      <div class="rc-placeholder">
-        <span class="material-symbols-outlined rc-placeholder-icon">schedule</span>
-        <p class="rc-placeholder-text">{{ 'ADMIN.regimes.catalog.selectPrompt' | translate }}</p>
-      </div>
-    }
+    <ng-template dafCell="timezone" let-row>
+      <span [class.rc-muted]="!row['_source'].timezone">{{ timezoneLabel(row['_source']) }}</span>
+    </ng-template>
 
-    @if (selectedId()) {
-      <div class="rc-editor">
+    <ng-template dafCell="usage" let-row>
+      @if (usageOf(row['_source']); as u) {
+        <span class="rc-muted">{{ 'ADMIN.regimes.catalog.usageValue' | translate:{ roles: u.roleCount, employees: u.employeeCount } }}</span>
+      } @else {
+        <span class="rc-muted">—</span>
+      }
+    </ng-template>
 
-        <!-- Messages -->
-        @if (successMsg()) { <div class="rc-msg rc-msg-success">{{ successMsg() }}</div> }
-        @if (errorMsg())   { <div class="rc-msg rc-msg-error">{{ errorMsg() }}</div> }
-
-        <!-- Default warning -->
-        @if (showDefaultWarning()) {
-          <div class="rc-warning">
-            <span class="material-symbols-outlined rc-warning-icon">warning</span>
-            <p class="rc-warning-text">{{ 'ADMIN.regimes.catalog.defaultWarningBefore' | translate }}"<strong>{{ currentDefaultName() }}</strong>"{{ 'ADMIN.regimes.catalog.defaultWarningAfter' | translate }}</p>
-          </div>
+    <ng-template dafCell="status" let-row>
+      <div class="rc-badges">
+        @if (row['_source'].isDefault) {
+          <daf-badge [label]="'ADMIN.regimes.catalog.badgeDefault' | translate" [options]="{ variant: 'teal', size: 'sm' }" />
         }
-
-        <!-- Usage counters -->
-        @if (detail()) {
-          <div class="rc-usage">
-            <div class="rc-usage-item">
-              <span class="material-symbols-outlined rc-usage-icon rc-usage-icon-employee">person</span>
-              <strong>{{ detail()!.employeeCount }}</strong>&nbsp;{{ 'ADMIN.regimes.catalog.employeesWithOverride' | translate }}
-            </div>
-            <div class="rc-usage-item">
-              <span class="material-symbols-outlined rc-usage-icon rc-usage-icon-role">badge</span>
-              <strong>{{ detail()!.roleCount }}</strong>&nbsp;{{ 'ADMIN.regimes.catalog.rolesAssigned' | translate }}
-            </div>
-          </div>
+        @if (isSeasonalActive(row['_source'])) {
+          <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonalActive' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
+        } @else if (row['_source'].seasonalFrom) {
+          <daf-badge [label]="'ADMIN.regimes.catalog.badgeSeasonal' | translate" [options]="{ variant: 'neutral', size: 'sm' }" />
         }
-
-        <!-- Form -->
-        <form [formGroup]="form">
-          <div class="rc-form-row rc-form-row-2">
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.fieldCode' | translate), type: 'text', required: true, fullWidth: true, error: fieldError('code', ('ADMIN.regimes.catalog.errorCode' | translate)) }"
-              [value]="form.get('code')?.value ?? ''"
-              (valueChange)="form.get('code')?.setValue($any($event))" />
-            <div class="rc-toggle-row">
-              <span class="rc-toggle-label">{{ 'ADMIN.regimes.catalog.defaultRegime' | translate }}</span>
-              <daf-toggle
-                [checked]="!!form.get('isDefault')?.value"
-                (checkedChange)="form.get('isDefault')?.setValue($event)" />
-            </div>
-          </div>
-          <div class="rc-form-row rc-form-row-2">
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.labelFr' | translate), type: 'text', required: true, fullWidth: true, error: fieldError('labelFr', ('ADMIN.regimes.catalog.errorLabelFr' | translate)) }"
-              [value]="form.get('labelFr')?.value ?? ''"
-              (valueChange)="form.get('labelFr')?.setValue($any($event))" />
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.labelEn' | translate), type: 'text', fullWidth: true }"
-              [value]="form.get('labelEn')?.value ?? ''"
-              (valueChange)="form.get('labelEn')?.setValue($any($event))" />
-          </div>
-          <div class="rc-form-row rc-form-row-4">
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.fieldHours' | translate), type: 'number', required: true, fullWidth: true, error: fieldError('hoursPerWeek', ('ADMIN.regimes.catalog.errorHours' | translate)) }"
-              [value]="form.get('hoursPerWeek')?.value ?? null"
-              (valueChange)="setNum('hoursPerWeek', 'form', $event)" />
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.fieldDays' | translate), type: 'number', required: true, fullWidth: true, error: fieldError('daysPerWeek', ('ADMIN.regimes.catalog.errorDays' | translate)) }"
-              [value]="form.get('daysPerWeek')?.value ?? null"
-              (valueChange)="setNum('daysPerWeek', 'form', $event)" />
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.startTime' | translate), type: 'time', fullWidth: true }"
-              [value]="form.get('startTime')?.value ?? ''"
-              (valueChange)="form.get('startTime')?.setValue($any($event))" />
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.endTime' | translate), type: 'time', fullWidth: true }"
-              [value]="form.get('endTime')?.value ?? ''"
-              (valueChange)="form.get('endTime')?.setValue($any($event))" />
-            <!-- Seasonal window: while active, this regime outranks role assignments
-                 and personal overrides for the whole entity. Leave empty for a normal
-                 year-round regime. -->
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.seasonalFrom' | translate), type: 'date', hint: ('ADMIN.regimes.catalog.seasonalHint' | translate), fullWidth: true }"
-              [value]="form.get('seasonalFrom')?.value ?? ''"
-              (valueChange)="form.get('seasonalFrom')?.setValue($any($event))" />
-            <daf-form-field
-              [options]="{ label: ('ADMIN.regimes.catalog.seasonalTo' | translate), type: 'date', fullWidth: true }"
-              [value]="form.get('seasonalTo')?.value ?? ''"
-              (valueChange)="form.get('seasonalTo')?.setValue($any($event))" />
-          </div>
-          <!-- Timezone: which clock this regime's hours are read in. Inheriting the
-               entity's zone is correct for almost every regime; an override exists for
-               a regime that must run on another country's clock (business travel,
-               assigned as a time-boxed personal override). -->
-          <div class="rc-form-row">
-            <daf-select
-              [selected]="timezoneSelected()"
-              [options]="timezoneOptions()"
-              [config]="{ label: ('ADMIN.regimes.catalog.timezone' | translate), searchable: true, fullWidth: true, hint: ('ADMIN.regimes.catalog.timezoneHint' | translate) }"
-              (selectedChange)="onTimezoneChange($event)" />
-          </div>
-          @if (timezoneOverridden()) {
-            <div class="rc-msg rc-msg-info">
-              {{ 'ADMIN.regimes.catalog.timezoneOverrideWarning' | translate }}
-            </div>
-          }
-          @if (!paysTimezone()?.timezone) {
-            <div class="rc-msg rc-msg-error">
-              {{ 'ADMIN.regimes.catalog.timezoneEntityMissing' | translate }}
-            </div>
-          }
-          <div class="rc-form-row rc-toggles">
-            <daf-toggle
-              [options]="{ label: ('ADMIN.regimes.catalog.flexibleHours' | translate) }"
-              [checked]="!!form.get('isFlexible')?.value"
-              (checkedChange)="form.get('isFlexible')?.setValue($event)" />
-            <daf-toggle
-              [options]="{ label: ('ADMIN.regimes.catalog.overtimeAllowed' | translate) }"
-              [checked]="!!form.get('overtimeAllowed')?.value"
-              (checkedChange)="form.get('overtimeAllowed')?.setValue($event)" />
-          </div>
-        </form>
-
-        <!-- Action buttons -->
-        <div class="rc-actions">
-          <daf-button
-            *dafHasPermission="'ADMIN_REGIMES'"
-            class="icon-btn-delete"
-            variant="ghost"
-            [options]="{ disabled: !canDelete() || isDeleting(), iconStart: 'delete' }"
-            [title]="(!canDelete() ? 'ADMIN.regimes.catalog.deleteInUseTitle' : 'ADMIN.regimes.common.delete') | translate"
-            (onClick)="deleteRegime()" />
-          <daf-button
-            [label]="(isSaving() ? 'ADMIN.regimes.common.saving' : 'ADMIN.regimes.common.save') | translate"
-            variant="teal"
-            [options]="{ disabled: form.invalid || isSaving(), loading: isSaving() }"
-            (onClick)="saveRegime()" />
-        </div>
+        @if (row['_source'].overtimeAllowed) {
+          <daf-badge [label]="'ADMIN.regimes.catalog.badgeOvertime' | translate" [options]="{ variant: 'neutral', size: 'sm' }" />
+        }
       </div>
-    }
-  </div>
+    </ng-template>
+  </daf-data-table>
 </div>
 
-<!-- Create Modal body — projected into the real daf-modal-host via ModalService. -->
-<ng-template #bodyTpl>
+<!-- One modal for create and edit, every field of the régime. -->
+<app-modal [title]="modalTitle()" [visible]="showModal()" size="lg" [hasFooter]="true" (closed)="closeModal()">
+  <div class="rc-modal">
 
-  <form [formGroup]="createForm">
-    <div class="rc-form-row rc-form-row-2">
-      <daf-form-field
-        [options]="{ label: ('ADMIN.regimes.catalog.fieldCode' | translate), type: 'text', required: true, fullWidth: true, error: createFieldError('code', ('ADMIN.regimes.catalog.errorCode' | translate)) }"
-        [value]="createForm.get('code')?.value ?? ''"
-        (valueChange)="createForm.get('code')?.setValue($any($event))" />
-      <daf-form-field
-        [options]="{ label: ('ADMIN.regimes.catalog.fieldHours' | translate), type: 'number', required: true, fullWidth: true, error: createFieldError('hoursPerWeek', ('ADMIN.regimes.catalog.errorHours' | translate)) }"
-        [value]="createForm.get('hoursPerWeek')?.value ?? null"
-        (valueChange)="setNum('hoursPerWeek', 'createForm', $event)" />
-    </div>
-    <div class="rc-form-row rc-form-row-2">
-      <daf-form-field
-        [options]="{ label: ('ADMIN.regimes.catalog.labelFr' | translate), type: 'text', required: true, fullWidth: true, error: createFieldError('labelFr', ('ADMIN.regimes.catalog.errorLabelFr' | translate)) }"
-        [value]="createForm.get('labelFr')?.value ?? ''"
-        (valueChange)="createForm.get('labelFr')?.setValue($any($event))" />
-      <daf-form-field
-        [options]="{ label: ('ADMIN.regimes.catalog.labelEn' | translate), type: 'text', fullWidth: true }"
-        [value]="createForm.get('labelEn')?.value ?? ''"
-        (valueChange)="createForm.get('labelEn')?.setValue($any($event))" />
-    </div>
-    <div class="rc-form-row">
+    @if (editingUsage(); as u) {
+      <p class="rc-usage-line">
+        <span class="material-symbols-outlined">group</span>
+        {{ 'ADMIN.regimes.catalog.usageValue' | translate:{ roles: u.roleCount, employees: u.employeeCount } }}
+      </p>
+    }
+
+    <!-- Identification -->
+    <section class="rc-section">
+      <p class="rc-section-title">{{ 'ADMIN.regimes.catalog.sectionIdentity' | translate }}</p>
+      <div class="rc-grid rc-grid-2">
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.fieldCode' | translate), type: 'text', required: true, fullWidth: true,
+                       disabled: editingId() !== null, error: err('code') }"
+          [value]="form().code"
+          (valueChange)="patch('code', $any($event) ?? '')" />
+        <div></div>
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.labelFr' | translate), type: 'text', required: true, fullWidth: true, error: err('labelFr') }"
+          [value]="form().labelFr"
+          (valueChange)="patch('labelFr', $any($event) ?? '')" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.labelEn' | translate), type: 'text', fullWidth: true }"
+          [value]="form().labelEn"
+          (valueChange)="patch('labelEn', $any($event) ?? '')" />
+      </div>
+      <div class="rc-grid rc-grid-2">
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.descriptionFr' | translate), type: 'textarea', rows: 2, fullWidth: true }"
+          [value]="form().descriptionFr"
+          (valueChange)="patch('descriptionFr', $any($event) ?? '')" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.descriptionEn' | translate), type: 'textarea', rows: 2, fullWidth: true }"
+          [value]="form().descriptionEn"
+          (valueChange)="patch('descriptionEn', $any($event) ?? '')" />
+      </div>
+    </section>
+
+    <!-- Hours: what pointage reads -->
+    <section class="rc-section">
+      <p class="rc-section-title">{{ 'ADMIN.regimes.catalog.sectionSchedule' | translate }}</p>
+      <div class="rc-grid rc-grid-3">
+        <daf-time-picker
+          [config]="{ label: ('ADMIN.regimes.catalog.startTime' | translate), required: !form().isFlexible,
+                      fullWidth: true, display: 'time', minuteStep: 5, error: err('startTime') }"
+          [value]="startTimeValue()"
+          (valueChange)="setTime('startTime', $event)" />
+        <daf-time-picker
+          [config]="{ label: ('ADMIN.regimes.catalog.endTime' | translate), required: !form().isFlexible,
+                      fullWidth: true, display: 'time', minuteStep: 5, error: err('endTime') }"
+          [value]="endTimeValue()"
+          (valueChange)="setTime('endTime', $event)" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.breakDuration' | translate), type: 'number', fullWidth: true,
+                       suffixText: ('ADMIN.regimes.common.minUnit' | translate) }"
+          [value]="form().breakDurationMin"
+          (valueChange)="patch('breakDurationMin', $any($event))" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.fieldHours' | translate), type: 'number', required: true, fullWidth: true, error: err('hoursPerWeek') }"
+          [value]="form().hoursPerWeek"
+          (valueChange)="patch('hoursPerWeek', $any($event))" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.fieldDays' | translate), type: 'number', required: true, fullWidth: true, error: err('daysPerWeek') }"
+          [value]="form().daysPerWeek"
+          (valueChange)="patch('daysPerWeek', $any($event))" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.regimes.catalog.maxHoursPerDay' | translate), type: 'number', fullWidth: true }"
+          [value]="form().maxHoursPerDay"
+          (valueChange)="patch('maxHoursPerDay', $any($event))" />
+      </div>
+      <p class="rc-hint">{{ 'ADMIN.regimes.catalog.scheduleHint' | translate }}</p>
+    </section>
+
+    <!-- Options -->
+    <section class="rc-section">
+      <p class="rc-section-title">{{ 'ADMIN.regimes.catalog.sectionOptions' | translate }}</p>
+      <div class="rc-toggles">
+        <daf-toggle
+          [options]="{ label: ('ADMIN.regimes.catalog.defaultRegime' | translate),
+                       hint: ('ADMIN.regimes.catalog.defaultToggleHint' | translate:{ pays: entityName() }) }"
+          [checked]="form().isDefault"
+          (checkedChange)="patch('isDefault', $event)" />
+        <daf-toggle
+          [options]="{ label: ('ADMIN.regimes.catalog.flexibleHours' | translate) }"
+          [checked]="form().isFlexible"
+          (checkedChange)="patch('isFlexible', $event)" />
+        <daf-toggle
+          [options]="{ label: ('ADMIN.regimes.catalog.overtimeAllowed' | translate) }"
+          [checked]="form().overtimeAllowed"
+          (checkedChange)="patch('overtimeAllowed', $event)" />
+      </div>
+      @if (form().isDefault && otherDefault(); as prev) {
+        <p class="rc-note rc-note-warning">
+          {{ 'ADMIN.regimes.catalog.makeDefaultReplaces' | translate:{ prev: regimeName(prev) } }}
+        </p>
+      }
+      @if (err('isDefault')) { <p class="rc-note rc-note-danger">{{ err('isDefault') }}</p> }
+    </section>
+
+    <!-- Seasonal window -->
+    <section class="rc-section">
+      <p class="rc-section-title">{{ 'ADMIN.regimes.catalog.sectionSeasonal' | translate }}</p>
+      <div class="rc-grid rc-grid-2">
+        <daf-multi-date-picker
+          [config]="{ label: ('ADMIN.regimes.catalog.seasonalFromShort' | translate), selectionMode: 'single',
+                      allowPastDays: true, allowWeekends: true, fullWidth: true, error: err('seasonalFrom'),
+                      placeholder: ('ADMIN.regimes.catalog.pickDate' | translate) }"
+          [value]="seasonalFromValue()"
+          (valueChange)="setDate('seasonalFrom', $event)" />
+        <daf-multi-date-picker
+          [config]="{ label: ('ADMIN.regimes.catalog.seasonalToShort' | translate), selectionMode: 'single',
+                      allowPastDays: true, allowWeekends: true, fullWidth: true, error: err('seasonalTo'),
+                      placeholder: ('ADMIN.regimes.catalog.pickDate' | translate) }"
+          [value]="seasonalToValue()"
+          (valueChange)="setDate('seasonalTo', $event)" />
+      </div>
+      <p class="rc-hint">{{ 'ADMIN.regimes.catalog.seasonalHint' | translate }}</p>
+    </section>
+
+    <!-- Clock -->
+    <section class="rc-section">
+      <p class="rc-section-title">{{ 'ADMIN.regimes.catalog.timezone' | translate }}</p>
       <daf-select
-        [selected]="createTimezoneSelected()"
+        [selected]="timezoneSelected()"
         [options]="timezoneOptions()"
-        [config]="{ label: ('ADMIN.regimes.catalog.timezone' | translate), searchable: true, fullWidth: true, hint: ('ADMIN.regimes.catalog.timezoneHint' | translate) }"
-        (selectedChange)="onCreateTimezoneChange($event)" />
-    </div>
-    <div class="rc-form-row rc-toggles">
-      <daf-toggle
-        [options]="{ label: ('ADMIN.regimes.catalog.badgeFlexible' | translate) }"
-        [checked]="!!createForm.get('isFlexible')?.value"
-        (checkedChange)="createForm.get('isFlexible')?.setValue($event)" />
-      <daf-toggle
-        [options]="{ label: ('ADMIN.regimes.catalog.defaultRegime' | translate) }"
-        [checked]="!!createForm.get('isDefault')?.value"
-        (checkedChange)="createForm.get('isDefault')?.setValue($event)" />
-    </div>
-  </form>
+        [config]="{ searchable: true, fullWidth: true, hint: ('ADMIN.regimes.catalog.timezoneHint' | translate) }"
+        (selectedChange)="patch('timezone', $event[0] ?? '')" />
+      @if (form().timezone) {
+        <p class="rc-note rc-note-info">{{ 'ADMIN.regimes.catalog.timezoneOverrideWarning' | translate }}</p>
+      }
+      @if (!paysTimezone()?.timezone) {
+        <p class="rc-note rc-note-danger">{{ 'ADMIN.regimes.catalog.timezoneEntityMissing' | translate }}</p>
+      }
+    </section>
 
-  @if (errorMsg()) { <div class="rc-msg rc-msg-error">{{ errorMsg() }}</div> }
-
-  <div class="rc-modal-footer">
-    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary" [options]="{ disabled: creating() }" (onClick)="cancelCreate()" />
-    <daf-button
-      [label]="'ADMIN.regimes.catalog.createSubmit' | translate"
-      variant="teal"
-      [options]="{ disabled: createForm.invalid || creating(), loading: creating() }"
-      (onClick)="createRegime()" />
+    @if (modalError()) { <p class="rc-note rc-note-danger">{{ modalError() }}</p> }
   </div>
-</ng-template>
+
+  <div slot="footer">
+    <daf-button [label]="'ADMIN.regimes.common.cancel' | translate" variant="secondary"
+                [options]="{ disabled: saving() }" (onClick)="closeModal()" />
+    @if (canManage()) {
+      <daf-button
+        [label]="(editingId() === null ? 'ADMIN.regimes.catalog.createSubmit' : 'ADMIN.regimes.common.save') | translate"
+        variant="teal"
+        [options]="{ loading: saving(), disabled: saving() || (submitted() && invalid()) }"
+        (onClick)="save()" />
+    }
+  </div>
+</app-modal>

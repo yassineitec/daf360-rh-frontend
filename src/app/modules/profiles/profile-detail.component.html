@@ -92,7 +92,11 @@
 
                 <rh-regime-section
                   [profile]="p" [regime]="resolvedRegime()" [loading]="regimeLoading()"
-                  (removeOverride)="removeEmployeeRegimeOverride()" />
+                  [status]="regimeStatus()"
+                  [assignments]="personalAssignments()"
+                  [canManage]="canManageRegime()"
+                  (removeOverride)="removeEmployeeRegimeOverride()"
+                  (endAssignment)="endPersonalRegime($event)" />
               </div>
             }
 
@@ -134,7 +138,7 @@
                 [loading]="lcLoading()"
                 [canEdit]="canEdit()"
                 [candidateId]="p.candidateId"
-                [cdiRequests]="lcCdiRequests()"
+                [cdiRequests]="lcCdiRequests()"
                 [canRequestCdi]="canRequestCdi()"
                 (newContract)="showNewContractModal.set(true)"
                 (decide)="openDecisionModal($event)"

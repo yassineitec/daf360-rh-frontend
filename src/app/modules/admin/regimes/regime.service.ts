@@ -1,13 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   WorkingTimeRegime, RegimeDetail, RegimeRoleAssignmentResponse,
   ResolvedRegimeDto, CreateRegimeRequest, UpdateRegimeRequest,
   AssignRegimeToRoleRequest, RegimeOverviewStats, EmployeeRegimeOverview,
-  AssignEmployeeOverrideRequest,
+  AssignEmployeeOverrideRequest, EmployeeRegimeAssignment, ResolvedRegimeResult,
 } from './regime.model';
 
 @Injectable({ providedIn: 'root' })
@@ -67,6 +67,37 @@ export class RegimeService {
     return this.http.get<ResolvedRegimeDto>(
       `${this.base}/regimes/resolve?employeeProfileId=${employeeProfileId}`
     ).pipe(catchError(() => of(null)));
+  }
+
+  /**
+   * The employee's resolved regime, telling apart "nothing configured" (204) from
+   * "not allowed" (403) and a failure — the profile page used to show all three as
+   * « aucun régime configuré ».
+   */
+  resolveProfile(employeeProfileId: number): Observable<ResolvedRegimeResult> {
+    return this.http.get<ResolvedRegimeDto>(
+      `${this.base}/profiles/${employeeProfileId}/regime`, { observe: 'response' }
+    ).pipe(
+      map((res): ResolvedRegimeResult => res.status === 204 || !res.body
+        ? { status: 'none' }
+        : { status: 'ok', regime: res.body }),
+      catchError((err: HttpErrorResponse) => of<ResolvedRegimeResult>(
+        err.status === 403 ? { status: 'forbidden' } : { status: 'error' })),
+    );
+  }
+
+  /** Personal assignments in force today or scheduled. */
+  getEmployeeAssignments(profileId: number): Observable<EmployeeRegimeAssignment[]> {
+    return this.http.get<EmployeeRegimeAssignment[]>(
+      `${this.base}/profiles/${profileId}/regime/assignments`
+    ).pipe(catchError(() => of([])));
+  }
+
+  /** Ends (started) or cancels (scheduled) one personal assignment. */
+  endEmployeeAssignment(profileId: number, assignmentId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/profiles/${profileId}/regime/assignments/${assignmentId}`
+    );
   }
 
   invalidateCache(): void { this.cache.clear(); }

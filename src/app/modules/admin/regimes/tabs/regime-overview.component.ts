@@ -6,8 +6,9 @@ import {
   AvatarCell, BadgeCell, BadgeOptions, ButtonComponent, CardComponent, CheckboxComponent,
   DafCellDirective, DataTableComponent, FormFieldComponent, SelectComponent, SelectOption,
   SortDirection, TableColumn, TableConfig, TableRow, PaginationComponent, ModalService, ModalRef,
-  PermissionService, SearchToolbarComponent,
+  PermissionService, SearchToolbarComponent, MultiDatePickerComponent,
 } from '@khalilrebhiitec/daf360';
+import { dateToIso, isoToDate } from '../regime-dates';
 import { RegimeService } from '../regime.service';
 import { TableSort, rankIn, searchRows, sortByColumn, toTableSort } from '../../../../shared/table-sort.utils';
 import {
@@ -18,7 +19,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
 import { rememberAdminState } from '../../admin-section-state';
 
-type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
+type SourceFilter = 'ALL' | 'SEASONAL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' | 'UNCONFIGURED';
 
 @Component({
   selector: 'app-regime-overview',
@@ -26,7 +27,7 @@ type SourceFilter = 'ALL' | 'EMPLOYEE_OVERRIDE' | 'ROLE_ASSIGNMENT' | 'DEFAULT' 
   imports: [
     NgClass, DataTableComponent, DafCellDirective,
     ButtonComponent, CardComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe, MultiDatePickerComponent,
   ],
   templateUrl: './regime-overview.component.html',
   styleUrl: './regime-overview.component.scss',
@@ -97,6 +98,19 @@ export class RegimeOverviewComponent implements OnChanges {
   overrideEffFrom   = '';
   overrideEffTo     = '';
   overrideReason    = '';
+  /** Same dates for daf-multi-date-picker — kept as fields so the picker gets a stable Date. */
+  overrideEffFromDate: Date | null = null;
+  overrideEffToDate:   Date | null = null;
+
+  onOverrideEffFrom(v: Date | Date[] | null): void {
+    this.overrideEffFrom = dateToIso(v);
+    this.overrideEffFromDate = isoToDate(this.overrideEffFrom);
+  }
+
+  onOverrideEffTo(v: Date | Date[] | null): void {
+    this.overrideEffTo = dateToIso(v);
+    this.overrideEffToDate = isoToDate(this.overrideEffTo);
+  }
   noEndDate         = signal(true);
   isSaving          = signal(false);
   panelError        = signal<string | null>(null);
@@ -122,9 +136,15 @@ export class RegimeOverviewComponent implements OnChanges {
     return roleLabel({ frenchName: e.roleName, englishName: e.roleNameEn }, this.translate) || null;
   }
 
+  /**
+   * Seasonal regimes are left out: they apply to the whole entity through their own window
+   * and the server refuses them as a personal assignment (they used to apply all year).
+   */
+  readonly assignableRegimes = computed(() => this.regimes().filter(r => !r.seasonalFrom));
+
   regimeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return this.regimes().map(r => ({ value: String(r.id), label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
+    return this.assignableRegimes().map(r => ({ value: String(r.id), label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}` }));
   });
 
   overrideRegimeSelected(): string[] {
@@ -140,6 +160,7 @@ export class RegimeOverviewComponent implements OnChanges {
     this.translate.currentLang();
     return [
       { value: 'ALL',              label: this.translate.instant('ADMIN.regimes.overview.filters.ALL')          },
+      { value: 'SEASONAL',         label: this.translate.instant('ADMIN.regimes.overview.filters.SEASONAL')     },
       { value: 'EMPLOYEE_OVERRIDE', label: this.translate.instant('ADMIN.regimes.overview.filters.OVERRIDE')    },
       { value: 'ROLE_ASSIGNMENT',  label: this.translate.instant('ADMIN.regimes.overview.filters.BY_ROLE')      },
       { value: 'DEFAULT',          label: this.translate.instant('ADMIN.regimes.overview.filters.DEFAULT')      },
@@ -264,9 +285,16 @@ export class RegimeOverviewComponent implements OnChanges {
     this.selectedEmployee.set(emp);
     this.showOverrideForm.set(false);
     this.panelError.set(null);
-    this.overrideRegimeId = emp.resolvedRegimeId ?? (this.regimes()[0]?.id ?? 0);
-    this.overrideEffFrom  = new Date().toISOString().split('T')[0];
+    // Pre-select the employee's own personal regime, else what applies today — but never a
+    // seasonal one (it cannot be assigned), else the first assignable regime.
+    const assignable = this.assignableRegimes();
+    const resolvedAssignable = assignable.some(r => r.id === emp.resolvedRegimeId) ? emp.resolvedRegimeId : null;
+    this.overrideRegimeId = emp.personalRegimeId ?? resolvedAssignable ?? (assignable[0]?.id ?? 0);
+    // Local today, not toISOString() (UTC): before 01:00 in Tunis that gave yesterday.
+    this.overrideEffFrom  = dateToIso(new Date());
     this.overrideEffTo    = '';
+    this.overrideEffFromDate = isoToDate(this.overrideEffFrom);
+    this.overrideEffToDate   = null;
     this.overrideReason   = '';
     this.noEndDate.set(true);
     this.modalRef = this.modal.open({
@@ -335,6 +363,7 @@ export class RegimeOverviewComponent implements OnChanges {
 
   getSourceClass(level: string | null | undefined): object {
     return {
+      'source-seasonal': level === 'SEASONAL',
       'source-override': level === 'EMPLOYEE_OVERRIDE',
       'source-role':     level === 'ROLE_ASSIGNMENT',
       'source-default':  level === 'DEFAULT',

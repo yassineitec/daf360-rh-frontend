@@ -1,443 +1,501 @@
-import {
-  Component, OnChanges, SimpleChanges, TemplateRef, inject, input, signal, computed, viewChild,
-} from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Component, OnChanges, SimpleChanges, computed, inject, input, signal, viewChild } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import {
   ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
-  ModalService, ModalRef, SelectComponent, SelectOption,
+  ModalService, SelectComponent, SelectOption,
   DataTableComponent, DafCellDirective, TableColumn, TableConfig, TableRow,
   PermissionService, SearchToolbarComponent,
+  TimePickerComponent, TimePickerValue, formatTimePickerValue, parseTimePickerValue,
+  MultiDatePickerComponent,
 } from '@khalilrebhiitec/daf360';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeDetail, CreateRegimeRequest } from '../regime.model';
 import { RefDataService } from '../../../../core/ref/ref-data.service';
 import { PaysTimezone, TimezoneOption } from '../../../../core/ref/ref-data.model';
-import { DafHasPermissionDirective } from '@khalilrebhiitec/daf360';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { NotificationService } from '../../../../core/notification.service';
+import { ModalComponent } from '../../../../shared/modal.component';
 import { searchRows } from '../../../../shared/table-sort.utils';
 import { adminLabel } from '../../../../shared/utils/admin-label.utils';
 import { rememberAdminState } from '../../admin-section-state';
+import { dateToIso, isoToDate } from '../regime-dates';
 
+/** What the create / edit modal holds. Numbers stay `number | string | null`: a cleared input gives ''. */
+interface RegimeForm {
+  code: string;
+  labelFr: string;
+  labelEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  hoursPerWeek: number | string | null;
+  daysPerWeek: number | string | null;
+  startTime: string;
+  endTime: string;
+  breakDurationMin: number | string | null;
+  maxHoursPerDay: number | string | null;
+  isFlexible: boolean;
+  overtimeAllowed: boolean;
+  isDefault: boolean;
+  seasonalFrom: string;
+  seasonalTo: string;
+  timezone: string;
+}
+
+const EMPTY_FORM: RegimeForm = {
+  code: '', labelFr: '', labelEn: '', descriptionFr: '', descriptionEn: '',
+  hoursPerWeek: 40, daysPerWeek: 5, startTime: '08:00', endTime: '17:00',
+  breakDurationMin: 60, maxHoursPerDay: null,
+  isFlexible: false, overtimeAllowed: false, isDefault: false,
+  seasonalFrom: '', seasonalTo: '', timezone: '',
+};
+
+/**
+ * Administration → Régimes horaires → Catalogue, for the entity picked in the admin header.
+ *
+ * Same shape as the other admin catalogues (Télétravail, Pauses): one full-width table, row
+ * actions, and ONE modal for both create and edit that carries every field. The old screen
+ * split list / editor side by side and its create modal had no hours at all — a régime made
+ * there (e.g. a new default) reached pointage without start/end time, so nobody following it
+ * had a schedule.
+ *
+ * The banner above the table answers the question the screen is mostly opened for: which
+ * régime applies to someone with no seasonal, personal or role régime — and whether it can
+ * actually drive pointage.
+ */
 @Component({
   selector: 'app-regime-catalog',
   standalone: true,
   imports: [
-    ReactiveFormsModule, DafHasPermissionDirective,
-    ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent,
-    SelectComponent, DataTableComponent, DafCellDirective, SearchToolbarComponent,
-    TranslatePipe,
+    ButtonComponent, FormFieldComponent, ToggleComponent, StatusBadgeComponent, SelectComponent,
+    DataTableComponent, DafCellDirective, SearchToolbarComponent, ModalComponent, TranslatePipe,
+    TimePickerComponent, MultiDatePickerComponent,
   ],
   templateUrl: './regime-catalog.component.html',
   styleUrl: './regime-catalog.component.scss',
 })
 export class RegimeCatalogComponent implements OnChanges {
-  private svc   = inject(RegimeService);
-  private fb    = inject(FormBuilder);
-  private modal = inject(ModalService);
-  private translate = inject(TranslateService);
-  private refData   = inject(RefDataService);
-  protected perms   = inject(PermissionService);
-  private modalRef?: ModalRef;
-  bodyTpl = viewChild.required<TemplateRef<unknown>>('bodyTpl');
-  creating = signal(false);
+  private readonly svc       = inject(RegimeService);
+  private readonly modal     = inject(ModalService);
+  private readonly translate = inject(TranslateService);
+  private readonly refData   = inject(RefDataService);
+  private readonly notify    = inject(NotificationService);
+  protected readonly perms   = inject(PermissionService);
 
-  readonly paysId = input<number>(179);
+  readonly paysId    = input<number>(179);
+  /** Entity name from the admin header picker, shown in the banner and the confirmations. */
+  readonly paysLabel = input<string>('');
 
   // ── State ──────────────────────────────────────────────────────────────────
-  regimes      = signal<WorkingTimeRegime[]>([]);
-  detail       = signal<RegimeDetail | null>(null);
-  selectedId   = signal<number | null>(null);
-  loading      = signal(true);
-  isSaving     = signal(false);
-  isDeleting   = signal(false);
-  errorMsg     = signal<string | null>(null);
-  successMsg   = signal<string | null>(null);
-  skeletonRows = [1,2,3,4];
-  /** Search over the regime list (toolbar above the panels). */
-  searchQuery  = signal('');
+  readonly regimes  = signal<WorkingTimeRegime[]>([]);
+  /** Usage per régime id (roles / employees pointing to it); missing = not loaded. */
+  readonly usage    = signal<Record<number, RegimeDetail>>({});
+  readonly loading  = signal(true);
+  readonly searchQuery = signal('');
 
-  // ── Mémoire de la section ──────────────────────────────────────────────────
-  /** Recherche gardée tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
   private readonly memory = rememberAdminState('regimes.catalog', { searchQuery: this.searchQuery });
 
-  /** The regime table (absent while loading or empty) — fed to the toolbar's `[table]`. */
   readonly table = viewChild(DataTableComponent);
 
-  onSearch(value: string): void {
-    if (value === this.searchQuery()) return;   // daf-search-toolbar re-emits on blur
-    this.searchQuery.set(value);
+  // ── Modal ──────────────────────────────────────────────────────────────────
+  readonly showModal = signal(false);
+  /** null = creating. */
+  readonly editingId = signal<number | null>(null);
+  readonly form      = signal<RegimeForm>({ ...EMPTY_FORM });
+  readonly submitted = signal(false);
+  readonly saving    = signal(false);
+  readonly modalError = signal<string | null>(null);
+
+  // ── Timezone context ───────────────────────────────────────────────────────
+  readonly paysTimezone = signal<PaysTimezone | null>(null);
+  private readonly timezones = signal<TimezoneOption[]>([]);
+
+  readonly canManage = computed(() => this.perms.has('ADMIN_REGIMES'));
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['paysId']) {
+      this.load();
+      this.refData.getPaysTimezones().subscribe(list =>
+        this.paysTimezone.set(list.find(p => p.id === this.paysId()) ?? null));
+    }
   }
 
-  /** A regime's name in the UI language (English when the UI is English and one exists). */
+  constructor() {
+    this.refData.getTimezones().subscribe(tzs => this.timezones.set(tzs));
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.svc.invalidateCache();
+    this.svc.getRegimes(this.paysId()).subscribe({
+      next: rs => {
+        this.regimes.set(rs);
+        this.loading.set(false);
+        this.loadUsage(rs);
+      },
+      error: () => { this.regimes.set([]); this.loading.set(false); },
+    });
+  }
+
+  /** Small fixed list (a handful per entity): one detail call each, failures just show « — ». */
+  private loadUsage(rs: WorkingTimeRegime[]): void {
+    if (!rs.length) { this.usage.set({}); return; }
+    forkJoin(rs.map(r => this.svc.getRegimeDetail(r.id).pipe(catchError(() => of(null)))))
+      .subscribe(details => {
+        const map: Record<number, RegimeDetail> = {};
+        details.forEach(d => { if (d) map[d.id] = d; });
+        this.usage.set(map);
+      });
+  }
+
+  // ── Derived: default / seasonal banner ─────────────────────────────────────
+  readonly defaultRegime = computed(() => this.regimes().find(r => r.isDefault && r.isActive) ?? null);
+
+  readonly activeSeasonal = computed(() => this.regimes().find(r => this.isSeasonalActive(r)) ?? null);
+
+  readonly defaultHasNoTimes = computed(() => {
+    const d = this.defaultRegime();
+    return !!d && !d.isFlexible && (!d.startTime || !d.endTime);
+  });
+
+  readonly entityName = computed(() => this.paysLabel() || this.paysTimezone()?.frenchLabel || '—');
+
+  // ── Table ──────────────────────────────────────────────────────────────────
   regimeName(r: WorkingTimeRegime): string {
     return adminLabel(r, this.translate);
   }
 
-  /** Searches what the row shows: label, code, schedule and the badges. No paging here. */
   readonly filteredRegimes = computed(() => {
     this.translate.currentLang();
-    const t = (k: string, p?: object) => this.translate.instant(k, p);
     return searchRows(this.regimes(), this.searchQuery(), r => [
-      this.regimeName(r), r.code,
-      t('ADMIN.regimes.catalog.hoursPerWeek', { h: r.hoursPerWeek }),
-      t('ADMIN.regimes.catalog.daysPerWeek', { d: r.daysPerWeek }),
-      r.isDefault ? t('ADMIN.regimes.catalog.badgeDefault') : null,
-      this.isSeasonalActive(r) ? t('ADMIN.regimes.catalog.badgeSeasonalActive')
-        : r.seasonalFrom ? t('ADMIN.regimes.catalog.badgeSeasonal') : null,
-      r.isFlexible ? t('ADMIN.regimes.catalog.badgeFlexible') : null,
-      !r.isActive ? t('ADMIN.regimes.catalog.badgeInactive') : null,
+      this.regimeName(r), r.code, this.timesLabel(r),
+      r.isDefault ? this.translate.instant('ADMIN.regimes.catalog.badgeDefault') : null,
+      r.seasonalFrom ? this.translate.instant('ADMIN.regimes.catalog.badgeSeasonal') : null,
+      r.isFlexible ? this.translate.instant('ADMIN.regimes.catalog.badgeFlexible') : null,
     ]);
   });
 
-  selectedRegime = computed(() =>
-    this.regimes().find(r => r.id === this.selectedId()) ?? null
-  );
-
-  currentDefaultName = computed(() => {
-    const r = this.regimes().find(r => r.isDefault && r.id !== this.selectedId());
-    return r ? this.regimeName(r) : null;
-  });
-
-  showDefaultWarning = computed(() => {
-    const val = this.form.get('isDefault')?.value;
-    return val === true && this.currentDefaultName() !== null;
-  });
-
-  /**
-   * Library table tools are on, same as the other RH tables. **No `manualSort`**: the regime
-   * list is not paginated, every regime is already a row, so the library's own client-side
-   * sort orders the whole set — through `sortAccessor`s, since the cells are templates.
-   * The badges column carries a label now: the column picker lists columns by label, and an
-   * empty one would show up as a blank entry.
-   */
   readonly columns = computed<TableColumn[]>(() => {
     this.translate.currentLang();
-    const regime = (row: TableRow) => row['_source'] as WorkingTimeRegime;
+    const t = (k: string) => this.translate.instant('ADMIN.regimes.catalog.' + k);
+    const src = (row: TableRow) => row['_source'] as WorkingTimeRegime;
     return [
-      { key: 'name',   label: this.translate.instant('ADMIN.regimes.catalog.colName'), sortable: true,
-        sortAccessor: (row) => this.regimeName(regime(row)) || null },
-      // Weekly hours first, days as the tie-breaker: 35h·5j before 39h·5j before 39h·6j.
-      { key: 'meta',   label: this.translate.instant('ADMIN.regimes.catalog.colSchedule'), sortable: true,
-        sortAccessor: (row) => regime(row).hoursPerWeek * 10 + regime(row).daysPerWeek },
-      { key: 'badges', label: this.translate.instant('ADMIN.regimes.catalog.colBadges') },
+      { key: 'name',     label: t('colName'), sortable: true, sortAccessor: row => this.regimeName(src(row)) || null },
+      { key: 'times',    label: t('colTimes'), sortable: true, sortAccessor: row => src(row).startTime ?? null },
+      { key: 'volume',   label: t('colVolume'), sortable: true,
+        sortAccessor: row => src(row).hoursPerWeek * 10 + src(row).daysPerWeek },
+      { key: 'pause',    label: t('colBreak'), sortable: true, sortAccessor: row => src(row).breakDurationMin ?? null },
+      { key: 'timezone', label: t('colTimezone') },
+      { key: 'usage',    label: t('colUsage') },
+      { key: 'status',   label: t('colStatus') },
     ];
   });
 
   readonly rows = computed<TableRow[]>(() =>
     this.filteredRegimes().map(r => ({
-      name:   this.regimeName(r),
-      meta:   `${r.hoursPerWeek}h · ${r.daysPerWeek}j`,
-      badges: null,
+      id: r.id,
+      name: this.regimeName(r),
+      times: this.timesLabel(r),
+      volume: `${r.hoursPerWeek} h · ${r.daysPerWeek} j`,
+      pause: r.breakDurationMin ? `${r.breakDurationMin} min` : '—',
       _source: r,
-    })),
-  );
+    })));
 
   readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
+    const src = (row: TableRow) => row['_source'] as WorkingTimeRegime;
     return {
-      showHeader: false,
+      loading: this.loading(),
+      skeletonRows: 4,
       hoverable: true,
-      // Stable row identity: row heights and sorting are keyed by it, not by render index.
-      rowId: (row: TableRow) => (row['_source'] as WorkingTimeRegime).id,
-      resizableColumns:  true,
-      resizableRows:     true,
-      columnPicker:      true,
+      rowId: (row: TableRow) => src(row).id,
+      resizableColumns: true,
+      columnPicker: true,
       columnPickerLabel: t('REQUESTS.TABLE.COLUMN_PICKER'),
-      showReset:         true,
-      resetLabel:        t('REQUESTS.TABLE.RESET'),
-      sortLabel:         t('REQUESTS.TABLE.SORT_BY'),
+      showReset: true,
+      resetLabel: t('REQUESTS.TABLE.RESET'),
+      sortLabel: t('REQUESTS.TABLE.SORT_BY'),
+      emptyMessage: t('ADMIN.regimes.catalog.emptyList'),
+      actions: [
+        { id: 'edit', icon: 'edit', tooltip: t('ADMIN.regimes.common.edit'),
+          onClick: (row: TableRow) => this.openEdit(src(row)) },
+        { id: 'default', icon: 'star', tooltip: t('ADMIN.regimes.catalog.makeDefault'),
+          hidden: (row: TableRow) => !this.canManage() || src(row).isDefault || !!src(row).seasonalFrom,
+          onClick: (row: TableRow) => this.confirmMakeDefault(src(row)) },
+        // Never a mute greyed-out icon: the default has no delete at all (another régime must
+        // become the default first), any other régime says on click what still uses it.
+        { id: 'delete', icon: 'delete', variant: 'danger', tooltip: t('ADMIN.regimes.common.delete'),
+          hidden: (row: TableRow) => !this.canManage() || src(row).isDefault,
+          onClick: (row: TableRow) => this.confirmDelete(src(row)) },
+      ],
     };
   });
 
-  formTouched       = signal(false);
-  createFormTouched = signal(false);
+  onSearch(value: string): void {
+    if (value !== this.searchQuery()) this.searchQuery.set(value);
+  }
 
-  // ── Timezone ───────────────────────────────────────────────────────────────
-  /** The entity's own zone — what a regime inherits when it declares none. */
-  paysTimezone = signal<PaysTimezone | null>(null);
-  private readonly timezones = signal<TimezoneOption[]>([]);
+  timesLabel(r: WorkingTimeRegime): string {
+    if (!r.startTime || !r.endTime) return '';
+    return `${this.hhmm(r.startTime)} – ${this.hhmm(r.endTime)}`;
+  }
 
-  /**
-   * Options for the regime override, with an explicit "inherit" entry first.
-   *
-   * Inheriting is the right answer for almost every regime, so it must be the visible
-   * default rather than something achieved by leaving a select untouched.
-   */
+  timezoneLabel(r: WorkingTimeRegime): string {
+    return r.timezone || this.translate.instant('ADMIN.regimes.catalog.tzInherited');
+  }
+
+  usageOf(r: WorkingTimeRegime): RegimeDetail | null {
+    return this.usage()[r.id] ?? null;
+  }
+
+  /** The seasonal window covers today: this régime currently replaces every other one of the entity. */
+  isSeasonalActive(r: WorkingTimeRegime): boolean {
+    if (!r.seasonalFrom) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return r.seasonalFrom <= today && (!r.seasonalTo || r.seasonalTo >= today);
+  }
+
+  hhmm(t: string | null | undefined): string {
+    return t ? t.slice(0, 5) : '';
+  }
+
+  // ── Modal: create / edit ───────────────────────────────────────────────────
   readonly timezoneOptions = computed<SelectOption[]>(() => {
-    const inheritLabel = this.paysTimezone()?.timezone
-      ? this.translate.instant('ADMIN.regimes.catalog.tzInheritFrom',
-          { zone: this.paysTimezone()!.timezone })
+    this.translate.currentLang();
+    const zone = this.paysTimezone()?.timezone;
+    const inherit = zone
+      ? this.translate.instant('ADMIN.regimes.catalog.tzInheritFrom', { zone })
       : this.translate.instant('ADMIN.regimes.catalog.tzInheritUnset');
-    return [
-      { value: '', label: inheritLabel },
-      ...this.timezones().map(t => ({ value: t.id, label: t.label })),
-    ];
+    return [{ value: '', label: inherit }, ...this.timezones().map(t => ({ value: t.id, label: t.label }))];
   });
 
-  /**
-   * daf-select's value is an array (it is multi-capable). Mirrored in signals rather than
-   * read from the control, because FormControl.value is not reactive — a computed over it
-   * would be evaluated once and then never update the select.
-   */
-  timezoneSelected       = signal<string[]>(['']);
-  createTimezoneSelected = signal<string[]>(['']);
+  readonly timezoneSelected = computed(() => [this.form().timezone ?? '']);
 
-  /** True while a regime declares its own zone — worth flagging, it is the exception. */
-  readonly timezoneOverridden = computed(() => !!this.timezoneSelected()[0]);
+  readonly modalTitle = computed(() => this.translate.instant(
+    this.editingId() === null ? 'ADMIN.regimes.catalog.createModalTitle' : 'ADMIN.regimes.catalog.editModalTitle'));
 
-  onTimezoneChange(values: string[]): void {
-    const tz = values[0] ?? '';
-    this.timezoneSelected.set([tz]);
-    this.form.get('timezone')?.setValue(tz);
-  }
-
-  onCreateTimezoneChange(values: string[]): void {
-    const tz = values[0] ?? '';
-    this.createTimezoneSelected.set([tz]);
-    this.createForm.get('timezone')?.setValue(tz);
-  }
-
-  // ── Forms ──────────────────────────────────────────────────────────────────
-  form = this.fb.group({
-    code:             ['', [Validators.required, Validators.maxLength(50)]],
-    labelFr:          ['', Validators.required],
-    labelEn:          [''],
-    descriptionFr:    [''],
-    hoursPerWeek:     [40, [Validators.required, Validators.min(1), Validators.max(60)]],
-    daysPerWeek:      [5,  [Validators.required, Validators.min(1), Validators.max(7)]],
-    startTime:        [''],
-    endTime:          [''],
-    seasonalFrom:     [''],
-    seasonalTo:       [''],
-    timezone:         [''],
-    isFlexible:       [false],
-    isDefault:        [false],
-    breakDurationMin: [0],
-    overtimeAllowed:  [false],
-    maxHoursPerDay:   [null as number | null],
+  readonly editingUsage = computed(() => {
+    const id = this.editingId();
+    return id === null ? null : this.usage()[id] ?? null;
   });
 
-  createForm = this.fb.group({
-    code:             ['', [Validators.required, Validators.maxLength(50)]],
-    labelFr:          ['', Validators.required],
-    labelEn:          [''],
-    descriptionFr:    [''],
-    hoursPerWeek:     [40, [Validators.required, Validators.min(1), Validators.max(60)]],
-    daysPerWeek:      [5,  [Validators.required, Validators.min(1), Validators.max(7)]],
-    startTime:        [''],
-    endTime:          [''],
-    seasonalFrom:     [''],
-    seasonalTo:       [''],
-    timezone:         [''],
-    isFlexible:       [false],
-    isDefault:        [false],
-    breakDurationMin: [0],
-    overtimeAllowed:  [false],
-    maxHoursPerDay:   [null as number | null],
+  /** The default currently held by ANOTHER régime — what ticking « Par défaut » replaces. */
+  readonly otherDefault = computed(() => {
+    const d = this.defaultRegime();
+    return d && d.id !== this.editingId() ? d : null;
   });
 
-  // ── Lifecycle ───────────────────────────────────────────────────────────────
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['paysId']) {
-      this.loadRegimes();
-      this.loadTimezoneContext();
+  readonly hasSeasonalDates = computed(() => !!this.form().seasonalFrom || !!this.form().seasonalTo);
+
+  readonly errors = computed(() => {
+    const f = this.form();
+    const t = (k: string) => this.translate.instant('ADMIN.regimes.catalog.' + k);
+    const e: Partial<Record<keyof RegimeForm, string>> = {};
+    if (!f.code.trim() || f.code.length > 50) e.code = t('errorCode');
+    if (!f.labelFr.trim()) e.labelFr = t('errorLabelFr');
+    const h = this.num(f.hoursPerWeek);
+    if (h === null || h < 1 || h > 60) e.hoursPerWeek = t('errorHours');
+    const d = this.num(f.daysPerWeek);
+    if (d === null || d < 1 || d > 7) e.daysPerWeek = t('errorDays');
+    if (!f.isFlexible && (!f.startTime || !f.endTime)) {
+      if (!f.startTime) e.startTime = t('errorTimes');
+      if (!f.endTime) e.endTime = t('errorTimes');
     }
+    if (f.startTime && f.endTime && f.endTime <= f.startTime) e.endTime = t('errorTimeOrder');
+    if (f.seasonalTo && !f.seasonalFrom) e.seasonalFrom = t('errorSeasonalFrom');
+    if (f.seasonalFrom && f.seasonalTo && f.seasonalTo < f.seasonalFrom) e.seasonalTo = t('errorSeasonalOrder');
+    if (f.isDefault && (f.seasonalFrom || f.seasonalTo)) e.isDefault = t('errorSeasonalDefault');
+    return e;
+  });
+
+  readonly invalid = computed(() => Object.keys(this.errors()).length > 0);
+
+  err(key: keyof RegimeForm): string | undefined {
+    return this.submitted() ? this.errors()[key] : undefined;
   }
 
-  /**
-   * The entity's zone (to show what a regime inherits) plus the IANA catalogue.
-   * Both are best-effort: a failure here must not stop the regime form from working.
-   */
-  private loadTimezoneContext(): void {
-    this.refData.getPaysTimezones().subscribe(list =>
-      this.paysTimezone.set(list.find(p => p.id === this.paysId()) ?? null));
-    this.refData.getTimezones().subscribe(tzs => this.timezones.set(tzs));
+  patch<K extends keyof RegimeForm>(key: K, value: RegimeForm[K]): void {
+    this.form.update(f => ({ ...f, [key]: value }));
   }
 
-  loadRegimes(): void {
-    this.loading.set(true);
-    this.selectedId.set(null);
-    this.detail.set(null);
-    this.svc.getRegimes(this.paysId()).subscribe({
-      next: rs => { this.regimes.set(rs); this.loading.set(false); },
-      error: ()  => this.loading.set(false),
-    });
+  openCreate(): void {
+    this.editingId.set(null);
+    this.form.set({ ...EMPTY_FORM, isDefault: !this.defaultRegime() });
+    this.submitted.set(false);
+    this.modalError.set(null);
+    this.showModal.set(true);
   }
 
-  selectRegime(r: WorkingTimeRegime): void {
-    this.selectedId.set(r.id);
-    this.errorMsg.set(null);
-    this.successMsg.set(null);
-    this.form.patchValue({
-      code: r.code, labelFr: r.labelFr, labelEn: r.labelEn ?? '',
-      descriptionFr: r.descriptionFr ?? '',
-      hoursPerWeek: r.hoursPerWeek, daysPerWeek: r.daysPerWeek,
-      startTime: r.startTime ?? '', endTime: r.endTime ?? '',
-      seasonalFrom: r.seasonalFrom ?? '', seasonalTo: r.seasonalTo ?? '',
-      timezone: r.timezone ?? '',
-      isFlexible: r.isFlexible, isDefault: r.isDefault,
-      breakDurationMin: r.breakDurationMin ?? 0,
-      overtimeAllowed: r.overtimeAllowed ?? false,
-      maxHoursPerDay: r.maxHoursPerDay ?? null,
-    });
-    this.timezoneSelected.set([r.timezone ?? '']);
-    this.svc.getRegimeDetail(r.id).subscribe({ next: d => this.detail.set(d) });
+  openEdit(r: WorkingTimeRegime): void {
+    this.editingId.set(r.id);
+    this.form.set(this.regimeToForm(r));
+    this.submitted.set(false);
+    this.modalError.set(null);
+    this.showModal.set(true);
   }
 
-  toggleDefault(): void {
-    const cur = this.form.get('isDefault')?.value;
-    this.form.patchValue({ isDefault: !cur });
+  closeModal(): void {
+    if (!this.saving()) this.showModal.set(false);
   }
 
-  saveRegime(): void {
-    if (this.form.invalid || !this.selectedId()) {
-      this.formTouched.set(true);
-      return;
-    }
-    this.isSaving.set(true);
-    this.errorMsg.set(null);
-    const v = this.form.value;
-    this.svc.updateRegime(this.selectedId()!, {
-      labelFr: v.labelFr!, labelEn: v.labelEn ?? '',
-      descriptionFr: v.descriptionFr ?? '',
-      hoursPerWeek: v.hoursPerWeek!, daysPerWeek: v.daysPerWeek!,
-      startTime: v.startTime || undefined, endTime: v.endTime || undefined,
-      isFlexible: v.isFlexible!, isDefault: v.isDefault!,
-      breakDurationMin: v.breakDurationMin ?? 0,
-      overtimeAllowed: v.overtimeAllowed ?? false,
-      maxHoursPerDay: v.maxHoursPerDay ?? undefined,
-      // null (not undefined) so clearing a seasonal window actually erases it
-      seasonalFrom: v.seasonalFrom || null, seasonalTo: v.seasonalTo || null,
-      // Same reason: null restores inheritance from the entity's zone. Sending undefined
-      // would leave a stale override running this regime on another country's clock.
-      timezone: v.timezone || null,
-    }).subscribe({
-      next: updated => {
-        this.regimes.update(rs => rs.map(r => r.id === updated.id ? updated : r));
-        this.isSaving.set(false);
-        this.successMsg.set(this.translate.instant('ADMIN.regimes.catalog.updateSuccess'));
-        setTimeout(() => this.successMsg.set(null), 3000);
+  save(): void {
+    this.submitted.set(true);
+    if (this.invalid() || !this.canManage()) return;
+    this.saving.set(true);
+    this.modalError.set(null);
+
+    const dto = this.toRequest(this.form());
+    const id = this.editingId();
+    const call = id === null ? this.svc.createRegime(dto) : this.svc.updateRegime(id, dto);
+    call.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.showModal.set(false);
+        this.notify.success(this.translate.instant(
+          id === null ? 'ADMIN.regimes.catalog.created' : 'ADMIN.regimes.catalog.updateSuccess'));
+        // Reload, not a local patch: ticking « Par défaut » also took the flag off another row.
+        this.load();
       },
       error: err => {
-        this.isSaving.set(false);
-        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.catalog.errorSave'));
+        this.saving.set(false);
+        this.modalError.set(err?.error?.message ?? this.translate.instant(
+          id === null ? 'ADMIN.regimes.common.errorCreate' : 'ADMIN.regimes.catalog.errorSave'));
       },
     });
   }
 
-  deleteRegime(): void {
-    if (!this.selectedId()) return;
+  /**
+   * The full payload, also for an edit: the server's PATCH writes the seasonal window and the
+   * timezone even when absent (null = cleared), so a partial body would wipe them.
+   */
+  private toRequest(f: RegimeForm): CreateRegimeRequest {
+    return {
+      code: f.code.trim(),
+      labelFr: f.labelFr.trim(),
+      labelEn: f.labelEn.trim(),
+      descriptionFr: f.descriptionFr.trim(),
+      descriptionEn: f.descriptionEn.trim(),
+      hoursPerWeek: this.num(f.hoursPerWeek)!,
+      daysPerWeek: this.num(f.daysPerWeek)!,
+      startTime: f.startTime || undefined,
+      endTime: f.endTime || undefined,
+      breakDurationMin: this.num(f.breakDurationMin) ?? 0,
+      maxHoursPerDay: this.num(f.maxHoursPerDay) ?? undefined,
+      isFlexible: f.isFlexible,
+      overtimeAllowed: f.overtimeAllowed,
+      isDefault: f.isDefault,
+      seasonalFrom: f.seasonalFrom || null,
+      seasonalTo: f.seasonalTo || null,
+      timezone: f.timezone || null,
+      paysId: this.paysId(),
+    };
+  }
+
+  private regimeToForm(r: WorkingTimeRegime): RegimeForm {
+    return {
+      code: r.code ?? '', labelFr: r.labelFr ?? '', labelEn: r.labelEn ?? '',
+      descriptionFr: r.descriptionFr ?? '', descriptionEn: r.descriptionEn ?? '',
+      hoursPerWeek: r.hoursPerWeek, daysPerWeek: r.daysPerWeek,
+      startTime: this.hhmm(r.startTime), endTime: this.hhmm(r.endTime),
+      breakDurationMin: r.breakDurationMin ?? 0, maxHoursPerDay: r.maxHoursPerDay ?? null,
+      isFlexible: !!r.isFlexible, overtimeAllowed: !!r.overtimeAllowed, isDefault: !!r.isDefault,
+      seasonalFrom: r.seasonalFrom ?? '', seasonalTo: r.seasonalTo ?? '',
+      timezone: r.timezone ?? '',
+    };
+  }
+
+  // ── Row actions ────────────────────────────────────────────────────────────
+  confirmMakeDefault(r: WorkingTimeRegime): void {
+    const prev = this.defaultRegime();
+    const t = (k: string, p?: object) => this.translate.instant('ADMIN.regimes.catalog.' + k, p);
+    const body = t('makeDefaultBody', { next: this.regimeName(r), pays: this.entityName() })
+      + (prev ? ' ' + t('makeDefaultReplaces', { prev: this.regimeName(prev) }) : '')
+      + (!r.isFlexible && (!r.startTime || !r.endTime) ? ' ' + t('makeDefaultNoTimes') : '');
     this.modal.open({
-      title: this.translate.instant('ADMIN.regimes.catalog.deleteTitle'),
-      body:  this.translate.instant('ADMIN.regimes.catalog.deleteBody'),
+      title: t('makeDefaultTitle'),
+      body,
       buttons: [
-        { label: this.translate.instant('ADMIN.regimes.common.cancel'),   variant: 'secondary', action: r => r.close() },
-        { label: this.translate.instant('ADMIN.regimes.common.delete'), variant: 'primary',   action: r => { this.doDeleteRegime(); r.close(); } },
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'), variant: 'secondary', action: m => m.close() },
+        { label: t('makeDefault'), variant: 'primary', action: m => { m.close(); this.makeDefault(r); } },
       ],
     });
   }
 
-  private doDeleteRegime(): void {
-    this.isDeleting.set(true);
-    this.svc.deleteRegime(this.selectedId()!).subscribe({
+  private makeDefault(r: WorkingTimeRegime): void {
+    const dto = this.toRequest({ ...this.regimeToForm(r), isDefault: true });
+    this.svc.updateRegime(r.id, dto).subscribe({
       next: () => {
-        this.regimes.update(rs => rs.filter(r => r.id !== this.selectedId()));
-        this.selectedId.set(null); this.detail.set(null);
-        this.isDeleting.set(false);
+        this.notify.success(this.translate.instant('ADMIN.regimes.catalog.defaultSet'));
+        this.load();
       },
-      error: err => {
-        this.isDeleting.set(false);
-        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorDelete'));
-      },
+      error: err => this.notify.error(err?.error?.message
+        ?? this.translate.instant('ADMIN.regimes.catalog.errorSave')),
     });
   }
 
-  openCreateModal(): void {
-    this.modalRef = this.modal.open({
-      minWidth:    '360px',
-      minHeight:   '260px',
-      resizable:   true,
-      maximizable: true,
-      title: this.translate.instant('ADMIN.regimes.catalog.createModalTitle'),
-      body: this.bodyTpl(),
-      closeOnBackdrop: false,
-    });
-  }
-
-  cancelCreate(): void {
-    this.modalRef?.close();
-  }
-
-  createRegime(): void {
-    if (this.createForm.invalid) {
-      this.createFormTouched.set(true);
+  confirmDelete(r: WorkingTimeRegime): void {
+    // Known to be in use: say by whom instead of offering a delete the server will refuse.
+    // Usage not loaded (a failed detail call): fall through, the server checks and answers.
+    const u = this.usageOf(r);
+    if (u && (u.roleCount > 0 || u.employeeCount > 0)) {
+      this.modal.open({
+        title: this.translate.instant('ADMIN.regimes.catalog.deleteTitle'),
+        body: this.translate.instant('ADMIN.regimes.catalog.deleteInUseBody', {
+          name: this.regimeName(r), roles: u.roleCount, employees: u.employeeCount,
+        }),
+        buttons: [
+          { label: this.translate.instant('ADMIN.regimes.catalog.understood'), variant: 'primary', action: m => m.close() },
+        ],
+      });
       return;
     }
-    this.creating.set(true);
-    const v = this.createForm.value;
-    const dto: CreateRegimeRequest = {
-      code: v.code!, labelFr: v.labelFr!, labelEn: v.labelEn ?? '',
-      descriptionFr: v.descriptionFr ?? '',
-      hoursPerWeek: v.hoursPerWeek!, daysPerWeek: v.daysPerWeek!,
-      startTime: v.startTime || undefined, endTime: v.endTime || undefined,
-      isFlexible: v.isFlexible ?? false, isDefault: v.isDefault ?? false,
-      breakDurationMin: v.breakDurationMin ?? 0,
-      overtimeAllowed: v.overtimeAllowed ?? false,
-      maxHoursPerDay: v.maxHoursPerDay ?? undefined,
-      seasonalFrom: v.seasonalFrom || null, seasonalTo: v.seasonalTo || null,
-      timezone: v.timezone || null,
-      paysId: this.paysId(),
-    };
-    this.svc.createRegime(dto).subscribe({
-      next: created => {
-        this.creating.set(false);
-        this.regimes.update(rs => [...rs, created]);
-        this.modalRef?.close();
-        this.createForm.reset({ hoursPerWeek: 40, daysPerWeek: 5, isFlexible: false, isDefault: false, breakDurationMin: 0, overtimeAllowed: false, timezone: '' });
-        this.createTimezoneSelected.set(['']);
-        this.selectRegime(created);
-      },
-      error: err => {
-        this.creating.set(false);
-        this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorCreate'));
-      },
+    this.modal.open({
+      title: this.translate.instant('ADMIN.regimes.catalog.deleteTitle'),
+      body: this.translate.instant('ADMIN.regimes.catalog.deleteBodyNamed', { name: this.regimeName(r) }),
+      buttons: [
+        { label: this.translate.instant('ADMIN.regimes.common.cancel'), variant: 'secondary', action: m => m.close() },
+        { label: this.translate.instant('ADMIN.regimes.common.delete'), variant: 'primary',
+          action: m => { m.close(); this.doDelete(r); } },
+      ],
     });
   }
 
-  canDelete = computed(() => {
-    const d = this.detail();
-    if (!d) return false;
-    return d.employeeCount === 0 && d.roleCount === 0 && !this.selectedRegime()?.isDefault;
-  });
-
-  /**
-   * True when the regime's seasonal window covers today, i.e. it is currently the regime
-   * in force for its entity — outranking role assignments and personal overrides.
-   * An open-ended `seasonalTo` means "until further notice".
-   */
-  isSeasonalActive(r: WorkingTimeRegime): boolean {
-    if (!r.seasonalFrom) return false;
-    const today = new Date().toISOString().slice(0, 10);
-    if (r.seasonalFrom > today) return false;
-    return !r.seasonalTo || r.seasonalTo >= today;
+  private doDelete(r: WorkingTimeRegime): void {
+    this.svc.deleteRegime(r.id).subscribe({
+      next: () => {
+        this.notify.success(this.translate.instant('ADMIN.regimes.catalog.deleted'));
+        this.load();
+      },
+      error: err => this.notify.error(err?.error?.message
+        ?? this.translate.instant('ADMIN.regimes.common.errorDelete')),
+    });
   }
 
-  formatTime(t: string | undefined): string { return t ?? '—'; }
+  // ── Library pickers ↔ form strings ─────────────────────────────────────────
+  // The form keeps 'HH:mm' and 'YYYY-MM-DD' (what the API takes); daf-time-picker works on
+  // {hours, minutes, seconds} and daf-multi-date-picker on Date.
 
-  fieldError(name: string, message: string): string | undefined {
-    if (!this.formTouched()) return undefined;
-    return this.form.get(name)?.invalid ? message : undefined;
+  // Computed (not method calls in the template): a picker gets a NEW object on every change
+  // detection otherwise, and a model input re-set mid-pick loses the user's selection.
+  readonly startTimeValue    = computed(() => parseTimePickerValue(this.form().startTime));
+  readonly endTimeValue      = computed(() => parseTimePickerValue(this.form().endTime));
+  readonly seasonalFromValue = computed(() => isoToDate(this.form().seasonalFrom));
+  readonly seasonalToValue   = computed(() => isoToDate(this.form().seasonalTo));
+
+  setTime(key: 'startTime' | 'endTime', v: TimePickerValue | null): void {
+    this.patch(key, v ? formatTimePickerValue(v) : '');
   }
 
-  createFieldError(name: string, message: string): string | undefined {
-    if (!this.createFormTouched()) return undefined;
-    return this.createForm.get(name)?.invalid ? message : undefined;
+  setDate(key: 'seasonalFrom' | 'seasonalTo', v: Date | Date[] | null): void {
+    this.patch(key, dateToIso(v));
   }
 
-  setNum(control: 'hoursPerWeek' | 'daysPerWeek' | 'maxHoursPerDay', formGroup: 'form' | 'createForm', value: unknown): void {
-    const num = value === '' || value === null || value === undefined ? null : Number(value);
-    const group = formGroup === 'form' ? this.form : this.createForm;
-    group.get(control)?.setValue(num);
+  /** '' and null are « empty »; Number('') would be 0. */
+  num(v: number | string | null | undefined): number | null {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
   }
 }

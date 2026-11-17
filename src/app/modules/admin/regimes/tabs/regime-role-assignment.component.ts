@@ -5,6 +5,7 @@ import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SelectComponent, SelectOption, SortDirection, TableColumn, TableConfig, TableRow,
   PaginationComponent, ModalService, ModalRef, PermissionService, SearchToolbarComponent,
+  MultiDatePickerComponent,
 } from '@khalilrebhiitec/daf360';
 import { RegimeService } from '../regime.service';
 import { WorkingTimeRegime, RegimeRoleAssignmentResponse, AssignRegimeToRoleRequest, RoleRow } from '../regime.model';
@@ -23,6 +24,7 @@ const ROLE_ASSIGNMENT_SORT: Record<string, (r: RoleRow) => string | number | nul
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { adminLabel, roleLabel } from '../../../../shared/utils/admin-label.utils';
 import { rememberAdminState } from '../../admin-section-state';
+import { dateToIso, isoToDate } from '../regime-dates';
 
 @Component({
   selector: 'app-regime-role-assignment',
@@ -30,7 +32,7 @@ import { rememberAdminState } from '../../admin-section-state';
   imports: [
     DataTableComponent, DafCellDirective,
     ButtonComponent, CheckboxComponent, FormFieldComponent, SelectComponent,
-    PaginationComponent, SearchToolbarComponent, TranslatePipe,
+    PaginationComponent, SearchToolbarComponent, TranslatePipe, MultiDatePickerComponent,
   ],
   templateUrl: './regime-role-assignment.component.html',
   styleUrl: './regime-role-assignment.component.scss',
@@ -62,6 +64,19 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   formEffFrom     = '';
   formEffTo       = '';
   formNotes       = '';
+  /** Same dates for daf-multi-date-picker — kept as fields so the picker gets a stable Date. */
+  formEffFromDate: Date | null = null;
+  formEffToDate:   Date | null = null;
+
+  onEffFrom(v: Date | Date[] | null): void {
+    this.formEffFrom = dateToIso(v);
+    this.formEffFromDate = isoToDate(this.formEffFrom);
+  }
+
+  onEffTo(v: Date | Date[] | null): void {
+    this.formEffTo = dateToIso(v);
+    this.formEffToDate = isoToDate(this.formEffTo);
+  }
 
   // Pagination — 5 per page
   readonly PAGE_SIZE = 5;
@@ -88,16 +103,37 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
   }
 
 
-  // Merge roles + assignments
+  // Merge roles + assignments. The server lists, per role, the assignment in force today
+  // and any scheduled one (V127: a change planned for next month no longer ends the
+  // current one early). Row = the one in force (else the first scheduled), plus the next
+  // scheduled change when there is one after it.
   allRolesWithAssignment = computed<RoleRow[]>(() => {
-    const assignMap = new Map<number, RegimeRoleAssignmentResponse>();
-    this.assignments().forEach(a => assignMap.set(a.roleId, a));
-    return this.allRoles().map(r => ({
-      roleId: r.id,
-      roleName: roleLabel(r, this.translate),
-      assignment: assignMap.get(r.id) ?? null,
-    }));
+    const byRole = new Map<number, RegimeRoleAssignmentResponse[]>();
+    for (const a of this.assignments()) {
+      const list = byRole.get(a.roleId) ?? [];
+      list.push(a);
+      byRole.set(a.roleId, list);
+    }
+    return this.allRoles().map(r => {
+      const list = [...(byRole.get(r.id) ?? [])]
+        .sort((x, y) => x.effectiveFrom.localeCompare(y.effectiveFrom));
+      const current  = [...list].reverse().find(a => !a.upcoming) ?? null;
+      const upcoming = list.filter(a => a.upcoming);
+      return {
+        roleId: r.id,
+        roleName: roleLabel(r, this.translate),
+        assignment: current ?? upcoming[0] ?? null,
+        upcoming: current ? (upcoming[0] ?? null) : (upcoming[1] ?? null),
+      };
+    });
   });
+
+  /** Label of a regime by id, in the UI language. */
+  regimeLabelOf(a: RegimeRoleAssignmentResponse | null | undefined): string | null {
+    if (!a) return null;
+    const r = this.regimes().find(x => x.id === a.regimeId);
+    return r ? adminLabel(r, this.translate) : a.regimeLabelFr;
+  }
 
   defaultRegimeName = computed(() => {
     const r = this.regimes().find(r => r.isDefault);
@@ -109,10 +145,7 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
    * so the English one is looked up in the loaded catalog by id (French when not found).
    */
   regimeLabel(row: RoleRow): string | null {
-    const a = row.assignment;
-    if (!a) return null;
-    const r = this.regimes().find(r => r.id === a.regimeId);
-    return r ? adminLabel(r, this.translate) : a.regimeLabelFr;
+    return this.regimeLabelOf(row.assignment);
   }
 
   private readonly sortAccessors: typeof ROLE_ASSIGNMENT_SORT = {
@@ -142,9 +175,11 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     return role?.userCount ?? 0;
   });
 
+  // Seasonal regimes apply to the whole entity through their own window: the server refuses
+  // them as a role assignment, so they are not offered.
   regimeOptions = computed<SelectOption[]>(() => {
     this.translate.currentLang();
-    return this.regimes().map(r => ({
+    return this.regimes().filter(r => !r.seasonalFrom).map(r => ({
       value: String(r.id),
       label: `${adminLabel(r, this.translate)} ·${r.hoursPerWeek}${this.translate.instant('ADMIN.regimes.common.hoursPerWeekShort')}${r.isFlexible ? this.translate.instant('ADMIN.regimes.roles.flexibleSuffix') : ''}`,
     }));
@@ -273,11 +308,17 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
 
   openAssignModal(row: RoleRow): void {
     this.selectedRow.set(row);
-    this.formRegimeId = row.assignment?.regimeId ?? (this.regimes()[0]?.id ?? 0);
-    this.formEffFrom  = row.assignment?.effectiveFrom ?? new Date().toISOString().split('T')[0];
-    this.formEffTo    = row.assignment?.effectiveTo ?? '';
+    const assignable = this.regimes().filter(r => !r.seasonalFrom);
+    this.formRegimeId = row.assignment?.regimeId ?? (assignable[0]?.id ?? 0);
+    // A change always creates a NEW assignment from this date (the current one keeps
+    // applying until the day before) — so it starts today, not on the old start date,
+    // which would rewrite the past.
+    this.formEffFrom  = this.todayIso();
+    this.formEffTo    = '';
+    this.formEffFromDate = isoToDate(this.formEffFrom);
+    this.formEffToDate   = null;
     this.formNotes    = row.assignment?.notes ?? '';
-    this.noEndDate.set(!row.assignment?.effectiveTo);
+    this.noEndDate.set(true);
     this.errorMsg.set(null);
     this.modalRef = this.modal.open({
       minWidth:    '360px',
@@ -317,13 +358,11 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
       notes: this.formNotes || undefined,
     };
     this.svc.assignToRole(dto).subscribe({
-      next: a => {
-        this.assignments.update(as => {
-          const filtered = as.filter(x => x.roleId !== a.roleId);
-          return [...filtered, a];
-        });
+      next: () => {
+        // The server may have ended or cancelled other rows of this role: reload them.
         this.isAssigning.set(false);
         this.modalRef?.close();
+        this.reloadAssignments();
       },
       error: err => {
         this.isAssigning.set(false);
@@ -337,11 +376,22 @@ export class RegimeRoleAssignmentComponent implements OnChanges {
     if (!row?.assignment) return;
     this.svc.removeRoleAssignment(row.assignment.id).subscribe({
       next: () => {
-        this.assignments.update(as => as.filter(a => a.id !== row.assignment!.id));
         this.modalRef?.close();
+        this.reloadAssignments();
       },
       error: err => this.errorMsg.set(err?.error?.message ?? this.translate.instant('ADMIN.regimes.common.errorDelete')),
     });
+  }
+
+  private reloadAssignments(): void {
+    this.svc.getRoleAssignments(this.paysId()).subscribe(as => this.assignments.set(as));
+  }
+
+  /** Today as YYYY-MM-DD in the browser's calendar (not UTC: toISOString shifts it near midnight). */
+  private todayIso(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
 
   formatDate(d: string): string {
