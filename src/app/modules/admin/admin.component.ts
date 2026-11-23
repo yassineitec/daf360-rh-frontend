@@ -39,6 +39,7 @@ import { ContractAlertsAdminComponent }     from './contract-alerts/contract-ale
 import { HelpFaqAdminComponent }            from './help-faq/help-faq-admin.component';
 import { CandidateEmailTemplatesAdminComponent } from './candidate-email-templates/candidate-email-templates-admin.component';
 import { AdminSectionStateService }         from './admin-section-state';
+import { AuditLogComponent }                from '../../features/audit/audit-log.component';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -102,7 +103,8 @@ const TONE_ICON: Record<string, { iconColor: string; iconBg: string }> = {
   danger:    { iconColor: 'text-danger',    iconBg: 'bg-danger/10' },
 };
 
-const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string; tone: keyof typeof TONE_ICON }[] = [
+/** `permission`: one code, or any-of several (the audit log keeps the three it always had). */
+const TABS: { key: AdminTab; labelKey: string; permission: string | string[]; icon: string; tone: keyof typeof TONE_ICON }[] = [
   { key: 'roles',               labelKey: 'ADMIN.shell.tabs.roles',               permission: 'GET_ROLES',                  icon: 'admin_panel_settings', tone: 'primary' },
   // The account register: the only screen that shows accounts WITHOUT an HR file, which
   // every other list filters out on purpose.
@@ -152,7 +154,16 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // Questions / answers typed by HR, shown by the help assistant and « Aide & guides » next
   // to the FAQ shipped with the app. HR_ADMIN_ROLES: what the backend's HelpFaqService checks.
   { key: 'help-faq',              labelKey: 'ADMIN.shell.tabs.helpFaq',             permission: 'HR_ADMIN_ROLES',             icon: 'smart_toy',             tone: 'teal' },
+  // The merged audit_log + audit_trail timeline. Was a sidebar entry of its own (/rh/audit,
+  // which now redirects here); same three codes as that route had, so nobody loses it.
+  { key: 'audit',                 labelKey: 'ADMIN.shell.tabs.audit',
+    permission: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'],                                    icon: 'history',               tone: 'secondary' },
 ];
+
+/** Any-of check over a tab's one or several codes. */
+function holdsTabPermission(store: UserStore, permission: string | string[]): boolean {
+  return (Array.isArray(permission) ? permission : [permission]).some(p => store.hasPermission(p));
+}
 
 /** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
 const GUIDE_STEPS: GuideStep[] = [
@@ -194,6 +205,7 @@ const GUIDE_STEPS: GuideStep[] = [
     ContractAlertsAdminComponent,
     HelpFaqAdminComponent,
     CandidateEmailTemplatesAdminComponent,
+    AuditLogComponent,
     TranslatePipe,
     PageGuideComponent,
   ],
@@ -300,6 +312,9 @@ const GUIDE_STEPS: GuideStep[] = [
             <!-- No [paysId]: the help questions are company-wide. -->
             @if (activeTab() === 'help-faq')              { <app-help-faq-admin /> }
             @if (activeTab() === 'candidate-emails')      { <app-candidate-email-templates-admin [paysId]="paysId()" /> }
+            <!-- No [paysId]: the audit timeline is scoped server-side. [embedded]: the tab's
+                 breadcrumb header already names it, so the page's own title is dropped. -->
+            @if (activeTab() === 'audit')                 { <app-audit-log [embedded]="true" /> }
             }
           </daf-page>
         </div>
@@ -393,7 +408,7 @@ export class AdminComponent {
    * otherwise land on « Accès refusé » with their section a click away.
    */
   isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager()
-    || TABS.some(t => this.userStore.hasPermission(t.permission)));
+    || TABS.some(t => holdsTabPermission(this.userStore, t.permission)));
 
   availablePays  = signal<PaysTimezone[]>([]);
 
@@ -447,7 +462,7 @@ export class AdminComponent {
   readonly toneIcon = (tone: keyof typeof TONE_ICON) => TONE_ICON[tone];
 
   visibleTabs = computed(() =>
-    TABS.filter(t => this.userStore.hasPermission(t.permission) || this.userStore.isAdmin())
+    TABS.filter(t => holdsTabPermission(this.userStore, t.permission) || this.userStore.isAdmin())
   );
 
   currentTabLabelKey = computed(() => TABS.find(t => t.key === this.activeTab())?.labelKey ?? '');

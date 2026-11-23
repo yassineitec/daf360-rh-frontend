@@ -9,7 +9,9 @@ import {
   CandidateInterview,
   CreateInterviewRequest,
   CreateInterviewTypeRequest,
+  InterviewQuestion,
   InterviewType,
+  SaveInterviewQuestionRequest,
   UpdateInterviewRequest,
   UpdateInterviewTypeRequest,
   UserPickerItem,
@@ -50,6 +52,43 @@ export class InterviewService {
     return this.http.patch<InterviewType>(`${this.typesBase}/${id}/activate`, {});
   }
 
+  // ── Questionnaire per type (V135, RH_ADMIN_INTERVIEW_TYPES) ─────────────────
+
+  /** typeId → active question count, for the types table. */
+  getQuestionCounts(paysId: number): Observable<Record<number, number>> {
+    const params = new HttpParams().set('paysId', paysId);
+    return this.http.get<Record<number, number>>(`${this.typesBase}/question-counts`, { params });
+  }
+
+  /** Every question of the type, archived ones included. */
+  getQuestions(typeId: number): Observable<InterviewQuestion[]> {
+    return this.http.get<InterviewQuestion[]>(`${this.typesBase}/${typeId}/questions`);
+  }
+
+  createQuestion(typeId: number, dto: SaveInterviewQuestionRequest): Observable<InterviewQuestion> {
+    return this.http.post<InterviewQuestion>(`${this.typesBase}/${typeId}/questions`, dto);
+  }
+
+  updateQuestion(questionId: number, dto: SaveInterviewQuestionRequest): Observable<InterviewQuestion> {
+    return this.http.put<InterviewQuestion>(`${this.typesBase}/questions/${questionId}`, dto);
+  }
+
+  reorderQuestions(typeId: number, questionIds: number[]): Observable<InterviewQuestion[]> {
+    return this.http.put<InterviewQuestion[]>(`${this.typesBase}/${typeId}/questions/order`, { questionIds });
+  }
+
+  archiveQuestion(questionId: number): Observable<InterviewQuestion> {
+    return this.http.patch<InterviewQuestion>(`${this.typesBase}/questions/${questionId}/archive`, {});
+  }
+
+  restoreQuestion(questionId: number): Observable<InterviewQuestion> {
+    return this.http.patch<InterviewQuestion>(`${this.typesBase}/questions/${questionId}/restore`, {});
+  }
+
+  deleteQuestion(questionId: number): Observable<void> {
+    return this.http.delete<void>(`${this.typesBase}/questions/${questionId}`);
+  }
+
   // ── User Picker ─────────────────────────────────────────────────────────────
 
   getInterviewUsers(paysId: number): Observable<UserPickerItem[]> {
@@ -81,6 +120,12 @@ export class InterviewService {
   submitReport(candidateId: number, interviewId: number, dto: SubmitInterviewReportRequest): Observable<CandidateInterview> {
     return this.http.put<CandidateInterview>(
       `${this.candidatesBase}/${candidateId}/interviews/${interviewId}/report`, dto);
+  }
+
+  /** The questionnaire of this interview's type — what the PV asks (V135). */
+  getQuestionnaire(candidateId: number, interviewId: number): Observable<InterviewQuestion[]> {
+    return this.http.get<InterviewQuestion[]>(
+      `${this.candidatesBase}/${candidateId}/interviews/${interviewId}/questions`);
   }
 
   /** RH decides PASS / FAIL after reading the PVs (RH_VALIDATE_INTERVIEW). */

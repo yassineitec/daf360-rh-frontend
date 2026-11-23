@@ -1,4 +1,4 @@
-<!-- /rh/recrutement — canonical page shape (UI-PLAYBOOK §1).
+<!-- /rh/recrutement — « Pipeline RH », canonical page shape (UI-PLAYBOOK §1).
      `daf-page` owns the 32px vertical rhythm, so there is no wrapper gap, no
      `space-y-*` between sections and no full-page spinner. `kpis="3"` matches
      the three funnel tiles, so the first-load skeleton doesn't draw a fourth
@@ -59,39 +59,18 @@
     </div>
   }
 
-  @if (notice()) {
-    <div class="flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">
-      <span class="material-symbols-outlined text-[18px]">info</span>
-      <span class="flex-1">{{ notice() }}</span>
-      <button type="button" class="text-primary/70 hover:text-primary" (click)="notice.set(null)">
-        <span class="material-symbols-outlined text-[18px]">close</span>
-      </button>
-    </div>
-  }
-
   <!-- Content sits free in the page — never wrapped in an outer daf-card (§1).
-       Each section renders only at its own breakpoint (host class), so there is
-       no duplicated desktop/mobile tree here (§8b). The wrapper only anchors the
-       guide's board steps (board, list or mobile cards — whichever is shown). -->
+       The lifecycle board draws its own desktop columns and its mobile list; in list
+       view only its mobile list stays, beside the desktop table. The wrapper only
+       anchors the guide's board steps. -->
   <div data-guide="board" class="flex flex-col gap-8">
-  @if (viewMode() === 'kanban') {
-    <rh-candidates-board-section
-      [columns]="kanbanColumns()"
-      [loading]="kanbanLoading()"
-      [draggedId]="draggedId()"
-      [dragOverKey]="dragOverKey()"
-      [statusLabel]="statusLabel()"
-      [offboarding]="offboardingActive()"
-      [showOffboarding]="canViewOffboarding()"
-      (open)="onView($event)"
-      (openOffboarding)="onViewOffboarding($event)"
-      (toggleSort)="toggleColumnSort($event)"
-      (dragStart)="onDragStart($event)"
-      (dragEnd)="onDragEnd()"
-      (dragOver)="onDragOver($event)"
-      (dragLeave)="onDragLeave($event)"
-      (cardDrop)="onDrop($event)" />
-  } @else {
+  <rh-lifecycle-board-section
+    [columns]="lifecycleColumns()"
+    [loading]="boardLoading()"
+    [desktop]="viewMode() === 'kanban'"
+    (open)="onOpenCard($event)" />
+
+  @if (viewMode() === 'list') {
     <!-- The table section carries no breakpoint class of its own — this page is
          the one that pairs it with a mobile card list, so it gates it here. -->
     <rh-candidates-table-section
@@ -111,28 +90,6 @@
       (accept)="quickAccept($event)"
       (reject)="openRejectModal($event)" />
   }
-
-  <!-- Mobile is always the card list: a horizontal kanban and a data table are
-       both unusable at that width. -->
-  <rh-candidates-mobile-section
-    [columns]="kanbanColumns()"
-    [candidates]="mobileCandidates()"
-    [totalCount]="visibleKanbanCount()"
-    [stageFilter]="mobileStageFilter()"
-    [loading]="kanbanLoading()"
-    [canAcceptReject]="canAcceptReject()"
-    [actioningId]="actioningId()"
-    [statusLabel]="statusLabel()"
-    [globalLabelFor]="globalLabelFor()"
-    [accentFor]="accentFor()"
-    [badgeBgFor]="badgeBgFor()"
-    [offboarding]="offboardingActive()"
-    [showOffboarding]="canViewOffboarding()"
-    (stageFilterChange)="mobileStageFilter.set($event)"
-    (open)="onView($event)"
-    (openOffboarding)="onViewOffboarding($event)"
-    (accept)="quickAccept($event)"
-    (reject)="openRejectModal($event)" />
   </div>
 
   <!-- List view only — the board holds the whole tenant set in one fetch. -->

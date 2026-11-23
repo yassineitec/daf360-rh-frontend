@@ -18,22 +18,38 @@ import { CardAccent, CardComponent } from '@khalilrebhiitec/daf360';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CardComponent],
   /**
-   * `[&_.glass-card:hover]:transform-none` neutralises a lib rule this shell must not obey.
+   * The styles block below neutralises a lib rule this shell must not obey.
    *
    * The lib's `.glass-card:hover` (styles.css) applies `translateY(-4px) scale(1.02)` as plain
    * CSS on the class — NOT through the `hover:` utilities `daf-card` adds only when `hoverable`
-   * is set. So every glass card lifts and grows on hover whether or not it asked to, and on a
-   * full-width tab panel that means ~10px of growth each side which slides over the `daf-tabs`
-   * strip directly above it: hovering the Documents panel hid the tabs.
+   * is set. So every glass card lifts and grows on hover whether or not it asked to. On a
+   * full-width tab panel that is ~10px of growth each side, sliding over the `daf-tabs` strip
+   * above it, and a scaled layer carrying `backdrop-filter` is re-rasterised: the whole panel,
+   * text included, goes visibly blurry while hovered (the Entretiens tab, with glass cards
+   * nested in it, made that obvious).
+   *
+   * Why a component style and not the Tailwind arbitrary variant this used to be
+   * (`[&_.glass-card:hover]:transform-none` on the host): the lib's styles.css is imported
+   * UNLAYERED in src/styles.css, and unlayered CSS beats everything in Tailwind's
+   * `@layer utilities` regardless of specificity, so that utility was generated and never won.
+   * A component style is unlayered too, and its selector is more specific than the lib's.
    *
    * Scoped here rather than fixed in the lib on purpose — the lib fix changes behaviour for
-   * every consumer and needs its own release. A tab panel is a container, never a target, so
-   * suppressing the lift for THIS shell is correct independently of that.
+   * every consumer and needs its own release. Only `transform` is dropped: the background and
+   * shadow shifts are harmless and still read as "you are over this panel".
    *
-   * Only `transform` is dropped: the background and shadow shifts are harmless and still read
-   * as "you are over this panel".
+   * Two rules:
+   * - Cards NESTED in the panel never lift — a card growing inside a card that may itself be
+   *   growing is what blurred the Entretiens tab.
+   * - The panel itself does not lift either, unless the caller opts in with `hoverLift`
+   *   (the Entretiens tab does). Off by default because the growth slid the Documents panel
+   *   over the tab strip.
    */
-  host: { class: 'block [&_.glass-card:hover]:transform-none' },
+  host: { class: 'block', '[class.rh-section-lift]': 'hoverLift()' },
+  styles: [`
+    :host ::ng-deep .glass-card .glass-card:hover { transform: none; }
+    :host(:not(.rh-section-lift)) ::ng-deep .glass-card:hover { transform: none; }
+  `],
   template: `
     <daf-card [options]="{ variant: 'glass', radius: 'xl', padding: 'md', accent: accent() }">
       @if (title()) {
@@ -82,6 +98,8 @@ export class SectionCardComponent {
   accent = input<CardAccent>('none');
   /** Header toggles the body, with the design's rotating chevron. */
   collapsible = input(false);
+  /** Keep the lib's glass lift on hover for the panel itself (nested cards never lift). */
+  hoverLift = input(false);
   /** Only meaningful with `collapsible`; the design opens the Régime card closed. */
   startOpen = input(false);
 

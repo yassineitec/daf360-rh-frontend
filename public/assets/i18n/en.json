@@ -1793,7 +1793,7 @@
     },
     "PIPELINE_RH": {
       "TITLE": "HR Pipeline",
-      "SUBTITLE": "The HR lifecycle: recruitment, onboarding, hiring, offboarding.",
+      "SUBTITLE": "The HR lifecycle: candidature, IT provisioning, onboarding, move to permanent contract, offboarding.",
       "KPI_ACTIVE": "Active candidates",
       "KPI_ACCEPTANCE": "Offer acceptance rate",
       "KPI_HIRED": "Recruited",
@@ -1970,6 +1970,7 @@
       "ACC_DONE": "DONE",
       "NO_RIGHT": "Waiting for an authorised person",
       "END_CANDIDACY": "End the application",
+      "NEXT_STEP_SHORT": "Next step",
       "MOVED": "The application moved to the next step.",
       "ERROR": "Unable to move to the next step.",
       "DECLINED_TITLE": "The candidate declines the opportunity",
@@ -1986,6 +1987,7 @@
         "CHECK_PASS": "At least one interview passed",
         "CHECK_NO_FAIL": "No failed interview",
         "ACTION": "Validate the application",
+        "ACTION_SHORT": "Validate",
         "BLOCKED": "Schedule an interview to continue.",
         "BLOCKED_PV": "Waiting for the interviewers' reports.",
         "BLOCKED_VALIDATION": "Read the reports and validate the interviews in the Interviews tab.",
@@ -1997,6 +1999,7 @@
         "CHECK_PREPARED": "Offer prepared and costed",
         "CHECK_APPROVED": "Budget approved by finance",
         "ACTION": "Send the offer to the candidate",
+        "ACTION_SHORT": "Send",
         "BLOCKED_PREPARE": "Prepare the offer in the Offer tab to continue.",
         "BLOCKED_FINANCE": "Waiting for finance budget approval.",
         "BLOCKED_REFUSED": "Finance refused the cost: revise the offer in the Offer tab.",
@@ -2103,6 +2106,14 @@
       "ERR_DATE_REQUIRED": "The date is required.",
       "ERR_SCHEDULE": "Error while scheduling.",
       "ERR_UPDATE": "Error while updating.",
+      "WHEN": "Date & time",
+      "PANEL": "Panel",
+      "NOTES": "Notes",
+      "ACTIONS_ARIA": "Interview actions",
+      "CANCEL_ACTION": "Cancel interview",
+      "CANCEL_TITLE": "Cancel the interview",
+      "CANCEL_HINT": "The interview will be marked as cancelled and can no longer receive reports. You can schedule a new one.",
+      "KEEP": "Keep it",
       "PV": {
         "TITLE": "Interview reports",
         "COUNT": "{{n}} / {{total}} filed",
@@ -2120,7 +2131,15 @@
         "AWAITING_VALIDATION": "Waiting for HR validation.",
         "ERR_SUMMARY": "The summary must be at least 20 characters long.",
         "ERR_OPINION": "Give your opinion on the candidate.",
-        "ERR_SAVE": "Could not save the report."
+        "ERR_SAVE": "Could not save the report.",
+        "NONE": "No report filed yet.",
+        "QUESTIONNAIRE": "Evaluation grid",
+        "NOT_RATED": "Not rated yet — move the slider",
+        "CLEAR_RATING": "Clear the rating",
+        "SYNTHESIS": "Panel synthesis ({{n}} reports)",
+        "ERR_REQUIRED": "Answer the required question « {{label}} ».",
+        "ERR_QUESTIONNAIRE": "Could not load the evaluation grid.",
+        "WRITE_FROM_SELF_SERVICE": "Interviewers write their report from Self-service › Interviews."
       },
       "VALIDATE": {
         "TITLE": "HR validation",
@@ -2341,6 +2360,60 @@
       "ERR_REQUIRED_STAR": "Please fill in all required fields (marked *).",
       "ERR_CV_AFTER_SAVE": "Candidate saved, but the CV upload failed. Try again from the profile.",
       "ERR_CREATE": "Error while creating."
+    },
+    "LIFECYCLE": {
+      "COL_CANDIDATE": "Candidate",
+      "COL_IT": "IT provisioning",
+      "COL_ONBOARDING": "Onboarding",
+      "COL_CDI": "Move to CDI",
+      "COL_OFFBOARDING": "Offboarding",
+      "EMPTY": "No file in progress",
+      "NO_STEP_DONE": "No step validated yet",
+      "NEXT_INTERVIEW": "Next interview: {{date}}",
+      "START_ON": "Start date: {{date}}",
+      "NO_START_DATE": "Start date not set",
+      "IT_EQUIPMENT": "{{assets}} device(s) · {{licenses}} licence(s)",
+      "IT_STEP": {
+        "EMAIL": "Microsoft 365 account",
+        "AD": "AD profile",
+        "HARDWARE": "Hardware",
+        "LICENSES": "Licences",
+        "CLOSE": "Closing the file"
+      },
+      "IT_STATUS": {
+        "PENDING": "File not started",
+        "IN_PROGRESS": "File in progress",
+        "EMAIL_CREATED": "E-mail created, file in progress",
+        "COMPLETED": "File completed"
+      },
+      "ONB_STEP": {
+        "EMAIL": "Microsoft 365 e-mail",
+        "FILE": "HR file",
+        "PROFILE": "Profile creation"
+      },
+      "ONB_DETAIL": {
+        "WAITING_IT": "Waiting for the account created by IT",
+        "TO_FILL": "HR file to fill in",
+        "DRAFT_AT": "Draft saved on {{date}}",
+        "TO_SUBMIT": "File to submit"
+      },
+      "CDI_STEP": {
+        "SUBMIT": "Request filed",
+        "VALIDATION": "Validation",
+        "ESCALATED": "Escalated",
+        "ARBITRATION": "Arbitration",
+        "APPROVED": "Approved",
+        "CONVERSION": "HR conversion"
+      },
+      "CDI_DETAIL": {
+        "VALIDATION": "Waiting for the validator",
+        "ARBITRATION": "Escalated, waiting for the arbiter",
+        "CONVERSION": "Approved — CDI contract to be created by HR"
+      },
+      "CDI_REQUESTED_BY": "Requested by {{name}}",
+      "CDI_FROM": "CDI from {{date}}",
+      "CIVP_ENDS": "CIVP ends: {{date}}",
+      "LAST_DAY": "Last day: {{date}}"
     }
   },
   "PIPELINE": {
@@ -4288,15 +4361,11 @@
       },
       "TOOLBAR": {
         "TITLE": "Search, filters and display",
-        "TEXT": "Search for a candidate by name. « Filters » lets you pick a status, a position (a recruitment demand or « Spontaneous application »), a department or an application date. The two icons on the right switch between the kanban view and the list view."
+        "TEXT": "Search filters every column by name, position or e-mail. The two icons on the right switch between the kanban view and the list view. In the list view, « Filters » lets you pick a status, a position (a recruitment demand or « Spontaneous application »), a department or an application date."
       },
       "BOARD": {
-        "TITLE": "The candidates",
-        "TEXT": "In the kanban view, candidates are arranged in 5 columns: Pending, Accepted, IT & Onboarding, Hired and Rejected. In each column they are sorted by « Fit » score; the arrow in the header reverses the order. Click a card to open the candidate's file."
-      },
-      "MOVES": {
-        "TITLE": "Moving a candidate forward",
-        "TEXT": "Drag a card to another column. From « Pending » to « Accepted », the candidate is accepted; to « Rejected », a rejection reason is asked for. From « Accepted » to « IT & Onboarding », you are taken to the IT Provisioning page. From « IT & Onboarding » to « Hired », the candidate's onboarding opens. Any other move is refused, with a message explaining the step to take."
+        "TITLE": "The lifecycle",
+        "TEXT": "In the kanban view, each column is a lifecycle step: Candidate, IT provisioning, Onboarding, Move to CDI and Offboarding (you only see the columns your rights give access to). A card’s pill shows the current step, the line under the name where it stands, and the card footer the steps already validated. The same recruit can sit in IT provisioning and in Onboarding: both files move forward in parallel. Click a card to open the file."
       },
       "ACTIONS": {
         "TITLE": "Accept or reject",
@@ -6077,6 +6146,7 @@
         "overtime": "Overtime",
         "interviewTypes": "Interview types",
         "candidateEmails": "Candidate email templates",
+        "audit": "Audit Log",
         "offboardingCatalog": "Offboarding tasks",
         "documentTemplates": "Document templates",
         "sharepoint": "SharePoint",
@@ -6594,7 +6664,55 @@
         "loadError": "Error while loading types.",
         "nameRequired": "Name is required.",
         "saveError": "Error while saving.",
-        "toggleError": "Error while changing status."
+        "toggleError": "Error while changing status.",
+        "colQuestions": "Questions",
+        "questions": {
+          "TITLE": "Evaluation grid",
+          "MANAGE": "Report questions",
+          "INTRO": "Every interviewer of this type answers these questions in their report.",
+          "ADD": "Add a question",
+          "EMPTY": "No question: the report is just the summary and the opinion.",
+          "ACTIONS": "Question actions",
+          "EDIT": "Edit",
+          "ARCHIVE": "Archive",
+          "RESTORE": "Restore",
+          "DELETE": "Delete",
+          "DELETE_CONFIRM": "Delete this question for good?",
+          "MOVE_UP": "Move up",
+          "MOVE_DOWN": "Move down",
+          "ARCHIVED": "Archived",
+          "ANSWERED": "{{n}} answer(s)",
+          "TYPE_TEXT": "Free text",
+          "TYPE_RATING": "Rating (slider)",
+          "TYPE_SELECT": "Single choice",
+          "TYPE_MULTI_SELECT": "Multiple choice",
+          "LABEL": "Question (FR)",
+          "LABEL_PLACEHOLDER": "E.g. Technical command of the role",
+          "LABEL_EN": "Question (EN)",
+          "HELP": "Help for the interviewer",
+          "HELP_PLACEHOLDER": "What to assess, expected criteria…",
+          "RESPONSE_TYPE": "Response type",
+          "LOCKED_HINT": "Already answered: the type and scale can no longer change.",
+          "REQUIRED": "Answer required",
+          "MIN": "Minimum",
+          "MAX": "Maximum",
+          "STEP": "Step",
+          "MIN_LABEL": "Minimum label",
+          "MIN_LABEL_PLACEHOLDER": "E.g. Insufficient",
+          "MAX_LABEL": "Maximum label",
+          "MAX_LABEL_PLACEHOLDER": "E.g. Excellent",
+          "PREVIEW": "Preview",
+          "OPTIONS": "Choices offered",
+          "OPTIONS_PLACEHOLDER": "Type a choice then Enter",
+          "OPTIONS_HINT": "At least two choices.",
+          "ERR_LABEL": "The question label is required.",
+          "ERR_SCALE_BOUNDS": "The scale must stay between 0 and 100.",
+          "ERR_SCALE_ORDER": "The minimum must be lower than the maximum.",
+          "ERR_SCALE_STEP": "The step must be positive and divide the gap between minimum and maximum.",
+          "ERR_OPTIONS": "Offer at least two different choices.",
+          "LOAD_ERROR": "Could not load the questions.",
+          "SAVE_ERROR": "Could not save the question."
+        }
       },
       "offboarding": {
         "title": "Offboarding task catalog",
@@ -8213,19 +8331,6 @@
     "DETAIL_NO_FIELDS": "No data available for this change.",
     "CLOSE": "Close"
   },
-  "MY_INTERVIEWS": {
-    "TITLE": "My interviews",
-    "SUBTITLE": "The interviews you take part in — write your report after each one.",
-    "EMPTY": "No interview is assigned to you.",
-    "TO_WRITE": "Reports to write",
-    "UPCOMING": "Upcoming",
-    "DONE": "Finished",
-    "WRITE_PV": "Write the report",
-    "OPEN": "Open",
-    "PV_SENT": "Report sent",
-    "INTERVIEW": "Interview",
-    "ERR_LOAD": "Could not load your interviews."
-  },
   "NAV": {
     "MY_INTERVIEWS": "My interviews",
     "ABSENCES": "Absences",
@@ -8234,6 +8339,7 @@
     "SECTION_LABEL": "HR NAVIGATION",
     "ACCUEIL": "Home",
     "PROFILES": "Profiles",
+    "LIFECYCLE": "Lifecycle",
     "AUDIT": "Audit Log",
     "PIPELINE": "HR Pipeline",
     "CANDIDATES": "Candidates",
@@ -8247,6 +8353,7 @@
     "REQUESTS_INBOX": "Inbox",
     "ADMIN": "Admin",
     "MISSIONS": "Missions",
+    "MISSIONS_GROUP": "Missions",
     "MISSIONS_CURRENT": "Current missions",
     "MISSIONS_HISTORY": "Mission history",
     "BILLETERIE": "Ticketing",

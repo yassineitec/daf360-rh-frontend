@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin, catchError, of } from 'rxjs';
+import { Observable, forkJoin, catchError, map, of } from 'rxjs';
 import {
   BadgeCell,
   BadgeOptions,
@@ -32,18 +32,29 @@ import {
   CandidateStatus,
   PageResponse,
 } from './candidate.model';
-import { KANBAN_COLUMN_DEFS, KanbanColumn, KanbanColumnDef, byFitScoreDesc } from './kanban.model';
-import { PipelineService, PipelineActivity, PipelineObjective } from '../pipeline/services/pipeline.service';
+import { KANBAN_COLUMN_DEFS, KanbanColumnDef } from './kanban.model';
+import {
+  KanbanCandidate, PipelineService, PipelineActivity, PipelineObjective,
+} from '../pipeline/services/pipeline.service';
 import { OffboardingService } from '../offboarding/offboarding.service';
-import { OffboardingWorkflowInstance, isTerminal } from '../offboarding/models/offboarding.model';
-import { OFFBOARDING_COLUMN_KEY } from '../offboarding/offboarding-kanban.model';
+import { OffboardingWorkflowInstance } from '../offboarding/models/offboarding.model';
+import { DepartureReasonLabelService } from '../offboarding/departure-reason-labels.service';
+import { ItProvisioningService } from '../it-provisioning/it-provisioning.service';
+import { ProvisioningListItem } from '../it-provisioning/it-provisioning.model';
+import { OnboardingService } from '../onboarding/onboarding.service';
+import { OnboardingListItem } from '../onboarding/onboarding.model';
+import { CdiConversionService } from '../cdi-conversions/cdi-conversion.service';
+import { CdiConversion } from '../cdi-conversions/cdi-conversion.model';
+import {
+  LIFECYCLE_COLUMNS, LifecycleCard, LifecycleColumn, LifecycleColumnDef, LifecycleColumnKey,
+  candidateCard, cdiCard, itCard, offboardingCard, onboardingCard,
+} from './lifecycle-board.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem } from '../../core/ref/ref-data.model';
 import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
 import { ApprovedDemandOption } from '../recruitment-demands/recruitment-demand.model';
-import { CandidatesBoardSectionComponent } from './sections/candidates-board-section.component';
 import { CandidatesTableSectionComponent } from './sections/candidates-table-section.component';
-import { CandidatesMobileSectionComponent } from './sections/candidates-mobile-section.component';
+import { LifecycleBoardSectionComponent } from './sections/lifecycle-board-section.component';
 import { RecruitmentInsightsPanelComponent } from './sections/recruitment-insights-panel.component';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
@@ -51,13 +62,11 @@ import { GuideStep } from '../../shared/guide/page-guide.types';
 const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-/** Kanban pulls the whole (tenant-scoped) candidate set in one page and groups it client-side. */
-const KANBAN_FETCH_SIZE = 500;
-
 /**
- * Candidate status codes, in lifecycle order, for the status filter — every one of them:
- * this page is the whole lifecycle (see `panelFilterQuery`). IT_IN_PROGRESS / EMAIL_RECEIVED
- * are legacy codes of the onboarding phase, still filterable since old files carry them.
+ * Candidate status codes, in lifecycle order, for the list view's status filter — every one
+ * of them: the list is the whole candidate lifecycle (see `panelFilterQuery`).
+ * IT_IN_PROGRESS / EMAIL_RECEIVED are legacy codes of the onboarding phase, still filterable
+ * since old files carry them.
  */
 const STATUS_CODES: CandidateStatus[] = [
   'PENDING', 'ACCEPTED', 'OFFER_SENT', 'HR_IN_PROGRESS', 'IT_IN_PROGRESS', 'EMAIL_RECEIVED',
@@ -69,13 +78,13 @@ type ViewMode = 'list' | 'kanban';
 /**
  * Guided tour of the page, started from the help center. `target` names a
  * `data-guide` anchor in the template; the board steps point at whichever view is shown.
+ * No « moves » step any more: the board is not draggable.
  */
 const GUIDE_STEPS: GuideStep[] = [
   { icon: 'waving_hand',  titleKey: 'RECRUITMENT.GUIDE.WELCOME.TITLE',  textKey: 'RECRUITMENT.GUIDE.WELCOME.TEXT' },
   { icon: 'monitoring',   titleKey: 'RECRUITMENT.GUIDE.KPIS.TITLE',     textKey: 'RECRUITMENT.GUIDE.KPIS.TEXT',     target: 'kpis' },
   { icon: 'search',       titleKey: 'RECRUITMENT.GUIDE.TOOLBAR.TITLE',  textKey: 'RECRUITMENT.GUIDE.TOOLBAR.TEXT',  target: 'toolbar' },
   { icon: 'view_kanban',  titleKey: 'RECRUITMENT.GUIDE.BOARD.TITLE',    textKey: 'RECRUITMENT.GUIDE.BOARD.TEXT',    target: 'board' },
-  { icon: 'drag_pan',     titleKey: 'RECRUITMENT.GUIDE.MOVES.TITLE',    textKey: 'RECRUITMENT.GUIDE.MOVES.TEXT',    target: 'board' },
   { icon: 'check_circle', titleKey: 'RECRUITMENT.GUIDE.ACTIONS.TITLE',  textKey: 'RECRUITMENT.GUIDE.ACTIONS.TEXT',  target: 'board' },
   { icon: 'insights',     titleKey: 'RECRUITMENT.GUIDE.INSIGHTS.TITLE', textKey: 'RECRUITMENT.GUIDE.INSIGHTS.TEXT' },
   { icon: 'help',         titleKey: 'RECRUITMENT.GUIDE.END.TITLE',      textKey: 'RECRUITMENT.GUIDE.END.TEXT' },
@@ -84,7 +93,7 @@ const GUIDE_STEPS: GuideStep[] = [
 /** Demand filter value for "no recruitment demand" — never a real demand id. */
 const SPONTANEOUS = 'SPONTANEOUS';
 
-/** Badge variant of each global status (lifecycle column) in the list view. */
+/** Badge variant of each global status (lifecycle phase) in the list view. */
 const GLOBAL_VARIANT: Record<string, BadgeOptions['variant']> = {
   recruiting: 'info',
   onboarding: 'warning',
@@ -98,36 +107,33 @@ function toIsoDay(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function sameRange(a: Date[] | null, b: Date[] | null): boolean {
-  const key = (r: Date[] | null) => (r ?? []).map(toIsoDay).join('/');
-  return key(a) === key(b);
+/** The raw rows behind the board, one list per column. */
+interface LifecycleSources {
+  candidates: KanbanCandidate[];
+  it: ProvisioningListItem[];
+  onboarding: OnboardingListItem[];
+  cdi: CdiConversion[];
+  offboarding: OffboardingWorkflowInstance[];
 }
 
+const EMPTY_SOURCES: LifecycleSources = { candidates: [], it: [], onboarding: [], cdi: [], offboarding: [] };
+
 /**
- * /rh/recrutement — « Pipeline RH », the HR LIFECYCLE board: En recrutement → Onboarding →
- * Embauchés → Offboarding → Clôturés (see KANBAN_COLUMN_DEFS). Every card carries its
- * global status and, under it, its detailed candidate status. The recruitment steps
- * themselves (Entretiens / Validation RH / Offre) are the columns of « Candidats ».
+ * /rh/recrutement — « Pipeline RH », the HR LIFECYCLE board (own sidebar entry, outside the
+ * « Lifecycle » group): Candidat → Provisioning IT → Onboarding → Passage en CDI →
+ * Offboarding (see LIFECYCLE_COLUMNS). Every card shows its current step, where it stands
+ * inside it, and the steps already validated in its footer.
  *
- * Backed entirely by the candidate backend (`/api/hr/candidates`,
- * CandidateController); statuses come straight from `CandidateStatus` so the
- * board, the list and the KPIs all reflect the same source. The two pipeline
- * endpoints it does call (`/pipeline/activity`, `/pipeline/objectives`) only
- * feed the insights drawer.
+ * Each column reads its own module's endpoint and is only drawn with that endpoint's read
+ * permission; a failing or 403'd call empties its column, never the board. The search box
+ * filters the board client-side (name, position…).
  *
- * The board also carries a read-only **Offboarding** column (`/api/hr/offboarding`,
- * gated on `RH_MANAGE_OFFBOARDING`). It used to hang off the design board on
- * `/rh/candidates`, which reads as "offboarding is a candidature"; this page is the
- * HR lifecycle board, so departures belong here. It is display-only in every sense —
- * no drag, no KPI contribution, no status filter — and a card just opens the file at
- * `/rh/offboarding/:id`.
+ * The list view is unchanged: the candidate lifecycle table (`/api/hr/candidates`,
+ * stage=LIFECYCLE) with its filter panel, paging, sort and accept / reject actions.
  *
- * Architecture follows UI-PLAYBOOK §8b: this template is `daf-page` +
- * `daf-page-header` + the KPI row + `daf-search-toolbar` + one section
- * component per view, and every section is a stateless input/output shell.
- * **All view state lives here** — `searchText`, `statusFilter`, `viewMode`,
- * paging, drag state — which is what makes flipping between board and list
- * lossless.
+ * Architecture follows UI-PLAYBOOK §8b: this template is `daf-page` + `daf-page-header` +
+ * the KPI row + `daf-search-toolbar` + one section component per view; all view state
+ * lives here.
  */
 @Component({
   selector: 'rh-candidates',
@@ -141,9 +147,8 @@ function sameRange(a: Date[] | null, b: Date[] | null): boolean {
     PaginationComponent,
     SearchToolbarComponent,
     RejectModalComponent,
-    CandidatesBoardSectionComponent,
     CandidatesTableSectionComponent,
-    CandidatesMobileSectionComponent,
+    LifecycleBoardSectionComponent,
     RecruitmentInsightsPanelComponent,
     PageGuideComponent,
     TranslatePipe,
@@ -158,6 +163,10 @@ export class CandidatesComponent implements OnInit {
   private confirm     = inject(ConfirmService);
   private pipelineSvc = inject(PipelineService);
   private offboardingSvc = inject(OffboardingService);
+  private itSvc       = inject(ItProvisioningService);
+  private onboardingSvc = inject(OnboardingService);
+  private cdiSvc      = inject(CdiConversionService);
+  private reasons     = inject(DepartureReasonLabelService);
   private router      = inject(Router);
   readonly userStore  = inject(UserStore);
   private translate   = inject(TranslateService);
@@ -171,10 +180,9 @@ export class CandidatesComponent implements OnInit {
     avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,
     activeCandidates: 0, hiredTotal: 0, offerAcceptanceRate: null,
   });
-  readonly kanbanItems = signal<CandidateListItem[]>([]);
+  readonly sources     = signal<LifecycleSources>(EMPTY_SOURCES);
   readonly activities  = signal<PipelineActivity[]>([]);
   readonly objectives  = signal<PipelineObjective[]>([]);
-  private readonly offboardingItems = signal<OffboardingWorkflowInstance[]>([]);
   /** Filter-panel option sources, loaded once for the user's entity. */
   private readonly departments   = signal<RefDataItem[]>([]);
   private readonly demandOptions = signal<ApprovedDemandOption[]>([]);
@@ -183,8 +191,7 @@ export class CandidatesComponent implements OnInit {
   readonly firstLoad     = signal(true);
   /** Every subsequent fetch — skeletons inside the affected section only. */
   readonly loading       = signal(false);
-  readonly kanbanLoading = signal(false);
-  readonly kanbanLoaded  = signal(false);
+  readonly boardLoading  = signal(false);
   readonly extrasLoading = signal(true);
 
   // ── View state (survives a view-mode switch) ───────────────────────────────
@@ -220,11 +227,7 @@ export class CandidatesComponent implements OnInit {
     return r == null ? '—' : `${Math.round(r)}%`;
   });
 
-  /**
-   * 30-day growth in *new candidatures*. It belongs to the "Candidats actifs"
-   * tile only — the "Recrutés" tile used to show the very same number, which
-   * read as a hiring trend the backend never computes.
-   */
+  /** 30-day growth in *new candidatures* — the « Candidats actifs » tile only. */
   readonly activeDelta = computed<MetricDelta | null>(() => {
     this.translate.currentLang();
     const growth = this.dashStats().monthGrowthPct;
@@ -251,74 +254,43 @@ export class CandidatesComponent implements OnInit {
     return Math.min(100, Math.round((o.actual / o.target) * 100));
   });
 
-  // ── Offboarding (display-only, separate HR workflow) ───────────────────────
-  readonly canViewOffboarding = computed(() => this.userStore.hasPermission('RH_MANAGE_OFFBOARDING'));
+  // ── Lifecycle board ────────────────────────────────────────────────────────
+  /** The columns this user may read — the others are not drawn at all. */
+  private readonly visibleColumnDefs = computed<LifecycleColumnDef[]>(() =>
+    LIFECYCLE_COLUMNS.filter(def => def.permissions.some(p => this.userStore.hasPermission(p))));
 
-  /** Active (non-terminal) offboarding files only — a closed file is not "in progress". */
-  readonly offboardingActive = computed(() =>
-    this.offboardingItems().filter(o => !isTerminal(o.status)),
-  );
-
-  onViewOffboarding(id: number): void { this.router.navigate(['/rh/offboarding', id]); }
-
-  // ── Kanban ─────────────────────────────────────────────────────────────────
-  private readonly columnDefs = KANBAN_COLUMN_DEFS;
-  readonly columnSortDirs = signal<Record<string, 'asc' | 'desc'>>({});
-
-  toggleColumnSort(key: string): void {
-    this.columnSortDirs.update(dirs => ({ ...dirs, [key]: dirs[key] === 'asc' ? 'desc' : 'asc' }));
+  private canRead(key: LifecycleColumnKey): boolean {
+    return this.visibleColumnDefs().some(d => d.key === key);
   }
 
-  /**
-   * The status filter is applied here as well as in the list query, so picking a
-   * status narrows the board too. Before, it silently only affected the list.
-   */
-  readonly kanbanColumns = computed<KanbanColumn[]>(() => {
-    this.translate.currentLang();
-    const status = this.statusFilter();
-    const all  = status ? this.kanbanItems().filter(c => c.status === status) : this.kanbanItems();
-    const dirs = this.columnSortDirs();
-    return this.columnDefs.map(def => {
-      const dir = dirs[def.key] ?? 'desc';
-      return {
-        ...def,
-        label:       this.translate.instant(def.labelKey),
-        globalLabel: this.translate.instant(def.globalLabelKey),
-        sortDir: dir,
-        candidates: all
-          .filter(c => def.statuses.includes(c.status))
-          .sort((a, b) => (dir === 'asc' ? -byFitScoreDesc(a, b) : byFitScoreDesc(a, b))),
-      };
-    });
+  /** Each source mapped to cards, then narrowed by the search box. */
+  readonly lifecycleColumns = computed<LifecycleColumn[]>(() => {
+    const lang = this.translate.currentLang();
+    const locale = lang === 'en' ? 'en-GB' : 'fr-FR';
+    const t = (key: string, params?: Record<string, unknown>) => this.translate.instant(key, params);
+    const src = this.sources();
+    const q = this.search().trim().toLowerCase();
+    const cardsOf = (key: LifecycleColumnKey): LifecycleCard[] => {
+      switch (key) {
+        case 'CANDIDATE':   return src.candidates.map(c => candidateCard(c, t, locale)).filter(nonNull);
+        case 'IT':          return src.it.map(p => itCard(p, t, locale)).filter(nonNull);
+        case 'ONBOARDING':  return src.onboarding.map(o => onboardingCard(o, t, locale));
+        case 'CDI':         return src.cdi.map(r => cdiCard(r, t, locale)).filter(nonNull);
+        case 'OFFBOARDING': return src.offboarding
+          .map(w => offboardingCard(w, t, locale, code => this.reasons.label(code))).filter(nonNull);
+      }
+    };
+    return this.visibleColumnDefs().map(({ labelKey, permissions, ...def }) => ({
+      ...def,
+      label: t(labelKey),
+      cards: cardsOf(def.key).filter(c => !q || c.haystack.includes(q)),
+    }));
   });
-
-  readonly visibleKanbanCount = computed(() =>
-    this.kanbanColumns().reduce((sum, col) => sum + col.candidates.length, 0),
-  );
-
-  // ── Mobile ─────────────────────────────────────────────────────────────────
-  readonly mobileStageFilter = signal<string | null>(null);
-
-  readonly mobileCandidates = computed(() => {
-    const key = this.mobileStageFilter();
-    const cols = this.kanbanColumns();
-    // The offboarding pill is not a status column: the mobile section renders the
-    // offboarding cards itself, and "all" must not fold departures into the funnel.
-    if (key === OFFBOARDING_COLUMN_KEY) return [];
-    if (key) return cols.find(c => c.key === key)?.candidates ?? [];
-    return cols.flatMap(c => c.candidates).sort(byFitScoreDesc);
-  });
-
-  // ── Drag & drop (native HTML5 — no CDK, avoids Native Federation issues) ────
-  readonly draggedId   = signal<number | null>(null);
-  readonly dragOverKey = signal<string | null>(null);
-  private draggedCandidate: CandidateListItem | null = null;
 
   // ── Actions ────────────────────────────────────────────────────────────────
   readonly rejectTarget = signal<CandidateListItem | null>(null);
   readonly actioningId  = signal<number | null>(null);
   readonly actionError  = signal<string | null>(null);
-  readonly notice       = signal<string | null>(null);
 
   readonly canAcceptReject = computed(() => this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'));
 
@@ -327,9 +299,8 @@ export class CandidatesComponent implements OnInit {
 
   /**
    * Chaque changement de vue, de recherche, de filtre, de tri ou de page est mémorisé,
-   * pour que le retour depuis la fiche d'un candidat retrouve la page telle qu'on l'a
-   * quittée. Le premier passage a lieu après `ngOnInit`, donc après la restauration :
-   * il réécrit l'état restauré, sans l'écraser par des valeurs vides.
+   * pour que le retour depuis une fiche retrouve la page telle qu'on l'a quittée.
+   * `columnSortDirs` / `mobileStageFilter` belonged to the old board — kept empty.
    */
   private readonly persistState = effect(() => {
     this.pageState.save({
@@ -342,22 +313,17 @@ export class CandidatesComponent implements OnInit {
       sort:              this.sort(),
       page:              this.currentPage(),
       pageSize:          this.pageSize(),
-      columnSortDirs:    this.columnSortDirs(),
-      mobileStageFilter: this.mobileStageFilter(),
+      columnSortDirs:    {},
+      mobileStageFilter: null,
     });
   });
 
-  /**
-   * Avant les premiers chargements et le premier rendu : la requête du tableau Kanban
-   * lit les filtres, et `daf-filter` ne lit `initialValues` qu'une fois.
-   */
+  /** Avant les premiers chargements et le premier rendu (`daf-filter` ne lit `initialValues` qu'une fois). */
   private restoreState(): void {
     const s = this.pageState.restore();
     if (!s) return;
     this.viewMode.set(s.viewMode);
     this.search.set(s.search);
-    // A status remembered from before this page dropped the post-offer statuses would
-    // filter on something it no longer loads: start from « all » instead.
     this.statusFilter.set(STATUS_CODES.includes(s.statusFilter as CandidateStatus) ? s.statusFilter : '');
     this.departmentFilter.set(s.departmentFilter);
     this.demandFilter.set(s.demandFilter);
@@ -365,19 +331,16 @@ export class CandidatesComponent implements OnInit {
     this.sort.set(s.sort);
     this.currentPage.set(s.page);
     this.pageSize.set(s.pageSize);
-    this.columnSortDirs.set(s.columnSortDirs);
-    // A pill remembered under a column key that no longer exists would show an empty list.
-    const pill = s.mobileStageFilter;
-    this.mobileStageFilter.set(
-      pill && (pill === OFFBOARDING_COLUMN_KEY || this.columnDefs.some(d => d.key === pill)) ? pill : null);
   }
 
   // ── Toolbar ────────────────────────────────────────────────────────────────
   /**
-   * The status dropdown belongs *inside* the filter panel — `daf-search-toolbar`
-   * renders no free-standing selects next to the search box.
+   * List view only: the panel filters candidates, and the board mixes five processes a
+   * candidate status / demand / department filter means nothing to. An empty list hides
+   * the toolbar's filter button.
    */
   readonly filterFields = computed<FilterField[]>(() => {
+    if (this.viewMode() !== 'list') return [];
     const lang = this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
     return [
@@ -421,10 +384,6 @@ export class CandidatesComponent implements OnInit {
     ];
   });
 
-  /**
-   * `initialValues` is a seed read once on first open, and a `select` needs the
-   * panel's internal shape — a `string[]`, not a bare string (§10b).
-   */
   readonly filterConfig = computed<SearchToolbarFilterConfig>(() => {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
@@ -452,14 +411,7 @@ export class CandidatesComponent implements OnInit {
     ];
   });
 
-  // ── Presentation callbacks handed to the sections ──────────────────────────
-  /** Translated status label; the hardcoded-French `statusBadge` map is display-only. */
-  readonly statusLabel = computed(() => {
-    this.translate.currentLang();
-    return (status: string) => this.translate.instant('CANDIDATES.STATUS.' + status);
-  });
-
-  /** Translated label + the shared badge variant, for the table's badge column. */
+  // ── Presentation callbacks handed to the table ─────────────────────────────
   readonly statusBadgeCell = computed(() => {
     this.translate.currentLang();
     return (status: string): BadgeCell => ({
@@ -468,46 +420,33 @@ export class CandidatesComponent implements OnInit {
     });
   });
 
-  /** Status → the global status it belongs to (« En recrutement », « En onboarding »…). */
-  readonly globalLabelFor = computed(() => {
+  /** Global status as a badge, for the list view's « Phase » column. */
+  readonly globalBadgeCell = computed(() => {
     this.translate.currentLang();
-    return (status: string) => {
+    return (status: string): BadgeCell => {
       const def = this.columnForStatus(status);
-      return def ? this.translate.instant(def.globalLabelKey) : '';
+      return {
+        label:   def ? this.translate.instant(def.globalLabelKey) : '',
+        options: { variant: GLOBAL_VARIANT[def?.key ?? ''] ?? 'neutral', dot: true } as BadgeOptions,
+      };
     };
   });
 
-  /** Global status as a badge, for the list view's « Phase » column. */
-  readonly globalBadgeCell = computed(() => {
-    const label = this.globalLabelFor();
-    return (status: string): BadgeCell => ({
-      label:   label(status),
-      options: { variant: GLOBAL_VARIANT[this.columnForStatus(status)?.key ?? ''] ?? 'neutral', dot: true } as BadgeOptions,
-    });
-  });
-
-  readonly accentFor  = computed(() => (status: string) => this.columnForStatus(status)?.accent ?? '#64748b');
-  readonly badgeBgFor = computed(() => (status: string) => this.columnForStatus(status)?.badgeBg ?? 'rgba(100,116,139,0.12)');
-
   private columnForStatus(status: string): KanbanColumnDef | undefined {
-    return this.columnDefs.find(d => d.statuses.includes(status as CandidateStatus));
+    return KANBAN_COLUMN_DEFS.find(d => d.statuses.includes(status as CandidateStatus));
   }
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
-    // Retour sur la vue liste : elle ne se charge sinon qu'à la bascule (`setView`).
     if (this.viewMode() === 'list') this.loadCandidates();
 
     forkJoin({
-      stats:  this.svc.getDashboardStats().pipe(catchError(() => of(null))),
-      kanban: this.svc.getCandidates(this.kanbanQuery()).pipe(catchError(() => of(null))),
-    }).subscribe(({ stats, kanban }) => {
+      stats:   this.svc.getDashboardStats().pipe(catchError(() => of(null))),
+      sources: this.fetchSources(),
+    }).subscribe(({ stats, sources }) => {
       if (stats) this.dashStats.set(stats);
-      if (kanban) {
-        this.kanbanItems.set(kanban.content);
-        this.kanbanLoaded.set(true);
-      }
+      this.sources.set(sources);
       this.firstLoad.set(false);
     });
 
@@ -522,25 +461,39 @@ export class CandidatesComponent implements OnInit {
       this.objectives.set(objectives);
       this.extrasLoading.set(false);
     });
+  }
 
-    // Offboarding rides alongside, not inside, the board fetch: it is a different
-    // service and only some roles can read it, so a slow or 403'd call must never
-    // delay the candidate columns. Not requested at all without the permission.
-    if (this.canViewOffboarding()) {
-      this.offboardingSvc.listOffboarding()
-        .pipe(catchError(() => of([] as OffboardingWorkflowInstance[])))
-        .subscribe(items => this.offboardingItems.set(items ?? []));
-    }
+  /**
+   * One call per readable column, in parallel. A column the user cannot read is not
+   * requested at all; a failing call empties its own column only.
+   */
+  private fetchSources(): Observable<LifecycleSources> {
+    const safe = <T>(key: LifecycleColumnKey, call: () => Observable<T[]>): Observable<T[]> =>
+      this.canRead(key) ? call().pipe(catchError(() => of([] as T[]))) : of([] as T[]);
+    return forkJoin({
+      // The « Candidats » board's own feed: it carries the interview / offer facts the step needs.
+      candidates:  safe('CANDIDATE', () => this.pipelineSvc.getKanban().pipe(
+        map(cols => (cols ?? []).flatMap(c => c.candidates ?? [])))),
+      it:          safe('IT', () => this.itSvc.getPendingList()),
+      onboarding:  safe('ONBOARDING', () => this.onboardingSvc.getPendingList()),
+      cdi:         safe('CDI', () => this.cdiSvc.list(false)),
+      offboarding: safe('OFFBOARDING', () => this.offboardingSvc.listOffboarding()),
+    });
+  }
+
+  private loadBoard(): void {
+    this.boardLoading.set(true);
+    this.fetchSources().subscribe(sources => {
+      this.sources.set(sources);
+      this.boardLoading.set(false);
+    });
   }
 
   private loadStats(): void {
     this.svc.getDashboardStats().subscribe({ next: s => this.dashStats.set(s), error: () => {} });
   }
 
-  /**
-   * Demand / department / date filters, shared by the board and the list — unlike
-   * status, they are applied server-side for both views.
-   */
+  /** Demand / department / date filters of the list view — applied server-side. */
   private panelFilterQuery(): CandidateListQuery {
     const demand = this.demandFilter();
     const range  = this.createdRange();
@@ -555,14 +508,6 @@ export class CandidatesComponent implements OnInit {
       createdFrom:  range?.[0] ? toIsoDay(range[0]) : undefined,
       // A single picked day is a one-day range.
       createdTo:    range?.[0] ? toIsoDay(range[1] ?? range[0]) : undefined,
-    };
-  }
-
-  private kanbanQuery(): CandidateListQuery {
-    return {
-      ...this.panelFilterQuery(),
-      page:   0,
-      size:   KANBAN_FETCH_SIZE,
     };
   }
 
@@ -588,8 +533,7 @@ export class CandidatesComponent implements OnInit {
       size:   this.pageSize(),
     }).subscribe({
       next: r => {
-        // Page restaurée devenue hors limites (candidats archivés entre-temps) : on
-        // retombe sur la première plutôt que d'afficher une liste vide.
+        // Page restaurée devenue hors limites : on retombe sur la première.
         if (r.content.length === 0 && this.currentPage() > 0) {
           this.currentPage.set(0);
           this.loadCandidates();
@@ -602,22 +546,10 @@ export class CandidatesComponent implements OnInit {
     });
   }
 
-  private loadKanban(): void {
-    this.kanbanLoading.set(true);
-    this.svc.getCandidates(this.kanbanQuery()).subscribe({
-      next: r => {
-        this.kanbanItems.set(r.content);
-        this.kanbanLoaded.set(true);
-        this.kanbanLoading.set(false);
-      },
-      error: () => this.kanbanLoading.set(false),
-    });
-  }
-
   private reload(): void {
     this.loadStats();
-    if (this.page())        this.loadCandidates();
-    if (this.kanbanLoaded()) this.loadKanban();
+    if (this.page()) this.loadCandidates();
+    this.loadBoard();
   }
 
   // ── Toolbar handlers ───────────────────────────────────────────────────────
@@ -625,39 +557,26 @@ export class CandidatesComponent implements OnInit {
     const next = mode as ViewMode;
     if (this.viewMode() === next) return;
     this.viewMode.set(next);
-    this.notice.set(null);
-    if (next === 'kanban' && !this.kanbanLoaded()) this.loadKanban();
-    if (next === 'list'   && !this.page())         this.loadCandidates();
+    if (next === 'list' && !this.page()) this.loadCandidates();
   }
 
+  /** The board filters client-side on `search()`; the list re-queries the server. */
   onSearch(value: string): void {
     if (value === this.search()) return; // daf-search-toolbar re-emits on blur
     this.search.set(value ?? '');
     this.currentPage.set(0);
-    this.loadKanban();
     if (this.page()) this.loadCandidates();
   }
 
   applyFilters(result: FilterResult): void {
     const str = (key: string) => typeof result[key] === 'string' ? result[key] as string : '';
     const range = result['createdAt'];
-    const nextRange = Array.isArray(range) && range.length ? range as Date[] : null;
-
-    // Status narrows the board client-side; the other filters are server-side, so
-    // the board only needs a re-fetch when one of those actually changed.
-    const boardChanged =
-      str('demand') !== this.demandFilter() ||
-      str('department') !== this.departmentFilter() ||
-      !sameRange(nextRange, this.createdRange());
-
     this.statusFilter.set(str('status'));
     this.demandFilter.set(str('demand'));
     this.departmentFilter.set(str('department'));
-    this.createdRange.set(nextRange);
+    this.createdRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
     this.currentPage.set(0);
-
-    if (boardChanged && this.kanbanLoaded()) this.loadKanban();
-    if (this.page() || this.viewMode() === 'list') this.loadCandidates();
+    this.loadCandidates();
   }
 
   onPageChange(page: number): void {
@@ -681,15 +600,18 @@ export class CandidatesComponent implements OnInit {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   onNewCandidate(): void { this.router.navigate(['/rh/candidates', 'new']); }
-  /**
-   * `from=recrutement` : le fil d'Ariane de la fiche ramène alors ici, et non au Kanban de
-   * `/rh/candidates` — c'est ce retour qui retrouve la page filtrée.
-   */
+
+  /** `from=recrutement` : le fil d'Ariane de la fiche ramène alors ici. */
   onView(id: number): void {
     this.router.navigate(['/rh/candidates', id], { queryParams: { from: 'recrutement' } });
   }
 
-  // ── Accept / reject (PENDING candidates only) ──────────────────────────────
+  /** A board card: each one carries the screen of its own module. */
+  onOpenCard(card: LifecycleCard): void {
+    this.router.navigate(card.commands, card.queryParams ? { queryParams: card.queryParams } : {});
+  }
+
+  // ── Accept / reject (list view, PENDING candidates only) ───────────────────
   async quickAccept({ candidate, event }: { candidate: CandidateListItem; event: Event }): Promise<void> {
     event.stopPropagation();
     if (!(await this.confirm.ask({
@@ -722,55 +644,8 @@ export class CandidatesComponent implements OnInit {
       },
     });
   }
+}
 
-  // ── Drag & drop workflow ───────────────────────────────────────────────────
-  onDragStart(c: CandidateListItem): void {
-    this.draggedCandidate = c;
-    this.draggedId.set(c.id);
-  }
-
-  onDragEnd(): void {
-    this.draggedCandidate = null;
-    this.draggedId.set(null);
-    this.dragOverKey.set(null);
-  }
-
-  onDragOver(key: string): void { this.dragOverKey.set(key); }
-
-  onDragLeave(key: string): void {
-    if (this.dragOverKey() === key) this.dragOverKey.set(null);
-  }
-
-  onDrop(col: KanbanColumn): void {
-    const candidate = this.draggedCandidate;
-    this.onDragEnd();
-    if (candidate) this.applyStageMove(candidate, col);
-  }
-
-  /**
-   * Applies a card dropped onto another column. Each move maps to the REAL coded
-   * transition — no blind status flips (which would skip provisioning / contract
-   * creation). Immediate transitions call the guarded endpoints; multi-step ones
-   * route the user to the dedicated flow.
-   */
-  private applyStageMove(candidate: CandidateListItem, target: KanbanColumn): void {
-    const status = candidate.status;
-    if (target.statuses.includes(status)) return; // dropped in its own column
-    this.notice.set(null);
-    this.actionError.set(null);
-
-    switch (target.key) {
-      // Closing a candidature is the one move a drag may start — and only from PENDING,
-      // the only status the backend lets RH reject from. It opens the reject modal.
-      case 'closed':
-        if (status === 'PENDING') this.rejectTarget.set(candidate);
-        else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_REJECT'));
-        break;
-
-      // Every other phase change is a real step done elsewhere: the offer is concluded from
-      // the candidate's « Étape actuelle », onboarding and IT on their own pages.
-      default:
-        this.notice.set(this.translate.instant('CANDIDATES.NOTICE.MOVE_NOT_ALLOWED'));
-    }
-  }
+function nonNull<T>(v: T | null): v is T {
+  return v !== null;
 }

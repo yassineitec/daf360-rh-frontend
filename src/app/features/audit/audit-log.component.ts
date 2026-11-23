@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, input } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -18,12 +18,16 @@ import {
   standalone: true,
   imports: [TranslatePipe, DafModalComponent, StatusBadgeComponent],
   template: `
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">{{ 'AUDIT.TITLE' | translate }}</h2>
-        <p class="page-subtitle">{{ 'AUDIT.SUBTITLE' | translate }}</p>
+    @if (!embedded()) {
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">{{ 'AUDIT.TITLE' | translate }}</h2>
+          <p class="page-subtitle">{{ 'AUDIT.SUBTITLE' | translate }}</p>
+        </div>
       </div>
-    </div>
+    } @else {
+      <p class="page-subtitle">{{ 'AUDIT.SUBTITLE' | translate }}</p>
+    }
 
     @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
@@ -223,6 +227,12 @@ import {
 export class AuditLogComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly employeeService = inject(EmployeeService);
+
+  /**
+   * Rendered as a tab of Administration (its only home since it left the sidebar): the
+   * tab's breadcrumb header already carries the title, so only the subtitle stays.
+   */
+  readonly embedded = input(false);
 
   page    = signal<Page<AuditLog> | null>(null);
   loading = signal(true);

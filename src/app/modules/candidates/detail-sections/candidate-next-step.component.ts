@@ -22,6 +22,8 @@ export interface NextStepModel {
   action: {
     kind: NextStepActionKind;
     label: string;
+    /** What the button reads at rest (« Valider ») — `label` shows on hover / focus. */
+    shortLabel?: string;
     icon: string;
     enabled: boolean;
     /** Shown under a disabled button: what is still missing, in one sentence. */
@@ -31,11 +33,11 @@ export interface NextStepModel {
    * A second way forward that keeps the step open — the candidate answering an offer with
    * their own figure: the negotiation goes on instead of ending (V133).
    */
-  secondary?: { kind: NextStepActionKind; label: string; icon: string } | null;
+  secondary?: { kind: NextStepActionKind; label: string; shortLabel?: string; icon: string } | null;
   /** Said instead of a button when the step is someone else's (IT) or the user lacks the right. */
   waiting: string | null;
   /** The discreet way out — only where the backend allows ending the candidature. */
-  end: { label: string } | null;
+  end: { label: string; shortLabel?: string } | null;
   done: boolean;
 }
 
@@ -63,12 +65,34 @@ export interface NextStepModel {
    * so they win over the lib's Tailwind utilities without !important. Once every front is on
    * 5.17.0 they can go, in favour of size: 'xs'.
    */
+  /*
+   * One fixed height for every header button, border included (border-box), content
+   * centred: the ghost button carries a 1px border and the teal one does not, and an
+   * icon-only button has no text line — left to padding, each came out a different height
+   * and they sat on the text baseline instead of on one axis. A button holding nothing but
+   * its icon (the collapsed state) becomes a square of that same height.
+   */
   styles: [`
+    .ns-actions > span,
+    .ns-actions ::ng-deep daf-button {
+      display: inline-flex;
+      align-items: center;
+    }
     .ns-actions ::ng-deep daf-button > button {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
       gap: 4px;
-      padding: 4px 10px;
+      padding: 0 10px;
       font-size: 11px;
-      line-height: 1.2;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .ns-actions ::ng-deep daf-button > button:not(:has(> span + span)) {
+      width: 28px;
+      padding: 0;
     }
     .ns-actions ::ng-deep daf-button > button .material-symbols-outlined {
       font-size: 15px;
@@ -95,25 +119,42 @@ export interface NextStepModel {
       [open]="open() || !!error()"
       (openChange)="open.set($event)">
 
+      <!-- Minimalist at rest, full sentence on demand: the main button reads its short label
+           (« Valider »), the side actions are icon-only; hovering or focusing one swaps in its
+           full label (« Valider la candidature »). The full label is always the accessible
+           name (ariaLabel), so a screen reader never hears the short form. -->
       <div headerAction class="ns-actions flex flex-wrap items-center justify-end gap-1.5"
            (click)="$event.stopPropagation()">
         @if (model().end; as e) {
-          <daf-button
-            [options]="{ variant: 'ghost', size: 'sm', iconStart: 'block', label: e.label,
-                         disabled: locked() || busy() }"
-            (onClick)="end.emit()" />
+          <span class="inline-flex" (mouseenter)="expand('end')" (mouseleave)="collapse()"
+                (focusin)="expand('end')" (focusout)="collapse()">
+            <daf-button
+              [options]="{ variant: 'ghost', size: 'sm', iconStart: 'block',
+                           label: expanded() === 'end' ? e.label : (e.shortLabel ?? ''),
+                           ariaLabel: e.label, disabled: locked() || busy() }"
+              (onClick)="end.emit()" />
+          </span>
         }
         @if (model().action; as a) {
           @if (model().secondary; as s) {
-            <daf-button
-              [options]="{ variant: 'secondary', size: 'sm', iconStart: s.icon, label: s.label,
-                           disabled: locked() || busy() }"
-              (onClick)="advance.emit(s.kind)" />
+            <span class="inline-flex" (mouseenter)="expand('secondary')" (mouseleave)="collapse()"
+                  (focusin)="expand('secondary')" (focusout)="collapse()">
+              <daf-button
+                [options]="{ variant: 'secondary', size: 'sm', iconStart: s.icon,
+                             label: expanded() === 'secondary' ? s.label : (s.shortLabel ?? ''),
+                             ariaLabel: s.label, disabled: locked() || busy() }"
+                (onClick)="advance.emit(s.kind)" />
+            </span>
           }
-          <daf-button
-            [options]="{ variant: 'teal', size: 'sm', iconEnd: a.icon, label: a.label,
-                         disabled: !a.enabled || locked() || busy(), loading: busy() }"
-            (onClick)="advance.emit(a.kind)" />
+          <span class="inline-flex" (mouseenter)="expand('main')" (mouseleave)="collapse()"
+                (focusin)="expand('main')" (focusout)="collapse()">
+            <daf-button
+              [options]="{ variant: 'teal', size: 'sm', iconEnd: a.icon,
+                           label: expanded() === 'main' ? a.label : (a.shortLabel ?? a.label),
+                           ariaLabel: a.label,
+                           disabled: !a.enabled || locked() || busy(), loading: busy() }"
+              (onClick)="advance.emit(a.kind)" />
+          </span>
         } @else if (model().waiting) {
           <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-2.5 py-0.5
                        text-[11px] font-semibold text-on-surface-variant">
@@ -200,6 +241,11 @@ export class CandidateNextStepComponent {
 
   readonly advance = output<NextStepActionKind>();
   readonly end     = output<void>();
+
+  /** The header button currently showing its full label, if any. */
+  protected readonly expanded = signal<'main' | 'secondary' | 'end' | null>(null);
+  protected expand(which: 'main' | 'secondary' | 'end'): void { this.expanded.set(which); }
+  protected collapse(): void { this.expanded.set(null); }
 
   protected fill(on: boolean): string {
     return on ? "'FILL' 1" : "'FILL' 0";

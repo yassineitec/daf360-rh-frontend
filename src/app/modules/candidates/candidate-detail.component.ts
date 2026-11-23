@@ -298,7 +298,8 @@ export class CandidateDetailComponent implements OnInit {
             { label: t('PENDING.CHECK_NO_FAIL'), done: !fail },
           ],
           action: this.canAcceptReject()
-            ? { kind: 'accept', label: t('PENDING.ACTION'), icon: 'arrow_forward', enabled: ready,
+            ? { kind: 'accept', label: t('PENDING.ACTION'), shortLabel: t('PENDING.ACTION_SHORT'),
+                icon: 'arrow_forward', enabled: ready,
                 blockedHint: ready ? null : t(hint) }
             : null,
           waiting: this.canAcceptReject() ? null : t('NO_RIGHT'),
@@ -344,7 +345,8 @@ export class CandidateDetailComponent implements OnInit {
               { label: t('OFFER.CHECK_APPROVED'), done: approved },
             ],
             action: this.canHire()
-              ? { kind: 'send-offer', label: t('OFFER.ACTION'), icon: 'send', enabled: approved,
+              ? { kind: 'send-offer', label: t('OFFER.ACTION'), shortLabel: t('OFFER.ACTION_SHORT'),
+                  icon: 'send', enabled: approved,
                   blockedHint: approved ? null : t(hint) }
               : null,
             waiting: this.canHire() ? null : t('NO_RIGHT'),
@@ -358,7 +360,8 @@ export class CandidateDetailComponent implements OnInit {
           text: t(round?.proposedBy === 'DAF' ? 'ANSWER.TEXT_DAF' : 'ANSWER.TEXT'),
           checks: [{ label: t('ANSWER.CHECK_SENT'), done: round?.status === 'SENT' }],
           action: this.canHire()
-            ? { kind: 'offer-accepted', label: t('ANSWER.ACTION'), icon: 'arrow_forward',
+            ? { kind: 'offer-accepted', label: t('ANSWER.ACTION'), shortLabel: t('NEXT_STEP_SHORT'),
+                icon: 'arrow_forward',
                 enabled: round?.status === 'SENT', blockedHint: null }
             : null,
           // The candidate's three answers sit together: accept (the main button), ask for
@@ -492,13 +495,13 @@ export class CandidateDetailComponent implements OnInit {
    * a laissé ses filtres : `/rh/recrutement` (`?from=recrutement`), la liste
    * `/rh/candidates/list` (`?from=list`), sinon le Kanban de `/rh/candidates`.
    */
-  private readonly back: { labelKey: string; link: string } = (() => {
+  private readonly back: { labelKey: string; link: string; queryParams?: Record<string, string> } = (() => {
     // An interviewer without candidate rights (V132) cannot open the lists below: their way
-    // back is « Mes entretiens ».
+    // back is their interviews — the « Entretiens » tab of the shell's self-service.
     const listRights = ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE']
       .some(p => this.userStore.hasPermission(p));
     if (!listRights || this.route.snapshot.queryParamMap.get('from') === 'mes-entretiens') {
-      return { labelKey: 'NAV.MY_INTERVIEWS', link: '/rh/mes-entretiens' };
+      return { labelKey: 'NAV.MY_INTERVIEWS', link: '/home/self-service', queryParams: { tab: 'entretiens' } };
     }
     switch (this.route.snapshot.queryParamMap.get('from')) {
       case 'recrutement': return { labelKey: 'CANDIDATES.PIPELINE_RH.TITLE', link: '/rh/recrutement' };
@@ -511,7 +514,7 @@ export class CandidateDetailComponent implements OnInit {
     this.translate.currentLang();
     const c = this.candidate();
     return [
-      { label: this.translate.instant(this.back.labelKey), link: this.back.link },
+      { label: this.translate.instant(this.back.labelKey), link: this.back.link, queryParams: this.back.queryParams },
       { label: c ? `${c.firstName} ${c.lastName}` : `#${this.candidateId}` },
     ];
   });
@@ -1056,7 +1059,7 @@ export class CandidateDetailComponent implements OnInit {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   navigateToCandidate(): void {
-    this.router.navigate([this.back.link]);
+    this.router.navigate([this.back.link], { queryParams: this.back.queryParams });
   }
 }
 

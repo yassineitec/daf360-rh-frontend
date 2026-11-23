@@ -1793,7 +1793,7 @@
     },
     "PIPELINE_RH": {
       "TITLE": "Pipeline RH",
-      "SUBTITLE": "Le cycle de vie RH : recrutement, onboarding, embauche, offboarding.",
+      "SUBTITLE": "Le cycle de vie RH : candidature, provisioning IT, onboarding, passage en CDI, offboarding.",
       "KPI_ACTIVE": "Candidats actifs",
       "KPI_ACCEPTANCE": "Taux d'acceptation des offres",
       "KPI_HIRED": "Recrutés",
@@ -1970,6 +1970,7 @@
       "ACC_DONE": "TERMINÉ",
       "NO_RIGHT": "En attente d'une personne habilitée",
       "END_CANDIDACY": "Mettre fin à la candidature",
+      "NEXT_STEP_SHORT": "Étape suivante",
       "MOVED": "La candidature est passée à l'étape suivante.",
       "ERROR": "Impossible de passer à l'étape suivante.",
       "DECLINED_TITLE": "Le candidat décline l'opportunité",
@@ -1986,6 +1987,7 @@
         "CHECK_PASS": "Au moins un entretien réussi",
         "CHECK_NO_FAIL": "Aucun entretien en échec",
         "ACTION": "Valider la candidature",
+        "ACTION_SHORT": "Valider",
         "BLOCKED": "Planifiez un entretien pour continuer.",
         "BLOCKED_PV": "En attente des PV des intervieweurs.",
         "BLOCKED_VALIDATION": "Lisez les PV et validez les entretiens dans l'onglet Entretiens.",
@@ -1997,6 +1999,7 @@
         "CHECK_PREPARED": "Offre préparée et chiffrée",
         "CHECK_APPROVED": "Budget validé par la finance",
         "ACTION": "Envoyer l'offre au candidat",
+        "ACTION_SHORT": "Envoyer",
         "BLOCKED_PREPARE": "Préparez l'offre dans l'onglet Offre pour continuer.",
         "BLOCKED_FINANCE": "En attente de la validation budgétaire de la finance.",
         "BLOCKED_REFUSED": "Le coût a été refusé par la finance : révisez l'offre dans l'onglet Offre.",
@@ -2103,6 +2106,14 @@
       "ERR_DATE_REQUIRED": "La date est obligatoire.",
       "ERR_SCHEDULE": "Erreur lors de la planification.",
       "ERR_UPDATE": "Erreur lors de la mise à jour.",
+      "WHEN": "Date & heure",
+      "PANEL": "Panel",
+      "NOTES": "Notes",
+      "ACTIONS_ARIA": "Actions de l'entretien",
+      "CANCEL_ACTION": "Annuler l'entretien",
+      "CANCEL_TITLE": "Annuler l'entretien",
+      "CANCEL_HINT": "L'entretien sera marqué comme annulé et ne pourra plus recevoir de PV. Vous pourrez en planifier un nouveau.",
+      "KEEP": "Conserver",
       "PV": {
         "TITLE": "PV d'entretien",
         "COUNT": "{{n}} / {{total}} déposé(s)",
@@ -2120,7 +2131,15 @@
         "AWAITING_VALIDATION": "En attente de la validation RH.",
         "ERR_SUMMARY": "Le résumé doit faire au moins 20 caractères.",
         "ERR_OPINION": "Indiquez votre avis sur le candidat.",
-        "ERR_SAVE": "Impossible d'enregistrer le PV."
+        "ERR_SAVE": "Impossible d'enregistrer le PV.",
+        "NONE": "Aucun PV déposé pour le moment.",
+        "QUESTIONNAIRE": "Grille d'évaluation",
+        "NOT_RATED": "Pas encore noté — déplacez le curseur",
+        "CLEAR_RATING": "Effacer la note",
+        "SYNTHESIS": "Synthèse du panel ({{n}} PV)",
+        "ERR_REQUIRED": "Répondez à la question obligatoire « {{label}} ».",
+        "ERR_QUESTIONNAIRE": "Impossible de charger la grille d'évaluation.",
+        "WRITE_FROM_SELF_SERVICE": "Les intervieweurs rédigent leur PV depuis Self-service › Entretiens."
       },
       "VALIDATE": {
         "TITLE": "Validation RH",
@@ -2341,6 +2360,60 @@
       "ERR_REQUIRED_STAR": "Veuillez remplir tous les champs obligatoires (marqués *).",
       "ERR_CV_AFTER_SAVE": "Candidat enregistré, mais le téléversement du CV a échoué. Réessayez depuis la fiche.",
       "ERR_CREATE": "Erreur lors de la création."
+    },
+    "LIFECYCLE": {
+      "COL_CANDIDATE": "Candidat",
+      "COL_IT": "Provisioning IT",
+      "COL_ONBOARDING": "Onboarding",
+      "COL_CDI": "Passage en CDI",
+      "COL_OFFBOARDING": "Offboarding",
+      "EMPTY": "Aucun dossier en cours",
+      "NO_STEP_DONE": "Aucune étape validée",
+      "NEXT_INTERVIEW": "Prochain entretien : {{date}}",
+      "START_ON": "Prise de poste : {{date}}",
+      "NO_START_DATE": "Date de prise de poste non fixée",
+      "IT_EQUIPMENT": "{{assets}} matériel(s) · {{licenses}} licence(s)",
+      "IT_STEP": {
+        "EMAIL": "Compte Microsoft 365",
+        "AD": "Profil AD",
+        "HARDWARE": "Matériel",
+        "LICENSES": "Licences",
+        "CLOSE": "Clôture du dossier"
+      },
+      "IT_STATUS": {
+        "PENDING": "Dossier à démarrer",
+        "IN_PROGRESS": "Dossier en cours",
+        "EMAIL_CREATED": "E-mail créé, dossier en cours",
+        "COMPLETED": "Dossier terminé"
+      },
+      "ONB_STEP": {
+        "EMAIL": "E-mail Microsoft 365",
+        "FILE": "Dossier RH",
+        "PROFILE": "Création du profil"
+      },
+      "ONB_DETAIL": {
+        "WAITING_IT": "En attente du compte créé par l’IT",
+        "TO_FILL": "Dossier RH à remplir",
+        "DRAFT_AT": "Brouillon enregistré le {{date}}",
+        "TO_SUBMIT": "Dossier à soumettre"
+      },
+      "CDI_STEP": {
+        "SUBMIT": "Demande déposée",
+        "VALIDATION": "Validation",
+        "ESCALATED": "Escaladée",
+        "ARBITRATION": "Arbitrage",
+        "APPROVED": "Validée",
+        "CONVERSION": "Conversion RH"
+      },
+      "CDI_DETAIL": {
+        "VALIDATION": "En attente du validateur",
+        "ARBITRATION": "Escaladée, en attente de l’arbitre",
+        "CONVERSION": "Validée — contrat CDI à créer par RH"
+      },
+      "CDI_REQUESTED_BY": "Demandé par {{name}}",
+      "CDI_FROM": "CDI à partir du {{date}}",
+      "CIVP_ENDS": "Fin du CIVP : {{date}}",
+      "LAST_DAY": "Dernier jour : {{date}}"
     }
   },
   "PIPELINE": {
@@ -4288,15 +4361,11 @@
       },
       "TOOLBAR": {
         "TITLE": "Recherche, filtres et affichage",
-        "TEXT": "Cherchez un candidat par son nom. « Filtres » permet de choisir un statut, un poste (une demande de recrutement ou « Candidature spontanée »), un département ou une date de candidature. Les deux icônes à droite basculent entre la vue kanban et la vue liste."
+        "TEXT": "La recherche filtre toutes les colonnes par nom, poste ou e-mail. Les deux icônes à droite basculent entre la vue kanban et la vue liste. En vue liste, « Filtres » permet de choisir un statut, un poste (une demande de recrutement ou « Candidature spontanée »), un département ou une date de candidature."
       },
       "BOARD": {
-        "TITLE": "Les candidats",
-        "TEXT": "En vue kanban, les candidats sont rangés en 5 colonnes : En attente, Acceptés, IT & Onboarding, Embauchés et Rejetés. Dans chaque colonne, ils sont triés par score « Fit » ; la flèche de l'en-tête inverse l'ordre. Cliquez sur une carte pour ouvrir la fiche du candidat."
-      },
-      "MOVES": {
-        "TITLE": "Faire avancer un candidat",
-        "TEXT": "Glissez une carte vers une autre colonne. D'« En attente » vers « Acceptés », le candidat est accepté ; vers « Rejetés », le motif du rejet est demandé. D'« Acceptés » vers « IT & Onboarding », vous êtes envoyé sur la page Provisioning IT. Depuis « IT & Onboarding » vers « Embauchés », l'onboarding du candidat s'ouvre. Un autre déplacement est refusé, avec un message qui explique l'étape à faire."
+        "TITLE": "Le cycle de vie",
+        "TEXT": "En vue kanban, chaque colonne est une étape du cycle de vie : Candidat, Provisioning IT, Onboarding, Passage en CDI et Offboarding (vous ne voyez que les colonnes auxquelles vos droits donnent accès). La pastille d’une carte indique l’étape en cours, la ligne sous le nom où elle en est, et le pied de carte les étapes déjà validées. Un même recruté peut figurer en Provisioning IT et en Onboarding : les deux dossiers avancent en parallèle. Cliquez sur une carte pour ouvrir le dossier."
       },
       "ACTIONS": {
         "TITLE": "Accepter ou rejeter",
@@ -6077,6 +6146,7 @@
         "overtime": "Heures supplémentaires",
         "interviewTypes": "Types d'entretiens",
         "candidateEmails": "Modèles d'emails candidats",
+        "audit": "Journal d'audit",
         "offboardingCatalog": "Tâches offboarding",
         "documentTemplates": "Maquettes documents",
         "sharepoint": "SharePoint",
@@ -6594,7 +6664,55 @@
         "loadError": "Erreur lors du chargement des types.",
         "nameRequired": "Le nom est obligatoire.",
         "saveError": "Erreur lors de l'enregistrement.",
-        "toggleError": "Erreur lors du changement de statut."
+        "toggleError": "Erreur lors du changement de statut.",
+        "colQuestions": "Questions",
+        "questions": {
+          "TITLE": "Grille d'évaluation",
+          "MANAGE": "Questions du PV",
+          "INTRO": "Chaque intervieweur de ce type répond à ces questions dans son PV.",
+          "ADD": "Ajouter une question",
+          "EMPTY": "Aucune question : le PV se limite au résumé et à l'avis.",
+          "ACTIONS": "Actions sur la question",
+          "EDIT": "Modifier",
+          "ARCHIVE": "Archiver",
+          "RESTORE": "Réactiver",
+          "DELETE": "Supprimer",
+          "DELETE_CONFIRM": "Supprimer définitivement cette question ?",
+          "MOVE_UP": "Monter",
+          "MOVE_DOWN": "Descendre",
+          "ARCHIVED": "Archivée",
+          "ANSWERED": "{{n}} réponse(s)",
+          "TYPE_TEXT": "Texte libre",
+          "TYPE_RATING": "Note (curseur)",
+          "TYPE_SELECT": "Choix unique",
+          "TYPE_MULTI_SELECT": "Choix multiple",
+          "LABEL": "Question (FR)",
+          "LABEL_PLACEHOLDER": "Ex : Maîtrise technique du poste",
+          "LABEL_EN": "Question (EN)",
+          "HELP": "Aide pour l'intervieweur",
+          "HELP_PLACEHOLDER": "Ce qu'il faut évaluer, critères attendus…",
+          "RESPONSE_TYPE": "Type de réponse",
+          "LOCKED_HINT": "Déjà répondue : le type et l'échelle ne peuvent plus changer.",
+          "REQUIRED": "Réponse obligatoire",
+          "MIN": "Minimum",
+          "MAX": "Maximum",
+          "STEP": "Pas",
+          "MIN_LABEL": "Libellé du minimum",
+          "MIN_LABEL_PLACEHOLDER": "Ex : Insuffisant",
+          "MAX_LABEL": "Libellé du maximum",
+          "MAX_LABEL_PLACEHOLDER": "Ex : Excellent",
+          "PREVIEW": "Aperçu",
+          "OPTIONS": "Choix proposés",
+          "OPTIONS_PLACEHOLDER": "Tapez un choix puis Entrée",
+          "OPTIONS_HINT": "Au moins deux choix.",
+          "ERR_LABEL": "Le libellé de la question est obligatoire.",
+          "ERR_SCALE_BOUNDS": "L'échelle doit rester entre 0 et 100.",
+          "ERR_SCALE_ORDER": "Le minimum doit être inférieur au maximum.",
+          "ERR_SCALE_STEP": "Le pas doit être positif et diviser l'écart entre minimum et maximum.",
+          "ERR_OPTIONS": "Proposez au moins deux choix différents.",
+          "LOAD_ERROR": "Impossible de charger les questions.",
+          "SAVE_ERROR": "Impossible d'enregistrer la question."
+        }
       },
       "offboarding": {
         "title": "Catalogue des tâches d'offboarding",
@@ -8213,19 +8331,6 @@
     "DETAIL_NO_FIELDS": "Aucune donnée disponible pour cette modification.",
     "CLOSE": "Fermer"
   },
-  "MY_INTERVIEWS": {
-    "TITLE": "Mes entretiens",
-    "SUBTITLE": "Les entretiens auxquels vous participez — rédigez votre PV après chacun d'eux.",
-    "EMPTY": "Aucun entretien ne vous est assigné.",
-    "TO_WRITE": "PV à rédiger",
-    "UPCOMING": "À venir",
-    "DONE": "Terminés",
-    "WRITE_PV": "Rédiger le PV",
-    "OPEN": "Ouvrir",
-    "PV_SENT": "PV envoyé",
-    "INTERVIEW": "Entretien",
-    "ERR_LOAD": "Impossible de charger vos entretiens."
-  },
   "NAV": {
     "MY_INTERVIEWS": "Mes entretiens",
     "ABSENCES": "Absences",
@@ -8234,6 +8339,7 @@
     "SECTION_LABEL": "NAVIGATION RH",
     "ACCUEIL": "Accueil",
     "PROFILES": "Profils",
+    "LIFECYCLE": "Lifecycle",
     "AUDIT": "Journal d'audit",
     "PIPELINE": "Pipeline RH",
     "CANDIDATES": "Candidats",
@@ -8247,6 +8353,7 @@
     "REQUESTS_INBOX": "Boîte de réception",
     "ADMIN": "Admin",
     "MISSIONS": "Missions",
+    "MISSIONS_GROUP": "Missions",
     "MISSIONS_CURRENT": "Missions en cours",
     "MISSIONS_HISTORY": "Historique des missions",
     "BILLETERIE": "Billeterie",

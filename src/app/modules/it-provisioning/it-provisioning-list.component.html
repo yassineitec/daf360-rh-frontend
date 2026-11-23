@@ -7,6 +7,10 @@
     [title]="'IT_PROVISIONING.LIST.TITLE' | translate"
     [subtitle]="'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending }" />
 
+  <!-- « Dossiers en cours » / « Historique » — two tabs of one page (the sidebar has one
+       entry for it, under Lifecycle). Route-backed: the other tab is its own URL. -->
+  <rh-it-provisioning-tabs active="pending" />
+
   <!-- KPIs — one row at every width. The two right-hand tiles used `text-amber` /
        `bg-amber/10`, which renders nothing: `amber` is not a token (§4). -->
   <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">

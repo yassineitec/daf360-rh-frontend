@@ -2,9 +2,12 @@
      /rh/missions/historique. -->
 <daf-page [loading]="firstLoad()" [kpis]="3">
 
+  <!-- Same title as the « Dossiers en cours » tab: one page, two tabs. -->
   <daf-page-header
-    [title]="'IT_PROVISIONING.HISTORY.TITLE' | translate"
+    [title]="'IT_PROVISIONING.LIST.TITLE' | translate"
     [subtitle]="'IT_PROVISIONING.HISTORY.SUBTITLE' | translate" />
+
+  <rh-it-provisioning-tabs active="history" />
 
   <!-- KPIs — one row at every width. Counted on the whole completed set, never on the
        search, the date filter or the current page. -->

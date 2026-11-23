@@ -6,7 +6,8 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { InterviewService } from '../candidates/interview.service';
-import { InterviewType } from '../candidates/interview.model';
+import { InterviewType, interviewTypeLabel } from '../candidates/interview.model';
+import { InterviewQuestionsAdminComponent } from './interview-questions-admin.component';
 import { TableSort, searchRows, sortByColumn, toTableSort } from '../../shared/table-sort.utils';
 import { rememberAdminState } from './admin-section-state';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -39,6 +40,7 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
     ButtonComponent, FormFieldComponent,
     StatusBadgeComponent, PaginationComponent, DataTableComponent, DafCellDirective,
     SearchToolbarComponent, TranslatePipe, PageGuideComponent,
+    InterviewQuestionsAdminComponent,
   ],
   template: `
     <rh-page-guide storageKey="admin-interview-types" [steps]="guideSteps" />
@@ -108,6 +110,13 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
         </div>
       </ng-template>
 
+      <!-- Questionnaire of one type (V135) — projected into a modal like the form above. -->
+      <ng-template #questionsTpl>
+        @if (questionsTarget(); as qt) {
+          <app-interview-questions-admin [type]="qt" (changed)="loadCounts()" />
+        }
+      </ng-template>
+
       <!-- List -->
       @if (types().length === 0 && !loading()) {
         <p class="ita-empty">{{ 'ADMIN.docs.interviews.empty' | translate }}</p>
@@ -128,6 +137,12 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
             } @else {
               <span class="ita-row-desc">—</span>
             }
+          </ng-template>
+          <ng-template dafCell="questionCount" let-row>
+            <button type="button" class="ita-q-link" (click)="openQuestions(row['_source'])">
+              <span class="material-symbols-outlined text-[16px]">quiz</span>
+              {{ row['questionCount'] }}
+            </button>
           </ng-template>
           <ng-template dafCell="isActive" let-row>
             <daf-badge
@@ -169,6 +184,8 @@ const INTERVIEW_TYPE_SORT: Record<string, (t: InterviewType) => string | number 
     .ita-footer { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px }
     .ita-count  { font-size:var(--text-body-sm);color:var(--color-on-surface-variant) }
     .table-scroll { overflow-x:auto }
+    .ita-q-link { display:inline-flex;align-items:center;gap:4px;font-size:var(--text-body-sm);font-weight:600;color:var(--color-primary);background:none;border:0;cursor:pointer;padding:2px 6px;border-radius:6px }
+    .ita-q-link:hover { background:var(--color-surface-container) }
 
     @media (max-width: 480px) {
       .ita-form-grid { grid-template-columns:1fr }
@@ -251,6 +268,7 @@ export class InterviewTypesAdminComponent implements OnChanges {
       { key: 'orderIndex', label: this.translate.instant('ADMIN.docs.interviews.colOrder'), align: 'center', width: '70px', sortable: true },
       { key: 'name', label: this.translate.instant('ADMIN.docs.interviews.colNameFr'), sortable: true },
       { key: 'nameEn', label: this.translate.instant('ADMIN.docs.interviews.colNameEn'), sortable: true },
+      { key: 'questionCount', label: this.translate.instant('ADMIN.docs.interviews.colQuestions'), align: 'center', width: '110px' },
       { key: 'isActive', label: this.translate.instant('ADMIN.docs.interviews.colStatus'), align: 'center', width: '110px', sortable: true },
     ];
   });
@@ -284,6 +302,11 @@ export class InterviewTypesAdminComponent implements OnChanges {
         onClick: (row: TableRow) => this.openEdit(row['_source'] as InterviewType),
       },
       {
+        id: 'questions', icon: 'quiz',
+        tooltip: this.translate.instant('ADMIN.docs.interviews.questions.MANAGE'),
+        onClick: (row: TableRow) => this.openQuestions(row['_source'] as InterviewType),
+      },
+      {
         id: 'deactivate', icon: 'toggle_on',
         tooltip: this.translate.instant('ADMIN.docs.interviews.deactivate'),
         hidden: (row: TableRow) => !(row['_source'] as InterviewType).isActive,
@@ -305,12 +328,46 @@ export class InterviewTypesAdminComponent implements OnChanges {
       name: t.name,
       nameEn: t.nameEn,
       description: t.description,
+      questionCount: this.questionCounts()[t.id] ?? 0,
       isActive: t.isActive,
       _source: t,
     })),
   );
 
-  ngOnChanges(): void { this.load(); }
+  ngOnChanges(): void { this.load(); this.loadCounts(); }
+
+  // ── Questionnaire (V135) ───────────────────────────────────────────────────
+  /** typeId → active question count. */
+  readonly questionCounts = signal<Record<number, number>>({});
+  /** The type whose questionnaire the modal is showing. */
+  readonly questionsTarget = signal<InterviewType | null>(null);
+  questionsTpl = viewChild.required<TemplateRef<unknown>>('questionsTpl');
+
+  loadCounts(): void {
+    if (this.paysId == null) return;
+    this.svc.getQuestionCounts(this.paysId).subscribe({
+      next: c => this.questionCounts.set(c ?? {}),
+      error: () => this.questionCounts.set({}),
+    });
+  }
+
+  openQuestions(t: InterviewType): void {
+    this.questionsTarget.set(t);
+    const ref = this.modal.open({
+      title: this.translate.instant('ADMIN.docs.interviews.questions.TITLE'),
+      subtitle: interviewTypeLabel(t.name, t.nameEn, this.translate.currentLang()),
+      icon: 'quiz',
+      body: this.questionsTpl(),
+      size: 'lg',
+      closeOnBackdrop: false,
+      resizable: true,
+      maximizable: true,
+      minWidth: '360px',
+    });
+    // Unmount the manager once closed, so the next type opens on a fresh one.
+    const destroy = ref._destroy.bind(ref);
+    ref._destroy = () => { destroy(); this.questionsTarget.set(null); };
+  }
 
   /** Premier chargement déjà fait — le tout premier garde la page restaurée par `memory`. */
   private loadedOnce = false;
