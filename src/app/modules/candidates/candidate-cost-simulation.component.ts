@@ -123,7 +123,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
               </p>
             }
             <daf-button
-              [label]="'CANDIDATES.COST_SIM.SUBMIT' | translate"
+              [label]="(latestApproval()?.status === 'PENDING' && !latestApproval()?.jobOfferId ? 'CANDIDATES.COST_SIM.SUBMIT_UPDATE' : 'CANDIDATES.COST_SIM.SUBMIT') | translate"
               [options]="{ variant: 'ghost', pill: true, iconStart: 'send',
                            loading: submitting(), disabled: submitting() }"
               (onClick)="submitForApproval()" />

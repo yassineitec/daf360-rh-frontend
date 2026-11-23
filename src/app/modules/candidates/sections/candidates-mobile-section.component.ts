@@ -99,7 +99,8 @@ import { OffboardingKanbanCardComponent } from '../../offboarding/components/off
               [candidate]="c"
               [accent]="accentFor()(c.status)"
               [badgeBg]="badgeBgFor()(c.status)"
-              [statusLabel]="statusLabel()(c.status)"
+              [statusLabel]="globalLabelFor()(c.status)"
+              [detailLabel]="statusLabel()(c.status)"
               [showChevron]="true"
               [showQuickActions]="c.status === 'PENDING' && canAcceptReject()"
               [actioning]="actioningId() === c.id"
@@ -126,7 +127,9 @@ export class CandidatesMobileSectionComponent {
   readonly canAcceptReject = input(false);
   readonly actioningId     = input<number | null>(null);
   readonly statusLabel     = input.required<(status: string) => string>();
-  readonly accentFor       = input.required<(status: string) => string>();
+  /** Status → global status (« En recrutement »…): the card's badge, the status sits beside it. */
+  readonly globalLabelFor  = input.required<(status: string) => string>();
+  readonly accentFor      = input.required<(status: string) => string>();
   readonly badgeBgFor      = input.required<(status: string) => string>();
   readonly offboarding     = input<OffboardingWorkflowInstance[]>([]);
   readonly showOffboarding = input(false);

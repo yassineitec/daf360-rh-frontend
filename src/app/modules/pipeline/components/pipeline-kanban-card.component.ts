@@ -3,27 +3,28 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 
 import { KanbanCardShellComponent } from '../../../shared/kanban-card-shell.component';
+import { statusBadge } from '../../../shared/status-badge.utils';
 import { KanbanCandidate } from '../services/pipeline.service';
-import { BoardStageKey, canSendOffer, isOfferPending } from '../board.model';
-import { badgeVariant, candidateAvatar, candidateInitials, fitScoreClass } from '../pipeline-display';
+import { BOARD_STAGES, BoardStageKey, canSendOffer, isOfferPending, stepDetail } from '../board.model';
+import { candidateAvatar, candidateInitials, fitScoreClass } from '../pipeline-display';
 import { interviewDateText } from '../../candidates/candidate-display';
 import { interviewTypeLabel } from '../../candidates/interview.model';
 
 /**
- * One pipeline candidate card — the single implementation used by BOTH the
- * desktop board and the mobile stage list. The two used to be one 120-line block
- * inlined in `pipeline.component.html` that mobile simply could not render
- * (85vw columns in a horizontal scroller).
+ * One candidature card — the single implementation used by BOTH the desktop board and the
+ * mobile stage list.
  *
- * Purely presentational: it owns no state beyond "this avatar 404'd", does no
- * navigation and never calls a service. Every action leaves as an output with
- * the original DOM event, so the page keeps deciding what a click means.
+ * It says two things up top, the two questions asked of a candidature at a glance:
+ *   - its STATUS (En attente / Accepté / Offre envoyée), the candidate's own status badge;
+ *   - its STEP — the column it sits in (Entretiens / Validation RH / Offre) and where it
+ *     stands inside it (« 1/2 PV déposé(s) », « Tour 2 — chez la DAF »…), the very words of
+ *     the rail on the candidate page.
  *
- * The footer is stage-driven — Préqualification shows contact, Entretien the
- * next interview, Offre the salary bracket + the offer actions, Recruté the
- * contract — which is why `stage` is an input rather than derived from the
- * candidate: the board owns the grouping (a pending candidate with a planned
- * interview is shown under Entretien, not under its own status).
+ * Purely presentational: it owns no state beyond "this avatar 404'd", does no navigation and
+ * never calls a service. Every action leaves as an output with the original DOM event.
+ *
+ * `stage` is an input rather than derived here: the board owns the grouping, and the card
+ * renders the column it was put in.
  */
 @Component({
   selector: 'rh-pipeline-kanban-card',
@@ -36,13 +37,23 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
       [surface]="'white'"
       (click)="open.emit()">
 
-      <!-- Badge (translated from the backend's badgeType) + fit score -->
-      <div class="flex items-center justify-between gap-2 mb-3">
-        <daf-badge [label]="badgeLabel()"[options]="{ variant: badge(), size: 'sm' }" />
+      <!-- Candidature status + fit score -->
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <daf-badge [label]="status().label" [options]="{ variant: status().options.variant, size: 'sm' }" />
         @if (candidate().fitScore != null) {
           <span class="text-sm font-bold shrink-0" [class]="fitClass()">
             {{ 'PIPELINE.FIT_SCORE' | translate:{ score: candidate().fitScore } }}
           </span>
+        }
+      </div>
+
+      <!-- Current step: the column's step, and how far along it the candidature is -->
+      <div class="flex items-center gap-1.5 mb-3 rounded-lg px-2 py-1.5 text-[11px] min-w-0"
+           [style.background]="stageDef().badgeBg" [style.color]="stageDef().accent">
+        <span class="material-symbols-outlined text-[15px] shrink-0">{{ stageDef().icon }}</span>
+        <span class="font-bold shrink-0">{{ stageDef().labelKey | translate }}</span>
+        @if (detail(); as d) {
+          <span class="truncate text-on-surface-variant" [title]="d">· {{ d }}</span>
         }
       </div>
 
@@ -61,9 +72,7 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
           <div class="min-w-0">
             <h4 class="font-bold text-on-surface truncate">{{ candidate().fullName }}</h4>
             <p class="text-xs text-outline truncate">{{ candidate().poste || '—' }}</p>
-            <!-- Which vacancy this candidature answers. Shown on every column, not just one
-                 stage: "what are we hiring them against" is the question asked at every step,
-                 and a spontaneous application (no demand) should be visible as such. -->
+            <!-- Which vacancy this candidature answers; a spontaneous one is shown as such. -->
             @if (candidate().demandTitle) {
               <p class="mt-1 flex items-center gap-1 text-[11px] text-tertiary truncate"
                  [title]="candidate().demandTitle!">
@@ -82,8 +91,8 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
         }
       </div>
 
-      <!-- Préqualification: skill chips -->
-      @if (stage() === 'SCREENING' && candidate().skills.length) {
+      <!-- Entretiens: skill chips -->
+      @if (stage() === 'INTERVIEWS' && candidate().skills.length) {
         <div class="flex flex-wrap gap-1.5 mb-3">
           @for (skill of candidate().skills.slice(0, 3); track skill) {
             <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">
@@ -93,16 +102,14 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
         </div>
       }
 
-      <!-- Offre: signature / preparation state -->
-      @if (stage() === 'OFFRE') {
+      <!-- Offre: where the round stands -->
+      @if (stage() === 'OFFER') {
         <div class="bg-surface-container-low p-2 rounded-lg mb-3 text-xs">
           <p class="text-on-surface-variant italic">
             @if (offerPending()) {
               {{ 'PIPELINE.CARD.PENDING_SIGNATURE' | translate }}@if (candidate().offerExpiry) {
                 {{ 'PIPELINE.CARD.EXPIRES' | translate:{ date: candidate().offerExpiry } }}
               }
-            } @else if (candidate().offerStatus === 'ACCEPTED') {
-              {{ 'PIPELINE.CARD.OFFER_ACCEPTED' | translate }}
             } @else {
               {{ candidate().note || ('PIPELINE.CARD.OFFER_IN_PREP' | translate) }}
             }
@@ -115,7 +122,22 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
                   text-on-surface-variant text-[11px]">
         @switch (stage()) {
 
-          @case ('SCREENING') {
+          @case ('INTERVIEWS') {
+            <span class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[14px] shrink-0">calendar_month</span>
+              <span class="truncate">
+                {{ nextEventLabel() || ('PIPELINE.CARD.INTERVIEW_TO_SCHEDULE' | translate) }}
+              </span>
+            </span>
+            @if (candidate().interviewLocation) {
+              <span class="flex items-center gap-1 min-w-0 shrink-0">
+                <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
+                <span class="truncate max-w-[90px]">{{ candidate().interviewLocation }}</span>
+              </span>
+            }
+          }
+
+          @case ('VALIDATION') {
             <span class="flex items-center gap-1 min-w-0 max-w-[55%]">
               <span class="material-symbols-outlined text-[14px] shrink-0">mail</span>
               <span class="truncate">{{ candidate().email || '—' }}</span>
@@ -126,37 +148,19 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
             </span>
           }
 
-          @case ('ENTRETIEN') {
-            <span class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[14px] shrink-0">calendar_month</span>
-              <span class="truncate">
-                {{ nextEventLabel() || ('PIPELINE.CARD.INTERVIEW_TO_SCHEDULE' | translate) }}
-              </span>
-            </span>
-            <div class="flex items-center gap-2 shrink-0 min-w-0">
-              @if (candidate().interviewLocation) {
-                <span class="flex items-center gap-1 min-w-0">
-                  <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
-                  <span class="truncate max-w-[90px]">{{ candidate().interviewLocation }}</span>
-                </span>
-              }
-              @if (offerSendable()) {
-                <button type="button" [title]="'PIPELINE.CARD.SEND_OFFER_TITLE' | translate"
-                  class="shrink-0 p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container
-                         hover:text-on-surface transition-colors"
-                  (click)="sendOffer.emit($event)">
-                  <span class="material-symbols-outlined text-[18px]">send</span>
-                </button>
-              }
-            </div>
-          }
-
-          @case ('OFFRE') {
+          @case ('OFFER') {
             <span class="flex items-center gap-1 min-w-0">
               <span class="material-symbols-outlined text-[14px] shrink-0">payments</span>
               <span class="truncate">{{ candidate().askedSalary || '—' }} ~ {{ candidate().proposedSalary || '—' }}</span>
             </span>
-            @if (offerPending()) {
+            @if (offerSendable()) {
+              <button type="button" [title]="'PIPELINE.CARD.SEND_OFFER_TITLE' | translate"
+                class="shrink-0 p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container
+                       hover:text-on-surface transition-colors"
+                (click)="sendOffer.emit($event)">
+                <span class="material-symbols-outlined text-[18px]">send</span>
+              </button>
+            } @else if (offerPending()) {
               <div class="flex items-center gap-1 shrink-0">
                 <button type="button" [title]="'PIPELINE.CARD.ACCEPT_OFFER_TITLE' | translate" [disabled]="actioning()"
                   class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface
@@ -177,20 +181,7 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
                   <span class="material-symbols-outlined text-[18px]">cancel</span>
                 </button>
               </div>
-            } @else if (candidate().offerStatus === 'ACCEPTED') {
-              <span class="shrink-0 text-outline">{{ 'PIPELINE.CARD.OFFER_ACCEPTED_SHORT' | translate }}</span>
             }
-          }
-
-          @case ('RECRUTE') {
-            <span class="flex items-center gap-1 min-w-0 max-w-[55%]">
-              <span class="material-symbols-outlined text-[14px] shrink-0">badge</span>
-              <span class="truncate">{{ candidate().contractType || '—' }}</span>
-            </span>
-            <span class="flex items-center gap-1 min-w-0 shrink-0">
-              <span class="material-symbols-outlined text-[14px] shrink-0">login</span>
-              <span class="truncate">{{ candidate().location || '—' }}</span>
-            </span>
           }
         }
       </div>
@@ -201,7 +192,7 @@ export class PipelineKanbanCardComponent {
   private translate = inject(TranslateService);
 
   readonly candidate = input.required<KanbanCandidate>();
-  /** Board stage this card is rendered under — drives the footer and the extras. */
+  /** Board column (recruitment step) this card is rendered under — drives the step line and footer. */
   readonly stage     = input.required<BoardStageKey>();
   /** Mobile list affordance: the card is a row, so it gets a chevron. */
   readonly showChevron = input(false);
@@ -217,15 +208,23 @@ export class PipelineKanbanCardComponent {
   /** Local only: the photo endpoint 404'd, fall back to initials. */
   protected readonly avatarFailed = signal(false);
 
-  protected readonly badge         = computed(() => badgeVariant(this.candidate().badgeType));
-  /** Badge text in the UI language, keyed on `badgeType`; falls back to the server's French label. */
-  protected readonly badgeLabel    = computed(() => {
-    const c = this.candidate();
+  /** The candidature status badge — label in the UI language, shared variant. */
+  protected readonly status = computed(() => {
     this.translate.currentLang();
-    const key = `PIPELINE.BADGE_TYPE.${c.badgeType}`;
-    const label = this.translate.instant(key);
-    return label && label !== key ? label : c.badge;
+    return statusBadge(this.candidate().status ?? 'PENDING', this.translate);
   });
+
+  /** The step definition of the column (label key, icon, colours). */
+  protected readonly stageDef = computed(() =>
+    BOARD_STAGES.find(s => s.key === this.stage()) ?? BOARD_STAGES[0]);
+
+  /** « 1/2 PV déposé(s) », « Tour 2 — chez la DAF »… — the rail's subtitle for this step. */
+  protected readonly detail = computed(() => {
+    this.translate.currentLang();
+    const d = stepDetail(this.candidate());
+    return d ? this.translate.instant(d.key, d.params) : null;
+  });
+
   protected readonly avatar        = computed(() => candidateAvatar(this.candidate()));
   protected readonly initials      = computed(() => this.candidate().initials || candidateInitials(this.candidate().fullName));
   protected readonly fitClass      = computed(() => fitScoreClass(this.candidate().fitScore));

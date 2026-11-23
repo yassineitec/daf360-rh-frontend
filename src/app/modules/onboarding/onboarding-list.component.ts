@@ -27,7 +27,7 @@ const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 /** The two statuses a file can carry while it waits for onboarding. */
-const STATUS_CODES: CandidateOnboardingStatus[] = ['EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
+const STATUS_CODES: CandidateOnboardingStatus[] = ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
 
 type ViewMode = 'grid' | 'list';
 

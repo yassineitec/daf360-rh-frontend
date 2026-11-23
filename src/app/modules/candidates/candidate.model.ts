@@ -101,6 +101,14 @@ export interface CandidateDetail {
   location: string | null;
   salaireNetCandidat: number | null;
   salaireNetRh: number | null;
+  /** V132 — the caller reads this record only as a member of an interview panel. */
+  interviewerView?: boolean;
+}
+
+/** GET /candidates/{id}/access (V132). */
+export interface CandidateAccess {
+  fullAccess: boolean;
+  interviewer: boolean;
 }
 
 export interface CreateCandidateRequest {
@@ -192,6 +200,12 @@ export interface CandidateFilter {
 export interface CandidateListQuery {
   paysId?: number;
   status?: string;
+  /**
+   * A set of statuses (server side). `CANDIDATE_WORKFLOW` = the candidates home page: only
+   * files not yet past the agreed offer — after it the candidate lives in onboarding.
+   * Ignored by the server when `status` is set (the narrower filter).
+   */
+  stage?: string;
   search?: string;
   departmentId?: number;
   demandId?: number;

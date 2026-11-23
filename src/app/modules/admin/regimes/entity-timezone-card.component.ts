@@ -38,15 +38,15 @@ import { PaysTimezone, TimezoneOption } from '../../../core/ref/ref-data.model';
         </div>
       </div>
 
-      <p class="etz-help">{{ 'ADMIN.regimes.timezone.help' | translate }}</p>
-
       <!-- Whoever configures the hours must be able to configure the clock they are read
-           in; ADMIN_LISTS is accepted too because the column lives on [pays]. -->
+           in; ADMIN_LISTS is accepted too because the column lives on [pays]. The help text
+           is the select's hint: one compact row instead of a card that pushed the catalogue
+           below the fold. -->
       <div class="etz-row" *dafHasPermission="['ADMIN_REGIMES', 'ADMIN_LISTS']">
         <daf-select
           [selected]="selected()"
           [options]="options()"
-          [config]="{ label: ('ADMIN.regimes.timezone.field' | translate), searchable: true, required: true, fullWidth: true }"
+          [config]="{ searchable: true, fullWidth: true, hint: ('ADMIN.regimes.timezone.help' | translate) }"
           (selectedChange)="onChange($event)" />
         <daf-button
           [label]="(saving() ? 'ADMIN.regimes.common.saving' : 'ADMIN.regimes.common.save') | translate"
@@ -60,23 +60,23 @@ import { PaysTimezone, TimezoneOption } from '../../../core/ref/ref-data.model';
   `,
   styles: [`
     .etz-card {
+      display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 24px;
       border: 1px solid var(--color-outline-variant);
       border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
       background: var(--color-surface-container-low);
     }
     /* An unconfigured entity is a broken entity as far as pointage is concerned. */
     .etz-unset { border-color: #fca5a5; background: var(--color-error-container); }
-    .etz-head { display: flex; align-items: center; gap: 12px; }
+    .etz-head { display: flex; align-items: center; gap: 12px; flex: 0 1 260px; padding-top: 6px; }
     .etz-icon { font-size: 22px; color: var(--color-tertiary); }
     .etz-titles { display: flex; flex-direction: column; gap: 2px; }
     .etz-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--color-on-surface); }
     .etz-sub   { margin: 0; font-size: 13px; color: var(--color-on-surface-variant); }
-    .etz-help  { margin: 10px 0 14px; font-size: 12px; color: var(--color-on-surface-variant); }
-    .etz-row   { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-    .etz-row daf-select { flex: 1 1 320px; }
-    .etz-msg   { margin-top: 12px; font-size: 13px; color: #15803d; }
+    .etz-row   { display: flex; align-items: flex-start; gap: 12px; flex: 1 1 360px; min-width: 0; }
+    .etz-row daf-select { flex: 1 1 auto; min-width: 0; }
+    .etz-msg   { flex-basis: 100%; font-size: 13px; color: #15803d; }
     .etz-msg-error { color: var(--color-on-error-container); }
   `],
 })

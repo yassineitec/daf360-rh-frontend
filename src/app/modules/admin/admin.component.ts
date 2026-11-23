@@ -32,11 +32,14 @@ import { InterviewTypesAdminComponent }      from './interview-types-admin.compo
 import { OffboardingCatalogAdminComponent }   from './offboarding-catalog-admin.component';
 import { DocumentTemplatesAdminComponent }   from './document-templates-admin.component';
 import { SharePointAdminComponent }         from './sharepoint/sharepoint-admin.component';
+import { DocumentTypesAdminComponent }      from './document-types/document-types-admin.component';
 import { AbsenceTypesAdminComponent }       from './absence-types-admin.component';
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
 import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
 import { HelpFaqAdminComponent }            from './help-faq/help-faq-admin.component';
+import { CandidateEmailTemplatesAdminComponent } from './candidate-email-templates/candidate-email-templates-admin.component';
 import { AdminSectionStateService }         from './admin-section-state';
+import { AuditLogComponent }                from '../../features/audit/audit-log.component';
 
 /**
  * `?tab=` ↔ signal pour CETTE page, où « aucun onglet » est un état réel.
@@ -100,7 +103,8 @@ const TONE_ICON: Record<string, { iconColor: string; iconBg: string }> = {
   danger:    { iconColor: 'text-danger',    iconBg: 'bg-danger/10' },
 };
 
-const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string; tone: keyof typeof TONE_ICON }[] = [
+/** `permission`: one code, or any-of several (the audit log keeps the three it always had). */
+const TABS: { key: AdminTab; labelKey: string; permission: string | string[]; icon: string; tone: keyof typeof TONE_ICON }[] = [
   { key: 'roles',               labelKey: 'ADMIN.shell.tabs.roles',               permission: 'GET_ROLES',                  icon: 'admin_panel_settings', tone: 'primary' },
   // The account register: the only screen that shows accounts WITHOUT an HR file, which
   // every other list filters out on purpose.
@@ -115,12 +119,20 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   { key: 'ref-data',            labelKey: 'ADMIN.shell.tabs.refData',             permission: 'ADMIN_LISTS',                icon: 'storage',               tone: 'secondary' },
   { key: 'overtime',             labelKey: 'ADMIN.shell.tabs.overtime',            permission: 'GET_PAYS',                   icon: 'more_time',             tone: 'warning' },
   { key: 'interview-types',      labelKey: 'ADMIN.shell.tabs.interviewTypes',      permission: 'RH_ADMIN_INTERVIEW_TYPES',   icon: 'forum',                 tone: 'primary' },
+  // Emails sent to candidates (the offer): recruitment configuration, same gate as the
+  // interview types beside it — and what the backend checks (V134).
+  { key: 'candidate-emails',     labelKey: 'ADMIN.shell.tabs.candidateEmails',     permission: 'RH_ADMIN_INTERVIEW_TYPES',   icon: 'forward_to_inbox',      tone: 'primary' },
   { key: 'offboarding-catalog',   labelKey: 'ADMIN.shell.tabs.offboardingCatalog',  permission: 'RH_MANAGE_OFFBOARDING',      icon: 'logout',                tone: 'danger' },
   { key: 'document-templates',    labelKey: 'ADMIN.shell.tabs.documentTemplates',   permission: 'HR_ADMIN_ROLES',             icon: 'article',               tone: 'teal' },
   // Its own permission, not HR_ADMIN_ROLES: the folder browser in this tab can enumerate
   // every employee folder on the HR SharePoint site, which is a different capability from
   // editing roles even though the same people hold both today.
   { key: 'sharepoint',            labelKey: 'ADMIN.shell.tabs.sharepoint',          permission: 'ADMIN_SHAREPOINT',           icon: 'folder_shared',         tone: 'primary' },
+  // The per-country catalogue of what may be uploaded into a dossier (document_types). Its
+  // own card, not a SharePoint tab: a type exists whether or not it has a SharePoint folder.
+  // HR_ADMIN_ROLES: one of the three authorities the backend endpoints accept, and the one
+  // that already opens « Modèles de documents ».
+  { key: 'document-types',        labelKey: 'ADMIN.shell.tabs.documentTypes',       permission: 'HR_ADMIN_ROLES',             icon: 'topic',                 tone: 'teal' },
   // The leave-type catalogue: what a congé IS, as opposed to the congés themselves, which
   // live under /rh/conges. It belongs with the other configurable lists and not in its own
   // nav group — someone adding a leave type is doing the same thing as someone adding a
@@ -142,7 +154,16 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   // Questions / answers typed by HR, shown by the help assistant and « Aide & guides » next
   // to the FAQ shipped with the app. HR_ADMIN_ROLES: what the backend's HelpFaqService checks.
   { key: 'help-faq',              labelKey: 'ADMIN.shell.tabs.helpFaq',             permission: 'HR_ADMIN_ROLES',             icon: 'smart_toy',             tone: 'teal' },
+  // The merged audit_log + audit_trail timeline. Was a sidebar entry of its own (/rh/audit,
+  // which now redirects here); same three codes as that route had, so nobody loses it.
+  { key: 'audit',                 labelKey: 'ADMIN.shell.tabs.audit',
+    permission: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'],                                    icon: 'history',               tone: 'secondary' },
 ];
+
+/** Any-of check over a tab's one or several codes. */
+function holdsTabPermission(store: UserStore, permission: string | string[]): boolean {
+  return (Array.isArray(permission) ? permission : [permission]).some(p => store.hasPermission(p));
+}
 
 /** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
 const GUIDE_STEPS: GuideStep[] = [
@@ -176,12 +197,15 @@ const GUIDE_STEPS: GuideStep[] = [
     OffboardingCatalogAdminComponent,
     DocumentTemplatesAdminComponent,
     SharePointAdminComponent,
+    DocumentTypesAdminComponent,
     AbsenceTypesAdminComponent,
     PaysCalendarAdminComponent,
     AutorisationRulesAdminComponent,
     TeletravailRulesAdminComponent,
     ContractAlertsAdminComponent,
     HelpFaqAdminComponent,
+    CandidateEmailTemplatesAdminComponent,
+    AuditLogComponent,
     TranslatePipe,
     PageGuideComponent,
   ],
@@ -266,7 +290,7 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'parameters')    { <app-parameters-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'holidays')      { <app-holidays-admin [paysId]="paysId()" [paysLabel]="currentPays()" [paysIsoCode]="currentPaysIso()" /> }
             @if (activeTab() === 'request-types') { <app-request-types-admin [paysId]="paysId()" /> }
-            @if (activeTab() === 'regimes')       { <app-regimes-admin [paysId]="paysId()" /> }
+            @if (activeTab() === 'regimes')       { <app-regimes-admin [paysId]="paysId()" [paysLabel]="currentPays()" /> }
             @if (activeTab() === 'lists')         { <app-list-manager [paysId]="paysId()" /> }
             @if (activeTab() === 'notifications') { <app-notification-routing (backToAdmin)="activeTab.set(null)" (detailOpen)="notificationDetailOpen.set($event)" /> }
             @if (activeTab() === 'breaks')        { <app-breaks-admin [paysId]="paysId()" /> }
@@ -276,6 +300,7 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'offboarding-catalog')  { <app-offboarding-catalog-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'document-templates')   { <app-document-templates-admin [paysId]="paysId()" /> }
             @if (activeTab() === 'sharepoint')            { <app-sharepoint-admin [paysId]="paysId()" /> }
+            @if (activeTab() === 'document-types')        { <app-document-types-admin [paysId]="paysId()" /> }
             <!-- No [paysId]: the leave-type catalogue is company-wide, not per-country. -->
             @if (activeTab() === 'absence-types')         { <app-absence-types-admin /> }
             <!-- No [paysId]: this screen configures every entity, not the caller's own. -->
@@ -286,6 +311,10 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'contract-alerts')       { <app-contract-alerts-admin [paysId]="paysId()" /> }
             <!-- No [paysId]: the help questions are company-wide. -->
             @if (activeTab() === 'help-faq')              { <app-help-faq-admin /> }
+            @if (activeTab() === 'candidate-emails')      { <app-candidate-email-templates-admin [paysId]="paysId()" /> }
+            <!-- No [paysId]: the audit timeline is scoped server-side. [embedded]: the tab's
+                 breadcrumb header already names it, so the page's own title is dropped. -->
+            @if (activeTab() === 'audit')                 { <app-audit-log [embedded]="true" /> }
             }
           </daf-page>
         </div>
@@ -379,7 +408,7 @@ export class AdminComponent {
    * otherwise land on « Accès refusé » with their section a click away.
    */
   isAdmin     = computed(() => this.userStore.isAdmin() || this.userStore.isHrManager()
-    || TABS.some(t => this.userStore.hasPermission(t.permission)));
+    || TABS.some(t => holdsTabPermission(this.userStore, t.permission)));
 
   availablePays  = signal<PaysTimezone[]>([]);
 
@@ -433,7 +462,7 @@ export class AdminComponent {
   readonly toneIcon = (tone: keyof typeof TONE_ICON) => TONE_ICON[tone];
 
   visibleTabs = computed(() =>
-    TABS.filter(t => this.userStore.hasPermission(t.permission) || this.userStore.isAdmin())
+    TABS.filter(t => holdsTabPermission(this.userStore, t.permission) || this.userStore.isAdmin())
   );
 
   currentTabLabelKey = computed(() => TABS.find(t => t.key === this.activeTab())?.labelKey ?? '');

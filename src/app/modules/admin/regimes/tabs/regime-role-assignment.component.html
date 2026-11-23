@@ -24,8 +24,14 @@
     <ng-template dafCell="regime" let-row>
       @if (row['regime']) {
         <span class="rra-regime-badge">{{ row['regime'] }}</span>
+        @if (row['_source'].assignment?.upcoming) {
+          <span class="rra-upcoming">{{ 'ADMIN.regimes.roleAssign.scheduledFrom' | translate:{ date: formatDate(row['_source'].assignment.effectiveFrom) } }}</span>
+        }
       } @else {
         <span class="rra-regime-none">{{ 'ADMIN.regimes.roleAssign.defaultLabel' | translate }} ({{ defaultRegimeName() ?? ('ADMIN.regimes.roleAssign.notConfigured' | translate) }})</span>
+      }
+      @if (row['_source'].upcoming; as next) {
+        <span class="rra-upcoming">{{ 'ADMIN.regimes.roleAssign.nextChange' | translate:{ regime: regimeLabelOf(next), date: formatDate(next.effectiveFrom) } }}</span>
       }
     </ng-template>
 
@@ -63,15 +69,19 @@
       [config]="{ label: ('ADMIN.regimes.roleAssign.fieldRegime' | translate), required: true, fullWidth: true }"
       (selectedChange)="onFormRegimeChange($event)" />
     <div class="rra-form-row-2">
-      <daf-form-field
-        [options]="{ label: ('ADMIN.regimes.roleAssign.effFrom' | translate), type: 'date', required: true, fullWidth: true }"
-        [value]="formEffFrom"
-        (valueChange)="formEffFrom = $any($event)" />
+      <daf-multi-date-picker
+        [config]="{ label: ('ADMIN.regimes.roleAssign.effFrom' | translate), selectionMode: 'single', required: true,
+                    allowPastDays: true, allowWeekends: true, fullWidth: true,
+                    placeholder: ('ADMIN.regimes.catalog.pickDate' | translate) }"
+        [value]="formEffFromDate"
+        (valueChange)="onEffFrom($event)" />
       <div>
-        <daf-form-field
-          [options]="{ label: ('ADMIN.regimes.roleAssign.effTo' | translate), type: 'date', disabled: noEndDate(), fullWidth: true }"
-          [value]="formEffTo"
-          (valueChange)="formEffTo = $any($event)" />
+        <daf-multi-date-picker
+          [config]="{ label: ('ADMIN.regimes.roleAssign.effTo' | translate), selectionMode: 'single', disabled: noEndDate(),
+                      allowPastDays: true, allowWeekends: true, fullWidth: true,
+                      placeholder: ('ADMIN.regimes.catalog.pickDate' | translate) }"
+          [value]="formEffToDate"
+          (valueChange)="onEffTo($event)" />
         <daf-checkbox
           class="rra-no-end-checkbox"
           [options]="{ label: ('ADMIN.regimes.roleAssign.noEnd' | translate) }"
@@ -83,6 +93,7 @@
       [options]="{ label: ('ADMIN.regimes.roleAssign.notes' | translate), type: 'textarea', rows: 2, fullWidth: true }"
       [value]="formNotes"
       (valueChange)="formNotes = $any($event)" />
+    <p class="rra-window-hint">{{ 'ADMIN.regimes.roleAssign.windowHint' | translate }}</p>
     <div class="rra-info-banner">
       <span class="material-symbols-outlined rra-info-icon">info</span>
       {{ 'ADMIN.regimes.roleAssign.affectBefore' | translate }}<strong>{{ affectedCount() }}</strong>{{ 'ADMIN.regimes.roleAssign.affectRoleMid' | translate }}"{{ selectedRow()?.roleName }}"{{ 'ADMIN.regimes.roleAssign.affectRoleEnd' | translate }}

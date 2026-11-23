@@ -74,12 +74,16 @@ export const routes: Routes = [
           import('./modules/profiles/profiles.routes').then(m => m.PROFILES_ROUTES),
       },
       {
+        // No guard here any more (V132): each child carries its own. The list pages keep the
+        // permission gate; the candidate page also lets in a member of one of the candidate's
+        // interview panels, who holds no RH code (candidateDetailGuard).
         path: 'candidates',
-        canActivate: [permissionGuard],
-        data: { permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'] },
         loadChildren: () =>
           import('./modules/candidates/candidates.routes').then(m => m.candidatesRoutes),
       },
+      // « Mes entretiens » moved to the shell's self-service (« Entretiens » tab). The old path
+      // stays as a redirect for bookmarks.
+      { path: 'mes-entretiens', redirectTo: '/home/self-service?tab=entretiens' },
       {
         path: 'recrutement',
         canActivate: [permissionGuard],
@@ -156,13 +160,8 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/requests/requests.routes').then(m => m.REQUESTS_ROUTES),
       },
-      {
-        path: 'audit',
-        canActivate: [permissionGuard],
-        data: { permissions: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'] },
-        loadChildren: () =>
-          import('./features/audit/audit.routes').then(m => m.AUDIT_ROUTES),
-      },
+      // The audit log is a tab of Administration now — the old URL lands on it.
+      { path: 'audit', redirectTo: 'admin?tab=audit', pathMatch: 'full' },
       // Historique des demandes (HR requests + recruitment demands). Was /rh/recruitment-demands —
       // the old URL still redirects, so bookmarks and already-sent notification links keep working.
       { path: 'recruitment-demands', redirectTo: 'requests-history', pathMatch: 'full' },
@@ -244,7 +243,9 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         // CREATE_ABSENCE_TYPE: the leave-type catalogue is an Administration tab, so whoever
         // may configure it must be able to reach this page even holding no other admin code.
-        data: { permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE'] },
+        // HR_CREATE_PROFILE / HR_UPDATE_PROFILE: the « Journal d'audit » tab, for the same reason.
+        data: { permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE',
+                              'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'] },
         loadChildren: () =>
           import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),
       },

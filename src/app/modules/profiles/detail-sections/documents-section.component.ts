@@ -386,6 +386,11 @@ export class DocumentsSectionComponent {
   }
 
   protected typeLabel(code: string): string {
+    // The country's catalogue first (document_types, already resolved by the parent in the
+    // UI language): a type added in Administration › Types de documents has no i18n key, and
+    // RH may have renamed a built-in one for their country.
+    const fromCatalogue = this.types().find(t => t.code === code)?.label;
+    if (fromCatalogue && fromCatalogue !== code) return fromCatalogue;
     const key = 'PROFILES.DOC_TYPES.' + code;
     const label = this.translate.instant(key);
     // ngx-translate echoes the key back when it is missing. Historic rows can carry a code

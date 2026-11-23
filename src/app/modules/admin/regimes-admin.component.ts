@@ -37,6 +37,13 @@ const GUIDE_STEPS: GuideStep[] = [
     <rh-page-guide storageKey="admin-regimes" [steps]="guideSteps" (tabChange)="onGuideTab($event)" />
 
     <div>
+      <!-- Every tab below is about ONE entity: the one picked in the admin header. Said here
+           so nobody edits Tunisia's régimes believing they are on France. -->
+      <p class="ra-entity">
+        <span class="material-symbols-outlined">location_on</span>
+        {{ 'ADMIN.regimes.entityLine' | translate:{ pays: paysLabel() || '—' } }}
+      </p>
+
       <!-- The entity's clock. Above the tabs because every regime, break window and
            pointage transition below is read in this zone — without it the entity has no
            presence automation at all. -->
@@ -55,7 +62,7 @@ const GUIDE_STEPS: GuideStep[] = [
 
       <!-- Tab content -->
       @if (activeTab() === 'catalog') {
-        <app-regime-catalog [paysId]="paysId()" />
+        <app-regime-catalog [paysId]="paysId()" [paysLabel]="paysLabel()" />
       }
       @if (activeTab() === 'roles') {
         <app-regime-role-assignment [paysId]="paysId()" />
@@ -66,13 +73,20 @@ const GUIDE_STEPS: GuideStep[] = [
     </div>
   `,
   styles: [`
-    .ra-tabs { margin-bottom: 24px; }
+    .ra-tabs { margin-bottom: 20px; }
+    .ra-entity {
+      display: flex; align-items: center; gap: 6px; margin: 0 0 12px;
+      font-size: var(--text-body-sm); color: var(--color-on-surface-variant);
+    }
+    .ra-entity .material-symbols-outlined { font-size: 18px; color: var(--color-tertiary); }
   `],
 })
 export class RegimesAdminComponent {
   private translate = inject(TranslateService);
 
   readonly paysId = input<number>(179);
+  /** Entity name from the admin header picker. */
+  readonly paysLabel = input<string>('');
   activeTab = signal<RegimeTab>('catalog');
 
   /** Steps of this card's guide (see `GUIDE_STEPS`). */

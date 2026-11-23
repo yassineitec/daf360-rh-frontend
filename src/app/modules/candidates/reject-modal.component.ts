@@ -1,5 +1,7 @@
 import { Component, DestroyRef, input, output, signal, inject, computed, effect, untracked, viewChild, TemplateRef } from '@angular/core';
 import { CandidateService } from './candidate.service';
+import { OfferService } from '../pipeline/services/offer.service';
+import { Observable } from 'rxjs';
 import { FormFieldComponent, FormFieldOptions, ModalButton, ModalRef, ModalService } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -17,6 +19,11 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     <ng-template #bodyTpl>
       @if (candidateName) {
         <p class="text-sm font-semibold text-on-surface mb-4">{{ candidateName }}</p>
+      }
+      <!-- Declining the OPPORTUNITY ends the candidature; refusing an AMOUNT does not —
+           that is a counter-proposal, and the negotiation goes on. -->
+      @if (mode() === 'offer') {
+        <p class="text-sm text-on-surface-variant mb-4">{{ 'CANDIDATES.NEXT.DECLINED_HINT' | translate }}</p>
       }
       <div class="flex flex-col gap-1">
         <label class="text-xs font-medium text-on-surface">
@@ -38,10 +45,18 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 export class RejectModalComponent {
   visible  = input(false);
   target   = input<{ id: number; firstName: string; lastName: string } | null>(null);
+  /**
+   * 'candidate' — RH ends a PENDING candidature (POST /reject).
+   * 'offer'     — the candidate declined the offer that was sent (POST /offer/reject).
+   * Both end the candidature REJECTED with the reason typed here; only the endpoint
+   * (and the title) differ, because the backend allows each in a different status.
+   */
+  mode     = input<'candidate' | 'offer'>('candidate');
   closed   = output<void>();
   rejected = output<void>();
 
   private candidateService = inject(CandidateService);
+  private offerService     = inject(OfferService);
   private translate = inject(TranslateService);
   private modalService = inject(ModalService);
 
@@ -97,7 +112,8 @@ export class RejectModalComponent {
     };
 
     const ref = this.modalService.open({
-      title: this.translate.instant('CANDIDATES.REJECT.TITLE'),
+      title: this.translate.instant(
+        this.mode() === 'offer' ? 'CANDIDATES.NEXT.DECLINED_TITLE' : 'CANDIDATES.REJECT.TITLE'),
       body:  tpl,
       minWidth:    '360px',
       minHeight:   '260px',
@@ -131,7 +147,12 @@ export class RejectModalComponent {
     const t = this.target();
     if (!t) return;
     this.saving.set(true);
-    this.candidateService.reject(t.id, r).subscribe({
+    // Typed to the common shape: the two endpoints return different bodies, and a union
+    // of two Observable types has no callable `subscribe` (TS2349).
+    const call: Observable<unknown> = this.mode() === 'offer'
+      ? this.offerService.rejectOffer(t.id, r)
+      : this.candidateService.reject(t.id, r);
+    call.subscribe({
       next: () => {
         this.saving.set(false);
         this.reason.set('');

@@ -43,7 +43,7 @@ export interface KanbanCandidate {
   askedSalary?: string;
   proposedSalary?: string;
   offerExpiry?: string;
-  /** Offer lifecycle status: SENT | ACCEPTED | REJECTED | EXPIRED. */
+  /** Current offer round's status: DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED. */
   offerStatus?: string;
   /**
    * The vacancy this candidature answers. Null = spontaneous application, which the card
@@ -62,6 +62,16 @@ export interface KanbanCandidate {
   nextInterviewAt?: string | null;
   nextInterviewType?: string | null;
   nextInterviewTypeEn?: string | null;
+  // ── Recruitment step (same facts as the candidate page's rail) ──
+  /** Live interviews (CANCELLED excluded). */
+  interviewsTotal?: number;
+  /** Of those, with a PV filed (DONE). */
+  interviewsFiled?: number;
+  /** Of those, validated by RH (result set). */
+  interviewsValidated?: number;
+  /** Who proposed the current offer round: RH | DAF | CANDIDATE. */
+  offerProposedBy?: string | null;
+  offerRound?: number | null;
 }
 
 export interface KanbanColumn {

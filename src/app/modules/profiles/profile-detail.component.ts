@@ -13,6 +13,7 @@ import {
   PageComponent,
   PageHeaderBadge,
   PageHeaderComponent,
+  PermissionService,
   RadioGroupComponent,
   StatusBadgeComponent,
   TabItem,
@@ -44,7 +45,7 @@ import { UserStore } from '../../core/user.store';
 import { NotificationService } from '../../core/notification.service';
 import { PdfDownloadService, GeneratedDocumentResponse } from '../../core/pdf/pdf-download.service';
 import { RegimeService } from '../admin/regimes/regime.service';
-import { ResolvedRegimeDto } from '../admin/regimes/regime.model';
+import { EmployeeRegimeAssignment, ResolvedRegimeDto } from '../admin/regimes/regime.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem } from '../../core/ref/ref-data.model';
 import { ContractHistoryService } from './contract-history/contract-history.service';
@@ -230,6 +231,14 @@ export class ProfileDetailComponent implements OnInit {
   readonly saving        = signal(false);
   readonly docsLoading   = signal(true);
   readonly regimeLoading = signal(true);
+  /** ok | none (nothing configured) | forbidden | error — shown differently by the section. */
+  readonly regimeStatus = signal<'ok' | 'none' | 'forbidden' | 'error'>('none');
+  /** Personal regimes in force or scheduled (RH only). */
+  readonly personalAssignments = signal<EmployeeRegimeAssignment[]>([]);
+  private readonly permissionSvc = inject(PermissionService);
+  /** Same authorities the server accepts on the personal-assignment endpoints. */
+  readonly canManageRegime = computed(() =>
+    this.permissionSvc.has('ADMIN_REGIMES') || this.permissionSvc.has('HR_UPDATE_PROFILE'));
 
   // ── Edit ───────────────────────────────────────────────────────────────────
   readonly editMode      = signal(false);
@@ -1215,14 +1224,25 @@ export class ProfileDetailComponent implements OnInit {
   }
 
   // ── Régime ─────────────────────────────────────────────────────────────────
+  /**
+   * Resolved regime + (for RH) the personal assignments. Reads /profiles/{id}/regime,
+   * which tells 204 (nothing configured) from 403 (not allowed): the old call swallowed
+   * every error into « aucun régime configuré ».
+   */
   private loadResolvedRegime(profileId: number): void {
     this.regimeLoading.set(true);
-    this.regimeSvc.resolveForEmployee(profileId).subscribe({
-      next: r  => { this.resolvedRegime.set(r); this.regimeLoading.set(false); },
-      error: () => this.regimeLoading.set(false),
+    this.regimeSvc.resolveProfile(profileId).subscribe(res => {
+      this.regimeStatus.set(res.status);
+      this.resolvedRegime.set(res.status === 'ok' ? res.regime : null);
+      this.regimeLoading.set(false);
     });
+    if (this.canManageRegime()) {
+      this.regimeSvc.getEmployeeAssignments(profileId)
+        .subscribe(list => this.personalAssignments.set(list));
+    }
   }
 
+  /** Ends every current and upcoming personal regime — back to the role / entity default. */
   async removeEmployeeRegimeOverride(): Promise<void> {
     const p = this.profile();
     if (!p) return;
@@ -1233,7 +1253,22 @@ export class ProfileDetailComponent implements OnInit {
     }))) return;
     this.regimeSvc.removeEmployeeOverride(p.id).subscribe({
       next:  () => this.loadResolvedRegime(p.id),
-      error: () => {},
+      error: err => this.notify.error(this.extractErrorMessage(err, this.translate.instant('PROFILES.REGIME_OVERRIDE.ERR'))),
+    });
+  }
+
+  /** Ends (started) or cancels (scheduled) ONE personal regime. */
+  async endPersonalRegime(assignmentId: number): Promise<void> {
+    const p = this.profile();
+    if (!p) return;
+    if (!(await this.confirm.ask({
+      title:   this.translate.instant('PROFILES.REGIME_OVERRIDE.END_ONE_TITLE'),
+      message: this.translate.instant('PROFILES.REGIME_OVERRIDE.END_ONE_MESSAGE'),
+      confirmLabel: this.translate.instant('PROFILES.COMMON.DELETE'), icon: 'delete',
+    }))) return;
+    this.regimeSvc.endEmployeeAssignment(p.id, assignmentId).subscribe({
+      next:  () => this.loadResolvedRegime(p.id),
+      error: err => this.notify.error(this.extractErrorMessage(err, this.translate.instant('PROFILES.REGIME_OVERRIDE.ERR'))),
     });
   }
 

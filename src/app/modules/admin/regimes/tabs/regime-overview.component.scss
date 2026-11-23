@@ -1,6 +1,7 @@
 @keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
 
 .skeleton { background:linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;display:block; }
+.source-seasonal { background:var(--color-warning-container, #fef3c7);color:var(--color-on-warning-container, #92400e); }
 .source-override { background:#e6f7f5;color:var(--color-teal); }
 .source-role      { background:#ede9fe;color:#5b21b6; }
 .source-default   { background:#f1f5f9;color:var(--color-on-surface-variant); }

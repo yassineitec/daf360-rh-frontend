@@ -31,7 +31,22 @@ export interface CreateOfferRequest {
   simulationSnapshot: string;
   /** Budget year the cost lands in. Omitted → the current year. */
   fiscalYear?: number | null;
+  /**
+   * RH records the CANDIDATE's counter-proposal (V133): `proposedSalary` is the candidate's
+   * figure, the round goes to the DAF, and its approval concludes the negotiation.
+   */
+  candidateCounter?: boolean;
 }
+
+/** The offer email as it would leave: recipient, rendered subject and body (editable). */
+export interface OfferEmailPreview {
+  to: string | null;
+  subject: string;
+  body: string;
+}
+
+/** Whose figure a round carries (V133) — the negotiation goes both ways. */
+export type OfferProposedBy = 'RH' | 'DAF' | 'CANDIDATE';
 
 /** One offer ROUND. A candidate has one per negotiation round since V98. */
 export interface OfferResponse {
@@ -53,6 +68,8 @@ export interface OfferResponse {
   /** DRAFT (awaiting the finance decision) | SENT | ACCEPTED | REJECTED | EXPIRED. */
   status: string;
   rejectionReason: string | null;
+  /** RH (prepared by RH) | DAF (the DAF's own counter, sent at once) | CANDIDATE (their counter). */
+  proposedBy: OfferProposedBy;
 }
 
 /**
@@ -88,9 +105,17 @@ export class OfferService {
     return this.http.put<OfferResponse>(`${this.base}/${candidateId}/offer`, body);
   }
 
-  /** Extend the approved DRAFT round to the candidate → candidate OFFER_SENT. */
-  sendOffer(candidateId: number): Observable<OfferResponse> {
-    return this.http.post<OfferResponse>(`${this.base}/${candidateId}/offer/send`, {});
+  /** The offer email as it would leave now — the entity's template, rendered (V134). */
+  previewOfferEmail(candidateId: number): Observable<OfferEmailPreview> {
+    return this.http.get<OfferEmailPreview>(`${this.base}/${candidateId}/offer/email-preview`);
+  }
+
+  /**
+   * Extend the approved DRAFT round to the candidate → candidate OFFER_SENT, offer emailed.
+   * `email` = RH's edited subject and body from the preview; omitted ⇒ the template as is.
+   */
+  sendOffer(candidateId: number, email?: { emailSubject: string; emailBody: string }): Observable<OfferResponse> {
+    return this.http.post<OfferResponse>(`${this.base}/${candidateId}/offer/send`, email ?? {});
   }
 
   acceptOffer(candidateId: number): Observable<OfferResponse> {

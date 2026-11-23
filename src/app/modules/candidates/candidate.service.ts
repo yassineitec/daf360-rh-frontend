@@ -9,6 +9,7 @@ import {
   CandidateStats, CandidateDashboardStats, CandidateHistoryItem, PageResponse,
   HireCandidateRequest,
   HireCandidateResponse,
+  CandidateAccess,
 } from './candidate.model';
 
 @Injectable({ providedIn: 'root' })
@@ -59,10 +60,25 @@ export class CandidateService {
     return `${this.base}/${id}/cv`;
   }
 
+  /**
+   * The CV file itself, through HttpClient so the auth interceptor adds the rh Bearer
+   * token — a plain link or window.open carries only the portal cookie, which this
+   * endpoint does not accept. Used by the profile tab's preview and by Télécharger.
+   */
+  getCvBlob(id: number): Observable<Blob> {
+    return this.http.get(`${this.base}/${id}/cv`, { responseType: 'blob' });
+  }
+
+  /** May the caller open this candidate — with RH rights, or as an interviewer (V132)? */
+  getAccess(id: number): Observable<CandidateAccess> {
+    return this.http.get<CandidateAccess>(`${this.base}/${id}/access`);
+  }
+
   getCandidates(filter: CandidateListQuery): Observable<PageResponse<CandidateListItem>> {
     const params: Record<string, string | number | boolean> = {};
     if (filter.paysId)          params['paysId']  = filter.paysId;
     if (filter.status)          params['status']  = filter.status;
+    if (filter.stage)           params['stage']   = filter.stage;
     if (filter.search)          params['search']  = filter.search;
     if (filter.departmentId)    params['departmentId'] = filter.departmentId;
     if (filter.demandId)        params['demandId']     = filter.demandId;

@@ -2,11 +2,12 @@ import {
   ChangeDetectionStrategy, Component, ElementRef, HostListener,
   computed, effect, inject, input, output, signal, viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 
 import { CandidateListItem } from '../candidate.model';
-import { KANBAN_COLUMN_DEFS, KanbanColumn } from '../kanban.model';
+import { KANBAN_COLUMN_DEFS, KanbanColumn, OFFBOARDING_AFTER_KEY } from '../kanban.model';
 import { CandidateKanbanCardComponent } from '../components/candidate-kanban-card.component';
 import { OffboardingWorkflowInstance } from '../../offboarding/models/offboarding.model';
 import {
@@ -42,7 +43,7 @@ interface MinimapTile {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CandidateKanbanCardComponent, OffboardingKanbanCardComponent,
-    SkeletonComponent, TranslatePipe,
+    SkeletonComponent, TranslatePipe, NgTemplateOutlet,
   ],
   host: { class: 'hidden sm:block' },
   styles: [`
@@ -100,7 +101,8 @@ interface MinimapTile {
                   [candidate]="c"
                   [accent]="col.accent"
                   [badgeBg]="col.badgeBg"
-                  [statusLabel]="statusLabel()(c.status)"
+                  [statusLabel]="col.globalLabel"
+                  [detailLabel]="statusLabel()(c.status)"
                   [draggable]="true"
                   [dragging]="draggedId() === c.id"
                   (dragStart)="dragStart.emit(c)"
@@ -113,13 +115,18 @@ interface MinimapTile {
               }
             </div>
           </div>
+
+          <!-- The lifecycle goes on after « Embauchés »: departures come before the closed files. -->
+          @if (col.key === offboardingAfterKey && showOffboarding()) {
+            <ng-container *ngTemplateOutlet="offboardingColumn" />
+          }
         }
 
         <!-- Offboarding — display-only; employees in an active offboarding workflow.
              Not a candidate status, so it is not a drop target, carries no sort
-             control, takes its neutral colour from the offboarding module rather
-             than from KANBAN_COLUMN_DEFS, and is absent from the minimap. -->
-        @if (showOffboarding()) {
+             control and takes its neutral colour from the offboarding module rather
+             than from KANBAN_COLUMN_DEFS. Drawn after OFFBOARDING_AFTER_KEY. -->
+        <ng-template #offboardingColumn>
           <div class="w-80 shrink-0 flex flex-col">
 
             <div class="flex items-center gap-2 px-1 mb-3">
@@ -142,7 +149,7 @@ interface MinimapTile {
               }
             </div>
           </div>
-        }
+        </ng-template>
       </div>
 
       <!-- Horizontal navigation minimap (fixed bottom-right) -->
@@ -196,6 +203,7 @@ export class CandidatesBoardSectionComponent {
   readonly cardDrop   = output<KanbanColumn>();
 
   protected readonly offboardingAccent = OFFBOARDING_ACCENT;
+  protected readonly offboardingAfterKey = OFFBOARDING_AFTER_KEY;
 
   /**
    * One tile per track the board actually renders — the status columns, then the
@@ -209,23 +217,23 @@ export class CandidatesBoardSectionComponent {
    */
   protected readonly minimapTiles = computed<MinimapTile[]>(() => {
     this.translate.currentLang();
-    const tiles: MinimapTile[] = this.columns().map(col => ({
-      key:     col.key,
-      label:   col.label,
-      accent:  col.accent,
-      badgeBg: col.badgeBg,
-      count:   col.candidates.length,
-    }));
-    if (this.showOffboarding()) {
-      tiles.push({
+    // Same order as the board: the Offboarding tile right after OFFBOARDING_AFTER_KEY's.
+    return this.columns().flatMap<MinimapTile>(col => [
+      {
+        key:     col.key,
+        label:   col.label,
+        accent:  col.accent,
+        badgeBg: col.badgeBg,
+        count:   col.candidates.length,
+      },
+      ...(col.key === OFFBOARDING_AFTER_KEY && this.showOffboarding() ? [{
         key:     OFFBOARDING_COLUMN_KEY,
         label:   this.translate.instant('OFFBOARDING.BOARD.COLUMN'),
         accent:  OFFBOARDING_ACCENT,
         badgeBg: OFFBOARDING_BADGE_BG,
         count:   this.offboarding().length,
-      });
-    }
-    return tiles;
+      }] : []),
+    ]);
   });
 
   constructor() {

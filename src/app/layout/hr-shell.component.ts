@@ -37,18 +37,22 @@ interface AppNavDef {
   children?: AppNavDef[];
   /** A heading inside a group (lib NavItem.heading): a label, never an entry — no route. */
   heading?: boolean;
+  /**
+   * Other URL prefixes that light this entry up. For a leaf whose `route` is deeper than
+   * the pages it stands for — Offboarding opens `offboarding/type/RESIGNATION`, yet the
+   * full list and every `offboarding/:id` file belong to it too.
+   */
+  activeOn?: string[];
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'accueil', labelKey: 'NAV.ACCUEIL', icon: 'home', route: 'accueil', permissions: [] },
   { id: 'profiles', labelKey: 'NAV.PROFILES', icon: 'account_circle', route: 'profiles', permissions: [] },
-  {
-    id: 'audit',
-    labelKey: 'NAV.AUDIT',
-    icon: 'history',
-    route: 'audit',
-    permissions: ['HR_ADMIN_ROLES', 'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'],
-  },
+  // « Journal d'audit » has no entry any more: it is a card of Administration (tab `audit`).
+  //
+  // « Pipeline RH » — the lifecycle board across every process (candidature, IT, onboarding,
+  // CDI, offboarding). Its own entry, outside the group below: it is the overview of the
+  // whole group, not one more step of it.
   {
     id: 'recrutement',
     labelKey: 'NAV.PIPELINE',
@@ -56,88 +60,76 @@ const APP_NAV_DEFS: AppNavDef[] = [
     route: 'recrutement',
     permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE'],
   },
+  // Lifecycle — ONE group for the screens of each step a person goes through, from
+  // candidature to departure: candidatures, IT provisioning, onboarding, CDI conversions and
+  // offboarding. The rail draws one level of children only, so a screen that used to be a
+  // group of its own (IT provisioning: en cours + historique) is ONE entry whose sub-screens
+  // are tabs inside the page. « Mes entretiens » is no longer here: it is the « Entretiens »
+  // tab of the shell's self-service.
+  //
+  // No permission on the group itself: it shows as soon as one child does (see `visible`).
   {
-    id: 'candidates',
-    labelKey: 'NAV.CANDIDATES',
-    icon: 'group_add',
-    route: 'candidates',
-    permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'],
-  },
-  // Same two-children shape as `missions`: open files to work on, completed ones to review.
-  {
-    id: 'it-provisioning',
-    labelKey: 'NAV.IT_PROVISIONING',
-    icon: 'devices',
-    permissions: ['IT_PROVISIONING'],
+    id: 'lifecycle',
+    labelKey: 'NAV.LIFECYCLE',
+    icon: 'conversion_path',
+    permissions: [],
     children: [
       {
-        id: 'it-provisioning-current',
-        labelKey: 'NAV.IT_PROVISIONING_CURRENT',
+        id: 'candidates',
+        labelKey: 'NAV.CANDIDATES',
+        icon: 'group_add',
+        route: 'candidates',
+        permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'],
+      },
+      // « Dossiers en cours » and « Historique » are the two tabs of this page.
+      {
+        id: 'it-provisioning',
+        labelKey: 'NAV.IT_PROVISIONING',
         icon: 'devices',
         route: 'it-provisioning',
         permissions: ['IT_PROVISIONING'],
       },
       {
-        id: 'it-provisioning-history',
-        labelKey: 'NAV.IT_PROVISIONING_HISTORY',
-        icon: 'history',
-        route: 'it-provisioning/historique',
-        permissions: ['IT_PROVISIONING'],
+        id: 'onboarding',
+        labelKey: 'NAV.ONBOARDING',
+        icon: 'person_add',
+        route: 'onboarding',
+        permissions: ['HR_ONBOARDING'],
       },
-    ],
-  },
-  {
-    id: 'onboarding',
-    labelKey: 'NAV.ONBOARDING',
-    icon: 'person_add',
-    route: 'onboarding',
-    permissions: ['HR_ONBOARDING'],
-  },
-  {
-    id: 'offboarding',
-    labelKey: 'NAV.OFFBOARDING',
-    icon: 'logout',
-    permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
-    // Une entrée par RAISON DE DÉPART, et rien d'autre : ce groupe est une
-    // catégorisation, pas un raccourci vers la liste. Seule RESIGNATION existe pour
-    // l'instant, sur demande ; les six autres codes de `DEPARTURE_REASONS` s'ajoutent
-    // ici, une ligne chacun.
-    //
-    // Pas d'entrée « tous les départs » : elle a été retirée volontairement. La liste
-    // complète (`offboarding`) reste servie par la route et par les liens internes des
-    // écrans, elle n'a simplement plus de porte dans la barre.
-    children: [
+      // CIVP → CDI requests: the validator's, the arbiter's and RH's queue, and each
+      // requester's own list. Requests themselves are filed from the profile's contract card.
       {
-        id: 'offboarding-resignation',
-        labelKey: 'NAV.OFFBOARDING_RESIGNATION',
-        icon: 'edit_document',
+        id: 'cdi-conversions',
+        labelKey: 'NAV.CDI_CONVERSIONS',
+        icon: 'workspace_premium',
+        route: 'cdi-conversions',
+        permissions: ['RH_REQUEST_CDI_CONVERSION', 'RH_VALIDATE_CDI_CONVERSION', 'RH_ARBITRATE_CDI_CONVERSION', 'RH_MANAGE_LIFECYCLE'],
+      },
+      // Was a group with one child per departure reason. RESIGNATION is the only reason
+      // with a screen, so the entry opens it directly; when a second reason gets one, the
+      // reasons become tabs of the offboarding page — never a second level in the rail.
+      {
+        id: 'offboarding',
+        labelKey: 'NAV.OFFBOARDING',
+        icon: 'logout',
         route: 'offboarding/type/RESIGNATION',
+        activeOn: ['offboarding'],
         permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'],
       },
     ],
   },
-  // CIVP → CDI requests: the validator's, the arbiter's and RH's queue, and each requester's
-  // own list. Requests themselves are filed from the profile's contract card.
-  {
-    id: 'cdi-conversions',
-    labelKey: 'NAV.CDI_CONVERSIONS',
-    icon: 'workspace_premium',
-    route: 'cdi-conversions',
-    permissions: ['RH_REQUEST_CDI_CONVERSION', 'RH_VALIDATE_CDI_CONVERSION', 'RH_ARBITRATE_CDI_CONVERSION', 'RH_MANAGE_LIFECYCLE'],
-  },
-  // `missions` is the manager planning for their team; `billeterie` (below) is RH
-  // pricing and validating what was planned — two different desks, deliberately kept as
-  // two separate top-level entries rather than one group, since a manager holds only the
-  // first permission and would see a group with a single child.
+  // « Missions » — everything about a business trip, whoever handles it:
+  // the manager planning missions for their team (current / history, RH_CREATE_MISSION)
+  // and RH's billeterie desk pricing and validating them (RH_MANAGE_MISSION_BILLETERIE).
+  // The label covers both desks, not only the manager's.
   //
-  // Within the manager's own desk, current and past missions ARE one group with two
-  // children — same shape as `requests` below — since both live under the one
-  // `RH_CREATE_MISSION` permission and only the two lists (not the desk) tell them apart.
+  // The group carries the UNION of its children's codes, and each child keeps its own: a
+  // manager sees the two mission lists, an RH ticketing officer only « Billeterie ».
   {
     id: 'missions',
-    labelKey: 'NAV.MISSIONS',
+    labelKey: 'NAV.MISSIONS_GROUP',
     icon: 'flight_takeoff',
-    permissions: ['RH_CREATE_MISSION'],
+    permissions: ['RH_CREATE_MISSION', 'RH_MANAGE_MISSION_BILLETERIE'],
     children: [
       {
         id: 'missions-current',
@@ -153,14 +145,14 @@ const APP_NAV_DEFS: AppNavDef[] = [
         route: 'missions/historique',
         permissions: ['RH_CREATE_MISSION'],
       },
+      {
+        id: 'billeterie',
+        labelKey: 'NAV.BILLETERIE',
+        icon: 'confirmation_number',
+        route: 'billeterie',
+        permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
+      },
     ],
-  },
-  {
-    id: 'billeterie',
-    labelKey: 'NAV.BILLETERIE',
-    icon: 'confirmation_number',
-    route: 'billeterie',
-    permissions: ['RH_MANAGE_MISSION_BILLETERIE'],
   },
   // Absences — ONE group for the three kinds of leave and their statistics, split by
   // headings (NavItem.heading, lib 5.8): congés, autorisations, télétravail and the HR
@@ -331,8 +323,10 @@ const APP_NAV_DEFS: AppNavDef[] = [
     labelKey: 'NAV.ADMIN',
     icon: 'admin_panel_settings',
     route: 'admin',
-    // Same codes as the route guard: CREATE_ABSENCE_TYPE opens the « Types de congés » tab.
-    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE'],
+    // Same codes as the route guard: CREATE_ABSENCE_TYPE opens the « Types de congés » tab,
+    // HR_CREATE_PROFILE / HR_UPDATE_PROFILE the « Journal d'audit » one (no sidebar entry).
+    permissions: ['ADMIN_ROLES', 'HR_ADMIN_ROLES', 'GET_ROLES', 'ADMIN_LISTS', 'ADMIN_REGIMES', 'ADMIN_BREAKS', 'ADMIN_NOTIFICATIONS', 'CREATE_ABSENCE_TYPE',
+                  'HR_CREATE_PROFILE', 'HR_UPDATE_PROFILE'],
   },
 ];
 
@@ -397,8 +391,11 @@ export class HrShellComponent implements OnInit {
       // Les groupes n'ont plus de route : sans ce filtre, `(^|/)(/|$)` correspondrait à
       // n'importe quelle URL et le premier groupe rencontré éteindrait toute la barre.
       .filter((d): d is AppNavDef & { route: string } => !!d.route)
-      .sort((a, b) => b.route.length - a.route.length)
-      .find((d) => new RegExp(`(^|/)${d.route}(/|$)`).test(url));
+      // One candidate per prefix: the entry's own route, then its `activeOn` aliases — all
+      // resolving to the entry's route, which is what the lib compares against.
+      .flatMap((d) => [d.route, ...(d.activeOn ?? [])].map((prefix) => ({ prefix, route: d.route })))
+      .sort((a, b) => b.prefix.length - a.prefix.length)
+      .find((d) => new RegExp(`(^|/)${d.prefix}(/|$)`).test(url));
     return match ? match.route : '';
   });
 
@@ -409,8 +406,11 @@ export class HrShellComponent implements OnInit {
   // translate PIPE isn't an option here.
   readonly navItems = computed<NavItem[]>(() => {
     this.translate.currentLang();
-    const visible = (def: AppNavDef) =>
-      def.permissions.length === 0 || this.perm.hasAny(def.permissions);
+    const visible = (def: AppNavDef): boolean =>
+      (def.permissions.length === 0 || this.perm.hasAny(def.permissions)) &&
+      // A group shows only with at least one real entry under it — headings do not count,
+      // the lib already hides a heading left with nothing beneath it.
+      (!def.children?.length || def.children.some((c) => !c.heading && visible(c)));
 
     const toNavItem = (def: AppNavDef): NavItem => {
       const children = (def.children ?? []).filter(visible).map(toNavItem);
@@ -425,6 +425,11 @@ export class HrShellComponent implements OnInit {
         // an expandable group, so it would render a chevron that opens nothing.
         ...(children.length ? { children } : {}),
         ...(def.id === 'onboarding' && this.onboardingCount() > 0
+          ? { badge: this.onboardingCount() }
+          : {}),
+        // The collapsed group still says something waits inside it: its children's badges
+        // (each count is only ever loaded for a user who sees that child).
+        ...(def.id === 'lifecycle' && this.onboardingCount() > 0
           ? { badge: this.onboardingCount() }
           : {}),
       };

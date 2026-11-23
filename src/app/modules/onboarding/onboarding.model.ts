@@ -1,7 +1,11 @@
 
 // FILE: onboarding.model.ts  (import from '../onboarding.model' inside steps/)
 
-export type CandidateOnboardingStatus = 'EMAIL_RECEIVED' | 'HR_IN_PROGRESS';
+/**
+ * HR_IN_PROGRESS = onboarding open (from the offer agreement, in parallel with IT).
+ * IT_IN_PROGRESS / EMAIL_RECEIVED = files from the old sequential flow (IT first).
+ */
+export type CandidateOnboardingStatus = 'IT_IN_PROGRESS' | 'EMAIL_RECEIVED' | 'HR_IN_PROGRESS';
 
 export interface OnboardingListItem {
   candidateId: number;

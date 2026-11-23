@@ -4,6 +4,11 @@ import { CandidateListItem, CandidateStatus } from './candidate.model';
 export interface KanbanColumn {
   key: string;
   label: string;
+  /**
+   * The global status a card of this column carries (« En recrutement », « En onboarding »,
+   * « Embauché », « Clôturé ») — singular, where `label` names the column.
+   */
+  globalLabel: string;
   statuses: CandidateStatus[];
   /** Solid accent (dot, status-badge text, avatar fallback). */
   accent: string;
@@ -15,20 +20,37 @@ export interface KanbanColumn {
 }
 
 /** Static column definition; `label` is resolved via i18n at render time. */
-export interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label' | 'sortDir'> {
+export interface KanbanColumnDef extends Omit<KanbanColumn, 'candidates' | 'label' | 'globalLabel' | 'sortDir'> {
   labelKey: string;
+  globalLabelKey: string;
 }
 
+/** Key of the column after which the board draws the read-only Offboarding column. */
+export const OFFBOARDING_AFTER_KEY = 'hired';
+
 /**
- * Kanban stages mirror the coded candidate workflow (PENDING → … → HIRED / REJECTED).
- * Each column owns a colour used for its dot and the card status badge.
+ * « Pipeline RH » is the LIFECYCLE board: one column per global status, each card saying
+ * which global status it is in and, under it, its detailed candidate status.
+ *
+ *   En recrutement — the candidature (interviews, RH validation, offer):
+ *                    PENDING / ACCEPTED / OFFER_SENT. Its steps are the columns of the
+ *                    « Candidats » board.
+ *   Onboarding     — offer agreed: onboarding and IT provisioning run in parallel
+ *                    (HR_IN_PROGRESS; IT_IN_PROGRESS / EMAIL_RECEIVED are the legacy codes
+ *                    of the same phase).
+ *   Embauchés      — HIRED, an employee now.
+ *   [Offboarding]  — read-only column of the departures in progress, drawn after Embauchés.
+ *   Clôturés       — REJECTED / ARCHIVED.
  */
 export const KANBAN_COLUMN_DEFS: KanbanColumnDef[] = [
-  { key: 'pending',  labelKey: 'CANDIDATES.KANBAN.COL_PENDING',  statuses: ['PENDING'],                                            accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)'  },
-  { key: 'accepted', labelKey: 'CANDIDATES.KANBAN.COL_ACCEPTED', statuses: ['ACCEPTED', 'OFFER_SENT'],                             accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
-  { key: 'progress', labelKey: 'CANDIDATES.KANBAN.COL_PROGRESS', statuses: ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'], accent: '#1e40af', badgeBg: 'rgba(30,64,175,0.12)'  },
-  { key: 'hired',    labelKey: 'CANDIDATES.KANBAN.COL_HIRED',    statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)'   },
-  { key: 'rejected', labelKey: 'CANDIDATES.KANBAN.COL_REJECTED', statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)'  },
+  { key: 'recruiting', labelKey: 'CANDIDATES.KANBAN.COL_RECRUITING', globalLabelKey: 'CANDIDATES.KANBAN.GLOBAL_RECRUITING',
+    statuses: ['PENDING', 'ACCEPTED', 'OFFER_SENT'],                  accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'  },
+  { key: 'onboarding', labelKey: 'CANDIDATES.KANBAN.COL_ONBOARDING', globalLabelKey: 'CANDIDATES.KANBAN.GLOBAL_ONBOARDING',
+    statuses: ['HR_IN_PROGRESS', 'IT_IN_PROGRESS', 'EMAIL_RECEIVED'], accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)'  },
+  { key: 'hired',      labelKey: 'CANDIDATES.KANBAN.COL_HIRED',      globalLabelKey: 'CANDIDATES.KANBAN.GLOBAL_HIRED',
+    statuses: ['HIRED'],                                              accent: '#047857', badgeBg: 'rgba(4,120,87,0.12)'   },
+  { key: 'closed',     labelKey: 'CANDIDATES.KANBAN.COL_CLOSED',     globalLabelKey: 'CANDIDATES.KANBAN.GLOBAL_CLOSED',
+    statuses: ['REJECTED', 'ARCHIVED'],                               accent: '#ba1a1a', badgeBg: 'rgba(186,26,26,0.12)'  },
 ];
 
 /** Highest fit score first; candidates without a score sink to the bottom. */

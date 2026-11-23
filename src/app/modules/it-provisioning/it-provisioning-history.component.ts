@@ -2,6 +2,7 @@ import { Component, OnInit, computed, effect, inject, signal, viewChild } from '
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
+import { ItProvisioningTabsComponent } from './it-provisioning-tabs.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
@@ -109,7 +110,7 @@ const GUIDE_STEPS: GuideStep[] = [
   imports: [
     MetricCardComponent, PageComponent, PageHeaderComponent, PaginationComponent,
     SearchToolbarComponent, ItProvisioningCardsSectionComponent, ItProvisioningTableSectionComponent,
-    PageGuideComponent,
+    PageGuideComponent, ItProvisioningTabsComponent,
     TranslatePipe,
   ],
   templateUrl: './it-provisioning-history.component.html',

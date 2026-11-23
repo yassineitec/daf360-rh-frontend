@@ -1,7 +1,7 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { catchError, of } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import {
   BreadcrumbItem,
   ButtonComponent,
@@ -26,25 +26,43 @@ import { statusBadge } from '../../shared/status-badge.utils';
 import { genderOptions } from '../../shared/utils/gender.utils';
 import { CandidateService } from './candidate.service';
 import {
-  CandidateDetail, CandidateHistoryItem, HireCandidateRequest, UpdateCandidateRequest,
+  CandidateDetail, CandidateHistoryItem, UpdateCandidateRequest,
 } from './candidate.model';
+import { CandidateCostApprovalDto, PayrollSimulationService } from './payroll-simulation.service';
 import { CandidateInterviewsComponent } from './candidate-interviews.component';
-import { CandidateCostSimulationComponent } from './candidate-cost-simulation.component';
+import { InterviewService } from './interview.service';
+import { CandidateInterview } from './interview.model';
+import { OfferResponse, OfferService } from '../pipeline/services/offer.service';
 import { OfferSectionComponent } from './offer-section.component';
+import { OfferEmailModalComponent } from './offer-email-modal.component';
 import { RejectModalComponent } from './reject-modal.component';
 import { CandidateIdentityCardComponent, CandidatePill } from './detail-sections/candidate-identity-card.component';
-import { CandidatePipelineCardComponent } from './detail-sections/candidate-pipeline-card.component';
 import { CandidateProfileSectionComponent } from './detail-sections/candidate-profile-section.component';
-import { CandidateSalarySectionComponent } from './detail-sections/candidate-salary-section.component';
-import { CandidateCvSectionComponent } from './detail-sections/candidate-cv-section.component';
-import { CandidateItSectionComponent } from './detail-sections/candidate-it-section.component';
-import { CandidateHireModalComponent } from './detail-sections/candidate-hire-modal.component';
+import { CandidateCvModalComponent } from './candidate-cv-modal.component';
+import {
+  CandidateNextStepComponent, NextStepActionKind, NextStepModel,
+} from './detail-sections/candidate-next-step.component';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
 
-const HIREABLE_STATUSES = ['ACCEPTED', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS'];
-/** Contract codes the backend requires an end date for (also enforced server-side). */
-const NEEDS_END_DATE = ['CDD', 'CIVP', 'STAGE', 'DETACHEMENT'];
+/** The recruitment path, in order — same list the rail draws. */
+const PIPELINE = [
+  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'IT_IN_PROGRESS',
+  'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED',
+] as const;
+
+/**
+ * The step (index in PIPELINE) from which each tab exists. A tab only appears once the
+ * candidature has reached its step. Profil (salary included) holds what was typed at
+ * creation and the interviews are the first step, so both are there from 0.
+ *
+ * No CV tab (the CV opens full size from « Prévisualiser le CV » on the identity card) and
+ * no IT tab: once the offer is agreed the file leaves the candidate workflow, and IT
+ * provisioning has its own screen.
+ */
+const TAB_FROM_STEP: Record<TabId, number> = {
+  profil: 0, entretiens: 0, offre: 1,
+};
 
 const CV_ALLOWED_TYPES = [
   'application/pdf',
@@ -53,7 +71,7 @@ const CV_ALLOWED_TYPES = [
 ];
 const CV_MAX_BYTES = 10 * 1024 * 1024;
 
-type TabId = 'profil' | 'salaire' | 'entretiens' | 'offre' | 'cv' | 'it';
+type TabId = 'profil' | 'entretiens' | 'offre';
 
 /**
  * Steps of the page guide, started from « Aide & guides » (« Candidats » tab). `target` is
@@ -64,13 +82,9 @@ const GUIDE_STEPS: GuideStep[] = [
   { icon: 'waving_hand',      titleKey: 'CANDIDATE_DETAIL.GUIDE.WELCOME.TITLE',    textKey: 'CANDIDATE_DETAIL.GUIDE.WELCOME.TEXT' },
   { icon: 'bolt',             titleKey: 'CANDIDATE_DETAIL.GUIDE.HEADER.TITLE',     textKey: 'CANDIDATE_DETAIL.GUIDE.HEADER.TEXT',     target: 'header' },
   { icon: 'badge',            titleKey: 'CANDIDATE_DETAIL.GUIDE.IDENTITY.TITLE',   textKey: 'CANDIDATE_DETAIL.GUIDE.IDENTITY.TEXT',   target: 'identity' },
-  { icon: 'linear_scale',     titleKey: 'CANDIDATE_DETAIL.GUIDE.RAIL.TITLE',       textKey: 'CANDIDATE_DETAIL.GUIDE.RAIL.TEXT',       target: 'rail' },
   { icon: 'person',           titleKey: 'CANDIDATE_DETAIL.GUIDE.PROFILE.TITLE',    textKey: 'CANDIDATE_DETAIL.GUIDE.PROFILE.TEXT',    target: 'panel', tab: 'profil' },
-  { icon: 'payments',         titleKey: 'CANDIDATE_DETAIL.GUIDE.SALARY.TITLE',     textKey: 'CANDIDATE_DETAIL.GUIDE.SALARY.TEXT',     target: 'panel', tab: 'salaire' },
   { icon: 'record_voice_over', titleKey: 'CANDIDATE_DETAIL.GUIDE.INTERVIEWS.TITLE', textKey: 'CANDIDATE_DETAIL.GUIDE.INTERVIEWS.TEXT', target: 'panel', tab: 'entretiens' },
   { icon: 'handshake',        titleKey: 'CANDIDATE_DETAIL.GUIDE.OFFER.TITLE',      textKey: 'CANDIDATE_DETAIL.GUIDE.OFFER.TEXT',      target: 'panel', tab: 'offre' },
-  { icon: 'description',      titleKey: 'CANDIDATE_DETAIL.GUIDE.CV.TITLE',         textKey: 'CANDIDATE_DETAIL.GUIDE.CV.TEXT',         target: 'panel', tab: 'cv' },
-  { icon: 'computer',         titleKey: 'CANDIDATE_DETAIL.GUIDE.IT.TITLE',         textKey: 'CANDIDATE_DETAIL.GUIDE.IT.TEXT',         target: 'panel', tab: 'it' },
   { icon: 'help',             titleKey: 'CANDIDATE_DETAIL.GUIDE.END.TITLE',        textKey: 'CANDIDATE_DETAIL.GUIDE.END.TEXT',        tab: 'profil' },
 ];
 
@@ -118,15 +132,12 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof UpdateCandidateRequest)[]>> = {
     PageHeaderComponent,
     TabsComponent,
     CandidateIdentityCardComponent,
-    CandidatePipelineCardComponent,
     CandidateProfileSectionComponent,
-    CandidateSalarySectionComponent,
-    CandidateCvSectionComponent,
-    CandidateItSectionComponent,
-    CandidateHireModalComponent,
+    CandidateNextStepComponent,
+    CandidateCvModalComponent,
     CandidateInterviewsComponent,
-    CandidateCostSimulationComponent,
     OfferSectionComponent,
+    OfferEmailModalComponent,
     RejectModalComponent,
     TranslatePipe,
     PageGuideComponent,
@@ -142,6 +153,9 @@ export class CandidateDetailComponent implements OnInit {
   private readonly listSvc   = inject(ConfigurableListService);
   private readonly demandSvc = inject(RecruitmentDemandService);
   private readonly notify    = inject(NotificationService);
+  private readonly interviewSvc = inject(InterviewService);
+  private readonly offerSvc     = inject(OfferService);
+  private readonly simulationSvc = inject(PayrollSimulationService);
   readonly userStore = inject(UserStore);
 
   private candidateId = 0;
@@ -154,6 +168,14 @@ export class CandidateDetailComponent implements OnInit {
    * and the rail degrades to undated steps — it must never block the page.
    */
   readonly history   = signal<CandidateHistoryItem[]>([]);
+  /**
+   * Interviews and offer rounds, read for the Profil tab's overview. The Entretiens and
+   * Offre tabs keep their own fetching (they also write); these copies are refreshed on
+   * every reload of the record, which follows every action that could change them.
+   * Both degrade to [] on error — the overview must never block the page.
+   */
+  readonly interviews  = signal<CandidateInterview[]>([]);
+  readonly offerRounds = signal<OfferResponse[]>([]);
   /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
   readonly firstLoad = signal(true);
   readonly error     = signal<string | null>(null);
@@ -169,8 +191,22 @@ export class CandidateDetailComponent implements OnInit {
   // ── Permissions ────────────────────────────────────────────────────────────
   readonly canAcceptReject = computed(() => this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'));
   readonly canHire         = computed(() => this.userStore.hasPermission('RH_HIRE_CANDIDATE'));
-  readonly canManageIt     = computed(() => this.userStore.hasPermission('IT_PROVISIONING'));
-  readonly canOnboard      = computed(() => this.userStore.hasPermission('HR_ONBOARDING'));
+  /**
+   * V132 — the record was served to an interviewer who holds no candidate right: a reduced
+   * page (Profil, Entretiens, CV), no workflow card, no editing.
+   */
+  readonly interviewerView = computed(() => !!this.candidate()?.interviewerView);
+
+  /**
+   * What `GET /candidates/{id}/interviews` accepts: the planner, the PV readers, or a panel
+   * member (V132). The panel case is only known from the record, hence `interviewerView` —
+   * an RH user who also sits on a panel already passes on the codes.
+   */
+  readonly canManageInterviews = computed(() =>
+    this.userStore.hasPermission('RH_MANAGE_INTERVIEWS')
+    || this.userStore.hasPermission('RH_VALIDATE_INTERVIEW')
+    || this.userStore.hasPermission('RH_VIEW_INTERVIEW_REPORTS')
+    || this.interviewerView());
 
   /**
    * Exactly what `PUT /api/hr/candidates/{id}` enforces, not a looser page-level
@@ -181,43 +217,277 @@ export class CandidateDetailComponent implements OnInit {
    * editing the candidature here would silently diverge from it.
    */
   readonly canEdit = computed(() =>
-    this.candidate()?.status !== 'HIRED' && this.userStore.hasPermission('HR_ONBOARDING'),
+    this.candidate()?.status !== 'HIRED' && !this.interviewerView()
+    && this.userStore.hasPermission('HR_ONBOARDING'),
   );
 
   /** Salary + cost simulation are budget data — RH hiring rights or admin. */
   readonly canViewSalary = computed(() => this.canHire() || this.userStore.isAdmin());
 
-  readonly canHireThisCandidate = computed(() => {
+  // ── Steps ──────────────────────────────────────────────────────────────────
+  /**
+   * The furthest step this candidature has reached (index in PIPELINE). For REJECTED /
+   * ARCHIVED, which are off the path, it is read from the history — so a candidate who
+   * declined the offer still shows the interview and offer tabs they went through.
+   */
+  readonly reachedStep = computed(() => {
     const c = this.candidate();
-    return c !== null && HIREABLE_STATUSES.includes(c.status) && this.canHire();
+    if (!c) return 0;
+    const idx = PIPELINE.indexOf(c.status as (typeof PIPELINE)[number]);
+    if (idx >= 0) return idx;
+    let max = 0;
+    for (const h of this.history()) {
+      const i = PIPELINE.indexOf((h.resultingStatus ?? '') as (typeof PIPELINE)[number]);
+      if (i > max) max = i;
+    }
+    if (this.offerRounds().length && max < 1) max = 1;
+    return max;
   });
 
-  /** CONTRACT_TYPE label in the UI language (see readLabels); the backend French label as fallback. */
-  readonly contractTypeLabel = computed(() =>
-    this.readLabels().employmentType ?? this.candidate()?.employmentTypeLabel ?? null);
+  /** Finance decisions on this candidate's offer rounds — the send gate reads it. */
+  readonly approvals = signal<CandidateCostApprovalDto[]>([]);
 
-  /** Whether the hire form must ask for an end date (backend enforces this too). */
-  readonly requiresEndDate = computed(() => {
-    const label = (this.candidate()?.employmentTypeLabel ?? '').toUpperCase();
-    return NEEDS_END_DATE.some(code => label.includes(code));
+  /** The live offer round: rounds come newest first, and a replaced one is superseded. */
+  readonly currentRound = computed(() => this.offerRounds().find(r => !r.supersededAt) ?? null);
+
+  readonly currentApprovalStatus = computed(() => {
+    const r = this.currentRound();
+    return r ? (this.approvals().find(a => a.jobOfferId === r.id)?.status ?? null) : null;
   });
 
-  // ── Which sections apply to this candidate ─────────────────────────────────
-  readonly showItSection = computed(() => {
+  readonly nextBusy  = signal(false);
+  readonly nextError = signal<string | null>(null);
+
+  /**
+   * The « Étape actuelle » card: what this step is, what it still needs, and the single
+   * button that moves the candidature on. The button exists only for the user who may
+   * press it, and stays disabled until every check is done — the backend enforces the
+   * same gates (interviews on accept, finance approval on send).
+   */
+  readonly nextStep = computed<NextStepModel | null>(() => {
+    this.translate.currentLang();
     const c = this.candidate();
-    return c !== null && !['PENDING', 'REJECTED'].includes(c.status);
+    if (!c) return null;
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant('CANDIDATES.NEXT.' + k, p);
+
+    // An interviewer reads the record to prepare and report on their interview; the
+    // workflow is RH's and is not shown to them.
+    if (this.interviewerView()) return null;
+
+    switch (c.status) {
+      case 'PENDING': {
+        // First step of the process: prepare and hold the interviews.
+        const ivs = this.interviews().filter(i => i.status !== 'CANCELLED');
+        const pass = ivs.some(i => i.result === 'PASS');
+        const fail = ivs.some(i => i.result === 'FAIL');
+        const reportsIn = ivs.length > 0 && ivs.every(i => i.status === 'DONE');
+        const allValidated = ivs.length > 0 && ivs.every(i => !!i.result);
+        const ready = pass && !fail && allValidated;
+        const hint = fail ? 'PENDING.BLOCKED_FAIL'
+          : !ivs.length ? 'PENDING.BLOCKED'
+          : !reportsIn ? 'PENDING.BLOCKED_PV'
+          : !allValidated ? 'PENDING.BLOCKED_VALIDATION'
+          : 'PENDING.BLOCKED';
+        return {
+          icon: 'record_voice_over', title: t('PENDING.TITLE'), text: t('PENDING.TEXT'),
+          checks: [
+            { label: t('PENDING.CHECK_PLANNED'), done: ivs.length > 0 },
+            { label: t('PENDING.CHECK_PV'), done: reportsIn },
+            { label: t('PENDING.CHECK_VALIDATED'), done: allValidated },
+            { label: t('PENDING.CHECK_PASS'), done: pass },
+            { label: t('PENDING.CHECK_NO_FAIL'), done: !fail },
+          ],
+          action: this.canAcceptReject()
+            ? { kind: 'accept', label: t('PENDING.ACTION'), shortLabel: t('PENDING.ACTION_SHORT'),
+                icon: 'arrow_forward', enabled: ready,
+                blockedHint: ready ? null : t(hint) }
+            : null,
+          waiting: this.canAcceptReject() ? null : t('NO_RIGHT'),
+          end: this.canAcceptReject() ? { label: t('END_CANDIDACY') } : null,
+          done: false,
+        };
+      }
+
+      case 'ACCEPTED':
+      case 'OFFER_SENT': {
+        const round = this.currentRound();
+        // A renegotiated round is DRAFT again even though the candidate is OFFER_SENT:
+        // it goes back through finance and is sent like the first one.
+        // The candidate countered (V133): their figure waits on the DAF, whose approval
+        // concludes the negotiation by itself — there is nothing to send.
+        if (round?.status === 'DRAFT' && round.proposedBy === 'CANDIDATE') {
+          const approval = this.currentApprovalStatus();
+          return {
+            icon: 'handshake', title: t('OFFER.TITLE'), text: t('OFFER.TEXT_CANDIDATE_COUNTER'),
+            checks: [
+              { label: t('OFFER.CHECK_COUNTER_RECORDED'), done: true },
+              { label: t('OFFER.CHECK_DAF_DECIDED'), done: approval === 'APPROVED' || approval === 'REJECTED' },
+            ],
+            action: null,
+            waiting: approval === 'REJECTED' ? t('OFFER.BLOCKED_REFUSED') : t('OFFER.WAITING_DAF_COUNTER'),
+            end: null,
+            done: false,
+          };
+        }
+        if (c.status === 'ACCEPTED' || round?.status === 'DRAFT') {
+          const prepared = round?.status === 'DRAFT';
+          const approval = this.currentApprovalStatus();
+          const approved = prepared && approval === 'APPROVED';
+          const hint = !prepared ? 'OFFER.BLOCKED_PREPARE'
+            : approval === 'REJECTED' ? 'OFFER.BLOCKED_REFUSED'
+            : 'OFFER.BLOCKED_FINANCE';
+          return {
+            icon: 'handshake', title: t('OFFER.TITLE'),
+            // The DAF's own counter-proposal: already approved, RH only has to send it.
+            text: t(round?.proposedBy === 'DAF' && round.status === 'DRAFT' ? 'OFFER.TEXT_DAF' : 'OFFER.TEXT'),
+            checks: [
+              { label: t('OFFER.CHECK_PREPARED'), done: prepared },
+              { label: t('OFFER.CHECK_APPROVED'), done: approved },
+            ],
+            action: this.canHire()
+              ? { kind: 'send-offer', label: t('OFFER.ACTION'), shortLabel: t('OFFER.ACTION_SHORT'),
+                  icon: 'send', enabled: approved,
+                  blockedHint: approved ? null : t(hint) }
+              : null,
+            waiting: this.canHire() ? null : t('NO_RIGHT'),
+            end: null,
+            done: false,
+          };
+        }
+        return {
+          icon: 'mark_email_unread', title: t('ANSWER.TITLE'),
+          // The offer on the table is the DAF's own counter-proposal: say so.
+          text: t(round?.proposedBy === 'DAF' ? 'ANSWER.TEXT_DAF' : 'ANSWER.TEXT'),
+          checks: [{ label: t('ANSWER.CHECK_SENT'), done: round?.status === 'SENT' }],
+          action: this.canHire()
+            ? { kind: 'offer-accepted', label: t('ANSWER.ACTION'), shortLabel: t('NEXT_STEP_SHORT'),
+                icon: 'arrow_forward',
+                enabled: round?.status === 'SENT', blockedHint: null }
+            : null,
+          // The candidate's three answers sit together: accept (the main button), ask for
+          // another amount (the negotiation goes on), or decline the opportunity (« end »).
+          secondary: this.canHire() && (round?.status === 'SENT' || round?.status === 'EXPIRED')
+            ? { kind: 'candidate-counter', label: t('ANSWER.COUNTER'), icon: 'reply' }
+            : null,
+          waiting: this.canHire() ? null : t('NO_RIGHT'),
+          end: this.canHire() && round?.status === 'SENT' ? { label: t('ANSWER.DECLINED') } : null,
+          done: false,
+        };
+      }
+
+      // The offer is agreed: the candidate is accepted and the file has LEFT the candidate
+      // workflow. Onboarding (RH) and IT provisioning (IT) run in parallel on their own
+      // screens, reached from the Lifecycle menu — this card only says where the file went.
+      // No button here: the candidate page is the candidature, not the onboarding desk.
+      case 'IT_IN_PROGRESS':
+      case 'EMAIL_RECEIVED':
+      case 'HR_IN_PROGRESS': {
+        const email = c.itProvisioning?.ms365Email ?? null;
+        return {
+          icon: 'how_to_reg', title: t('HANDOFF.TITLE'), text: t('HANDOFF.TEXT'),
+          checks: [
+            { label: t('HANDOFF.CHECK_OFFER'), done: true },
+            { label: t('HANDOFF.CHECK_IT_ACCOUNT'), done: !!email },
+            { label: t('HANDOFF.CHECK_ONBOARDING'), done: false },
+          ],
+          action: null,
+          waiting: null,
+          end: null,
+          done: true,
+        };
+      }
+
+      case 'HIRED':
+        return {
+          icon: 'how_to_reg', title: t('HIRED.TITLE'), text: t('HIRED.TEXT'),
+          checks: [],
+          action: null,
+          waiting: null, end: null, done: true,
+        };
+
+      default:
+        // REJECTED / ARCHIVED: the rail already says so, and nothing moves on from here.
+        return null;
+    }
   });
 
-  readonly showInterviewsSection = computed(() => {
-    const c = this.candidate();
-    return c !== null && !['REJECTED', 'ARCHIVED'].includes(c.status);
+  onNextStep(kind: NextStepActionKind): void {
+    switch (kind) {
+      case 'send-offer': this.openOfferEmail(); return;
+      case 'candidate-counter': {
+        // The counter is entered in the Offre tab's modal (amount + costing). Panel already
+        // on screen → ask it now; otherwise open the tab and ask once the panel exists.
+        const section = this.offerSection();
+        if (section) { section.requestCandidateCounter(); return; }
+        this.pendingCounter = true;
+        this.activeTab.set('offre');
+        return;
+      }
+    }
+    const call: Observable<unknown> = kind === 'accept'
+      ? this.candidateService.accept(this.candidateId)
+      : this.offerSvc.acceptOffer(this.candidateId);
+    this.nextBusy.set(true);
+    this.nextError.set(null);
+    call.subscribe({
+      next: () => {
+        this.nextBusy.set(false);
+        this.notify.success(this.translate.instant('CANDIDATES.NEXT.MOVED'));
+        this.loadCandidate();
+      },
+      error: err => {
+        this.nextBusy.set(false);
+        this.nextError.set(this.extractErrorMessage(err, this.translate.instant('CANDIDATES.NEXT.ERROR')));
+      },
+    });
+  }
+
+  private readonly offerEmailModal = viewChild.required<OfferEmailModalComponent>('offerEmailModal');
+
+  /** The Offre panel — present only while its tab is shown. */
+  private readonly offerSection = viewChild<OfferSectionComponent>('offerSection');
+  /** « Le candidat propose un autre montant » clicked from another tab: hand it over on arrival. */
+  private pendingCounter = false;
+  private readonly handCounterToOfferTab = effect(() => {
+    const section = this.offerSection();
+    if (!section || !this.pendingCounter) return;
+    this.pendingCounter = false;
+    // A method call, not a signal write: nothing of this page changes during the render.
+    untracked(() => section.requestCandidateCounter());
   });
 
-  /** Offer/negotiation: relevant from acceptance onward (and to show a refused offer). */
-  readonly showOfferSection = computed(() => {
-    const c = this.candidate();
-    return c !== null && !['PENDING', 'ARCHIVED'].includes(c.status);
-  });
+  /**
+   * « Envoyer l'offre » (V134): the email is rendered from the entity's template and shown
+   * first; RH may edit it, and only the confirmation sends the offer — RH's round or the
+   * DAF's own counter-proposal alike.
+   */
+  private openOfferEmail(): void {
+    this.nextBusy.set(true);
+    this.nextError.set(null);
+    this.offerSvc.previewOfferEmail(this.candidateId).subscribe({
+      next: preview => {
+        this.nextBusy.set(false);
+        this.offerEmailModal().open(preview, (subject, body, done) => {
+          this.offerSvc.sendOffer(this.candidateId, { emailSubject: subject, emailBody: body }).subscribe({
+            next: () => {
+              done();
+              this.notify.success(this.translate.instant('CANDIDATES.OFFER_EMAIL.SENT'));
+              this.loadCandidate();
+            },
+            error: err => done(this.extractErrorMessage(err, this.translate.instant('CANDIDATES.NEXT.ERROR'))),
+          });
+        });
+      },
+      error: err => {
+        this.nextBusy.set(false);
+        this.nextError.set(this.extractErrorMessage(err, this.translate.instant('CANDIDATES.NEXT.ERROR')));
+      },
+    });
+  }
+
+  /** PENDING → RH ends the candidature; OFFER_SENT → the candidate declined the offer. */
+  readonly rejectMode = computed<'candidate' | 'offer'>(() =>
+    this.candidate()?.status === 'OFFER_SENT' ? 'offer' : 'candidate');
 
   // ── Header ─────────────────────────────────────────────────────────────────
   /**
@@ -225,7 +495,14 @@ export class CandidateDetailComponent implements OnInit {
    * a laissé ses filtres : `/rh/recrutement` (`?from=recrutement`), la liste
    * `/rh/candidates/list` (`?from=list`), sinon le Kanban de `/rh/candidates`.
    */
-  private readonly back: { labelKey: string; link: string } = (() => {
+  private readonly back: { labelKey: string; link: string; queryParams?: Record<string, string> } = (() => {
+    // An interviewer without candidate rights (V132) cannot open the lists below: their way
+    // back is their interviews — the « Entretiens » tab of the shell's self-service.
+    const listRights = ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE']
+      .some(p => this.userStore.hasPermission(p));
+    if (!listRights || this.route.snapshot.queryParamMap.get('from') === 'mes-entretiens') {
+      return { labelKey: 'NAV.MY_INTERVIEWS', link: '/home/self-service', queryParams: { tab: 'entretiens' } };
+    }
     switch (this.route.snapshot.queryParamMap.get('from')) {
       case 'recrutement': return { labelKey: 'CANDIDATES.PIPELINE_RH.TITLE', link: '/rh/recrutement' };
       case 'list':        return { labelKey: 'CANDIDATES.LIST.TITLE',        link: '/rh/candidates/list' };
@@ -237,7 +514,7 @@ export class CandidateDetailComponent implements OnInit {
     this.translate.currentLang();
     const c = this.candidate();
     return [
-      { label: this.translate.instant(this.back.labelKey), link: this.back.link },
+      { label: this.translate.instant(this.back.labelKey), link: this.back.link, queryParams: this.back.queryParams },
       { label: c ? `${c.firstName} ${c.lastName}` : `#${this.candidateId}` },
     ];
   });
@@ -296,7 +573,7 @@ export class CandidateDetailComponent implements OnInit {
    * La liste d'ids est passée en SIGNAL, et c'est indispensable ici : les onglets sont
    * filtrés par permission et par statut du candidat (voir `tabs` juste en dessous), donc
    * elle n'est pas connue à la construction et elle change ensuite. Un lien vers
-   * `?tab=salaire` reçu par quelqu'un sans droit sur la rémunération retombe ainsi sur
+   * `?tab=offre` reçu par quelqu'un sans droit sur l'offre retombe ainsi sur
    * « profil » au lieu de laisser le bandeau sans onglet sélectionné — ce que faisait la
    * restauration manuelle précédente, qui ne validait rien.
    *
@@ -315,15 +592,34 @@ export class CandidateDetailComponent implements OnInit {
     this.translate.currentLang();
     const t = (k: string) => this.translate.instant(k);
     const dirty = this.dirtyTabs();
+    // Only the tabs of the current and past steps (TAB_FROM_STEP) — a future step's tab
+    // has nothing in it yet and only makes the page harder to read.
+    const reached = this.reachedStep();
+    const open = (id: TabId) => reached >= TAB_FROM_STEP[id];
     const items: TabItem[] = [
       { id: 'profil', label: t('CANDIDATES.DETAIL.TABS.PROFILE'), marker: dirty.has('profil') },
     ];
-    if (this.canViewSalary())         items.push({ id: 'salaire',    label: t('CANDIDATES.DETAIL.TABS.SALARY')     });
-    if (this.showInterviewsSection()) items.push({ id: 'entretiens', label: t('CANDIDATES.DETAIL.TABS.INTERVIEWS') });
-    if (this.showOfferSection())      items.push({ id: 'offre',      label: t('CANDIDATES.DETAIL.TABS.OFFER')      });
-    items.push({ id: 'cv', label: t('CANDIDATES.DETAIL.TABS.CV') });
-    if (this.showItSection())         items.push({ id: 'it',         label: t('CANDIDATES.DETAIL.TABS.IT')         });
+    // An interviewer gets their interview — nothing of the budget or the offer. The CV is
+    // read through « Prévisualiser le CV » on the identity card, for them as for RH.
+    if (this.interviewerView()) {
+      items.push({ id: 'entretiens', label: t('CANDIDATES.DETAIL.TABS.INTERVIEWS') });
+      return items;
+    }
+    // Interviews are the first step: the tab is there from creation. The salary typed at
+    // creation is read on the Profil tab — there is no Rémunération tab.
+    if (open('entretiens'))    items.push({ id: 'entretiens', label: t('CANDIDATES.DETAIL.TABS.INTERVIEWS') });
+    if (open('offre'))         items.push({ id: 'offre',      label: t('CANDIDATES.DETAIL.TABS.OFFER')      });
     return items;
+  });
+
+  /**
+   * The Entretiens and Offre tabs write through their own components, which never tell
+   * the page. Every tab change refetches, so the overview and the « Étape actuelle »
+   * checklist (a PASS just recorded, an offer just prepared) are current.
+   */
+  private readonly refreshOverviewOnTab = effect(() => {
+    this.activeTab();
+    untracked(() => { if (this.candidateId) this.loadOverview(); });
   });
 
   /** The guide's steps for this candidate: only the tabs it actually shows. */
@@ -386,7 +682,7 @@ export class CandidateDetailComponent implements OnInit {
   startEdit(): void {
     const c = this.candidate();
     if (!c) return;
-    // Salary is left out on purpose — the Rémunération tab saves it on its own.
+    // Salary is left out on purpose — it is the figure typed at creation, read-only here.
     this.editForm.set({
       firstName: c.firstName ?? '', lastName: c.lastName ?? '',
       emailPersonal: c.emailPersonal ?? '', phone: c.phone ?? '',
@@ -485,10 +781,6 @@ export class CandidateDetailComponent implements OnInit {
       .subscribe(updated => {
         if (!updated) return;
         this.candidate.set(updated);
-        // The Rémunération tab holds its own copy of the two salary figures and is
-        // not part of this form; re-seed it so the saved record and that tab agree.
-        this.salaryNetRh.set(updated.salaireNetRh ?? null);
-        this.salaryNetCandidat.set(updated.salaireNetCandidat ?? null);
         this.editMode.set(false);
         this.saving.set(false);
         this.editSaveError.set(null);
@@ -625,17 +917,29 @@ export class CandidateDetailComponent implements OnInit {
     this.loadCandidate();
   }
 
+  /**
+   * Holds a candidate right, as opposed to reaching the page as an interviewer only (V132).
+   * Known before the record arrives, so the RH-only calls are not even attempted for an
+   * interviewer — each would be a 403.
+   */
+  private readonly hasCandidateRights = computed(() =>
+    ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE', 'IT_PROVISIONING']
+      .some(p => this.userStore.hasPermission(p)));
+
   private loadCandidate(): void {
     this.error.set(null);
     // Refetched alongside the record, not once: every reload here follows an action that
     // moved the pipeline (accept, reject, offer, hire), which is exactly what adds a row.
-    this.candidateService.getHistory(this.candidateId).subscribe(h => this.history.set(h));
+    if (this.hasCandidateRights()) {
+      this.candidateService.getHistory(this.candidateId).subscribe(h => this.history.set(h));
+    }
+    this.loadOverview();
     this.candidateService.getById(this.candidateId).subscribe({
       next: data => {
         this.candidate.set(data);
-        this.loadAdminLists(data.paysId);
-        this.salaryNetRh.set(data.salaireNetRh ?? null);
-        this.salaryNetCandidat.set(data.salaireNetCandidat ?? null);
+        // An interviewer may hold none of the rh/admin read rights; the record's own
+        // French labels are what read mode falls back to anyway.
+        if (!data.interviewerView) this.loadAdminLists(data.paysId);
         this.firstLoad.set(false);
         // Once only: a later reload (after accept, hire or an offer change) must
         // not silently reopen the editor.
@@ -651,97 +955,45 @@ export class CandidateDetailComponent implements OnInit {
     });
   }
 
-  // ── Accept / reject ────────────────────────────────────────────────────────
-  readonly showReject = signal(false);
-
-  onAccept(): void {
-    this.candidateService.accept(this.candidateId).subscribe({
-      next:  () => this.loadCandidate(),
-      error: err => this.error.set(err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.ACCEPT')),
-    });
+  /**
+   * Interviews + offer rounds for the Profil tab. Interviews only with the right the
+   * endpoint enforces — calling it without would be a guaranteed 403.
+   */
+  loadOverview(): void {
+    // Asked of everyone: an interviewer without codes is only known once the record is in,
+    // and the endpoint answers them (V132). A 403 for anyone else degrades to [].
+    this.interviewSvc.listByCandidate(this.candidateId)
+      .pipe(catchError(() => of([] as CandidateInterview[])))
+      .subscribe(list => this.interviews.set(list));
+    if (!this.hasCandidateRights() && !this.canHire()) return;
+    this.offerSvc.getRounds(this.candidateId)
+      .pipe(catchError(() => of([] as OfferResponse[])))
+      .subscribe(rounds => this.offerRounds.set(rounds));
+    this.simulationSvc.getByCandidate(this.candidateId)
+      .pipe(catchError(() => of([] as CandidateCostApprovalDto[])))
+      .subscribe(a => this.approvals.set(a));
   }
+
+  // ── End the candidature ────────────────────────────────────────────────────
+  // No « Recruter » shortcut any more: hiring happens by walking the steps (offer →
+  // IT → onboarding), which is the only path that runs every side effect.
+  readonly showReject = signal(false);
 
   onRejected(): void {
     this.showReject.set(false);
     this.loadCandidate();
   }
 
-  // ── Hire workflow ──────────────────────────────────────────────────────────
-  readonly showHireModal = signal(false);
-  readonly hireLoading   = signal(false);
-  readonly hireError     = signal<string | null>(null);
-
-  openHireModal(): void {
-    if (!this.candidate()) return;
-    this.hireError.set(null);
-    this.showHireModal.set(true);
-  }
-
-  confirmHire(form: HireCandidateRequest): void {
-    if (!form.hireDate) {
-      this.hireError.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.HIRE_DATE_REQUIRED'));
-      return;
-    }
-    if (this.requiresEndDate() && !form.dateFinPrevue) {
-      this.hireError.set(this.translate.instant('CANDIDATES.DETAIL_ERRORS.END_DATE_REQUIRED'));
-      return;
-    }
-    this.hireLoading.set(true);
-    this.hireError.set(null);
-
-    // contractTypeCode is intentionally omitted — the backend derives it from the
-    // candidate's employmentTypeId (CandidateService#hireCandidate).
-    this.candidateService.hireCandidate(this.candidateId, {
-      hireDate:       form.hireDate,
-      dateFinPrevue:  form.dateFinPrevue || undefined,
-      managerProfile: form.managerProfile,
-      notes:          form.notes || null,
-    }).subscribe({
-      next: res => {
-        this.hireLoading.set(false);
-        this.showHireModal.set(false);
-        this.router.navigate(['/rh/profiles', res.employeeProfileId]);
-      },
-      error: err => {
-        this.hireLoading.set(false);
-        this.hireError.set(
-          err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.DETAIL_ERRORS.HIRE'),
-        );
-      },
-    });
-  }
-
-  // ── Salary ─────────────────────────────────────────────────────────────────
-  readonly salaryNetRh       = signal<number | null>(null);
-  readonly salaryNetCandidat = signal<number | null>(null);
-  readonly salarySaving      = signal(false);
-  readonly salaryError       = signal<string | null>(null);
-  readonly salarySuccess     = signal<string | null>(null);
-
-  saveSalary(): void {
-    this.salarySaving.set(true);
-    this.salaryError.set(null);
-    this.salarySuccess.set(null);
-    this.candidateService.update(this.candidateId, {
-      salaireNetRh:       this.salaryNetRh(),
-      salaireNetCandidat: this.salaryNetCandidat(),
-    }).subscribe({
-      next: updated => {
-        this.candidate.set(updated);
-        this.salarySaving.set(false);
-        this.salarySuccess.set(this.translate.instant('CANDIDATES.DETAIL.SALARY_SAVED'));
-        setTimeout(() => this.salarySuccess.set(null), 3500);
-      },
-      error: err => {
-        this.salarySaving.set(false);
-        this.salaryError.set(
-          err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.DETAIL_ERRORS.SALARY_SAVE'),
-        );
-      },
-    });
-  }
-
   // ── CV ─────────────────────────────────────────────────────────────────────
+  private readonly cvModal = viewChild<CandidateCvModalComponent>('cvModal');
+
+  /** « Prévisualiser le CV » on the identity card. */
+  openCv(): void {
+    this.cvError.set(null);
+    this.cvSuccess.set(null);
+    this.cvModal()?.open();
+  }
+
   readonly cvUploading = signal(false);
   readonly cvError     = signal<string | null>(null);
   readonly cvSuccess   = signal<string | null>(null);
@@ -781,8 +1033,23 @@ export class CandidateDetailComponent implements OnInit {
     });
   }
 
+  /**
+   * Through HttpClient, not window.open: the endpoint needs the rh Bearer token, which
+   * only the interceptor adds — a bare link carries the portal cookie alone.
+   */
   downloadCv(): void {
-    window.open(this.candidateService.cvDownloadUrl(this.candidateId), '_blank');
+    const name = this.candidate()?.cvOriginalName || 'cv';
+    this.candidateService.getCvBlob(this.candidateId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: () => this.notify.error(this.translate.instant('CANDIDATES.DETAIL.CV_DOWNLOAD_ERROR')),
+    });
   }
 
   // ── Offer panel ────────────────────────────────────────────────────────────
@@ -791,12 +1058,9 @@ export class CandidateDetailComponent implements OnInit {
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────────
-  goToProvisioning(provId: number): void { this.router.navigate(['/rh/it-provisioning', provId]); }
-  goToOnboarding(): void { this.router.navigate(['/rh/onboarding', this.candidateId]); }
   navigateToCandidate(): void {
-    this.router.navigate([this.back.link]);
+    this.router.navigate([this.back.link], { queryParams: this.back.queryParams });
   }
-  navigateToProfiles(): void { this.router.navigate(['/rh/profiles']); }
 }
 
 /** `''`, `null` and `undefined` all mean "no value" when diffing form vs record. */

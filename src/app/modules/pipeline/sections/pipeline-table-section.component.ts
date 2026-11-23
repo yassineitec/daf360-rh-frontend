@@ -10,7 +10,8 @@ export interface PipelineTableSort {
   dir: 'asc' | 'desc';
 }
 
-import { BoardColumn } from '../board.model';
+import { BoardColumn, stepDetail } from '../board.model';
+import { statusBadge } from '../../../shared/status-badge.utils';
 import { KanbanCandidate } from '../services/pipeline.service';
 import { candidateAvatar, candidateInitials, stageVariant } from '../pipeline-display';
 
@@ -82,9 +83,13 @@ export class PipelineTableSectionComponent {
       { key: 'candidat',  label: t('PIPELINE.COL_CANDIDATE'), type: 'avatar', sortable: true },
       { key: 'poste',     label: t('PIPELINE.COL_POSITION'), sortable: true,
         sortAccessor: (row) => src(row).poste || null },
-      // Board order (Nouveau → … → Recruté), not the badge label's alphabetical order.
+      // Board order (Entretiens → Validation RH → Offre), not the badge label's alphabetical order.
       { key: 'stage',     label: t('PIPELINE.COL_STAGE'), type: 'badge', sortable: true,
         sortAccessor: (row) => row['stageIndex'] as number },
+      // Where the candidature stands inside its step — the rail's own words.
+      { key: 'stepDetail', label: t('PIPELINE.COL_STEP_DETAIL'), sortable: false },
+      { key: 'status',    label: t('PIPELINE.COL_STATUS'), type: 'badge', sortable: true,
+        sortAccessor: (row) => src(row).status ?? null },
       // The number, not the "85%" string ("100%" would sort before "9%").
       { key: 'fit',       label: t('PIPELINE.COL_FIT'), align: 'right', sortable: true,
         sortAccessor: (row) => src(row).fitScore ?? null },
@@ -96,9 +101,13 @@ export class PipelineTableSectionComponent {
    * `candidate.stageLabel`: the board moves a pending candidate with a planned
    * interview into Entretien, and the table has to agree with what the board shows.
    */
-  protected readonly rows = computed<TableRow[]>(() =>
-    this.columns().flatMap((col, stageIndex) =>
-      col.candidates.map((c: KanbanCandidate) => ({
+  protected readonly rows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    return this.columns().flatMap((col, stageIndex) =>
+      col.candidates.map((c: KanbanCandidate) => {
+        const detail = stepDetail(c);
+        const status = statusBadge(c.status ?? 'PENDING', this.translate);
+        return {
         candidat: {
           name:     c.fullName,
           initials: c.initials || candidateInitials(c.fullName),
@@ -107,12 +116,15 @@ export class PipelineTableSectionComponent {
         },
         poste:   c.poste || '—',
         stage:   { label: col.label, options: { variant: stageVariant(col.key), dot: true } } as BadgeCell,
+        stepDetail: detail ? this.translate.instant(detail.key, detail.params) : '—',
+        status:  { label: status.label, options: { variant: status.options.variant } } as BadgeCell,
         fit:     c.fitScore != null ? `${c.fitScore}%` : '—',
         stageIndex,
         _source: c,
-      })),
-    ),
-  );
+        };
+      }),
+    );
+  });
 
   protected readonly tableConfig = computed<TableConfig>(() => {
     this.translate.currentLang();

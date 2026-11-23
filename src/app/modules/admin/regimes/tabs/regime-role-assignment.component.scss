@@ -45,6 +45,20 @@
   font-style: italic;
 }
 
+/* Scheduled assignment / next planned change, under the regime badge. */
+.rra-upcoming {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--text-label-caps);
+  color: var(--color-on-surface-variant);
+}
+
+.rra-window-hint {
+  margin: 0;
+  font-size: var(--text-body-sm);
+  color: var(--color-on-surface-variant);
+}
+
 .rra-notes {
   font-size: var(--text-label-caps);
   color: var(--color-on-surface-variant);
