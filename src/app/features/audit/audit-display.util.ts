@@ -271,9 +271,27 @@ export interface FieldDiff {
   before: string;
   after: string;
   changed: boolean;
+  /** Users.id the "before" value names, when `field` is an actor-reference column (`*_by`,
+   *  e.g. `validated_by`, `completed_by`) -- null for every other field, or when the raw
+   *  value isn't a plausible id. Lets the detail modal show a resolved name instead of a
+   *  bare Users.id, without hardcoding which tables have which `_by` columns. */
+  beforeActorId: number | null;
+  afterActorId: number | null;
 }
 
 const NO_VALUE = '—';
+
+/** Every `*_by` column in DAF360_HR is a `bigint` FK to `Users` (confirmed against the live
+ *  schema: created_by, validated_by, completed_by, approved_by, uploaded_by...). A handful of
+ *  legacy columns (`contrats.created_by`, `fiches_paie.updated_by`) are `varchar`, not an id --
+ *  the positive-integer check below already excludes those. */
+const ACTOR_FIELD = /_by$/i;
+
+function actorIdOf(field: string, value: unknown): number | null {
+  if (!ACTOR_FIELD.test(field)) return null;
+  const id = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 
 function display(value: unknown): string {
   if (value === null || value === undefined) return NO_VALUE;
@@ -295,8 +313,20 @@ export function computeFieldDiffs(entry: { oldValue: string | null; newValue: st
       before: field in before ? display(b) : NO_VALUE,
       after: field in after ? display(a) : NO_VALUE,
       changed: JSON.stringify(b) !== JSON.stringify(a),
+      beforeActorId: field in before ? actorIdOf(field, b) : null,
+      afterActorId: field in after ? actorIdOf(field, a) : null,
     };
   });
+}
+
+/** Every actor id a page of diffs references, before and after, deduplicated. */
+export function actorIdsIn(diffs: FieldDiff[]): number[] {
+  const ids = new Set<number>();
+  for (const d of diffs) {
+    if (d.beforeActorId !== null) ids.add(d.beforeActorId);
+    if (d.afterActorId !== null) ids.add(d.afterActorId);
+  }
+  return Array.from(ids);
 }
 
 export interface AuditEntryLike {

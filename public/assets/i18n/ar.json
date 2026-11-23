@@ -4697,6 +4697,7 @@
     "COL_DOMAIN": "المجال",
     "COL_EMPLOYEE": "الموظف",
     "EMPLOYEE_PLACEHOLDER": "الموظف رقم {{id}}",
+    "ACTOR_PLACEHOLDER": "المستخدم رقم {{id}}",
     "COL_IP": "عنوان IP",
     "SOURCE_EVENT": "حدث",
     "SOURCE_FIELD_CHANGE": "تعديل حقل",
