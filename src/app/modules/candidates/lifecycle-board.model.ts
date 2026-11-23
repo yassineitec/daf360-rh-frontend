@@ -40,23 +40,44 @@ export interface LifecycleColumnDef {
   permissions: string[];
 }
 
-/** Raw hex, not Tailwind classes: bound through [style.*], never seen by the class scanner. */
+/**
+ * A column colour from the lib palette (`@theme` in tokens.css): the token itself for the
+ * dot, the pill text and the avatar fallback, and the same token at 12 % behind the pill and
+ * the minimap tile. Bound through [style.*], so a CSS variable works where a Tailwind class
+ * would not (a class assembled at runtime is never generated) — and a rebrand of the lib
+ * recolours the board with the rest of the app.
+ */
+function tone(token: string): { accent: string; badgeBg: string } {
+  return {
+    accent: `var(--color-${token})`,
+    badgeBg: `color-mix(in srgb, var(--color-${token}) 12%, transparent)`,
+  };
+}
+
+/**
+ * One lib token per column, left to right:
+ *   Candidat        secondary          — the recruitment colour
+ *   Provisioning IT teal               — the brand's deep teal
+ *   Onboarding      warning            — in progress, needs action
+ *   Passage en CDI  success            — the step towards a permanent contract
+ *   Offboarding     on-surface-variant — neutral grey: a departure is not an error
+ */
 export const LIFECYCLE_COLUMNS: LifecycleColumnDef[] = [
   { key: 'CANDIDATE',   labelKey: 'CANDIDATES.LIFECYCLE.COL_CANDIDATE',   icon: 'person_search',
-    accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)',
+    ...tone('secondary'),
     permissions: ['VIEW_CANDIDATES', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE', 'HR_ONBOARDING'] },
   { key: 'IT',          labelKey: 'CANDIDATES.LIFECYCLE.COL_IT',          icon: 'devices',
-    accent: '#7c3aed', badgeBg: 'rgba(124,58,237,0.12)',
+    ...tone('teal'),
     permissions: ['IT_PROVISIONING'] },
   { key: 'ONBOARDING',  labelKey: 'CANDIDATES.LIFECYCLE.COL_ONBOARDING',  icon: 'person_add',
-    accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)',
+    ...tone('warning'),
     permissions: ['HR_ONBOARDING'] },
   { key: 'CDI',         labelKey: 'CANDIDATES.LIFECYCLE.COL_CDI',         icon: 'workspace_premium',
-    accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)',
+    ...tone('success'),
     permissions: ['RH_REQUEST_CDI_CONVERSION', 'RH_VALIDATE_CDI_CONVERSION', 'RH_ARBITRATE_CDI_CONVERSION',
                   'RH_MANAGE_LIFECYCLE', 'RH_VIEW_CONTRACTS'] },
   { key: 'OFFBOARDING', labelKey: 'CANDIDATES.LIFECYCLE.COL_OFFBOARDING', icon: 'logout',
-    accent: '#64748b', badgeBg: 'rgba(100,116,139,0.12)',
+    ...tone('on-surface-variant'),
     permissions: ['RH_MANAGE_OFFBOARDING', 'RH_VIEW_CONTRACTS', 'RH_MANAGE_LIFECYCLE'] },
 ];
 

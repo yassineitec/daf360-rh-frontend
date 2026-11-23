@@ -88,8 +88,9 @@ import { LifecycleCard } from '../lifecycle-board.model';
 })
 export class LifecycleCardComponent {
   readonly card    = input.required<LifecycleCard>();
-  readonly accent  = input<string>('#64748b');
-  readonly badgeBg = input<string>('rgba(100,116,139,0.12)');
+  /** Lib tokens (see `tone` in lifecycle-board.model.ts); the column always passes its own. */
+  readonly accent  = input<string>('var(--color-on-surface-variant)');
+  readonly badgeBg = input<string>('color-mix(in srgb, var(--color-on-surface-variant) 12%, transparent)');
 
   readonly open = output<void>();
 
