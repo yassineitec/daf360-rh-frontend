@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
-  BadgeVariant, ButtonComponent, FormFieldComponent, MultiDatePickerComponent,
+  BadgeVariant, FormFieldComponent, MultiDatePickerComponent,
   SelectComponent, SelectOption, StatusBadgeComponent,
 } from '@khalilrebhiitec/daf360';
 
@@ -14,9 +14,6 @@ import { CandidateDetail, UpdateCandidateRequest } from '../candidate.model';
 import { CandidateInterview, interviewTypeLabel } from '../interview.model';
 import { OfferResponse } from '../../pipeline/services/offer.service';
 import { formatDate } from '../candidate-display';
-
-/** Tabs the overview's « Voir l'onglet » buttons can open. */
-export type CandidateOverviewTab = 'entretiens' | 'offre';
 
 const OFFER_STATUS_KEY: Record<string, string> = {
   DRAFT:    'CANDIDATES.OFFER.STATUS_DRAFT',
@@ -56,7 +53,7 @@ const INTERVIEW_STATUS_VARIANT: Record<string, BadgeVariant> = {
   selector: 'rh-candidate-profile-section',
   standalone: true,
   imports: [
-    SectionCardComponent, ProfileFieldComponent, FormFieldComponent, ButtonComponent,
+    SectionCardComponent, ProfileFieldComponent, FormFieldComponent,
     MultiDatePickerComponent, SelectComponent, StatusBadgeComponent, TranslatePipe,
   ],
   host: { class: 'block' },
@@ -218,12 +215,6 @@ const INTERVIEW_STATUS_VARIANT: Record<string, BadgeVariant> = {
         <rh-section-card [title]="'CANDIDATES.DETAIL.TABS.INTERVIEWS' | translate" icon="record_voice_over">
           <div sectionAction class="flex items-center gap-2">
             <daf-badge [label]="'' + interviews().length" [options]="{ variant: 'neutral', size: 'sm', pill: true }" />
-            @if (tabIds().includes('entretiens')) {
-              <daf-button
-                [options]="{ variant: 'ghost', size: 'sm', iconEnd: 'arrow_forward',
-                             label: ('CANDIDATES.DETAIL.OPEN_TAB' | translate) }"
-                (onClick)="openTab.emit('entretiens')" />
-            }
           </div>
 
           @if (!interviews().length) {
@@ -265,12 +256,6 @@ const INTERVIEW_STATUS_VARIANT: Record<string, BadgeVariant> = {
       <rh-section-card [title]="'CANDIDATES.DETAIL.OFFERS_OVERVIEW' | translate" icon="handshake">
         <div sectionAction class="flex items-center gap-2">
           <daf-badge [label]="'' + offerRounds().length" [options]="{ variant: 'neutral', size: 'sm', pill: true }" />
-          @if (tabIds().includes('offre')) {
-            <daf-button
-              [options]="{ variant: 'ghost', size: 'sm', iconEnd: 'arrow_forward',
-                           label: ('CANDIDATES.DETAIL.OPEN_TAB' | translate) }"
-              (onClick)="openTab.emit('offre')" />
-          }
         </div>
 
         @if (!offerRounds().length) {
@@ -351,13 +336,10 @@ export class CandidateProfileSectionComponent {
   readonly showInterviews = input(false);
   /** Every offer round, newest first — fetched by the page. */
   readonly offerRounds    = input<OfferResponse[]>([]);
-  /** Ids of the tabs this candidate has (status- and right-dependent) — gates « Voir l'onglet ». */
-  readonly tabIds         = input<string[]>([]);
   /** Budget figures (salary expectations, offer amounts) — RH hiring right or admin. */
   readonly showSalary     = input(false);
 
   readonly patch   = output<Partial<UpdateCandidateRequest>>();
-  readonly openTab = output<CandidateOverviewTab>();
 
   private locale(): string {
     return this.translate.currentLang() === 'en' ? 'en-GB' : 'fr-FR';

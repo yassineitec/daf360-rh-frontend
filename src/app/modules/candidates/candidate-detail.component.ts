@@ -37,7 +37,6 @@ import { OfferSectionComponent } from './offer-section.component';
 import { OfferEmailModalComponent } from './offer-email-modal.component';
 import { RejectModalComponent } from './reject-modal.component';
 import { CandidateIdentityCardComponent, CandidatePill } from './detail-sections/candidate-identity-card.component';
-import { CandidatePipelineCardComponent } from './detail-sections/candidate-pipeline-card.component';
 import { CandidateProfileSectionComponent } from './detail-sections/candidate-profile-section.component';
 import { CandidateCvModalComponent } from './candidate-cv-modal.component';
 import {
@@ -83,7 +82,6 @@ const GUIDE_STEPS: GuideStep[] = [
   { icon: 'waving_hand',      titleKey: 'CANDIDATE_DETAIL.GUIDE.WELCOME.TITLE',    textKey: 'CANDIDATE_DETAIL.GUIDE.WELCOME.TEXT' },
   { icon: 'bolt',             titleKey: 'CANDIDATE_DETAIL.GUIDE.HEADER.TITLE',     textKey: 'CANDIDATE_DETAIL.GUIDE.HEADER.TEXT',     target: 'header' },
   { icon: 'badge',            titleKey: 'CANDIDATE_DETAIL.GUIDE.IDENTITY.TITLE',   textKey: 'CANDIDATE_DETAIL.GUIDE.IDENTITY.TEXT',   target: 'identity' },
-  { icon: 'linear_scale',     titleKey: 'CANDIDATE_DETAIL.GUIDE.RAIL.TITLE',       textKey: 'CANDIDATE_DETAIL.GUIDE.RAIL.TEXT',       target: 'rail' },
   { icon: 'person',           titleKey: 'CANDIDATE_DETAIL.GUIDE.PROFILE.TITLE',    textKey: 'CANDIDATE_DETAIL.GUIDE.PROFILE.TEXT',    target: 'panel', tab: 'profil' },
   { icon: 'record_voice_over', titleKey: 'CANDIDATE_DETAIL.GUIDE.INTERVIEWS.TITLE', textKey: 'CANDIDATE_DETAIL.GUIDE.INTERVIEWS.TEXT', target: 'panel', tab: 'entretiens' },
   { icon: 'handshake',        titleKey: 'CANDIDATE_DETAIL.GUIDE.OFFER.TITLE',      textKey: 'CANDIDATE_DETAIL.GUIDE.OFFER.TEXT',      target: 'panel', tab: 'offre' },
@@ -134,7 +132,6 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof UpdateCandidateRequest)[]>> = {
     PageHeaderComponent,
     TabsComponent,
     CandidateIdentityCardComponent,
-    CandidatePipelineCardComponent,
     CandidateProfileSectionComponent,
     CandidateNextStepComponent,
     CandidateCvModalComponent,
@@ -194,8 +191,6 @@ export class CandidateDetailComponent implements OnInit {
   // ── Permissions ────────────────────────────────────────────────────────────
   readonly canAcceptReject = computed(() => this.userStore.hasPermission('ACCEPT_REJECT_CANDIDATE'));
   readonly canHire         = computed(() => this.userStore.hasPermission('RH_HIRE_CANDIDATE'));
-  readonly canManageIt     = computed(() => this.userStore.hasPermission('IT_PROVISIONING'));
-  readonly canOnboard      = computed(() => this.userStore.hasPermission('HR_ONBOARDING'));
   /**
    * V132 — the record was served to an interviewer who holds no candidate right: a reduced
    * page (Profil, Entretiens, CV), no workflow card, no editing.
@@ -274,8 +269,6 @@ export class CandidateDetailComponent implements OnInit {
     const c = this.candidate();
     if (!c) return null;
     const t = (k: string, p?: Record<string, unknown>) => this.translate.instant('CANDIDATES.NEXT.' + k, p);
-    const tab = (id: TabId) => this.tabIds().includes(id)
-      ? { id, label: t('GO_TO_' + id.toUpperCase()) } : null;
 
     // An interviewer reads the record to prepare and report on their interview; the
     // workflow is RH's and is not shown to them.
@@ -309,7 +302,6 @@ export class CandidateDetailComponent implements OnInit {
                 blockedHint: ready ? null : t(hint) }
             : null,
           waiting: this.canAcceptReject() ? null : t('NO_RIGHT'),
-          tab: tab('entretiens'),
           end: this.canAcceptReject() ? { label: t('END_CANDIDACY') } : null,
           done: false,
         };
@@ -332,7 +324,6 @@ export class CandidateDetailComponent implements OnInit {
             ],
             action: null,
             waiting: approval === 'REJECTED' ? t('OFFER.BLOCKED_REFUSED') : t('OFFER.WAITING_DAF_COUNTER'),
-            tab: tab('offre'),
             end: null,
             done: false,
           };
@@ -357,7 +348,6 @@ export class CandidateDetailComponent implements OnInit {
                   blockedHint: approved ? null : t(hint) }
               : null,
             waiting: this.canHire() ? null : t('NO_RIGHT'),
-            tab: tab('offre'),
             end: null,
             done: false,
           };
@@ -377,7 +367,6 @@ export class CandidateDetailComponent implements OnInit {
             ? { kind: 'candidate-counter', label: t('ANSWER.COUNTER'), icon: 'reply' }
             : null,
           waiting: this.canHire() ? null : t('NO_RIGHT'),
-          tab: tab('offre'),
           end: this.canHire() && round?.status === 'SENT' ? { label: t('ANSWER.DECLINED') } : null,
           done: false,
         };
@@ -385,13 +374,12 @@ export class CandidateDetailComponent implements OnInit {
 
       // The offer is agreed: the candidate is accepted and the file has LEFT the candidate
       // workflow. Onboarding (RH) and IT provisioning (IT) run in parallel on their own
-      // screens; this card only says where the file went and opens them.
+      // screens, reached from the Lifecycle menu — this card only says where the file went.
+      // No button here: the candidate page is the candidature, not the onboarding desk.
       case 'IT_IN_PROGRESS':
       case 'EMAIL_RECEIVED':
       case 'HR_IN_PROGRESS': {
         const email = c.itProvisioning?.ms365Email ?? null;
-        const onboard = this.canOnboard();
-        const it = this.canManageIt() && !!c.itProvisioning;
         return {
           icon: 'how_to_reg', title: t('HANDOFF.TITLE'), text: t('HANDOFF.TEXT'),
           checks: [
@@ -399,17 +387,8 @@ export class CandidateDetailComponent implements OnInit {
             { label: t('HANDOFF.CHECK_IT_ACCOUNT'), done: !!email },
             { label: t('HANDOFF.CHECK_ONBOARDING'), done: false },
           ],
-          action: onboard
-            ? { kind: 'onboarding', label: t('HANDOFF.ACTION_ONBOARDING'), icon: 'arrow_forward',
-                enabled: true, blockedHint: null }
-            : it
-              ? { kind: 'it', label: t('HANDOFF.ACTION_IT'), icon: 'open_in_new', enabled: true, blockedHint: null }
-              : null,
-          secondary: onboard && it
-            ? { kind: 'it', label: t('HANDOFF.ACTION_IT'), icon: 'computer' }
-            : null,
-          waiting: onboard || it ? null : t('HANDOFF.WAITING'),
-          tab: null,
+          action: null,
+          waiting: null,
           end: null,
           done: true,
         };
@@ -419,8 +398,8 @@ export class CandidateDetailComponent implements OnInit {
         return {
           icon: 'how_to_reg', title: t('HIRED.TITLE'), text: t('HIRED.TEXT'),
           checks: [],
-          action: { kind: 'profiles', label: t('HIRED.ACTION'), icon: 'badge', enabled: true, blockedHint: null },
-          waiting: null, tab: null, end: null, done: true,
+          action: null,
+          waiting: null, end: null, done: true,
         };
 
       default:
@@ -431,13 +410,6 @@ export class CandidateDetailComponent implements OnInit {
 
   onNextStep(kind: NextStepActionKind): void {
     switch (kind) {
-      case 'it': {
-        const prov = this.candidate()?.itProvisioning;
-        if (prov) this.goToProvisioning(prov.id);
-        return;
-      }
-      case 'onboarding': this.goToOnboarding(); return;
-      case 'profiles':   this.navigateToProfiles(); return;
       case 'send-offer': this.openOfferEmail(); return;
       case 'candidate-counter': {
         // The counter is entered in the Offre tab's modal (amount + costing). Panel already
@@ -646,9 +618,6 @@ export class CandidateDetailComponent implements OnInit {
     this.activeTab();
     untracked(() => { if (this.candidateId) this.loadOverview(); });
   });
-
-  /** Ids of the tabs on screen — the overview only links to tabs that exist. */
-  readonly tabIds = computed(() => this.tabs().map(t => t.id));
 
   /** The guide's steps for this candidate: only the tabs it actually shows. */
   readonly guideSteps = computed(() => {
@@ -1086,12 +1055,9 @@ export class CandidateDetailComponent implements OnInit {
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────────
-  goToProvisioning(provId: number): void { this.router.navigate(['/rh/it-provisioning', provId]); }
-  goToOnboarding(): void { this.router.navigate(['/rh/onboarding', this.candidateId]); }
   navigateToCandidate(): void {
     this.router.navigate([this.back.link]);
   }
-  navigateToProfiles(): void { this.router.navigate(['/rh/profiles']); }
 }
 
 /** `''`, `null` and `undefined` all mean "no value" when diffing form vs record. */

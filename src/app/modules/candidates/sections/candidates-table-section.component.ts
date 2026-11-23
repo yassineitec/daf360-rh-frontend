@@ -70,6 +70,11 @@ export class CandidatesTableSectionComponent {
   readonly actioningId     = input<number | null>(null);
   /** Status → translated badge label + variant, owned by the page. */
   readonly statusBadge     = input.required<(status: string) => BadgeCell>();
+  /**
+   * Status → global status badge (« En recrutement », « Onboarding »…). Given on « Pipeline
+   * RH » only, where it adds a « Phase » column before the status; null elsewhere.
+   */
+  readonly phaseBadge      = input<((status: string) => BadgeCell) | null>(null);
   /** Sort, resize, column picker and reset, with server-side sort — /rh/recrutement and /rh/candidates/list. */
   readonly tools           = input(false);
   /**
@@ -100,6 +105,10 @@ export class CandidatesTableSectionComponent {
     return [
       { key: 'candidat',          label: t('CANDIDATES.LIST.COL_CANDIDATE'), type: 'avatar', sortable },
       { key: 'poste',             label: t('CANDIDATES.LIST.COL_POSITION'), sortable },
+      // Not server-sortable: the phase is derived from the status, not a column of its own.
+      ...(this.phaseBadge()
+        ? [{ key: 'phase', label: t('CANDIDATES.LIST.COL_PHASE'), type: 'badge', sortable: false } as TableColumn]
+        : []),
       { key: 'status',            label: t('CANDIDATES.LIST.COL_STATUS'), type: 'badge', sortable },
       { key: 'expectedStartDate', label: t('CANDIDATES.LIST.COL_START_DATE'), sortable },
     ];
@@ -114,6 +123,7 @@ export class CandidatesTableSectionComponent {
         subtitle: c.emailPersonal,
       },
       poste:             c.appliedPosition ?? '—',
+      phase:             this.phaseBadge()?.(c.status) ?? null,
       status:            this.dottedBadge(c.status),
       expectedStartDate: formatDate(c.expectedStartDate),
       _source:           c,

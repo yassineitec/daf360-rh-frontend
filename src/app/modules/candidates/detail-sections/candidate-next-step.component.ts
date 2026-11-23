@@ -9,7 +9,7 @@ export interface NextStepCheck {
 
 /** What moving on does — the page maps each kind to its call or navigation. */
 export type NextStepActionKind =
-  'accept' | 'send-offer' | 'offer-accepted' | 'candidate-counter' | 'it' | 'onboarding' | 'profiles';
+  'accept' | 'send-offer' | 'offer-accepted' | 'candidate-counter';
 
 export interface NextStepModel {
   /** Material Symbol of the current step. */
@@ -34,8 +34,6 @@ export interface NextStepModel {
   secondary?: { kind: NextStepActionKind; label: string; icon: string } | null;
   /** Said instead of a button when the step is someone else's (IT) or the user lacks the right. */
   waiting: string | null;
-  /** The tab where this step's work is done. */
-  tab: { id: string; label: string } | null;
   /** The discreet way out — only where the backend allows ending the candidature. */
   end: { label: string } | null;
   done: boolean;
@@ -58,14 +56,72 @@ export interface NextStepModel {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [AccordionCardComponent, ButtonComponent],
   host: { class: 'block' },
+  /*
+   * Compact header actions. daf-button's smallest size is 'sm' up to lib 5.16 ('xs' arrives in
+   * 5.17.0), and 'sm' still reads as a full-size call to action in a card header. These rules
+   * shrink the three buttons in place, whatever lib version is installed; they are unlayered,
+   * so they win over the lib's Tailwind utilities without !important. Once every front is on
+   * 5.17.0 they can go, in favour of size: 'xs'.
+   */
+  styles: [`
+    .ns-actions ::ng-deep daf-button > button {
+      gap: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+    .ns-actions ::ng-deep daf-button > button .material-symbols-outlined {
+      font-size: 15px;
+      line-height: 1;
+    }
+  `],
   template: `
-    <!-- The lib's stage card: the header names the current step (with its progress and a
-         status pill); opening it shows what the step is, its conditions and its buttons.
-         Forced open while an action error is on screen, so the error is never hidden. -->
+    <!-- The lib's stage card. Its HEADER carries the step (title, progress, status pill) AND
+         the step's buttons — « Valider… », the counter-proposal, « Mettre fin… » — through
+         the [headerAction] slot, so they are on screen whether the card is folded or not.
+         Since lib 5.17.0 that slot sits outside the header's toggle button: clicking an
+         action never folds or unfolds the card (the stopPropagation below only matters on
+         an older lib, where the slot was inside the toggle).
+
+         Static root for the slot: content nested in a control-flow block lives in an
+         embedded view the select never matches, and would land in the body instead.
+
+         The BODY (collapsed by default) explains the step: its text, its conditions, what
+         still blocks the button (no « Gérer les entretiens / l'offre » link: the tabs are
+         right below the card). Forced open while an action
+         error is on screen, so the error is never hidden. -->
     <daf-accordion-card
       [options]="accordionOptions()"
       [open]="open() || !!error()"
       (openChange)="open.set($event)">
+
+      <div headerAction class="ns-actions flex flex-wrap items-center justify-end gap-1.5"
+           (click)="$event.stopPropagation()">
+        @if (model().end; as e) {
+          <daf-button
+            [options]="{ variant: 'ghost', size: 'sm', iconStart: 'block', label: e.label,
+                         disabled: locked() || busy() }"
+            (onClick)="end.emit()" />
+        }
+        @if (model().action; as a) {
+          @if (model().secondary; as s) {
+            <daf-button
+              [options]="{ variant: 'secondary', size: 'sm', iconStart: s.icon, label: s.label,
+                           disabled: locked() || busy() }"
+              (onClick)="advance.emit(s.kind)" />
+          }
+          <daf-button
+            [options]="{ variant: 'teal', size: 'sm', iconEnd: a.icon, label: a.label,
+                         disabled: !a.enabled || locked() || busy(), loading: busy() }"
+            (onClick)="advance.emit(a.kind)" />
+        } @else if (model().waiting) {
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-2.5 py-0.5
+                       text-[11px] font-semibold text-on-surface-variant">
+            <span class="material-symbols-outlined text-[14px]">hourglass_top</span>
+            {{ model().waiting }}
+          </span>
+        }
+      </div>
 
       <div class="flex flex-col gap-4">
         <p class="text-[13px] leading-relaxed text-on-surface-variant">{{ model().text }}</p>
@@ -86,55 +142,22 @@ export interface NextStepModel {
           </ul>
         }
 
+        <!-- Why the header's button is still disabled, in one sentence. -->
+        @if (model().action; as a) {
+          @if (!a.enabled && a.blockedHint) {
+            <p class="flex items-start gap-1.5 text-[12px] text-outline">
+              <span class="material-symbols-outlined text-[15px]">lock</span>
+              <span class="min-w-0">{{ a.blockedHint }}</span>
+            </p>
+          }
+        }
+
         @if (error()) {
           <p class="flex items-start gap-1.5 text-[12px] text-danger">
             <span class="material-symbols-outlined text-[15px]">error</span>
             <span class="min-w-0">{{ error() }}</span>
           </p>
         }
-
-        <div class="flex flex-col-reverse gap-3 border-t border-outline-variant/40 pt-4
-                    sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex flex-wrap items-center gap-2">
-            @if (model().tab; as t) {
-              <daf-button
-                [options]="{ variant: 'ghost', size: 'sm', iconStart: 'open_in_new', label: t.label }"
-                (onClick)="openTab.emit(t.id)" />
-            }
-            @if (model().end; as e) {
-              <daf-button
-                [options]="{ variant: 'ghost', size: 'sm', iconStart: 'block', label: e.label,
-                             disabled: locked() || busy() }"
-                (onClick)="end.emit()" />
-            }
-          </div>
-
-          <div class="flex flex-col items-stretch gap-1 sm:items-end">
-            @if (model().action; as a) {
-              <div class="flex flex-wrap items-center justify-end gap-2">
-                @if (model().secondary; as s) {
-                  <daf-button
-                    [options]="{ variant: 'secondary', iconStart: s.icon, label: s.label,
-                                 disabled: locked() || busy() }"
-                    (onClick)="advance.emit(s.kind)" />
-                }
-                <daf-button
-                  [options]="{ variant: 'teal', iconEnd: a.icon, label: a.label,
-                               disabled: !a.enabled || locked() || busy(), loading: busy() }"
-                  (onClick)="advance.emit(a.kind)" />
-              </div>
-              @if (!a.enabled && a.blockedHint) {
-                <p class="text-[12px] text-outline sm:text-right">{{ a.blockedHint }}</p>
-              }
-            } @else if (model().waiting) {
-              <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-3 py-1.5
-                           text-[12px] font-semibold text-on-surface-variant">
-                <span class="material-symbols-outlined text-[16px]">hourglass_top</span>
-                {{ model().waiting }}
-              </span>
-            }
-          </div>
-        </div>
       </div>
     </daf-accordion-card>
   `,
@@ -144,7 +167,10 @@ export class CandidateNextStepComponent {
 
   readonly model  = input.required<NextStepModel>();
 
-  /** Collapsed by default: the header already says which step the candidature is at. */
+  /**
+   * Collapsed by default: the header already says which step the candidature is at, and the
+   * buttons sit in that header, so folding the card never hides the way forward.
+   */
   protected readonly open = signal(false);
 
   /**
@@ -174,7 +200,6 @@ export class CandidateNextStepComponent {
 
   readonly advance = output<NextStepActionKind>();
   readonly end     = output<void>();
-  readonly openTab = output<string>();
 
   protected fill(on: boolean): string {
     return on ? "'FILL' 1" : "'FILL' 0";

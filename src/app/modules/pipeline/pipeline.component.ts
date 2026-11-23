@@ -25,6 +25,7 @@ import {
   BoardStageKey,
   OfferMode,
   byFitScoreDesc,
+  candidatureStage,
 } from './board.model';
 import { RefuseOfferModalComponent } from './components/refuse-offer-modal.component';
 import { PipelineBoardSectionComponent } from './sections/pipeline-board-section.component';
@@ -57,8 +58,9 @@ const GUIDE_STEPS: GuideStep[] = [
 ];
 
 /**
- * /rh/candidates — the recruitment board (Préqualification / Entretien / Offre /
- * Recruté), fed by `/api/hr/pipeline/kanban`.
+ * /rh/candidates — the candidature board: one column per recruitment step (Entretiens /
+ * Validation RH / Offre, the rail of the candidate page), fed by `/api/hr/pipeline/kanban`.
+ * Each card shows the candidature status and where it stands inside its step.
  *
  * Candidate stages only: the read-only Offboarding column this board used to carry
  * now lives on `/rh/recrutement` (`CandidatesComponent`), which is the lifecycle
@@ -162,12 +164,15 @@ export class PipelineComponent implements OnInit {
     if (!s) return;
     this.viewMode.set(s.viewMode);
     this.search.set(s.search);
-    this.stageFilter.set(s.stageFilter);
+    // A stage remembered under the old column keys (SCREENING, ENTRETIEN…) would empty the
+    // board: start from « all » instead.
+    const known = (k: string | null) => !!k && BOARD_STAGES.some(st => st.key === k);
+    this.stageFilter.set(known(s.stageFilter) ? s.stageFilter : '');
     this.demandFilter.set(s.demandFilter);
     this.minFitFilter.set(s.minFitFilter);
     this.urgentOnly.set(s.urgentOnly);
     this.columnSortDirs.set(s.columnSortDirs);
-    this.mobileStageFilter.set(s.mobileStageFilter);
+    this.mobileStageFilter.set(known(s.mobileStageFilter) ? s.mobileStageFilter : null);
     this.listSort.set(s.listSort);
   }
 
@@ -184,11 +189,13 @@ export class PipelineComponent implements OnInit {
 
   // ── Board ──────────────────────────────────────────────────────────────────
   /**
-   * The four design columns, populated from the kanban response.
+   * The three recruitment steps (Entretiens / Validation RH / Offre), populated from the
+   * kanban response.
    *
-   * Entretien is interview-driven: it holds every interview-phase candidate PLUS
-   * any still-pending candidate who already has a planned interview waiting.
-   * Those pending-with-interview cards leave Préqualification.
+   * The server's own grouping (its `stage` columns) is NOT used: it predates the reworked
+   * process. Every card is placed by `candidatureStage` — the candidate page's rail rule —
+   * from its status and its interview / offer counters. Post-offer, hired and closed files
+   * have no step and are left out: they live on « Pipeline RH ».
    */
   readonly boardColumns = computed<BoardColumn[]>(() => {
     this.translate.currentLang();
@@ -210,21 +217,11 @@ export class PipelineComponent implements OnInit {
       (minFit == null || (c.fitScore ?? 0) >= minFit) &&
       (!urgentOnly || c.isUrgent);
 
-    const stageOf = (key: string) =>
-      (cols.find(c => (c.stage ?? '').toUpperCase() === key)?.candidates ?? []).filter(matches);
-
-    const screening        = stageOf('SCREENING');
-    const entretienStage   = stageOf('ENTRETIEN');
-    const prequalification = screening.filter(c => !c.nextEvent);
-    const entretien        = [...entretienStage, ...screening.filter(c => !!c.nextEvent)];
+    const all = cols.flatMap(c => c.candidates ?? []).filter(matches);
 
     return BOARD_STAGES.map(s => {
       const dir = dirs[s.key] ?? 'desc';
-      const candidates =
-        stage && stage !== s.key ? [] :
-        s.key === 'SCREENING'    ? prequalification :
-        s.key === 'ENTRETIEN'    ? entretien :
-        stageOf(s.key);
+      const candidates = stage && stage !== s.key ? [] : all.filter(c => candidatureStage(c) === s.key);
       const { labelKey, ...rest } = s;
       return {
         ...rest,

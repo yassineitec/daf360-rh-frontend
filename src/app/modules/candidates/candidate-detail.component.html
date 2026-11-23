@@ -52,22 +52,14 @@
         </div>
       </div>
 
-      <!-- ── Right: the recruitment rail, then one tab per section of the record ── -->
+      <!-- ── Right: the current step, then one tab per section of the record ── -->
       <div class="flex min-w-0 flex-1 flex-col gap-6">
-
-        <!-- The rail sits above the tabs, as on /rh/offboarding/:id — it describes the
-             whole file, not one tab, and it used to be vertical in the left column where
-             there was no room for its dates, progress or next step. -->
-        <!-- Not for an interviewer reading the record (V132): the workflow is RH's. -->
-        @if (!interviewerView()) {
-          <div data-guide="rail">
-            <rh-candidate-pipeline-card [status]="c.status" [interviews]="interviews()" [offer]="currentRound()" />
-          </div>
-        }
 
         <!-- The current step, what it still needs, and the single button that moves the
              candidature on — disabled until the step is ready, and while editing (every
-             action reloads the record under the open editor). -->
+             action reloads the record under the open editor). No recruitment stepper above
+             it any more: this card's header already names the step the candidature is at.
+             Not shown to an interviewer (V132): nextStep() is null for them. -->
         @if (nextStep(); as step) {
           <rh-candidate-next-step data-guide="next-step"
             [model]="step"
@@ -75,8 +67,7 @@
             [error]="nextError()"
             [locked]="editMode()"
             (advance)="onNextStep($event)"
-            (end)="showReject.set(true)"
-            (openTab)="activeTab.set($any($event))" />
+            (end)="showReject.set(true)" />
         }
 
         <!-- daf-tabs is strip-only; the panel below is ours, which is what keeps
@@ -109,9 +100,7 @@
                 [showInterviews]="canManageInterviews()"
                 [offerRounds]="offerRounds()"
                 [showSalary]="canViewSalary()"
-                [tabIds]="tabIds()"
-                (patch)="patch($event)"
-                (openTab)="activeTab.set($event)" />
+                (patch)="patch($event)" />
             }
 
             @case ('entretiens') {

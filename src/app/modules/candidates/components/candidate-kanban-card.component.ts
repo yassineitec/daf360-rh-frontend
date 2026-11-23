@@ -31,12 +31,17 @@ import { candidateAvatar, candidateInitials, fitScoreClass, interviewDateText } 
       (dragend)="dragEnd.emit()"
       (click)="open.emit()">
 
-      <!-- Status badge (stage colour) + fit score -->
+      <!-- Status badge (stage colour) + the detailed status under a global one + fit score -->
       <div class="flex items-center justify-between gap-2 mb-3">
-        <span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider"
-              [style.background]="badgeBg()" [style.color]="accent()">
-          {{ statusLabel() }}
-        </span>
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider shrink-0"
+                [style.background]="badgeBg()" [style.color]="accent()">
+            {{ statusLabel() }}
+          </span>
+          @if (detailLabel()) {
+            <span class="text-[11px] text-on-surface-variant truncate" [title]="detailLabel()">{{ detailLabel() }}</span>
+          }
+        </div>
         @if (candidate().fitScore != null) {
           <span class="text-sm font-bold shrink-0" [class]="fitClass()">
             {{ candidate().fitScore }}{{ 'CANDIDATES.KANBAN.FIT_SUFFIX' | translate }}
@@ -141,6 +146,11 @@ export class CandidateKanbanCardComponent {
   readonly badgeBg     = input<string>('rgba(100,116,139,0.12)');
   /** Translated status label (the page owns i18n; the card only renders). */
   readonly statusLabel = input<string>('');
+  /**
+   * Optional finer status shown beside the badge — on « Pipeline RH » the badge is the
+   * global status (« En recrutement ») and this is the candidate's own (« Offre envoyée »).
+   */
+  readonly detailLabel = input<string>('');
 
   readonly draggable        = input(false);
   readonly dragging         = input(false);

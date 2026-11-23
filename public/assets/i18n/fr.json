@@ -1753,6 +1753,7 @@
       "RESULTS_COUNT": "{{count}} résultats",
       "COL_CANDIDATE": "Candidat",
       "COL_POSITION": "Poste",
+      "COL_PHASE": "Phase",
       "COL_STATUS": "Statut",
       "COL_START_DATE": "Début prévu",
       "COL_ACTIONS": "Actions"
@@ -1792,7 +1793,7 @@
     },
     "PIPELINE_RH": {
       "TITLE": "Pipeline RH",
-      "SUBTITLE": "Suivi des candidatures et des étapes de recrutement.",
+      "SUBTITLE": "Le cycle de vie RH : recrutement, onboarding, embauche, offboarding.",
       "KPI_ACTIVE": "Candidats actifs",
       "KPI_ACCEPTANCE": "Taux d'acceptation des offres",
       "KPI_HIRED": "Recrutés",
@@ -1825,6 +1826,13 @@
       "COL_PROGRESS": "IT & Onboarding",
       "COL_HIRED": "Embauchés",
       "COL_REJECTED": "Rejetés",
+      "COL_RECRUITING": "En recrutement",
+      "COL_ONBOARDING": "Onboarding",
+      "COL_CLOSED": "Clôturés",
+      "GLOBAL_RECRUITING": "En recrutement",
+      "GLOBAL_ONBOARDING": "En onboarding",
+      "GLOBAL_HIRED": "Embauché",
+      "GLOBAL_CLOSED": "Clôturé",
       "ALL": "Tous",
       "YEARS_EXP": "{{years}} ans exp.",
       "FIT_SUFFIX": "% Fit",
@@ -2337,7 +2345,7 @@
   },
   "PIPELINE": {
     "TITLE": "Candidats",
-    "SUBTITLE": "Suivi en temps réel des processus d'embauche actifs.",
+    "SUBTITLE": "Les candidatures en cours, par étape : entretiens, validation RH, offre.",
     "NEW_CANDIDATE": "Nouveau Candidat",
     "KPI_TOTAL": "Total Candidats",
     "KPI_AVG_DELAY": "Délai Recrutement Moy.",
@@ -2358,6 +2366,8 @@
     "COL_CANDIDATE": "Candidat",
     "COL_POSITION": "Poste",
     "COL_STAGE": "Étape",
+    "COL_STEP_DETAIL": "Avancement",
+    "COL_STATUS": "Statut",
     "COL_FIT": "Fit",
     "FILTERS": {
       "TITLE": "Filtrer les candidats",

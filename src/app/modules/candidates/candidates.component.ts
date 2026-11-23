@@ -55,11 +55,13 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const KANBAN_FETCH_SIZE = 500;
 
 /**
- * Candidate status codes, in workflow order, for the status filter — only those of the
- * candidate / negotiation workflow, the only ones this page shows (see `panelFilterQuery`).
+ * Candidate status codes, in lifecycle order, for the status filter — every one of them:
+ * this page is the whole lifecycle (see `panelFilterQuery`). IT_IN_PROGRESS / EMAIL_RECEIVED
+ * are legacy codes of the onboarding phase, still filterable since old files carry them.
  */
 const STATUS_CODES: CandidateStatus[] = [
-  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'ARCHIVED',
+  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'HR_IN_PROGRESS', 'IT_IN_PROGRESS', 'EMAIL_RECEIVED',
+  'HIRED', 'REJECTED', 'ARCHIVED',
 ];
 
 type ViewMode = 'list' | 'kanban';
@@ -82,6 +84,14 @@ const GUIDE_STEPS: GuideStep[] = [
 /** Demand filter value for "no recruitment demand" — never a real demand id. */
 const SPONTANEOUS = 'SPONTANEOUS';
 
+/** Badge variant of each global status (lifecycle column) in the list view. */
+const GLOBAL_VARIANT: Record<string, BadgeOptions['variant']> = {
+  recruiting: 'info',
+  onboarding: 'warning',
+  hired:      'success',
+  closed:     'neutral',
+};
+
 /** Local calendar day as `yyyy-MM-dd` — `toISOString()` would shift it to UTC. */
 function toIsoDay(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -94,7 +104,10 @@ function sameRange(a: Date[] | null, b: Date[] | null): boolean {
 }
 
 /**
- * /rh/recrutement — the single, canonical candidate board.
+ * /rh/recrutement — « Pipeline RH », the HR LIFECYCLE board: En recrutement → Onboarding →
+ * Embauchés → Offboarding → Clôturés (see KANBAN_COLUMN_DEFS). Every card carries its
+ * global status and, under it, its detailed candidate status. The recruitment steps
+ * themselves (Entretiens / Validation RH / Offre) are the columns of « Candidats ».
  *
  * Backed entirely by the candidate backend (`/api/hr/candidates`,
  * CandidateController); statuses come straight from `CandidateStatus` so the
@@ -269,7 +282,8 @@ export class CandidatesComponent implements OnInit {
       const dir = dirs[def.key] ?? 'desc';
       return {
         ...def,
-        label:   this.translate.instant(def.labelKey),
+        label:       this.translate.instant(def.labelKey),
+        globalLabel: this.translate.instant(def.globalLabelKey),
         sortDir: dir,
         candidates: all
           .filter(c => def.statuses.includes(c.status))
@@ -352,7 +366,10 @@ export class CandidatesComponent implements OnInit {
     this.currentPage.set(s.page);
     this.pageSize.set(s.pageSize);
     this.columnSortDirs.set(s.columnSortDirs);
-    this.mobileStageFilter.set(s.mobileStageFilter);
+    // A pill remembered under a column key that no longer exists would show an empty list.
+    const pill = s.mobileStageFilter;
+    this.mobileStageFilter.set(
+      pill && (pill === OFFBOARDING_COLUMN_KEY || this.columnDefs.some(d => d.key === pill)) ? pill : null);
   }
 
   // ── Toolbar ────────────────────────────────────────────────────────────────
@@ -451,6 +468,24 @@ export class CandidatesComponent implements OnInit {
     });
   });
 
+  /** Status → the global status it belongs to (« En recrutement », « En onboarding »…). */
+  readonly globalLabelFor = computed(() => {
+    this.translate.currentLang();
+    return (status: string) => {
+      const def = this.columnForStatus(status);
+      return def ? this.translate.instant(def.globalLabelKey) : '';
+    };
+  });
+
+  /** Global status as a badge, for the list view's « Phase » column. */
+  readonly globalBadgeCell = computed(() => {
+    const label = this.globalLabelFor();
+    return (status: string): BadgeCell => ({
+      label:   label(status),
+      options: { variant: GLOBAL_VARIANT[this.columnForStatus(status)?.key ?? ''] ?? 'neutral', dot: true } as BadgeOptions,
+    });
+  });
+
   readonly accentFor  = computed(() => (status: string) => this.columnForStatus(status)?.accent ?? '#64748b');
   readonly badgeBgFor = computed(() => (status: string) => this.columnForStatus(status)?.badgeBg ?? 'rgba(100,116,139,0.12)');
 
@@ -511,10 +546,8 @@ export class CandidatesComponent implements OnInit {
     const range  = this.createdRange();
     return {
       paysId:       this.userStore.currentUser()?.paysId,
-      // The home page holds the candidate / negotiation workflow only: once the offer is
-      // agreed the candidate is hired in all but paperwork and is followed in onboarding
-      // (IT provisioning included) — never listed here again.
-      stage:        'CANDIDATE_WORKFLOW',
+      // The whole lifecycle — in recruitment, in onboarding, hired, closed — newest first.
+      stage:        'LIFECYCLE',
       search:       this.search() || undefined,
       departmentId: this.departmentFilter() ? Number(this.departmentFilter()) : undefined,
       spontaneous:  demand === SPONTANEOUS || undefined,
@@ -727,37 +760,17 @@ export class CandidatesComponent implements OnInit {
     this.actionError.set(null);
 
     switch (target.key) {
-      case 'accepted':
-        if (status === 'PENDING') this.dragAccept(candidate);
-        else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_ACCEPT'));
-        break;
-
-      case 'rejected':
+      // Closing a candidature is the one move a drag may start — and only from PENDING,
+      // the only status the backend lets RH reject from. It opens the reject modal.
+      case 'closed':
         if (status === 'PENDING') this.rejectTarget.set(candidate);
         else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_REJECT'));
         break;
 
-      // No « En cours » / « Recrutés » columns: the board ends at the offer, which is
-      // concluded from the candidate's « Étape actuelle » — never by a drag.
+      // Every other phase change is a real step done elsewhere: the offer is concluded from
+      // the candidate's « Étape actuelle », onboarding and IT on their own pages.
       default:
         this.notice.set(this.translate.instant('CANDIDATES.NOTICE.MOVE_NOT_ALLOWED'));
     }
-  }
-
-  private dragAccept(c: CandidateListItem): void {
-    this.actioningId.set(c.id);
-    this.patchLocalStatus(c.id, 'ACCEPTED'); // optimistic — the card jumps to Acceptés
-    this.svc.accept(c.id).subscribe({
-      next:  () => { this.actioningId.set(null); this.reload(); },
-      error: err => {
-        this.actioningId.set(null);
-        this.actionError.set(err?.error?.detail ?? err?.error?.message ?? this.translate.instant('CANDIDATES.ERRORS.ACCEPT'));
-        this.loadKanban(); // revert the optimistic move
-      },
-    });
-  }
-
-  private patchLocalStatus(id: number, status: CandidateStatus): void {
-    this.kanbanItems.update(items => items.map(c => (c.id === id ? { ...c, status } : c)));
   }
 }
