@@ -350,6 +350,12 @@ export class OnboardingFormComponent implements OnInit, HasUnsavedChanges {
 
   openConfirmModal(): void {
     const d = this.draftData();
+    // Onboarding runs in parallel with IT: everything can be filled and saved as a draft,
+    // but the profile is created on the Microsoft 365 account IT provides.
+    if (!this.ms365Email()) {
+      this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_IT_ACCOUNT_PENDING'));
+      return;
+    }
     if (!d.hireDate) {
       this.error.set(this.translate.instant('ONBOARDING.FORM.ERR_HIRE_DATE_REQUIRED'));
       this.currentStep.set(2);

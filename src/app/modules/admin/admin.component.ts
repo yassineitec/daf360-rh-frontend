@@ -37,6 +37,7 @@ import { AbsenceTypesAdminComponent }       from './absence-types-admin.componen
 import { PaysCalendarAdminComponent }       from './pays-calendar-admin.component';
 import { ContractAlertsAdminComponent }     from './contract-alerts/contract-alerts-admin.component';
 import { HelpFaqAdminComponent }            from './help-faq/help-faq-admin.component';
+import { CandidateEmailTemplatesAdminComponent } from './candidate-email-templates/candidate-email-templates-admin.component';
 import { AdminSectionStateService }         from './admin-section-state';
 
 /**
@@ -116,6 +117,9 @@ const TABS: { key: AdminTab; labelKey: string; permission: string; icon: string;
   { key: 'ref-data',            labelKey: 'ADMIN.shell.tabs.refData',             permission: 'ADMIN_LISTS',                icon: 'storage',               tone: 'secondary' },
   { key: 'overtime',             labelKey: 'ADMIN.shell.tabs.overtime',            permission: 'GET_PAYS',                   icon: 'more_time',             tone: 'warning' },
   { key: 'interview-types',      labelKey: 'ADMIN.shell.tabs.interviewTypes',      permission: 'RH_ADMIN_INTERVIEW_TYPES',   icon: 'forum',                 tone: 'primary' },
+  // Emails sent to candidates (the offer): recruitment configuration, same gate as the
+  // interview types beside it — and what the backend checks (V134).
+  { key: 'candidate-emails',     labelKey: 'ADMIN.shell.tabs.candidateEmails',     permission: 'RH_ADMIN_INTERVIEW_TYPES',   icon: 'forward_to_inbox',      tone: 'primary' },
   { key: 'offboarding-catalog',   labelKey: 'ADMIN.shell.tabs.offboardingCatalog',  permission: 'RH_MANAGE_OFFBOARDING',      icon: 'logout',                tone: 'danger' },
   { key: 'document-templates',    labelKey: 'ADMIN.shell.tabs.documentTemplates',   permission: 'HR_ADMIN_ROLES',             icon: 'article',               tone: 'teal' },
   // Its own permission, not HR_ADMIN_ROLES: the folder browser in this tab can enumerate
@@ -189,6 +193,7 @@ const GUIDE_STEPS: GuideStep[] = [
     TeletravailRulesAdminComponent,
     ContractAlertsAdminComponent,
     HelpFaqAdminComponent,
+    CandidateEmailTemplatesAdminComponent,
     TranslatePipe,
     PageGuideComponent,
   ],
@@ -294,6 +299,7 @@ const GUIDE_STEPS: GuideStep[] = [
             @if (activeTab() === 'contract-alerts')       { <app-contract-alerts-admin [paysId]="paysId()" /> }
             <!-- No [paysId]: the help questions are company-wide. -->
             @if (activeTab() === 'help-faq')              { <app-help-faq-admin /> }
+            @if (activeTab() === 'candidate-emails')      { <app-candidate-email-templates-admin [paysId]="paysId()" /> }
             }
           </daf-page>
         </div>

@@ -37,11 +37,20 @@ interface AppNavDef {
   children?: AppNavDef[];
   /** A heading inside a group (lib NavItem.heading): a label, never an entry — no route. */
   heading?: boolean;
+  /**
+   * Shown only to a user who sits on at least one interview panel — being an interviewer
+   * is not a permission (V132), so `permissions` cannot express it.
+   */
+  interviewersOnly?: boolean;
 }
 
 const APP_NAV_DEFS: AppNavDef[] = [
   { id: 'accueil', labelKey: 'NAV.ACCUEIL', icon: 'home', route: 'accueil', permissions: [] },
   { id: 'profiles', labelKey: 'NAV.PROFILES', icon: 'account_circle', route: 'profiles', permissions: [] },
+  {
+    id: 'mes-entretiens', labelKey: 'NAV.MY_INTERVIEWS', icon: 'record_voice_over',
+    route: 'mes-entretiens', permissions: [], interviewersOnly: true,
+  },
   {
     id: 'audit',
     labelKey: 'NAV.AUDIT',
@@ -373,6 +382,10 @@ export class HrShellComponent implements OnInit {
   }
 
   onboardingCount = signal(0);
+  /** Interviews the user sits on (V132) — the « Mes entretiens » entry shows only if > 0. */
+  readonly assignedInterviews = signal(0);
+  /** Of those, held and not validated, with the user's PV still missing — the entry's badge. */
+  readonly reportsToWrite = signal(0);
 
   private readonly rawUrl = toSignal(
     this.router.events.pipe(
@@ -410,7 +423,8 @@ export class HrShellComponent implements OnInit {
   readonly navItems = computed<NavItem[]>(() => {
     this.translate.currentLang();
     const visible = (def: AppNavDef) =>
-      def.permissions.length === 0 || this.perm.hasAny(def.permissions);
+      (!def.interviewersOnly || this.assignedInterviews() > 0) &&
+      (def.permissions.length === 0 || this.perm.hasAny(def.permissions));
 
     const toNavItem = (def: AppNavDef): NavItem => {
       const children = (def.children ?? []).filter(visible).map(toNavItem);
@@ -426,6 +440,9 @@ export class HrShellComponent implements OnInit {
         ...(children.length ? { children } : {}),
         ...(def.id === 'onboarding' && this.onboardingCount() > 0
           ? { badge: this.onboardingCount() }
+          : {}),
+        ...(def.id === 'mes-entretiens' && this.reportsToWrite() > 0
+          ? { badge: this.reportsToWrite() }
           : {}),
       };
     };
@@ -450,6 +467,18 @@ export class HrShellComponent implements OnInit {
         error: () => {},
       });
     }
+    // Everyone: being an interviewer needs no permission (V132). A failure just hides the entry.
+    this.http.get<{ status: string; result: string | null; myReportAt: string | null; scheduledAt: string }[]>(
+      `${environment.hrApiUrl}/api/hr/interviews/assigned`,
+    ).subscribe({
+      next: (list) => {
+        this.assignedInterviews.set(list.length);
+        const now = Date.now();
+        this.reportsToWrite.set(list.filter(i =>
+          !i.result && !i.myReportAt && new Date(i.scheduledAt).getTime() <= now).length);
+      },
+      error: () => {},
+    });
     const paysId = this.userStore.currentUser()?.paysId;
     // if (paysId && this.userStore.hasPermission('RH_VIEW_CONTRACTS')) {
     //   this.http.get<any[]>(`${environment.hrApiUrl}/api/hr/lifecycle/alerts?paysId=${paysId}&acknowledged=false`).subscribe({

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import {
   AvatarComponent,
   AvatarData,
@@ -19,13 +19,19 @@ import { InterviewService } from './interview.service';
 import {
   CandidateInterview,
   CreateInterviewRequest,
+  InterviewOpinion,
+  InterviewReport,
+  InterviewResult,
   InterviewType,
   interviewTypeLabel,
   UpdateInterviewRequest,
   UserPickerItem,
 } from './interview.model';
 
-type UpdateAction = 'DONE_PASS' | 'DONE_FAIL' | 'CANCELLED';
+/** Only cancelling is manual now (V132): DONE comes from a PV, PASS / FAIL from RH. */
+type UpdateAction = 'CANCELLED';
+
+const OPINIONS: InterviewOpinion[] = ['FAVORABLE', 'RESERVED', 'UNFAVORABLE'];
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
@@ -208,6 +214,10 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                         #{{ iv.sequenceNumber }} — {{ typeLabel(iv) }}
                       </span>
                       <daf-badge [label]="statusLabel(iv.status)" [options]="statusBadgeOptions(iv.status)" />
+                      @if (iv.status === 'DONE' && !iv.result) {
+                        <daf-badge [label]="'CANDIDATES.INTERVIEWS.PV.TO_VALIDATE' | translate"
+                                   [options]="{ variant: 'warning', size: 'sm' }" />
+                      }
                       @if (iv.result) {
                         <daf-badge [label]="(iv.result === 'PASS' ? 'CANDIDATES.INTERVIEWS.RESULT_PASS' : 'CANDIDATES.INTERVIEWS.RESULT_FAIL') | translate"
                                    [options]="resultBadgeOptions(iv.result)" />
@@ -270,21 +280,10 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                   }
                 </div>
 
-                <!-- Status transitions (PLANNED only) -->
+                <!-- Cancelling is the only manual transition left (V132): DONE comes from
+                     the first PV, PASS / FAIL from the RH validation below. -->
                 @if (canManage() && iv.status === 'PLANNED' && updatingId() !== iv.id) {
                   <div class="flex items-center gap-1.5 flex-wrap justify-end mt-2">
-                    <button type="button"
-                            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
-                            style="border-color:var(--color-tertiary);color:var(--color-tertiary);background:var(--color-tertiary-container)"
-                            (click)="openUpdate(iv, 'DONE_PASS')">
-                      {{ 'CANDIDATES.INTERVIEWS.PASS' | translate }}
-                    </button>
-                    <button type="button"
-                            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
-                            style="border-color:var(--color-danger);color:var(--color-danger);background:var(--color-error-container)"
-                            (click)="openUpdate(iv, 'DONE_FAIL')">
-                      {{ 'CANDIDATES.INTERVIEWS.FAIL' | translate }}
-                    </button>
                     <button type="button"
                             class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border
                                    border-outline-variant"
@@ -314,6 +313,122 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
                     </div>
                   </div>
                 }
+
+                <!-- ── PV & RH validation (V132) ──
+                     Each panel member writes their own PV once the interview has started;
+                     RH reads them all and decides PASS / FAIL, which is what moves the
+                     candidature on. A panel member reads only their own PV. -->
+                @if (iv.status !== 'CANCELLED') {
+                  <div class="mt-3 pt-3 border-t border-outline-variant flex flex-col gap-3">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                      <span class="flex items-center gap-1.5 text-[12px] font-semibold text-on-surface">
+                        <span class="material-symbols-outlined text-[15px] text-outline">description</span>
+                        {{ 'CANDIDATES.INTERVIEWS.PV.TITLE' | translate }}
+                        <span class="font-normal text-outline">
+                          {{ 'CANDIDATES.INTERVIEWS.PV.COUNT' | translate: { n: iv.reportCount, total: panelSize(iv) } }}
+                        </span>
+                      </span>
+                      @if (iv.canWriteReport && reportFormId() !== iv.id) {
+                        <daf-button
+                          [label]="(myReport(iv) ? 'CANDIDATES.INTERVIEWS.PV.EDIT' : 'CANDIDATES.INTERVIEWS.PV.WRITE') | translate"
+                          variant="teal"
+                          [options]="{ size: 'sm', iconStart: 'edit_note' }"
+                          (onClick)="openReport(iv)" />
+                      }
+                    </div>
+
+                    @if (isOnPanel(iv) && iv.status === 'PLANNED' && !iv.canWriteReport) {
+                      <p class="flex items-center gap-1.5 text-[12px] text-outline">
+                        <span class="material-symbols-outlined text-[14px]">schedule</span>
+                        {{ 'CANDIDATES.INTERVIEWS.PV.OPENS_AT_START' | translate }}
+                      </p>
+                    }
+
+                    <!-- The interviewer's form -->
+                    @if (reportFormId() === iv.id) {
+                      <div class="flex flex-col gap-3 rounded-lg border border-outline-variant bg-surface-container-low p-3">
+                        <daf-form-field
+                          [value]="reportSummary()"
+                          [options]="{ label: ('CANDIDATES.INTERVIEWS.PV.SUMMARY' | translate), type: 'textarea', rows: 6, required: true, maxLength: 4000, fullWidth: true, placeholder: ('CANDIDATES.INTERVIEWS.PV.SUMMARY_PLACEHOLDER' | translate) }"
+                          (valueChange)="reportSummary.set($any($event) ?? '')" />
+                        <daf-select
+                          [selected]="reportOpinion() ? [reportOpinion()!] : []"
+                          [options]="opinionOptions()"
+                          [config]="{ label: ('CANDIDATES.INTERVIEWS.PV.OPINION' | translate), required: true, placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate), fullWidth: true }"
+                          (selectedChange)="reportOpinion.set($any($event[0]) || null)" />
+                        @if (reportError()) {
+                          <p class="text-[12px] text-danger">{{ reportError() }}</p>
+                        }
+                        <div class="flex justify-end gap-2">
+                          <daf-button [label]="'CANDIDATES.COMMON.CANCEL' | translate" variant="ghost"
+                            [options]="{ size: 'sm' }" (onClick)="closeReport()" />
+                          <daf-button [label]="'CANDIDATES.INTERVIEWS.PV.SUBMIT' | translate" variant="teal"
+                            [options]="{ size: 'sm', iconStart: 'send', loading: reportSaving(), disabled: reportSaving() }"
+                            (onClick)="submitReport(iv)" />
+                        </div>
+                      </div>
+                    }
+
+                    <!-- The PVs this user may read -->
+                    @for (r of iv.reports; track r.id) {
+                      <div class="rounded-lg border border-outline-variant bg-surface-container-low p-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <daf-avatar [data]="{ name: r.authorName || ('#' + r.authorUserId) }" size="xs" [showTooltip]="false" />
+                          <span class="text-[12px] font-semibold text-on-surface">{{ r.authorName || ('#' + r.authorUserId) }}</span>
+                          <daf-badge [label]="opinionLabel(r.opinion)" [options]="opinionBadge(r.opinion)" />
+                          <span class="ml-auto text-[11px] text-outline">{{ formatStamp(r.updatedAt || r.submittedAt) }}</span>
+                        </div>
+                        <p class="mt-2 whitespace-pre-line text-[12px] leading-relaxed text-on-surface">{{ r.summary }}</p>
+                      </div>
+                    }
+
+                    @if (iv.status === 'DONE' && !iv.result && !iv.canValidate) {
+                      <p class="flex items-center gap-1.5 text-[12px] text-outline">
+                        <span class="material-symbols-outlined text-[14px]">hourglass_top</span>
+                        {{ 'CANDIDATES.INTERVIEWS.PV.AWAITING_VALIDATION' | translate }}
+                      </p>
+                    }
+
+                    <!-- RH decision -->
+                    @if (iv.canValidate) {
+                      <div class="flex flex-col gap-2 rounded-lg border border-outline-variant bg-surface p-3">
+                        <p class="text-[12px] font-semibold text-on-surface">{{ 'CANDIDATES.INTERVIEWS.VALIDATE.TITLE' | translate }}</p>
+                        <p class="text-[12px] text-outline">{{ 'CANDIDATES.INTERVIEWS.VALIDATE.HINT' | translate }}</p>
+                        @if (iv.reportCount < panelSize(iv)) {
+                          <p class="flex items-center gap-1.5 text-[12px] text-warning">
+                            <span class="material-symbols-outlined text-[14px]">warning</span>
+                            {{ 'CANDIDATES.INTERVIEWS.VALIDATE.MISSING_PV' | translate: { n: panelSize(iv) - iv.reportCount } }}
+                          </p>
+                        }
+                        <daf-form-field
+                          [value]="validationComment(iv.id)"
+                          [options]="{ label: ('CANDIDATES.INTERVIEWS.VALIDATE.COMMENT' | translate), type: 'textarea', rows: 2, maxLength: 1000, fullWidth: true }"
+                          (valueChange)="setValidationComment(iv.id, $any($event) ?? '')" />
+                        @if (validationError() && validationErrorFor() === iv.id) {
+                          <p class="text-[12px] text-danger">{{ validationError() }}</p>
+                        }
+                        <div class="flex flex-wrap justify-end gap-2">
+                          <daf-button [label]="'CANDIDATES.INTERVIEWS.VALIDATE.FAIL' | translate" variant="danger"
+                            [options]="{ size: 'sm', iconStart: 'close', disabled: validatingId() === iv.id }"
+                            (onClick)="validate(iv, 'FAIL')" />
+                          <daf-button [label]="'CANDIDATES.INTERVIEWS.VALIDATE.PASS' | translate" variant="teal"
+                            [options]="{ size: 'sm', iconStart: 'check', loading: validatingId() === iv.id, disabled: validatingId() === iv.id }"
+                            (onClick)="validate(iv, 'PASS')" />
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Decided -->
+                    @if (iv.result) {
+                      <p class="text-[12px] text-outline">
+                        {{ 'CANDIDATES.INTERVIEWS.VALIDATE.DONE_BY' | translate: { name: iv.validatedByName || '—', date: formatStamp(iv.validatedAt) } }}
+                        @if (iv.validationComment) {
+                          <span class="block mt-1 text-on-surface">« {{ iv.validationComment }} »</span>
+                        }
+                      </p>
+                    }
+                  </div>
+                }
               </div>
             </div>
           }
@@ -333,6 +448,8 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
 export class CandidateInterviewsComponent implements OnInit {
   @Input() candidateId!: number;
   @Input() paysId!: number;
+  /** A PV or a validation changed what the page's « Étape actuelle » card reads. */
+  readonly changed = output<void>();
 
   private svc = inject(InterviewService);
   private userStore = inject(UserStore);
@@ -405,12 +522,130 @@ export class CandidateInterviewsComponent implements OnInit {
 
   readonly updateActionLabel = computed(() => {
     this.translate.currentLang();
-    const a = this.updateAction();
-    if (a === 'DONE_PASS') return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM_PASS');
-    if (a === 'DONE_FAIL') return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM_FAIL');
-    if (a === 'CANCELLED') return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM_CANCEL');
-    return this.translate.instant('CANDIDATES.INTERVIEWS.CONFIRM');
+    return this.translate.instant(this.updateAction() === 'CANCELLED'
+      ? 'CANDIDATES.INTERVIEWS.CONFIRM_CANCEL' : 'CANDIDATES.INTERVIEWS.CONFIRM');
   });
+
+  // ── PV (V132) ────────────────────────────────────────────────────────────────
+  /** The interview whose PV form is open — one at a time. */
+  readonly reportFormId  = signal<number | null>(null);
+  readonly reportSummary = signal('');
+  readonly reportOpinion = signal<InterviewOpinion | null>(null);
+  readonly reportSaving  = signal(false);
+  readonly reportError   = signal<string | null>(null);
+
+  private readonly me = computed(() => this.userStore.currentUser()?.userId ?? null);
+
+  readonly opinionOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return OPINIONS.map(o => ({ value: o, label: this.opinionLabel(o) }));
+  });
+
+  /** Panel size, never 0 — an interview with no panel still expects one PV. */
+  panelSize(iv: CandidateInterview): number {
+    return Math.max(iv.interviewers?.length ?? 0, 1);
+  }
+
+  isOnPanel(iv: CandidateInterview): boolean {
+    const me = this.me();
+    return me != null && (iv.interviewers ?? []).some(u => u.id === me);
+  }
+
+  myReport(iv: CandidateInterview): InterviewReport | null {
+    const me = this.me();
+    return (iv.reports ?? []).find(r => r.authorUserId === me) ?? null;
+  }
+
+  openReport(iv: CandidateInterview): void {
+    const mine = this.myReport(iv);
+    this.reportSummary.set(mine?.summary ?? '');
+    this.reportOpinion.set(mine?.opinion ?? null);
+    this.reportError.set(null);
+    this.reportFormId.set(iv.id);
+  }
+
+  closeReport(): void { this.reportFormId.set(null); }
+
+  submitReport(iv: CandidateInterview): void {
+    const summary = this.reportSummary().trim();
+    const opinion = this.reportOpinion();
+    if (summary.length < 20) { this.reportError.set(this.translate.instant('CANDIDATES.INTERVIEWS.PV.ERR_SUMMARY')); return; }
+    if (!opinion)            { this.reportError.set(this.translate.instant('CANDIDATES.INTERVIEWS.PV.ERR_OPINION')); return; }
+    this.reportSaving.set(true);
+    this.reportError.set(null);
+    this.svc.submitReport(this.candidateId, iv.id, { summary, opinion }).subscribe({
+      next: updated => {
+        this.reportSaving.set(false);
+        this.reportFormId.set(null);
+        this.replace(updated);
+        this.changed.emit();
+      },
+      error: err => {
+        this.reportSaving.set(false);
+        this.reportError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.INTERVIEWS.PV.ERR_SAVE'));
+      },
+    });
+  }
+
+  opinionLabel(o: InterviewOpinion): string {
+    return this.translate.instant('CANDIDATES.INTERVIEWS.PV.OPINION_' + o);
+  }
+
+  opinionBadge(o: InterviewOpinion): BadgeOptions {
+    return { variant: o === 'FAVORABLE' ? 'success' : o === 'RESERVED' ? 'warning' : 'danger', size: 'sm' };
+  }
+
+  // ── RH validation (V132) ─────────────────────────────────────────────────────
+  private readonly comments = signal<Record<number, string>>({});
+  readonly validatingId    = signal<number | null>(null);
+  readonly validationError = signal<string | null>(null);
+
+  validationComment(id: number): string { return this.comments()[id] ?? ''; }
+
+  setValidationComment(id: number, value: string): void {
+    this.comments.update(c => ({ ...c, [id]: value }));
+  }
+
+  validate(iv: CandidateInterview, decision: InterviewResult): void {
+    const comment = this.validationComment(iv.id).trim();
+    if (decision === 'FAIL' && !comment) {
+      this.validationErrorFor.set(iv.id);
+      this.validationError.set(this.translate.instant('CANDIDATES.INTERVIEWS.VALIDATE.ERR_FAIL_COMMENT'));
+      return;
+    }
+    this.validatingId.set(iv.id);
+    this.validationError.set(null);
+    this.validationErrorFor.set(null);
+    this.svc.validateInterview(this.candidateId, iv.id, { decision, comment: comment || undefined }).subscribe({
+      next: updated => {
+        this.validatingId.set(null);
+        this.replace(updated);
+        this.changed.emit();
+      },
+      error: err => {
+        this.validatingId.set(null);
+        this.validationErrorFor.set(iv.id);
+        this.validationError.set(err?.error?.detail ?? this.translate.instant('CANDIDATES.INTERVIEWS.VALIDATE.ERR'));
+      },
+    });
+  }
+
+  /** Which interview the validation error belongs to. */
+  readonly validationErrorFor = signal<number | null>(null);
+
+  private replace(updated: CandidateInterview): void {
+    this.interviews.update(list => list.map(x => x.id === updated.id ? updated : x));
+  }
+
+  formatStamp(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    // A real instant (not a typed slot), so the browser's own zone is right here.
+    return d.toLocaleString(this.translate.currentLang() === 'en' ? 'en-GB' : 'fr-FR', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    });
+  }
 
   ngOnInit(): void { this.loadInterviews(); }
 

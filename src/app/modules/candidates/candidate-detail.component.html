@@ -10,56 +10,8 @@
     [badges]="headerBadges()"
     [breadcrumbs]="breadcrumbs()"
     [breadcrumbLabel]="'CANDIDATES.DETAIL.BREADCRUMB_ARIA' | translate">
-
-    <!-- Unlike the profile page, the workflow actions stay in `pageActions`:
-         there are up to four of them and they drive the recruitment state, so
-         they belong with the title rather than at the foot of a 32%-wide card.
-         (The edit toggle does sit at the foot of that card, as on the profile
-         page — it belongs with the fields it opens, not with the workflow.)
-
-         All of them are hidden while editing: each reloads the candidate on
-         success, which would leave the open editor holding pre-reload values.
-         The one way out of edit mode is the card's Annuler or the save bar. -->
-    <ng-container pageActions>
-      @if (candidate(); as c) {
-        @if (!editMode()) {
-          @if (canAcceptReject() && c.status === 'PENDING') {
-            <daf-button
-              [options]="{ variant: 'teal', iconStart: 'check_circle',
-                           label: ('CANDIDATES.ACTIONS.ACCEPT' | translate) }"
-              (onClick)="onAccept()" />
-            <daf-button
-              [options]="{ variant: 'danger', iconStart: 'cancel',
-                           label: ('CANDIDATES.ACTIONS.REJECT' | translate) }"
-              (onClick)="showReject.set(true)" />
-          }
-          @if (c.itProvisioning && ['ACCEPTED','IT_IN_PROGRESS','EMAIL_CREATED'].includes(c.status)) {
-            <daf-button
-              [options]="{ variant: 'secondary', iconStart: 'computer',
-                           label: ('CANDIDATES.DETAIL.IT_PROVISIONING_LINK' | translate) }"
-              (onClick)="goToProvisioning(c.itProvisioning!.id)" />
-          }
-          @if (canOnboard() && ['EMAIL_RECEIVED','HR_IN_PROGRESS'].includes(c.status)) {
-            <daf-button
-              [options]="{ variant: 'teal', iconStart: 'assignment_turned_in',
-                           label: ('CANDIDATES.DETAIL.COMPLETE_ONBOARDING' | translate) }"
-              (onClick)="goToOnboarding()" />
-          }
-          @if (canHireThisCandidate()) {
-            <daf-button
-              [options]="{ variant: 'teal', iconStart: 'how_to_reg',
-                           label: ('CANDIDATES.DETAIL.HIRE' | translate) }"
-              (onClick)="openHireModal()" />
-          }
-          @if (c.status === 'HIRED') {
-            <daf-button
-              [options]="{ variant: 'secondary', iconStart: 'badge',
-                           label: ('CANDIDATES.DETAIL.VIEW_PROFILE_LINK' | translate) }"
-              (onClick)="navigateToProfiles()" />
-          }
-        }
-      }
-    </ng-container>
+    <!-- No workflow buttons up here any more: the one way to move the candidature on
+         is the « Étape actuelle » card under the rail. -->
   </daf-page-header>
 
   @if (error()) {
@@ -78,9 +30,11 @@
          and the card's own button stay reachable. -->
     <div class="flex flex-col gap-8 lg:flex-row" [class.pb-32]="editMode()">
 
-      <!-- ── Left: identity + where the candidate stands, always on screen ── -->
-      <div data-guide="identity" class="lg:w-[32%] lg:shrink-0">
-        <div class="flex flex-col gap-6 lg:sticky lg:top-6">
+      <!-- ── Left: identity, on screen whatever the tab. The CV is no longer previewed
+           here nor in a tab: « Prévisualiser le CV » on the card opens it full size. -->
+      <div class="lg:w-[32%] lg:shrink-0">
+        <div class="flex flex-col gap-6">
+          <div data-guide="identity">
           <rh-candidate-identity-card
             [candidate]="c"
             [pills]="identityPills()"
@@ -92,7 +46,9 @@
             [nationalityLabel]="readLabels().nationality"
             [genderText]="readLabels().gender"
             (toggleEdit)="toggleEdit()"
+            (previewCv)="openCv()"
             (patch)="patch($event)" />
+          </div>
         </div>
       </div>
 
@@ -102,9 +58,26 @@
         <!-- The rail sits above the tabs, as on /rh/offboarding/:id — it describes the
              whole file, not one tab, and it used to be vertical in the left column where
              there was no room for its dates, progress or next step. -->
-        <div data-guide="rail">
-          <rh-candidate-pipeline-card [status]="c.status" [history]="history()" />
-        </div>
+        <!-- Not for an interviewer reading the record (V132): the workflow is RH's. -->
+        @if (!interviewerView()) {
+          <div data-guide="rail">
+            <rh-candidate-pipeline-card [status]="c.status" [interviews]="interviews()" [offer]="currentRound()" />
+          </div>
+        }
+
+        <!-- The current step, what it still needs, and the single button that moves the
+             candidature on — disabled until the step is ready, and while editing (every
+             action reloads the record under the open editor). -->
+        @if (nextStep(); as step) {
+          <rh-candidate-next-step data-guide="next-step"
+            [model]="step"
+            [busy]="nextBusy()"
+            [error]="nextError()"
+            [locked]="editMode()"
+            (advance)="onNextStep($event)"
+            (end)="showReject.set(true)"
+            (openTab)="activeTab.set($any($event))" />
+        }
 
         <!-- daf-tabs is strip-only; the panel below is ours, which is what keeps
              the offer and interview panels owning their own fetching. -->
@@ -132,61 +105,37 @@
                 [employmentTypeOptions]="employmentTypeOptions()"
                 [demandOptions]="demandOptions()"
                 [labels]="readLabels()"
-                (patch)="patch($event)" />
-            }
-
-            <!-- Rémunération: the negotiated figures, then the employer-cost
-                 simulation that reads them. Same permission gate as the tab. -->
-            @case ('salaire') {
-              @if (canViewSalary()) {
-                <div class="flex flex-col gap-6">
-                  <rh-candidate-salary-section
-                    [netRh]="salaryNetRh()"
-                    [netCandidate]="salaryNetCandidat()"
-                    [saving]="salarySaving()"
-                    [error]="salaryError()"
-                    [success]="salarySuccess()"
-                    (netRhChange)="salaryNetRh.set($event)"
-                    (netCandidateChange)="salaryNetCandidat.set($event)"
-                    (save)="saveSalary()" />
-
-                  <app-candidate-cost-simulation [candidate]="c" />
-                </div>
-              }
+                [interviews]="interviews()"
+                [showInterviews]="canManageInterviews()"
+                [offerRounds]="offerRounds()"
+                [showSalary]="canViewSalary()"
+                [tabIds]="tabIds()"
+                (patch)="patch($event)"
+                (openTab)="activeTab.set($event)" />
             }
 
             @case ('entretiens') {
-              <app-candidate-interviews [candidateId]="c.id" [paysId]="c.paysId" />
+              <!-- (changed): a PV or a validation moves the « Étape actuelle » checklist. -->
+              <app-candidate-interviews
+                [candidateId]="c.id"
+                [paysId]="c.paysId"
+                (changed)="loadOverview()" />
             }
 
             @case ('offre') {
               <!-- paysId and employmentTypeId are what the panel needs to cost a round
                    through the payroll engine: the parameter set is per entity, and the
                    engine speaks contract codes the CONTRACT_TYPE list resolves. -->
-              <app-offer-section
+              <app-offer-section #offerSection
                 [candidateId]="c.id"
                 [status]="c.status"
                 [candidateName]="c.firstName + ' ' + c.lastName"
                 [paysId]="c.paysId"
                 [employmentTypeId]="c.employmentTypeId"
+                [desiredSalary]="c.salaireNetCandidat ?? null"
+                [budgetSalary]="c.salaireNetRh ?? null"
+                [plannedHireDate]="c.expectedStartDate ?? null"
                 (changed)="onOfferChanged()" />
-            }
-
-            @case ('cv') {
-              <rh-candidate-cv-section
-                [candidate]="c"
-                [uploading]="cvUploading()"
-                [error]="cvError()"
-                [success]="cvSuccess()"
-                (fileSelected)="onCvFileSelected($event)"
-                (download)="downloadCv()" />
-            }
-
-            @case ('it') {
-              <rh-candidate-it-section
-                [provisioning]="c.itProvisioning"
-                [canManage]="canManageIt()"
-                (manage)="goToProvisioning($event)" />
             }
           }
         </div>
@@ -243,19 +192,27 @@
   <app-reject-modal
     [visible]="showReject()"
     [target]="c"
+    [mode]="rejectMode()"
     (closed)="showReject.set(false)"
     (rejected)="onRejected()" />
-
-  <rh-candidate-hire-modal
-    [visible]="showHireModal()"
-    [candidateName]="c.firstName + ' ' + c.lastName"
-    [contractLabel]="contractTypeLabel()"
-    [requiresEndDate]="requiresEndDate()"
-    [submitting]="hireLoading()"
-    [error]="hireError()"
-    (closed)="showHireModal.set(false)"
-    (submit)="confirmHire($event)" />
 }
+
+<!-- « Prévisualiser le CV » (identity card): the CV full size, download / replace. -->
+@if (candidate(); as c) {
+  <app-candidate-cv-modal #cvModal
+    [candidateId]="c.id"
+    [fileName]="c.cvOriginalName"
+    [uploadedAt]="c.cvUploadedAt"
+    [canReplace]="canEdit()"
+    [uploading]="cvUploading()"
+    [error]="cvError()"
+    [success]="cvSuccess()"
+    (fileSelected)="onCvFileSelected($event)"
+    (download)="downloadCv()" />
+}
+
+<!-- « Envoyer l'offre » previews the email (template from Administration) before it goes. -->
+<app-offer-email-modal #offerEmailModal />
 
 <!-- The guide opens each tab before highlighting its panel (tabChange). -->
 <rh-page-guide storageKey="candidate-detail" [steps]="guideSteps()" (tabChange)="onGuideTab($event)" />

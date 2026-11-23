@@ -54,10 +54,12 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 /** Kanban pulls the whole (tenant-scoped) candidate set in one page and groups it client-side. */
 const KANBAN_FETCH_SIZE = 500;
 
-/** Candidate status codes, in workflow order, for the status filter. */
+/**
+ * Candidate status codes, in workflow order, for the status filter — only those of the
+ * candidate / negotiation workflow, the only ones this page shows (see `panelFilterQuery`).
+ */
 const STATUS_CODES: CandidateStatus[] = [
-  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'IT_IN_PROGRESS',
-  'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED', 'ARCHIVED',
+  'PENDING', 'ACCEPTED', 'OFFER_SENT', 'REJECTED', 'ARCHIVED',
 ];
 
 type ViewMode = 'list' | 'kanban';
@@ -340,7 +342,9 @@ export class CandidatesComponent implements OnInit {
     if (!s) return;
     this.viewMode.set(s.viewMode);
     this.search.set(s.search);
-    this.statusFilter.set(s.statusFilter);
+    // A status remembered from before this page dropped the post-offer statuses would
+    // filter on something it no longer loads: start from « all » instead.
+    this.statusFilter.set(STATUS_CODES.includes(s.statusFilter as CandidateStatus) ? s.statusFilter : '');
     this.departmentFilter.set(s.departmentFilter);
     this.demandFilter.set(s.demandFilter);
     this.createdRange.set(s.createdRange);
@@ -507,6 +511,10 @@ export class CandidatesComponent implements OnInit {
     const range  = this.createdRange();
     return {
       paysId:       this.userStore.currentUser()?.paysId,
+      // The home page holds the candidate / negotiation workflow only: once the offer is
+      // agreed the candidate is hired in all but paperwork and is followed in onboarding
+      // (IT provisioning included) — never listed here again.
+      stage:        'CANDIDATE_WORKFLOW',
       search:       this.search() || undefined,
       departmentId: this.departmentFilter() ? Number(this.departmentFilter()) : undefined,
       spontaneous:  demand === SPONTANEOUS || undefined,
@@ -729,23 +737,8 @@ export class CandidatesComponent implements OnInit {
         else this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ONLY_PENDING_REJECT'));
         break;
 
-      case 'progress':
-        if (status === 'ACCEPTED') {
-          this.notice.set(this.translate.instant('CANDIDATES.NOTICE.IT_DEDICATED'));
-          this.router.navigate(['/rh/it-provisioning']);
-        } else {
-          this.notice.set(this.translate.instant('CANDIDATES.NOTICE.ACCEPT_FIRST'));
-        }
-        break;
-
-      case 'hired':
-        if (status === 'EMAIL_RECEIVED' || status === 'HR_IN_PROGRESS') {
-          this.router.navigate(['/rh/onboarding', candidate.id]);
-        } else {
-          this.notice.set(this.translate.instant('CANDIDATES.NOTICE.HIRE_FLOW'));
-        }
-        break;
-
+      // No « En cours » / « Recrutés » columns: the board ends at the offer, which is
+      // concluded from the candidate's « Étape actuelle » — never by a drag.
       default:
         this.notice.set(this.translate.instant('CANDIDATES.NOTICE.MOVE_NOT_ALLOWED'));
     }

@@ -187,14 +187,11 @@ export interface CandidatePill {
               (valueChange)="patch.emit({ passportNumber: asText($event) })" />
           }
 
-          <!-- Hidden when empty while reading, always shown while editing —
-               otherwise a candidate with no location has no way to gain one. -->
+          <!-- Always shown, like every other field typed in the creation wizard. -->
           @if (!editMode()) {
-            @if (candidate().location) {
-              <rh-profile-field
-                [label]="'CANDIDATES.DETAIL.LOCATION' | translate"
-                [value]="candidate().location" />
-            }
+            <rh-profile-field
+              [label]="'CANDIDATES.DETAIL.LOCATION' | translate"
+              [value]="candidate().location" />
           } @else {
             <daf-form-field
               [options]="{ label: ('CANDIDATES.DETAIL.LOCATION' | translate) }"
@@ -206,8 +203,11 @@ export interface CandidatePill {
         <!-- Action, at the foot of the card as on the profile page. One button,
              two states: Modifier while viewing, Annuler while editing — and the
              save bar only exists in the second state. -->
-        @if (canEdit()) {
-          <div class="mt-8 flex gap-3">
+        <!-- « Prévisualiser le CV » beside it: the CV opens full size in a window (it no
+             longer has a preview card or a tab). Shown to every reader of the record —
+             an interviewer included — while Modifier stays for whoever may edit. -->
+        <div class="mt-8 flex gap-3">
+          @if (canEdit()) {
             <daf-button class="flex-1"
               [options]="{
                 variant: editMode() ? 'ghost' : 'teal', size: 'sm', fullWidth: true,
@@ -215,8 +215,16 @@ export interface CandidatePill {
                 label: (editMode() ? 'CANDIDATES.COMMON.CANCEL' : 'CANDIDATES.COMMON.EDIT') | translate
               }"
               (onClick)="toggleEdit.emit()" />
-          </div>
-        }
+          }
+          @if (!editMode()) {
+            <daf-button class="flex-1"
+              [options]="{
+                variant: 'secondary', size: 'sm', fullWidth: true, iconStart: 'description',
+                label: ('CANDIDATES.CV_MODAL.PREVIEW' | translate)
+              }"
+              (onClick)="previewCv.emit()" />
+          }
+        </div>
       </div>
 
     </daf-card>
@@ -240,6 +248,7 @@ export class CandidateIdentityCardComponent {
 
   readonly patch      = output<Partial<UpdateCandidateRequest>>();
   readonly toggleEdit = output<void>();
+  readonly previewCv  = output<void>();
 
   protected readonly avatar   = computed(() => candidateAvatar(this.candidate().gender));
   protected readonly initials = computed(() =>

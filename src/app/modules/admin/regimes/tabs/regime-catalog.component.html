@@ -234,7 +234,7 @@
         [selected]="timezoneSelected()"
         [options]="timezoneOptions()"
         [config]="{ searchable: true, fullWidth: true, hint: ('ADMIN.regimes.catalog.timezoneHint' | translate) }"
-        (selectedChange)="patch('timezone', $event[0] ?? '')" />
+        (selectedChange)="patch('timezone', $event[0] || '')" />
       @if (form().timezone) {
         <p class="rc-note rc-note-info">{{ 'ADMIN.regimes.catalog.timezoneOverrideWarning' | translate }}</p>
       }

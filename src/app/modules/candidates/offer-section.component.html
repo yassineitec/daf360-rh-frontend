@@ -53,6 +53,10 @@
           <p class="text-[14px] font-semibold text-on-surface">{{ formatDate(o.decidedAt) }}</p>
         </div>
       }
+      <div>
+        <p class="text-[11px] text-outline mb-0.5">{{ 'CANDIDATES.OFFER.PROPOSED_BY' | translate }}</p>
+        <p class="text-[14px] font-semibold text-on-surface">{{ proposedByKey(o) | translate }}</p>
+      </div>
     </div>
 
     @if (o.salaryNote) {
@@ -75,7 +79,12 @@
           {{ st === 'APPROVED' ? 'check_circle' : (st === 'REJECTED' ? 'cancel' : 'hourglass_empty') }}
         </span>
         <span class="min-w-0">
-          <strong>{{ ('CANDIDATES.OFFER.APPROVAL_' + st) | translate }}</strong>
+          <!-- The DAF's own round is approved by construction; a candidate's counter, once
+               approved, is the agreement — both read differently from an RH round. -->
+          <strong>{{ (o.proposedBy === 'DAF' && st === 'APPROVED'
+                       ? (o.status === 'DRAFT' ? 'CANDIDATES.OFFER.APPROVAL_DAF_OWN_TO_SEND' : 'CANDIDATES.OFFER.APPROVAL_DAF_OWN')
+                     : (o.proposedBy === 'CANDIDATE' && st !== 'REJECTED' ? 'CANDIDATES.OFFER.APPROVAL_CANDIDATE_' + st
+                     : 'CANDIDATES.OFFER.APPROVAL_' + st)) | translate }}</strong>
           @if (currentApproval()?.approvalNotes) {
             <span class="block opacity-80">{{ currentApproval()!.approvalNotes }}</span>
           }
@@ -92,32 +101,29 @@
       <p class="text-[12px] text-danger mt-3">{{ actionError() }}</p>
     }
 
-    <!-- Costed, awaiting or carrying the finance decision — not yet with the candidate. -->
+    <!-- Only the work done INSIDE the offer step lives here (revise, renegotiate).
+         Moving the candidature on — sending the approved offer, recording the
+         candidate's answer — is the page's single « étape suivante » button, so
+         there is one place to advance the file, not three. -->
     @if (isDraft) {
       <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-outline-variant">
-        <daf-button [label]="'CANDIDATES.OFFER.SEND_TO_CANDIDATE' | translate" variant="teal"
-          [options]="{ iconStart: 'send', size: 'sm',
-                       loading: actioning(), disabled: actioning() || !canSendToCandidate() }"
-          [title]="canSendToCandidate() ? '' : ('CANDIDATES.OFFER.SEND_BLOCKED' | translate)"
-          (onClick)="sendToCandidate()" />
         <daf-button [label]="'CANDIDATES.OFFER.REVISE' | translate" variant="secondary"
           [options]="{ iconStart: 'sync', size: 'sm' }"
           (onClick)="openOfferModal('renegotiate')" />
       </div>
     }
 
-    <!-- Actions while the offer is with the candidate -->
+    <!-- With the candidate: the negotiation goes both ways (V133). The candidate's own
+         figure goes to the DAF; RH can also change its offer. Accept / decline are the
+         page's « étape suivante » card. -->
     @if (isPending) {
       <div class="flex flex-wrap gap-2 mt-5 pt-4 border-t border-outline-variant">
-        <daf-button [label]="'CANDIDATES.OFFER.ACCEPT' | translate" variant="teal"
-          [options]="{ iconStart: 'check_circle', size: 'sm', loading: actioning(), disabled: actioning() }"
-          (onClick)="acceptOffer()" />
+        <daf-button [label]="'CANDIDATES.OFFER.CANDIDATE_COUNTER' | translate" variant="teal"
+          [options]="{ iconStart: 'reply', size: 'sm' }"
+          (onClick)="openOfferModal('counter')" />
         <daf-button [label]="'CANDIDATES.OFFER.RENEGOTIATE' | translate" variant="secondary"
           [options]="{ iconStart: 'sync', size: 'sm' }"
           (onClick)="openOfferModal('renegotiate')" />
-        <daf-button [label]="'CANDIDATES.OFFER.REJECT' | translate" variant="danger"
-          [options]="{ iconStart: 'cancel', size: 'sm' }"
-          (onClick)="openRejectModal()" />
       </div>
     }
 
@@ -133,6 +139,7 @@
                  [class.opacity-60]="r.supersededAt !== null">
               <span class="text-on-surface-variant">
                 {{ 'CANDIDATES.OFFER.ROUND' | translate }} {{ r.roundNumber }}
+                · {{ proposedByKey(r) | translate }}
               </span>
               <span class="font-semibold text-on-surface">{{ formatSalary(r.proposedSalary) }}</span>
               <span class="text-outline">{{ formatDate(r.sentAt ?? r.supersededAt) }}</span>
@@ -162,7 +169,7 @@
 
 <!-- ── Send / renegotiate modal ─────────────────────────────────────────────── -->
 <app-daf-modal
-  [title]="(offerMode() === 'renegotiate' ? 'CANDIDATES.OFFER.MODAL_RENEGOTIATE_TITLE' : 'CANDIDATES.OFFER.MODAL_SEND_TITLE') | translate"
+  [title]="modalTitleKey() | translate"
   [visible]="showOfferModal()"
   [hasFooter]="true"
   width="min(1200px, 80vw)"
@@ -171,16 +178,33 @@
 
   <p class="text-[13px] text-outline mb-4">{{ candidateName() }}</p>
 
-  <div class="grid grid-cols-2 gap-3">
-    <div class="flex flex-col gap-1">
-      <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.ASKED_SALARY_NET' | translate }}</label>
-      <daf-form-field [value]="offerForm.askedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onAskedChange($event)" />
+  @if (offerMode() === 'counter') {
+    <!-- The candidate's figure IS the round's proposal: one field, then the costing. -->
+    <p class="text-[12.5px] text-on-surface-variant mb-3">{{ 'CANDIDATES.OFFER.COUNTER_HINT' | translate }}</p>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.COUNTER_SALARY_NET' | translate }}</label>
+        <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
+      </div>
+      @if (offer(); as o) {
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.CURRENT_OFFER' | translate }}</label>
+          <p class="text-[14px] font-semibold text-on-surface pt-2">{{ formatSalary(o.proposedSalary) }}</p>
+        </div>
+      }
     </div>
-    <div class="flex flex-col gap-1">
-      <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.PROPOSED_SALARY_NET' | translate }}</label>
-      <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
+  } @else {
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.ASKED_SALARY_NET' | translate }}</label>
+        <daf-form-field [value]="offerForm.askedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onAskedChange($event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-medium text-on-surface">{{ 'CANDIDATES.OFFER.PROPOSED_SALARY_NET' | translate }}</label>
+        <daf-form-field [value]="offerForm.proposedSalary ?? null" [options]="salaryFieldOpts" (valueChange)="onProposedChange($event)" />
+      </div>
     </div>
-  </div>
+  }
 
   <!-- ── Chiffrage ────────────────────────────────────────────────────────────
        No longer the disabled "bientôt" placeholder: this IS the gate. The round

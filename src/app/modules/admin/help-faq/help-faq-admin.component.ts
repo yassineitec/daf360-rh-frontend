@@ -66,7 +66,7 @@ type Lang = 'fr' | 'en' | 'ar';
             [options]="pageOptions()"
             [selected]="form.pageKey ? [form.pageKey] : []"
             [config]="{ label: ('ADMIN.helpFaq.pageLabel' | translate), searchable: true, fullWidth: true }"
-            (selectedChange)="form.pageKey = $event[0] ?? ''" />
+            (selectedChange)="form.pageKey = $event[0] || ''" />
 
           <daf-tabs
             variant="pill"

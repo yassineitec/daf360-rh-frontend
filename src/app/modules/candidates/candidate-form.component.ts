@@ -1,5 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {
+  AbstractControl, ReactiveFormsModule, FormBuilder, FormGroup, ValidationErrors, Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -10,7 +12,6 @@ import { RefDataService } from '../../core/ref/ref-data.service';
 import { RefDataItem }    from '../../core/ref/ref-data.model';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue }               from '../../core/lists/configurable-list.model';
-import { PayrollSimulationService, payrollContractOf } from './payroll-simulation.service';
 import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
 import { ApprovedDemandOption }     from '../recruitment-demands/recruitment-demand.model';
 import { catchError, of }           from 'rxjs';
@@ -53,6 +54,12 @@ const GUIDE_STEPS: GuideStep[] = [
   { icon: 'help',        titleKey: 'CANDIDATE_FORM.GUIDE.END.TITLE',      textKey: 'CANDIDATE_FORM.GUIDE.END.TEXT',      tab: '1' },
 ];
 
+/** `Validators.required` that also refuses a value made only of spaces. */
+function blankRequired(control: AbstractControl): ValidationErrors | null {
+  const v = control.value;
+  return v == null || String(v).trim() === '' ? { required: true } : null;
+}
+
 @Component({
   selector: 'app-candidate-form',
   standalone: true,
@@ -79,7 +86,6 @@ export class CandidateFormComponent implements OnInit {
   private userStore        = inject(UserStore);
   private refSvc           = inject(RefDataService);
   private listSvc          = inject(ConfigurableListService);
-  private simulationSvc    = inject(PayrollSimulationService);
   private demandSvc        = inject(RecruitmentDemandService);
   private router           = inject(Router);
   private translate        = inject(TranslateService);
@@ -171,11 +177,15 @@ export class CandidateFormComponent implements OnInit {
   });
   readonly cardIcon    = computed(() => this.STEP_INFO[this.currentStep() - 1].icon);
 
+  /** Step 3: a CV that passed the upload component's own type/size checks. */
+  readonly cvSelected = computed(() => this.cvFiles().some(f => !f.error));
+
   readonly canGoNext = computed(() => {
     this.formValue(); // FormGroup.valid isn't reactive — depend on form value so this recomputes as fields fill
     switch (this.currentStep()) {
       case 1:  return this.identityGroup.valid;
       case 2:  return this.positionGroup.valid;
+      case 3:  return this.cvSelected();
       default: return true;
     }
   });
@@ -186,33 +196,40 @@ export class CandidateFormComponent implements OnInit {
     switch (this.currentStep()) {
       case 1:  return this.identityGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP1_ERR');
       case 2:  return this.positionGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP2_ERR');
+      case 3:  return this.cvSelected()        ? null : this.translate.instant('CANDIDATES.FORM.STEP3_ERR');
       default: return null;
     }
   });
 
+  /**
+   * Every field is required except the passport number (step 1) and the notes (step 4).
+   * Text fields use `blankRequired` so whitespace alone doesn't count as filled in. The
+   * CV (step 3) is required too, but it is a file signal, not a control — see
+   * `cvSelected`.
+   */
   form: FormGroup = this.fb.group({
     identity: this.fb.group({
-      firstName:     ['', Validators.required],
-      lastName:      ['', Validators.required],
-      emailPersonal: ['', [Validators.required, Validators.email]],
-      phone:         [null as string | null],
-      dateOfBirth:   [null as string | null],
-      gender:        [null as string | null],
-      nationalId:    [null as string | null],
+      firstName:     ['', blankRequired],
+      lastName:      ['', blankRequired],
+      emailPersonal: ['', [blankRequired, Validators.email]],
+      phone:         [null as string | null, blankRequired],
+      dateOfBirth:   [null as string | null, Validators.required],
+      gender:        [null as string | null, Validators.required],
+      nationalId:    [null as string | null, blankRequired],
       passportNumber: [null as string | null],
-      location:      [null as string | null],
+      location:      [null as string | null, blankRequired],
     }),
     position: this.fb.group({
-      appliedPosition:     [null as string | null],
-      recruitmentDemandId: [null as number | null],
-      departmentId:        [null as number | null],
+      appliedPosition:     [null as string | null, blankRequired],
+      recruitmentDemandId: [null as number | null, Validators.required],
+      departmentId:        [null as number | null, Validators.required],
       employmentTypeId:    [null as number | null, Validators.required],
-      appliedGradeId:      [null as number | null],
-      appliedDisciplineId: [null as number | null],
-      nationalityId:       [null as number | null],
+      appliedGradeId:      [null as number | null, Validators.required],
+      appliedDisciplineId: [null as number | null, Validators.required],
+      nationalityId:       [null as number | null, Validators.required],
       expectedStartDate:   ['', Validators.required],
-      salaireNetCandidat:  [null as number | null],
-      salaireNetRh:        [null as number | null],
+      salaireNetCandidat:  [null as number | null, [Validators.required, Validators.min(0)]],
+      salaireNetRh:        [null as number | null, [Validators.required, Validators.min(0)]],
     }),
     notes: [null as string | null],
   });
@@ -223,16 +240,17 @@ export class CandidateFormComponent implements OnInit {
     const v   = this.formValue() as any;
     const id  = v?.identity ?? {};
     const pos = v?.position ?? {};
+    // The required fields only — passport and notes are optional and don't count.
     const fields = [
       id.firstName, id.lastName, id.emailPersonal, id.phone,
-      id.dateOfBirth, id.gender, id.nationalId,
-      pos.appliedPosition, pos.employmentTypeId, pos.expectedStartDate,
+      id.dateOfBirth, id.gender, id.nationalId, id.location,
+      pos.recruitmentDemandId, pos.appliedPosition, pos.employmentTypeId, pos.expectedStartDate,
       pos.departmentId, pos.appliedGradeId, pos.appliedDisciplineId,
-      pos.nationalityId, v?.notes,
+      pos.nationalityId, pos.salaireNetCandidat, pos.salaireNetRh,
     ];
     const total  = fields.length + 1; // +1 for CV
-    const filled = fields.filter((val: unknown) => val != null && val !== '').length
-                 + (this.cvFiles().length > 0 ? 1 : 0);
+    const filled = fields.filter((val: unknown) => val != null && String(val).trim() !== '').length
+                 + (this.cvSelected() ? 1 : 0);
     return Math.round((filled / total) * 100);
   });
 
@@ -251,12 +269,22 @@ export class CandidateFormComponent implements OnInit {
     const v   = this.formValue() as any;
     const id  = v?.identity ?? {};
     const pos = v?.position ?? {};
+    const t = (k: string) => this.translate.instant(k);
     return [
-      { label: this.translate.instant('CANDIDATES.FORM.RF_NAME'),     done: !!(id.firstName && id.lastName) },
-      { label: this.translate.instant('CANDIDATES.FORM.RF_EMAIL'),    done: !!id.emailPersonal },
-      { label: this.translate.instant('CANDIDATES.FORM.RF_POSITION'), done: !!pos.appliedPosition },
-      { label: this.translate.instant('CANDIDATES.FORM.RF_CONTRACT'), done: !!pos.employmentTypeId },
-      { label: this.translate.instant('CANDIDATES.FORM.RF_START'),    done: !!pos.expectedStartDate },
+      { label: t('CANDIDATES.FORM.RF_NAME'),     done: !!(id.firstName && id.lastName) },
+      { label: t('CANDIDATES.FORM.RF_EMAIL'),    done: !!id.emailPersonal },
+      { label: t('CANDIDATES.FORM.RF_IDENTITY'),
+        done: !!(id.phone && id.dateOfBirth && id.gender && id.nationalId && id.location) },
+      { label: t('CANDIDATES.FORM.RF_VACANCY'),  done: pos.recruitmentDemandId != null },
+      { label: t('CANDIDATES.FORM.RF_POSITION'), done: !!pos.appliedPosition },
+      { label: t('CANDIDATES.FORM.RF_CONTRACT'), done: !!pos.employmentTypeId },
+      { label: t('CANDIDATES.FORM.RF_START'),    done: !!pos.expectedStartDate },
+      { label: t('CANDIDATES.FORM.RF_ASSIGNMENT'),
+        done: pos.departmentId != null && pos.appliedGradeId != null
+           && pos.appliedDisciplineId != null && pos.nationalityId != null },
+      { label: t('CANDIDATES.FORM.RF_SALARY'),
+        done: pos.salaireNetCandidat != null && pos.salaireNetRh != null },
+      { label: t('CANDIDATES.FORM.RF_CV'),       done: this.cvSelected() },
     ];
   });
 
@@ -399,6 +427,16 @@ export class CandidateFormComponent implements OnInit {
     this.form.get(path)?.markAsTouched();
   }
 
+  /**
+   * Salary input → number. Empty stays null (so `required` still fires); 0 stays 0 —
+   * the old `$event ? +$event : null` turned a typed 0 into "not filled in".
+   */
+  toAmount(value: string | number | null): number | null {
+    if (value == null || String(value).trim() === '') return null;
+    const n = Number(value);
+    return isNaN(n) ? null : n;
+  }
+
   protected readonly formatFirstName = formatFirstName;
   protected readonly formatLastName  = formatLastName;
 
@@ -527,51 +565,11 @@ export class CandidateFormComponent implements OnInit {
   }
 
   /**
-   * Budget PRE-VALIDATION for a brand-new candidate.
-   *
-   * <p>The two salary figures typed in step 2 used to be stored and then sit there: nothing
-   * costed them, and finance only ever saw a candidature once RH remembered to run the
-   * simulation from the Rémunération tab. Here the engine is asked straight away and the
-   * result goes to `/finance/cost/approval`, so a recruitment is budget-visible from the day
-   * it is opened.
-   *
-   * <p>It is NOT an offer, and carries no `jobOfferId`. A brand-new candidate is PENDING with
-   * no interviews, and an offer needs both ACCEPTED and a passed interview — so this gates
-   * nothing; it tells finance what is coming. The offer, when it comes, is costed and
-   * approved on its own.
-   *
-   * <p>Entirely non-fatal: the candidate exists either way, and the simulation can be re-run
-   * from the Rémunération tab. A payroll engine that is down, or an entity with no parameter
-   * set, must not cost the recruiter the record they just typed.
+   * The salary figures typed in step 2 are stored with the candidate and only read back on
+   * the Profil tab. Nothing is sent to finance at creation any more: the first step of the
+   * process is preparing the interviews, and finance sees the candidature with its offer.
    */
-  private submitBudgetPreValidation(candidateId: number): void {
-    const paysId = this.userStore.currentUser()?.paysId;
-    const net    = this.positionGroup.get('salaireNetRh')?.value as number | null;
-    if (!paysId || net == null || net <= 0) return;
-
-    const typeId = this.positionGroup.get('employmentTypeId')?.value as number | null;
-    const code   = payrollContractOf(this.employmentTypes().find(t => t.id === typeId));
-
-    this.simulationSvc.simulateFromNet({ paysId, inputNet: net, contractType: code })
-      .pipe(catchError(() => of(null)))
-      .subscribe(result => {
-        if (!result) return;
-        this.simulationSvc.submitForApproval({
-          candidateId,
-          paysId,
-          fiscalYear:         new Date().getFullYear(),
-          salaireNetRh:       net,
-          salaireNetCandidat: (this.positionGroup.get('salaireNetCandidat')?.value as number | null) ?? undefined,
-          contractTypeCode:   code,
-          simulationSnapshot: JSON.stringify(result),
-        }).pipe(catchError(() => of(null))).subscribe();
-      });
-  }
-
   private afterSave(candidateId: number): void {
-    // Fire-and-forget, before the navigation: it must not delay landing on the candidate.
-    this.submitBudgetPreValidation(candidateId);
-
     const file = this.cvFiles().find(f => !f.error)?.file ?? null;
     if (!file) {
       this.saving.set(false);

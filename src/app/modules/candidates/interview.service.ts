@@ -3,6 +3,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AssignedInterview,
+  SubmitInterviewReportRequest,
+  ValidateInterviewRequest,
   CandidateInterview,
   CreateInterviewRequest,
   CreateInterviewTypeRequest,
@@ -70,6 +73,25 @@ export class InterviewService {
       `${this.candidatesBase}/${candidateId}/interviews`,
       dto,
     );
+  }
+
+  // ── PV & validation (V132) ──────────────────────────────────────────────────
+
+  /** File or rewrite the caller's own PV — any panel member, no permission. */
+  submitReport(candidateId: number, interviewId: number, dto: SubmitInterviewReportRequest): Observable<CandidateInterview> {
+    return this.http.put<CandidateInterview>(
+      `${this.candidatesBase}/${candidateId}/interviews/${interviewId}/report`, dto);
+  }
+
+  /** RH decides PASS / FAIL after reading the PVs (RH_VALIDATE_INTERVIEW). */
+  validateInterview(candidateId: number, interviewId: number, dto: ValidateInterviewRequest): Observable<CandidateInterview> {
+    return this.http.post<CandidateInterview>(
+      `${this.candidatesBase}/${candidateId}/interviews/${interviewId}/validate`, dto);
+  }
+
+  /** Every interview the caller sits on — « Mes entretiens ». */
+  listAssigned(): Observable<AssignedInterview[]> {
+    return this.http.get<AssignedInterview[]>(`${environment.hrApiUrl}/api/hr/interviews/assigned`);
   }
 
   updateInterview(

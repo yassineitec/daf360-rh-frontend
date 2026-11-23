@@ -85,8 +85,10 @@
             <daf-form-field
               [options]="{
                 label: ('CANDIDATES.FORM.PHONE' | translate),
+                required: true,
                 placeholder: ('CANDIDATES.FORM.PHONE_PH' | translate),
                 prefixIcon: 'phone',
+                error: getFieldError('identity.phone'),
               }"
               [value]="getTextValue('identity.phone')"
               (valueChange)="setTextValue('identity.phone', $event)"
@@ -97,7 +99,9 @@
               [config]="{
                 label: ('CANDIDATES.FORM.DOB' | translate),
                 placeholder: ('CANDIDATES.COMMON.SELECT' | translate),
+                required: true,
                 selectionMode: 'single',
+                error: getFieldError('identity.dateOfBirth'),
               }"
               (valueChange)="setDateValue('identity.dateOfBirth', $event)"
             />
@@ -108,7 +112,9 @@
               [config]="{
                 label: ('CANDIDATES.FORM.GENDER' | translate),
                 placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                required: true,
                 fullWidth: true,
+                error: getFieldError('identity.gender'),
               }"
               (selectedChange)="setSelectStr('identity.gender', $event)"
             />
@@ -116,15 +122,17 @@
             <daf-form-field
               [options]="{
                 label: ('CANDIDATES.FORM.NATIONAL_ID' | translate),
+                required: true,
                 placeholder: ('CANDIDATES.FORM.NATIONAL_ID_PH' | translate),
                 prefixIcon: 'badge',
+                error: getFieldError('identity.nationalId'),
               }"
               [value]="getTextValue('identity.nationalId')"
               (valueChange)="setTextValue('identity.nationalId', $event)"
             />
 
             <!-- Its own field, not folded into the CIN: onboarding pre-fills each into its
-                 own column of the employee profile. -->
+                 own column of the employee profile. The one optional field of this step. -->
             <daf-form-field
               [options]="{
                 label: ('CANDIDATES.FORM.PASSPORT_NUMBER' | translate),
@@ -138,8 +146,10 @@
             <daf-form-field
               [options]="{
                 label: ('CANDIDATES.FORM.LOCATION' | translate),
+                required: true,
                 placeholder: ('CANDIDATES.FORM.LOCATION_PH' | translate),
                 prefixIcon: 'location_on',
+                error: getFieldError('identity.location'),
               }"
               [value]="getTextValue('identity.location')"
               (valueChange)="setTextValue('identity.location', $event)"
@@ -152,8 +162,8 @@
           <div class="space-y-8">
             <!-- FIRST in this step, because picking it fills the rest: the vacancy already
                  carries the title, department, grade, contract type and target start date
-                 that the fields below ask for. Optional — a spontaneous application has no
-                 demand behind it, and forcing one would invent a vacancy. -->
+                 that the fields below ask for. Required: every candidature answers an
+                 approved recruitment request. -->
             <div class="mb-8">
               <daf-select
                 [selected]="getSelectNum('position.recruitmentDemandId')"
@@ -162,8 +172,10 @@
                   label: ('CANDIDATES.FORM.DEMAND' | translate),
                   placeholder: ('CANDIDATES.FORM.DEMAND_PH' | translate),
                   hint: ('CANDIDATES.FORM.DEMAND_HINT' | translate),
+                  required: true,
                   fullWidth: true,
                   searchable: true,
+                  error: getFieldError('position.recruitmentDemandId'),
                 }"
                 (selectedChange)="onDemandSelected($event)"
               />
@@ -178,6 +190,7 @@
               <daf-form-field
                 [options]="{
                   label: ('CANDIDATES.FORM.POSITION' | translate),
+                  required: true,
                   placeholder: ('CANDIDATES.FORM.POSITION_PH' | translate),
                   prefixIcon: 'work_outline',
                   error: getFieldError('position.appliedPosition'),
@@ -218,6 +231,7 @@
                 [config]="{
                   label: ('CANDIDATES.FORM.DEPARTMENT' | translate),
                   placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                  required: true,
                   fullWidth: true,
                   searchable: true,
                   error: getFieldError('position.departmentId'),
@@ -248,8 +262,10 @@
                 [config]="{
                   label: ('CANDIDATES.FORM.GRADE' | translate),
                   placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                  required: true,
                   fullWidth: true,
                   searchable: true,
+                  error: getFieldError('position.appliedGradeId'),
                 }"
                 (selectedChange)="setSelectNum('position.appliedGradeId', $event)"
               />
@@ -260,8 +276,10 @@
                 [config]="{
                   label: ('CANDIDATES.FORM.DISCIPLINE' | translate),
                   placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                  required: true,
                   fullWidth: true,
                   searchable: true,
+                  error: getFieldError('position.appliedDisciplineId'),
                 }"
                 (selectedChange)="setSelectNum('position.appliedDisciplineId', $event)"
               />
@@ -273,28 +291,32 @@
               [config]="{
                 label: ('CANDIDATES.FORM.NATIONALITY' | translate),
                 placeholder: ('CANDIDATES.COMMON.SELECT_PLACEHOLDER' | translate),
+                required: true,
                 fullWidth: true,
                 searchable: true,
+                error: getFieldError('position.nationalityId'),
               }"
               (selectedChange)="setSelectNum('position.nationalityId', $event)"
             />
           </div>
 
-          <!-- Salary benchmarking (optional — used for cost simulation) -->
+          <!-- Salary benchmarking (required — feeds the budget pre-validation sent to finance) -->
           <div class="border-t border-outline-variant/40 pt-6">
             <p class="text-[11px] font-semibold uppercase tracking-wider text-outline mb-3">{{ 'CANDIDATES.FORM.SALARY_SECTION' | translate }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <daf-form-field
-                [options]="{ label: ('CANDIDATES.FORM.SALARY_CANDIDATE_NET' | translate), type: 'number',
-                             placeholder: ('CANDIDATES.FORM.SALARY_CANDIDATE_NET_PH' | translate), prefixIcon: 'person' }"
+                [options]="{ label: ('CANDIDATES.FORM.SALARY_CANDIDATE_NET' | translate), type: 'number', required: true,
+                             placeholder: ('CANDIDATES.FORM.SALARY_CANDIDATE_NET_PH' | translate), prefixIcon: 'person',
+                             error: getFieldError('position.salaireNetCandidat') }"
                 [value]="getTextValue('position.salaireNetCandidat')"
-                (valueChange)="setTextValue('position.salaireNetCandidat', $event ? +$event : null)" />
+                (valueChange)="setTextValue('position.salaireNetCandidat', toAmount($event))" />
 
               <daf-form-field
-                [options]="{ label: ('CANDIDATES.FORM.SALARY_HR_BUDGET_NET' | translate), type: 'number',
-                             placeholder: ('CANDIDATES.FORM.SALARY_HR_BUDGET_NET_PH' | translate), prefixIcon: 'currency_exchange' }"
+                [options]="{ label: ('CANDIDATES.FORM.SALARY_HR_BUDGET_NET' | translate), type: 'number', required: true,
+                             placeholder: ('CANDIDATES.FORM.SALARY_HR_BUDGET_NET_PH' | translate), prefixIcon: 'currency_exchange',
+                             error: getFieldError('position.salaireNetRh') }"
                 [value]="getTextValue('position.salaireNetRh')"
-                (valueChange)="setTextValue('position.salaireNetRh', $event ? +$event : null)" />
+                (valueChange)="setTextValue('position.salaireNetRh', toAmount($event))" />
             </div>
           </div>
         }
@@ -309,6 +331,7 @@
             [config]="{
               accept: '.pdf,.doc,.docx',
               maxSizeMb: 10,
+              required: true,
               hint: ('CANDIDATES.FORM.CV_HINT' | translate),
             }"
           />

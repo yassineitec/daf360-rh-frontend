@@ -59,6 +59,58 @@ export interface CandidateInterview {
    * interview (null if Graph is unconfigured, the sync hasn't run yet, or it
    * failed — never a required field to render the rest of the card). */
   graphJoinUrl: string | null;
+
+  // ── PV & RH validation (V132) ──
+  /** The PVs this user may read: all for an RH reader, only their own for a panel member. */
+  reports: InterviewReport[];
+  /** How many PVs exist, readable or not. */
+  reportCount: number;
+  /** This user sits on the panel and may file / rewrite their PV now. */
+  canWriteReport: boolean;
+  /** This user may decide PASS / FAIL now (RH_VALIDATE_INTERVIEW, a PV is in, not decided). */
+  canValidate: boolean;
+  validatedBy: number | null;
+  validatedByName: string | null;
+  validatedAt: string | null;
+  validationComment: string | null;
+}
+
+export type InterviewOpinion = 'FAVORABLE' | 'RESERVED' | 'UNFAVORABLE';
+
+export interface InterviewReport {
+  id: number;
+  authorUserId: number;
+  authorName: string | null;
+  summary: string;
+  opinion: InterviewOpinion;
+  submittedAt: string;
+  updatedAt: string | null;
+}
+
+export interface SubmitInterviewReportRequest {
+  summary: string;
+  opinion: InterviewOpinion;
+}
+
+export interface ValidateInterviewRequest {
+  decision: InterviewResult;
+  comment?: string;
+}
+
+/** « Mes entretiens » row (V132). */
+export interface AssignedInterview {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  appliedPosition: string | null;
+  interviewTypeName: string | null;
+  interviewTypeNameEn: string | null;
+  scheduledAt: string;
+  location: string | null;
+  status: InterviewStatus;
+  result: InterviewResult | null;
+  myReportAt: string | null;
+  graphJoinUrl: string | null;
 }
 
 export interface CreateInterviewRequest {

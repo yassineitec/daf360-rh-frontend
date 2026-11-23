@@ -74,11 +74,19 @@ export const routes: Routes = [
           import('./modules/profiles/profiles.routes').then(m => m.PROFILES_ROUTES),
       },
       {
+        // No guard here any more (V132): each child carries its own. The list pages keep the
+        // permission gate; the candidate page also lets in a member of one of the candidate's
+        // interview panels, who holds no RH code (candidateDetailGuard).
         path: 'candidates',
-        canActivate: [permissionGuard],
-        data: { permissions: ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDATE', 'CREATE_CANDIDATE'] },
         loadChildren: () =>
           import('./modules/candidates/candidates.routes').then(m => m.candidatesRoutes),
+      },
+      {
+        // « Mes entretiens » (V132) — every interview the user sits on. No permission: being
+        // on a panel is the right, and the list is self-scoped server-side.
+        path: 'mes-entretiens',
+        loadComponent: () =>
+          import('./modules/candidates/my-interviews.component').then(m => m.MyInterviewsComponent),
       },
       {
         path: 'recrutement',

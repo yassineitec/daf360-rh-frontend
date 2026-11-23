@@ -55,7 +55,15 @@ export class OfferSectionComponent {
   readonly paysId         = input.required<number>();
   /** Resolves to the engine's contract code via the CONTRACT_TYPE list. */
   readonly employmentTypeId = input<number | null>(null);
+  /** Salaries typed at creation — what the candidate wants and what RH budgets. Open a first round. */
+  readonly desiredSalary  = input<number | null>(null);
+  readonly budgetSalary   = input<number | null>(null);
+  /** Planned start date of the candidate — copied from the recruitment demand at creation. */
+  readonly plannedHireDate = input<string | null>(null);
   readonly changed        = output<void>();
+
+  /** Set when the counter modal was asked for before the offer finished loading. */
+  private pendingCounter = false;
 
   readonly offer     = signal<OfferResponse | null>(null);
   readonly rounds    = signal<OfferResponse[]>([]);
@@ -65,7 +73,8 @@ export class OfferSectionComponent {
 
   // ── Modal state ───────────────────────────────────────────────────────────
   readonly showOfferModal   = signal(false);
-  readonly offerMode        = signal<'send' | 'renegotiate'>('send');
+  /** send = first round · renegotiate = RH's new figure · counter = the candidate's figure (V133). */
+  readonly offerMode        = signal<'send' | 'renegotiate' | 'counter'>('send');
   readonly offerSubmitting  = signal(false);
   offerForm: CreateOfferRequest = { simulationSnapshot: '' };
 
@@ -125,11 +134,34 @@ export class OfferSectionComponent {
   /** Devise du pays du candidat (TND, EGP…) ; `null` tant qu'elle n'est pas connue. */
   private readonly currency = signal<string | null>(null);
 
+  /**
+   * « Le candidat propose un autre montant » (page's « Étape actuelle » card): opens the
+   * counter modal — now if the offer is loaded, else as soon as it is.
+   */
+  requestCandidateCounter(): void {
+    if (this.loading()) { this.pendingCounter = true; return; }
+    this.openCandidateCounter();
+  }
+
+  private openCandidateCounter(): void {
+    const o = this.offer();
+    if (o && (o.status === 'SENT' || o.status === 'EXPIRED')) {
+      this.openOfferModal('counter');
+    } else {
+      // Never a silent click: say why there is nothing to counter.
+      this.actionError.set(this.translate.instant('CANDIDATES.OFFER.COUNTER_NOT_SENT'));
+    }
+  }
+
   private load(id: number): void {
     this.loading.set(true);
+    const settle = () => {
+      this.loading.set(false);
+      if (this.pendingCounter) { this.pendingCounter = false; this.openCandidateCounter(); }
+    };
     this.offerService.getOffer(id).subscribe({
-      next: o  => { this.offer.set(o); this.loading.set(false); },
-      error: () => { this.offer.set(null); this.loading.set(false); }, // 404 = no round yet
+      next: o  => { this.offer.set(o); settle(); },
+      error: () => { this.offer.set(null); settle(); }, // 404 = no round yet
     });
     // Rounds and approvals degrade to empty rather than blocking the panel: they are
     // history and status, not the offer itself.
@@ -166,32 +198,65 @@ export class OfferSectionComponent {
   /** PENDING | APPROVED | REJECTED for the current round; null when it has no approval. */
   readonly approvalStatus = computed(() => this.currentApproval()?.status ?? null);
 
+  readonly modalTitleKey = computed(() => {
+    switch (this.offerMode()) {
+      case 'counter':     return 'CANDIDATES.OFFER.MODAL_COUNTER_TITLE';
+      case 'renegotiate': return 'CANDIDATES.OFFER.MODAL_RENEGOTIATE_TITLE';
+      default:            return 'CANDIDATES.OFFER.MODAL_SEND_TITLE';
+    }
+  });
+
+  /** « Proposée par » label of a round (V133). */
+  proposedByKey(r: OfferResponse): string {
+    return 'CANDIDATES.OFFER.BY_' + (r.proposedBy ?? 'RH');
+  }
+
   /** The gate: only an approved DRAFT round may be extended to the candidate. */
   readonly canSendToCandidate = computed(() =>
     this.isDraft && this.approvalStatus() === 'APPROVED');
 
   // ── Draft / renegotiate a round ────────────────────────────────────────────
-  openOfferModal(mode: 'send' | 'renegotiate'): void {
+  openOfferModal(mode: 'send' | 'renegotiate' | 'counter'): void {
     this.actionError.set(null);
     this.simError.set(null);
     this.simResult.set(null);
     this.offerMode.set(mode);
     const o = this.offer();
     /*
+     * The candidate answers with their own figure (V133): RH types it, costs it, and it goes
+     * to the DAF. The rest of the offer (dates, préavis, note) is carried over unchanged.
+     */
+    if (mode === 'counter' && o) {
+      this.offerForm = {
+        askedSalary: null, proposedSalary: null, salaryNote: o.salaryNote,
+        noticePeriodDays: o.noticePeriodDays, noticePeriodNote: o.noticePeriodNote,
+        expectedHireDate: o.expectedHireDate ?? this.plannedHireDate(), expiryDate: o.expiryDate,
+        simulationSnapshot: '',
+      };
+      this.showOfferModal.set(true);
+      return;
+    }
+    /*
      * A renegotiation starts from the round it replaces — including a counter-proposal, if
      * finance made one: that figure is what they said they WOULD approve, so it is the most
      * useful number to open on. Falls back to the previous round's own proposal.
      */
     const counter = this.currentApproval()?.contrePropSalaire ?? null;
+    // A first round opens on the two salaries typed at the candidate's creation: the
+    // candidate's wish (desired) and RH's figure (proposed). RH can change either before costing.
     this.offerForm = mode === 'renegotiate' && o
-      ? { askedSalary: o.askedSalary, proposedSalary: counter ?? o.proposedSalary,
+      ? { askedSalary: o.askedSalary ?? this.desiredSalary(),
+          proposedSalary: counter ?? o.proposedSalary,
           salaryNote: o.salaryNote, noticePeriodDays: o.noticePeriodDays,
           noticePeriodNote: o.noticePeriodNote,
-          expectedHireDate: o.expectedHireDate, expiryDate: o.expiryDate,
+          expectedHireDate: o.expectedHireDate ?? this.plannedHireDate(), expiryDate: o.expiryDate,
           simulationSnapshot: '' }
-      : { askedSalary: null, proposedSalary: null, salaryNote: null,
-          expectedHireDate: null, expiryDate: null, simulationSnapshot: '' };
+      : { askedSalary: this.desiredSalary(), proposedSalary: this.budgetSalary(), salaryNote: null,
+          expectedHireDate: this.plannedHireDate(), expiryDate: null, simulationSnapshot: '' };
     this.showOfferModal.set(true);
+    // The proposed figure is already there: cost it straight away so the breakdown shows
+    // with the values, instead of an empty panel waiting for a click.
+    if ((this.offerForm.proposedSalary ?? 0) > 0) this.simulate();
   }
 
   /**
@@ -233,9 +298,10 @@ export class OfferSectionComponent {
       ...this.offerForm,
       simulationSnapshot: JSON.stringify(sim),
       fiscalYear: new Date().getFullYear(),
+      candidateCounter: this.offerMode() === 'counter',
     };
     // Both verbs hit the same backend method — a renegotiation IS a new round.
-    const call = this.offerMode() === 'renegotiate'
+    const call = this.offerMode() !== 'send'
       ? this.offerService.renegotiateOffer(id, body)
       : this.offerService.draftOffer(id, body);
     call.subscribe({
