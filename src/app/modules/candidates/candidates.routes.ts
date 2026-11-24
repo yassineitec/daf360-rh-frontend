@@ -17,6 +17,15 @@ export const candidatesRoutes: Routes = [
       import('../pipeline/pipeline.component').then(m => m.PipelineComponent),
   },
   {
+    // « Historique » tab of the board page — before ':id', or « historique » would be read
+    // as a candidate id.
+    path: 'historique',
+    canActivate: [permissionGuard],
+    data: { permissions: CANDIDATE_PERMISSIONS },
+    loadComponent: () =>
+      import('../pipeline/candidates-history.component').then(m => m.CandidatesHistoryComponent),
+  },
+  {
     path: 'list',
     canActivate: [permissionGuard],
     data: { permissions: CANDIDATE_PERMISSIONS },

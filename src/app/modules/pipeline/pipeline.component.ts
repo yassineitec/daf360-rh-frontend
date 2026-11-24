@@ -7,8 +7,6 @@ import {
   DafHasPermissionDirective,
   FilterField,
   FilterResult,
-  MetricCardComponent,
-  MetricDelta,
   PageComponent,
   PageHeaderComponent,
   SearchToolbarComponent,
@@ -28,6 +26,8 @@ import {
   candidatureStage,
 } from './board.model';
 import { RefuseOfferModalComponent } from './components/refuse-offer-modal.component';
+import { CandidatesTabsComponent } from './components/candidates-tabs.component';
+import { CandidatesKpisComponent } from './components/candidates-kpis.component';
 import { PipelineBoardSectionComponent } from './sections/pipeline-board-section.component';
 import { PipelineMobileSectionComponent, MobilePipelineItem } from './sections/pipeline-mobile-section.component';
 import { PipelineTableSectionComponent, PipelineTableSort } from './sections/pipeline-table-section.component';
@@ -83,7 +83,6 @@ const GUIDE_STEPS: GuideStep[] = [
   imports: [
     ButtonComponent,
     DafHasPermissionDirective,
-    MetricCardComponent,
     PageComponent,
     PageHeaderComponent,
     SearchToolbarComponent,
@@ -91,6 +90,8 @@ const GUIDE_STEPS: GuideStep[] = [
     PipelineTableSectionComponent,
     PipelineMobileSectionComponent,
     RefuseOfferModalComponent,
+    CandidatesTabsComponent,
+    CandidatesKpisComponent,
     PageGuideComponent,
     TranslatePipe,
   ],
@@ -189,13 +190,12 @@ export class PipelineComponent implements OnInit {
 
   // ── Board ──────────────────────────────────────────────────────────────────
   /**
-   * The three recruitment steps (Entretiens / Validation RH / Offre), populated from the
-   * kanban response.
+   * The five recruitment steps (Présélection / Entretiens / Validation RH / Offre /
+   * Embauché), populated from the kanban response.
    *
    * The server's own grouping (its `stage` columns) is NOT used: it predates the reworked
-   * process. Every card is placed by `candidatureStage` — the candidate page's rail rule —
-   * from its status and its interview / offer counters. Post-offer, hired and closed files
-   * have no step and are left out: they live on « Pipeline RH ».
+   * process. Every card is placed by `candidatureStage` from its status and its interview /
+   * offer counters. Rejected files have no step and are left out.
    */
   readonly boardColumns = computed<BoardColumn[]>(() => {
     this.translate.currentLang();
@@ -359,52 +359,7 @@ export class PipelineComponent implements OnInit {
     this.notice.set(null);
   }
 
-  // ── KPI tiles ──────────────────────────────────────────────────────────────
-  readonly kpiTotal  = computed(() => this.stats()?.totalCandidats ?? 0);
-  readonly kpiDelay  = computed(() => this.stats()?.delaiMoyenJours ?? null);
-  readonly kpiUrgent = computed(() => this.stats()?.urgents ?? 0);
-
-  readonly totalMetricValue = computed(() => this.kpiTotal().toLocaleString('fr-FR'));
-  readonly delayMetricValue = computed(() => {
-    this.translate.currentLang();
-    const d = this.kpiDelay();
-    return d != null ? this.translate.instant('PIPELINE.DAYS', { count: d }) : '—';
-  });
-  readonly urgentMetricValue = computed(() => {
-    this.translate.currentLang();
-    return this.translate.instant('PIPELINE.URGENT_OPEN', { count: this.kpiUrgent() });
-  });
-
-  /** Deltas are translated — they used to be hardcoded English on a French page. */
-  readonly totalDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const s = this.stats();
-    if (!s) return null;
-    const rate = s.totalCandidats > 0 ? Math.round((s.recrutementsClos / s.totalCandidats) * 100) : 0;
-    return {
-      value: this.translate.instant('PIPELINE.DELTA.CLOSURE_RATE', { pct: rate }),
-      direction: rate >= 50 ? 'up' : rate >= 30 ? 'neutral' : 'down',
-    };
-  });
-
-  readonly delayDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const d = this.kpiDelay();
-    if (d == null) return null;
-    return d > 30 ? { value: this.translate.instant('PIPELINE.DELTA.DELAY_OVER'),  direction: 'down'    }
-         : d > 15 ? { value: this.translate.instant('PIPELINE.DELTA.DELAY_OK'),    direction: 'neutral' }
-                  : { value: this.translate.instant('PIPELINE.DELTA.DELAY_GOOD'),  direction: 'up'      };
-  });
-
-  readonly urgentDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const urgent = this.kpiUrgent();
-    if (urgent === 0) return null;
-    return {
-      value: this.translate.instant('PIPELINE.DELTA.URGENT', { count: urgent }),
-      direction: 'down',
-    };
-  });
+  // KPI tiles: `rh-candidates-kpis`, fed `stats()` — shared with the Historique tab.
 
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {

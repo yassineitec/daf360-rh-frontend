@@ -28,8 +28,10 @@ export function badgeVariant(badgeType: string | undefined): BadgeVariant {
 /** Badge variant for a board stage (a recruitment step), used by the table's `stage` column. */
 export function stageVariant(stage: string | undefined): BadgeVariant {
   switch ((stage ?? '').toUpperCase()) {
-    case 'OFFER':      return 'warning';
-    case 'VALIDATION': return 'teal';
+    case 'OFFER':        return 'warning';
+    case 'VALIDATION':   return 'teal';
+    case 'HIRED':        return 'success';
+    case 'PRESELECTION': return 'neutral';
     default:           return 'info';
   }
 }

@@ -1763,12 +1763,114 @@
       "PENDING": "En attente",
       "HIRED": "Embauchés"
     },
+    "TABS": {
+      "BOARD": "Kanban",
+      "HISTORY": "Historique"
+    },
     "HISTORY": {
+      "SUBTITLE": "Toutes les actions sur les candidatures, et qui les a faites.",
+      "DEFAULT_WINDOW": "Sans période choisie : les 12 derniers mois.",
+      "COL_CANDIDATE": "Candidat",
+      "COL_POSITION": "Poste",
+      "ALL": "Tous",
       "TITLE": "Historique des décisions",
       "SUB": "Cliquez sur un candidat pour voir son historique",
       "SELECT_PROMPT": "Sélectionnez un candidat",
       "SELECT_HINT": "pour voir l'historique de ses décisions",
-      "EMPTY": "Aucun historique disponible"
+      "EMPTY": "Aucun historique disponible",
+      "EMPTY_FILTERED": "Aucune action ne correspond à la recherche ou aux filtres.",
+      "SEARCH": "Rechercher une action, une personne, un détail…",
+      "RETRY": "Réessayer",
+      "ERR_LOAD": "Impossible de charger l'historique.",
+      "FILTER_DATE": "Date",
+      "ALL_STATUSES": "Tous les statuts",
+      "COL_DATE": "Date",
+      "COL_ACTION": "Action",
+      "COL_CATEGORY": "Type",
+      "COL_ACTOR": "Par",
+      "COL_STATUS": "Statut",
+      "COL_DETAIL": "Détail",
+      "SYSTEM": "Système",
+      "CATEGORY": {
+        "CANDIDATE": "Candidature",
+        "INTERVIEW": "Entretien",
+        "OFFER": "Offre",
+        "FINANCE": "Finance",
+        "ONBOARDING": "Onboarding"
+      },
+      "ACTION": {
+        "CREATE": "Candidature créée",
+        "CREATE_CANDIDATE": "Candidature créée",
+        "UPDATE": "Profil modifié",
+        "UPDATE_CANDIDATE": "Profil modifié",
+        "UPLOAD_CV": "CV téléversé",
+        "ACCEPT": "Candidature validée",
+        "ACCEPT_CANDIDATE": "Candidature validée",
+        "REJECT": "Candidature refusée",
+        "REJECT_CANDIDATE": "Candidature refusée",
+        "DRAFT_OFFER": "Offre préparée",
+        "SEND_OFFER": "Offre envoyée",
+        "FINANCE_COUNTER_OFFER": "Contre-proposition DAF",
+        "OFFER_AGREED": "Accord sur la contre-proposition du candidat",
+        "ACCEPT_OFFER": "Offre acceptée",
+        "REJECT_OFFER": "Offre refusée",
+        "HIRE_CANDIDATE": "Embauche",
+        "UPDATE_IT_PROVISIONING": "Provisioning IT mis à jour",
+        "SUBMIT_MS365_EMAIL": "Compte Microsoft 365 créé",
+        "COMPLETE_IT_PROVISIONING": "Provisioning IT terminé",
+        "COMPLETE_ONBOARDING_PROFILE": "Dossier RH complété",
+        "INTERVIEW_PLANNED": "Entretien planifié",
+        "INTERVIEW_CANCELLED": "Entretien annulé",
+        "INTERVIEW_PV": "PV d'entretien déposé",
+        "INTERVIEW_VALIDATED": "Entretien validé par RH",
+        "FINANCE_SUBMITTED": "Envoyé en validation financière",
+        "FINANCE_DECIDED": "Décision financière"
+      },
+      "STATUS": {
+        "PENDING": "En attente",
+        "ACCEPTED": "Accepté",
+        "OFFER_SENT": "Offre envoyée",
+        "OFFER_DRAFT": "Offre en préparation",
+        "HR_IN_PROGRESS": "Onboarding en cours",
+        "IT_IN_PROGRESS": "IT en cours",
+        "EMAIL_RECEIVED": "E-mail reçu",
+        "HIRED": "Embauché",
+        "REJECTED": "Refusé",
+        "ARCHIVED": "Archivé",
+        "PLANNED": "Planifié",
+        "PV_FILED": "PV déposé",
+        "PASS": "Réussi",
+        "FAIL": "Échoué",
+        "CANCELLED": "Annulé",
+        "FINANCE_PENDING": "En attente finance",
+        "FINANCE_APPROVED": "Validé par la finance",
+        "FINANCE_REJECTED": "Refusé par la finance",
+        "IT_EMAIL_CREATED": "Compte M365 créé",
+        "IT_COMPLETED": "IT terminé",
+        "PROFILE_CREATED": "Profil employé créé"
+      },
+      "OPINION": {
+        "FAVORABLE": "Favorable",
+        "RESERVED": "Réservé",
+        "UNFAVORABLE": "Défavorable"
+      },
+      "PROPOSED_BY": {
+        "RH": "RH",
+        "DAF": "DAF",
+        "CANDIDATE": "le candidat"
+      },
+      "DETAIL": {
+        "round": "Tour {{value}}",
+        "proposedSalary": "Salaire proposé : {{value}}",
+        "counterSalary": "Contre-proposition : {{value}}",
+        "proposedBy": "Proposé par {{value}}",
+        "noticePeriodDays": "Préavis : {{value}} j",
+        "scheduledAt": "Le {{value}}",
+        "opinion": "Avis : {{value}}",
+        "cv": "Fichier : {{value}}",
+        "email": "E-mail : {{value}}",
+        "contractType": "Contrat : {{value}}"
+      }
     },
     "WORKFLOW": {
       "TITLE": "Automatisation du Workflow",
@@ -1946,6 +2048,12 @@
       "CV_DOWNLOAD_ERROR": "Le téléchargement du CV a échoué."
     },
     "RAIL": {
+      "PRESELECTION": "Présélection",
+      "PRESELECTION_TODO": "CV à étudier — entretien à planifier",
+      "HIRED": "Embauché",
+      "HIRED_ONBOARDING": "Onboarding en cours",
+      "HIRED_ONBOARDING_PCT": "Onboarding en cours — {{pct}} %",
+      "HIRED_DONE": "Intégré",
       "INTERVIEWS": "Entretiens",
       "INTERVIEWS_NONE": "À planifier",
       "INTERVIEWS_PV": "{{filed}}/{{total}} PV déposé(s)",
@@ -2486,6 +2594,7 @@
       "OFFER_ACCEPTED": "Offre acceptée — provisioning en cours.",
       "OFFER_IN_PREP": "Offre en préparation.",
       "INTERVIEW_TO_SCHEDULE": "Entretien à planifier",
+      "APPLIED_ON": "Reçue le {{date}}",
       "OFFER_ACCEPTED_SHORT": "Acceptée",
       "SEND_OFFER_TITLE": "Envoyer une offre",
       "ACCEPT_OFFER_TITLE": "Accepter l'offre",
@@ -3069,7 +3178,7 @@
     "GUIDE": {
       "WELCOME": {
         "TITLE": "Bienvenue sur la page Candidats",
-        "TEXT": "Cette page suit les candidatures étape par étape : Préqualification, Entretien, Offre et Recruté. Le bouton « Nouveau Candidat », en haut à droite, ajoute un candidat (selon vos droits). Suivez ce guide pour découvrir la page."
+        "TEXT": "Cette page suit les candidatures étape par étape : Présélection, Entretiens, Validation RH, Offre et Embauché. Le bouton « Nouveau Candidat », en haut à droite, ajoute un candidat (selon vos droits). Suivez ce guide pour découvrir la page."
       },
       "KPIS": {
         "TITLE": "Les compteurs",
@@ -3081,7 +3190,7 @@
       },
       "BOARD": {
         "TITLE": "Les étapes",
-        "TEXT": "Quatre colonnes : Préqualification, Entretien, Offre et Recruté. Un candidat qui a déjà un entretien planifié passe en « Entretien ». Dans chaque colonne, les candidats sont triés par score « Fit » ; la flèche de l'en-tête inverse l'ordre. Cliquez sur une carte pour ouvrir la fiche du candidat."
+        "TEXT": "Cinq colonnes : Présélection (aucun entretien encore), Entretiens, Validation RH, Offre et Embauché (onboarding en cours ou terminé). Un candidat passe en « Entretiens » dès son premier entretien planifié. Dans chaque colonne, les candidats sont triés par score « Fit » ; la flèche de l'en-tête inverse l'ordre. Cliquez sur une carte pour ouvrir la fiche du candidat."
       },
       "ACTIONS": {
         "TITLE": "Les actions des cartes",

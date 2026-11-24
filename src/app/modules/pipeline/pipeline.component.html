@@ -15,27 +15,11 @@
     </ng-container>
   </daf-page-header>
 
-  <!-- KPIs — one row at every width, never wraps. The bespoke mobile stat strip
-       is gone: three metric cards at grid-cols-3 gap-2 cover both widths. -->
-  <section data-guide="kpis" class="grid grid-cols-3 gap-2 sm:gap-6">
-    <daf-metric-card
-      [label]="'PIPELINE.KPI_TOTAL' | translate"
-      [value]="totalMetricValue()"
-      [delta]="totalDelta()"
-      [options]="{ icon: 'group', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
+  <!-- Page-level KPIs ABOVE the tab strip: the same row on both tabs (Kanban | Historique). -->
+  <rh-candidates-kpis [stats]="stats()" />
 
-    <daf-metric-card
-      [label]="'PIPELINE.KPI_AVG_DELAY' | translate"
-      [value]="delayMetricValue()"
-      [delta]="delayDelta()"
-      [options]="{ icon: 'timer', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
-
-    <daf-metric-card
-      [label]="'PIPELINE.KPI_URGENT' | translate"
-      [value]="urgentMetricValue()"
-      [delta]="urgentDelta()"
-      [options]="{ icon: 'priority_high', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
-  </section>
+  <!-- Kanban | Historique — one page, two route-backed tabs (like « Provisioning IT »). -->
+  <rh-candidates-tabs active="board" />
 
   <!-- Search + filters + view toggle: one lib toolbar, one card. Replaces the
        hand-rolled search card, its mobile search toggle and the bespoke

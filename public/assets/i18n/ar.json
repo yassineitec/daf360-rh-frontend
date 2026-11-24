@@ -1,5 +1,111 @@
 {
-  "STATUS_BADGE": {
+  "CANDIDATES": {
+    "TABS": {
+      "BOARD": "كانبان",
+      "HISTORY": "السجل"
+    },
+    "HISTORY": {
+      "SUBTITLE": "كل الإجراءات على الترشحات، ومن قام بها.",
+      "DEFAULT_WINDOW": "بدون فترة محددة: آخر 12 شهرًا.",
+      "COL_CANDIDATE": "المرشح",
+      "COL_POSITION": "المنصب",
+      "ALL": "الكل",
+      "EMPTY": "لا يوجد سجل",
+      "EMPTY_FILTERED": "لا يوجد إجراء يطابق البحث أو عوامل التصفية.",
+      "SEARCH": "ابحث عن إجراء أو شخص أو تفصيل…",
+      "RETRY": "إعادة المحاولة",
+      "ERR_LOAD": "تعذّر تحميل السجل.",
+      "FILTER_DATE": "التاريخ",
+      "ALL_STATUSES": "كل الحالات",
+      "COL_DATE": "التاريخ",
+      "COL_ACTION": "الإجراء",
+      "COL_CATEGORY": "النوع",
+      "COL_ACTOR": "بواسطة",
+      "COL_STATUS": "الحالة",
+      "COL_DETAIL": "التفاصيل",
+      "SYSTEM": "النظام",
+      "CATEGORY": {
+        "CANDIDATE": "الترشح",
+        "INTERVIEW": "مقابلة",
+        "OFFER": "العرض",
+        "FINANCE": "المالية",
+        "ONBOARDING": "الإدماج"
+      },
+      "ACTION": {
+        "CREATE": "إنشاء الترشح",
+        "CREATE_CANDIDATE": "إنشاء الترشح",
+        "UPDATE": "تعديل الملف",
+        "UPDATE_CANDIDATE": "تعديل الملف",
+        "UPLOAD_CV": "رفع السيرة الذاتية",
+        "ACCEPT": "قبول الترشح",
+        "ACCEPT_CANDIDATE": "قبول الترشح",
+        "REJECT": "رفض الترشح",
+        "REJECT_CANDIDATE": "رفض الترشح",
+        "DRAFT_OFFER": "إعداد العرض",
+        "SEND_OFFER": "إرسال العرض",
+        "FINANCE_COUNTER_OFFER": "عرض مقابل من المدير المالي",
+        "OFFER_AGREED": "الموافقة على العرض المقابل للمرشح",
+        "ACCEPT_OFFER": "قبول العرض",
+        "REJECT_OFFER": "رفض العرض",
+        "HIRE_CANDIDATE": "التوظيف",
+        "UPDATE_IT_PROVISIONING": "تحديث التجهيز المعلوماتي",
+        "SUBMIT_MS365_EMAIL": "إنشاء حساب Microsoft 365",
+        "COMPLETE_IT_PROVISIONING": "اكتمال التجهيز المعلوماتي",
+        "COMPLETE_ONBOARDING_PROFILE": "اكتمال ملف الموارد البشرية",
+        "INTERVIEW_PLANNED": "برمجة مقابلة",
+        "INTERVIEW_CANCELLED": "إلغاء مقابلة",
+        "INTERVIEW_PV": "إيداع محضر المقابلة",
+        "INTERVIEW_VALIDATED": "مصادقة الموارد البشرية على المقابلة",
+        "FINANCE_SUBMITTED": "إرسال للمصادقة المالية",
+        "FINANCE_DECIDED": "القرار المالي"
+      },
+      "STATUS": {
+        "PENDING": "قيد الانتظار",
+        "ACCEPTED": "مقبول",
+        "OFFER_SENT": "تم إرسال العرض",
+        "OFFER_DRAFT": "العرض قيد الإعداد",
+        "HR_IN_PROGRESS": "الإدماج جارٍ",
+        "IT_IN_PROGRESS": "التجهيز المعلوماتي جارٍ",
+        "EMAIL_RECEIVED": "تم استلام البريد",
+        "HIRED": "تم التوظيف",
+        "REJECTED": "مرفوض",
+        "ARCHIVED": "مؤرشف",
+        "PLANNED": "مبرمجة",
+        "PV_FILED": "تم إيداع المحضر",
+        "PASS": "ناجحة",
+        "FAIL": "غير ناجحة",
+        "CANCELLED": "ملغاة",
+        "FINANCE_PENDING": "في انتظار المالية",
+        "FINANCE_APPROVED": "صادقت عليه المالية",
+        "FINANCE_REJECTED": "رفضته المالية",
+        "IT_EMAIL_CREATED": "تم إنشاء حساب M365",
+        "IT_COMPLETED": "اكتمل التجهيز المعلوماتي",
+        "PROFILE_CREATED": "تم إنشاء ملف الموظف"
+      },
+      "OPINION": {
+        "FAVORABLE": "إيجابي",
+        "RESERVED": "متحفظ",
+        "UNFAVORABLE": "سلبي"
+      },
+      "PROPOSED_BY": {
+        "RH": "الموارد البشرية",
+        "DAF": "المدير المالي",
+        "CANDIDATE": "المرشح"
+      },
+      "DETAIL": {
+        "round": "الجولة {{value}}",
+        "proposedSalary": "الأجر المقترح: {{value}}",
+        "counterSalary": "العرض المقابل: {{value}}",
+        "proposedBy": "اقترحه {{value}}",
+        "noticePeriodDays": "مدة الإشعار: {{value}} يوم",
+        "scheduledAt": "في {{value}}",
+        "opinion": "الرأي: {{value}}",
+        "cv": "الملف: {{value}}",
+        "email": "البريد: {{value}}",
+        "contractType": "العقد: {{value}}"
+      }
+    }
+  },  "STATUS_BADGE": {
     "CONGE": "إجازة",
     "MALADIE": "مرض",
     "MATERNITE": "أمومة",
@@ -1669,7 +1775,7 @@
     "GUIDE": {
       "WELCOME": {
         "TITLE": "مرحبًا بك في صفحة المترشحين",
-        "TEXT": "تتابع هذه الصفحة الترشحات مرحلة بمرحلة: Screening وInterview وOffer وRecruited. يتيح زر « New Candidate » أعلى اليمين إضافة مرشح (حسب صلاحياتك). اتبع هذا الدليل لاكتشاف الصفحة."
+        "TEXT": "تتابع هذه الصفحة الترشحات مرحلة بمرحلة: الانتقاء الأولي والمقابلات ومصادقة الموارد البشرية والعرض وتم التوظيف. يتيح زر « New Candidate » أعلى اليمين إضافة مرشح (حسب صلاحياتك). اتبع هذا الدليل لاكتشاف الصفحة."
       },
       "KPIS": {
         "TITLE": "العدادات",
@@ -1681,7 +1787,7 @@
       },
       "BOARD": {
         "TITLE": "المراحل",
-        "TEXT": "أربعة أعمدة: Screening وInterview وOffer وRecruited. المرشح الذي لديه مقابلة مبرمجة يظهر في « Interview ». في كل عمود، يُرتَّب المرشحون حسب نقاط « Fit »، ويعكس السهم في رأس العمود الترتيب. انقر على بطاقة لفتح صفحة المرشح."
+        "TEXT": "خمسة أعمدة: الانتقاء الأولي (بلا مقابلة بعد)، والمقابلات، ومصادقة الموارد البشرية، والعرض، وتم التوظيف (الإدماج جارٍ أو منتهٍ). ينتقل المرشح إلى « المقابلات » بمجرد برمجة أول مقابلة له. في كل عمود، يُرتَّب المرشحون حسب نقاط « Fit »، ويعكس السهم في رأس العمود الترتيب. انقر على بطاقة لفتح صفحة المرشح."
       },
       "ACTIONS": {
         "TITLE": "إجراءات البطاقات",

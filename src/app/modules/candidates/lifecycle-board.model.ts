@@ -147,12 +147,13 @@ function split<T extends string>(order: readonly T[], done: (s: T) => boolean): 
  */
 export function candidateCard(c: KanbanCandidate, t: Translate, locale: string): LifecycleCard | null {
   const stage = candidatureStage(c);
-  if (!stage) return null;
+  // An agreed offer is followed in the IT / Onboarding columns of this board, not here.
+  if (!stage || stage === 'HIRED') return null;
   const order: BoardStageKey[] = BOARD_STAGES.map(s => s.key);
   const def = BOARD_STAGES.find(s => s.key === stage)!;
   const detail = stepDetail(c);
   const meta: LifecycleMeta[] = [];
-  if (stage === 'INTERVIEWS') {
+  if (stage === 'PRESELECTION' || stage === 'INTERVIEWS') {
     meta.push(c.nextInterviewAt
       ? { icon: 'event', text: t('CANDIDATES.LIFECYCLE.NEXT_INTERVIEW', { date: shortDate(c.nextInterviewAt, locale) }) }
       : { icon: 'event_busy', text: t('CANDIDATES.KANBAN.NO_INTERVIEW'), muted: true });

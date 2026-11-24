@@ -124,8 +124,22 @@ export class CandidateService {
     );
   }
 
+  /** One candidate's history. Errors swallowed to [] — the rail and the drawer must never block. */
   getHistory(candidateId: number): Observable<CandidateHistoryItem[]> {
-    return this.http.get<CandidateHistoryItem[]>(this.base + '/' + candidateId + '/history').pipe(catchError(() => of([])));
+    return this.http.get<CandidateHistoryItem[]>(this.base + '/' + candidateId + '/history')
+      .pipe(catchError(() => of([])));
+  }
+
+  /**
+   * « Historique » tab of /rh/candidates — every candidate of the user's entities over
+   * [from, to] (yyyy-MM-dd, both included; none = the last 12 months). Errors kept: the tab
+   * says when the history could not be loaded.
+   */
+  getGlobalHistory(from?: string | null, to?: string | null): Observable<CandidateHistoryItem[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to)   params = params.set('to', to);
+    return this.http.get<CandidateHistoryItem[]>(this.base + '/history', { params });
   }
 
   hireCandidate(id: number, dto: HireCandidateRequest): Observable<HireCandidateResponse> {

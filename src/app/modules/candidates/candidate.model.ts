@@ -283,14 +283,36 @@ export interface CandidateDashboardStats {
   offerAcceptanceRate: number | null;
 }
 
+/** Where a history line comes from — the « Type » column of the Historique tab. */
+export type CandidateHistoryCategory = 'CANDIDATE' | 'INTERVIEW' | 'OFFER' | 'FINANCE' | 'ONBOARDING';
+
+/**
+ * One action on a candidature (GET /candidates/{id}/history, newest first) — merged by
+ * rh-service from the action log, the interviews and PVs, and the finance decisions.
+ */
 export interface CandidateHistoryItem {
-  id: number;
+  /** Unique across sources (`log-12`, `itv-4-planned`, `pv-7`, `fin-3-decided`). */
+  id: string;
+  /** ISO instant, UTC. */
   timestamp: string;
+  category: CandidateHistoryCategory;
+  /** Code, translated through CANDIDATES.HISTORY.ACTION.* — `actionLabel` is the fallback. */
   action: string;
   actionLabel: string;
+  performedByUserId: number | null;
   performedByName: string | null;
   comment: string | null;
+  /** The candidate's status after the action — candidature-level actions only (the rail reads it). */
   resultingStatus: string | null;
+  /** Outcome of the action, one namespace across sources — the « Statut » column and filter. */
+  status: string | null;
+  /** Facts of the action: round, proposedSalary, counterSalary, interviewType(En), opinion, scheduledAt, email, cv… */
+  details: Record<string, string> | null;
+  // ── Global history only (null on one candidate's history) ──
+  candidateId: number | null;
+  candidateName: string | null;
+  candidatePosition: string | null;
+  candidateGender: string | null;
 }
 
 export interface PageResponse<T> {

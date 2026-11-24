@@ -91,8 +91,8 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
         }
       </div>
 
-      <!-- Entretiens: skill chips -->
-      @if (stage() === 'INTERVIEWS' && candidate().skills.length) {
+      <!-- Présélection / Entretiens: skill chips -->
+      @if ((stage() === 'PRESELECTION' || stage() === 'INTERVIEWS') && candidate().skills.length) {
         <div class="flex flex-wrap gap-1.5 mb-3">
           @for (skill of candidate().skills.slice(0, 3); track skill) {
             <span class="bg-surface-container-low text-on-surface-variant text-[10px] px-2 py-0.5 rounded">
@@ -121,6 +121,32 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
       <div class="mt-auto pt-3 border-t border-outline-variant flex items-center justify-between gap-2
                   text-on-surface-variant text-[11px]">
         @switch (stage()) {
+
+          @case ('PRESELECTION') {
+            <span class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[14px] shrink-0">inbox</span>
+              <span class="truncate">
+                {{ 'PIPELINE.CARD.APPLIED_ON' | translate:{ date: candidate().applicationDate || '—' } }}
+              </span>
+            </span>
+            <span class="flex items-center gap-1 min-w-0 shrink-0">
+              <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
+              <span class="truncate max-w-[90px]">{{ candidate().location || '—' }}</span>
+            </span>
+          }
+
+          @case ('HIRED') {
+            <span class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[14px] shrink-0">badge</span>
+              <span class="truncate">{{ candidate().contractType || '—' }}</span>
+            </span>
+            @if (candidate().status !== 'HIRED' && candidate().progressPercent != null) {
+              <span class="flex items-center gap-1 min-w-0 shrink-0">
+                <span class="material-symbols-outlined text-[14px] shrink-0">progress_activity</span>
+                <span>{{ candidate().progressPercent }} %</span>
+              </span>
+            }
+          }
 
           @case ('INTERVIEWS') {
             <span class="flex items-center gap-1 min-w-0">

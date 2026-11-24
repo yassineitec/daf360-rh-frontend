@@ -1763,12 +1763,114 @@
       "PENDING": "Pending",
       "HIRED": "Hired"
     },
+    "TABS": {
+      "BOARD": "Kanban",
+      "HISTORY": "History"
+    },
     "HISTORY": {
+      "SUBTITLE": "Every action on the applications, and who took it.",
+      "DEFAULT_WINDOW": "No period chosen: the last 12 months.",
+      "COL_CANDIDATE": "Candidate",
+      "COL_POSITION": "Position",
+      "ALL": "All",
       "TITLE": "Decision history",
       "SUB": "Click a candidate to see their history",
       "SELECT_PROMPT": "Select a candidate",
       "SELECT_HINT": "to see their decision history",
-      "EMPTY": "No history available"
+      "EMPTY": "No history available",
+      "EMPTY_FILTERED": "No action matches the search or the filters.",
+      "SEARCH": "Search an action, a person, a detail…",
+      "RETRY": "Retry",
+      "ERR_LOAD": "The history could not be loaded.",
+      "FILTER_DATE": "Date",
+      "ALL_STATUSES": "All statuses",
+      "COL_DATE": "Date",
+      "COL_ACTION": "Action",
+      "COL_CATEGORY": "Type",
+      "COL_ACTOR": "By",
+      "COL_STATUS": "Status",
+      "COL_DETAIL": "Detail",
+      "SYSTEM": "System",
+      "CATEGORY": {
+        "CANDIDATE": "Application",
+        "INTERVIEW": "Interview",
+        "OFFER": "Offer",
+        "FINANCE": "Finance",
+        "ONBOARDING": "Onboarding"
+      },
+      "ACTION": {
+        "CREATE": "Application created",
+        "CREATE_CANDIDATE": "Application created",
+        "UPDATE": "Profile edited",
+        "UPDATE_CANDIDATE": "Profile edited",
+        "UPLOAD_CV": "CV uploaded",
+        "ACCEPT": "Application validated",
+        "ACCEPT_CANDIDATE": "Application validated",
+        "REJECT": "Application rejected",
+        "REJECT_CANDIDATE": "Application rejected",
+        "DRAFT_OFFER": "Offer prepared",
+        "SEND_OFFER": "Offer sent",
+        "FINANCE_COUNTER_OFFER": "DAF counter-offer",
+        "OFFER_AGREED": "Candidate's counter-offer agreed",
+        "ACCEPT_OFFER": "Offer accepted",
+        "REJECT_OFFER": "Offer declined",
+        "HIRE_CANDIDATE": "Hired",
+        "UPDATE_IT_PROVISIONING": "IT provisioning updated",
+        "SUBMIT_MS365_EMAIL": "Microsoft 365 account created",
+        "COMPLETE_IT_PROVISIONING": "IT provisioning completed",
+        "COMPLETE_ONBOARDING_PROFILE": "HR file completed",
+        "INTERVIEW_PLANNED": "Interview scheduled",
+        "INTERVIEW_CANCELLED": "Interview cancelled",
+        "INTERVIEW_PV": "Interview report filed",
+        "INTERVIEW_VALIDATED": "Interview validated by HR",
+        "FINANCE_SUBMITTED": "Sent for finance approval",
+        "FINANCE_DECIDED": "Finance decision"
+      },
+      "STATUS": {
+        "PENDING": "Pending",
+        "ACCEPTED": "Accepted",
+        "OFFER_SENT": "Offer sent",
+        "OFFER_DRAFT": "Offer in preparation",
+        "HR_IN_PROGRESS": "Onboarding in progress",
+        "IT_IN_PROGRESS": "IT in progress",
+        "EMAIL_RECEIVED": "Email received",
+        "HIRED": "Hired",
+        "REJECTED": "Rejected",
+        "ARCHIVED": "Archived",
+        "PLANNED": "Scheduled",
+        "PV_FILED": "Report filed",
+        "PASS": "Passed",
+        "FAIL": "Failed",
+        "CANCELLED": "Cancelled",
+        "FINANCE_PENDING": "Awaiting finance",
+        "FINANCE_APPROVED": "Approved by finance",
+        "FINANCE_REJECTED": "Refused by finance",
+        "IT_EMAIL_CREATED": "M365 account created",
+        "IT_COMPLETED": "IT completed",
+        "PROFILE_CREATED": "Employee profile created"
+      },
+      "OPINION": {
+        "FAVORABLE": "Favourable",
+        "RESERVED": "Reserved",
+        "UNFAVORABLE": "Unfavourable"
+      },
+      "PROPOSED_BY": {
+        "RH": "HR",
+        "DAF": "DAF",
+        "CANDIDATE": "the candidate"
+      },
+      "DETAIL": {
+        "round": "Round {{value}}",
+        "proposedSalary": "Proposed salary: {{value}}",
+        "counterSalary": "Counter-offer: {{value}}",
+        "proposedBy": "Proposed by {{value}}",
+        "noticePeriodDays": "Notice: {{value}} d",
+        "scheduledAt": "On {{value}}",
+        "opinion": "Opinion: {{value}}",
+        "cv": "File: {{value}}",
+        "email": "Email: {{value}}",
+        "contractType": "Contract: {{value}}"
+      }
     },
     "WORKFLOW": {
       "TITLE": "Workflow Automation",
@@ -1946,6 +2048,12 @@
       "CV_DOWNLOAD_ERROR": "The CV download failed."
     },
     "RAIL": {
+      "PRESELECTION": "Pre-selection",
+      "PRESELECTION_TODO": "CV to review — interview to schedule",
+      "HIRED": "Hired",
+      "HIRED_ONBOARDING": "Onboarding in progress",
+      "HIRED_ONBOARDING_PCT": "Onboarding in progress — {{pct}}%",
+      "HIRED_DONE": "Onboarded",
       "INTERVIEWS": "Interviews",
       "INTERVIEWS_NONE": "To schedule",
       "INTERVIEWS_PV": "{{filed}}/{{total}} report(s) filed",
@@ -2365,7 +2473,7 @@
       "COL_CANDIDATE": "Candidate",
       "COL_IT": "IT provisioning",
       "COL_ONBOARDING": "Onboarding",
-      "COL_CDI": "Move to CDI",
+      "COL_CDI": "Permanent contract requests",
       "COL_OFFBOARDING": "Offboarding",
       "EMPTY": "No file in progress",
       "NO_STEP_DONE": "No step validated yet",
@@ -2486,6 +2594,7 @@
       "OFFER_ACCEPTED": "Offer accepted — provisioning in progress.",
       "OFFER_IN_PREP": "Offer in preparation.",
       "INTERVIEW_TO_SCHEDULE": "Interview to schedule",
+      "APPLIED_ON": "Received {{date}}",
       "OFFER_ACCEPTED_SHORT": "Accepted",
       "SEND_OFFER_TITLE": "Send an offer",
       "ACCEPT_OFFER_TITLE": "Accept the offer",
@@ -3069,7 +3178,7 @@
     "GUIDE": {
       "WELCOME": {
         "TITLE": "Welcome to the Candidates page",
-        "TEXT": "This page follows applications step by step: Screening, Interview, Offer and Recruited. The « New Candidate » button, top right, adds a candidate (depending on your rights). Follow this guide to discover the page."
+        "TEXT": "This page follows applications step by step: Pre-selection, Interviews, HR validation, Offer and Hired. The « New Candidate » button, top right, adds a candidate (depending on your rights). Follow this guide to discover the page."
       },
       "KPIS": {
         "TITLE": "The counters",
@@ -3081,7 +3190,7 @@
       },
       "BOARD": {
         "TITLE": "The stages",
-        "TEXT": "Four columns: Screening, Interview, Offer and Recruited. A candidate who already has an interview scheduled shows under « Interview ». In each column, candidates are sorted by « Fit » score; the header arrow reverses the order. Click a card to open the candidate's page."
+        "TEXT": "Five columns: Pre-selection (no interview yet), Interviews, HR validation, Offer and Hired (onboarding running or done). A candidate moves to « Interviews » as soon as a first interview is scheduled. In each column, candidates are sorted by « Fit » score; the header arrow reverses the order. Click a card to open the candidate's page."
       },
       "ACTIONS": {
         "TITLE": "Card actions",

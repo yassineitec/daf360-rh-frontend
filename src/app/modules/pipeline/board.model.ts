@@ -4,16 +4,20 @@ import { KanbanCandidate } from './services/pipeline.service';
  * The candidature board's columns are the recruitment STEPS (the same ones the candidate
  * page's « Étape actuelle » card walks through), in order:
  *
- *   1. INTERVIEWS  — PENDING, interviews still to plan or a PV still missing.
- *   2. VALIDATION  — PENDING, every live interview has its PV: RH validates them, then
- *                    validates the candidature (status leaves PENDING).
- *   3. OFFER       — ACCEPTED / OFFER_SENT: the salary negotiation, round after round.
+ *   1. PRESELECTION — PENDING, no live interview yet: the CV is being screened, the first
+ *                     interview is still to plan.
+ *   2. INTERVIEWS   — PENDING, at least one live interview and a PV still missing.
+ *   3. VALIDATION   — PENDING, every live interview has its PV: RH validates them, then
+ *                     validates the candidature (status leaves PENDING).
+ *   4. OFFER        — ACCEPTED / OFFER_SENT: the salary negotiation, round after round.
+ *   5. HIRED        — the offer is agreed: HR_IN_PROGRESS (onboarding running, with the
+ *                     legacy IT_IN_PROGRESS / EMAIL_RECEIVED codes) and HIRED (file closed).
  *
- * Nothing after the offer: once both parties agree the candidate is handed to onboarding
- * (IT provisioning included) and is followed on « Pipeline RH », not here. Rejected and
- * archived candidatures are not a column either — they are closed.
+ * The onboarding itself is still followed on « Pipeline RH »; here the column only says the
+ * candidature ended in a hire. Rejected and archived candidatures are not a column — they
+ * are closed.
  */
-export type BoardStageKey = 'INTERVIEWS' | 'VALIDATION' | 'OFFER';
+export type BoardStageKey = 'PRESELECTION' | 'INTERVIEWS' | 'VALIDATION' | 'OFFER' | 'HIRED';
 
 /**
  * Which offer action a card emitted. Both now route to the candidate's Offre tab
@@ -43,10 +47,15 @@ export interface BoardColumn extends Omit<BoardStageDef, 'labelKey'> {
 
 /** Labels are the rail's own (CANDIDATES.RAIL.*): a column and the rail name a step alike. */
 export const BOARD_STAGES: BoardStageDef[] = [
-  { key: 'INTERVIEWS', labelKey: 'CANDIDATES.RAIL.INTERVIEWS', icon: 'record_voice_over', accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'  },
-  { key: 'VALIDATION', labelKey: 'CANDIDATES.RAIL.VALIDATION', icon: 'fact_check',        accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)' },
-  { key: 'OFFER',      labelKey: 'CANDIDATES.RAIL.OFFER',      icon: 'handshake',         accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)'  },
+  { key: 'PRESELECTION', labelKey: 'CANDIDATES.RAIL.PRESELECTION', icon: 'filter_alt',        accent: '#64748b', badgeBg: 'rgba(100,116,139,0.12)' },
+  { key: 'INTERVIEWS',   labelKey: 'CANDIDATES.RAIL.INTERVIEWS',   icon: 'record_voice_over', accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'   },
+  { key: 'VALIDATION',   labelKey: 'CANDIDATES.RAIL.VALIDATION',   icon: 'fact_check',        accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)'  },
+  { key: 'OFFER',        labelKey: 'CANDIDATES.RAIL.OFFER',        icon: 'handshake',         accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)'   },
+  { key: 'HIRED',        labelKey: 'CANDIDATES.RAIL.HIRED',        icon: 'how_to_reg',        accent: '#16a34a', badgeBg: 'rgba(22,163,74,0.12)'   },
 ];
+
+/** Statuses of an agreed offer: onboarding running (legacy IT / e-mail codes included) or done. */
+const HIRED_STATUSES = ['HR_IN_PROGRESS', 'IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HIRED'];
 
 /** Every live interview has its PV (status DONE) — the rail's « Entretiens » done rule. */
 function interviewsFiled(c: KanbanCandidate): boolean {
@@ -55,16 +64,18 @@ function interviewsFiled(c: KanbanCandidate): boolean {
 }
 
 /**
- * The step a candidature is at, or null when it is no candidature any more (offer agreed →
- * onboarding, hired, rejected, archived).
+ * The step a candidature is at, or null when it is closed without a hire (rejected,
+ * archived).
  */
 export function candidatureStage(c: KanbanCandidate): BoardStageKey | null {
-  switch (c.status) {
-    case 'PENDING':    return interviewsFiled(c) ? 'VALIDATION' : 'INTERVIEWS';
-    case 'ACCEPTED':
-    case 'OFFER_SENT': return 'OFFER';
-    default:           return null;
+  const status = c.status ?? '';
+  if (status === 'PENDING') {
+    if ((c.interviewsTotal ?? 0) === 0) return 'PRESELECTION';
+    return interviewsFiled(c) ? 'VALIDATION' : 'INTERVIEWS';
   }
+  if (status === 'ACCEPTED' || status === 'OFFER_SENT') return 'OFFER';
+  if (HIRED_STATUSES.includes(status)) return 'HIRED';
+  return null;
 }
 
 /**
@@ -75,6 +86,13 @@ export function candidatureStage(c: KanbanCandidate): BoardStageKey | null {
 export function stepDetail(c: KanbanCandidate): { key: string; params?: Record<string, unknown> } | null {
   const total = c.interviewsTotal ?? 0;
   switch (candidatureStage(c)) {
+    case 'PRESELECTION':
+      return { key: 'CANDIDATES.RAIL.PRESELECTION_TODO' };
+    case 'HIRED':
+      if (c.status === 'HIRED') return { key: 'CANDIDATES.RAIL.HIRED_DONE' };
+      return c.progressPercent != null
+        ? { key: 'CANDIDATES.RAIL.HIRED_ONBOARDING_PCT', params: { pct: c.progressPercent } }
+        : { key: 'CANDIDATES.RAIL.HIRED_ONBOARDING' };
     case 'INTERVIEWS':
       return total === 0
         ? { key: 'CANDIDATES.RAIL.INTERVIEWS_NONE' }
