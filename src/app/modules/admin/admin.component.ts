@@ -312,9 +312,10 @@ const GUIDE_STEPS: GuideStep[] = [
             <!-- No [paysId]: the help questions are company-wide. -->
             @if (activeTab() === 'help-faq')              { <app-help-faq-admin /> }
             @if (activeTab() === 'candidate-emails')      { <app-candidate-email-templates-admin [paysId]="paysId()" /> }
-            <!-- No [paysId]: the audit timeline is scoped server-side. [embedded]: the tab's
+            <!-- [paysId]: the picker narrows the timeline to that entity (plus the company-wide
+                 rows); the server still clamps it to the caller's perimeter. [embedded]: the tab's
                  breadcrumb header already names it, so the page's own title is dropped. -->
-            @if (activeTab() === 'audit')                 { <app-audit-log [embedded]="true" /> }
+            @if (activeTab() === 'audit')                 { <app-audit-log [embedded]="true" [paysId]="paysId()" [paysLabel]="currentPays()" /> }
             }
           </daf-page>
         </div>

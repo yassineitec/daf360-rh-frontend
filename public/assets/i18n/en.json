@@ -8452,7 +8452,12 @@
     "DETAIL_BEFORE": "Before",
     "DETAIL_AFTER": "After",
     "DETAIL_NO_FIELDS": "No data available for this change.",
-    "CLOSE": "Close"
+    "CLOSE": "Close",
+    "SEARCH": "Search an actor, an element, a value…",
+    "FILTER_DATE": "Period",
+    "ALL": "All",
+    "EMPTY_FILTERED": "No audit entry matches these filters.",
+    "PAYS_SCOPE": "Entity: {{pays}} — entries with no country (roles, users, catalogues) are shown too."
   },
   "NAV": {
     "MY_INTERVIEWS": "My interviews",

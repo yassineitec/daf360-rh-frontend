@@ -165,6 +165,12 @@ export function tableDomain(tableName: string): FunctionalDomain {
   return TABLE_DOMAINS[tableName] ?? 'Autre';
 }
 
+/** The tables, among those the log holds, a « Domaine » filter stands for -- sent to the server
+ *  as `entityTypes`. 'Autre' = every logged table no domain claims. */
+export function tablesOfDomain(domain: FunctionalDomain, loggedTables: string[]): string[] {
+  return loggedTables.filter(t => tableDomain(t) === domain);
+}
+
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'primary' | 'secondary' | 'neutral' | 'teal';
 
 /** I/U/D -> the same create/update/delete colour convention as version control and every other
@@ -228,8 +234,15 @@ export function rowEmployeeProfileId(entry: { entityType: string; entityId: stri
   return typeof id === 'number' ? id : null;
 }
 
+/** snake_case and CamelCase alike: offboarding_tasks / OffboardingTask → « Offboarding tasks » /
+ *  « Offboarding task » (event_log rows name their element in CamelCase, tables in snake_case). */
 function humanizeTableName(name: string): string {
-  return name.replace(/_/g, ' ').replace(/\b\p{L}/gu, c => c.toUpperCase());
+  const words = name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_\-]+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
 }
 
 const IDENTITY_FIELD_CANDIDATES = [

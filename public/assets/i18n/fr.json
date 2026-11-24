@@ -8452,7 +8452,12 @@
     "DETAIL_BEFORE": "Avant",
     "DETAIL_AFTER": "Après",
     "DETAIL_NO_FIELDS": "Aucune donnée disponible pour cette modification.",
-    "CLOSE": "Fermer"
+    "CLOSE": "Fermer",
+    "SEARCH": "Rechercher un acteur, un élément, une valeur…",
+    "FILTER_DATE": "Période",
+    "ALL": "Tous",
+    "EMPTY_FILTERED": "Aucune entrée d'audit ne correspond à ces filtres.",
+    "PAYS_SCOPE": "Entité : {{pays}} — les entrées sans pays (rôles, utilisateurs, catalogues) restent affichées."
   },
   "NAV": {
     "MY_INTERVIEWS": "Mes entretiens",
