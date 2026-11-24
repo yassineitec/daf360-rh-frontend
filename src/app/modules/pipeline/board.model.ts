@@ -10,12 +10,12 @@ import { KanbanCandidate } from './services/pipeline.service';
  *   3. VALIDATION   — PENDING, every live interview has its PV: RH validates them, then
  *                     validates the candidature (status leaves PENDING).
  *   4. OFFER        — ACCEPTED / OFFER_SENT: the salary negotiation, round after round.
- *   5. HIRED        — the offer is agreed: HR_IN_PROGRESS (onboarding running, with the
- *                     legacy IT_IN_PROGRESS / EMAIL_RECEIVED codes) and HIRED (file closed).
+ *   5. HIRED        — the offer is agreed and onboarding is still running: HR_IN_PROGRESS
+ *                     (with the legacy IT_IN_PROGRESS / EMAIL_RECEIVED codes), or HIRED with
+ *                     the IT file still open.
  *
- * The onboarding itself is still followed on « Pipeline RH »; here the column only says the
- * candidature ended in a hire. Rejected and archived candidatures are not a column — they
- * are closed.
+ * Once the RH file is submitted (HIRED) AND the IT file is closed, onboarding is over and the
+ * card leaves the board. Rejected and archived candidatures are not a column — they are closed.
  */
 export type BoardStageKey = 'PRESELECTION' | 'INTERVIEWS' | 'VALIDATION' | 'OFFER' | 'HIRED';
 
@@ -54,8 +54,19 @@ export const BOARD_STAGES: BoardStageDef[] = [
   { key: 'HIRED',        labelKey: 'CANDIDATES.RAIL.HIRED',        icon: 'how_to_reg',        accent: '#16a34a', badgeBg: 'rgba(22,163,74,0.12)'   },
 ];
 
-/** Statuses of an agreed offer: onboarding running (legacy IT / e-mail codes included) or done. */
-const HIRED_STATUSES = ['HR_IN_PROGRESS', 'IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HIRED'];
+/** Statuses of an agreed offer whose RH file is not submitted yet (legacy IT / e-mail codes included). */
+const ONBOARDING_STATUSES = ['HR_IN_PROGRESS', 'IT_IN_PROGRESS', 'EMAIL_RECEIVED'];
+
+/**
+ * The hire is still being onboarded: the RH file is open, or — once it is submitted (HIRED,
+ * the employee profile exists) — the IT file is not closed yet. When both are done the
+ * candidature leaves the board.
+ */
+function onboardingOpen(c: KanbanCandidate): boolean {
+  const status = c.status ?? '';
+  if (ONBOARDING_STATUSES.includes(status)) return true;
+  return status === 'HIRED' && !!c.itStatus && c.itStatus !== 'COMPLETED';
+}
 
 /** Every live interview has its PV (status DONE) — the rail's « Entretiens » done rule. */
 function interviewsFiled(c: KanbanCandidate): boolean {
@@ -74,7 +85,7 @@ export function candidatureStage(c: KanbanCandidate): BoardStageKey | null {
     return interviewsFiled(c) ? 'VALIDATION' : 'INTERVIEWS';
   }
   if (status === 'ACCEPTED' || status === 'OFFER_SENT') return 'OFFER';
-  if (HIRED_STATUSES.includes(status)) return 'HIRED';
+  if (onboardingOpen(c)) return 'HIRED';
   return null;
 }
 
@@ -89,7 +100,8 @@ export function stepDetail(c: KanbanCandidate): { key: string; params?: Record<s
     case 'PRESELECTION':
       return { key: 'CANDIDATES.RAIL.PRESELECTION_TODO' };
     case 'HIRED':
-      if (c.status === 'HIRED') return { key: 'CANDIDATES.RAIL.HIRED_DONE' };
+      // RH file submitted, the IT file is what is left.
+      if (c.status === 'HIRED') return { key: 'CANDIDATES.RAIL.HIRED_IT_PENDING' };
       return c.progressPercent != null
         ? { key: 'CANDIDATES.RAIL.HIRED_ONBOARDING_PCT', params: { pct: c.progressPercent } }
         : { key: 'CANDIDATES.RAIL.HIRED_ONBOARDING' };

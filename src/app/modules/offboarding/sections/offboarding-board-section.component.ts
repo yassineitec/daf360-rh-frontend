@@ -9,6 +9,8 @@ import {
   OFFBOARDING_KANBAN_COLUMN_DEFS, OffboardingKanbanColumn,
 } from '../offboarding-kanban.model';
 import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban-card.component';
+import { KanbanMinimapComponent, MinimapColumn } from '../../../shared/kanban-minimap.component';
+import { FillViewportDirective } from '../../../shared/fill-viewport.directive';
 
 /**
  * Desktop / tablet kanban board for `/rh/offboarding` (UI-PLAYBOOK §8b).
@@ -32,15 +34,18 @@ import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban
   selector: 'rh-offboarding-board-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [OffboardingKanbanCardComponent, SkeletonComponent, TranslatePipe],
+  imports: [OffboardingKanbanCardComponent, KanbanMinimapComponent, FillViewportDirective, SkeletonComponent, TranslatePipe],
   host: { class: 'hidden sm:block' },
   styles: [`
     /* The board scrolls horizontally (wheel / minimap) but hides its scrollbar —
        the minimap already communicates the position. */
     .custom-scroll   { scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar   { display: none; }
-    .custom-scroll-y { scrollbar-width: none; }
-    .custom-scroll-y::-webkit-scrollbar { display: none; }
+    /* A column's own scroll — the page never scrolls, the columns do: thin, always visible. */
+    .col-scroll { overflow-y: auto; overscroll-behavior: contain;
+                  scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) transparent; }
+    .col-scroll::-webkit-scrollbar { width: 6px; }
+    .col-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 3px; }
 
     /* A class, not a static style attribute: the same element also carries a
        [style.color] binding, and one source of inline style is easier to reason about. */
@@ -66,10 +71,11 @@ import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban
         {{ 'OFFBOARDING.KANBAN.READ_ONLY_HINT' | translate }}
       </p>
 
-      <div #board class="flex gap-6 overflow-x-auto pb-4 items-start custom-scroll scroll-smooth"
+      <!-- The page never scrolls: the board reaches the bottom of the window (rhFillViewport) and each column scrolls its own cards, every card there. -->
+      <div #board rhFillViewport class="flex gap-6 overflow-x-auto overflow-y-hidden pb-4 items-stretch custom-scroll scroll-smooth"
            (scroll)="syncBoardMetrics()">
         @for (col of columns(); track col.key) {
-          <div class="w-80 shrink-0 flex flex-col">
+          <div class="w-80 shrink-0 flex flex-col min-h-0">
 
             <!-- Column header: the stage's own glyph, the same one the detail page's rail
                  shows for that step. -->
@@ -89,9 +95,9 @@ import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban
               </button>
             </div>
 
-            <!-- Cards -->
-            <div class="flex flex-col gap-3 min-h-[120px] max-h-[610px] overflow-y-auto overscroll-contain
-                        rounded-xl p-1 pr-2 pt-4 custom-scroll-y">
+            <!-- Cards — every one, scrolling inside the column; the bottom space lets the last card
+                 scroll clear of the minimap. -->
+            <div class="col-scroll flex-1 min-h-0 flex flex-col gap-3 rounded-xl p-1 pr-2 pt-4 pb-24">
               @for (item of col.items; track item.id) {
                 <!-- draggable="false" suppresses the browser's own drag ghost. Without it
                      a card can be picked up and dropped on a column that will never
@@ -113,29 +119,8 @@ import { OffboardingKanbanCardComponent } from '../components/offboarding-kanban
         }
       </div>
 
-      <!-- Horizontal navigation minimap (fixed bottom-right) -->
-      @if (boardHasOverflow()) {
-        <div class="fixed bottom-6 right-6 z-40">
-          <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-2
-                      opacity-30 shadow-md origin-bottom-right transition-all duration-200
-                      hover:opacity-100 hover:scale-150 hover:shadow-2xl">
-            <div class="relative flex gap-1" style="width: 172px;">
-              @for (col of columns(); track col.key; let i = $index) {
-                <button type="button"
-                  class="flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105"
-                  [style.background]="col.badgeBg"
-                  [title]="col.label + ' (' + col.items.length + ')'"
-                  (click)="scrollToColumn(i)">
-                  <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
-                  <span class="text-[10px] font-bold leading-none" [style.color]="col.accent">{{ col.items.length }}</span>
-                </button>
-              }
-              <div class="absolute top-0 bottom-0 rounded-md border-2 border-primary pointer-events-none transition-all duration-150"
-                   [style.left]="viewportStyle().left" [style.width]="viewportStyle().width"></div>
-            </div>
-          </div>
-        </div>
-      }
+      <!-- Minimap — always on screen, bottom-right, wherever the page is scrolled. -->
+      <rh-kanban-minimap [columns]="minimapColumns()" [viewport]="viewportStyle()" (go)="scrollToColumn($event)" />
     }
   `,
 })
@@ -170,11 +155,8 @@ export class OffboardingBoardSectionComponent {
   private readonly board = viewChild<ElementRef<HTMLDivElement>>('board');
   private readonly boardScroll = signal({ left: 0, client: 0, scroll: 0 });
 
-  /** The minimap is only useful once the board actually overflows. */
-  protected readonly boardHasOverflow = computed(() => {
-    const b = this.boardScroll();
-    return b.scroll > b.client + 4;
-  });
+  protected readonly minimapColumns = computed<MinimapColumn[]>(() =>
+    this.columns().map(c => ({ key: c.key, label: c.label, accent: c.accent, badgeBg: c.badgeBg, count: c.items.length })));
 
   /** Position/size of the viewport indicator, as a % of the board width. */
   protected readonly viewportStyle = computed(() => {

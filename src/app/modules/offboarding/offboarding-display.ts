@@ -392,6 +392,30 @@ export function boardStageOf(wf: OffboardingWorkflowInstance): StageCode {
   return isTerminal(wf.status) ? 'CLOSURE' : stageProgressOf(wf).code;
 }
 
+/**
+ * Whether a file still belongs on the board.
+ *
+ * A running file always does. A finished one (validated or cancelled) stays in Clôture until
+ * the END OF THE MONTH its process ended, then leaves the board — the list view still shows
+ * it. The process ends at the later of the closing date (validated / cancelled) and the
+ * employee's last working day: a file validated before the person has left stays until the
+ * month they actually leave is over. An archived file, or a closed one with no date at all,
+ * is off the board.
+ */
+export function onBoard(wf: OffboardingWorkflowInstance, today: Date = new Date()): boolean {
+  if (!isTerminal(wf.status)) return true;
+  if (wf.status === 'ARCHIVED') return false;
+  const closedAt = wf.status === 'VALIDATED' ? wf.validatedAt : wf.cancelledAt;
+  const ends = [closedAt, wf.status === 'VALIDATED' ? wf.lastWorkingDay : null]
+    .filter((d): d is string => !!d)
+    .map(d => new Date(d.length === 10 ? d + 'T00:00:00' : d))
+    .filter(d => !isNaN(d.getTime()));
+  if (!ends.length) return false;
+  const end = new Date(Math.max(...ends.map(d => d.getTime())));
+  const month = (d: Date) => d.getFullYear() * 12 + d.getMonth();
+  return month(today) <= month(end);
+}
+
 export function stageProgressOf(wf: OffboardingWorkflowInstance): StageProgress {
   const states = resolveStageStates(wf, wf.tasks ?? []);
   const index  = activeStageIndex(states);

@@ -16,15 +16,21 @@ import {
   PaginationComponent,
   SearchToolbarComponent,
   SearchToolbarFilterConfig,
+  TabItem,
+  TabsComponent,
   ToolbarToggleOption,
+  tabParam,
 } from '@khalilrebhiitec/daf360';
+import { HistoryTableComponent } from '../../shared/history/history-table.component';
+import { HistoryEntry, HistoryLabels } from '../../shared/history/history.model';
+import { employeeAvatar } from '../../shared/utils/avatar.utils';
 
 import { OffboardingService } from './offboarding.service';
 import {
   DEPARTURE_REASONS, DepartureReason, OFFBOARDING_STATUSES, OffboardingStatus,
   OffboardingWorkflowInstance,
 } from './models/offboarding.model';
-import { StageCode, boardStageOf, isActive, isOverdue } from './offboarding-display';
+import { StageCode, boardStageOf, isActive, isOverdue, onBoard } from './offboarding-display';
 import { OffboardingCardsSectionComponent } from './sections/offboarding-cards-section.component';
 import {
   OffboardingSort, OffboardingTableSectionComponent, sortOffboarding,
@@ -82,6 +88,8 @@ const GUIDE_STEPS: GuideStep[] = [
     PageHeaderComponent,
     PaginationComponent,
     SearchToolbarComponent,
+    TabsComponent,
+    HistoryTableComponent,
     OffboardingCardsSectionComponent,
     OffboardingTableSectionComponent,
     OffboardingBoardSectionComponent,
@@ -105,6 +113,53 @@ export class OffboardingListComponent implements OnInit {
   // No `canManage` / UserStore here any more: it existed only to gate the "Démarrer un
   // offboarding" button, which has moved to the employee's profile page. This page is
   // read-only — every mutation happens inside a file, which has its own per-stage gates.
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  /** « Dossiers » (the board / list) | « Historique » — in the URL (?tab=history). */
+  readonly activeTab = tabParam<'files' | 'history'>(['files', 'history'], 'files');
+
+  readonly tabs = computed<TabItem[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'files',   label: this.translate.instant('OFFBOARDING.LIST.TAB_FILES'), icon: 'logout' },
+      { id: 'history', label: this.translate.instant('HISTORY.TAB'),              icon: 'history' },
+    ];
+  });
+
+  /**
+   * The history of this page's population — one departure reason on a /type/:reason page.
+   * The template recreates the table when the reason changes (sibling type pages reuse this
+   * component), so each source call reads the current reason.
+   */
+  readonly historySource = (from: string | null, to: string | null) =>
+    this.svc.getHistory(this.routeReason(), from, to);
+
+  readonly historyAvatar = (e: HistoryEntry) =>
+    employeeAvatar(e.subjectProfileId ?? null, e.subjectPhotoUrl ?? null, e.subjectGender ?? null);
+
+  readonly historyLabels: HistoryLabels = {
+    subject:      () => this.translate.instant('HISTORY.COL_EMPLOYEE'),
+    subtitle:     () => this.translate.instant('OFFBOARDING.HISTORY.REASON'),
+    subtitleText: e => (e.subjectSubtitle ? this.reasons.label(e.subjectSubtitle) : ''),
+    action:   e => this.tr('OFFBOARDING.AUDIT.ACTION.' + e.action, e.action),
+    category: c => this.tr('OFFBOARDING.HISTORY.CATEGORY.' + c, c),
+    status:   c => this.tr('OFFBOARDING.HISTORY.STATUS.' + c, c),
+    detailPrefix: 'OFFBOARDING.HISTORY.DETAIL.',
+    categoryVariant: c => (c === 'FILE' ? 'primary' : 'neutral'),
+  };
+
+  /** A history line opens its departure file (breadcrumb back to this type page, as from the board). */
+  openHistory(e: HistoryEntry): void {
+    if (e.subjectId != null) this.open(e.subjectId);
+  }
+
+  /** Key the template tracks to recreate the history table on a reason change. */
+  readonly historyKey = computed(() => [this.routeReason() ?? 'ALL']);
+
+  private tr(key: string, fallback: string): string {
+    const v = this.translate.instant(key);
+    return v && v !== key ? v : fallback;
+  }
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly items = signal<OffboardingWorkflowInstance[]>([]);
@@ -245,8 +300,9 @@ export class OffboardingListComponent implements OnInit {
         def => [def.key, []] as [StageCode, OffboardingWorkflowInstance[]],
       ),
     );
+    // A finished file stays in Clôture until the end of the month its process ended (onBoard).
     for (const wf of this.filteredItems()) {
-      buckets.get(boardStageOf(wf))?.push(wf);
+      if (onBoard(wf)) buckets.get(boardStageOf(wf))?.push(wf);
     }
 
     return OFFBOARDING_KANBAN_COLUMN_DEFS.map(def => {

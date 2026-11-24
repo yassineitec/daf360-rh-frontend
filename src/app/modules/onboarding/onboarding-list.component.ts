@@ -14,8 +14,14 @@ import {
   PaginationComponent,
   SearchToolbarComponent,
   SearchToolbarFilterConfig,
+  TabItem,
+  TabsComponent,
   ToolbarToggleOption,
+  tabParam,
 } from '@khalilrebhiitec/daf360';
+import { HistoryTableComponent } from '../../shared/history/history-table.component';
+import { HistoryEntry, HistoryLabels } from '../../shared/history/history.model';
+import { candidateAvatar } from '../candidates/candidate-display';
 
 import { OnboardingService } from './onboarding.service';
 import { CandidateOnboardingStatus, OnboardingKpiStats, OnboardingListItem } from './onboarding.model';
@@ -101,6 +107,8 @@ const GUIDE_STEPS: GuideStep[] = [
     PageHeaderComponent,
     PaginationComponent,
     SearchToolbarComponent,
+    TabsComponent,
+    HistoryTableComponent,
     OnboardingCardsSectionComponent,
     OnboardingTableSectionComponent,
     PageGuideComponent,
@@ -127,6 +135,43 @@ export class OnboardingListComponent implements OnInit {
   /** Every refresh after that — skeletons inside the affected section only. */
   readonly loading = signal(false);
   readonly error   = signal<string | null>(null);
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  /** « Dossiers » (the files in progress) | « Historique » — in the URL (?tab=history). */
+  readonly activeTab = tabParam<'files' | 'history'>(['files', 'history'], 'files');
+
+  readonly tabs = computed<TabItem[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'files',   label: this.translate.instant('ONBOARDING.LIST.TAB_FILES'), icon: 'person_add' },
+      { id: 'history', label: this.translate.instant('HISTORY.TAB'),              icon: 'history' },
+    ];
+  });
+
+  /** The onboarding lines for the shared history table. */
+  readonly historySource = (from: string | null, to: string | null) => this.service.getHistory(from, to);
+
+  readonly historyAvatar = (e: HistoryEntry) => candidateAvatar(e.subjectGender);
+
+  /** The labels of the onboarding lines — the candidate history's own (same log codes). */
+  readonly historyLabels: HistoryLabels = {
+    subject:  () => this.translate.instant('HISTORY.COL_PERSON'),
+    subtitle: () => this.translate.instant('CANDIDATES.HISTORY.COL_POSITION'),
+    action:   e => this.tr('CANDIDATES.HISTORY.ACTION.' + e.action, e.action),
+    category: c => this.tr('CANDIDATES.HISTORY.CATEGORY.' + c, c),
+    status:   c => this.tr('CANDIDATES.HISTORY.STATUS.' + c, this.tr('CANDIDATES.STATUS.' + c, c)),
+    detailPrefix: 'CANDIDATES.HISTORY.DETAIL.',
+  };
+
+  /** A history line opens the candidate's onboarding file. */
+  openHistory(e: HistoryEntry): void {
+    this.router.navigate(['/rh/onboarding', e.subjectId]);
+  }
+
+  private tr(key: string, fallback: string): string {
+    const v = this.translate.instant(key);
+    return v && v !== key ? v : fallback;
+  }
 
   // ── View state ─────────────────────────────────────────────────────────────
   readonly viewMode     = signal<ViewMode>('grid');

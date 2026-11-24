@@ -3,12 +3,11 @@ import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { ItProvisioningTabsComponent } from './it-provisioning-tabs.component';
+import { ItProvisioningKpisComponent } from './it-provisioning-kpis.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
   FilterResult,
-  MetricCardComponent,
-  MetricDelta,
   PageComponent,
   PageHeaderComponent,
   PaginationComponent,
@@ -110,7 +109,7 @@ const GUIDE_STEPS: GuideStep[] = [
 @Component({
   standalone: true,
   imports: [
-    MetricCardComponent,
+    ItProvisioningKpisComponent,
     PageComponent,
     PageHeaderComponent,
     PaginationComponent,
@@ -258,49 +257,8 @@ export class ItProvisioningListComponent implements OnInit {
     };
   });
 
-  /** Share of all files that are done — the same rate every tile's delta reads. */
-  private completionRate(incomplete: number): number {
-    const total = this.items().length;
-    return total > 0 ? Math.round(((total - incomplete) / total) * 100) : 0;
-  }
-
-  /** Deltas are translated — they used to be hardcoded English on a French page. */
-  readonly pendingDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const rate = this.completionRate(this.stats().pending);
-    return {
-      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_COMPLETE', { pct: rate }),
-      direction: rate >= 70 ? 'up' : rate >= 40 ? 'neutral' : 'down',
-    };
-  });
-
-  readonly overdueDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const overdue = this.stats().overdue;
-    if (overdue === 0) return null;
-    return {
-      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_OVERDUE', { count: overdue }),
-      direction: 'down',
-    };
-  });
-
-  readonly hwDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const rate = this.completionRate(this.stats().hwIncomplete);
-    return {
-      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_HW_READY', { pct: rate }),
-      direction: rate >= 70 ? 'up' : 'neutral',
-    };
-  });
-
-  readonly licDelta = computed<MetricDelta | null>(() => {
-    this.translate.currentLang();
-    const rate = this.completionRate(this.stats().licIncomplete);
-    return {
-      value: this.translate.instant('IT_PROVISIONING.LIST.DELTA_LIC_READY', { pct: rate }),
-      direction: rate >= 70 ? 'up' : 'neutral',
-    };
-  });
+  // The KPI tiles are `rh-it-provisioning-kpis` (above the tab strip, shared with the
+  // Historique tab); `stats` stays for the header subtitle's count.
 
   // ── Toolbar ────────────────────────────────────────────────────────────────
   /** The status dropdown belongs *inside* the filter panel, not loose beside the search. */

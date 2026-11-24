@@ -1769,28 +1769,13 @@
     },
     "HISTORY": {
       "SUBTITLE": "Every action on the applications, and who took it.",
-      "DEFAULT_WINDOW": "No period chosen: the last 12 months.",
       "COL_CANDIDATE": "Candidate",
       "COL_POSITION": "Position",
-      "ALL": "All",
       "TITLE": "Decision history",
       "SUB": "Click a candidate to see their history",
       "SELECT_PROMPT": "Select a candidate",
       "SELECT_HINT": "to see their decision history",
       "EMPTY": "No history available",
-      "EMPTY_FILTERED": "No action matches the search or the filters.",
-      "SEARCH": "Search an action, a person, a detail…",
-      "RETRY": "Retry",
-      "ERR_LOAD": "The history could not be loaded.",
-      "FILTER_DATE": "Date",
-      "ALL_STATUSES": "All statuses",
-      "COL_DATE": "Date",
-      "COL_ACTION": "Action",
-      "COL_CATEGORY": "Type",
-      "COL_ACTOR": "By",
-      "COL_STATUS": "Status",
-      "COL_DETAIL": "Detail",
-      "SYSTEM": "System",
       "CATEGORY": {
         "CANDIDATE": "Application",
         "INTERVIEW": "Interview",
@@ -1824,7 +1809,8 @@
         "INTERVIEW_PV": "Interview report filed",
         "INTERVIEW_VALIDATED": "Interview validated by HR",
         "FINANCE_SUBMITTED": "Sent for finance approval",
-        "FINANCE_DECIDED": "Finance decision"
+        "FINANCE_DECIDED": "Finance decision",
+        "SAVE_ONBOARDING_DRAFT": "HR file saved (draft)"
       },
       "STATUS": {
         "PENDING": "Pending",
@@ -1847,7 +1833,8 @@
         "FINANCE_REJECTED": "Refused by finance",
         "IT_EMAIL_CREATED": "M365 account created",
         "IT_COMPLETED": "IT completed",
-        "PROFILE_CREATED": "Employee profile created"
+        "PROFILE_CREATED": "Employee profile created",
+        "DRAFT_SAVED": "Draft saved"
       },
       "OPINION": {
         "FAVORABLE": "Favourable",
@@ -2067,7 +2054,8 @@
       "OFFER_DAF_TO_SEND": "Round {{round}} — DAF counter-offer to send",
       "OFFER_CANDIDATE_COUNTER": "Round {{round}} — candidate's request with the DAF",
       "OFFER_CANDIDATE": "Round {{round}} — awaiting the candidate's answer",
-      "OFFER_AGREED": "Salary agreed"
+      "OFFER_AGREED": "Salary agreed",
+      "HIRED_IT_PENDING": "Profile created — IT provisioning in progress"
     },
     "NEXT": {
       "CURRENT_LABEL": "Current step",
@@ -2917,7 +2905,8 @@
       "COL_ACTIONS": "Actions",
       "COMPLETE": "Complete",
       "FILES_WORD": "file(s)",
-      "COL_IT_STATUS": "IT status"
+      "COL_IT_STATUS": "IT status",
+      "TAB_FILES": "Files"
     },
     "STEPS": {
       "IDENTITY": "Identity",
@@ -5563,7 +5552,8 @@
       "STEP_OF": "step {{step}}/{{total}}",
       "NO_HANDOVER": "No successor",
       "NO_LAST_DAY": "Date TBD",
-      "EMPTY_NO_MATCH": "No offboarding case matches these filters"
+      "EMPTY_NO_MATCH": "No offboarding case matches these filters",
+      "TAB_FILES": "Files"
     },
     "BADGE": {
       "SLA_BREACHED": "SLA breached",
@@ -6028,6 +6018,30 @@
       "ERR_REOPEN": "Could not reopen the case.",
       "ERR_ARCHIVE": "Could not archive the case.",
       "ERR_AUDIT": "Could not load the audit trail."
+    },
+    "HISTORY": {
+      "REASON": "Departure type",
+      "CATEGORY": {
+        "FILE": "File",
+        "TASK": "Task",
+        "ASSET": "Equipment",
+        "CHECKLIST": "Checklist",
+        "SETTLEMENT": "Settlement",
+        "INTERVIEW": "Exit interview"
+      },
+      "STATUS": {
+        "STARTED": "Started",
+        "MANAGER_VALIDATED": "Manager opinion",
+        "HR_VALIDATED": "HR validated",
+        "DONE": "Done",
+        "SKIPPED": "Skipped",
+        "RETURNED": "Returned",
+        "PLANNED": "Scheduled",
+        "VALIDATED": "File validated",
+        "CANCELLED": "Cancelled",
+        "REOPENED": "Reopened",
+        "ARCHIVED": "Archived"
+      }
     }
   },
   "ADMIN": {
@@ -9264,5 +9278,57 @@
     "EMPTY_FILTERED": "No approved absence for these criteria.",
     "ERR_LOAD": "The statistics could not be loaded.",
     "ERR_EXPORT": "The export failed."
+  },
+  "HISTORY": {
+    "TAB": "History",
+    "SEARCH": "Search a person, an action, a detail…",
+    "RETRY": "Retry",
+    "ERR_LOAD": "The history could not be loaded.",
+    "FILTER_DATE": "Period",
+    "ALL": "All",
+    "ALL_STATUSES": "All statuses",
+    "COL_DATE": "Date",
+    "COL_ACTION": "Action",
+    "COL_CATEGORY": "Type",
+    "COL_ACTOR": "By",
+    "COL_STATUS": "Status",
+    "COL_DETAIL": "Detail",
+    "COL_EMPLOYEE": "Employee",
+    "COL_PERSON": "Person",
+    "SYSTEM": "System",
+    "EMPTY": "No action recorded over this period.",
+    "EMPTY_FILTERED": "No action matches the search or the filters.",
+    "DEFAULT_WINDOW": "No period chosen: the last 12 months.",
+    "FILTERS": {
+      "TITLE": "Filters",
+      "APPLY": "Apply",
+      "CANCEL": "Cancel",
+      "RESET": "Reset",
+      "TRIGGER": "Filters"
+    },
+    "CATEGORY": {
+      "REQUEST": "Request"
+    },
+    "DETAIL": {
+      "netSalary": "Net salary: {{value}}",
+      "startDate": "Start: {{value}}",
+      "lastWorkingDay": "Last day: {{value}}",
+      "label": "{{value}}",
+      "group": "Group: {{value}}",
+      "code": "Code: {{value}}",
+      "at": "On {{value}}",
+      "assets": "Equipment: {{value}}",
+      "executionDate": "Execution: {{value}}",
+      "prorata13": "13th-month prorata: {{value}}",
+      "accountDeactivationAt": "Access deactivation: {{value}}",
+      "byNamedManager": "By the named manager: {{value}}",
+      "isDone": "Done: {{value}}",
+      "text": "{{value}}",
+      "email": "Email: {{value}}",
+      "cv": "File: {{value}}",
+      "contractType": "Contract: {{value}}",
+      "round": "Round {{value}}",
+      "proposedSalary": "Proposed salary: {{value}}"
+    }
   }
 }

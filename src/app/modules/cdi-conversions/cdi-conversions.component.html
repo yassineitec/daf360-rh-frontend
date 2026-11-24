@@ -43,11 +43,20 @@
       </div>
     }
 
-    <daf-data-table data-guide="table"
-      [columns]="columns()"
-      [rows]="rows()"
-      [config]="config()"
-      (rowClick)="onRowClick($event)" />
+    @if (activeTab() === 'history') {
+      <!-- Every step of every visible request, and who took it; a line opens the request. -->
+      <rh-history-table
+        [source]="historySource"
+        [labels]="historyLabels"
+        [avatar]="historyAvatar"
+        (open)="openHistory($event)" />
+    } @else {
+      <daf-data-table data-guide="table"
+        [columns]="columns()"
+        [rows]="rows()"
+        [config]="config()"
+        (rowClick)="onRowClick($event)" />
+    }
   </div>
 
 </daf-page>

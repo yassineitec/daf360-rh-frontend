@@ -7,37 +7,12 @@
     [title]="'IT_PROVISIONING.LIST.TITLE' | translate"
     [subtitle]="'IT_PROVISIONING.LIST.SUBTITLE' | translate:{ count: stats().pending }" />
 
+  <!-- The page's KPIs, ABOVE the tab strip: the same row on both tabs. -->
+  <rh-it-provisioning-kpis [items]="items()" />
+
   <!-- « Dossiers en cours » / « Historique » — two tabs of one page (the sidebar has one
        entry for it, under Lifecycle). Route-backed: the other tab is its own URL. -->
   <rh-it-provisioning-tabs active="pending" />
-
-  <!-- KPIs — one row at every width. The two right-hand tiles used `text-amber` /
-       `bg-amber/10`, which renders nothing: `amber` is not a token (§4). -->
-  <section data-guide="kpis" class="grid grid-cols-4 gap-2 sm:gap-6">
-    <daf-metric-card
-      [label]="'IT_PROVISIONING.LIST.KPI_PENDING' | translate"
-      [value]="stats().pending"
-      [delta]="pendingDelta()"
-      [options]="{ icon: 'assignment_late', iconColor: 'text-primary', iconBg: 'bg-primary/10' }" />
-
-    <daf-metric-card
-      [label]="'IT_PROVISIONING.LIST.KPI_OVERDUE' | translate"
-      [value]="stats().overdue"
-      [delta]="overdueDelta()"
-      [options]="{ icon: 'error', iconColor: 'text-danger', iconBg: 'bg-danger/10' }" />
-
-    <daf-metric-card
-      [label]="'IT_PROVISIONING.LIST.KPI_HW_INCOMPLETE' | translate"
-      [value]="stats().hwIncomplete"
-      [delta]="hwDelta()"
-      [options]="{ icon: 'package_2', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
-
-    <daf-metric-card
-      [label]="'IT_PROVISIONING.LIST.KPI_LIC_INCOMPLETE' | translate"
-      [value]="stats().licIncomplete"
-      [delta]="licDelta()"
-      [options]="{ icon: 'subscriptions', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
-  </section>
 
   <!-- Search + status filter + refresh + view toggle: one lib toolbar, one card,
        one breakpoint. This replaces two separate hand-built cards (a desktop one

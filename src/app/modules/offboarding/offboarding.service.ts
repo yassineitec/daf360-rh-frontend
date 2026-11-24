@@ -11,6 +11,7 @@ import {
   UpdateChecklistItemRequest, UpdateDeclarationRequest, UpdateHandoverRequest,
   UpdateItSecurityRequest, UpdateSettlementRequest,
 } from './models/offboarding.model';
+import { HistoryEntry } from '../../shared/history/history.model';
 
 @Injectable({ providedIn: 'root' })
 export class OffboardingService {
@@ -119,6 +120,18 @@ export class OffboardingService {
   }
 
   /** The real trail, gathered across the six entity types a file touches. */
+  /**
+   * « Historique » tab — every action on every departure file over [from, to] (yyyy-MM-dd;
+   * none = 12 months), one departure reason when `reason` is set (the /type/:reason pages).
+   */
+  getHistory(reason: string | null, from: string | null, to: string | null): Observable<HistoryEntry[]> {
+    let params = new HttpParams();
+    if (reason) params = params.set('reason', reason);
+    if (from)   params = params.set('from', from);
+    if (to)     params = params.set('to', to);
+    return this.http.get<HistoryEntry[]>(`${this.base}/history`, { params });
+  }
+
   getAuditTrail(id: number): Observable<OffboardingAuditEntry[]> {
     return this.http.get<OffboardingAuditEntry[]>(`${this.base}/${id}/audit`);
   }

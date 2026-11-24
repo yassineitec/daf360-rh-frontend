@@ -6,8 +6,11 @@ import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   BadgeCell, ButtonComponent, DataTableComponent, FormFieldComponent, MetricCardComponent,
   PageComponent, PageHeaderComponent, TabItem, TableColumn, TableConfig, TableRow,
-  TabsComponent, tabParam,
+  TabsComponent, tabParam, BadgeVariant,
 } from '@khalilrebhiitec/daf360';
+import { HistoryTableComponent } from '../../shared/history/history-table.component';
+import { HistoryEntry, HistoryLabels } from '../../shared/history/history.model';
+import { employeeAvatar } from '../../shared/utils/avatar.utils';
 
 import { DafModalComponent } from '../../shared/daf-modal.component';
 import { errorMessage, formatAmount, initialsOf, localeDate, localeOf } from '../missions/mission-display';
@@ -17,7 +20,7 @@ import { cdiStatusKey, cdiStatusVariant } from './cdi-conversion-display';
 import { CdiConversionDetailDrawerComponent, CdiDrawerAction } from './cdi-conversion-detail-drawer.component';
 import { CdiConversionDecisionModalComponent } from './cdi-conversion-decision-modal.component';
 
-type TabKey = 'todo' | 'all';
+type TabKey = 'todo' | 'all' | 'history';
 
 /** Steps of the page guide, started from « Aide & guides »; `target` = a `data-guide` anchor. */
 const GUIDE_STEPS: GuideStep[] = [
@@ -44,7 +47,7 @@ const GUIDE_STEPS: GuideStep[] = [
   imports: [
     PageComponent, PageHeaderComponent, MetricCardComponent, TabsComponent, DataTableComponent,
     ButtonComponent, FormFieldComponent, DafModalComponent,
-    CdiConversionDetailDrawerComponent, CdiConversionDecisionModalComponent, TranslatePipe,
+    CdiConversionDetailDrawerComponent, CdiConversionDecisionModalComponent, HistoryTableComponent, TranslatePipe,
     PageGuideComponent,
   ],
   templateUrl: './cdi-conversions.component.html',
@@ -62,7 +65,38 @@ export class CdiConversionsComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  readonly activeTab = tabParam<TabKey>(['todo', 'all'], 'todo');
+  readonly activeTab = tabParam<TabKey>(['todo', 'all', 'history'], 'todo');
+
+  // ── Historique tab ───────────────────────────────────────────────────────
+  readonly historySource = (from: string | null, to: string | null) => this.svc.history(from, to);
+
+  readonly historyAvatar = (e: HistoryEntry) =>
+    employeeAvatar(e.subjectProfileId ?? null, e.subjectPhotoUrl ?? null, e.subjectGender ?? null);
+
+  readonly historyLabels: HistoryLabels = {
+    subject:  () => this.translate.instant('HISTORY.COL_EMPLOYEE'),
+    action:   e => this.tr('CDI_CONVERSION.STEP.' + e.action, e.action),
+    category: c => this.tr('HISTORY.CATEGORY.' + c, c),
+    status:   c => this.tr('CDI_CONVERSION.STATUS.' + c, c),
+    // The page's own colours (cdiStatusVariant), plus CONVERTED, which is a step, not a status.
+    statusVariant: c => ({ SUBMITTED: 'warning', ESCALATED: 'danger', APPROVED: 'success', CONVERTED: 'success',
+                           REJECTED: 'neutral', CANCELLED: 'neutral' } as Record<string, BadgeVariant>)[c] ?? 'neutral',
+    categoryVariant: () => 'primary',
+  };
+
+  /** A history line opens its request in the drawer, like a row of the other tabs. */
+  openHistory(e: HistoryEntry): void {
+    if (e.subjectId == null) return;
+    this.svc.get(e.subjectId).subscribe({
+      next: r => this.selected.set(r),
+      error: err => this.error.set(errorMessage(err, this.translate)),
+    });
+  }
+
+  private tr(key: string, fallback: string): string {
+    const v = this.translate.instant(key);
+    return v && v !== key ? v : fallback;
+  }
 
   readonly selected = signal<CdiConversion | null>(null);
   readonly deciding = signal<CdiDecisionAction | null>(null);
@@ -121,6 +155,7 @@ export class CdiConversionsComponent implements OnInit {
     return [
       { id: 'todo', label: t('CDI_CONVERSION.TABS.TODO'), count: this.firstLoad() ? null : this.stats().todo },
       { id: 'all', label: t('CDI_CONVERSION.TABS.ALL') },
+      { id: 'history', label: t('HISTORY.TAB'), icon: 'history' },
     ];
   });
 

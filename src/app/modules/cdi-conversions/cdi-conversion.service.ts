@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   CdiConversion, CdiDecisionPayload, SubmitCdiConversionPayload,
 } from './cdi-conversion.model';
+import { HistoryEntry } from '../../shared/history/history.model';
 
 @Injectable({ providedIn: 'root' })
 export class CdiConversionService {
@@ -14,6 +15,14 @@ export class CdiConversionService {
   /** `todo` = what waits for me (validator / arbiter / RH to convert); else every visible request. */
   list(todo: boolean): Observable<CdiConversion[]> {
     return this.http.get<CdiConversion[]>(`${this.base}/api/hr/cdi-conversions`, { params: { todo } });
+  }
+
+  /** « Historique » tab — every step of the visible requests over [from, to] (yyyy-MM-dd; none = 12 months). */
+  history(from: string | null, to: string | null): Observable<HistoryEntry[]> {
+    const params: Record<string, string> = {};
+    if (from) params['from'] = from;
+    if (to)   params['to'] = to;
+    return this.http.get<HistoryEntry[]>(`${this.base}/api/hr/cdi-conversions/history`, { params });
   }
 
   get(id: number): Observable<CdiConversion> {

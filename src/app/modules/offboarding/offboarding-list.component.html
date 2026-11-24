@@ -43,6 +43,27 @@
       [options]="{ icon: 'task_alt', iconColor: 'text-teal', iconBg: 'bg-teal/10' }" />
   </section>
 
+  <!-- Dossiers | Historique — under the page's KPIs, which stay on both tabs. -->
+  <daf-tabs #tabsRef
+    variant="underline"
+    style="--daf-tabs-fade: var(--color-background)"
+    [tabs]="tabs()"
+    [(active)]="activeTab"
+    idPrefix="offboarding" />
+
+  @if (activeTab() === 'history') {
+    <!-- Recreated per departure reason: sibling /type/:reason pages reuse this component. -->
+    @for (key of historyKey(); track key) {
+      <div role="tabpanel" [id]="tabsRef.panelId('history')" [attr.aria-labelledby]="tabsRef.tabId('history')">
+        <rh-history-table
+          [source]="historySource"
+          [labels]="historyLabels"
+          [avatar]="historyAvatar"
+          (open)="openHistory($event)" />
+      </div>
+    }
+  } @else {
+
   <!-- Search + status filter + view toggle: one lib toolbar. Replaces the
        `.filters-bar` with its loose `daf-select` and its "Réinitialiser" button —
        the filter panel applies and resets itself (§10c). -->
@@ -101,6 +122,7 @@
       [pageSizeOptions]="pageSizeOptions"
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)" />
+  }
   }
 
 </daf-page>

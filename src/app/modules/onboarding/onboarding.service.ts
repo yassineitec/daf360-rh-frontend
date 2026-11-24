@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { HistoryEntry } from '../../shared/history/history.model';
 import { OnboardingListItem, OnboardingFormData, OnboardingProfileDto, CompletionResult, OnboardingKpiStats } from './onboarding.model';
 
 @Injectable({ providedIn: 'root' })
@@ -15,6 +16,14 @@ export class OnboardingService {
 
   getPendingList(): Observable<OnboardingListItem[]> {
     return this.http.get<OnboardingListItem[]>(`${this.base}/pending`);
+  }
+
+  /** « Historique » tab — onboarding actions over [from, to] (yyyy-MM-dd; none = 12 months). */
+  getHistory(from: string | null, to: string | null): Observable<HistoryEntry[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to)   params = params.set('to', to);
+    return this.http.get<HistoryEntry[]>(`${this.base}/history`, { params });
   }
 
   getOnboardingForm(candidateId: number): Observable<OnboardingFormData> {

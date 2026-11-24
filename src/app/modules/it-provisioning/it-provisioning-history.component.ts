@@ -3,12 +3,12 @@ import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { ItProvisioningTabsComponent } from './it-provisioning-tabs.component';
+import { ItProvisioningKpisComponent } from './it-provisioning-kpis.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
 import {
   FilterField,
   FilterOption,
   FilterResult,
-  MetricCardComponent,
   PageComponent,
   PageHeaderComponent,
   PaginationComponent,
@@ -108,7 +108,7 @@ const GUIDE_STEPS: GuideStep[] = [
   selector: 'rh-it-provisioning-history',
   standalone: true,
   imports: [
-    MetricCardComponent, PageComponent, PageHeaderComponent, PaginationComponent,
+    ItProvisioningKpisComponent, PageComponent, PageHeaderComponent, PaginationComponent,
     SearchToolbarComponent, ItProvisioningCardsSectionComponent, ItProvisioningTableSectionComponent,
     PageGuideComponent, ItProvisioningTabsComponent,
     TranslatePipe,
@@ -127,6 +127,8 @@ export class ItProvisioningHistoryComponent implements OnInit {
 
   // ── Data ───────────────────────────────────────────────────────────────────
   readonly items     = signal<ProvisioningListItem[]>([]);
+  /** Every file (open + completed) — for the page-level KPI row shared with the other tab. */
+  readonly allItems  = signal<ProvisioningListItem[]>([]);
   readonly firstLoad = signal(true);
   readonly loading   = signal(false);
   readonly error     = signal<string | null>(null);
@@ -202,6 +204,8 @@ export class ItProvisioningHistoryComponent implements OnInit {
     this.error.set(null);
     this.service.getAllList().subscribe({
       next: data => {
+        // Every file, open ones included — the page's KPI row above the tabs counts both.
+        this.allItems.set(data);
         // Most recently closed first — the natural order of a history.
         this.items.set(data
           .filter(r => r.status === 'COMPLETED')
@@ -264,21 +268,8 @@ export class ItProvisioningHistoryComponent implements OnInit {
       : 'IT_PROVISIONING.HISTORY.EMPTY');
   });
 
-  // ── KPIs ───────────────────────────────────────────────────────────────────
-  /** Counted on the whole completed set, never on the search, the date filter or the page. */
-  readonly stats = computed(() => {
-    const all = this.items();
-    const month = toIsoDay(new Date()).slice(0, 7);
-    // Days from file creation to completion — files missing either date are left out.
-    const durations = all
-      .filter(r => r.completedAt && r.createdAt)
-      .map(r => (new Date(r.completedAt!).getTime() - new Date(r.createdAt).getTime()) / 86_400_000);
-    return {
-      total:     all.length,
-      thisMonth: all.filter(r => r.completedAt?.slice(0, 7) === month).length,
-      avgDays:   durations.length ? Math.round(durations.reduce((s, d) => s + d, 0) / durations.length) : 0,
-    };
-  });
+  // KPI tiles: `rh-it-provisioning-kpis` above the tab strip, fed `allItems` — shared with
+  // the « Dossiers en cours » tab.
 
   // ── Toolbar ────────────────────────────────────────────────────────────────
   readonly filterFields = computed<FilterField[]>(() => {

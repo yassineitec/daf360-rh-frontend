@@ -36,6 +36,24 @@
       [options]="{ icon: 'timer', iconColor: 'text-warning', iconBg: 'bg-warning/10' }" />
   </section>
 
+  <!-- Dossiers | Historique — under the page's KPIs, which stay on both tabs. -->
+  <daf-tabs #tabsRef
+    variant="underline"
+    style="--daf-tabs-fade: var(--color-background)"
+    [tabs]="tabs()"
+    [(active)]="activeTab"
+    idPrefix="onboarding" />
+
+  @if (activeTab() === 'history') {
+    <div role="tabpanel" [id]="tabsRef.panelId('history')" [attr.aria-labelledby]="tabsRef.tabId('history')">
+      <rh-history-table
+        [source]="historySource"
+        [labels]="historyLabels"
+        [avatar]="historyAvatar"
+        (open)="openHistory($event)" />
+    </div>
+  } @else {
+
   <!-- Search + status filter + view toggle: one lib toolbar, one card, one
        breakpoint. Replaces the hand-built card that held a desktop search box, a
        mobile search toggle, a square refresh button and a grid/list button pair. -->
@@ -90,6 +108,7 @@
       [pageSizeOptions]="pageSizeOptions"
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)" />
+  }
   }
 
 </daf-page>

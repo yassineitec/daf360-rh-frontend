@@ -1769,28 +1769,13 @@
     },
     "HISTORY": {
       "SUBTITLE": "Toutes les actions sur les candidatures, et qui les a faites.",
-      "DEFAULT_WINDOW": "Sans période choisie : les 12 derniers mois.",
       "COL_CANDIDATE": "Candidat",
       "COL_POSITION": "Poste",
-      "ALL": "Tous",
       "TITLE": "Historique des décisions",
       "SUB": "Cliquez sur un candidat pour voir son historique",
       "SELECT_PROMPT": "Sélectionnez un candidat",
       "SELECT_HINT": "pour voir l'historique de ses décisions",
       "EMPTY": "Aucun historique disponible",
-      "EMPTY_FILTERED": "Aucune action ne correspond à la recherche ou aux filtres.",
-      "SEARCH": "Rechercher une action, une personne, un détail…",
-      "RETRY": "Réessayer",
-      "ERR_LOAD": "Impossible de charger l'historique.",
-      "FILTER_DATE": "Date",
-      "ALL_STATUSES": "Tous les statuts",
-      "COL_DATE": "Date",
-      "COL_ACTION": "Action",
-      "COL_CATEGORY": "Type",
-      "COL_ACTOR": "Par",
-      "COL_STATUS": "Statut",
-      "COL_DETAIL": "Détail",
-      "SYSTEM": "Système",
       "CATEGORY": {
         "CANDIDATE": "Candidature",
         "INTERVIEW": "Entretien",
@@ -1824,7 +1809,8 @@
         "INTERVIEW_PV": "PV d'entretien déposé",
         "INTERVIEW_VALIDATED": "Entretien validé par RH",
         "FINANCE_SUBMITTED": "Envoyé en validation financière",
-        "FINANCE_DECIDED": "Décision financière"
+        "FINANCE_DECIDED": "Décision financière",
+        "SAVE_ONBOARDING_DRAFT": "Dossier RH enregistré (brouillon)"
       },
       "STATUS": {
         "PENDING": "En attente",
@@ -1847,7 +1833,8 @@
         "FINANCE_REJECTED": "Refusé par la finance",
         "IT_EMAIL_CREATED": "Compte M365 créé",
         "IT_COMPLETED": "IT terminé",
-        "PROFILE_CREATED": "Profil employé créé"
+        "PROFILE_CREATED": "Profil employé créé",
+        "DRAFT_SAVED": "Brouillon enregistré"
       },
       "OPINION": {
         "FAVORABLE": "Favorable",
@@ -2067,7 +2054,8 @@
       "OFFER_DAF_TO_SEND": "Tour {{round}} — contre-proposition DAF à envoyer",
       "OFFER_CANDIDATE_COUNTER": "Tour {{round}} — demande du candidat chez la DAF",
       "OFFER_CANDIDATE": "Tour {{round}} — réponse du candidat attendue",
-      "OFFER_AGREED": "Accord salarial conclu"
+      "OFFER_AGREED": "Accord salarial conclu",
+      "HIRED_IT_PENDING": "Profil créé — provisioning IT en cours"
     },
     "NEXT": {
       "CURRENT_LABEL": "Étape actuelle",
@@ -2917,7 +2905,8 @@
       "COL_ACTIONS": "Actions",
       "COMPLETE": "Compléter",
       "FILES_WORD": "dossier(s)",
-      "COL_IT_STATUS": "Statut IT"
+      "COL_IT_STATUS": "Statut IT",
+      "TAB_FILES": "Dossiers"
     },
     "STEPS": {
       "IDENTITY": "Identité",
@@ -5563,7 +5552,8 @@
       "STEP_OF": "étape {{step}}/{{total}}",
       "NO_HANDOVER": "Aucun repreneur",
       "NO_LAST_DAY": "Date à définir",
-      "EMPTY_NO_MATCH": "Aucun dossier d’offboarding ne correspond à ces filtres"
+      "EMPTY_NO_MATCH": "Aucun dossier d’offboarding ne correspond à ces filtres",
+      "TAB_FILES": "Dossiers"
     },
     "BADGE": {
       "SLA_BREACHED": "SLA dépassé",
@@ -6028,6 +6018,30 @@
       "ERR_REOPEN": "Impossible de réouvrir le dossier.",
       "ERR_ARCHIVE": "Impossible d'archiver le dossier.",
       "ERR_AUDIT": "Impossible de charger l'historique."
+    },
+    "HISTORY": {
+      "REASON": "Type de départ",
+      "CATEGORY": {
+        "FILE": "Dossier",
+        "TASK": "Tâche",
+        "ASSET": "Matériel",
+        "CHECKLIST": "Checklist",
+        "SETTLEMENT": "Solde",
+        "INTERVIEW": "Entretien de sortie"
+      },
+      "STATUS": {
+        "STARTED": "Initié",
+        "MANAGER_VALIDATED": "Avis manager",
+        "HR_VALIDATED": "Validé RH",
+        "DONE": "Terminé",
+        "SKIPPED": "Ignoré",
+        "RETURNED": "Restitué",
+        "PLANNED": "Planifié",
+        "VALIDATED": "Dossier validé",
+        "CANCELLED": "Annulé",
+        "REOPENED": "Réouvert",
+        "ARCHIVED": "Archivé"
+      }
     }
   },
   "ADMIN": {
@@ -9264,5 +9278,57 @@
     "EMPTY_FILTERED": "Aucune absence validée pour ces critères.",
     "ERR_LOAD": "Impossible de charger les statistiques.",
     "ERR_EXPORT": "L’export a échoué."
+  },
+  "HISTORY": {
+    "TAB": "Historique",
+    "SEARCH": "Rechercher une personne, une action, un détail…",
+    "RETRY": "Réessayer",
+    "ERR_LOAD": "Impossible de charger l'historique.",
+    "FILTER_DATE": "Période",
+    "ALL": "Tous",
+    "ALL_STATUSES": "Tous les statuts",
+    "COL_DATE": "Date",
+    "COL_ACTION": "Action",
+    "COL_CATEGORY": "Type",
+    "COL_ACTOR": "Par",
+    "COL_STATUS": "Statut",
+    "COL_DETAIL": "Détail",
+    "COL_EMPLOYEE": "Collaborateur",
+    "COL_PERSON": "Personne",
+    "SYSTEM": "Système",
+    "EMPTY": "Aucune action enregistrée sur cette période.",
+    "EMPTY_FILTERED": "Aucune action ne correspond à la recherche ou aux filtres.",
+    "DEFAULT_WINDOW": "Sans période choisie : les 12 derniers mois.",
+    "FILTERS": {
+      "TITLE": "Filtres",
+      "APPLY": "Appliquer",
+      "CANCEL": "Annuler",
+      "RESET": "Réinitialiser",
+      "TRIGGER": "Filtres"
+    },
+    "CATEGORY": {
+      "REQUEST": "Demande"
+    },
+    "DETAIL": {
+      "netSalary": "Salaire net : {{value}}",
+      "startDate": "Début : {{value}}",
+      "lastWorkingDay": "Dernier jour : {{value}}",
+      "label": "{{value}}",
+      "group": "Groupe : {{value}}",
+      "code": "Code : {{value}}",
+      "at": "Le {{value}}",
+      "assets": "Matériels : {{value}}",
+      "executionDate": "Exécution : {{value}}",
+      "prorata13": "Prorata 13e mois : {{value}}",
+      "accountDeactivationAt": "Désactivation des accès : {{value}}",
+      "byNamedManager": "Par le manager désigné : {{value}}",
+      "isDone": "Fait : {{value}}",
+      "text": "{{value}}",
+      "email": "E-mail : {{value}}",
+      "cv": "Fichier : {{value}}",
+      "contractType": "Contrat : {{value}}",
+      "round": "Tour {{value}}",
+      "proposedSalary": "Salaire proposé : {{value}}"
+    }
   }
 }

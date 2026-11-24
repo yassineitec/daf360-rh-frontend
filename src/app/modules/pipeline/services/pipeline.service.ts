@@ -72,6 +72,8 @@ export interface KanbanCandidate {
   /** Who proposed the current offer round: RH | DAF | CANDIDATE. */
   offerProposedBy?: string | null;
   offerRound?: number | null;
+  /** The IT file's status (PENDING | IN_PROGRESS | EMAIL_CREATED | COMPLETED); null = none. */
+  itStatus?: string | null;
 }
 
 export interface KanbanColumn {

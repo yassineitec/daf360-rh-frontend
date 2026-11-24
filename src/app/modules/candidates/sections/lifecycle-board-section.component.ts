@@ -7,6 +7,8 @@ import { SkeletonComponent } from '@khalilrebhiitec/daf360';
 
 import { LifecycleCard, LifecycleColumn, LifecycleColumnKey } from '../lifecycle-board.model';
 import { LifecycleCardComponent } from '../components/lifecycle-card.component';
+import { KanbanMinimapComponent, MinimapColumn } from '../../../shared/kanban-minimap.component';
+import { FillViewportDirective } from '../../../shared/fill-viewport.directive';
 
 /**
  * « Pipeline RH » board (UI-PLAYBOOK §8b section): the lifecycle columns side by side from
@@ -21,12 +23,15 @@ import { LifecycleCardComponent } from '../components/lifecycle-card.component';
   selector: 'rh-lifecycle-board-section',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LifecycleCardComponent, SkeletonComponent, TranslatePipe],
+  imports: [LifecycleCardComponent, KanbanMinimapComponent, FillViewportDirective, SkeletonComponent, TranslatePipe],
   styles: [`
     .custom-scroll   { scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar   { display: none; }
-    .custom-scroll-y { scrollbar-width: none; }
-    .custom-scroll-y::-webkit-scrollbar { display: none; }
+    /* A column's own scroll — the page never scrolls, the columns do: thin, always visible. */
+    .col-scroll { overflow-y: auto; overscroll-behavior: contain;
+                  scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) transparent; }
+    .col-scroll::-webkit-scrollbar { width: 6px; }
+    .col-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 3px; }
   `],
   template: `
     <!-- ── Desktop / tablet ─────────────────────────────────────────── -->
@@ -44,10 +49,11 @@ import { LifecycleCardComponent } from '../components/lifecycle-card.component';
             }
           </div>
         } @else {
-          <div #board class="flex gap-6 overflow-x-auto pb-4 items-start custom-scroll scroll-smooth"
+          <!-- The page never scrolls: the board reaches the bottom of the window (rhFillViewport) and each column scrolls its own cards, every card there. -->
+          <div #board rhFillViewport class="flex gap-6 overflow-x-auto overflow-y-hidden pb-4 items-stretch custom-scroll scroll-smooth"
                (scroll)="syncBoardMetrics()">
             @for (col of columns(); track col.key) {
-              <div class="w-80 shrink-0 flex flex-col">
+              <div class="w-80 shrink-0 flex flex-col min-h-0">
                 <div class="flex items-center gap-2 px-1 mb-3">
                   <span class="w-2.5 h-2.5 rounded-full" [style.background]="col.accent"></span>
                   <span class="text-sm font-bold text-on-surface">{{ col.label }}</span>
@@ -55,7 +61,8 @@ import { LifecycleCardComponent } from '../components/lifecycle-card.component';
                     {{ col.cards.length }}
                   </span>
                 </div>
-                <div class="flex flex-col gap-3 min-h-[120px] max-h-[640px] overflow-y-auto overscroll-contain p-1 pr-2 pt-4 custom-scroll-y">
+                <!-- Every card, scrolling inside the column; the bottom space lets the last card scroll clear of the minimap. -->
+                <div class="col-scroll flex-1 min-h-0 flex flex-col gap-3 p-1 pr-2 pt-4 pb-24">
                   @for (card of col.cards; track card.key) {
                     <rh-lifecycle-card [card]="card" [accent]="col.accent" [badgeBg]="col.badgeBg" (open)="open.emit(card)" />
                   } @empty {
@@ -69,28 +76,8 @@ import { LifecycleCardComponent } from '../components/lifecycle-card.component';
             }
           </div>
 
-          @if (boardHasOverflow()) {
-            <div class="fixed bottom-6 right-6 z-40">
-              <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-2
-                          opacity-30 shadow-md origin-bottom-right transition-all duration-200
-                          hover:opacity-100 hover:scale-150 hover:shadow-2xl">
-                <div class="relative flex gap-1" style="width: 172px;">
-                  @for (col of columns(); track col.key; let i = $index) {
-                    <button type="button"
-                      class="flex-1 h-12 rounded-md flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105"
-                      [style.background]="col.badgeBg"
-                      [title]="col.label + ' (' + col.cards.length + ')'"
-                      (click)="scrollToColumn(i)">
-                      <span class="w-2 h-2 rounded-full" [style.background]="col.accent"></span>
-                      <span class="text-[10px] font-bold leading-none" [style.color]="col.accent">{{ col.cards.length }}</span>
-                    </button>
-                  }
-                  <div class="absolute top-0 bottom-0 rounded-md border-2 border-primary pointer-events-none transition-all duration-150"
-                       [style.left]="viewportStyle().left" [style.width]="viewportStyle().width"></div>
-                </div>
-              </div>
-            </div>
-          }
+          <!-- Minimap — always on screen, bottom-right, wherever the page is scrolled. -->
+          <rh-kanban-minimap [columns]="minimapColumns()" [viewport]="viewportStyle()" (go)="scrollToColumn($event)" />
         }
       </div>
     }
@@ -157,10 +144,8 @@ export class LifecycleBoardSectionComponent {
   private readonly board = viewChild<ElementRef<HTMLDivElement>>('board');
   private readonly boardScroll = signal({ left: 0, client: 0, scroll: 0 });
 
-  protected readonly boardHasOverflow = computed(() => {
-    const b = this.boardScroll();
-    return b.scroll > b.client + 4;
-  });
+  protected readonly minimapColumns = computed<MinimapColumn[]>(() =>
+    this.columns().map(c => ({ key: c.key, label: c.label, accent: c.accent, badgeBg: c.badgeBg, count: c.cards.length })));
 
   protected readonly viewportStyle = computed(() => {
     const b = this.boardScroll();

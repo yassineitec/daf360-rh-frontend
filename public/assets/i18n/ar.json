@@ -6,24 +6,9 @@
     },
     "HISTORY": {
       "SUBTITLE": "كل الإجراءات على الترشحات، ومن قام بها.",
-      "DEFAULT_WINDOW": "بدون فترة محددة: آخر 12 شهرًا.",
       "COL_CANDIDATE": "المرشح",
       "COL_POSITION": "المنصب",
-      "ALL": "الكل",
       "EMPTY": "لا يوجد سجل",
-      "EMPTY_FILTERED": "لا يوجد إجراء يطابق البحث أو عوامل التصفية.",
-      "SEARCH": "ابحث عن إجراء أو شخص أو تفصيل…",
-      "RETRY": "إعادة المحاولة",
-      "ERR_LOAD": "تعذّر تحميل السجل.",
-      "FILTER_DATE": "التاريخ",
-      "ALL_STATUSES": "كل الحالات",
-      "COL_DATE": "التاريخ",
-      "COL_ACTION": "الإجراء",
-      "COL_CATEGORY": "النوع",
-      "COL_ACTOR": "بواسطة",
-      "COL_STATUS": "الحالة",
-      "COL_DETAIL": "التفاصيل",
-      "SYSTEM": "النظام",
       "CATEGORY": {
         "CANDIDATE": "الترشح",
         "INTERVIEW": "مقابلة",
@@ -57,7 +42,8 @@
         "INTERVIEW_PV": "إيداع محضر المقابلة",
         "INTERVIEW_VALIDATED": "مصادقة الموارد البشرية على المقابلة",
         "FINANCE_SUBMITTED": "إرسال للمصادقة المالية",
-        "FINANCE_DECIDED": "القرار المالي"
+        "FINANCE_DECIDED": "القرار المالي",
+        "SAVE_ONBOARDING_DRAFT": "حفظ ملف الموارد البشرية (مسودة)"
       },
       "STATUS": {
         "PENDING": "قيد الانتظار",
@@ -80,7 +66,8 @@
         "FINANCE_REJECTED": "رفضته المالية",
         "IT_EMAIL_CREATED": "تم إنشاء حساب M365",
         "IT_COMPLETED": "اكتمل التجهيز المعلوماتي",
-        "PROFILE_CREATED": "تم إنشاء ملف الموظف"
+        "PROFILE_CREATED": "تم إنشاء ملف الموظف",
+        "DRAFT_SAVED": "تم حفظ المسودة"
       },
       "OPINION": {
         "FAVORABLE": "إيجابي",
@@ -104,8 +91,12 @@
         "email": "البريد: {{value}}",
         "contractType": "العقد: {{value}}"
       }
+    },
+    "RAIL": {
+      "HIRED_IT_PENDING": "تم إنشاء الملف — التجهيز المعلوماتي جارٍ"
     }
-  },  "STATUS_BADGE": {
+  },
+  "STATUS_BADGE": {
     "CONGE": "إجازة",
     "MALADIE": "مرض",
     "MATERNITE": "أمومة",
@@ -3514,7 +3505,8 @@
       "DELTA_OVERDUE_TASKS": "{{count}} مهمة متأخرة",
       "DELTA_BLOCKING": "{{count}} محجوب بمهمة",
       "DELTA_SLA": "{{count}} خارج المدة",
-      "DELTA_VALIDATED": "{{pct}}% من الملفات مغلقة"
+      "DELTA_VALIDATED": "{{pct}}% من الملفات مغلقة",
+      "TAB_FILES": "الملفات"
     },
     "BADGE": {
       "SLA_BREACHED": "تجاوز مستوى الخدمة",
@@ -3971,6 +3963,30 @@
       "ERR_REOPEN": "تعذّرت إعادة فتح الملف.",
       "ERR_ARCHIVE": "تعذّرت أرشفة الملف.",
       "ERR_AUDIT": "تعذّر تحميل السجل."
+    },
+    "HISTORY": {
+      "REASON": "نوع المغادرة",
+      "CATEGORY": {
+        "FILE": "الملف",
+        "TASK": "مهمة",
+        "ASSET": "معدات",
+        "CHECKLIST": "قائمة التحقق",
+        "SETTLEMENT": "التسوية",
+        "INTERVIEW": "مقابلة المغادرة"
+      },
+      "STATUS": {
+        "STARTED": "بدأ",
+        "MANAGER_VALIDATED": "رأي المسؤول",
+        "HR_VALIDATED": "صادقت الموارد البشرية",
+        "DONE": "منجز",
+        "SKIPPED": "متجاوز",
+        "RETURNED": "مُعاد",
+        "PLANNED": "مبرمج",
+        "VALIDATED": "تمت المصادقة على الملف",
+        "CANCELLED": "ملغى",
+        "REOPENED": "أعيد فتحه",
+        "ARCHIVED": "مؤرشف"
+      }
     }
   },
   "ADMIN": {
@@ -5124,5 +5140,62 @@
     "EMPTY_FILTERED": "لا يوجد غياب معتمد لهذه المعايير.",
     "ERR_LOAD": "تعذر تحميل الإحصائيات.",
     "ERR_EXPORT": "فشل التصدير."
+  },
+  "HISTORY": {
+    "TAB": "السجل",
+    "SEARCH": "ابحث عن شخص أو إجراء أو تفصيل…",
+    "RETRY": "إعادة المحاولة",
+    "ERR_LOAD": "تعذّر تحميل السجل.",
+    "FILTER_DATE": "الفترة",
+    "ALL": "الكل",
+    "ALL_STATUSES": "كل الحالات",
+    "COL_DATE": "التاريخ",
+    "COL_ACTION": "الإجراء",
+    "COL_CATEGORY": "النوع",
+    "COL_ACTOR": "بواسطة",
+    "COL_STATUS": "الحالة",
+    "COL_DETAIL": "التفاصيل",
+    "COL_EMPLOYEE": "الموظف",
+    "COL_PERSON": "الشخص",
+    "SYSTEM": "النظام",
+    "EMPTY": "لا يوجد إجراء مسجّل في هذه الفترة.",
+    "EMPTY_FILTERED": "لا يوجد إجراء يطابق البحث أو عوامل التصفية.",
+    "DEFAULT_WINDOW": "بدون فترة محددة: آخر 12 شهرًا.",
+    "FILTERS": {
+      "TITLE": "التصفية",
+      "APPLY": "تطبيق",
+      "CANCEL": "إلغاء",
+      "RESET": "إعادة الضبط",
+      "TRIGGER": "التصفية"
+    },
+    "CATEGORY": {
+      "REQUEST": "الطلب"
+    },
+    "DETAIL": {
+      "netSalary": "الأجر الصافي: {{value}}",
+      "startDate": "البداية: {{value}}",
+      "lastWorkingDay": "آخر يوم عمل: {{value}}",
+      "label": "{{value}}",
+      "group": "المجموعة: {{value}}",
+      "code": "الرمز: {{value}}",
+      "at": "في {{value}}",
+      "assets": "المعدات: {{value}}",
+      "executionDate": "التنفيذ: {{value}}",
+      "prorata13": "قسط الشهر 13: {{value}}",
+      "accountDeactivationAt": "تعطيل النفاذ: {{value}}",
+      "byNamedManager": "من المسؤول المعيّن: {{value}}",
+      "isDone": "منجز: {{value}}",
+      "text": "{{value}}",
+      "email": "البريد: {{value}}",
+      "cv": "الملف: {{value}}",
+      "contractType": "العقد: {{value}}",
+      "round": "الجولة {{value}}",
+      "proposedSalary": "الأجر المقترح: {{value}}"
+    }
+  },
+  "ONBOARDING": {
+    "LIST": {
+      "TAB_FILES": "الملفات"
+    }
   }
 }
