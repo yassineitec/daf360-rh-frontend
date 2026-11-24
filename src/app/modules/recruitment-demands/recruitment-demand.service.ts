@@ -2,9 +2,12 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ArchivedCandidate } from '../pipeline/services/pipeline.service';
 import {
   ApprovedDemandOption,
   CreateRecruitmentDemandRequest,
+  DemandCandidate,
+  DemandHistoryEvent,
   UpdateRecruitmentDemandRequest,
   RecruitmentDemandDetail,
   RecruitmentDemandSummary,
@@ -56,9 +59,39 @@ export class RecruitmentDemandService {
     return this.http.post<RecruitmentDemandDetail>(`${this.base}/${id}/cancel`, {}, { withCredentials: true });
   }
 
+  /** V137 — closes the demand by hand; its candidatures still in recruitment are archived. */
+  close(id: number, note?: string | null): Observable<RecruitmentDemandDetail> {
+    return this.http.post<RecruitmentDemandDetail>(`${this.base}/${id}/close`, { note: note ?? null }, { withCredentials: true });
+  }
+
+  /** V137 — reopens a closed demand that still has a post to fill. */
+  reopen(id: number): Observable<RecruitmentDemandDetail> {
+    return this.http.post<RecruitmentDemandDetail>(`${this.base}/${id}/reopen`, {}, { withCredentials: true });
+  }
+
+  /** V137 — changes the number of posts (never below the posts already filled). */
+  changeHeadcount(id: number, headcount: number): Observable<RecruitmentDemandDetail> {
+    return this.http.put<RecruitmentDemandDetail>(`${this.base}/${id}/headcount`, { headcount }, { withCredentials: true });
+  }
+
   getApprovedOptions(paysId: number): Observable<ApprovedDemandOption[]> {
     const params = new HttpParams().set('paysId', paysId);
     return this.http.get<ApprovedDemandOption[]>(`${this.base}/options`, { params, withCredentials: true });
+  }
+
+  /** The demand's history, newest first — the « Historique » drawer of its detail page. */
+  getHistory(demandId: number): Observable<DemandHistoryEvent[]> {
+    return this.http.get<DemandHistoryEvent[]>(`${this.base}/${demandId}/history`, { withCredentials: true });
+  }
+
+  /** Every candidature of the demand, newest first — its detail page. */
+  getCandidates(demandId: number): Observable<DemandCandidate[]> {
+    return this.http.get<DemandCandidate[]>(`${this.base}/${demandId}/candidates`, { withCredentials: true });
+  }
+
+  /** Archived candidatures of the other demands raised for the same post (creation wizard). */
+  getRelatedArchivedCandidates(demandId: number): Observable<ArchivedCandidate[]> {
+    return this.http.get<ArchivedCandidate[]>(`${this.base}/${demandId}/related-archived-candidates`, { withCredentials: true });
   }
 
   updateDemand(id: number, dto: UpdateRecruitmentDemandRequest): Observable<RecruitmentDemandDetail> {

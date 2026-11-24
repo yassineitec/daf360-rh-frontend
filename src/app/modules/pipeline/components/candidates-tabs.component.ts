@@ -3,22 +3,23 @@ import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { TabItem, TabsComponent } from '@khalilrebhiitec/daf360';
 
-export type CandidatesTab = 'board' | 'history';
+export type CandidatesTab = 'board' | 'history' | 'archived';
 
 /** Each tab's own URL — kept, so bookmarks and the breadcrumbs back from a candidate land. */
 const TAB_URL: Record<CandidatesTab, string[]> = {
   board:   ['/rh/candidates'],
   history: ['/rh/candidates', 'historique'],
+  archived: ['/rh/candidates', 'archives'],
 };
 
 /**
- * The two tabs of « Candidats » — the recruitment board and « Historique » (every action on
- * every candidature, with who took it).
+ * The tabs of « Candidats » — the recruitment board, « Historique » (every action on
+ * every candidature, with who took it) and « Archivés » (closed candidatures, with why).
  *
- * Route-backed, like « Provisioning IT »: each tab keeps its own component, its own
- * remembered filters and its own URL (`candidates` / `candidates/historique`), so a tab
- * click is a navigation between them. Both pages draw this strip right under the same page
- * header, which is what makes them read as one page.
+ * Route-backed: each tab keeps its own component, its own remembered filters and its own URL
+ * (`candidates` / `candidates/historique` / `candidates/archives`). They are CHILD routes of
+ * CandidatesPageComponent, which draws this strip once with the title and the KPIs — a tab
+ * click only swaps the content under it, nothing above it reloads.
  */
 @Component({
   selector: 'rh-candidates-tabs',
@@ -48,6 +49,7 @@ export class CandidatesTabsComponent {
     return [
       { id: 'board',   label: this.translate.instant('CANDIDATES.TABS.BOARD'),   icon: 'view_kanban' },
       { id: 'history', label: this.translate.instant('CANDIDATES.TABS.HISTORY'), icon: 'history' },
+      { id: 'archived', label: this.translate.instant('CANDIDATES.TABS.ARCHIVED'), icon: 'inventory_2' },
     ];
   });
 

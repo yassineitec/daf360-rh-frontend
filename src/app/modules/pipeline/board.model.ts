@@ -129,6 +129,20 @@ export function stepDetail(c: KanbanCandidate): { key: string; params?: Record<s
   }
 }
 
+/**
+ * Days left before a candidature on a filled demand is archived (V137): 0 = today, negative
+ * never (the server archives it at its next check, so « today » covers the overdue few
+ * minutes). Null when no archive is planned — a post is still open.
+ */
+export function archiveDaysLeft(c: KanbanCandidate, today: Date = new Date()): number | null {
+  if (!c.archiveDueDate) return null;
+  const [y, m, d] = c.archiveDueDate.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const due   = Date.UTC(y, m - 1, d);
+  const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.max(0, Math.round((due - start) / 86_400_000));
+}
+
 /** Highest fit score first; candidates without a score sink to the bottom. */
 export function byFitScoreDesc(a: KanbanCandidate, b: KanbanCandidate): number {
   return (b.fitScore ?? -1) - (a.fitScore ?? -1);

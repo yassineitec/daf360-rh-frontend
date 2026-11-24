@@ -1,17 +1,14 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Observable, catchError, map, of } from 'rxjs';
-import { BadgeOptions, PageComponent, PageHeaderComponent } from '@khalilrebhiitec/daf360';
+import { TranslateService } from '@ngx-translate/core';
+import { Observable, map } from 'rxjs';
+import { BadgeOptions } from '@khalilrebhiitec/daf360';
 
 import { CandidateService } from '../candidates/candidate.service';
 import { CandidateHistoryItem } from '../candidates/candidate.model';
 import { candidateAvatar } from '../candidates/candidate-display';
 import { HistoryTableComponent } from '../../shared/history/history-table.component';
 import { HistoryEntry, HistoryLabels } from '../../shared/history/history.model';
-import { CandidatesTabsComponent } from './components/candidates-tabs.component';
-import { CandidatesKpisComponent } from './components/candidates-kpis.component';
-import { PipelineService, PipelineStats } from './services/pipeline.service';
 
 /** Badge colour of each outcome; an unknown code is neutral. */
 const STATUS_VARIANT: Record<string, BadgeOptions['variant']> = {
@@ -44,50 +41,28 @@ function toEntry(h: CandidateHistoryItem): HistoryEntry {
 /**
  * /rh/candidates/historique — « Historique » tab of the Candidats page: every action on every
  * candidature of the user's entities, with who took it. The table is the shared
- * `rh-history-table`; this page brings the KPIs and the tab strip above it, and the
- * candidate labels (actions, statuses, details) it needs.
+ * `rh-history-table`; this tab brings the candidate labels (actions, statuses, details) it
+ * needs. The page around it — title, « Nouveau candidat », KPIs, tab strip — is
+ * CandidatesPageComponent's, drawn once for every tab.
  */
 @Component({
   selector: 'rh-candidates-history',
   standalone: true,
-  imports: [
-    PageComponent, PageHeaderComponent, HistoryTableComponent,
-    CandidatesTabsComponent, CandidatesKpisComponent, TranslatePipe,
-  ],
+  imports: [HistoryTableComponent],
+  // A tab of CandidatesPageComponent: it joins the page's own flex column.
+  host: { style: 'display: contents' },
   template: `
-    <daf-page [kpis]="3">
-
-      <!-- Same title as the board: one page, two tabs. -->
-      <daf-page-header
-        [title]="'PIPELINE.TITLE' | translate"
-        [subtitle]="'CANDIDATES.HISTORY.SUBTITLE' | translate" />
-
-      <!-- The page's KPIs, above the strip — the same row as on the Kanban tab. -->
-      <rh-candidates-kpis [stats]="stats()" />
-
-      <rh-candidates-tabs active="history" />
-
-      <rh-history-table
-        [source]="source"
-        [labels]="labels"
-        [avatar]="avatar"
-        (open)="open($event)" />
-    </daf-page>
+    <rh-history-table
+      [source]="source"
+      [labels]="labels"
+      [avatar]="avatar"
+      (open)="open($event)" />
   `,
 })
-export class CandidatesHistoryComponent implements OnInit {
+export class CandidatesHistoryComponent {
   private readonly svc         = inject(CandidateService);
-  private readonly pipelineSvc = inject(PipelineService);
   private readonly translate   = inject(TranslateService);
   private readonly router      = inject(Router);
-
-  /** Feeds the KPI row above the tabs; null until `/pipeline/stats` answers. */
-  readonly stats = signal<PipelineStats | null>(null);
-
-  ngOnInit(): void {
-    // The page's KPIs — allowed to fail alone (the tiles then show 0 / « — »).
-    this.pipelineSvc.getStats().pipe(catchError(() => of(null))).subscribe(s => this.stats.set(s));
-  }
 
   readonly source = (from: string | null, to: string | null): Observable<HistoryEntry[]> =>
     this.svc.getGlobalHistory(from, to).pipe(map(list => (list ?? []).map(toEntry)));

@@ -74,6 +74,31 @@ export interface KanbanCandidate {
   offerRound?: number | null;
   /** The IT file's status (PENDING | IN_PROGRESS | EMAIL_CREATED | COMPLETED); null = none. */
   itStatus?: string | null;
+  /**
+   * Every post of the demand is filled (V137): this candidature can no longer be hired and is
+   * archived on this day (yyyy-MM-dd, its creation date + 30 days). Null while a post is open.
+   */
+  archiveDueDate?: string | null;
+}
+
+/** An archived candidature with why it was archived (V137) — the board's « Archivés » column. */
+export interface ArchivedCandidate {
+  id: number;
+  fullName: string;
+  gender?: string | null;
+  position?: string | null;
+  demandId?: number | null;
+  demandTitle?: string | null;
+  /** POSITION_FILLED | DEMAND_CLOSED | MANUAL, null for a candidature archived before V137. */
+  archiveReason?: 'POSITION_FILLED' | 'DEMAND_CLOSED' | 'MANUAL' | null;
+  archiveNote?: string | null;
+  /** The status it had when archived (PENDING, OFFER_SENT, HIRED…). */
+  archivedFromStatus?: string | null;
+  /** ISO local date-time. */
+  archivedAt?: string | null;
+  archivedByName?: string | null;
+  rejectionReason?: string | null;
+  email?: string | null;
 }
 
 export interface KanbanColumn {
@@ -126,6 +151,11 @@ export class PipelineService {
 
   getKanban(): Observable<KanbanColumn[]> {
     return this.http.get<KanbanColumn[]>(`${this.base}/kanban`);
+  }
+
+  /** Every archived candidature of the caller's entity, newest first, with its reason (V137). */
+  getArchived(): Observable<ArchivedCandidate[]> {
+    return this.http.get<ArchivedCandidate[]>(`${this.base}/archived`);
   }
 
   getCandidates(params: CandidateParams = {}): Observable<CandidatesPage> {

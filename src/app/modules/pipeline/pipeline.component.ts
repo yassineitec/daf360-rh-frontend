@@ -1,14 +1,10 @@
 import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, of } from 'rxjs';
 import {
-  ButtonComponent,
-  DafHasPermissionDirective,
   FilterField,
   FilterResult,
-  PageComponent,
-  PageHeaderComponent,
   SearchToolbarComponent,
   SearchToolbarFilterConfig,
   ToolbarToggleOption,
@@ -26,14 +22,13 @@ import {
   candidatureStage,
 } from './board.model';
 import { RefuseOfferModalComponent } from './components/refuse-offer-modal.component';
-import { CandidatesTabsComponent } from './components/candidates-tabs.component';
-import { CandidatesKpisComponent } from './components/candidates-kpis.component';
+import { CandidatesPageState } from './candidates-page.state';
 import { PipelineBoardSectionComponent } from './sections/pipeline-board-section.component';
 import { PipelineMobileSectionComponent, MobilePipelineItem } from './sections/pipeline-mobile-section.component';
 import { PipelineTableSectionComponent, PipelineTableSort } from './sections/pipeline-table-section.component';
 import { OfferService } from './services/offer.service';
 import { PipelineStateService } from './services/pipeline-state.service';
-import { KanbanCandidate, KanbanColumn, PipelineService, PipelineStats } from './services/pipeline.service';
+import { KanbanCandidate, KanbanColumn, PipelineService } from './services/pipeline.service';
 
 /** Board or flat list. The choice survives search, filtering and a re-fetch. */
 type ViewMode = 'kanban' | 'list';
@@ -81,20 +76,16 @@ const GUIDE_STEPS: GuideStep[] = [
   selector: 'rh-pipeline',
   standalone: true,
   imports: [
-    ButtonComponent,
-    DafHasPermissionDirective,
-    PageComponent,
-    PageHeaderComponent,
     SearchToolbarComponent,
     PipelineBoardSectionComponent,
     PipelineTableSectionComponent,
     PipelineMobileSectionComponent,
     RefuseOfferModalComponent,
-    CandidatesTabsComponent,
-    CandidatesKpisComponent,
     PageGuideComponent,
     TranslatePipe,
   ],
+  // A tab of CandidatesPageComponent: its sections join the page's own flex column.
+  host: { style: 'display: contents' },
   templateUrl: './pipeline.component.html',
 })
 export class PipelineComponent implements OnInit {
@@ -108,13 +99,12 @@ export class PipelineComponent implements OnInit {
 
   // ── Data ───────────────────────────────────────────────────────────────────
   private readonly rawColumns = signal<KanbanColumn[]>([]);
-  /** Feeds the KPI row; null until `/pipeline/stats` answers (it is allowed to fail alone). */
-  readonly stats = signal<PipelineStats | null>(null);
+  /** The page's KPIs (drawn by CandidatesPageComponent) — refreshed after an action here. */
+  private readonly candidatesPage = inject(CandidatesPageState);
 
-  /** Whole-page skeleton — first load only (UI-PLAYBOOK §5). */
-  readonly firstLoad = signal(true);
-  /** Every subsequent fetch — skeletons inside the affected section only. */
-  readonly loading   = signal(false);
+  /** Every fetch, the first one included — skeletons inside the sections; the page around
+   *  the tab (title, KPIs, tab strip) never blinks. */
+  readonly loading   = signal(true);
 
   // ── View state (survives a view-mode switch) ───────────────────────────────
   readonly viewMode          = signal<ViewMode>('kanban');
@@ -359,30 +349,22 @@ export class PipelineComponent implements OnInit {
     this.notice.set(null);
   }
 
-  // KPI tiles: `rh-candidates-kpis`, fed `stats()` — shared with the Historique tab.
-
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
-    forkJoin({
-      kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
-      stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),
-    }).subscribe(({ kanban, stats }) => {
-      if (kanban) this.rawColumns.set(kanban);
-      if (stats)  this.stats.set(stats);
-      this.firstLoad.set(false);
-    });
+    this.loadBoard();
   }
 
-  /** Re-fetch after an action — section-level skeletons, header and KPIs stay put. */
+  /** Re-fetch after an action — section-level skeletons; the page's KPIs update in place. */
   private reload(): void {
+    this.loadBoard();
+    this.candidatesPage.reload();
+  }
+
+  private loadBoard(): void {
     this.loading.set(true);
-    forkJoin({
-      kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
-      stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),
-    }).subscribe(({ kanban, stats }) => {
+    this.pipelineService.getKanban().pipe(catchError(() => of(null))).subscribe(kanban => {
       if (kanban) this.rawColumns.set(kanban);
-      if (stats)  this.stats.set(stats);
       this.loading.set(false);
     });
   }

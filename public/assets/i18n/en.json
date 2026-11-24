@@ -1765,7 +1765,8 @@
     },
     "TABS": {
       "BOARD": "Kanban",
-      "HISTORY": "History"
+      "HISTORY": "History",
+      "ARCHIVED": "Archived"
     },
     "HISTORY": {
       "SUBTITLE": "Every action on the applications, and who took it.",
@@ -2397,6 +2398,7 @@
       "DEMAND": "Hiring request",
       "DEMAND_PH": "Attach to an open position",
       "DEMAND_HINT": "Fills in the position, department and desired start date.",
+      "DEMAND_POSTS_LEFT": "{{left}} of {{total}} position(s) to fill",
       "DEMAND_NONE": "No approved hiring request for your entity — a candidate can only be created against an approved request.",
       "SALARY_SECTION": "Salary information",
       "SALARY_CANDIDATE_NET": "Candidate salary expectation (net)",
@@ -2457,7 +2459,24 @@
       "RF_CV": "CV",
       "ERR_REQUIRED_STAR": "Please fill in all required fields (marked *).",
       "ERR_CV_AFTER_SAVE": "Candidate saved, but the CV upload failed. Try again from the profile.",
-      "ERR_CREATE": "Error while creating."
+      "ERR_CREATE": "Error while creating.",
+      "PRE_LOADING": "Loading…",
+      "PRE_NEW": "New candidate",
+      "PICK_ERR_LOAD": "Could not load this archived candidate.",
+      "COPIED_FROM": "Form prefilled from the archived candidature of {{name}}: check every step. The archived candidature stays unchanged.",
+      "CV_COPIED": "The CV “{{file}}” of the archived candidature will be copied. Drop another file to replace it.",
+      "PRE_DEMAND_ERR": "Could not load the recruitment requests. Try again; if it persists, contact the administrator.",
+      "PRE_DEMAND_FULL": "All posts filled",
+      "STEP0_TITLE": "Recruitment request",
+      "STEP0_SUB": "The open position this candidature answers",
+      "STEP0_ERR": "Pick the recruitment request this candidature answers.",
+      "STEP0_ERR_SOURCE": "Pick the archived candidate to reuse, or « New candidate ».",
+      "SOURCE_LABEL": "Candidate",
+      "SOURCE_REUSE": "Reuse an archived candidate ({{count}})",
+      "SOURCE_HINT": "This position was requested {{count}} time(s) before: you can start from an archived candidate of those requests. Their details and CV are copied; the archived candidature stays unchanged.",
+      "ARCHIVED_CANDIDATE": "Archived candidate",
+      "ARCHIVED_CANDIDATE_PH": "Pick the candidate to reuse",
+      "ARCHIVED_ON_SHORT": "archived on {{date}}"
     },
     "LIFECYCLE": {
       "COL_CANDIDATE": "Candidate",
@@ -2465,6 +2484,16 @@
       "COL_ONBOARDING": "Onboarding",
       "COL_CDI": "Permanent contract requests",
       "COL_OFFBOARDING": "Offboarding",
+      "COL_ARCHIVED": "Archived",
+      "ARCHIVE_REASON": {
+        "POSITION_FILLED": "Position filled",
+        "DEMAND_CLOSED": "Request closed",
+        "MANUAL": "Archived by hand",
+        "UNKNOWN": "Archived (no reason recorded)"
+      },
+      "ARCHIVED_ON": "Archived on {{date}}",
+      "ARCHIVED_ON_BY": "Archived on {{date}} by {{name}}",
+      "ARCHIVED_FROM": "Was: {{status}}",
       "EMPTY": "No file in progress",
       "NO_STEP_DONE": "No step validated yet",
       "NEXT_INTERVIEW": "Next interview: {{date}}",
@@ -2512,6 +2541,22 @@
       "CDI_FROM": "CDI from {{date}}",
       "CIVP_ENDS": "CIVP ends: {{date}}",
       "LAST_DAY": "Last day: {{date}}"
+    },
+    "ARCHIVED": {
+      "SUBTITLE": "Archived candidatures: post filled (30 days after the application), request closed or archived by hand.",
+      "SEARCH": "Search a candidate, a position, a reason…",
+      "ALL": "All",
+      "OPEN": "Open",
+      "EMPTY": "No archived candidature.",
+      "EMPTY_FILTERED": "No archived candidature matches the filters.",
+      "ERR_LOAD": "Could not load the archived candidatures.",
+      "FILTER_DATE": "Archive date",
+      "COL_CANDIDATE": "Candidate",
+      "COL_DEMAND": "Recruitment request",
+      "COL_REASON": "Reason",
+      "COL_FROM": "Status before archiving",
+      "COL_NOTE": "Note",
+      "COL_DATE": "Archived on"
     }
   },
   "PIPELINE": {
@@ -2589,7 +2634,10 @@
       "SEND_OFFER_TITLE": "Send an offer",
       "ACCEPT_OFFER_TITLE": "Accept the offer",
       "RENEGOTIATE_TITLE": "Renegotiate",
-      "REFUSE_OFFER_TITLE": "Refuse the offer"
+      "REFUSE_OFFER_TITLE": "Refuse the offer",
+      "ARCHIVE_IN": "Posts filled — archived in {{days}} d",
+      "ARCHIVE_TODAY": "Posts filled — archived today",
+      "ARCHIVE_TOOLTIP": "Every post of the request is filled: this candidate can no longer be hired and will be archived on {{date}} (30 days after the application)."
     },
     "OFFER": {
       "SEND_TITLE": "Send an offer",
@@ -2769,6 +2817,23 @@
       "ANNULEE": "Cancelled",
       "CLOTUREE": "Closed"
     },
+    "POSITIONS": {
+      "TITLE": "Positions",
+      "FILLED": "filled",
+      "DETAIL": "{{hired}} hired · {{remaining}} position(s) left. A position is filled as soon as its offer is accepted.",
+      "CLOSED_AUTO_FILLED": "Closed automatically on {{date}}: every post is filled. Candidatures still in progress can no longer be hired and are archived 30 days after they were created.",
+      "CLOSED_MANUAL": "Closed on {{date}} by {{name}}.",
+      "HEADCOUNT": "Number of positions",
+      "SAVE": "Save",
+      "ERR_RANGE": "Between 1 and 50 positions.",
+      "ERR_BELOW_FILLED": "{{filled}} position(s) are already filled: it cannot go lower.",
+      "CLOSE_NOTE": "Reason for closing (optional)",
+      "CLOSE": "Close the request",
+      "CLOSE_CONFIRM_TITLE": "Close the request?",
+      "CLOSE_CONFIRM_MSG": "The request will take no more candidatures, and the candidatures still in progress (interviews, validation, offer) will be archived with this reason.",
+      "CANCEL": "Cancel",
+      "REOPEN": "Reopen the request"
+    },
     "DETAIL": {
       "BACK": "Back to requests",
       "BREADCRUMB": "Requests",
@@ -2851,6 +2916,61 @@
         "REMPLACEMENT_DESC": "Replacement of a departing or absent employee",
         "ACCROISSEMENT_LABEL": "Increased activity",
         "ACCROISSEMENT_DESC": "Team reinforcement linked to business growth"
+      }
+    },
+    "KPI": {
+      "POSTS": "Posts filled",
+      "POSTS_FULL": "All posts filled",
+      "POSTS_LEFT": "{{count}} post(s) to fill",
+      "RUNNING": "Candidatures in progress",
+      "RUNNING_COUNTDOWN": "{{count}} awaiting archive",
+      "RECRUITED": "Recruited",
+      "RECRUITED_HIRED": "of which {{count}} hired",
+      "CLOSED": "Archived / refused",
+      "CLOSED_DETAIL": "{{archived}} archived · {{rejected}} refused"
+    },
+    "CANDIDATES": {
+      "TITLE": "Candidates ({{count}})",
+      "ERR_LOAD": "Could not load the candidates of this request.",
+      "EMPTY": "No candidate on this request yet.",
+      "COL_CANDIDATE": "Candidate",
+      "COL_STATUS": "Status",
+      "COL_APPLIED": "Applied on",
+      "COL_FOLLOW_UP": "Follow-up",
+      "ARCHIVE_IN": "Posts filled — archived in {{days}} d",
+      "ARCHIVE_TODAY": "Posts filled — archived today"
+    },
+    "HISTORY": {
+      "OPEN": "History",
+      "TITLE": "Request history",
+      "CLOSE": "Close",
+      "EMPTY": "No event for this request.",
+      "ERR_LOAD": "Could not load the request history.",
+      "SYSTEM": "Automatic",
+      "TYPE": {
+        "CREATED": "Request created",
+        "REQUESTED_AGAIN": "Position requested {{count}} time(s) before",
+        "REQUESTED_LATER": "Position requested again",
+        "APPROVED": "Request approved",
+        "REJECTED": "Request rejected",
+        "CANCELLED": "Request cancelled",
+        "HEADCOUNT_CHANGED": "Number of posts: {{from}} → {{to}}",
+        "CLOSED_MANUAL": "Request closed",
+        "CLOSED_FILLED": "Every post filled — request closed",
+        "REOPENED": "Request reopened",
+        "REOPENED_AUTO": "Request reopened automatically (drop-out)",
+        "CANDIDATE_ADDED": "New candidate:",
+        "CANDIDATE_REUSED": "Archived candidate reused:",
+        "OFFER_ACCEPTED": "Offer accepted, post filled:",
+        "CANDIDATE_ARCHIVED": "Candidate archived:",
+        "CANDIDATE_REJECTED": "Candidate refused:"
+      },
+      "DETAIL": {
+        "REQUESTED_AGAIN": "Last request: no. {{demandId}} of {{date}}",
+        "REQUESTED_LATER": "New request no. {{demandId}} — {{status}}",
+        "ARCHIVED_COUNT": "{{count}} candidature(s) archived",
+        "FILLED": "{{filled}} post(s) filled",
+        "REUSED_FROM": "Copy of the archived candidature of {{name}}"
       }
     }
   },
@@ -3199,16 +3319,20 @@
         "TITLE": "Create a candidate",
         "TEXT": "This form creates a candidate in 4 steps. Nothing is saved before the last step. Follow this guide to discover each part."
       },
+      "DEMAND": {
+        "TITLE": "1. Recruitment request",
+        "TEXT": "Pick the open position: it prefills the title, department, grade and start date. If this position was requested before, you can reuse an archived candidate of those requests instead of typing everything again."
+      },
       "IDENTITY": {
-        "TITLE": "1. Identity Information",
+        "TITLE": "2. Identity Information",
         "TEXT": "First name, last name and email (a valid address) are required. Phone, date of birth, gender, national ID, passport and location are optional: they are carried over to the HR profile at hiring."
       },
       "POSITION": {
-        "TITLE": "2. Position & Contract",
+        "TITLE": "3. Position & Contract",
         "TEXT": "Start with « Hiring request »: picking an open position fills the position, start date, department, grade and discipline still empty. Contract type and start date are required. Salary information is optional."
       },
       "CV_NOTES": {
-        "TITLE": "3. CV and 4. Notes",
+        "TITLE": "4. CV and 5. Notes",
         "TEXT": "Drop the CV (PDF, DOC or DOCX, 10 MB at most), then add your notes and comments. Both are optional: the CV can also be added later from the candidate's page."
       },
       "PROGRESS": {

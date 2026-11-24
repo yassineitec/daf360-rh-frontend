@@ -7,23 +7,35 @@ const CANDIDATE_PERMISSIONS = ['VIEW_CANDIDATES', 'HR_ONBOARDING', 'EDIT_CANDIDA
 
 export const candidatesRoutes: Routes = [
   {
-    // Landing = the design Kanban board (Screening/Entretien/Offre/Recruté),
-    // fed by /api/hr/pipeline/kanban. Lives in the pipeline module; the current
-    // status-kanban (CandidatesComponent) now serves the "Pipeline RH" route.
+    // The « Candidats » page: title, « Nouveau candidat », KPIs and the tab strip are drawn
+    // once by the shell; a tab click only swaps the child below. Same URLs as before. The
+    // child paths come before ':id' (an empty-path parent whose children do not match falls
+    // through to the siblings), so « historique » / « archives » are never read as an id.
     path: '',
     canActivate: [permissionGuard],
     data: { permissions: CANDIDATE_PERMISSIONS },
     loadComponent: () =>
-      import('../pipeline/pipeline.component').then(m => m.PipelineComponent),
-  },
-  {
-    // « Historique » tab of the board page — before ':id', or « historique » would be read
-    // as a candidate id.
-    path: 'historique',
-    canActivate: [permissionGuard],
-    data: { permissions: CANDIDATE_PERMISSIONS },
-    loadComponent: () =>
-      import('../pipeline/candidates-history.component').then(m => m.CandidatesHistoryComponent),
+      import('../pipeline/candidates-page.component').then(m => m.CandidatesPageComponent),
+    children: [
+      {
+        // Kanban — the candidature board, fed by /api/hr/pipeline/kanban.
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('../pipeline/pipeline.component').then(m => m.PipelineComponent),
+      },
+      {
+        path: 'historique',
+        loadComponent: () =>
+          import('../pipeline/candidates-history.component').then(m => m.CandidatesHistoryComponent),
+      },
+      {
+        // « Archivés » tab (V137).
+        path: 'archives',
+        loadComponent: () =>
+          import('../pipeline/candidates-archived.component').then(m => m.CandidatesArchivedComponent),
+      },
+    ],
   },
   {
     path: 'list',

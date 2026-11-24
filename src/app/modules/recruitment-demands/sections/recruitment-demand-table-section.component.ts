@@ -5,7 +5,7 @@ import { catchError, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BadgeCell, DataTableComponent, TableColumn, TableConfig, TableRow } from '@khalilrebhiitec/daf360';
 
-import { RecruitmentDemandStatus, RecruitmentDemandSummary } from '../recruitment-demand.model';
+import { RecruitmentDemandStatus, RecruitmentDemandSummary, demandPostsLabel } from '../recruitment-demand.model';
 import { RecruitmentDemandAction, isStaleDemand } from './recruitment-demand-cards-section.component';
 import { demandDepartmentLabel, demandReasonLabel, demandUrgencyLabel } from '../recruitment-demand-labels';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
@@ -131,7 +131,8 @@ export class RecruitmentDemandTableSectionComponent {
         poste: { name: poste, initials: initialsOf(poste), subtitle: demandDepartmentLabel(d, this.translate) },
         reason: demandReasonLabel(d, this.translate) || '—',
         urgency: demandUrgencyLabel(d, levels, this.translate) || '—',
-        headcount: String(d.headcount ?? 0),
+        // « filled / posts » once the vacancy is open (V137).
+        headcount: demandPostsLabel(d),
         candidates: String(d.candidateCount ?? 0),
         status: {
           label: this.translate.instant('RECRUITMENT_DEMANDS.STATUS.' + d.statut),

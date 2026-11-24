@@ -42,8 +42,87 @@
       [icon]="cardIcon()"
       [title]="cardTitle()"
       [subtitle]="cardSub()">
-        <!-- Step 1 — Identité -->
+        <!-- Step 1 — Demande de recrutement. Picking it fills the position fields of step 3.
+             When the same post was requested before and those demands left archived
+             candidatures, the step also asks who the candidate is: a new one, or a copy of an
+             archived one (the archived record stays unchanged). -->
         @if (currentStep() === 1) {
+          <div class="space-y-8">
+            @if (demandsError()) {
+              <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+                <span class="material-symbols-outlined text-[18px]">error</span>
+                {{ demandsError() }}
+              </div>
+            }
+
+            <div>
+              <daf-select
+                [selected]="getSelectNum('position.recruitmentDemandId')"
+                [options]="demandOptions()"
+                [config]="{
+                  label: ('CANDIDATES.FORM.DEMAND' | translate),
+                  placeholder: (demandsLoading() ? ('CANDIDATES.FORM.PRE_LOADING' | translate) : ('CANDIDATES.FORM.DEMAND_PH' | translate)),
+                  hint: ('CANDIDATES.FORM.DEMAND_HINT' | translate),
+                  required: true,
+                  fullWidth: true,
+                  searchable: true,
+                  error: getFieldError('position.recruitmentDemandId'),
+                }"
+                (selectedChange)="onDemandSelected($event)"
+              />
+              @if (!demandsLoading() && !demandsError() && demandOptions().length === 0) {
+                <p class="mt-1.5 text-[12px] text-outline">
+                  {{ 'CANDIDATES.FORM.DEMAND_NONE' | translate }}
+                </p>
+              }
+            </div>
+
+            <!-- Same post requested before, with archived candidatures: new or reuse. -->
+            @if (chosenDemand()?.archivedCandidates) {
+              <div>
+                <daf-chip-group
+                  [options]="sourceOptions()"
+                  [selected]="[candidateSource()]"
+                  [config]="{
+                    label: ('CANDIDATES.FORM.SOURCE_LABEL' | translate),
+                    required: true,
+                  }"
+                  (selectedChange)="onSourceChange($event)"
+                />
+                <p class="mt-1.5 text-[12px] text-outline">
+                  {{ 'CANDIDATES.FORM.SOURCE_HINT' | translate:{ count: chosenDemand()?.earlierRequests ?? 0 } }}
+                </p>
+              </div>
+
+              @if (candidateSource() === 'REUSE') {
+                <div>
+                  <daf-select
+                    [selected]="copiedFrom() ? [copiedFrom()!.id + ''] : []"
+                    [options]="relatedOptions()"
+                    [config]="{
+                      label: ('CANDIDATES.FORM.ARCHIVED_CANDIDATE' | translate),
+                      placeholder: (relatedLoading() ? ('CANDIDATES.FORM.PRE_LOADING' | translate) : ('CANDIDATES.FORM.ARCHIVED_CANDIDATE_PH' | translate)),
+                      required: true,
+                      fullWidth: true,
+                      searchable: true,
+                    }"
+                    (selectedChange)="onArchivedSelected($event)"
+                  />
+                </div>
+              }
+            }
+
+            @if (copiedFrom(); as src) {
+              <div class="flex items-start gap-2.5 rounded-xl border border-teal/20 bg-teal/5 px-3.5 py-2.5">
+                <span class="material-symbols-outlined text-[16px] mt-0.5 text-teal">content_copy</span>
+                <span class="text-[12.5px] leading-snug text-teal">{{ 'CANDIDATES.FORM.COPIED_FROM' | translate:{ name: src.fullName } }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Step 2 — Identité -->
+        @if (currentStep() === 2) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <daf-form-field
               [options]="{
@@ -157,35 +236,9 @@
           </div>
         }
 
-        <!-- Step 2 — Poste & Contrat -->
-        @if (currentStep() === 2) {
+        <!-- Step 3 — Poste & Contrat -->
+        @if (currentStep() === 3) {
           <div class="space-y-8">
-            <!-- FIRST in this step, because picking it fills the rest: the vacancy already
-                 carries the title, department, grade, contract type and target start date
-                 that the fields below ask for. Required: every candidature answers an
-                 approved recruitment request. -->
-            <div class="mb-8">
-              <daf-select
-                [selected]="getSelectNum('position.recruitmentDemandId')"
-                [options]="demandOptions()"
-                [config]="{
-                  label: ('CANDIDATES.FORM.DEMAND' | translate),
-                  placeholder: ('CANDIDATES.FORM.DEMAND_PH' | translate),
-                  hint: ('CANDIDATES.FORM.DEMAND_HINT' | translate),
-                  required: true,
-                  fullWidth: true,
-                  searchable: true,
-                  error: getFieldError('position.recruitmentDemandId'),
-                }"
-                (selectedChange)="onDemandSelected($event)"
-              />
-              @if (demandOptions().length === 0) {
-                <p class="mt-1.5 text-[12px] text-outline">
-                  {{ 'CANDIDATES.FORM.DEMAND_NONE' | translate }}
-                </p>
-              }
-            </div>
-
             <div class="mb-8">
               <daf-form-field
                 [options]="{
@@ -321,8 +374,16 @@
           </div>
         }
 
-        <!-- Step 3 — Curriculum Vitae -->
-        @if (currentStep() === 3) {
+        <!-- Step 4 — Curriculum Vitae -->
+        @if (currentStep() === 4) {
+          <!-- Copied from an archived candidature: its CV is copied on save, unless a new
+               file is dropped below, which replaces it. -->
+          @if (copiedFrom()?.cvName; as cv) {
+            <div class="mb-4 flex items-start gap-2.5 rounded-xl border border-teal/20 bg-teal/5 px-3.5 py-2.5">
+              <span class="material-symbols-outlined text-[16px] mt-0.5 text-teal">description</span>
+              <span class="text-[12.5px] leading-snug text-teal">{{ 'CANDIDATES.FORM.CV_COPIED' | translate:{ file: cv } }}</span>
+            </div>
+          }
           <!-- Scope --color-primary to tertiary so the dropzone accents (icon, "parcourir"
                link, hover/drag border) render green instead of the dark primary. -->
           <daf-file-upload
@@ -331,14 +392,14 @@
             [config]="{
               accept: '.pdf,.doc,.docx',
               maxSizeMb: 10,
-              required: true,
+              required: !copiedFrom()?.cvName,
               hint: ('CANDIDATES.FORM.CV_HINT' | translate),
             }"
           />
         }
 
-        <!-- Step 4 — Notes & Commentaires -->
-        @if (currentStep() === 4) {
+        <!-- Step 5 — Notes & Commentaires -->
+        @if (currentStep() === 5) {
           <daf-form-field
             [options]="{
               type: 'textarea',
@@ -394,7 +455,7 @@
           <daf-button
             class="block w-full"
             [label]="
-              currentStep() === 4
+              currentStep() === 5
                 ? saving()
                   ? cvFiles().length
                     ? ('CANDIDATES.FORM.SAVING_CV' | translate)
@@ -407,7 +468,7 @@
               pill: true,
               fullWidth: true,
               iconEnd: currentStep() < 4 ? 'arrow_forward' : undefined,
-              iconStart: currentStep() === 4 ? 'save' : undefined,
+              iconStart: currentStep() === 5 ? 'save' : undefined,
               loading: saving(),
               disabled: !canGoNext() || saving(),
             }"
@@ -588,7 +649,7 @@
     <daf-button
       class="block w-full"
       [label]="
-        currentStep() === 4
+        currentStep() === 5
           ? saving()
             ? ('CANDIDATES.FORM.SAVING' | translate)
             : ('CANDIDATES.FORM.SAVE' | translate)

@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { DatePipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, of } from 'rxjs';
 import {
@@ -140,6 +141,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof UpdateCandidateRequest)[]>> = {
     OfferEmailModalComponent,
     RejectModalComponent,
     TranslatePipe,
+    DatePipe,
     PageGuideComponent,
   ],
   templateUrl: './candidate-detail.component.html',

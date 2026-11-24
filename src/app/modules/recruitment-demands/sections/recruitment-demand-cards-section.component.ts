@@ -5,7 +5,7 @@ import { catchError, of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { EntityCardAction, EntityCardComponent, EntityCardOptions, SkeletonComponent } from '@khalilrebhiitec/daf360';
 
-import { RecruitmentDemandStatus, RecruitmentDemandSummary } from '../recruitment-demand.model';
+import { RecruitmentDemandStatus, RecruitmentDemandSummary, demandPostsLabel } from '../recruitment-demand.model';
 import { demandDepartmentLabel, demandReasonLabel, demandUrgencyLabel } from '../recruitment-demand-labels';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import { ListValue } from '../../../core/lists/configurable-list.model';
@@ -117,7 +117,7 @@ export class RecruitmentDemandCardsSectionComponent {
           },
           metricsColumns: 2,
           metrics: [
-            { label: t('RECRUITMENT_DEMANDS.LIST.COL_HEADCOUNT'),  value: String(d.headcount ?? 0) },
+            { label: t('RECRUITMENT_DEMANDS.LIST.COL_HEADCOUNT'),  value: demandPostsLabel(d) },
             { label: t('RECRUITMENT_DEMANDS.LIST.COL_CANDIDATES'), value: String(d.candidateCount ?? 0) },
             { label: t('RECRUITMENT_DEMANDS.LIST.COL_URGENCY'),    value: demandUrgencyLabel(d, levels, this.translate) || '—' },
             { label: t('RECRUITMENT_DEMANDS.LIST.COL_SUBMITTED'),  value: this.date.transform(d.submittedAt, 'dd/MM/yyyy') ?? '—' },

@@ -55,6 +55,30 @@
       <!-- ── Right: the current step, then one tab per section of the record ── -->
       <div class="flex min-w-0 flex-1 flex-col gap-6">
 
+        <!-- V137 — an archived candidature says why, the same words as the board's
+             « Archivés » column. -->
+        @if (c.status === 'ARCHIVED') {
+          <div class="flex items-start gap-3 rounded-xl border border-outline-variant/50 bg-surface-container px-4 py-3">
+            <span class="material-symbols-outlined text-[20px] text-outline">inventory_2</span>
+            <div class="min-w-0 text-sm">
+              <p class="m-0 font-semibold text-on-surface">
+                {{ ('CANDIDATES.LIFECYCLE.ARCHIVE_REASON.' + (c.archiveReason || 'UNKNOWN')) | translate }}
+              </p>
+              @if (c.archiveNote || c.rejectionReason) {
+                <p class="m-0 mt-0.5 text-on-surface-variant">{{ c.archiveNote || c.rejectionReason }}</p>
+              }
+              @if (c.archivedAt) {
+                <p class="m-0 mt-1 text-[12px] text-outline">
+                  {{ 'CANDIDATES.LIFECYCLE.ARCHIVED_ON' | translate:{ date: (c.archivedAt | date:'dd/MM/yyyy') } }}
+                  @if (c.archivedFromStatus) {
+                    · {{ 'CANDIDATES.LIFECYCLE.ARCHIVED_FROM' | translate:{ status: ('CANDIDATES.STATUS.' + c.archivedFromStatus | translate) } }}
+                  }
+                </p>
+              }
+            </div>
+          </div>
+        }
+
         <!-- The current step, what it still needs, and the single button that moves the
              candidature on — disabled until the step is ready, and while editing (every
              action reloads the record under the open editor). No recruitment stepper above

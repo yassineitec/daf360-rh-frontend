@@ -103,6 +103,12 @@ export interface CandidateDetail {
   salaireNetRh: number | null;
   /** V132 — the caller reads this record only as a member of an interview panel. */
   interviewerView?: boolean;
+  // ── Archiving (V137) ──
+  archivedAt?: string | null;
+  /** POSITION_FILLED | DEMAND_CLOSED | MANUAL, null before V137. */
+  archiveReason?: string | null;
+  archiveNote?: string | null;
+  archivedFromStatus?: string | null;
 }
 
 /** GET /candidates/{id}/access (V132). */
@@ -135,6 +141,11 @@ export interface CreateCandidateRequest {
   location?: string | null;
   salaireNetCandidat?: number | null;
   salaireNetRh?: number | null;
+  /**
+   * The archived candidature this one is copied from (creation wizard). The server copies its
+   * CV file; the archived record itself is left as it is.
+   */
+  copiedFromCandidateId?: number | null;
 }
 
 /**

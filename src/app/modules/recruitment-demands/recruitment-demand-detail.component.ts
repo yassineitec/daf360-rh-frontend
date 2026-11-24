@@ -4,22 +4,38 @@ import { DatePipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
 import { GuideStep } from '../../shared/guide/page-guide.types';
-import { catchError, of } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import {
+  BadgeCell,
   BreadcrumbItem,
   ButtonComponent,
   CardAccent,
   CardComponent,
+  DataTableComponent,
+  DrawerComponent,
+  DrawerConfig,
   FormFieldComponent,
+  MetricCardComponent,
+  MetricDelta,
   PageComponent,
   PageHeaderBadge,
   PageHeaderComponent,
+  ProgressBarComponent,
+  SkeletonComponent,
   StatusBadgeComponent,
+  TableColumn,
+  TableConfig,
+  TableRow,
 } from '@khalilrebhiitec/daf360';
+import { ConfirmService } from '../../core/confirm.service';
 
 import { UserStore } from '../../core/user.store';
 import { RecruitmentDemandService } from './recruitment-demand.service';
-import { RecruitmentDemandDetail, RecruitmentDemandStatus } from './recruitment-demand.model';
+import {
+  DemandCandidate, DemandHistoryEvent, DemandHistoryType, RecruitmentDemandDetail, RecruitmentDemandStatus,
+} from './recruitment-demand.model';
+import { statusBadge } from '../../shared/status-badge.utils';
+import { candidateAvatar } from '../candidates/candidate-display';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue } from '../../core/lists/configurable-list.model';
 import { RefDataService } from '../../core/ref/ref-data.service';
@@ -103,21 +119,45 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
   standalone: true,
   imports: [
     ButtonComponent, CardComponent, FormFieldComponent, PageComponent, PageHeaderComponent,
-    StatusBadgeComponent, DatePipe, TranslatePipe,
+    ProgressBarComponent, StatusBadgeComponent, MetricCardComponent, DataTableComponent, DrawerComponent,
+    SkeletonComponent, DatePipe, TranslatePipe,
     PageGuideComponent,
   ],
   template: `
     <!-- Same daf-page/daf-page-header scaffold as the other detail pages (candidates,
          profiles): breadcrumbs carry the "back to list" affordance, badges show status
          on the title line — no hand-rolled header markup. -->
-    <daf-page [loading]="loading()" [kpis]="0" [breadcrumbs]="true">
+    <daf-page [loading]="loading()" [kpis]="4" [breadcrumbs]="true">
 
       <daf-page-header data-guide="header"
         [title]="demand()?.jobTitle ?? ('RECRUITMENT_DEMANDS.DETAIL.NOT_FOUND' | translate)"
         [subtitle]="departmentLabel()"
         [badges]="headerBadges()"
         [breadcrumbs]="breadcrumbs()"
-        [breadcrumbLabel]="'RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB_ARIA' | translate" />
+        [breadcrumbLabel]="'RECRUITMENT_DEMANDS.DETAIL.BREADCRUMB_ARIA' | translate">
+        <!-- Static root (the @if lives inside): content nested in an @if is never matched
+             by the header's ng-content select. -->
+        <div pageActions>
+          @if (demand()) {
+            <daf-button
+              [options]="{ variant: 'secondary', iconStart: 'history', label: ('RECRUITMENT_DEMANDS.HISTORY.OPEN' | translate) }"
+              (onClick)="openHistory()" />
+          }
+        </div>
+      </daf-page-header>
+
+      <!-- KPIs under the header (UI-PLAYBOOK §1 scale): where the vacancy stands at a glance —
+           posts filled, candidatures still running, recruited, closed. -->
+      @if (demand()) {
+        <section class="grid gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4
+                        max-sm:grid-flow-col max-sm:auto-cols-[80%] max-sm:overflow-x-auto
+                        max-sm:snap-x max-sm:snap-mandatory max-sm:pb-1 max-sm:[scrollbar-width:none]">
+          @for (k of kpis(); track k.key) {
+            <daf-metric-card class="snap-start" [label]="k.label" [value]="k.value" [delta]="k.delta"
+                             [options]="{ icon: k.icon, iconColor: k.iconColor, iconBg: k.iconBg }" />
+          }
+        </section>
+      }
 
       @if (!demand()) {
         <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
@@ -159,6 +199,79 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
                   }
                 </div>
               </daf-card>
+
+              <!-- Posts (V137): how many are filled, and — once approved — closing, reopening
+                   and resizing the vacancy. A post is filled when its offer is agreed. -->
+              @if (showPositions()) {
+                <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                  <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[18px] text-secondary">groups</span>
+                    {{ 'RECRUITMENT_DEMANDS.POSITIONS.TITLE' | translate }}
+                  </h3>
+                  <p class="m-0 text-[22px] font-bold text-on-surface">
+                    {{ demand()!.positionsFilled ?? 0 }} / {{ demand()!.headcount }}
+                    <span class="text-[13px] font-medium text-on-surface-variant">{{ 'RECRUITMENT_DEMANDS.POSITIONS.FILLED' | translate }}</span>
+                  </p>
+                  <div class="mt-2">
+                    <daf-progress-bar
+                      [value]="demand()!.positionsFilled ?? 0"
+                      [options]="{ max: demand()!.headcount || 1, size: 'sm', rounded: true,
+                                   variant: (demand()!.remainingPositions ?? 0) === 0 ? 'teal' : 'secondary' }" />
+                  </div>
+                  <p class="m-0 mt-2 text-[12px] text-on-surface-variant">
+                    {{ 'RECRUITMENT_DEMANDS.POSITIONS.DETAIL' | translate:{ hired: demand()!.hiredCount ?? 0, remaining: demand()!.remainingPositions ?? 0 } }}
+                  </p>
+
+                  @if (demand()!.statut === 'CLOTUREE' && demand()!.closedReason) {
+                    <p class="m-0 mt-3 flex items-start gap-1.5 rounded-lg bg-surface-container px-3 py-2 text-[12px] text-on-surface">
+                      <span class="material-symbols-outlined text-[16px] text-teal">task_alt</span>
+                      <span>
+                        {{ ('RECRUITMENT_DEMANDS.POSITIONS.CLOSED_' + demand()!.closedReason) | translate:{ date: (demand()!.closedAt | date:'dd/MM/yyyy'), name: demand()!.closedByName || '—' } }}
+                      </span>
+                    </p>
+                  }
+
+                  @if (canResize()) {
+                    <div class="mt-4 flex items-end gap-2">
+                      <div class="min-w-0 flex-1">
+                        <daf-form-field
+                          [options]="{ type: 'number', label: ('RECRUITMENT_DEMANDS.POSITIONS.HEADCOUNT' | translate),
+                                       fullWidth: true, error: headcountError() ?? '' }"
+                          [value]="headcountDraft()"
+                          (valueChange)="headcountDraft.set(toInt($event))" />
+                      </div>
+                      <daf-button
+                        [options]="{ variant: 'secondary', iconStart: 'save', disabled: positionsBusy() || headcountDraft() === demand()!.headcount,
+                                     loading: positionsBusy(), label: ('RECRUITMENT_DEMANDS.POSITIONS.SAVE' | translate) }"
+                        (onClick)="saveHeadcount()" />
+                    </div>
+                  }
+
+                  @if (positionsError()) {
+                    <p class="m-0 mt-2 text-[12px] text-danger">{{ positionsError() }}</p>
+                  }
+
+                  <div class="mt-4 flex flex-col gap-2">
+                    @if (canClose()) {
+                      <daf-form-field
+                        [options]="{ type: 'textarea', rows: 2, fullWidth: true,
+                                     label: ('RECRUITMENT_DEMANDS.POSITIONS.CLOSE_NOTE' | translate) }"
+                        [value]="closeNote"
+                        (valueChange)="closeNote = asText($event)" />
+                      <daf-button
+                        [options]="{ variant: 'ghost', iconStart: 'lock', fullWidth: true, disabled: positionsBusy(),
+                                     label: ('RECRUITMENT_DEMANDS.POSITIONS.CLOSE' | translate) }"
+                        (onClick)="doClose()" />
+                    }
+                    @if (canReopen()) {
+                      <daf-button
+                        [options]="{ variant: 'secondary', iconStart: 'lock_open', fullWidth: true, disabled: positionsBusy(),
+                                     label: ('RECRUITMENT_DEMANDS.POSITIONS.REOPEN' | translate) }"
+                        (onClick)="doReopen()" />
+                    }
+                  </div>
+                </daf-card>
+              }
 
               <!-- Approve / Reject — the one decision this page exists for, right under
                    the job details, so the buttons are large, full-width and
@@ -209,6 +322,26 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
           <!-- ── Right: one flowing column — decision (if any), then the job's own
                description/profile/scope/skills/notes. ── -->
           <div class="flex min-w-0 flex-1 flex-col gap-6">
+            <!-- Who applied to this vacancy: every candidature, with where it stands — still
+                 running, counting down to its archive (posts filled), recruited, or closed. -->
+            @if (showCandidates()) {
+              <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl' }">
+                <h3 class="m-0 mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  <span class="material-symbols-outlined text-[18px] text-teal">group</span>
+                  {{ 'RECRUITMENT_DEMANDS.CANDIDATES.TITLE' | translate:{ count: candidates().length } }}
+                </h3>
+                @if (candidatesError()) {
+                  <p class="m-0 text-[13px] text-danger">{{ candidatesError() }}</p>
+                } @else {
+                  <daf-data-table
+                    [columns]="candidateColumns()"
+                    [rows]="candidateRows()"
+                    [config]="candidateTableConfig()"
+                    (rowClick)="openCandidate($any($event)['_id'])" />
+                }
+              </daf-card>
+            }
+
             @if (demand()!.reviewedAt) {
               <daf-card [options]="{ variant: 'glass', padding: 'lg', radius: 'xl', accent: reviewAccent() }">
                 <h3 class="m-0 mb-2 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">
@@ -296,6 +429,53 @@ const FIELD_ICON: Record<string, { icon: string; iconColor: string; iconBg: stri
         </div>
       }
     </daf-page>
+
+    <!-- « Historique » — at the page root: the panel is position: fixed, and an ancestor with
+         a transform (daf-page's enter animation, a glass card) would become its containing
+         block. Opened from the header button only (no edge tab). -->
+    <daf-drawer [(open)]="historyOpen" [config]="historyDrawerConfig()">
+      @if (historyLoading()) {
+        <div class="flex flex-col gap-3">
+          @for (i of [0, 1, 2, 3, 4]; track i) {
+            <daf-skeleton variant="block" radius="lg" width="100%" height="56px" />
+          }
+        </div>
+      } @else if (historyError()) {
+        <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+          <span class="material-symbols-outlined text-[18px]">error</span>
+          <span class="flex-1">{{ historyError() }}</span>
+        </div>
+      } @else if (!historyItems().length) {
+        <p class="m-0 text-[13px] text-on-surface-variant">{{ 'RECRUITMENT_DEMANDS.HISTORY.EMPTY' | translate }}</p>
+      } @else {
+        <ol class="m-0 flex list-none flex-col p-0">
+          @for (h of historyItems(); track $index; let last = $last) {
+            <li class="flex gap-3">
+              <!-- Rail: the event's icon, a line down to the next one. -->
+              <div class="flex flex-col items-center">
+                <span [class]="'flex h-8 w-8 shrink-0 items-center justify-center rounded-full ' + h.tone">
+                  <span class="material-symbols-outlined text-[17px]">{{ h.icon }}</span>
+                </span>
+                @if (!last) { <span class="my-1 w-px flex-1 bg-outline-variant"></span> }
+              </div>
+              <div class="min-w-0 flex-1 pb-5">
+                <p class="m-0 text-[13px] font-semibold leading-snug text-on-surface">
+                  {{ h.title }}
+                  @if (h.candidateId) {
+                    <button type="button" class="ml-0.5 font-semibold text-teal hover:underline"
+                            (click)="openCandidate(h.candidateId)">{{ h.candidateName }}</button>
+                  }
+                </p>
+                @if (h.detail) {
+                  <p class="m-0 mt-0.5 text-[12px] leading-snug text-on-surface-variant">{{ h.detail }}</p>
+                }
+                <p class="m-0 mt-1 text-[11px] text-outline">{{ h.when }}@if (h.actor) { · {{ h.actor }} }</p>
+              </div>
+            </li>
+          }
+        </ol>
+      }
+    </daf-drawer>
 
     <rh-page-guide storageKey="recruitment-demand" [steps]="guideSteps" />
   `,
@@ -444,7 +624,7 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     fields.push(field('EDUCATION',  this.labelById(this.educationLevels(),  d.educationLevelId,  d.educationLevelLabel)));
     fields.push(field('TARGET_START',        d.targetStartDate ? this.formatDate(d.targetStartDate) : '—'));
     fields.push(field('BUDGET',              d.budgetRange ?? '—'));
-    fields.push(field('LINKED_CANDIDATES',   String(d.candidateCount)));
+    fields.push(field('LINKED_CANDIDATES',   String(d.candidateCount ?? 0)));
     return fields;
   });
 
@@ -464,10 +644,253 @@ export class RecruitmentDemandDetailComponent implements OnInit {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.svc.getById(id).pipe(catchError(() => of(null))).subscribe(d => {
       this.demand.set(d);
-      if (d) this.loadAdminLists(d.paysId);
+      if (d) {
+        this.headcountDraft.set(d.headcount);
+        this.loadAdminLists(d.paysId);
+        this.loadCandidates(d.id);
+      }
       this.loading.set(false);
     });
   }
+
+  // ── Candidates + KPIs ──────────────────────────────────────────────────────
+
+  /** Every candidature of the demand (`/{id}/candidates`), newest first. */
+  readonly candidates        = signal<DemandCandidate[]>([]);
+  readonly candidatesLoading = signal(true);
+  readonly candidatesError   = signal<string | null>(null);
+
+  /** Candidatures exist only once a demand is approved — before that the section is noise. */
+  readonly showCandidates = computed(() => {
+    const s = this.demand()?.statut;
+    return s === 'APPROUVEE' || s === 'CLOTUREE' || this.candidates().length > 0;
+  });
+
+  private loadCandidates(demandId: number): void {
+    this.candidatesLoading.set(true);
+    this.candidatesError.set(null);
+    this.svc.getCandidates(demandId).subscribe({
+      next: list => { this.candidates.set(list ?? []); this.candidatesLoading.set(false); },
+      error: err => {
+        this.candidatesLoading.set(false);
+        this.candidatesError.set(err?.error?.detail ?? err?.error?.message
+          ?? this.translate.instant('RECRUITMENT_DEMANDS.CANDIDATES.ERR_LOAD'));
+      },
+    });
+  }
+
+  /** Still in recruitment (interviews, accepted, offer sent). */
+  private static readonly RUNNING = ['PENDING', 'ACCEPTED', 'OFFER_SENT'];
+  /** The offer is agreed: onboarding / IT under way, or hired — these hold a post. */
+  private static readonly RECRUITED = ['IT_IN_PROGRESS', 'EMAIL_RECEIVED', 'HR_IN_PROGRESS', 'HIRED'];
+
+  /** Days left before a candidature on a filled demand is archived; null when none is planned. */
+  private daysLeft(c: DemandCandidate): number | null {
+    if (!c.archiveDueDate) return null;
+    const [y, m, d] = c.archiveDueDate.split('-').map(Number);
+    const now = new Date();
+    const diff = Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.max(0, Math.round(diff / 86_400_000));
+  }
+
+  /**
+   * The vacancy at a glance: posts filled (of the headcount), candidatures still running (and
+   * how many of them count down to the archive), recruited, and closed ones (archived /
+   * refused).
+   */
+  readonly kpis = computed(() => {
+    this.translate.currentLang();
+    const d = this.demand();
+    if (!d) return [];
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant('RECRUITMENT_DEMANDS.KPI.' + k, p);
+    const list = this.candidates();
+    const running   = list.filter(c => RecruitmentDemandDetailComponent.RUNNING.includes(c.status));
+    const counting  = running.filter(c => c.archiveDueDate).length;
+    const recruited = list.filter(c => RecruitmentDemandDetailComponent.RECRUITED.includes(c.status)).length;
+    const archived  = list.filter(c => c.status === 'ARCHIVED').length;
+    const rejected  = list.filter(c => c.status === 'REJECTED').length;
+    const filled    = d.positionsFilled ?? 0;
+    const remaining = d.remainingPositions ?? Math.max(0, d.headcount - filled);
+    const kpi = (key: string, label: string, value: string, delta: MetricDelta | null,
+                 icon: string, iconColor: string, iconBg: string) => ({ key, label, value, delta, icon, iconColor, iconBg });
+    return [
+      kpi('POSTS', t('POSTS'), filled + ' / ' + d.headcount,
+          { value: remaining === 0 ? t('POSTS_FULL') : t('POSTS_LEFT', { count: remaining }),
+            direction: remaining === 0 ? 'up' : 'neutral' },
+          'groups', 'text-secondary', 'bg-secondary/10'),
+      kpi('RUNNING', t('RUNNING'), String(running.length),
+          counting ? { value: t('RUNNING_COUNTDOWN', { count: counting }), direction: 'down' } : null,
+          'hourglass_top', 'text-warning', 'bg-warning/10'),
+      kpi('RECRUITED', t('RECRUITED'), String(recruited),
+          d.hiredCount ? { value: t('RECRUITED_HIRED', { count: d.hiredCount }), direction: 'up' } : null,
+          'how_to_reg', 'text-success', 'bg-success/10'),
+      kpi('CLOSED', t('CLOSED'), String(archived + rejected),
+          (archived + rejected) ? { value: t('CLOSED_DETAIL', { archived, rejected }), direction: 'neutral' } : null,
+          'inventory_2', 'text-outline', 'bg-surface-container-high'),
+    ];
+  });
+
+  readonly candidateColumns = computed<TableColumn[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string) => this.translate.instant('RECRUITMENT_DEMANDS.CANDIDATES.' + k);
+    return [
+      { key: 'candidate', label: t('COL_CANDIDATE'), type: 'avatar', mobile: 'primary' },
+      { key: 'status',    label: t('COL_STATUS'), type: 'badge' },
+      { key: 'created',   label: t('COL_APPLIED'), mobile: 'hidden' },
+      { key: 'followUp',  label: t('COL_FOLLOW_UP') },
+    ];
+  });
+
+  readonly candidateRows = computed<TableRow[]>(() => {
+    this.translate.currentLang();
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant('RECRUITMENT_DEMANDS.CANDIDATES.' + k, p);
+    return this.candidates().map(c => {
+      const badge = statusBadge(c.status, this.translate);
+      const days = this.daysLeft(c);
+      let followUp = '—';
+      if (days !== null) {
+        followUp = days === 0 ? t('ARCHIVE_TODAY') : t('ARCHIVE_IN', { days });
+      } else if (c.status === 'ARCHIVED') {
+        const reason = this.translate.instant('CANDIDATES.LIFECYCLE.ARCHIVE_REASON.' + (c.archiveReason ?? 'UNKNOWN'));
+        followUp = c.archivedAt ? reason + ' · ' + this.formatDate(c.archivedAt) : reason;
+      } else if (c.status === 'REJECTED') {
+        followUp = c.rejectionReason || '—';
+      }
+      const initials = (c.fullName || '?').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+      return {
+        _id: c.id,
+        candidate: { name: c.fullName || '—', initials, avatar: candidateAvatar(c.gender) || undefined, subtitle: c.email ?? '' },
+        status: { label: badge.label, options: { variant: badge.options.variant } } as BadgeCell,
+        created: c.createdAt ? this.formatDate(c.createdAt) : '—',
+        followUp,
+      };
+    });
+  });
+
+  readonly candidateTableConfig = computed<TableConfig>(() => {
+    this.translate.currentLang();
+    return {
+      hoverable: true,
+      loading: this.candidatesLoading(),
+      skeletonRows: 3,
+      emptyMessage: this.translate.instant('RECRUITMENT_DEMANDS.CANDIDATES.EMPTY'),
+      rowId: (row) => String(row['_id']),
+    };
+  });
+
+  openCandidate(id: number | null | undefined): void {
+    if (id != null) this.router.navigate(['/rh/candidates', id]);
+  }
+
+  // ── Historique (drawer) ────────────────────────────────────────────────────
+
+  readonly historyOpen    = signal(false);
+  readonly history        = signal<DemandHistoryEvent[]>([]);
+  readonly historyLoading = signal(false);
+  readonly historyError   = signal<string | null>(null);
+
+  readonly historyDrawerConfig = computed<DrawerConfig>(() => {
+    this.translate.currentLang();
+    return {
+      title: this.translate.instant('RECRUITMENT_DEMANDS.HISTORY.TITLE'),
+      icon: 'history',
+      width: '440px',
+      showToggle: false,
+      closeLabel: this.translate.instant('RECRUITMENT_DEMANDS.HISTORY.CLOSE'),
+    };
+  });
+
+  /** Fetched on every opening: the drawer is where you look for what just changed. */
+  openHistory(): void {
+    const d = this.demand();
+    if (!d) return;
+    this.historyOpen.set(true);
+    this.historyLoading.set(true);
+    this.historyError.set(null);
+    this.svc.getHistory(d.id).subscribe({
+      next: list => { this.history.set(list ?? []); this.historyLoading.set(false); },
+      error: err => {
+        this.historyLoading.set(false);
+        this.historyError.set(err?.error?.detail ?? err?.error?.message
+          ?? this.translate.instant('RECRUITMENT_DEMANDS.HISTORY.ERR_LOAD'));
+      },
+    });
+  }
+
+  /** Icon + tone per event. Whole literal class strings — a class built at runtime is never
+   *  generated by Tailwind (UI-PLAYBOOK §3). */
+  private static readonly HISTORY_LOOK: Record<DemandHistoryType, { icon: string; tone: string }> = {
+    CREATED:            { icon: 'add_circle',     tone: 'bg-primary/10 text-primary' },
+    REQUESTED_AGAIN:    { icon: 'history',        tone: 'bg-secondary/10 text-secondary' },
+    REQUESTED_LATER:    { icon: 'content_copy',   tone: 'bg-secondary/10 text-secondary' },
+    APPROVED:           { icon: 'check_circle',   tone: 'bg-success/10 text-success' },
+    REJECTED:           { icon: 'cancel',         tone: 'bg-danger/10 text-danger' },
+    CANCELLED:          { icon: 'block',          tone: 'bg-surface-container-high text-on-surface-variant' },
+    HEADCOUNT_CHANGED:  { icon: 'groups',         tone: 'bg-secondary/10 text-secondary' },
+    CLOSED_MANUAL:      { icon: 'lock',           tone: 'bg-surface-container-high text-on-surface-variant' },
+    CLOSED_FILLED:      { icon: 'task_alt',       tone: 'bg-teal/10 text-teal' },
+    REOPENED:           { icon: 'lock_open',      tone: 'bg-warning/10 text-warning' },
+    REOPENED_AUTO:      { icon: 'lock_open',      tone: 'bg-warning/10 text-warning' },
+    CANDIDATE_ADDED:    { icon: 'person_add',     tone: 'bg-primary/10 text-primary' },
+    CANDIDATE_REUSED:   { icon: 'content_copy',   tone: 'bg-teal/10 text-teal' },
+    OFFER_ACCEPTED:     { icon: 'how_to_reg',     tone: 'bg-success/10 text-success' },
+    CANDIDATE_ARCHIVED: { icon: 'inventory_2',    tone: 'bg-surface-container-high text-on-surface-variant' },
+    CANDIDATE_REJECTED: { icon: 'person_remove',  tone: 'bg-danger/10 text-danger' },
+  };
+
+  readonly historyItems = computed(() => {
+    const lang = this.translate.currentLang();
+    const locale = lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-TN' : 'fr-FR';
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant('RECRUITMENT_DEMANDS.HISTORY.' + k, p);
+    const day = (iso: string | undefined) => {
+      if (!iso) return '';
+      const x = new Date(iso);
+      return isNaN(x.getTime()) ? iso : x.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+    return this.history().map(h => {
+      const look = RecruitmentDemandDetailComponent.HISTORY_LOOK[h.type]
+        ?? { icon: 'radio_button_checked', tone: 'bg-surface-container-high text-on-surface-variant' };
+      const d = h.details ?? {};
+      let detail: string | null = null;
+      switch (h.type) {
+        case 'REQUESTED_AGAIN':
+          detail = t('DETAIL.REQUESTED_AGAIN', { demandId: d['demandId'], date: day(d['date']) }); break;
+        case 'REQUESTED_LATER':
+          detail = t('DETAIL.REQUESTED_LATER', {
+            demandId: d['demandId'],
+            status: d['status'] ? this.translate.instant('RECRUITMENT_DEMANDS.STATUS.' + d['status']) : '' }); break;
+        case 'APPROVED':
+        case 'REJECTED':
+          detail = d['comment'] || null; break;
+        case 'CLOSED_MANUAL':
+          detail = [d['note'], d['archived'] ? t('DETAIL.ARCHIVED_COUNT', { count: d['archived'] }) : null]
+            .filter(Boolean).join(' · ') || null; break;
+        case 'CLOSED_FILLED':
+        case 'REOPENED':
+        case 'REOPENED_AUTO':
+          detail = d['filled'] ? t('DETAIL.FILLED', { filled: d['filled'] }) : null; break;
+        case 'CANDIDATE_REUSED':
+          detail = d['fromName'] ? t('DETAIL.REUSED_FROM', { name: d['fromName'] }) : null; break;
+        case 'CANDIDATE_ARCHIVED':
+          detail = this.translate.instant('CANDIDATES.LIFECYCLE.ARCHIVE_REASON.' + (d['reason'] || 'UNKNOWN')); break;
+        case 'CANDIDATE_REJECTED':
+          detail = d['reason'] || null; break;
+      }
+      const when = new Date(h.at);
+      return {
+        icon: look.icon,
+        tone: look.tone,
+        title: t('TYPE.' + h.type, { count: d['count'], from: d['from'], to: d['to'] }),
+        detail,
+        candidateId: h.candidateId,
+        candidateName: h.candidateName,
+        actor: h.actorName ?? (h.type === 'CLOSED_FILLED' || h.type === 'REOPENED_AUTO'
+          || (h.type === 'CANDIDATE_ARCHIVED' && d['reason'] === 'POSITION_FILLED') ? t('SYSTEM') : null),
+        when: isNaN(when.getTime()) ? h.at
+          : when.toLocaleString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      };
+    });
+  });
 
   doReview(approved: boolean): void {
     const d = this.demand();
@@ -480,6 +903,92 @@ export class RecruitmentDemandDetailComponent implements OnInit {
         if (updated) { this.demand.set(updated); }
         this.reviewing.set(false);
       });
+  }
+
+  // ── Posts (V137) ───────────────────────────────────────────────────────────
+  private confirm = inject(ConfirmService);
+
+  readonly positionsBusy  = signal(false);
+  readonly positionsError = signal<string | null>(null);
+  readonly headcountDraft = signal<number>(1);
+  closeNote = '';
+
+  /** Approved or closed: the vacancy exists, so its posts mean something. */
+  readonly showPositions = () => {
+    const s = this.demand()?.statut;
+    return s === 'APPROUVEE' || s === 'CLOTUREE';
+  };
+  /** The recruitment team runs the vacancy; the approvers decided it — both may close it. */
+  readonly canClose = () => this.demand()?.statut === 'APPROUVEE'
+    && (this.userStore.hasPermission('RH_APPROVE_RECRUITMENT_DEMAND') || this.userStore.hasPermission('CREATE_CANDIDATE'));
+  /** Reopening or resizing restarts / widens the recruitment: an approver's call. */
+  readonly canReopen = () => this.demand()?.statut === 'CLOTUREE'
+    && this.userStore.hasPermission('RH_APPROVE_RECRUITMENT_DEMAND');
+  readonly canResize = () => this.showPositions() && this.userStore.hasPermission('RH_APPROVE_RECRUITMENT_DEMAND');
+
+  /** Never below the posts already filled — the server refuses it too. */
+  readonly headcountError = computed<string | null>(() => {
+    this.translate.currentLang();
+    const n = this.headcountDraft();
+    const filled = this.demand()?.positionsFilled ?? 0;
+    if (!Number.isInteger(n) || n < 1 || n > 50) return this.translate.instant('RECRUITMENT_DEMANDS.POSITIONS.ERR_RANGE');
+    if (n < filled) return this.translate.instant('RECRUITMENT_DEMANDS.POSITIONS.ERR_BELOW_FILLED', { filled });
+    return null;
+  });
+
+  private setDemand(d: RecruitmentDemandDetail): void {
+    this.demand.set(d);
+    this.headcountDraft.set(d.headcount);
+  }
+
+  toInt(v: string | number | null): number {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : 0;
+  }
+
+  saveHeadcount(): void {
+    const d = this.demand();
+    if (!d || this.headcountError()) return;
+    this.runPositions(this.svc.changeHeadcount(d.id, this.headcountDraft()));
+  }
+
+  async doClose(): Promise<void> {
+    const d = this.demand();
+    if (!d) return;
+    const ok = await this.confirm.ask({
+      title:   this.translate.instant('RECRUITMENT_DEMANDS.POSITIONS.CLOSE_CONFIRM_TITLE'),
+      message: this.translate.instant('RECRUITMENT_DEMANDS.POSITIONS.CLOSE_CONFIRM_MSG'),
+      confirmLabel: this.translate.instant('RECRUITMENT_DEMANDS.POSITIONS.CLOSE'),
+      cancelLabel:  this.translate.instant('RECRUITMENT_DEMANDS.POSITIONS.CANCEL'),
+      icon: 'lock',
+    });
+    if (!ok) return;
+    this.runPositions(this.svc.close(d.id, this.closeNote.trim() || null), () => { this.closeNote = ''; });
+  }
+
+  doReopen(): void {
+    const d = this.demand();
+    if (!d) return;
+    this.runPositions(this.svc.reopen(d.id));
+  }
+
+  private runPositions(call: Observable<RecruitmentDemandDetail>, after?: () => void): void {
+    this.positionsBusy.set(true);
+    this.positionsError.set(null);
+    call.subscribe({
+      next: updated => {
+        this.setDemand(updated);
+        this.positionsBusy.set(false);
+        // Closing archives candidatures, resizing / reopening ends their countdown.
+        this.loadCandidates(updated.id);
+        after?.();
+      },
+      error: err => {
+        this.positionsBusy.set(false);
+        this.positionsError.set(err?.error?.detail ?? err?.error?.message
+          ?? this.translate.instant('RECRUITMENT_DEMANDS.DETAIL.ERR'));
+      },
+    });
   }
 
   doCancel(): void {

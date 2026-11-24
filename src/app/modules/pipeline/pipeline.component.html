@@ -1,26 +1,6 @@
-<!-- /rh/candidates — canonical page shape (UI-PLAYBOOK §1).
-     `daf-page` owns the 32px vertical rhythm, so there is no wrapper gap, no
-     `space-y-*` between sections and no full-page spinner. `kpis="3"` matches the
-     three tiles, so the first-load skeleton doesn't draw a fourth that never
-     resolves. No `icon` on the header — page titles carry none. -->
-<daf-page [loading]="firstLoad()" [kpis]="3">
-
-  <daf-page-header
-    [title]="'PIPELINE.TITLE' | translate"
-    [subtitle]="'PIPELINE.SUBTITLE' | translate">
-    <ng-container pageActions>
-      <daf-button *dafHasPermission="'CREATE_CANDIDATE'"
-        [options]="{ variant: 'teal', label: ('PIPELINE.NEW_CANDIDATE' | translate), iconStart: 'add' }"
-        (onClick)="onNewCandidate()" />
-    </ng-container>
-  </daf-page-header>
-
-  <!-- Page-level KPIs ABOVE the tab strip: the same row on both tabs (Kanban | Historique). -->
-  <rh-candidates-kpis [stats]="stats()" />
-
-  <!-- Kanban | Historique — one page, two route-backed tabs (like « Provisioning IT »). -->
-  <rh-candidates-tabs active="board" />
-
+<!-- /rh/candidates — Kanban tab. The page around it (title, « Nouveau candidat », KPIs,
+     tab strip) is CandidatesPageComponent's: this template is only the tab's content, laid in
+     the page's flex column through the host's display: contents. -->
   <!-- Search + filters + view toggle: one lib toolbar, one card. Replaces the
        hand-rolled search card, its mobile search toggle and the bespoke
        kanban/list button pair. The stage dropdown lives inside the filter panel. -->
@@ -97,11 +77,9 @@
     (renegotiate)="openOfferModal($event, 'renegotiate')"
     (refuse)="openRefuseModal($event)" />
 
-</daf-page>
 
-<!-- Modals live at the page root, outside `daf-page`: the overlay is
-     `position: fixed`, and an ancestor carrying transform / filter /
-     backdrop-filter would become its containing block. -->
+<!-- Modals at the end of the tab: the overlay is `position: fixed`, and an ancestor
+     carrying transform / filter / backdrop-filter would become its containing block. -->
 <!-- rh-offer-modal is gone. An offer must be costed by the payroll engine and approved by
      finance before it reaches a candidate (V98), and this modal had no simulator — anything
      it submitted would be refused for want of a costing. Both card actions now open the

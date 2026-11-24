@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   AbstractControl, ReactiveFormsModule, FormBuilder, FormGroup, ValidationErrors, Validators,
 } from '@angular/forms';
@@ -14,6 +14,7 @@ import { ConfigurableListService } from '../../core/lists/configurable-list.serv
 import { ListValue }               from '../../core/lists/configurable-list.model';
 import { RecruitmentDemandService } from '../recruitment-demands/recruitment-demand.service';
 import { ApprovedDemandOption }     from '../recruitment-demands/recruitment-demand.model';
+import { ArchivedCandidate }        from '../pipeline/services/pipeline.service';
 import { catchError, of }           from 'rxjs';
 import {
   ButtonComponent,
@@ -46,11 +47,12 @@ import { GuideStep } from '../../shared/guide/page-guide.types';
  */
 const GUIDE_STEPS: GuideStep[] = [
   { icon: 'waving_hand', titleKey: 'CANDIDATE_FORM.GUIDE.WELCOME.TITLE',  textKey: 'CANDIDATE_FORM.GUIDE.WELCOME.TEXT',  tab: '1' },
-  { icon: 'person',      titleKey: 'CANDIDATE_FORM.GUIDE.IDENTITY.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.IDENTITY.TEXT', target: 'form', tab: '1' },
-  { icon: 'work',        titleKey: 'CANDIDATE_FORM.GUIDE.POSITION.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.POSITION.TEXT', target: 'form', tab: '2' },
-  { icon: 'description', titleKey: 'CANDIDATE_FORM.GUIDE.CV_NOTES.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.CV_NOTES.TEXT', target: 'form', tab: '3' },
-  { icon: 'checklist',   titleKey: 'CANDIDATE_FORM.GUIDE.PROGRESS.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.PROGRESS.TEXT', target: 'progress', tab: '3' },
-  { icon: 'save',        titleKey: 'CANDIDATE_FORM.GUIDE.ACTIONS.TITLE',  textKey: 'CANDIDATE_FORM.GUIDE.ACTIONS.TEXT',  target: 'actions', tab: '4' },
+  { icon: 'work_history', titleKey: 'CANDIDATE_FORM.GUIDE.DEMAND.TITLE',  textKey: 'CANDIDATE_FORM.GUIDE.DEMAND.TEXT',   target: 'form', tab: '1' },
+  { icon: 'person',      titleKey: 'CANDIDATE_FORM.GUIDE.IDENTITY.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.IDENTITY.TEXT', target: 'form', tab: '2' },
+  { icon: 'work',        titleKey: 'CANDIDATE_FORM.GUIDE.POSITION.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.POSITION.TEXT', target: 'form', tab: '3' },
+  { icon: 'description', titleKey: 'CANDIDATE_FORM.GUIDE.CV_NOTES.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.CV_NOTES.TEXT', target: 'form', tab: '4' },
+  { icon: 'checklist',   titleKey: 'CANDIDATE_FORM.GUIDE.PROGRESS.TITLE', textKey: 'CANDIDATE_FORM.GUIDE.PROGRESS.TEXT', target: 'progress', tab: '4' },
+  { icon: 'save',        titleKey: 'CANDIDATE_FORM.GUIDE.ACTIONS.TITLE',  textKey: 'CANDIDATE_FORM.GUIDE.ACTIONS.TEXT',  target: 'actions', tab: '5' },
   { icon: 'help',        titleKey: 'CANDIDATE_FORM.GUIDE.END.TITLE',      textKey: 'CANDIDATE_FORM.GUIDE.END.TEXT',      tab: '1' },
 ];
 
@@ -153,10 +155,132 @@ export class CandidateFormComponent implements OnInit {
     this.employmentTypes().map(t => ({ value: String(t.id), label: this.label(t) })),
   );
 
+  // ── Step 1: the recruitment demand (V137) ────────────────────────────────
+  /*
+   * The wizard starts on the vacancy. Picking it fills the position fields (step 3). When the
+   * same post was requested before (department + title + exact title) and those demands left
+   * archived candidatures, the step also asks who the candidate is: a new one, or a COPY of
+   * one of those archived candidates — the archived record itself stays as it is. A post
+   * requested for the first time asks nothing more.
+   */
+  readonly demandsLoading = signal(true);
+  readonly demandsError   = signal<string | null>(null);
+  readonly related        = signal<ArchivedCandidate[]>([]);
+  readonly relatedLoading = signal(false);
+  /** NEW = a blank candidate; REUSE = start from an archived candidature of the same post. */
+  readonly candidateSource = signal<'NEW' | 'REUSE'>('NEW');
+  /** The archived candidature the form was filled from; its CV is copied server-side. */
+  readonly copiedFrom     = signal<{ id: number; fullName: string; cvName: string | null } | null>(null);
+
+  isFull(d: ApprovedDemandOption): boolean {
+    return d.headcount != null && (d.positionsFilled ?? 0) >= d.headcount;
+  }
+
+  /** The demand currently picked in step 1. */
+  readonly chosenDemand = computed(() => {
+    this.formValue();
+    const id = this.positionGroup.get('recruitmentDemandId')?.value;
+    return this.demands().find(d => d.id === id) ?? null;
+  });
+
+  readonly sourceOptions = computed<ChipOption[]>(() => {
+    this.translate.currentLang();
+    const n = this.related().length;
+    return [
+      { value: 'NEW',   label: this.translate.instant('CANDIDATES.FORM.PRE_NEW'),   icon: 'person_add' },
+      { value: 'REUSE', label: this.translate.instant('CANDIDATES.FORM.SOURCE_REUSE', { count: n }), icon: 'content_copy', disabled: n === 0 },
+    ];
+  });
+
+  readonly relatedOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return this.related().map(a => ({
+      value: String(a.id),
+      label: [a.fullName || '—', a.email,
+              this.translate.instant('CANDIDATES.FORM.ARCHIVED_ON_SHORT', { date: this.archivedDate(a.archivedAt) })]
+        .filter(Boolean).join(' · '),
+    }));
+  });
+
+  /** Archived candidates of the earlier demands for this post — only when it has some. */
+  private loadRelated(demand: ApprovedDemandOption | null): void {
+    this.related.set([]);
+    if (!demand?.archivedCandidates) return;
+    this.relatedLoading.set(true);
+    this.demandSvc.getRelatedArchivedCandidates(demand.id).pipe(catchError(() => of([] as ArchivedCandidate[])))
+      .subscribe(list => { this.related.set(list ?? []); this.relatedLoading.set(false); });
+  }
+
+  onSourceChange(values: string[]): void {
+    const next = values[0] === 'REUSE' ? 'REUSE' : 'NEW';
+    this.candidateSource.set(next);
+    if (next === 'NEW') this.clearCopy();
+  }
+
+  onArchivedSelected(values: string[]): void {
+    const a = this.related().find(x => String(x.id) === values[0]);
+    if (a) this.copyFromArchived(a);
+  }
+
+  /**
+   * Fills the form from an archived candidature: identity, nationality, experience, salary
+   * claim and notes (the demand fills the position). The CV is copied by the server on save.
+   */
+  private copyFromArchived(a: ArchivedCandidate): void {
+    this.relatedLoading.set(true);
+    this.candidateService.getById(a.id).pipe(catchError(() => of(null))).subscribe(c => {
+      this.relatedLoading.set(false);
+      if (!c) {
+        this.error.set(this.translate.instant('CANDIDATES.FORM.PICK_ERR_LOAD'));
+        return;
+      }
+      this.identityGroup.patchValue({
+        firstName:      c.firstName ?? '',
+        lastName:       c.lastName ?? '',
+        emailPersonal:  c.emailPersonal ?? '',
+        phone:          c.phone ?? null,
+        dateOfBirth:    c.dateOfBirth ?? null,
+        gender:         c.gender ?? null,
+        nationalId:     c.nationalId ?? null,
+        passportNumber: c.passportNumber ?? null,
+        location:       c.location ?? null,
+      });
+      this.positionGroup.patchValue({
+        nationalityId:      c.nationalityId ?? null,
+        salaireNetCandidat: c.salaireNetCandidat ?? null,
+      });
+      if (c.notes) this.form.get('notes')?.setValue(c.notes);
+      if (c.experienceYears != null) this.experienceYears.set(c.experienceYears);
+      this.copiedFrom.set({
+        id: c.id,
+        fullName: [c.firstName, c.lastName].filter(Boolean).join(' '),
+        cvName: c.cvPath ? (c.cvOriginalName ?? 'CV') : null,
+      });
+    });
+  }
+
+  /** Back to a blank candidate: what the copy filled in is emptied. */
+  private clearCopy(): void {
+    if (!this.copiedFrom()) return;
+    this.identityGroup.reset();
+    this.positionGroup.patchValue({ nationalityId: null, salaireNetCandidat: null });
+    this.form.get('notes')?.setValue(null);
+    this.experienceYears.set(0);
+    this.copiedFrom.set(null);
+  }
+
+  archivedDate(iso: string | null | undefined): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso
+      : d.toLocaleDateString(this.translate.currentLang() === 'en' ? 'en-GB' : 'fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
   // ── Wizard state ─────────────────────────────────────────────────────────
   currentStep = signal(1);
 
   private readonly STEP_INFO: { titleKey: string; subKey: string; icon: string }[] = [
+    { titleKey: 'CANDIDATES.FORM.STEP0_TITLE', subKey: 'CANDIDATES.FORM.STEP0_SUB', icon: 'work_history' },
     { titleKey: 'CANDIDATES.FORM.STEP1_TITLE', subKey: 'CANDIDATES.FORM.STEP1_SUB', icon: 'person' },
     { titleKey: 'CANDIDATES.FORM.STEP2_TITLE', subKey: 'CANDIDATES.FORM.STEP2_SUB', icon: 'work' },
     { titleKey: 'CANDIDATES.FORM.STEP3_TITLE', subKey: 'CANDIDATES.FORM.STEP3_SUB', icon: 'description' },
@@ -177,26 +301,40 @@ export class CandidateFormComponent implements OnInit {
   });
   readonly cardIcon    = computed(() => this.STEP_INFO[this.currentStep() - 1].icon);
 
-  /** Step 3: a CV that passed the upload component's own type/size checks. */
-  readonly cvSelected = computed(() => this.cvFiles().some(f => !f.error));
+  /**
+   * Step 3: a CV that passed the upload component's own type/size checks — or the CV of the
+   * archived candidature the form was copied from, which the server copies on save. A file
+   * dropped here anyway replaces it.
+   */
+  readonly cvSelected = computed(() => this.cvFiles().some(f => !f.error) || !!this.copiedFrom()?.cvName);
 
   readonly canGoNext = computed(() => {
     this.formValue(); // FormGroup.valid isn't reactive — depend on form value so this recomputes as fields fill
     switch (this.currentStep()) {
-      case 1:  return this.identityGroup.valid;
-      case 2:  return this.positionGroup.valid;
-      case 3:  return this.cvSelected();
+      case 1:  return this.demandStepDone();
+      case 2:  return this.identityGroup.valid;
+      case 3:  return this.positionGroup.valid;
+      case 4:  return this.cvSelected();
       default: return true;
     }
   });
+
+  /** Step 1: an open demand is picked and, when reusing, the archived candidate too. */
+  private demandStepDone(): boolean {
+    const d = this.chosenDemand();
+    if (!d || this.isFull(d)) return false;
+    return this.candidateSource() === 'NEW' || this.copiedFrom() != null;
+  }
 
   readonly stepValidationError = computed<string | null>(() => {
     this.formValue(); // recompute on every form change (see canGoNext)
     this.translate.currentLang();
     switch (this.currentStep()) {
-      case 1:  return this.identityGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP1_ERR');
-      case 2:  return this.positionGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP2_ERR');
-      case 3:  return this.cvSelected()        ? null : this.translate.instant('CANDIDATES.FORM.STEP3_ERR');
+      case 1:  return this.demandStepDone()     ? null : this.translate.instant(
+                 this.chosenDemand() ? 'CANDIDATES.FORM.STEP0_ERR_SOURCE' : 'CANDIDATES.FORM.STEP0_ERR');
+      case 2:  return this.identityGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP1_ERR');
+      case 3:  return this.positionGroup.valid ? null : this.translate.instant('CANDIDATES.FORM.STEP2_ERR');
+      case 4:  return this.cvSelected()        ? null : this.translate.instant('CANDIDATES.FORM.STEP3_ERR');
       default: return null;
     }
   });
@@ -296,11 +434,28 @@ export class CandidateFormComponent implements OnInit {
   /** Approved demands only — the endpoint filters, an unapproved demand is not a vacancy. */
   readonly demands = signal<ApprovedDemandOption[]>([]);
 
-  readonly demandOptions = computed<SelectOption[]>(() =>
-    this.demands().map(d => ({
-      value: String(d.id),
-      label: d.department ? `${d.label} — ${d.department}` : d.label,
-    })));
+  /**
+   * Approved demands, each saying how many posts are left (V137). A full one stays in the list,
+   * disabled and saying so, after the open ones — hiding it made the list look empty for no
+   * visible reason (the server refuses a candidature on it anyway).
+   */
+  readonly demandOptions = computed<SelectOption[]>(() => {
+    this.translate.currentLang();
+    return [...this.demands()]
+      .sort((a, b) => Number(this.isFull(a)) - Number(this.isFull(b)))
+      .map(d => {
+        const base = d.department ? `${d.label} — ${d.department}` : d.label;
+        if (d.headcount == null) return { value: String(d.id), label: base };
+        if (this.isFull(d)) {
+          return { value: String(d.id), label: `${base} · ${this.translate.instant('CANDIDATES.FORM.PRE_DEMAND_FULL')}`, disabled: true };
+        }
+        const left = d.headcount - (d.positionsFilled ?? 0);
+        return {
+          value: String(d.id),
+          label: `${base} · ${this.translate.instant('CANDIDATES.FORM.DEMAND_POSTS_LEFT', { left, total: d.headcount })}`,
+        };
+      });
+  });
 
   /**
    * Minimum years implied by each required experience level.
@@ -329,6 +484,10 @@ export class CandidateFormComponent implements OnInit {
   onDemandSelected(values: string[]): void {
     this.setSelectNum('position.recruitmentDemandId', values);
     const id = values[0] ? Number(values[0]) : null;
+    // Another post: the candidate choice starts over (a copy belonged to the previous post).
+    this.candidateSource.set('NEW');
+    this.clearCopy();
+    this.loadRelated(this.demands().find(d => d.id === id) ?? null);
     if (id == null) return;
 
     this.demandSvc.getById(id).pipe(catchError(() => of(null))).subscribe(d => {
@@ -371,27 +530,57 @@ export class CandidateFormComponent implements OnInit {
     });
   }
 
+  /** The entity the lists were loaded for — they load once, when the user is known. */
+  private loadedForPays: number | null = null;
+
+  constructor() {
+    // Opened straight on /rh/candidates/new, the page can start before the signed-in user is
+    // loaded: reading paysId once in ngOnInit then found nothing and the demand list stayed
+    // empty — shown as « no approved demand ». Wait for the user instead.
+    effect(() => {
+      const user = this.userStore.currentUser();
+      if (!user) return;                       // still loading — keep the spinner
+      const paysId = user.paysId ?? null;
+      untracked(() => {
+        if (paysId == null) { this.demandsLoading.set(false); return; }
+        if (paysId === this.loadedForPays) return;
+        this.loadedForPays = paysId;
+        this.loadForPays(paysId);
+      });
+    });
+  }
+
   ngOnInit(): void {
-    const paysId = this.userStore.currentUser()?.paysId;
-    if (paysId) {
-      this.demandSvc.getApprovedOptions(paysId)
-        .pipe(catchError(() => of([] as ApprovedDemandOption[])))
-        .subscribe(d => this.demands.set(d));
-    }
+    // Lists that do not depend on the entity.
+    this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
+    this.listSvc.getListValues('GENDER')
+      .pipe(catchError(() => of([] as ListValue[])))
+      .subscribe(v => this.genders.set(v));
+  }
+
+  private loadForPays(paysId: number): void {
+    this.demandsLoading.set(true);
+    this.demandsError.set(null);
+    // A failed call is NOT shown as « no approved demand »: that message would send RH looking
+    // for a missing approval when the real problem is the server (e.g. V137 not applied).
+    this.demandSvc.getApprovedOptions(paysId).subscribe({
+      next: d => { this.demands.set(d ?? []); this.demandsLoading.set(false); },
+      error: err => {
+        this.demandsLoading.set(false);
+        this.demandsError.set(err?.error?.detail ?? err?.error?.message
+          ?? this.translate.instant('CANDIDATES.FORM.PRE_DEMAND_ERR'));
+      },
+    });
     // Scoped to the user's OWN entity, and that is not a detail: onSubmit stamps the new
     // candidate with exactly this paysId, so offering grades or departments from anywhere
     // else would let the form write a candidate pointing at another entity's structure.
     // These three calls used to pass nothing at all, and the endpoints answered with every
     // entity's rows — which is what made the lists look duplicated.
-    // Nationalities are global (no paysId) and stay unscoped.
+    // Nationalities are global (no paysId) and load in ngOnInit.
     this.refSvc.getGrades(paysId).subscribe(r => this.grades.set(r));
     this.refSvc.getDisciplines(paysId).subscribe(r => this.disciplines.set(r));
     this.refSvc.getDepartments(paysId).subscribe(r => this.departments.set(r));
-    this.refSvc.getNationalities().subscribe(r => this.nationalities.set(r));
     this.listSvc.getListValues('CONTRACT_TYPE', paysId).subscribe(v => this.employmentTypes.set(v));
-    this.listSvc.getListValues('GENDER')
-      .pipe(catchError(() => of([] as ListValue[])))
-      .subscribe(v => this.genders.set(v));
   }
 
   // ── Bridge helpers ───────────────────────────────────────────────────────
@@ -499,8 +688,9 @@ export class CandidateFormComponent implements OnInit {
   goNext(): void {
     this.error.set(null);
     if (!this.canGoNext()) {
-      if (this.currentStep() === 1) this.identityGroup.markAllAsTouched();
-      if (this.currentStep() === 2) this.positionGroup.markAllAsTouched();
+      if (this.currentStep() === 1) this.positionGroup.get('recruitmentDemandId')?.markAsTouched();
+      if (this.currentStep() === 2) this.identityGroup.markAllAsTouched();
+      if (this.currentStep() === 3) this.positionGroup.markAllAsTouched();
       this.error.set(this.stepValidationError());
       return;
     }
@@ -553,6 +743,7 @@ export class CandidateFormComponent implements OnInit {
       location:            identity.location            || null,
       salaireNetCandidat:  position.salaireNetCandidat  ?? null,
       salaireNetRh:        position.salaireNetRh        ?? null,
+      copiedFromCandidateId: this.copiedFrom()?.id ?? null,
     };
 
     this.candidateService.create(dto).subscribe({

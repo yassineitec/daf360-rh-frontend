@@ -1765,7 +1765,8 @@
     },
     "TABS": {
       "BOARD": "Kanban",
-      "HISTORY": "Historique"
+      "HISTORY": "Historique",
+      "ARCHIVED": "Archivés"
     },
     "HISTORY": {
       "SUBTITLE": "Toutes les actions sur les candidatures, et qui les a faites.",
@@ -2397,6 +2398,7 @@
       "DEMAND": "Demande de recrutement",
       "DEMAND_PH": "Rattacher à un poste ouvert",
       "DEMAND_HINT": "Remplit le poste, le département et la date d'entrée souhaitée.",
+      "DEMAND_POSTS_LEFT": "{{left}} poste(s) à pourvoir sur {{total}}",
       "DEMAND_NONE": "Aucune demande de recrutement approuvée pour votre entité — un candidat ne peut être créé que sur une demande approuvée.",
       "SALARY_SECTION": "Informations salariales",
       "SALARY_CANDIDATE_NET": "Prétention salariale candidat (net)",
@@ -2457,7 +2459,24 @@
       "RF_CV": "CV",
       "ERR_REQUIRED_STAR": "Veuillez remplir tous les champs obligatoires (marqués *).",
       "ERR_CV_AFTER_SAVE": "Candidat enregistré, mais le téléversement du CV a échoué. Réessayez depuis la fiche.",
-      "ERR_CREATE": "Erreur lors de la création."
+      "ERR_CREATE": "Erreur lors de la création.",
+      "PRE_LOADING": "Chargement…",
+      "PRE_NEW": "Nouveau candidat",
+      "PICK_ERR_LOAD": "Impossible de charger ce candidat archivé.",
+      "COPIED_FROM": "Formulaire prérempli à partir de la candidature archivée de {{name}} : vérifiez chaque étape. La candidature archivée reste inchangée.",
+      "CV_COPIED": "Le CV « {{file}} » de la candidature archivée sera copié. Déposez un autre fichier pour le remplacer.",
+      "PRE_DEMAND_ERR": "Impossible de charger les demandes de recrutement. Réessayez ; si le problème persiste, contactez l’administrateur.",
+      "PRE_DEMAND_FULL": "Tous les postes sont pourvus",
+      "STEP0_TITLE": "Demande de recrutement",
+      "STEP0_SUB": "Le poste ouvert auquel répond cette candidature",
+      "STEP0_ERR": "Choisissez la demande de recrutement à laquelle répond cette candidature.",
+      "STEP0_ERR_SOURCE": "Choisissez le candidat archivé à reprendre, ou « Nouveau candidat ».",
+      "SOURCE_LABEL": "Candidat",
+      "SOURCE_REUSE": "Reprendre un candidat archivé ({{count}})",
+      "SOURCE_HINT": "Ce poste a déjà été demandé {{count}} fois : vous pouvez repartir d'un candidat archivé de ces demandes. Ses informations et son CV sont copiés, la candidature archivée reste inchangée.",
+      "ARCHIVED_CANDIDATE": "Candidat archivé",
+      "ARCHIVED_CANDIDATE_PH": "Choisir le candidat à reprendre",
+      "ARCHIVED_ON_SHORT": "archivé le {{date}}"
     },
     "LIFECYCLE": {
       "COL_CANDIDATE": "Candidat",
@@ -2465,6 +2484,16 @@
       "COL_ONBOARDING": "Onboarding",
       "COL_CDI": "Passage en CDI",
       "COL_OFFBOARDING": "Offboarding",
+      "COL_ARCHIVED": "Archivés",
+      "ARCHIVE_REASON": {
+        "POSITION_FILLED": "Poste pourvu",
+        "DEMAND_CLOSED": "Demande clôturée",
+        "MANUAL": "Archivé manuellement",
+        "UNKNOWN": "Archivé (motif non renseigné)"
+      },
+      "ARCHIVED_ON": "Archivé le {{date}}",
+      "ARCHIVED_ON_BY": "Archivé le {{date}} par {{name}}",
+      "ARCHIVED_FROM": "Était : {{status}}",
       "EMPTY": "Aucun dossier en cours",
       "NO_STEP_DONE": "Aucune étape validée",
       "NEXT_INTERVIEW": "Prochain entretien : {{date}}",
@@ -2512,6 +2541,22 @@
       "CDI_FROM": "CDI à partir du {{date}}",
       "CIVP_ENDS": "Fin du CIVP : {{date}}",
       "LAST_DAY": "Dernier jour : {{date}}"
+    },
+    "ARCHIVED": {
+      "SUBTITLE": "Les candidatures archivées : poste pourvu (30 jours après la candidature), demande clôturée ou archivage manuel.",
+      "SEARCH": "Rechercher un candidat, un poste, un motif…",
+      "ALL": "Tous",
+      "OPEN": "Ouvrir",
+      "EMPTY": "Aucune candidature archivée.",
+      "EMPTY_FILTERED": "Aucune candidature archivée ne correspond aux filtres.",
+      "ERR_LOAD": "Impossible de charger les candidatures archivées.",
+      "FILTER_DATE": "Date d'archivage",
+      "COL_CANDIDATE": "Candidat",
+      "COL_DEMAND": "Demande de recrutement",
+      "COL_REASON": "Motif",
+      "COL_FROM": "Statut avant archivage",
+      "COL_NOTE": "Note",
+      "COL_DATE": "Archivé le"
     }
   },
   "PIPELINE": {
@@ -2589,7 +2634,10 @@
       "SEND_OFFER_TITLE": "Envoyer une offre",
       "ACCEPT_OFFER_TITLE": "Accepter l'offre",
       "RENEGOTIATE_TITLE": "Renégocier",
-      "REFUSE_OFFER_TITLE": "Refuser l'offre"
+      "REFUSE_OFFER_TITLE": "Refuser l'offre",
+      "ARCHIVE_IN": "Postes pourvus — archivage dans {{days}} j",
+      "ARCHIVE_TODAY": "Postes pourvus — archivage aujourd'hui",
+      "ARCHIVE_TOOLTIP": "Tous les postes de la demande sont pourvus : ce candidat ne peut plus être embauché et sera archivé le {{date}} (30 jours après sa candidature)."
     },
     "OFFER": {
       "SEND_TITLE": "Envoyer une offre",
@@ -2769,6 +2817,23 @@
       "ANNULEE": "Annulées",
       "CLOTUREE": "Clôturées"
     },
+    "POSITIONS": {
+      "TITLE": "Postes",
+      "FILLED": "pourvu(s)",
+      "DETAIL": "{{hired}} recruté(s) · {{remaining}} poste(s) restant(s). Un poste est pourvu dès que l'offre est acceptée.",
+      "CLOSED_AUTO_FILLED": "Clôturée automatiquement le {{date}} : tous les postes sont pourvus. Les candidatures encore en cours ne peuvent plus être embauchées et sont archivées 30 jours après leur candidature.",
+      "CLOSED_MANUAL": "Clôturée le {{date}} par {{name}}.",
+      "HEADCOUNT": "Nombre de postes",
+      "SAVE": "Enregistrer",
+      "ERR_RANGE": "Entre 1 et 50 postes.",
+      "ERR_BELOW_FILLED": "{{filled}} poste(s) sont déjà pourvus : impossible de descendre en dessous.",
+      "CLOSE_NOTE": "Motif de clôture (optionnel)",
+      "CLOSE": "Clôturer la demande",
+      "CLOSE_CONFIRM_TITLE": "Clôturer la demande ?",
+      "CLOSE_CONFIRM_MSG": "La demande ne recevra plus de candidatures et les candidatures encore en cours (entretiens, validation, offre) seront archivées avec ce motif.",
+      "CANCEL": "Annuler",
+      "REOPEN": "Rouvrir la demande"
+    },
     "DETAIL": {
       "BACK": "Retour aux demandes",
       "BREADCRUMB": "Demandes",
@@ -2851,6 +2916,61 @@
         "REMPLACEMENT_DESC": "Remplacement d'un collaborateur partant ou absent",
         "ACCROISSEMENT_LABEL": "Accroissement d'activité",
         "ACCROISSEMENT_DESC": "Renforcement des équipes lié à la croissance de l'activité"
+      }
+    },
+    "KPI": {
+      "POSTS": "Postes pourvus",
+      "POSTS_FULL": "Tous les postes sont pourvus",
+      "POSTS_LEFT": "{{count}} poste(s) à pourvoir",
+      "RUNNING": "Candidatures en cours",
+      "RUNNING_COUNTDOWN": "{{count}} en attente d'archivage",
+      "RECRUITED": "Recrutés",
+      "RECRUITED_HIRED": "dont {{count}} embauché(s)",
+      "CLOSED": "Archivées / refusées",
+      "CLOSED_DETAIL": "{{archived}} archivée(s) · {{rejected}} refusée(s)"
+    },
+    "CANDIDATES": {
+      "TITLE": "Candidats ({{count}})",
+      "ERR_LOAD": "Impossible de charger les candidats de cette demande.",
+      "EMPTY": "Aucun candidat sur cette demande pour l'instant.",
+      "COL_CANDIDATE": "Candidat",
+      "COL_STATUS": "Statut",
+      "COL_APPLIED": "Candidature le",
+      "COL_FOLLOW_UP": "Suivi",
+      "ARCHIVE_IN": "Postes pourvus — archivage dans {{days}} j",
+      "ARCHIVE_TODAY": "Postes pourvus — archivage aujourd'hui"
+    },
+    "HISTORY": {
+      "OPEN": "Historique",
+      "TITLE": "Historique de la demande",
+      "CLOSE": "Fermer",
+      "EMPTY": "Aucun événement pour cette demande.",
+      "ERR_LOAD": "Impossible de charger l'historique de la demande.",
+      "SYSTEM": "Automatique",
+      "TYPE": {
+        "CREATED": "Demande créée",
+        "REQUESTED_AGAIN": "Poste déjà demandé {{count}} fois",
+        "REQUESTED_LATER": "Poste redemandé",
+        "APPROVED": "Demande approuvée",
+        "REJECTED": "Demande rejetée",
+        "CANCELLED": "Demande annulée",
+        "HEADCOUNT_CHANGED": "Nombre de postes : {{from}} → {{to}}",
+        "CLOSED_MANUAL": "Demande clôturée",
+        "CLOSED_FILLED": "Tous les postes sont pourvus — demande clôturée",
+        "REOPENED": "Demande rouverte",
+        "REOPENED_AUTO": "Demande rouverte automatiquement (désistement)",
+        "CANDIDATE_ADDED": "Nouveau candidat :",
+        "CANDIDATE_REUSED": "Candidat archivé repris :",
+        "OFFER_ACCEPTED": "Offre acceptée, poste pourvu :",
+        "CANDIDATE_ARCHIVED": "Candidat archivé :",
+        "CANDIDATE_REJECTED": "Candidat refusé :"
+      },
+      "DETAIL": {
+        "REQUESTED_AGAIN": "Dernière demande : n° {{demandId}} du {{date}}",
+        "REQUESTED_LATER": "Nouvelle demande n° {{demandId}} — {{status}}",
+        "ARCHIVED_COUNT": "{{count}} candidature(s) archivée(s)",
+        "FILLED": "{{filled}} poste(s) pourvu(s)",
+        "REUSED_FROM": "Copie de la candidature archivée de {{name}}"
       }
     }
   },
@@ -3199,16 +3319,20 @@
         "TITLE": "Créer un candidat",
         "TEXT": "Ce formulaire crée un candidat en 4 étapes. Rien n'est enregistré avant la dernière étape. Suivez ce guide pour découvrir chaque partie."
       },
+      "DEMAND": {
+        "TITLE": "1. Demande de recrutement",
+        "TEXT": "Choisissez le poste ouvert : il préremplit l'intitulé, le département, le grade et la date d'entrée. Si ce poste a déjà été demandé, vous pouvez reprendre un candidat archivé de ces demandes au lieu de tout ressaisir."
+      },
       "IDENTITY": {
-        "TITLE": "1. Informations d'Identité",
+        "TITLE": "2. Informations d'Identité",
         "TEXT": "Le prénom, le nom et l'e-mail (une adresse valide) sont obligatoires. Le téléphone, la date de naissance, le genre, la CIN, le passeport et la localisation sont facultatifs : ils seront repris dans la fiche RH à l'embauche."
       },
       "POSITION": {
-        "TITLE": "2. Poste & Contrat",
+        "TITLE": "3. Poste & Contrat",
         "TEXT": "Commencez par « Demande de recrutement » : choisir un poste ouvert remplit le poste, la date de début, le département, le grade et la discipline encore vides. Le type de contrat et la date de début sont obligatoires. Les informations salariales sont facultatives."
       },
       "CV_NOTES": {
-        "TITLE": "3. CV et 4. Notes",
+        "TITLE": "4. CV et 5. Notes",
         "TEXT": "Déposez le CV (PDF, DOC ou DOCX, 10 Mo maximum), puis ajoutez vos notes et commentaires. Les deux sont facultatifs : le CV peut aussi être ajouté plus tard depuis la fiche du candidat."
       },
       "PROGRESS": {

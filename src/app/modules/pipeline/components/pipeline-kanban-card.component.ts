@@ -5,7 +5,7 @@ import { StatusBadgeComponent } from '@khalilrebhiitec/daf360';
 import { KanbanCardShellComponent } from '../../../shared/kanban-card-shell.component';
 import { statusBadge } from '../../../shared/status-badge.utils';
 import { KanbanCandidate } from '../services/pipeline.service';
-import { BOARD_STAGES, BoardStageKey, canSendOffer, isOfferPending, stepDetail } from '../board.model';
+import { BOARD_STAGES, BoardStageKey, archiveDaysLeft, canSendOffer, isOfferPending, stepDetail } from '../board.model';
 import { candidateAvatar, candidateInitials, fitScoreClass } from '../pipeline-display';
 import { interviewDateText } from '../../candidates/candidate-display';
 import { interviewTypeLabel } from '../../candidates/interview.model';
@@ -56,6 +56,16 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
           <span class="truncate text-on-surface-variant" [title]="d">· {{ d }}</span>
         }
       </div>
+
+      <!-- Every post of the demand is filled: this candidature can no longer be hired and
+           leaves for the archive on its creation date + 30 days. -->
+      @if (archiveLabel(); as label) {
+        <div class="flex items-center gap-1.5 mb-3 rounded-lg px-2 py-1.5 text-[11px] font-semibold
+                    bg-warning/10 text-warning" [title]="archiveTooltip()">
+          <span class="material-symbols-outlined text-[15px] shrink-0">schedule</span>
+          <span class="truncate">{{ label }}</span>
+        </div>
+      }
 
       <!-- Identity -->
       <div class="flex items-start justify-between gap-3 mb-3">
@@ -243,8 +253,26 @@ export class PipelineKanbanCardComponent {
   protected readonly avatar        = computed(() => candidateAvatar(this.candidate()));
   protected readonly initials      = computed(() => this.candidate().initials || candidateInitials(this.candidate().fullName));
   protected readonly fitClass      = computed(() => fitScoreClass(this.candidate().fitScore));
-  protected readonly offerPending  = computed(() => isOfferPending(this.candidate()));
-  protected readonly offerSendable = computed(() => canSendOffer(this.candidate()));
+  /**
+   * Every post of the demand is filled (V137): days left before this candidature is archived,
+   * null while a post is open. The offer actions go away with it — the server refuses them.
+   */
+  protected readonly archiveDays   = computed(() => archiveDaysLeft(this.candidate()));
+  protected readonly archiveLabel  = computed(() => {
+    this.translate.currentLang();
+    const days = this.archiveDays();
+    if (days === null) return null;
+    return days === 0
+      ? this.translate.instant('PIPELINE.CARD.ARCHIVE_TODAY')
+      : this.translate.instant('PIPELINE.CARD.ARCHIVE_IN', { days });
+  });
+  protected readonly archiveTooltip = computed(() => {
+    this.translate.currentLang();
+    const due = this.candidate().archiveDueDate;
+    return due ? this.translate.instant('PIPELINE.CARD.ARCHIVE_TOOLTIP', { date: due.split('-').reverse().join('/') }) : '';
+  });
+  protected readonly offerPending  = computed(() => isOfferPending(this.candidate()) && this.archiveDays() === null);
+  protected readonly offerSendable = computed(() => canSendOffer(this.candidate()) && this.archiveDays() === null);
 
   /** "Type · 12 juil. · 14:00" in the UI language; falls back to the server's French label. */
   protected readonly nextEventLabel = computed(() => {

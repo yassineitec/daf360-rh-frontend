@@ -1,5 +1,5 @@
 import { KanbanCandidate } from '../pipeline/services/pipeline.service';
-import { BOARD_STAGES, BoardStageKey, candidatureStage, stepDetail } from '../pipeline/board.model';
+import { BOARD_STAGES, BoardStageKey, archiveDaysLeft, candidatureStage, stepDetail } from '../pipeline/board.model';
 import { candidateAvatar as kanbanAvatar, candidateInitials as initialsOf } from '../pipeline/pipeline-display';
 import { candidateAvatar } from './candidate-display';
 import { ProvisioningListItem } from '../it-provisioning/it-provisioning.model';
@@ -145,6 +145,12 @@ function split<T extends string>(order: readonly T[], done: (s: T) => boolean): 
  * its subtitle (`stepDetail`), and the steps before it are validated — a candidature only
  * leaves Entretiens once every PV is in, and only leaves Validation RH once RH validated it.
  */
+function archiveAlert(c: KanbanCandidate, t: Translate): string | null {
+  const days = archiveDaysLeft(c);
+  if (days === null) return null;
+  return days === 0 ? t('PIPELINE.CARD.ARCHIVE_TODAY') : t('PIPELINE.CARD.ARCHIVE_IN', { days });
+}
+
 export function candidateCard(c: KanbanCandidate, t: Translate, locale: string): LifecycleCard | null {
   const stage = candidatureStage(c);
   // An agreed offer is followed in the IT / Onboarding columns of this board, not here.
@@ -173,7 +179,8 @@ export function candidateCard(c: KanbanCandidate, t: Translate, locale: string):
     stepDetail: detail ? t(detail.key, detail.params) : null,
     meta,
     doneSteps: order.slice(0, order.indexOf(stage)).map(k => t('CANDIDATES.RAIL.' + k)),
-    alert: null,
+    // Every post of the demand is filled (V137): no hire possible, archived on creation + 30 days.
+    alert: archiveAlert(c, t),
     haystack: haystack(c.fullName, c.poste, c.demandTitle),
     commands: ['/rh/candidates', c.id],
     queryParams: { from: 'recrutement' },

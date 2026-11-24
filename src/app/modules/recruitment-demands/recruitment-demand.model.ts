@@ -57,6 +57,11 @@ export interface RecruitmentDemandSummary {
   urgencyLevelLabel: string | null;
   headcount: number;
   candidateCount: number;
+  /** Posts filled (V137): offer agreed — onboarding, IT or hired. */
+  positionsFilled?: number;
+  hiredCount?: number;
+  /** AUTO_FILLED | MANUAL | null (V137). */
+  closedReason?: DemandClosedReason | null;
   submittedAt: string;
   createdByUserId: number;
   recruitmentReason: string | null;
@@ -107,8 +112,29 @@ export interface RecruitmentDemandDetail {
   reviewedAt: string | null;
   reviewComment: string | null;
   candidateCount: number;
+  // ── Posts filled (V137) ──
+  positionsFilled?: number;
+  hiredCount?: number;
+  remainingPositions?: number;
+  closedAt?: string | null;
+  closedReason?: DemandClosedReason | null;
+  closedByName?: string | null;
   createdAt: string;
   updatedAt: string | null;
+}
+
+/** Why a demand is CLOTUREE (V137): every post filled, or closed by someone. */
+export type DemandClosedReason = 'AUTO_FILLED' | 'MANUAL';
+
+/**
+ * The « Postes » cell (V137): « 2 / 3 » (filled / headcount) once the demand is a real vacancy
+ * (approved or closed), the plain headcount before — nothing can be filled yet.
+ */
+export function demandPostsLabel(d: { statut: RecruitmentDemandStatus; headcount: number; positionsFilled?: number }): string {
+  const headcount = d.headcount ?? 0;
+  return d.statut === 'APPROUVEE' || d.statut === 'CLOTUREE'
+    ? `${d.positionsFilled ?? 0} / ${headcount}`
+    : String(headcount);
 }
 
 export interface CreateRecruitmentDemandRequest {
@@ -143,6 +169,52 @@ export interface ApprovedDemandOption {
   id: number;
   label: string;
   department?: string | null;
+  /** V137 — posts of the demand and how many are filled, so the option says what is left. */
+  headcount?: number;
+  positionsFilled?: number;
+  /**
+   * Other demands raised for the same post (department + title + exact title) and the archived
+   * candidatures they left — when there are some, the creation wizard offers to start from one.
+   */
+  earlierRequests?: number;
+  archivedCandidates?: number;
+}
+
+/**
+ * One candidature of a demand, as its detail page lists it (« Candidats » + KPI row). Light on
+ * purpose: the page is open to the manager who raised the demand, not only to recruiters.
+ */
+export interface DemandCandidate {
+  id: number;
+  fullName: string;
+  gender: string | null;
+  email: string | null;
+  status: string;
+  /** ISO local date-time. */
+  createdAt: string | null;
+  archiveReason: string | null;
+  archivedFromStatus: string | null;
+  archivedAt: string | null;
+  /** yyyy-MM-dd: every post is filled, this candidature is archived on that day. */
+  archiveDueDate: string | null;
+  rejectionReason: string | null;
+}
+
+/** One line of a demand's « Historique » (newest first). See DemandHistoryService. */
+export type DemandHistoryType =
+  | 'CREATED' | 'REQUESTED_AGAIN' | 'REQUESTED_LATER' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  | 'HEADCOUNT_CHANGED' | 'CLOSED_MANUAL' | 'CLOSED_FILLED' | 'REOPENED' | 'REOPENED_AUTO'
+  | 'CANDIDATE_ADDED' | 'CANDIDATE_REUSED' | 'OFFER_ACCEPTED' | 'CANDIDATE_ARCHIVED' | 'CANDIDATE_REJECTED';
+
+export interface DemandHistoryEvent {
+  /** ISO instant (UTC). */
+  at: string;
+  type: DemandHistoryType;
+  /** null = the system (automatic close / archive), or unknown. */
+  actorName: string | null;
+  candidateId: number | null;
+  candidateName: string | null;
+  details: Record<string, string>;
 }
 
 export const DEMAND_STATUS_LABELS: Record<RecruitmentDemandStatus, string> = {
