@@ -163,17 +163,6 @@ import { interviewTypeLabel } from '../../candidates/interview.model';
             }
           }
 
-          @case ('VALIDATION') {
-            <span class="flex items-center gap-1 min-w-0 max-w-[55%]">
-              <span class="material-symbols-outlined text-[14px] shrink-0">mail</span>
-              <span class="truncate">{{ candidate().email || '—' }}</span>
-            </span>
-            <span class="flex items-center gap-1 min-w-0 shrink-0">
-              <span class="material-symbols-outlined text-[14px] shrink-0">location_on</span>
-              <span class="truncate">{{ candidate().location || '—' }}</span>
-            </span>
-          }
-
           @case ('OFFER') {
             <span class="flex items-center gap-1 min-w-0">
               <span class="material-symbols-outlined text-[14px] shrink-0">payments</span>

@@ -2044,6 +2044,8 @@
       "INTERVIEWS": "Entretiens",
       "INTERVIEWS_NONE": "À planifier",
       "INTERVIEWS_PV": "{{filed}}/{{total}} PV déposé(s)",
+      "INTERVIEWS_VERDICTS": "PV déposés — {{validated}}/{{total}} validé(s) par RH",
+      "INTERVIEWS_VERDICTS_DONE": "Entretiens validés — décision RH attendue",
       "INTERVIEWS_DONE": "Terminés",
       "VALIDATION": "Validation RH",
       "VALIDATION_COUNT": "{{validated}}/{{total}} validé(s)",
@@ -3167,7 +3169,7 @@
     "GUIDE": {
       "WELCOME": {
         "TITLE": "Bienvenue sur la page Candidats",
-        "TEXT": "Cette page suit les candidatures étape par étape : Présélection, Entretiens, Validation RH, Offre et Embauché. Le bouton « Nouveau Candidat », en haut à droite, ajoute un candidat (selon vos droits). Suivez ce guide pour découvrir la page."
+        "TEXT": "Cette page suit les candidatures étape par étape : Présélection, Entretiens, Offre et Embauché. Le bouton « Nouveau Candidat », en haut à droite, ajoute un candidat (selon vos droits). Suivez ce guide pour découvrir la page."
       },
       "KPIS": {
         "TITLE": "Les compteurs",
@@ -3179,7 +3181,7 @@
       },
       "BOARD": {
         "TITLE": "Les étapes",
-        "TEXT": "Cinq colonnes : Présélection (aucun entretien encore), Entretiens, Validation RH, Offre et Embauché (onboarding en cours ou terminé). Un candidat passe en « Entretiens » dès son premier entretien planifié. Dans chaque colonne, les candidats sont triés par score « Fit » ; la flèche de l'en-tête inverse l'ordre. Cliquez sur une carte pour ouvrir la fiche du candidat."
+        "TEXT": "Quatre colonnes : Présélection (aucun entretien encore), Entretiens, Offre et Embauché (onboarding en cours). Un candidat passe en « Entretiens » dès son premier entretien planifié et y reste jusqu’à la décision RH : la carte indique les PV déposés, puis les PV validés par RH. Dans chaque colonne, les candidats sont triés par score « Fit » ; la flèche de l'en-tête inverse l'ordre. Cliquez sur une carte pour ouvrir la fiche du candidat."
       },
       "ACTIONS": {
         "TITLE": "Les actions des cartes",

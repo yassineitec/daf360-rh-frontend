@@ -36,17 +36,19 @@ import { FillViewportDirective } from '../../../shared/fill-viewport.directive';
     .custom-scroll   { scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar   { display: none; }
     /* A column's own scroll — the page never scrolls, the columns do: thin, always visible. */
-    .col-scroll { overflow-y: auto; overscroll-behavior: contain;
-                  scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) transparent; }
+    .col-scroll { overflow-y: auto; /* no overscroll containment: at its top, scrolling up hands over to the page */
+                  scrollbar-width: thin; scrollbar-color: transparent transparent; }
+    .col-scroll:hover { scrollbar-color: var(--color-outline-variant) transparent; }
     .col-scroll::-webkit-scrollbar { width: 6px; }
-    .col-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 3px; }
+    .col-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+    .col-scroll:hover::-webkit-scrollbar-thumb { background: var(--color-outline-variant); }
   `],
   template: `
     @if (loading()) {
       <!-- Re-fetch skeleton: the page header, KPIs and toolbar stay on screen (§5). -->
       <div class="flex gap-6 items-start">
         @for (i of skeletonColumns(); track i) {
-          <div class="w-80 shrink-0 flex flex-col gap-3">
+          <div class="flex-1 min-w-80 flex flex-col gap-3">
             <daf-skeleton variant="text" width="45%" height="16px" />
             @for (j of skeletonCards(); track j) {
               <daf-skeleton variant="block" radius="xl" width="100%" height="240px" />
@@ -55,12 +57,14 @@ import { FillViewportDirective } from '../../../shared/fill-viewport.directive';
         }
       </div>
     } @else {
-      <!-- The page never scrolls: the board reaches the bottom of the window (rhFillViewport) and each column scrolls its own cards, every card there. -->
-      <div #board rhFillViewport class="flex gap-6 overflow-x-auto overflow-y-hidden pb-4 items-stretch custom-scroll scroll-smooth"
+      <!-- The page scrolls until the column headers reach the top (rhFillViewport), then each column scrolls its own cards, every card there. -->
+      <div #board rhFillViewport class="flex gap-6 overflow-x-auto overflow-y-hidden items-stretch custom-scroll scroll-smooth"
            (scroll)="syncBoardMetrics()">
 
+        <!-- Columns share the full width (flex-1), never narrower than 320px: below that the
+             board scrolls sideways, as before. -->
         @for (col of columns(); track col.key) {
-          <div class="w-80 shrink-0 flex flex-col min-h-0">
+          <div class="flex-1 min-w-80 flex flex-col min-h-0" data-board-column>
 
             <!-- Column header -->
             <div class="flex items-center gap-2 px-1 mb-3">
@@ -159,6 +163,11 @@ export class PipelineBoardSectionComponent {
   }
 
   protected scrollToColumn(index: number): void {
-    this.board()?.nativeElement.scrollTo({ left: index * 344, behavior: 'smooth' }); // 320px column + 24px gap
+    // Columns stretch with the screen now: scroll to the column's real position, not a fixed width.
+    const board = this.board()?.nativeElement;
+    const column = board?.querySelectorAll<HTMLElement>('[data-board-column]')[index];
+    if (!board || !column) return;
+    const left = column.getBoundingClientRect().left - board.getBoundingClientRect().left + board.scrollLeft;
+    board.scrollTo({ left, behavior: 'smooth' });
   }
 }

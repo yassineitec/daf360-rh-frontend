@@ -2044,6 +2044,8 @@
       "INTERVIEWS": "Interviews",
       "INTERVIEWS_NONE": "To schedule",
       "INTERVIEWS_PV": "{{filed}}/{{total}} report(s) filed",
+      "INTERVIEWS_VERDICTS": "Reports filed — {{validated}}/{{total}} validated by HR",
+      "INTERVIEWS_VERDICTS_DONE": "Interviews validated — HR decision pending",
       "INTERVIEWS_DONE": "Completed",
       "VALIDATION": "HR validation",
       "VALIDATION_COUNT": "{{validated}}/{{total}} validated",
@@ -3167,7 +3169,7 @@
     "GUIDE": {
       "WELCOME": {
         "TITLE": "Welcome to the Candidates page",
-        "TEXT": "This page follows applications step by step: Pre-selection, Interviews, HR validation, Offer and Hired. The « New Candidate » button, top right, adds a candidate (depending on your rights). Follow this guide to discover the page."
+        "TEXT": "This page follows applications step by step: Pre-selection, Interviews, Offer and Hired. The « New Candidate » button, top right, adds a candidate (depending on your rights). Follow this guide to discover the page."
       },
       "KPIS": {
         "TITLE": "The counters",
@@ -3179,7 +3181,7 @@
       },
       "BOARD": {
         "TITLE": "The stages",
-        "TEXT": "Five columns: Pre-selection (no interview yet), Interviews, HR validation, Offer and Hired (onboarding running or done). A candidate moves to « Interviews » as soon as a first interview is scheduled. In each column, candidates are sorted by « Fit » score; the header arrow reverses the order. Click a card to open the candidate's page."
+        "TEXT": "Four columns: Pre-selection (no interview yet), Interviews, Offer and Hired (onboarding running). A candidate moves to « Interviews » as soon as a first interview is scheduled and stays there until the HR decision: the card shows the reports filed, then the reports validated by HR. In each column, candidates are sorted by « Fit » score; the header arrow reverses the order. Click a card to open the candidate's page."
       },
       "ACTIONS": {
         "TITLE": "Card actions",

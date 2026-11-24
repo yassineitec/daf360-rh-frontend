@@ -28,10 +28,12 @@ import { FillViewportDirective } from '../../../shared/fill-viewport.directive';
     .custom-scroll   { scrollbar-width: none; }
     .custom-scroll::-webkit-scrollbar   { display: none; }
     /* A column's own scroll — the page never scrolls, the columns do: thin, always visible. */
-    .col-scroll { overflow-y: auto; overscroll-behavior: contain;
-                  scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) transparent; }
+    .col-scroll { overflow-y: auto; /* no overscroll containment: at its top, scrolling up hands over to the page */
+                  scrollbar-width: thin; scrollbar-color: transparent transparent; }
+    .col-scroll:hover { scrollbar-color: var(--color-outline-variant) transparent; }
     .col-scroll::-webkit-scrollbar { width: 6px; }
-    .col-scroll::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 3px; }
+    .col-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+    .col-scroll:hover::-webkit-scrollbar-thumb { background: var(--color-outline-variant); }
   `],
   template: `
     <!-- ── Desktop / tablet ─────────────────────────────────────────── -->
@@ -49,8 +51,8 @@ import { FillViewportDirective } from '../../../shared/fill-viewport.directive';
             }
           </div>
         } @else {
-          <!-- The page never scrolls: the board reaches the bottom of the window (rhFillViewport) and each column scrolls its own cards, every card there. -->
-          <div #board rhFillViewport class="flex gap-6 overflow-x-auto overflow-y-hidden pb-4 items-stretch custom-scroll scroll-smooth"
+          <!-- The page scrolls until the column headers reach the top (rhFillViewport), then each column scrolls its own cards, every card there. -->
+          <div #board rhFillViewport class="flex gap-6 overflow-x-auto overflow-y-hidden items-stretch custom-scroll scroll-smooth"
                (scroll)="syncBoardMetrics()">
             @for (col of columns(); track col.key) {
               <div class="w-80 shrink-0 flex flex-col min-h-0">

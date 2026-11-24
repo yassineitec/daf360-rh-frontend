@@ -6,18 +6,19 @@ import { KanbanCandidate } from './services/pipeline.service';
  *
  *   1. PRESELECTION — PENDING, no live interview yet: the CV is being screened, the first
  *                     interview is still to plan.
- *   2. INTERVIEWS   — PENDING, at least one live interview and a PV still missing.
- *   3. VALIDATION   — PENDING, every live interview has its PV: RH validates them, then
- *                     validates the candidature (status leaves PENDING).
- *   4. OFFER        — ACCEPTED / OFFER_SENT: the salary negotiation, round after round.
- *   5. HIRED        — the offer is agreed and onboarding is still running: HR_IN_PROGRESS
+ *   2. INTERVIEWS   — PENDING, at least one live interview: the PVs are being filed, then RH
+ *                     gives each one its verdict (PASS / FAIL). There is no separate « Validation
+ *                     RH » step any more — the verdicts belong to the interviews, and the
+ *                     candidature leaves this column when RH accepts it (status leaves PENDING).
+ *   3. OFFER        — ACCEPTED / OFFER_SENT: the salary negotiation, round after round.
+ *   4. HIRED        — the offer is agreed and onboarding is still running: HR_IN_PROGRESS
  *                     (with the legacy IT_IN_PROGRESS / EMAIL_RECEIVED codes), or HIRED with
  *                     the IT file still open.
  *
  * Once the RH file is submitted (HIRED) AND the IT file is closed, onboarding is over and the
  * card leaves the board. Rejected and archived candidatures are not a column — they are closed.
  */
-export type BoardStageKey = 'PRESELECTION' | 'INTERVIEWS' | 'VALIDATION' | 'OFFER' | 'HIRED';
+export type BoardStageKey = 'PRESELECTION' | 'INTERVIEWS' | 'OFFER' | 'HIRED';
 
 /**
  * Which offer action a card emitted. Both now route to the candidate's Offre tab
@@ -49,7 +50,6 @@ export interface BoardColumn extends Omit<BoardStageDef, 'labelKey'> {
 export const BOARD_STAGES: BoardStageDef[] = [
   { key: 'PRESELECTION', labelKey: 'CANDIDATES.RAIL.PRESELECTION', icon: 'filter_alt',        accent: '#64748b', badgeBg: 'rgba(100,116,139,0.12)' },
   { key: 'INTERVIEWS',   labelKey: 'CANDIDATES.RAIL.INTERVIEWS',   icon: 'record_voice_over', accent: '#3755c3', badgeBg: 'rgba(55,85,195,0.12)'   },
-  { key: 'VALIDATION',   labelKey: 'CANDIDATES.RAIL.VALIDATION',   icon: 'fact_check',        accent: '#0d9488', badgeBg: 'rgba(13,148,136,0.12)'  },
   { key: 'OFFER',        labelKey: 'CANDIDATES.RAIL.OFFER',        icon: 'handshake',         accent: '#d97706', badgeBg: 'rgba(217,119,6,0.12)'   },
   { key: 'HIRED',        labelKey: 'CANDIDATES.RAIL.HIRED',        icon: 'how_to_reg',        accent: '#16a34a', badgeBg: 'rgba(22,163,74,0.12)'   },
 ];
@@ -81,8 +81,7 @@ function interviewsFiled(c: KanbanCandidate): boolean {
 export function candidatureStage(c: KanbanCandidate): BoardStageKey | null {
   const status = c.status ?? '';
   if (status === 'PENDING') {
-    if ((c.interviewsTotal ?? 0) === 0) return 'PRESELECTION';
-    return interviewsFiled(c) ? 'VALIDATION' : 'INTERVIEWS';
+    return (c.interviewsTotal ?? 0) === 0 ? 'PRESELECTION' : 'INTERVIEWS';
   }
   if (status === 'ACCEPTED' || status === 'OFFER_SENT') return 'OFFER';
   if (onboardingOpen(c)) return 'HIRED';
@@ -105,12 +104,17 @@ export function stepDetail(c: KanbanCandidate): { key: string; params?: Record<s
       return c.progressPercent != null
         ? { key: 'CANDIDATES.RAIL.HIRED_ONBOARDING_PCT', params: { pct: c.progressPercent } }
         : { key: 'CANDIDATES.RAIL.HIRED_ONBOARDING' };
-    case 'INTERVIEWS':
-      return total === 0
-        ? { key: 'CANDIDATES.RAIL.INTERVIEWS_NONE' }
-        : { key: 'CANDIDATES.RAIL.INTERVIEWS_PV', params: { filed: c.interviewsFiled ?? 0, total } };
-    case 'VALIDATION':
-      return { key: 'CANDIDATES.RAIL.VALIDATION_COUNT', params: { validated: c.interviewsValidated ?? 0, total } };
+    case 'INTERVIEWS': {
+      if (total === 0) return { key: 'CANDIDATES.RAIL.INTERVIEWS_NONE' };
+      // PVs still being filed → how many are in; all in → how many verdicts RH has given.
+      if (!interviewsFiled(c)) {
+        return { key: 'CANDIDATES.RAIL.INTERVIEWS_PV', params: { filed: c.interviewsFiled ?? 0, total } };
+      }
+      const validated = c.interviewsValidated ?? 0;
+      return validated >= total
+        ? { key: 'CANDIDATES.RAIL.INTERVIEWS_VERDICTS_DONE' }
+        : { key: 'CANDIDATES.RAIL.INTERVIEWS_VERDICTS', params: { validated, total } };
+    }
     case 'OFFER': {
       const round = c.offerRound ?? 1;
       if (!c.offerStatus)                                              return { key: 'CANDIDATES.RAIL.OFFER_NONE' };
