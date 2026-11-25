@@ -70,8 +70,8 @@ export class CongeModificationsService {
   }
 
   /** Badge counts for both queues. */
-  counts(): Observable<CongeModificationCounts> {
-    return this.http.get<CongeModificationCounts>(`${this.base}/counts`);
+  counts(pays?: string): Observable<CongeModificationCounts> {
+    return this.http.get<CongeModificationCounts>(`${this.base}/counts`, { params: pays ? { paysId: pays } : {} });
   }
 
   /** Every proposal filed against one congé — the history panel on its detail view. */
@@ -88,6 +88,7 @@ export class CongeModificationsService {
     if (filter.size != null) p = p.set('size', String(filter.size));
     if (filter.sort) p = p.set('sort', filter.sort);
     if (filter.dir) p = p.set('dir', filter.dir);
+    if (filter.paysId) p = p.set('paysId', filter.paysId);
     return p;
   }
 }

@@ -14,7 +14,6 @@ import {
   PageHeaderBadge,
   PageHeaderComponent,
   PermissionService,
-  RadioGroupComponent,
   StatusBadgeComponent,
   TabItem,
   TabsComponent,
@@ -56,7 +55,7 @@ import { contractLabel } from './profile-labels';
 import { ContractLifecycleService } from './lifecycle/contract-lifecycle.service';
 import {
   ContractListDto, ContractDetailDto, ContractTransitionHistoryDto,
-  ContractDecisionOptions, ContractDecisionOption,
+  ContractDecisionOptions, ContractDecisionOption, ContractDecisionAction,
 } from './lifecycle/contract-lifecycle.model';
 import { NewContractFormComponent } from './lifecycle/new-contract-form.component';
 import { DocumentEditFormComponent } from './documents/document-edit-form.component';
@@ -184,7 +183,7 @@ const TAB_FIELDS: Partial<Record<TabId, (keyof ProfileUpdateDto)[]>> = {
   standalone: true,
   imports: [
     PageComponent, PageHeaderComponent, TabsComponent, ButtonComponent, PageGuideComponent,
-    FormFieldComponent, MultiDatePickerComponent, RadioGroupComponent, StatusBadgeComponent,
+    FormFieldComponent, MultiDatePickerComponent, StatusBadgeComponent,
     IdentityCardComponent, EmploymentSectionComponent,
     PositionSectionComponent, RegimeSectionComponent, ContactSectionComponent,
     EmergencySectionComponent, BankingSectionComponent, LifecycleSectionComponent,
@@ -718,16 +717,36 @@ export class ProfileDetailComponent implements OnInit {
   /** The picked choice, or null. */
   readonly decisionPicked = computed<ContractDecisionOption | null>(() =>
     this.decisionOptions()?.options.find(o => o.id === this.decisionId()) ?? null);
-  /** Radio options: blocked choices stay visible, greyed, with the reason as hint. */
-  readonly decisionRadio = computed(() => {
-    const en = this.translate.currentLang() === 'en';
-    return (this.decisionOptions()?.options ?? []).map(o => ({
-      value: String(o.id),
-      label: (en ? o.labelEn : o.labelFr) || o.labelFr,
-      disabled: !!o.blockedReason,
-      hint: o.blockedReason ?? undefined,
-    }));
+  /** Label of a decision card in the current language (FR as fallback). */
+  decisionLabel(o: ContractDecisionOption): string {
+    return (this.translate.currentLang() === 'en' ? o.labelEn : o.labelFr) || o.labelFr;
+  }
+  /** Days left before the deadline (negative = overdue), null without deadline. */
+  readonly decisionDaysLeft = computed<number | null>(() => {
+    const d = this.decisionOptions()?.deadline;
+    if (!d) return null;
+    const end = new Date(d.substring(0, 10) + 'T00:00:00');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.round((end.getTime() - today.getTime()) / 86_400_000);
   });
+  /** Icon + colour classes of a decision card, from its action (full class names so Tailwind sees them). */
+  decisionLook(action: ContractDecisionAction | null | undefined): { icon: string; badge: string; active: string; dot: string } {
+    const tones = {
+      success: { badge: 'bg-success/10 text-success', active: 'border-success bg-success/5 ring-4 ring-success/10', dot: 'border-success bg-success' },
+      primary: { badge: 'bg-primary/10 text-primary', active: 'border-primary bg-primary/5 ring-4 ring-primary/10', dot: 'border-primary bg-primary' },
+      warning: { badge: 'bg-warning/10 text-warning', active: 'border-warning bg-warning/5 ring-4 ring-warning/10', dot: 'border-warning bg-warning' },
+      danger:  { badge: 'bg-danger/10 text-danger',   active: 'border-danger bg-danger/5 ring-4 ring-danger/10',    dot: 'border-danger bg-danger' },
+    };
+    switch (action) {
+      case 'CONFIRM_TRIAL': return { icon: 'verified',       ...tones.success };
+      case 'RENEW_TRIAL':   return { icon: 'update',         ...tones.primary };
+      case 'BREAK_TRIAL':   return { icon: 'block',          ...tones.danger  };
+      case 'RENEW_CDD':     return { icon: 'autorenew',      ...tones.primary };
+      case 'EXTEND':        return { icon: 'event_upcoming', ...tones.warning };
+      case 'END_CONTRACT':  return { icon: 'logout',         ...tones.danger  };
+      default:              return { icon: 'task_alt',       ...tones.primary };
+    }
+  }
   renewDateFin  = '';
   renewComment  = '';
   cdiStartDate  = '';

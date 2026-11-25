@@ -33,8 +33,10 @@ export class RecruitmentDemandService {
   }
 
   /** `sort`: Spring sort param, e.g. `submittedAt,desc` — omitted = newest first (server default). */
-  listByPays(paysId: number, statut?: RecruitmentDemandStatus | '', page = 0, size = 20, sort?: string | null): Observable<PageResponse<RecruitmentDemandSummary>> {
-    let params = new HttpParams().set('paysId', paysId).set('page', page).set('size', size);
+  /** `paysId` : un pays, ou les drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  listByPays(paysId: number | string | undefined, statut?: RecruitmentDemandStatus | '', page = 0, size = 20, sort?: string | null): Observable<PageResponse<RecruitmentDemandSummary>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (paysId != null && paysId !== '') params = params.set('paysId', paysId);
     if (statut) params = params.set('statut', statut);
     if (sort)   params = params.set('sort', sort);
     return this.http.get<PageResponse<RecruitmentDemandSummary>>(this.base, { params, withCredentials: true });

@@ -10,7 +10,7 @@ export interface OnboardingListState {
   statusFilter:    string;
   draftFilter:     '' | 'WITH_DRAFT' | 'NO_DRAFT';
   startRange:      Date[] | null;
-  entityFilter:    string;
+  // Plus d'`entityFilter` : le pays vient des drapeaux de la navbar (2026-11-23).
   startPassedOnly: boolean;
   sort:            OnboardingSort | null;
   page:            number;

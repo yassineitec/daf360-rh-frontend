@@ -82,7 +82,8 @@ export interface RequestFilter {
   profileId?: number;
   status?:    RequestStatus;
   typeId?:    number;
-  paysId?:    number;
+  /** Un `pays_id`, ou les drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  paysId?:    number | string;
   /** Spring `sort` param, e.g. `submissionDate,desc` — entity fields only. */
   sort?:      string;
   page?:      number;

@@ -5602,6 +5602,13 @@
       "TITLE_END": "Décision de fin de contrat",
       "DEADLINE_TRIAL": "Fin de la période d'essai : {{date}}",
       "DEADLINE_END": "Fin prévue du contrat : {{date}}",
+      "DEADLINE_LABEL_TRIAL": "Fin de la période d'essai",
+      "DEADLINE_LABEL_END": "Fin prévue du contrat",
+      "DAYS_LEFT": "J-{{n}}",
+      "TODAY": "Aujourd'hui",
+      "OVERDUE": "Dépassée de {{n}} j",
+      "CHOOSE": "Votre décision",
+      "NEEDS_DATE": "Une nouvelle date de fin sera demandée",
       "NONE": "Aucun choix n'est proposé pour ce type de contrat. Configurez-les dans Administration › Échéances de contrat.",
       "NEW_DATE": "Nouvelle date de fin",
       "LOADING": "Chargement des choix…",
@@ -6375,6 +6382,7 @@
       "entity": "Entité {{pays}}",
       "back": "Retour",
       "countryMenu": "Changer de pays",
+      "paysFromNavbar": "Plusieurs pays cochés : réglages de {{pays}}. Cochez un seul pays dans la barre pour en régler un autre.",
       "tabs": {
         "roles": "Rôles & Permissions",
         "users": "Utilisateurs",
@@ -7069,6 +7077,12 @@
         "COL_ACTION": "Action",
         "FIELD_ACTION": "Action réalisée",
         "HINT_ACTION": "Ce que fait ce choix quand les RH le sélectionnent.",
+        "TYPE_EDIT": {
+          "TITLE": "Modifier le type de contrat {{label}}",
+          "TAB_INFO": "Informations",
+          "TAB_RULES": "Décisions « Décider »",
+          "ERR_LABELS": "Les libellés français et anglais sont obligatoires."
+        },
         "RULES": {
           "COL": "Décisions",
           "ACTION": "Décisions « Décider »",
@@ -7083,7 +7097,7 @@
           "NONE": "Aucun choix",
           "RENEWABLE_YES": "Période d'essai renouvelable (max. {{n}} fois)",
           "RENEWABLE_NO": "Période d'essai non renouvelable",
-          "HINT": "Sans choix propres, le type suit sa nature. Les libellés des choix se modifient dans la liste « Décision de contrat ».",
+          "HINT": "Sans choix propres, le type suit sa nature. Les choix sont les valeurs de la liste « Décision de contrat » : une valeur ajoutée là apparaît ici, sous le moment de son action.",
           "ERR_MAX": "Le nombre de renouvellements doit être compris entre 0 et 10.",
           "SAVED": "Décisions enregistrées."
         }

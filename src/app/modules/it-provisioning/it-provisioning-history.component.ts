@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -193,8 +194,28 @@ export class ItProvisioningHistoryComponent implements OnInit {
     this.pageSize.set(s.pageSize);
   }
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1 et liste rechargée (filtrée côté serveur). */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.load();
+    });
+  });
+
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     this.load();
     this.listService.getListValues('AD_PROFILE_TYPE').subscribe(v => this.adProfiles.set(v));
   }
@@ -202,8 +223,10 @@ export class ItProvisioningHistoryComponent implements OnInit {
   load(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
-    this.service.getAllList().subscribe({
+    const seq = ++this.loadSeq;
+    this.service.getAllList(this.pays()).subscribe({
       next: data => {
+        if (seq !== this.loadSeq) return;
         // Every file, open ones included — the page's KPI row above the tabs counts both.
         this.allItems.set(data);
         // Most recently closed first — the natural order of a history.
@@ -218,6 +241,7 @@ export class ItProvisioningHistoryComponent implements OnInit {
         this.firstLoad.set(false);
       },
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.error.set(this.translate.instant('IT_PROVISIONING.LIST.LOAD_ERROR'));
         this.loading.set(false);
         this.firstLoad.set(false);

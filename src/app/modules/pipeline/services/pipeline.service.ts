@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { paysHttpParam } from '../../../core/header-pays';
 
 export interface PipelineStats {
   totalCandidats: number;
@@ -120,6 +121,8 @@ export interface CandidateParams {
   size?: number;
   stage?: string;
   search?: string;
+  /** Drapeaux de la navbar (`179,64`). */
+  paysId?: string;
 }
 
 export interface PipelineActivity {
@@ -145,12 +148,13 @@ export class PipelineService {
   private http = inject(HttpClient);
   private base = `${environment.hrApiUrl}/api/hr/pipeline`;
 
-  getStats(): Observable<PipelineStats> {
-    return this.http.get<PipelineStats>(`${this.base}/stats`);
+  /** `pays` : drapeaux de la navbar (`179,64`) — voir core/header-pays.ts ; absent = tout le périmètre. */
+  getStats(pays?: string): Observable<PipelineStats> {
+    return this.http.get<PipelineStats>(`${this.base}/stats`, { params: paysHttpParam(pays) });
   }
 
-  getKanban(): Observable<KanbanColumn[]> {
-    return this.http.get<KanbanColumn[]>(`${this.base}/kanban`);
+  getKanban(pays?: string): Observable<KanbanColumn[]> {
+    return this.http.get<KanbanColumn[]>(`${this.base}/kanban`, { params: paysHttpParam(pays) });
   }
 
   /** Every archived candidature of the caller's entity, newest first, with its reason (V137). */
@@ -164,6 +168,7 @@ export class PipelineService {
     if (params.size  !== undefined) httpParams = httpParams.set('size',  params.size);
     if (params.stage)  httpParams = httpParams.set('stage',  params.stage);
     if (params.search) httpParams = httpParams.set('search', params.search);
+    if (params.paysId) httpParams = httpParams.set('paysId', params.paysId);
     return this.http.get<CandidatesPage>(`${this.base}/candidates`, { params: httpParams });
   }
 
@@ -171,11 +176,11 @@ export class PipelineService {
     return this.http.put<KanbanCandidate>(`${this.base}/candidates/${id}/stage`, stage);
   }
 
-  getActivity(): Observable<PipelineActivity[]> {
-    return this.http.get<PipelineActivity[]>(`${this.base}/activity`);
+  getActivity(pays?: string): Observable<PipelineActivity[]> {
+    return this.http.get<PipelineActivity[]>(`${this.base}/activity`, { params: paysHttpParam(pays) });
   }
 
-  getObjectives(): Observable<PipelineObjective[]> {
-    return this.http.get<PipelineObjective[]>(`${this.base}/objectives`);
+  getObjectives(pays?: string): Observable<PipelineObjective[]> {
+    return this.http.get<PipelineObjective[]>(`${this.base}/objectives`, { params: paysHttpParam(pays) });
   }
 }

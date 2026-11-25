@@ -98,7 +98,7 @@ export class CandidateService {
    * endpoint (CandidateController#list) does not accept date params, so it was
    * silently ignored and returned the all-time HIRED count anyway.
    */
-  getStats(paysId?: number): Observable<CandidateStats> {
+  getStats(paysId?: number | string): Observable<CandidateStats> {
     const count = (status?: string) => {
       let params = new HttpParams().set('page', 0).set('size', 1);
       if (status) params = params.set('status', status);
@@ -115,8 +115,9 @@ export class CandidateService {
   }
 
   /** KPI-row metrics for the /candidates dashboard (total/growth, avg delay, urgent positions). */
-  getDashboardStats(): Observable<CandidateDashboardStats> {
-    return this.http.get<CandidateDashboardStats>(`${this.base}/stats/dashboard`).pipe(
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  getDashboardStats(pays?: string): Observable<CandidateDashboardStats> {
+    return this.http.get<CandidateDashboardStats>(`${this.base}/stats/dashboard`, { params: pays ? { paysId: pays } : {} }).pipe(
       catchError(() => of({
         totalCandidates: 0, monthGrowthPct: null,
         avgRecruitmentDays: null, avgRecruitmentDaysDelta: null, urgentPositions: 0,

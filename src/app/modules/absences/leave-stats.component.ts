@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   ButtonComponent, DataTableComponent, EntityCardComponent, MetricCardComponent, PageComponent,
@@ -160,16 +161,43 @@ export class LeaveStatsComponent implements OnInit {
   readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
   readonly skeletonSlots = computed(() => Array.from({ length: Math.min(this.pageSize(), 12) }, (_, i) => i));
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1, tableau, totaux et options des filtres rechargés. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.loadOptions();
+      this.reload();
+    });
+  });
+
   ngOnInit(): void {
-    this.svc.filterOptions().subscribe({
+    this.loadedPays = this.pays();
+    this.loadOptions();
+    this.reload();
+  }
+
+  /** Collaborateurs, mois et années proposés par le panneau — ceux des pays cochés. */
+  private loadOptions(): void {
+    this.svc.filterOptions(this.pays()).subscribe({
       next: (o) => this.options.set(o),
       error: () => this.options.set(null),
     });
-    this.reload();
   }
 
   private currentFilter(): LeaveStatsFilter {
     return {
+      paysId: this.pays(),
       search: this.search() || null,
       collaborateurs: this.collaborateurs(),
       months: this.months(),
@@ -184,8 +212,10 @@ export class LeaveStatsComponent implements OnInit {
   reload(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
+    const seq = ++this.loadSeq;
     this.svc.page(this.currentFilter()).subscribe({
       next: (p) => {
+        if (seq !== this.loadSeq) return;
         this.rows.set(p.content ?? []);
         this.summary.set(p.summary ?? null);
         this.totalElements.set(p.totalElements ?? 0);
@@ -194,6 +224,7 @@ export class LeaveStatsComponent implements OnInit {
       },
       // Never an empty table on failure: "nothing matched" and "the call failed" must differ.
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.rows.set([]);
         this.summary.set(null);
         this.totalElements.set(0);

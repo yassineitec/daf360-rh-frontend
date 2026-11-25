@@ -10,13 +10,15 @@ export class ItProvisioningService {
   private base = `${environment.hrApiUrl}/api/hr/it-provisioning`;
 
   /** GET /api/hr/it-provisioning/pending */
-  getPendingList(): Observable<ProvisioningListItem[]> {
-    return this.http.get<ProvisioningListItem[]>(`${this.base}/pending`);
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  getPendingList(pays?: string): Observable<ProvisioningListItem[]> {
+    return this.http.get<ProvisioningListItem[]>(`${this.base}/pending`, { params: pays ? { paysId: pays } : {} });
   }
 
   /** GET /api/hr/it-provisioning/all */
-  getAllList(): Observable<ProvisioningListItem[]> {
-    return this.http.get<ProvisioningListItem[]>(`${this.base}/all`);
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  getAllList(pays?: string): Observable<ProvisioningListItem[]> {
+    return this.http.get<ProvisioningListItem[]>(`${this.base}/all`, { params: pays ? { paysId: pays } : {} });
   }
 
   /** GET /api/hr/it-provisioning/{id} */

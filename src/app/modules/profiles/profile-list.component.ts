@@ -2,10 +2,12 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ConfigurableListService } from '../../core/lists/configurable-list.service';
 import { ListValue } from '../../core/lists/configurable-list.model';
 import { adminLabel } from '../../shared/utils/admin-label.utils';
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { forkJoin, catchError, of } from 'rxjs';
 import {
+  selectSelectedCountryIds,
   BulkActionBarComponent, BulkAction,
   PageComponent, PageHeaderComponent,
   PaginationComponent,
@@ -43,8 +45,11 @@ const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
 
 type ViewMode = 'grid' | 'list';
 
-/** The filter panel's field names, which are also the query-param names. */
-type FilterKey = 'pays' | 'department' | 'grade' | 'status' | 'contract' | 'hireDate' | 'includeInactive';
+/**
+ * The filter panel's field names, which are also the query-param names.
+ * No `pays`: the country is the shell header's flag (shared store), not a panel field.
+ */
+type FilterKey = 'department' | 'grade' | 'status' | 'contract' | 'hireDate' | 'includeInactive';
 
 const EMPTY_OPTIONS: FilterOptions = {
   departments: [], grades: [], pays: [], contractTypes: [],
@@ -149,6 +154,39 @@ export class ProfileListComponent implements OnInit {
 
   readonly selectedCount = computed(() => this.selectedIds().size);
 
+  // ── Pays : le drapeau de l'en-tête du shell ────────────────────────────────
+  /**
+   * Les pays cochés dans la navbar, en `pays_id` séparés par des virgules et triés (ce
+   * qu'attend `?pays=179,64`) ; undefined = « Tous les pays ». Le serveur les croise avec
+   * la portée du jeton : un pays hors portée ne renverrait rien, mais l'en-tête ne propose
+   * de toute façon que les pays permis. Texte trié : deux sélections identiques donnent la
+   * même valeur, donc pas de rechargement inutile (voir `loadedPays`).
+   */
+  readonly paysParam = computed<string | undefined>(() => {
+    const ids = [...new Set(this.headerCountryIds()
+      .map(id => Number(id))
+      .filter(id => Number.isInteger(id) && id > 0))].sort((a, b) => a - b);
+    return ids.length ? ids.join(',') : undefined;
+  });
+  private readonly headerCountryIds = inject(Store).selectSignal(selectSelectedCountryIds);
+
+  /** Pays des données affichées — pour ne recharger que sur un VRAI changement de drapeau. */
+  private loadedPays: string | undefined;
+
+  /**
+   * Changement de drapeau = nouveau jeu de résultats : page 0, sélection vidée, liste et
+   * KPI rechargés. Le premier passage arrive après `ngOnInit`, qui a déjà chargé ce pays.
+   */
+  private readonly followHeaderCountry = effect(() => {
+    const pays = this.paysParam();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.resetToFirstPage();
+      this.loadStats();
+    });
+  });
+
   /** Table view only (undefined in cards view) — its `daf-data-table` goes to the toolbar. */
   readonly tableSection = viewChild(ProfilesTableSectionComponent);
 
@@ -181,7 +219,10 @@ export class ProfileListComponent implements OnInit {
     const s = this.listState.restore();
     if (!s) return;
     this.searchText.set(s.searchText);
-    this.filters.set(s.filters as Partial<Record<FilterKey, string>>);
+    // Un état mémorisé avant le drapeau de l'en-tête peut encore porter `pays` : on l'écarte,
+    // le pays ne vient plus que de la navbar.
+    const { pays: _legacyPays, ...filters } = s.filters as Partial<Record<FilterKey | 'pays', string>>;
+    this.filters.set(filters);
     this.sort.set(s.sort);
     this.currentPage.set(s.page);
     this.pageSize.set(s.pageSize);
@@ -193,18 +234,14 @@ export class ProfileListComponent implements OnInit {
   readonly filterFields = computed<FilterField[]>(() => {
     const isEn = (this.translate.currentLang() ?? '').startsWith('en');
     const t   = (k: string) => this.translate.instant(k);
-    // Pays / département / grade arrive from the DB with both labels; only the
-    // displayed one follows the language, the `value` sent to /employees does not.
+    // Département / grade arrive from the DB with both labels; only the displayed one
+    // follows the language, the `value` sent to /employees does not.
+    // (No « Pays » field: the country is the shell header's flag.)
     const loc = (list: ProfileFilterOption[]) =>
       list.map(o => ({ value: o.value, label: (isEn && o.labelEn) || o.label }));
     const raw = this.filterOptions();
-    const opt = { pays: loc(raw.pays), departments: loc(raw.departments), grades: loc(raw.grades) };
+    const opt = { departments: loc(raw.departments), grades: loc(raw.grades) };
     return [
-      {
-        name: 'pays', label: t('PROFILES.FILTERS.PAYS'), type: 'select',
-        placeholder: t('PROFILES.FILTERS.ALL'), searchable: true,
-        options: opt.pays,
-      },
       {
         name: 'department', label: t('PROFILES.FILTERS.DEPARTMENT'), type: 'select',
         placeholder: t('PROFILES.FILTERS.ALL'), searchable: true,
@@ -286,7 +323,6 @@ export class ProfileListComponent implements OnInit {
       align:        'right',
       panelWidth:   340,
       initialValues: {
-        pays:       sel(f.pays),
         department: sel(f.department),
         grade:      sel(f.grade),
         status:     sel(f.status),
@@ -316,6 +352,7 @@ export class ProfileListComponent implements OnInit {
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.paysParam();
     forkJoin({
       list: this.svc.getEmployees(this.queryParams()).pipe(catchError(() => of(null))),
       opts: this.svc.getFilterOptions(),
@@ -328,12 +365,12 @@ export class ProfileListComponent implements OnInit {
   }
 
   /**
-   * On load, then whenever the pays filter changes — the only filter the cards follow;
-   * the search and the other filters leave them alone. A failure blanks the cards
+   * On load, then whenever the header's country changes — the only filter the cards
+   * follow; the search and the panel filters leave them alone. A failure blanks the cards
    * rather than the page.
    */
   private loadStats(): void {
-    this.svc.getStats(this.filters().pays)
+    this.svc.getStats(this.paysParam())
       .pipe(catchError(() => of(null)))
       .subscribe(s => this.stats.set(s));
   }
@@ -374,7 +411,7 @@ export class ProfileListComponent implements OnInit {
       page:         this.currentPage(),
       size:         this.pageSize(),
       search:       this.searchText() || undefined,
-      pays:         f.pays,
+      pays:         this.paysParam(),
       department:   f.department,
       grade:        f.grade,
       status:       f.status,
@@ -404,9 +441,7 @@ export class ProfileListComponent implements OnInit {
   }
 
   applyFilters(result: FilterResult): void {
-    const previousPays = this.filters().pays;
     this.filters.set({
-      pays:       this.asString(result['pays']),
       department: this.asString(result['department']),
       grade:      this.asString(result['grade']),
       status:     this.asString(result['status']),
@@ -417,7 +452,6 @@ export class ProfileListComponent implements OnInit {
       includeInactive: result['includeInactive'] === true ? 'true' : undefined,
     });
     this.resetToFirstPage();
-    if (this.filters().pays !== previousPays) this.loadStats();
   }
 
   /** A new order is a new result set — back to page 0, selection cleared (like a filter). */

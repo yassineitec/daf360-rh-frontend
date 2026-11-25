@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -288,8 +289,9 @@ export class CandidateListComponent implements OnInit {
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     forkJoin({
-      stats: this.svc.getStats().pipe(catchError(() => of(null))),
+      stats: this.svc.getStats(this.pays()).pipe(catchError(() => of(null))),
       page:  this.svc.getCandidates(this.query()).pipe(catchError(() => of(null))),
     }).subscribe(({ stats, page }) => {
       if (stats) this.stats.set(stats);
@@ -311,7 +313,8 @@ export class CandidateListComponent implements OnInit {
     const demand = this.demandFilter();
     const range  = this.createdRange();
     return {
-      paysId:       this.userStore.currentUser()?.paysId,
+      // Les drapeaux de la navbar ; absent = tout le périmètre du rôle (serveur).
+      paysId:       this.pays(),
       status:       this.statusFilter() || undefined,
       search:       this.search()       || undefined,
       departmentId: this.departmentFilter() ? Number(this.departmentFilter()) : undefined,
@@ -326,17 +329,47 @@ export class CandidateListComponent implements OnInit {
     };
   }
 
-  /** Once per page: the demand and department options of the filter panel. */
+  /**
+   * The demand and department options of the filter panel, for the navbar's countries.
+   * Both endpoints take ONE pays: one flag → that one; none → the user's own (as before);
+   * several → departments unfiltered then narrowed here, demands fetched per country.
+   */
   private loadFilterOptions(): void {
-    const paysId = this.userStore.currentUser()?.paysId;
-    this.refData.getDepartments(paysId).subscribe(items =>
-      this.departments.set((items ?? []).filter(d => d.isActive !== false)));
-    if (paysId) {
-      this.demandSvc.getApprovedOptions(paysId)
-        .pipe(catchError(() => of([] as ApprovedDemandOption[])))
-        .subscribe(opts => this.demandOptions.set(opts ?? []));
-    }
+    const ids = (this.pays() ?? '').split(',').filter(Boolean).map(Number);
+    const own = this.userStore.currentUser()?.paysId;
+    const single = ids.length === 1 ? ids[0] : ids.length === 0 ? own : undefined;
+    this.refData.getDepartments(single).subscribe(items =>
+      this.departments.set((items ?? [])
+        .filter(d => d.isActive !== false)
+        .filter(d => ids.length < 2 || (d.paysId != null && ids.includes(d.paysId)))));
+    const demandPays = single != null ? [single] : ids;
+    if (demandPays.length === 0) { this.demandOptions.set([]); return; }
+    forkJoin(demandPays.map(id => this.demandSvc.getApprovedOptions(id)
+        .pipe(catchError(() => of([] as ApprovedDemandOption[])))))
+      .subscribe(lists => this.demandOptions.set(lists.flat()));
   }
+
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+
+  /**
+   * Changement de drapeaux = nouveau jeu de résultats : page 0, liste, KPI et options du
+   * panneau rechargés. Le premier passage arrive après `ngOnInit`, qui a déjà tout chargé.
+   */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.loadCandidates();
+      this.loadStats();
+      this.loadFilterOptions();
+    });
+  });
 
   private loadCandidates(): void {
     this.loading.set(true);
@@ -347,7 +380,7 @@ export class CandidateListComponent implements OnInit {
   }
 
   private loadStats(): void {
-    this.svc.getStats().subscribe({ next: s => this.stats.set(s), error: () => {} });
+    this.svc.getStats(this.pays()).subscribe({ next: s => this.stats.set(s), error: () => {} });
   }
 
   // ── Toolbar handlers ───────────────────────────────────────────────────────

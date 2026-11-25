@@ -328,7 +328,8 @@ export interface RegimeAssignmentDto {
 // List / filter
 // ─────────────────────────────────────────────────────────────────────────────
 export interface ProfileFilter {
-  pays?: number;
+  /** Un `pays_id`, ou les drapeaux de la navbar (`179,64`). */
+  pays?: number | string;
   status?: LifecycleStatus;
   department?: string;
   grade?: string;

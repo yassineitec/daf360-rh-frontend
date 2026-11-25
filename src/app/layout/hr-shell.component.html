@@ -7,7 +7,19 @@
   (itemClick)="onNavClick($event)">
   <!-- « Centre d'aide », in the rail's footer slot (lib 5.13.0): under the item list,
        which scrolls above it instead of passing under it. Desktop rail only. -->
-  <rh-help-center dafSideNavFooter />
+  <!-- Above it, the country picker (lib 5.19.0) — no separator of its own, rh-help-center
+       already draws the line. On mobile the shell's navbar keeps the globe instead. -->
+  <rh-help-center dafSideNavFooter>
+    <daf-country-picker
+      [separator]="false"
+      [countries]="countryPicker.countries()"
+      [allCountriesLabel]="countryPicker.allCountriesLabel()"
+      [multiCountry]="countryPicker.multiCountry()"
+      [activeCountry]="countryPicker.activeCountry()"
+      [activeCountries]="countryPicker.activeCountries()"
+      (countryChange)="countryPicker.onCountryChange($event)"
+      (countriesChange)="countryPicker.onCountriesChange($event)" />
+  </rh-help-center>
 </daf-side-nav>
 
 <main class="shell-content">

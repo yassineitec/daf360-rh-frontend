@@ -88,11 +88,17 @@ export abstract class CongeListBase {
     };
   }
 
+  /** Bumped per list / count fetch: a slow answer for a previous query is dropped. */
+  private loadSeq = 0;
+  private countsSeq = 0;
+
   reload(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
+    const seq = ++this.loadSeq;
     this.fetch(this.currentFilter()).subscribe({
       next: (p) => {
+        if (seq !== this.loadSeq) return;
         this.rows.set(p.content ?? []);
         this.totalElements.set(p.totalElements ?? 0);
         this.totalPages.set(p.totalPages ?? 0);
@@ -103,6 +109,7 @@ export abstract class CongeListBase {
       // Never swallowed into an empty table: "nothing matched" and "the call failed" must
       // not look the same to someone checking whether anyone is waiting on them.
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.rows.set([]);
         this.totalElements.set(0);
         this.totalPages.set(0);
@@ -114,11 +121,12 @@ export abstract class CongeListBase {
   }
 
   reloadCounts(): void {
+    const seq = ++this.countsSeq;
     this.fetchCounts().subscribe({
       // A failed count leaves the tiles blank rather than showing zeros, which would read
       // as "nothing pending" — the one thing this row must never say by accident.
-      next: (c) => this.counts.set(c),
-      error: () => this.counts.set(null),
+      next: (c) => { if (seq === this.countsSeq) this.counts.set(c); },
+      error: () => { if (seq === this.countsSeq) this.counts.set(null); },
     });
   }
 

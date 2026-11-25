@@ -370,28 +370,88 @@
 <!-- « Décider » — end of trial / end of contract. Choices = list « Décision de contrat »
      filtered by the contract type's rules (Administration › Échéances de contrat). -->
 <ng-template #decisionTpl>
-  <div class="flex flex-col gap-3.5">
+  <div class="flex flex-col gap-4">
     @if (lcError()) {
-      <div class="rounded-lg bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">{{ lcError() }}</div>
+      <div class="flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-3.5 py-2.5 text-[13px] text-danger">
+        <span class="material-symbols-outlined shrink-0 text-[18px]">error</span>
+        <span>{{ lcError() }}</span>
+      </div>
     }
     @if (decisionOptions(); as o) {
+      <!-- Échéance : date + compte à rebours -->
       @if (o.deadline) {
-        <p class="m-0 text-[13px] text-on-surface-variant">
-          {{ (o.moment === 'TRIAL_END' ? 'PROFILES.DECISION.DEADLINE_TRIAL' : 'PROFILES.DECISION.DEADLINE_END')
-             | translate:{ date: fmtDate(o.deadline) } }}
-        </p>
+        <div class="flex items-center gap-3 rounded-xl bg-surface-container px-4 py-3">
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span class="material-symbols-outlined text-[22px]">event</span>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="m-0 text-[12px] font-medium uppercase tracking-wide text-on-surface-variant">
+              {{ (o.moment === 'TRIAL_END' ? 'PROFILES.DECISION.DEADLINE_LABEL_TRIAL' : 'PROFILES.DECISION.DEADLINE_LABEL_END') | translate }}
+            </p>
+            <p class="m-0 text-[15px] font-semibold text-on-surface">{{ fmtDate(o.deadline) }}</p>
+          </div>
+          @let days = decisionDaysLeft() ?? 0;
+          @if (days < 0) {
+            <span class="shrink-0 rounded-full bg-danger/10 px-2.5 py-1 text-[12px] font-semibold text-danger">
+              {{ 'PROFILES.DECISION.OVERDUE' | translate:{ n: -days } }}
+            </span>
+          } @else if (days === 0) {
+            <span class="shrink-0 rounded-full bg-warning/10 px-2.5 py-1 text-[12px] font-semibold text-warning">
+              {{ 'PROFILES.DECISION.TODAY' | translate }}
+            </span>
+          } @else {
+            <span class="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary">
+              {{ 'PROFILES.DECISION.DAYS_LEFT' | translate:{ n: days } }}
+            </span>
+          }
+        </div>
       }
+
+      <!-- Choix : cartes sélectionnables -->
       @if (o.options.length) {
-        <daf-radio-group
-          [options]="decisionRadio()"
-          [config]="{ layout: 'vertical' }"
-          [selected]="decisionId() !== null ? '' + decisionId() : ''"
-          (selectedChange)="onDecisionPick($event)" />
+        <div class="flex flex-col gap-2" role="radiogroup">
+          <p class="m-0 text-[12px] font-semibold uppercase tracking-wide text-on-surface-variant">
+            {{ 'PROFILES.DECISION.CHOOSE' | translate }}
+          </p>
+          @for (opt of o.options; track opt.id) {
+            @let look = decisionLook(opt.action);
+            @let active = decisionId() === opt.id;
+            <button type="button" role="radio"
+              [attr.aria-checked]="active"
+              [disabled]="!!opt.blockedReason"
+              (click)="onDecisionPick('' + opt.id)"
+              class="group flex w-full items-center gap-3 rounded-xl border bg-surface-container-lowest px-3.5 py-3 text-left transition-all duration-150
+                     disabled:cursor-not-allowed disabled:opacity-50"
+              [class]="active ? look.active : 'border-outline-variant hover:border-outline hover:bg-surface-container'">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" [class]="look.badge">
+                <span class="material-symbols-outlined text-[20px]">{{ look.icon }}</span>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-[14px] font-medium text-on-surface">
+                  {{ decisionLabel(opt) }}
+                </span>
+                @if (opt.blockedReason) {
+                  <span class="mt-0.5 flex items-center gap-1 text-[12px] text-on-surface-variant">
+                    <span class="material-symbols-outlined text-[14px]">lock</span>{{ opt.blockedReason }}
+                  </span>
+                } @else if (opt.requiresDate) {
+                  <span class="mt-0.5 block text-[12px] text-on-surface-variant">{{ 'PROFILES.DECISION.NEEDS_DATE' | translate }}</span>
+                }
+              </span>
+              <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
+                    [class]="active ? look.dot : 'border-outline-variant'">
+                @if (active) { <span class="material-symbols-outlined text-[14px] text-white">check</span> }
+              </span>
+            </button>
+          }
+        </div>
       } @else {
-        <p class="m-0 rounded-lg bg-surface-container px-3.5 py-2.5 text-[13px] text-on-surface-variant">
-          {{ 'PROFILES.DECISION.NONE' | translate }}
-        </p>
+        <div class="flex items-start gap-2 rounded-xl bg-surface-container px-3.5 py-3 text-[13px] text-on-surface-variant">
+          <span class="material-symbols-outlined shrink-0 text-[18px]">info</span>
+          <span>{{ 'PROFILES.DECISION.NONE' | translate }}</span>
+        </div>
       }
+
       @if (decisionPicked()?.requiresDate) {
         <daf-multi-date-picker
           [config]="{ label: ('PROFILES.DECISION.NEW_DATE' | translate), selectionMode: 'single' }"
@@ -403,7 +463,10 @@
                      placeholder: ('PROFILES.PLACEHOLDERS.TRIAL_COMMENT' | translate) }"
         [value]="decisionComment" (valueChange)="onDecisionComment($event)" />
     } @else {
-      <p class="m-0 text-[13px] text-on-surface-variant">{{ 'PROFILES.DECISION.LOADING' | translate }}</p>
+      <div class="flex items-center gap-2 py-6 text-[13px] text-on-surface-variant">
+        <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+        {{ 'PROFILES.DECISION.LOADING' | translate }}
+      </div>
     }
   </div>
 </ng-template>

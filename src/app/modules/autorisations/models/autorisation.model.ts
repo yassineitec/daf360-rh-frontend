@@ -78,6 +78,8 @@ export interface AutorisationCreate {
 }
 
 export interface AutorisationFilter {
+  /** Drapeaux de la navbar (`179,64`) — vue « global » seulement ; absent = tout le périmètre. */
+  paysId?: string;
   etat?: AutorisationEtat | null;
   from?: string | null;
   to?: string | null;

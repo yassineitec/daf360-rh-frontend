@@ -10,12 +10,14 @@ export class OnboardingService {
   private http = inject(HttpClient);
   private base = `${environment.hrApiUrl}/api/hr/onboarding`;
 
-  getKpiStats(): Observable<OnboardingKpiStats> {
-    return this.http.get<OnboardingKpiStats>(`${this.base}/kpi`);
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  getKpiStats(pays?: string): Observable<OnboardingKpiStats> {
+    return this.http.get<OnboardingKpiStats>(`${this.base}/kpi`, { params: pays ? { paysId: pays } : {} });
   }
 
-  getPendingList(): Observable<OnboardingListItem[]> {
-    return this.http.get<OnboardingListItem[]>(`${this.base}/pending`);
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  getPendingList(pays?: string): Observable<OnboardingListItem[]> {
+    return this.http.get<OnboardingListItem[]>(`${this.base}/pending`, { params: pays ? { paysId: pays } : {} });
   }
 
   /** « Historique » tab — onboarding actions over [from, to] (yyyy-MM-dd; none = 12 months). */

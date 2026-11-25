@@ -1,4 +1,5 @@
-import { Component, Input, OnInit, TemplateRef, inject, signal, viewChild } from '@angular/core';
+import { Component, Input, OnInit, TemplateRef, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -203,8 +204,34 @@ export class CongeHistoryComponent extends CongeListBase implements OnInit {
   }
 
   protected fetchCounts(): Observable<CongeCounts> {
-    return this.scope === 'global' ? this.svc.globalCounts() : this.svc.teamCounts();
+    return this.scope === 'global' ? this.svc.globalCounts(this.pays()) : this.svc.teamCounts();
   }
+
+  // ── Pays : les drapeaux cochés dans la navbar (vue « global » seulement) ───
+  /**
+   * `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). La vue « équipe »
+   * n'en dépend pas : elle est bornée par la hiérarchie, pas par un pays.
+   */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+
+  /** Liste, export et compteurs de la vue globale suivent les drapeaux. */
+  protected override currentFilter(): CongeFilter {
+    const f = super.currentFilter();
+    return this.scope === 'global' ? { ...f, paysId: this.pays() ?? null } : f;
+  }
+
+  /** Changement de drapeaux = page 1, liste et compteurs rechargés. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays || this.scope !== 'global') return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.refreshAll();
+    });
+  });
 
   protected scopeKey(): string {
     return this.scope === 'global' ? 'CONGES.HISTORY.GLOBAL' : 'CONGES.HISTORY.TEAM';
@@ -217,6 +244,7 @@ export class CongeHistoryComponent extends CongeListBase implements OnInit {
     const fromRoute = this.route.snapshot.data['scope'] as HistoryScope | undefined;
     if (fromRoute) this.scope = fromRoute;
     this.canArchive = this.scope === 'global';
+    this.loadedPays = this.pays();
 
     this.sortKey.set('dateDebut');
     this.loadTypes();

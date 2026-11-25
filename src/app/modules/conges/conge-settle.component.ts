@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal, TemplateRef, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, TemplateRef, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Observable, of, switchMap } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -320,14 +321,36 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
 
   protected fetch(filter: CongeFilter): Observable<CongePage> {
     return this.svc.settled(
-      { ...filter, mine: this.mineOnly() }, this.translate.currentLang() ?? 'fr');
+      { ...filter, paysId: this.pays() ?? null, mine: this.mineOnly() }, this.translate.currentLang() ?? 'fr');
   }
   protected fetchCounts(): Observable<CongeCounts> {
-    return this.svc.settledCounts(this.mineOnly());
+    return this.svc.settledCounts(this.mineOnly(), this.pays());
   }
   protected scopeKey(): string { return 'CONGES.SETTLE'; }
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+
+  /**
+   * Changement de drapeaux : liste (page 1), compteurs et collaborateurs proposés dans le
+   * formulaire de régularisation rechargés.
+   */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.refreshAll();
+      this.loadEmployees();
+    });
+  });
+
   ngOnInit(): void {
+    this.loadedPays = this.pays();
     this.loadEmployees();
     this.loadTypes();
     this.refreshAll();
@@ -642,7 +665,8 @@ export class CongeSettleComponent extends CongeListBase implements OnInit {
    * rather than a paged picker — the company is in the hundreds and the select searches.
    */
   private loadEmployees(): void {
-    this.profiles.listAllEmployees({}, 0, 500).subscribe({
+    // Les collaborateurs des pays cochés dans la navbar (tout le périmètre sans drapeau).
+    this.profiles.listAllEmployees({ pays: this.pays() }, 0, 500).subscribe({
       next: (p) => this.employees.set(
         (p.content ?? []).map((e) => ({ userId: e.userId, fullName: e.fullName }))),
       error: () => this.notify.warning(this.translate.instant('CONGES.SETTLE.ERR_EMPLOYEES')),

@@ -36,8 +36,9 @@ export class MissionService {
   }
 
   // ── RH — billeterie ─────────────────────────────────────────────────────
-  pendingHr(): Observable<Mission[]> {
-    return this.http.get<Mission[]>(`${this.base}/pending-hr`);
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  pendingHr(pays?: string): Observable<Mission[]> {
+    return this.http.get<Mission[]>(`${this.base}/pending-hr`, { params: pays ? { paysId: pays } : {} });
   }
 
   /** Creates the sheet on first call, updates it afterwards — one endpoint either way. */
@@ -58,8 +59,9 @@ export class MissionService {
   }
 
   // ── RH — the employees' asks ────────────────────────────────────────────
-  pendingChangeRequests(): Observable<MissionChangeRequest[]> {
-    return this.http.get<MissionChangeRequest[]>(`${this.base}/change-requests`);
+  /** `pays` : drapeaux de la navbar — le pays de la MISSION concernée. */
+  pendingChangeRequests(pays?: string): Observable<MissionChangeRequest[]> {
+    return this.http.get<MissionChangeRequest[]>(`${this.base}/change-requests`, { params: pays ? { paysId: pays } : {} });
   }
 
   resolveChangeRequest(requestId: number, accept: boolean, notes: string | null):

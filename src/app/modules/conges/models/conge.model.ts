@@ -181,7 +181,8 @@ export interface CongeFilter {
   from?: string | null;
   to?: string | null;
   collaborateurId?: number | null;
-  paysId?: number | null;
+  /** Un `pays_id`, ou les drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  paysId?: number | string | null;
   /** Matches the employee's name or the request's reason, server-side. */
   search?: string | null;
   /**

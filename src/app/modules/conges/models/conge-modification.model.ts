@@ -94,6 +94,8 @@ export interface CongeModificationCreate {
 }
 
 export interface CongeModificationFilter {
+  /** Drapeaux de la navbar (`179,64`) — file RH seulement ; absent = tout le périmètre. */
+  paysId?: string;
   page?: number;
   size?: number;
   sort?: string | null;

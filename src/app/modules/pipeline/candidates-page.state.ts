@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 
+import { injectHeaderPays } from '../../core/header-pays';
 import { PipelineService, PipelineStats } from './services/pipeline.service';
 
 /**
@@ -19,8 +20,15 @@ export class CandidatesPageState {
   /** First answer received (success or failure): ends the page's first-load skeleton. */
   readonly loaded = signal(false);
 
+  /** Les drapeaux de la navbar — les KPI suivent les mêmes pays que le tableau. */
+  private readonly pays = injectHeaderPays();
+  /** Une réponse lente d'une sélection de drapeaux précédente est ignorée. */
+  private seq = 0;
+
   reload(): void {
-    this.pipelineSvc.getStats().pipe(catchError(() => of(null))).subscribe(s => {
+    const seq = ++this.seq;
+    this.pipelineSvc.getStats(this.pays()).pipe(catchError(() => of(null))).subscribe(s => {
+      if (seq !== this.seq) return;
       if (s) this.stats.set(s);
       this.loaded.set(true);
     });

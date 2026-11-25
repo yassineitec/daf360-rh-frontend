@@ -72,20 +72,8 @@ const DEFAULT_BADGE_COLOR = '#b45309';
         <h3 class="col-title">{{ 'ADMIN.catalog.holidays.title' | translate }}</h3>
         <p class="col-sub">{{ 'ADMIN.catalog.holidays.subtitle' | translate }}</p>
       </div>
-      <div class="header-actions">
-        <!-- Which entity's holidays. Replaces the hard-wired paysId input: this screen is
-             for administering calendars, and an administrator covering several entities had
-             no way to reach the others. The list is SCOPED server side, so it can only offer
-             what the writes would accept. -->
-        @if (paysOptions().length > 1) {
-          <daf-select
-            class="pays-picker"
-            [options]="paysOptions()"
-            [selected]="selectedPaysSelected()"
-            [config]="{ label: ('ADMIN.catalog.holidays.colCountry' | translate), fullWidth: false, searchable: true }"
-            (selectedChange)="onPaysChange($event)" />
-        }
-      </div>
+      <!-- No pays picker here any more: the entity comes from the navbar flags, through
+           /rh/admin's [paysId] (the shell rebuilds this tab when it changes). -->
     </div>
 
     <!-- Same bar as the other lists (daf-search-toolbar): search, the Table / Calendar view
@@ -424,14 +412,16 @@ export class HolidaysAdminComponent implements OnChanges {
     this.currentPage.set(0);
   });
 
+  /** Set only when the `paysId` passed in is outside the caller's scope (see constructor). */
+  private readonly scopeFallback = signal<number | null>(null);
+
   /**
-   * The entity being administered: the picker's choice, else the caller's own.
-   *
-   * Every read and write goes through this rather than the `paysId` input, so the screen
-   * follows the picker. The input remains the sensible starting point — an administrator of
-   * one entity never touches the picker and sees exactly what they saw before.
+   * The entity whose holidays are listed: the one /rh/admin passes (from the navbar flags),
+   * unless it is outside the caller's scope — then the first entity they do have.
+   * The add/edit modal's own country field (super admin) only decides where a holiday is
+   * SAVED (`selectedPaysId`); it no longer moves the list.
    */
-  readonly activePaysId = computed(() => this.selectedPaysId() ?? this.paysId());
+  readonly activePaysId = computed(() => this.scopeFallback() ?? this.paysId());
 
   constructor() {
     // Scoped server-side to the caller's role perimeter, and loaded for EVERYONE rather than
@@ -444,7 +434,7 @@ export class HolidaysAdminComponent implements OnChanges {
         // Default to the caller's own entity when it is in scope; otherwise the first one
         // they do have, so the screen is never pointed at something they cannot read.
         if (!list.some(p => p.id === this.paysId()) && list.length) {
-          this.selectedPaysId.set(list[0].id);
+          this.scopeFallback.set(list[0].id);
         }
         this.load();
       },
@@ -501,7 +491,7 @@ export class HolidaysAdminComponent implements OnChanges {
   openAdd(prefillDate?: string) {
     this.editTarget.set(null);
     this.form = { dateHoliday: prefillDate ?? '', frenchLabel: '', englishLabel: '', isRecurring: false };
-    this.selectedPaysId.set(this.paysId());
+    this.selectedPaysId.set(this.activePaysId());
     this.modalError.set(null);
     this.openModal(this.translate.instant('ADMIN.catalog.holidays.modalTitleNew'));
   }
@@ -528,7 +518,8 @@ export class HolidaysAdminComponent implements OnChanges {
 
   save() {
     this.saving.set(true);
-    const paysId = this.activePaysId();
+    // The modal's country (super admin may pick another one), else the listed entity.
+    const paysId = this.selectedPaysId() ?? this.activePaysId();
     const dto = { paysId, ...this.form };
     const obs = this.editTarget()
       ? this.svc.updateHoliday(this.editTarget()!.id, dto)

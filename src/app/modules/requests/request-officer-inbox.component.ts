@@ -1,6 +1,7 @@
 import {
-  Component, computed, inject, OnInit, signal,
+  Component, computed, effect, inject, OnInit, signal, untracked,
 } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
@@ -188,7 +189,24 @@ export class RequestOfficerInboxComponent implements OnInit {
   canProcess = (status: RequestStatus) => RequestOfficerInboxComponent.PROCESSABLE.includes(status);
 
   private officerId = computed(() => this.userStore.currentUser()?.userId ?? 0);
-  private paysId    = computed(() => this.userStore.currentUser()?.paysId ?? 1);
+  /**
+   * Les drapeaux cochés dans la navbar (`179,64`) ; undefined = tout le périmètre du rôle.
+   * Remplace le pays de l'utilisateur (`?? 1`), que le serveur ignorait sans filtre de statut.
+   */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.reload();
+    });
+  });
 
   private slaPipe = new SlaCountdownPipe();
 
@@ -262,18 +280,23 @@ export class RequestOfficerInboxComponent implements OnInit {
     return SLA_VARIANTS[level];
   }
 
-  ngOnInit() { this.reload(); }
+  ngOnInit() {
+    this.loadedPays = this.pays();
+    this.reload();
+  }
 
   reload(resetPage = true) {
     if (resetPage) this.page.set(0);
     this.loading.set(true);
+    const seq = ++this.loadSeq;
     this.svc.listRequests({
-      paysId:  this.paysId(),
+      paysId:  this.pays(),
       status:  (this.filterStatus || undefined) as RequestStatus | undefined,
       sort:    this.sort() ?? undefined,
       page:    this.page(),
       size:    30,
     }).pipe(catchError(() => of(null))).subscribe(res => {
+      if (seq !== this.loadSeq) return;
       this.loading.set(false);
       if (res) {
         this.rows.set(res.content);
