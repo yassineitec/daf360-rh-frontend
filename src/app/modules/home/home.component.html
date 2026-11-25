@@ -11,7 +11,8 @@
   <daf-page-header
     [title]="'HOME.TITLE' | translate"
     [subtitle]="'HOME.SUBTITLE' | translate:{ name: userName() }" />
-  <!-- Country and department filters live in the workforce cards' detail pop-up (#detailTpl). -->
+  <!-- Country = the shell header's flag (whole page); the department filter lives in the
+       workforce cards' detail pop-up (#detailTpl). -->
 
   @if (error()) {
     <div class="flex items-center gap-2 rounded-xl bg-danger/10 px-4 py-3 text-body-sm text-danger">
@@ -73,20 +74,11 @@
 <!-- Detail pop-up of a workforce card — projected into daf-modal-host by ModalService
      (onCardOpen). rh-workforce-detail (KPI tiles, ring, one library chart) is fed by
      `detailWorkforce`, which the department filter reloads; the page's own cards are
-     never filtered. -->
+     never filtered by department. The country is the shell header's flag, for the whole page. -->
 <ng-template #detailTpl>
   <div class="flex flex-col gap-4">
-    <!-- Country (cross-country admins only, same options as the page header) then
-         department — the department list follows the country picked here. -->
+    <!-- Department only — its list follows the header's country. -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      @if (canSwitchPays() && paysOptions().length > 2) {
-        <daf-select
-          class="block"
-          [options]="paysOptions()"
-          [selected]="detailPaysValue()"
-          [config]="{ label: ('HOME.COUNTRY_PICKER' | translate), fullWidth: true, searchable: true }"
-          (selectedChange)="onDetailPaysChange($event)" />
-      }
       @if (departmentOptions().length > 1) {
         <daf-select
           class="block"

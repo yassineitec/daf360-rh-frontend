@@ -1,4 +1,5 @@
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -148,15 +149,38 @@ export class BilleterieComponent implements OnInit {
     request?: MissionChangeRequest;
   } | null>(null);
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = file billetterie et demandes de changement rechargées. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.load();
+    });
+  });
+
   ngOnInit(): void {
+    this.loadedPays = this.pays();
     this.load();
   }
 
   load(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
-    this.svc.pendingHr().subscribe({
+    const pays = this.pays();
+    const seq = ++this.loadSeq;
+    this.svc.pendingHr(pays).subscribe({
       next: list => {
+        if (seq !== this.loadSeq) return;
         this.missions.set(list);
         this.loading.set(false);
         this.firstLoad.set(false);
@@ -169,9 +193,9 @@ export class BilleterieComponent implements OnInit {
     });
     // Independent and failure-tolerant: the asks tab must not keep the queue from
     // rendering when its endpoint is unhappy.
-    this.svc.pendingChangeRequests()
+    this.svc.pendingChangeRequests(pays)
       .pipe(catchError(() => of([] as MissionChangeRequest[])))
-      .subscribe(list => this.requests.set(list));
+      .subscribe(list => { if (seq === this.loadSeq) this.requests.set(list); });
   }
 
   // ── Projections ──────────────────────────────────────────────────────────

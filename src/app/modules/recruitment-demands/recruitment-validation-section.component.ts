@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked, viewChild, WritableSignal } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -458,27 +459,44 @@ export class RecruitmentValidationSectionComponent implements OnInit {
 
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     this.load();
   }
 
-  /** Fetches the EN_ATTENTE queue — on init, and again on a page or page-size change. */
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /**
+   * `179,64` ; undefined = « Tous les pays » : le serveur applique tout le périmètre du rôle.
+   * Remplace le pays de l'utilisateur — sans lui, un compte non rattaché à une entité
+   * (administrateur) n'avait qu'un message d'erreur à la place de la file.
+   */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.page.set(0);
+      this.load();
+    });
+  });
+
+  /** Fetches the EN_ATTENTE queue — on init, on a page or page-size change, and on new flags. */
   load(): void {
-    const paysId = this.userStore.currentUser()?.paysId;
-    if (!paysId) {
-      // Admins and show-all roles have no pays of their own; without one the endpoint has
-      // nothing to scope to, so say so rather than render a permanently empty queue.
-      this.loading.set(false);
-      this.error.set(this.translate.instant('RECRUITMENT_VALIDATION.ERR_NO_PAYS'));
-      return;
-    }
     this.loading.set(true);
     this.error.set(null);
+    const seq = ++this.loadSeq;
     // Filtered server-side to EN_ATTENTE — the backend takes one exact status, and that's
     // exactly what this queue needs, so page/total/totalPages are all real counts here,
     // unlike the client-side approximation the multi-status "Demande" tabs fall back to.
-    this.svc.listByPays(paysId, 'EN_ATTENTE', this.page(), this.pageSize(), this.sort())
+    this.svc.listByPays(this.pays(), 'EN_ATTENTE', this.page(), this.pageSize(), this.sort())
       .pipe(catchError(() => of(null)))
       .subscribe(res => {
+        if (seq !== this.loadSeq) return;
         // Page restaurée devenue hors limites (demandes décidées entre-temps) : on retombe
         // sur la première plutôt que d'afficher une page vide.
         if (res && !res.content?.length && this.page() > 0) {

@@ -63,9 +63,10 @@ export class TeletravailService {
     return this.http.get(`${this.base}/global/export`, { params: this.params(f, lang), responseType: 'blob' });
   }
 
-  counts(scope: 'mine' | 'manager' | 'global' = 'mine'): Observable<TeletravailCounts> {
+  /** `pays` : drapeaux de la navbar, lus pour `global` seulement. */
+  counts(scope: 'mine' | 'manager' | 'global' = 'mine', pays?: string): Observable<TeletravailCounts> {
     return this.http.get<TeletravailCounts>(`${this.base}/counts`, {
-      params: new HttpParams().set('scope', scope),
+      params: pays ? new HttpParams().set('scope', scope).set('paysId', pays) : new HttpParams().set('scope', scope),
     });
   }
 
@@ -79,6 +80,7 @@ export class TeletravailService {
     if (f.size != null) p = p.set('size', String(f.size));
     if (f.sort) p = p.set('sort', f.sort);
     if (f.dir) p = p.set('dir', f.dir);
+    if (f.paysId) p = p.set('paysId', f.paysId);
     return p;
   }
 }

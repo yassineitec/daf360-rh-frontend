@@ -1,4 +1,5 @@
-import { Component, Input, OnInit, TemplateRef, inject, signal, viewChild } from '@angular/core';
+import { Component, Input, OnInit, TemplateRef, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Observable } from 'rxjs';
@@ -352,6 +353,7 @@ export class AutorisationListComponent implements OnInit {
   ngOnInit(): void {
     const fromRoute = this.route.snapshot.data['scope'] as AutorisationScope | undefined;
     if (fromRoute) this.scope = fromRoute;
+    this.loadedPays = this.pays();
     this.refreshAll();
   }
 
@@ -374,7 +376,7 @@ export class AutorisationListComponent implements OnInit {
     this.exporting.set(true);
     const f: AutorisationFilter = {
       etat: this.etatFilter(), from: this.fromFilter(), to: this.toFilter(),
-      sort: this.sortKey(), dir: this.sortDir(),
+      sort: this.sortKey(), dir: this.sortDir(), paysId: this.pays(),
     };
     this.svc.exportGlobal(f, this.translate.currentLang() ?? 'fr').subscribe({
       next: (blob) => { saveBlob(blob, 'autorisations.xlsx'); this.exporting.set(false); },
@@ -391,6 +393,8 @@ export class AutorisationListComponent implements OnInit {
       etat: this.etatFilter(), from: this.fromFilter(), to: this.toFilter(),
       page: this.currentPage(), size: this.pageSize(),
       sort: this.sortKey(), dir: this.sortDir(),
+      // Les drapeaux de la navbar ne bornent que la vue globale.
+      paysId: this.scope === 'global' ? this.pays() : undefined,
     };
     switch (this.scope) {
       case 'mine':   return this.svc.mine(f, lang);
@@ -400,10 +404,29 @@ export class AutorisationListComponent implements OnInit {
     }
   }
 
+  // ── Pays : les drapeaux cochés dans la navbar (vue « global » seulement) ───
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une requête précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1, liste et compteurs de la vue globale rechargés. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays || this.scope !== 'global') return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.refreshAll();
+    });
+  });
+
   refreshAll(): void {
     this.load();
     const countScope = this.scope === 'queue' ? 'manager' : this.scope === 'global' ? 'global' : 'mine';
-    this.svc.counts(countScope).subscribe({
+    this.svc.counts(countScope, countScope === 'global' ? this.pays() : undefined).subscribe({
       next: c => this.kpi.set(c),
       // A failed count costs the four figures and nothing else — the table still renders.
       error: () => { /* keep the last known figures */ },
@@ -413,8 +436,10 @@ export class AutorisationListComponent implements OnInit {
   private load(): void {
     this.loading.set(true);
     this.error.set(null);
+    const seq = ++this.loadSeq;
     this.fetch().subscribe({
       next: p => {
+        if (seq !== this.loadSeq) return;
         this.rows.set(p.content ?? []);
         this.totalPages.set(p.totalPages );
         this.totalElements.set(p.totalElements );

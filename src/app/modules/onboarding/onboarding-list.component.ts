@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -135,8 +136,6 @@ export class OnboardingListComponent implements OnInit {
   readonly draftFilter  = signal<DraftFilter>('');
   /** Expected-start-date range from the panel: one day or [from, to]; null = no bound. */
   readonly startRange   = signal<Date[] | null>(null);
-  /** Entity id as a string ('' = all) — only offered when the list spans several entities. */
-  readonly entityFilter = signal('');
   /** Only files whose expected start date is already past — the employee is waiting. */
   readonly startPassedOnly = signal(false);
   readonly currentPage  = signal(0);
@@ -147,7 +146,6 @@ export class OnboardingListComponent implements OnInit {
     const term   = this.search().trim().toLowerCase();
     const status = this.statusFilter();
     const draft  = this.draftFilter();
-    const entity = this.entityFilter();
     const range  = this.startRange();
     const from = range?.[0] ? toIsoDay(range[0]) : null;
     const to   = range?.[0] ? toIsoDay(range[1] ?? range[0]) : null; // one day = one-day range
@@ -163,23 +161,30 @@ export class OnboardingListComponent implements OnInit {
       return matchesTerm
         && (!status || r.candidateStatus === status)
         && (!draft || (draft === 'WITH_DRAFT') === !!r.hasDraft)
-        && (!entity || String(r.paysId) === entity)
         && (!from || (!!start && start >= from && start <= to!))
         && (!startPassedOnly || (!!start && start < today));
     });
   });
 
-  /** The entities present in the list; the filter is hidden when there is only one. */
-  private readonly entityOptions = computed(() => {
-    const isEn = (this.translate.currentLang() ?? '').startsWith('en');
-    const byId = new Map<string, string>();
-    for (const r of this.items()) {
-      if (r.paysId != null && !byId.has(String(r.paysId))) {
-        byId.set(String(r.paysId), (isEn && r.paysLabelEn) || r.paysLabel || `#${r.paysId}`);
-      }
-    }
-    return [...byId].map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  // Ils remplacent l'ancien filtre « Entité » du panneau (2026-11-23) : la liste et les
+  // indicateurs sont filtrés côté serveur, dans le périmètre du rôle.
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1, liste et indicateurs rechargés. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.load();
+    });
   });
 
   /** Table header sort — applied to the whole filtered set, before paging. Kept across views. */
@@ -210,7 +215,6 @@ export class OnboardingListComponent implements OnInit {
       statusFilter:    this.statusFilter(),
       draftFilter:     this.draftFilter(),
       startRange:      this.startRange(),
-      entityFilter:    this.entityFilter(),
       startPassedOnly: this.startPassedOnly(),
       sort:            this.sort(),
       page:            this.currentPage(),
@@ -227,7 +231,6 @@ export class OnboardingListComponent implements OnInit {
     this.statusFilter.set(s.statusFilter);
     this.draftFilter.set(s.draftFilter);
     this.startRange.set(s.startRange);
-    this.entityFilter.set(s.entityFilter);
     this.startPassedOnly.set(s.startPassedOnly);
     this.sort.set(s.sort);
     this.currentPage.set(s.page);
@@ -318,16 +321,7 @@ export class OnboardingListComponent implements OnInit {
         type: 'checkbox',
       },
     ];
-    if (this.entityOptions().length > 1) {
-      fields.push({
-        name: 'entity',
-        label: t('ONBOARDING.LIST.COL_ENTITY'),
-        type: 'select',
-        searchable: true,
-        placeholder: t('ONBOARDING.LIST.FILTERS.ALL_ENTITIES'),
-        options: this.entityOptions(),
-      });
-    }
+    // No « Entité » field any more: the country comes from the navbar's flags.
     return fields;
   });
 
@@ -349,7 +343,6 @@ export class OnboardingListComponent implements OnInit {
         status:    this.statusFilter() ? [this.statusFilter()] : [],
         draft:     this.draftFilter()  ? [this.draftFilter()]  : [],
         startDate: this.startRange(),
-        entity:    this.entityFilter() ? [this.entityFilter()] : [],
         startPassed: this.startPassedOnly(),
       },
     };
@@ -366,18 +359,24 @@ export class OnboardingListComponent implements OnInit {
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     this.load();
   }
 
   load(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
+    const pays = this.pays();
+    const seq = ++this.loadSeq;
 
     // The KPI feed is independent — it must never hold up the list.
-    this.service.getKpiStats().pipe(catchError(() => of(null))).subscribe(stats => this.kpiStats.set(stats));
+    this.service.getKpiStats(pays).pipe(catchError(() => of(null))).subscribe(stats => {
+      if (seq === this.loadSeq) this.kpiStats.set(stats);
+    });
 
-    this.service.getPendingList().subscribe({
+    this.service.getPendingList(pays).subscribe({
       next: data => {
+        if (seq !== this.loadSeq) return;
         this.items.set(data);
         // Page restaurée devenue hors limites (un onboarding vient d'être terminé et quitte
         // la liste) : on retombe sur la dernière page qui existe plutôt que sur une page vide.
@@ -388,6 +387,7 @@ export class OnboardingListComponent implements OnInit {
         this.firstLoad.set(false);
       },
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.error.set(this.translate.instant('ONBOARDING.LIST.ERROR_LOAD'));
         this.loading.set(false);
         this.firstLoad.set(false);
@@ -408,7 +408,6 @@ export class OnboardingListComponent implements OnInit {
     this.statusFilter.set(str('status'));
     this.draftFilter.set(str('draft') as DraftFilter);
     this.startRange.set(Array.isArray(range) && range.length ? range as Date[] : null);
-    this.entityFilter.set(str('entity'));
     this.startPassedOnly.set(result['startPassed'] === true);
     this.currentPage.set(0);
   }

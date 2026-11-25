@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -392,8 +393,28 @@ export class ItProvisioningListComponent implements OnInit {
   });
 
   // ── Load ───────────────────────────────────────────────────────────────────
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1 et liste rechargée (filtrée côté serveur). */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.load();
+    });
+  });
+
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     this.load();
     this.listService.getListValues('AD_PROFILE_TYPE').subscribe(v => this.adProfiles.set(v));
   }
@@ -401,8 +422,10 @@ export class ItProvisioningListComponent implements OnInit {
   load(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
-    this.service.getAllList().subscribe({
+    const seq = ++this.loadSeq;
+    this.service.getAllList(this.pays()).subscribe({
       next: data => {
+        if (seq !== this.loadSeq) return;
         this.items.set(data);
         // Page restaurée devenue hors limites (dossiers terminés ou retirés entre-temps) :
         // on retombe sur la dernière page qui existe plutôt que sur une page vide.
@@ -413,6 +436,7 @@ export class ItProvisioningListComponent implements OnInit {
         this.firstLoad.set(false);
       },
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.error.set(this.translate.instant('IT_PROVISIONING.LIST.LOAD_ERROR'));
         this.loading.set(false);
         this.firstLoad.set(false);

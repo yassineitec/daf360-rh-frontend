@@ -1,5 +1,6 @@
 import { DepartureReasonLabelService } from './departure-reason-labels.service';
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -475,14 +476,36 @@ export class OffboardingListComponent implements OnInit {
   });
 
   // ── Load ───────────────────────────────────────────────────────────────────
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1 et dossiers rechargés (filtrés côté serveur). */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.load();
+    });
+  });
+
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     this.load();
   }
 
   load(): void {
     if (!this.firstLoad()) this.loading.set(true);
-    this.svc.listOffboarding().pipe(catchError(() => of([]))).subscribe(list => {
+    const seq = ++this.loadSeq;
+    this.svc.listOffboarding({ paysId: this.pays() }).pipe(catchError(() => of([]))).subscribe(list => {
+      if (seq !== this.loadSeq) return;
       this.items.set(list);
       // Page restaurée devenue hors limites (dossiers clos entre-temps) : on retombe sur
       // la dernière page qui existe plutôt que sur une page vide.

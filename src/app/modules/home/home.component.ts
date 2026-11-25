@@ -1,4 +1,5 @@
-import { Component, OnInit, TemplateRef, inject, signal, computed, untracked, viewChild } from '@angular/core';
+import { Component, OnInit, TemplateRef, inject, signal, computed, effect, untracked, viewChild } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
@@ -16,8 +17,8 @@ import {
 import { UserStore } from '../../core/user.store';
 import { RefDataService } from '../../core/ref/ref-data.service';
 import { PaysTimezone, RefDataItem } from '../../core/ref/ref-data.model';
-import { flagDataUri } from '../admin/flag-svgs';
 import {
+  selectSelectedCountryIds,
   AvatarCell, BadgeCell, BadgeVariant, DafCellDirective, DataTableComponent, FilterField, FilterResult,
   ModalRef, ModalService, PageComponent, PageHeaderComponent, PaginationComponent,
   SearchToolbarComponent, SearchToolbarFilterConfig, SelectComponent, SelectOption,
@@ -117,30 +118,36 @@ export class HomeComponent implements OnInit {
 
   readonly guideSteps = GUIDE_STEPS;
 
-  // ── Country picker of the detail pop-up (same options as /rh/admin) ────────
-  // The page itself has no country filter: its cards show every entity to a
-  // cross-country admin, and their own entity to anyone else.
-  /** Option value meaning "no filter" — the backend then counts every entity. */
-  private static readonly ALL_PAYS = '0';
+  // ── Country: the flag picked in the shell header (shared store) ────────────
+  // It drives the whole page — cards, detail pop-up and the full missing-documents list.
+  // There is no country picker on the page any more (the detail pop-up had one).
 
+  /**
+   * The header's ticked countries, as pays_ids, sorted; [] = « Tous les pays ».
+   *
+   * Server side each id is kept only if it is in the role's country scope
+   * (TenantService.resolvePaysList) — the header only offers those anyway.
+   *
+   * Compared by content: the store hands a new array on every selection, and an unchanged
+   * list must not reload the whole page.
+   */
+  readonly paysIds = computed<readonly number[]>(
+    () => [...new Set(this.headerCountryIds()
+      .map(id => HomeComponent.toId(String(id ?? '')))
+      .filter((id): id is number => id != null))].sort((a, b) => a - b),
+    { equal: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]) },
+  );
+  private readonly headerCountryIds = inject(Store).selectSignal(selectSelectedCountryIds);
+
+  /** Country names / ISO codes, to label departments and the missing-documents filter. */
   private readonly availablePays = signal<PaysTimezone[]>([]);
 
   /**
    * Same permissions that open the cross-country scope server side (TenantService:
-   * ADMIN_ROLES, RH_SUPER_ADMIN). Anyone else only ever sees their own entity, so the
-   * picker would have nothing to switch to.
+   * ADMIN_ROLES, RH_SUPER_ADMIN). Anyone else only ever sees their own entity.
    */
   readonly canSwitchPays = computed(() =>
     this.userStore.isSuperAdmin() || this.userStore.hasPermission('ADMIN_ROLES'));
-
-  readonly paysOptions = computed<SelectOption[]>(() => [
-    { value: HomeComponent.ALL_PAYS, label: this.translate.instant('HOME.ALL_COUNTRIES') },
-    ...this.availablePays().map(p => ({
-      value:    String(p.id),
-      label:    `${p.frenchLabel} (${p.isoCode})`,
-      imageUrl: flagDataUri(p.isoCode),
-    })),
-  ]);
 
   // ── Department filter (list from /rh/admin?tab=ref-data → Départements) ────
   /** Option value meaning "every department". */
@@ -150,7 +157,7 @@ export class HomeComponent implements OnInit {
 
   /**
    * null = every department. Only narrows the detail pop-up — the cards on the page
-   * itself always show the whole country.
+   * itself always show the whole country (the header's).
    */
   readonly selectedDepartmentId = signal<number | null>(null);
 
@@ -161,26 +168,20 @@ export class HomeComponent implements OnInit {
 
   /** Which card the pop-up shows. */
   readonly detailCard = signal<WorkforceCardKey>('workforce');
-  /**
-   * The pop-up's own country (null = all, i.e. the page's view). Reset on every
-   * opening; changing it never touches the page behind.
-   */
-  readonly detailPaysId = signal<number | null>(null);
-  readonly detailPaysValue = computed<string[]>(() =>
-    [this.detailPaysId() != null ? String(this.detailPaysId()) : HomeComponent.ALL_PAYS]);
 
-  /** The pop-up's own figures: the page's, until its country or department moves. */
+  /** The pop-up's own figures: the page's, until its department moves. */
   readonly detailWorkforce = signal<WorkforceData | null>(null);
   readonly detailLoading = signal(false);
   private detailSeq = 0;
 
-  /** Country the `departments` list was loaded for — `undefined` until the first load. */
-  private departmentsPaysId: number | null | undefined = undefined;
+  /** Countries the `departments` list was loaded for — `undefined` until the first load. */
+  private departmentsPaysIds: readonly number[] | undefined = undefined;
 
   readonly departmentOptions = computed<SelectOption[]>(() => {
-    // Departments belong to one country: with "Tous les pays" the same label can exist in
-    // several entities, so the country code tells them apart.
-    const showCountry = this.detailPaysId() == null && this.canSwitchPays();
+    // Departments belong to one country: as soon as several can be on screen (« Tous les
+    // pays » or several flags), the same label can exist in several entities, so the
+    // country code tells them apart.
+    const showCountry = this.paysIds().length !== 1 && this.canSwitchPays();
     const iso = new Map(this.availablePays().map(p => [p.id, p.isoCode]));
     return [
       { value: HomeComponent.ALL_DEPTS, label: this.translate.instant('HOME.ALL_DEPARTMENTS') },
@@ -421,26 +422,36 @@ export class HomeComponent implements OnInit {
     }))
   );
 
+  constructor() {
+    // First load, then one reload per header country change. A pop-up left open would
+    // still show the previous country's figures and departments: it is closed instead.
+    effect(() => {
+      const paysIds = this.paysIds();
+      untracked(() => {
+        this.modalRef?.close();
+        this.loadData(paysIds);
+      });
+    });
+  }
+
   ngOnInit(): void {
     if (this.canSwitchPays()) {
       this.refData.getPaysTimezones().subscribe(list => this.availablePays.set(list));
     }
-    this.loadData();
   }
 
   /**
-   * Opens the clicked card in a pop-up with its own country and department filters.
-   * Both start from the page's view (every country, every department) each time: it's
-   * a look into one card, not a page setting.
+   * Opens the clicked card in a pop-up with its own department filter, for the header's
+   * country. The department starts from « all » each time: it's a look into one card,
+   * not a page setting.
    */
   onCardOpen(card: WorkforceCardKey): void {
     this.detailCard.set(card);
-    this.detailPaysId.set(null);
     this.selectedDepartmentId.set(null);
     this.detailWorkforce.set(this.workforce());
     this.detailLoading.set(false);
     this.detailSeq++;   // drop any answer still in flight from a previous pop-up
-    if (this.departmentsPaysId !== this.detailPaysId()) this.loadDepartments();
+    if (this.departmentsPaysIds !== this.paysIds()) this.loadDepartments();
     this.modalRef?.close();
     this.modalRef = this.modal.open({
       title: this.translate.instant(DETAIL_TITLE_KEYS[card]),
@@ -454,16 +465,6 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  /** Pop-up country picker. The department picked belongs to the old country — drop it. */
-  onDetailPaysChange(values: string[]): void {
-    const next = HomeComponent.toId(values[0]);
-    if (next === this.detailPaysId()) return;
-    this.detailPaysId.set(next);
-    this.selectedDepartmentId.set(null);
-    this.loadDepartments();
-    this.refreshDetail();
-  }
-
   onDepartmentChange(values: string[]): void {
     const next = HomeComponent.toId(values[0]);
     if (next === this.selectedDepartmentId()) return;
@@ -471,12 +472,12 @@ export class HomeComponent implements OnInit {
     this.refreshDetail();
   }
 
-  /** Reloads the pop-up's figures for its country + department. */
+  /** Reloads the pop-up's figures for the header's country + its department. */
   private refreshDetail(): void {
-    const paysId = this.detailPaysId();
+    const paysIds = this.paysIds();
     const deptId = this.selectedDepartmentId();
     // Same filter as the page: its figures are already loaded.
-    if (paysId == null && deptId == null) {
+    if (deptId == null) {
       this.detailSeq++;
       this.detailLoading.set(false);
       this.detailWorkforce.set(this.workforce());
@@ -484,7 +485,7 @@ export class HomeComponent implements OnInit {
     }
     const seq = ++this.detailSeq;
     this.detailLoading.set(true);
-    this.homeSvc.getWorkforce(paysId, deptId).subscribe({
+    this.homeSvc.getWorkforce(paysIds, deptId).subscribe({
       next: data => {
         if (seq !== this.detailSeq) return;
         this.detailWorkforce.set(data);
@@ -505,22 +506,32 @@ export class HomeComponent implements OnInit {
   }
 
   /**
-   * Same endpoint as the Départements tab of /rh/admin?tab=ref-data. Without a paysId
-   * the backend returns what the caller may read: their own entity, or every entity
-   * for a cross-country admin.
+   * Same endpoint as the Départements tab of /rh/admin?tab=ref-data. It takes one paysId
+   * at most: with one flag it is sent; otherwise the list comes without it (what the
+   * caller may read) and, with several flags, is narrowed here to the ticked countries.
    */
   private loadDepartments(): void {
-    const paysId = this.detailPaysId();
-    this.departmentsPaysId = paysId;
+    const paysIds = this.paysIds();
+    this.departmentsPaysIds = paysIds;
     this.departments.set([]);   // never show the previous country's list meanwhile
-    this.refData.getDepartments(paysId ?? undefined).subscribe(list => {
-      if (paysId === this.detailPaysId()) this.departments.set(list);
+    const single = paysIds.length === 1 ? paysIds[0] : undefined;
+    this.refData.getDepartments(single).subscribe(list => {
+      if (paysIds !== this.paysIds()) return;
+      this.departments.set(paysIds.length > 1
+        ? list.filter(d => d.paysId != null && paysIds.includes(d.paysId))
+        : list);
     });
   }
 
-  private loadData(): void {
-    this.homeSvc.load().subscribe({
+  /** Bumped on each page load: a slow answer for a previous header country is dropped. */
+  private loadSeq = 0;
+
+  private loadData(paysIds: readonly number[]): void {
+    const seq = ++this.loadSeq;
+    this.loading.set(true);
+    this.homeSvc.load(paysIds).subscribe({
       next: data => {
+        if (seq !== this.loadSeq) return;
         this.stats.set(data.stats);
         this.workforce.set(data.workforce);
         this.completion.set(data.completion);
@@ -541,6 +552,7 @@ export class HomeComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.error.set(this.translate.instant('HOME.LOAD_ERROR'));
         this.loading.set(false);
       },
@@ -576,7 +588,7 @@ export class HomeComponent implements OnInit {
     const request = ++this.missingDocsRequest;
     this.missingDocsError.set(false);
     this.missingDocsLoading.set(true);
-    this.homeSvc.getMissingDocs(null, true, this.missingDocsScope()).subscribe({
+    this.homeSvc.getMissingDocs(this.paysIds(), true, this.missingDocsScope()).subscribe({
       next: res => {
         if (request !== this.missingDocsRequest) return;
         this.allMissingDocs.set(res.items);

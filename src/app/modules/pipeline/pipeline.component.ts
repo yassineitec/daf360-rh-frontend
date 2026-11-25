@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -104,6 +105,24 @@ export class PipelineComponent implements OnInit {
   private translate       = inject(TranslateService);
 
   readonly guideSteps = GUIDE_STEPS;
+
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = tableau et KPI rechargés. `ngOnInit` a déjà chargé le premier. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.reload();
+    });
+  });
 
   // ── Data ───────────────────────────────────────────────────────────────────
   private readonly rawColumns = signal<KanbanColumn[]>([]);
@@ -409,10 +428,13 @@ export class PipelineComponent implements OnInit {
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
+    const pays = this.loadedPays = this.pays();
+    const seq = ++this.loadSeq;
     forkJoin({
-      kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
-      stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),
+      kanban: this.pipelineService.getKanban(pays).pipe(catchError(() => of(null))),
+      stats:  this.pipelineService.getStats(pays).pipe(catchError(() => of(null))),
     }).subscribe(({ kanban, stats }) => {
+      if (seq !== this.loadSeq) return;
       if (kanban) this.rawColumns.set(kanban);
       if (stats)  this.stats.set(stats);
       this.firstLoad.set(false);
@@ -422,13 +444,17 @@ export class PipelineComponent implements OnInit {
   /** Re-fetch after an action — section-level skeletons, header and KPIs stay put. */
   private reload(): void {
     this.loading.set(true);
+    const pays = this.pays();
+    const seq = ++this.loadSeq;
     forkJoin({
-      kanban: this.pipelineService.getKanban().pipe(catchError(() => of(null))),
-      stats:  this.pipelineService.getStats().pipe(catchError(() => of(null))),
+      kanban: this.pipelineService.getKanban(pays).pipe(catchError(() => of(null))),
+      stats:  this.pipelineService.getStats(pays).pipe(catchError(() => of(null))),
     }).subscribe(({ kanban, stats }) => {
+      if (seq !== this.loadSeq) return;
       if (kanban) this.rawColumns.set(kanban);
       if (stats)  this.stats.set(stats);
       this.loading.set(false);
+      this.firstLoad.set(false);
     });
   }
 

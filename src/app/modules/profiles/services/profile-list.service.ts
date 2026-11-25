@@ -8,7 +8,7 @@ export interface EmployeeListParams {
   page:          number;
   size:          number;
   search?:       string;
-  /** `pays` is the numeric pays_id, not the label — see FilterOptionsDto. */
+  /** One or several numeric pays_id, comma-separated (`179,64`) — the navbar's flags. */
   pays?:         string;
   department?:   string;
   grade?:        string;

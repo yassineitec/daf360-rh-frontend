@@ -198,7 +198,8 @@ export interface CandidateFilter {
 
 /** Query of the paged `GET /api/hr/candidates` (the recruitment board / list). */
 export interface CandidateListQuery {
-  paysId?: number;
+  /** Un `pays_id`, ou les drapeaux de la navbar (`179,64`). */
+  paysId?: number | string;
   status?: string;
   /**
    * A set of statuses (server side). `CANDIDATE_WORKFLOW` = the candidates home page: only

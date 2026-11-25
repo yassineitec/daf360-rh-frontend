@@ -2,11 +2,12 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, TemplateRef, computed, inject, input, OnInit, signal, untracked, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { injectHeaderPays } from '../../../core/header-pays';
 import {
   ButtonComponent, CheckboxComponent, DafCellDirective, DataTableComponent,
   FormFieldComponent, SortDirection, TableColumn, TableConfig, TableRow, StatusBadgeComponent,
   PaginationComponent, PaginationConfig, ModalService, ModalRef,
-  SearchToolbarComponent, SelectComponent, type SelectOption,
+  SearchToolbarComponent, SelectComponent, type SelectOption, TabsComponent, type TabItem,
 } from '@khalilrebhiitec/daf360';
 import { ConfigurableListService } from '../../../core/lists/configurable-list.service';
 import {
@@ -94,7 +95,7 @@ const LIST_VALUE_SORT: Record<string, (v: ListValue) => string | number | null> 
   imports: [
     FormsModule, ReactiveFormsModule, DataTableComponent, DafCellDirective,
     ButtonComponent, FormFieldComponent, CheckboxComponent, StatusBadgeComponent,
-    PaginationComponent, SearchToolbarComponent, SelectComponent, TranslatePipe, PageGuideComponent,
+    PaginationComponent, SearchToolbarComponent, SelectComponent, TabsComponent, TranslatePipe, PageGuideComponent,
     NgTemplateOutlet,
   ],
   templateUrl: './list-manager.component.html',
@@ -112,11 +113,26 @@ export class ListManagerComponent implements OnInit {
   private alertsSvc = inject(ContractAlertsService);
 
   /**
-   * The entity picked in /rh/admin. A per-pays list (CONTRACT_TYPE…) shows and creates the
-   * values of THIS entity; a global list ignores it. The admin shell rebuilds this tab when
-   * the pick changes, so the value is read as-is, never watched.
+   * The entity administered in /rh/admin (from the navbar flags). A per-pays list
+   * (CONTRACT_TYPE…) shows and creates the values of THIS entity; a global list ignores it.
+   * The admin shell rebuilds this tab when it changes.
    */
-  readonly paysId = input<number | null>(null);
+  readonly paysIdInput = input<number | null>(null, { alias: 'paysId' });
+
+  /** Drapeaux de la barre (`179,64`), `undefined` = tous. */
+  private readonly headerPays = injectHeaderPays();
+
+  /**
+   * L'entité des listes par pays : celle que passe /rh/admin ; sur la route seule
+   * /rh/admin/lists (pas d'entrée), le drapeau quand UN seul pays est coché — sinon aucune,
+   * et une liste par pays montre alors les valeurs de toutes les entités, comme avant.
+   */
+  readonly paysId = computed<number | null>(() => {
+    const given = this.paysIdInput();
+    if (given != null) return given;
+    const ids = (this.headerPays() ?? '').split(',').filter(Boolean);
+    return ids.length === 1 ? Number(ids[0]) : null;
+  });
   adding  = signal(false);
 
   /** Steps of the card's page guide (one view: the lists and their values). */
@@ -276,15 +292,10 @@ export class ListManagerComponent implements OnInit {
           id: 'edit', icon: 'edit',
           tooltip: this.translate.instant('ADMIN.data.lists.EDIT'),
           hidden: (row: TableRow) => this.editingId() === (row['_source'] as ListValue).id,
-          onClick: (row: TableRow) => this.startEdit(row['_source'] as ListValue),
-        },
-        {
-          // « Type de contrat » only: the type's « Décider » rules (own or inherited).
-          id: 'rules', icon: 'rule',
-          tooltip: this.translate.instant('ADMIN.data.lists.RULES.ACTION'),
-          hidden: (row: TableRow) => !this.isContractTypeList()
-            || this.editingId() === (row['_source'] as ListValue).id,
-          onClick: (row: TableRow) => this.openRulesModal(row['_source'] as ListValue),
+          // « Type de contrat » : une seule modale (infos + décisions) ; ailleurs, édition en ligne.
+          onClick: (row: TableRow) => this.isContractTypeList()
+            ? this.openTypeEditModal(row['_source'] as ListValue)
+            : this.startEdit(row['_source'] as ListValue),
         },
         {
           id: 'delete', icon: 'delete', variant: 'danger',
@@ -521,16 +532,34 @@ export class ListManagerComponent implements OnInit {
     };
   }
 
-  openRulesModal(v: ListValue): void {
+  /** Onglet ouvert dans la modale « Modifier le type de contrat ». */
+  readonly typeEditTab = signal<'info' | 'rules'>('info');
+  readonly typeEditTabs = computed<TabItem[]>(() => {
+    this.translate.currentLang();
+    return [
+      { id: 'info',  label: this.translate.instant('ADMIN.data.lists.TYPE_EDIT.TAB_INFO'),  icon: 'edit_note' },
+      { id: 'rules', label: this.translate.instant('ADMIN.data.lists.TYPE_EDIT.TAB_RULES'), icon: 'rule' },
+    ];
+  });
+
+  /**
+   * « Type de contrat » : libellés, ordre, statut ET décisions « Décider » dans une seule
+   * modale (deux onglets), enregistrés en un seul appel.
+   */
+  openTypeEditModal(v: ListValue, tab: 'info' | 'rules' = 'info'): void {
     this.rulesEditing.set(v);
+    this.typeEditTab.set(tab);
+    this.editForm.reset({
+      labelFr: v.labelFr, labelEn: v.labelEn, sortOrder: v.sortOrder, isActive: v.isActive, decisionAction: '',
+    });
     this.rules = this.rulesOfValue(v);
     this.rulesError.set(null);
     this.modalRef = this.modal.open({
-      minWidth:    '560px',
-      minHeight:   '440px',
+      minWidth:    '600px',
+      minHeight:   '500px',
       resizable:   true,
       maximizable: true,
-      title: this.translate.instant('ADMIN.data.lists.RULES.MODAL_TITLE', { label: v.labelFr }),
+      title: this.translate.instant('ADMIN.data.lists.TYPE_EDIT.TITLE', { label: v.labelFr }),
       body: this.rulesTpl(),
       closeOnBackdrop: false,
     });
@@ -539,14 +568,24 @@ export class ListManagerComponent implements OnInit {
   saveRules(): void {
     const v = this.rulesEditing();
     if (!v) return;
-    if (!this.rulesValid()) { this.rulesError.set(this.translate.instant('ADMIN.data.lists.RULES.ERR_MAX')); return; }
+    if (this.editForm.invalid) {
+      this.typeEditTab.set('info');
+      this.rulesError.set(this.translate.instant('ADMIN.data.lists.TYPE_EDIT.ERR_LABELS'));
+      return;
+    }
+    if (!this.rulesValid()) {
+      this.typeEditTab.set('rules');
+      this.rulesError.set(this.translate.instant('ADMIN.data.lists.RULES.ERR_MAX'));
+      return;
+    }
     this.rulesSaving.set(true);
     this.rulesError.set(null);
-    this.listService.updateValue(v.id, this.rulesPayload()).subscribe({
+    const { decisionAction: _ignored, ...info } = this.editForm.value;
+    this.listService.updateValue(v.id, { ...info, ...this.rulesPayload() }).subscribe({
       next: () => {
         this.rulesSaving.set(false);
         this.modalRef?.close();
-        this.flash(this.translate.instant('ADMIN.data.lists.RULES.SAVED'));
+        this.flash(this.translate.instant('ADMIN.data.lists.MSG_UPDATED'));
         this.loadValues(v.listTypeId, false);
       },
       error: err => {

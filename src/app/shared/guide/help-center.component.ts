@@ -63,7 +63,10 @@ interface HelpChoice {
   // help center reads as one more item of the rail, only pinned to its bottom.
   template: `
     <div class="hidden sm:block">
-      <div class="border-t border-surface-container pt-4">
+      <div class="flex flex-col gap-1 border-t border-surface-container pt-4">
+        <!-- Other footer entries of the rail, above this one (the country picker), like in
+             Finance and Payroll. -->
+        <ng-content />
         <button type="button" [class]="itemClasses()" [attr.aria-current]="active() ? 'page' : null"
                 [attr.aria-haspopup]="'dialog'"
                 (click)="openChooser()" (mouseenter)="hovered.set(true)" (mouseleave)="hovered.set(false)">

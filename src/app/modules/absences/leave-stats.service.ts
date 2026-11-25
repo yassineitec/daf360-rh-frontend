@@ -41,6 +41,8 @@ export interface LeaveStatsFilterOptions {
 }
 
 export interface LeaveStatsFilter {
+  /** Drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  paysId?: string;
   search?: string | null;
   collaborateurs?: string[];
   months?: string[];
@@ -65,8 +67,8 @@ export class LeaveStatsService {
     return this.http.get<LeaveStatsPage>(this.base, { params: this.params(filter) });
   }
 
-  filterOptions(): Observable<LeaveStatsFilterOptions> {
-    return this.http.get<LeaveStatsFilterOptions>(`${this.base}/filter-options`);
+  filterOptions(pays?: string): Observable<LeaveStatsFilterOptions> {
+    return this.http.get<LeaveStatsFilterOptions>(`${this.base}/filter-options`, { params: pays ? { paysId: pays } : {} });
   }
 
   export(filter: LeaveStatsFilter, lang: string): Observable<Blob> {
@@ -77,6 +79,7 @@ export class LeaveStatsService {
   /** Lists go comma-joined; empty values are not sent. */
   private params(f: LeaveStatsFilter): HttpParams {
     let p = new HttpParams();
+    if (f.paysId) p = p.set('paysId', f.paysId);
     if (f.search) p = p.set('search', f.search);
     for (const key of ['collaborateurs', 'months', 'years'] as const) {
       const values = f[key];

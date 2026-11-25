@@ -1,4 +1,5 @@
-import { Component, Input, OnInit, TemplateRef, inject, signal, viewChild } from '@angular/core';
+import { Component, Input, OnInit, TemplateRef, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { Observable } from 'rxjs';
@@ -280,8 +281,31 @@ export class CongeModificationsComponent implements OnInit {
   ngOnInit(): void {
     const fromRoute = this.route.snapshot.data['stage'] as ModificationStage | undefined;
     if (fromRoute) this.stage = fromRoute;
+    this.loadedPays = this.pays();
     this.refreshAll();
   }
+
+  // ── Pays : les drapeaux cochés dans la navbar (file RH seulement) ──────────
+  /**
+   * `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). La file
+   * « responsable » n'en dépend pas : elle contient ce qui attend CE responsable.
+   */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = page 1, file RH et compteurs rechargés. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays || this.stage !== 'hr') return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.refreshAll();
+    });
+  });
 
   // ── Data ──────────────────────────────────────────────────────────────────
 
@@ -291,12 +315,15 @@ export class CongeModificationsComponent implements OnInit {
       page: this.currentPage(), size: this.pageSize(),
       sort: this.sortKey(), dir: this.sortDir(),
     };
-    return this.stage === 'hr' ? this.svc.hrQueue(filter, lang) : this.svc.managerQueue(filter, lang);
+    return this.stage === 'hr'
+      ? this.svc.hrQueue({ ...filter, paysId: this.pays() }, lang)
+      : this.svc.managerQueue(filter, lang);
   }
 
   refreshAll(): void {
     this.load();
-    this.svc.counts().subscribe({
+    // The three HR figures follow the flags; « manager » is personal and ignores them.
+    this.svc.counts(this.stage === 'hr' ? this.pays() : undefined).subscribe({
       next: c => this.counts.set(c),
       // A failed count costs the four figures and nothing else — the queue still renders.
       error: () => { /* keep the last known figures */ },
@@ -306,8 +333,10 @@ export class CongeModificationsComponent implements OnInit {
   private load(): void {
     this.loading.set(true);
     this.error.set(null);
+    const seq = ++this.loadSeq;
     this.fetch().subscribe({
       next: p => {
+        if (seq !== this.loadSeq) return;
         this.rows.set(p.content ?? []);
         this.totalPages.set(p.totalPages ?? 0);
         this.totalElements.set(p.totalElements ?? 0);

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   AvatarComponent, AvatarData,
@@ -9,6 +9,7 @@ import {
 } from '@khalilrebhiitec/daf360';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../../environments/environment';
+import { injectHeaderPays, paysHttpParam } from '../../../core/header-pays';
 import { DafModalComponent } from '../../../shared/daf-modal.component';
 import { TableActionComponent } from '../../../shared/table-action.component';
 import { NotificationService } from '../../../core/notification.service';
@@ -396,7 +397,6 @@ export class UsersAdminComponent implements OnInit {
   readonly viewMode = signal<'list' | 'grid'>('list');
   readonly search = signal('');
   readonly employeeFilter = signal<string>('');
-  readonly paysFilter = signal<string>('');
   readonly roleFilter = signal<string>('');
   readonly onlyMissing = signal(false);
   readonly currentPage = signal(0);
@@ -407,7 +407,7 @@ export class UsersAdminComponent implements OnInit {
   /** Vue, recherche, filtres et page gardés tant qu'on reste dans /rh/admin (voir `rememberAdminState`). */
   private readonly memory = rememberAdminState('users', {
     viewMode: this.viewMode, search: this.search, employeeFilter: this.employeeFilter,
-    paysFilter: this.paysFilter, roleFilter: this.roleFilter, onlyMissing: this.onlyMissing,
+    roleFilter: this.roleFilter, onlyMissing: this.onlyMissing,
     currentPage: this.currentPage, pageSize: this.pageSize,
   });
 
@@ -501,11 +501,6 @@ export class UsersAdminComponent implements OnInit {
         ],
       },
       {
-        name: 'pays', label: this.t('ADMIN.users.filters.entity'), type: 'select',
-        placeholder: this.t('ADMIN.users.filters.allFem'),
-        options: this.paysOptions().map(o => ({ value: String(o.value), label: o.label })),
-      },
-      {
         name: 'role', label: this.t('ADMIN.users.filters.role'), type: 'select', searchable: true,
         placeholder: this.t('ADMIN.users.filters.all'),
         options: this.roleOptions().map(o => ({ value: String(o.value), label: o.label })),
@@ -523,7 +518,6 @@ export class UsersAdminComponent implements OnInit {
       // Le panneau s'ouvre sur les filtres restaurés ; un `select` attend un `string[]`.
       initialValues: {
         employee: this.employeeFilter() ? [this.employeeFilter()] : [],
-        pays:     this.paysFilter()     ? [this.paysFilter()]     : [],
         role:     this.roleFilter()     ? [this.roleFilter()]     : [],
         missing:  this.onlyMissing(),
       },
@@ -535,7 +529,6 @@ export class UsersAdminComponent implements OnInit {
   readonly filtered = computed<AdminUserRow[]>(() => {
     const term = this.search().trim().toLowerCase();
     const emp = this.employeeFilter();
-    const pays = this.paysFilter();
     const role = this.roleFilter();
     const missing = this.onlyMissing();
     return this.users().filter(u => {
@@ -545,9 +538,8 @@ export class UsersAdminComponent implements OnInit {
         || (u.username ?? '').toLowerCase().includes(term)
         || (u.employeeId ?? '').toLowerCase().includes(term);
       const matchesEmp = !emp || String(u.employee) === emp;
-      const matchesPays = !pays || String(u.paysId) === pays;
       const matchesRole = !role || String(u.roleId) === role;
-      return matchesTerm && matchesEmp && matchesPays && matchesRole
+      return matchesTerm && matchesEmp && matchesRole
         && (!missing || !u.hasProfile);
     });
   });
@@ -628,7 +620,22 @@ export class UsersAdminComponent implements OnInit {
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
+  /** Drapeaux de la barre (`179,64`), `undefined` = tous. */
+  private readonly pays = injectHeaderPays();
+  /** Drapeaux du dernier chargement — l'effet ne recharge que sur un vrai changement. */
+  private loadedPays: string | undefined | null = null;
+  /** Écarte une réponse arrivée après un rechargement plus récent. */
+  private loadSeq = 0;
+
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    if (this.loadedPays === null || pays === this.loadedPays) return;
+    this.loadedPays = pays;
+    untracked(() => { this.currentPage.set(0); this.load(); });
+  });
+
   ngOnInit(): void {
+    this.loadedPays = this.pays();
     this.load();
     this.http.get<({ id: number } & BilingualRoleName)[]>(`${environment.hrApiUrl}/api/hr/admin/roles`)
       .subscribe({ next: r => this.roles.set(r ?? []), error: () => this.roles.set([]) });
@@ -637,25 +644,36 @@ export class UsersAdminComponent implements OnInit {
       .subscribe({ next: p => this.paysList.set(p ?? []), error: () => this.paysList.set([]) });
   }
 
-  /** The whole register in one call — see the class comment on why nothing is server-filtered. */
+  /**
+   * The whole register in one call — see the class comment on why nothing else is
+   * server-filtered. The one exception is the pays: the navbar flags (`paysId=179,64`) go to
+   * the server, which bounds them to the role's perimeter (list and counters alike).
+   */
   load(): void {
     this.error.set(null);
     this.loading.set(true);
-    this.http.get<AdminUserRow[]>(this.base).subscribe({
+    const seq = ++this.loadSeq;
+    const params = paysHttpParam(this.pays());
+    this.http.get<AdminUserRow[]>(this.base, { params }).subscribe({
       next: list => {
+        if (seq !== this.loadSeq) return;
         this.users.set(list ?? []);
         this.loading.set(false);
         // Page restaurée (ou registre raccourci) : retour à la dernière page existante.
         this.currentPage.update(p => Math.min(p, Math.max(0, this.totalPages() - 1)));
       },
       error: () => {
+        if (seq !== this.loadSeq) return;
         this.users.set([]);
         this.loading.set(false);
         this.error.set(this.t('ADMIN.users.messages.loadError'));
       },
     });
-    this.http.get<AdminUserStats>(`${this.base}/stats`)
-      .subscribe({ next: s => this.stats.set(s), error: () => this.stats.set(null) });
+    this.http.get<AdminUserStats>(`${this.base}/stats`, { params })
+      .subscribe({
+        next: s => { if (seq === this.loadSeq) this.stats.set(s); },
+        error: () => { if (seq === this.loadSeq) this.stats.set(null); },
+      });
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -668,7 +686,6 @@ export class UsersAdminComponent implements OnInit {
 
   applyFilters(r: FilterResult): void {
     this.employeeFilter.set(this.scalar(r['employee']) ?? '');
-    this.paysFilter.set(this.scalar(r['pays']) ?? '');
     this.roleFilter.set(this.scalar(r['role']) ?? '');
     this.onlyMissing.set(r['missing'] === true);
     this.currentPage.set(0);

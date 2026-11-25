@@ -6,7 +6,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { environment } from '../../environments/environment';
 import { UserStore } from '../core/user.store';
 import { AuthService } from '../core/auth.service';
-import { SideNavComponent, PermissionService } from '@khalilrebhiitec/daf360';
+import { SideNavComponent, PermissionService, CountryPickerComponent } from '@khalilrebhiitec/daf360';
+import { CountryPickerService } from '../core/country-picker.service';
 import type { NavItem, SideNavConfig } from '@khalilrebhiitec/daf360';
 import { TranslateService } from '@ngx-translate/core';
 import en from '@public/assets/i18n/en.json';
@@ -333,7 +334,7 @@ const APP_NAV_DEFS: AppNavDef[] = [
 @Component({
   selector: 'app-hr-shell',
   standalone: true,
-  imports: [RouterOutlet, SideNavComponent, HelpCenterComponent, HelpChatComponent, GuideHintComponent],
+  imports: [RouterOutlet, SideNavComponent, CountryPickerComponent, HelpCenterComponent, HelpChatComponent, GuideHintComponent],
   templateUrl: './hr-shell.component.html',
   styleUrl: './hr-shell.component.scss',
   host: { style: 'display:block;height:100%' },
@@ -347,6 +348,8 @@ export class HrShellComponent implements OnInit {
   private auth = inject(AuthService);
   private injector = inject(Injector);
   private translate = inject(TranslateService);
+  /** Sélecteur de pays du bas de la barre latérale (lib 5.19.0). */
+  readonly countryPicker = inject(CountryPickerService);
 
   constructor() {
     // Populate the RH translation store. The shell route now provides an ISOLATED
@@ -447,6 +450,7 @@ export class HrShellComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.countryPicker.load();
     // NOTE: the remote's styles.css is injected + awaited by the shell
     // (ensureRemoteStyles) before this route activates — no runtime injection here.
     if (this.userStore.hasPermission('HR_ONBOARDING')) {

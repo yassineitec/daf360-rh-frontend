@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { inHeaderPays, injectHeaderPays } from '../../core/header-pays';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   ButtonComponent, DafCellDirective, DataTableComponent, FormFieldComponent, RadioGroupComponent,
@@ -181,6 +182,8 @@ interface RulesRow {
 })
 export class TeletravailRulesAdminComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  /** Drapeaux de la barre : seules les entités cochées sont listées (aucune = toutes). */
+  private readonly pays = injectHeaderPays();
   private readonly translate = inject(TranslateService);
   private readonly notify = inject(NotificationService);
   private readonly base = `${environment.hrApiUrl}/api/hr/teletravail/admin/rules`;
@@ -251,7 +254,7 @@ export class TeletravailRulesAdminComponent implements OnInit {
   }
 
   tableRows(): TableRow[] {
-    return this.rows().map(r => ({
+    return this.rows().filter(r => inHeaderPays(this.pays(), r.paysId)).map(r => ({
       id: r.paysId,
       pays: r.frenchLabel ?? r.isoCode ?? String(r.paysId),
       employees: r.employees,

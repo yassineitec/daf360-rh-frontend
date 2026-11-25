@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { Router } from '@angular/router';
 import { Observable, forkJoin, catchError, map, of } from 'rxjs';
 import {
@@ -439,10 +440,11 @@ export class CandidatesComponent implements OnInit {
   // ── Load ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     if (this.viewMode() === 'list') this.loadCandidates();
 
     forkJoin({
-      stats:   this.svc.getDashboardStats().pipe(catchError(() => of(null))),
+      stats:   this.svc.getDashboardStats(this.pays()).pipe(catchError(() => of(null))),
       sources: this.fetchSources(),
     }).subscribe(({ stats, sources }) => {
       if (stats) this.dashStats.set(stats);
@@ -451,12 +453,43 @@ export class CandidatesComponent implements OnInit {
     });
 
     this.loadFilterOptions();
+    this.loadExtras();
+  }
 
-    // The drawer's two feeds are independent — they must never hold up the board.
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+
+  /**
+   * Changement de drapeaux = tout est rechargé : KPI, colonnes du tableau, liste (page 1),
+   * options du panneau, activité et objectifs. `ngOnInit` a déjà chargé la sélection du départ.
+   */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.currentPage.set(0);
+      this.reload();
+      this.loadFilterOptions();
+      this.loadExtras();
+    });
+  });
+
+  /** Bumped per extras fetch: a slow answer for previous flags is dropped. */
+  private extrasSeq = 0;
+
+  /** The drawer's two feeds are independent — they must never hold up the board. */
+  private loadExtras(): void {
+    const seq = ++this.extrasSeq;
+    const pays = this.pays();
     forkJoin({
-      activity:   this.pipelineSvc.getActivity().pipe(catchError(() => of([] as PipelineActivity[]))),
-      objectives: this.pipelineSvc.getObjectives().pipe(catchError(() => of([] as PipelineObjective[]))),
+      activity:   this.pipelineSvc.getActivity(pays).pipe(catchError(() => of([] as PipelineActivity[]))),
+      objectives: this.pipelineSvc.getObjectives(pays).pipe(catchError(() => of([] as PipelineObjective[]))),
     }).subscribe(({ activity, objectives }) => {
+      if (seq !== this.extrasSeq) return;
       this.activities.set(activity);
       this.objectives.set(objectives);
       this.extrasLoading.set(false);
@@ -470,27 +503,34 @@ export class CandidatesComponent implements OnInit {
   private fetchSources(): Observable<LifecycleSources> {
     const safe = <T>(key: LifecycleColumnKey, call: () => Observable<T[]>): Observable<T[]> =>
       this.canRead(key) ? call().pipe(catchError(() => of([] as T[]))) : of([] as T[]);
+    // Every column follows the navbar's flags (absent = the role's whole scope).
+    const pays = this.pays();
     return forkJoin({
       // The « Candidats » board's own feed: it carries the interview / offer facts the step needs.
-      candidates:  safe('CANDIDATE', () => this.pipelineSvc.getKanban().pipe(
+      candidates:  safe('CANDIDATE', () => this.pipelineSvc.getKanban(pays).pipe(
         map(cols => (cols ?? []).flatMap(c => c.candidates ?? [])))),
-      it:          safe('IT', () => this.itSvc.getPendingList()),
-      onboarding:  safe('ONBOARDING', () => this.onboardingSvc.getPendingList()),
-      cdi:         safe('CDI', () => this.cdiSvc.list(false)),
-      offboarding: safe('OFFBOARDING', () => this.offboardingSvc.listOffboarding()),
+      it:          safe('IT', () => this.itSvc.getPendingList(pays)),
+      onboarding:  safe('ONBOARDING', () => this.onboardingSvc.getPendingList(pays)),
+      cdi:         safe('CDI', () => this.cdiSvc.list(false, pays)),
+      offboarding: safe('OFFBOARDING', () => this.offboardingSvc.listOffboarding({ paysId: pays })),
     });
   }
 
+  /** Bumped per board fetch: a slow answer for previous flags is dropped. */
+  private boardSeq = 0;
+
   private loadBoard(): void {
     this.boardLoading.set(true);
+    const seq = ++this.boardSeq;
     this.fetchSources().subscribe(sources => {
+      if (seq !== this.boardSeq) return;
       this.sources.set(sources);
       this.boardLoading.set(false);
     });
   }
 
   private loadStats(): void {
-    this.svc.getDashboardStats().subscribe({ next: s => this.dashStats.set(s), error: () => {} });
+    this.svc.getDashboardStats(this.pays()).subscribe({ next: s => this.dashStats.set(s), error: () => {} });
   }
 
   /** Demand / department / date filters of the list view — applied server-side. */
@@ -498,7 +538,8 @@ export class CandidatesComponent implements OnInit {
     const demand = this.demandFilter();
     const range  = this.createdRange();
     return {
-      paysId:       this.userStore.currentUser()?.paysId,
+      // Les drapeaux de la navbar ; absent = tout le périmètre du rôle (serveur).
+      paysId:       this.pays(),
       // The whole lifecycle — in recruitment, in onboarding, hired, closed — newest first.
       stage:        'LIFECYCLE',
       search:       this.search() || undefined,
@@ -511,16 +552,24 @@ export class CandidatesComponent implements OnInit {
     };
   }
 
-  /** Once per page: the demand and department options of the filter panel. */
+  /**
+   * The demand and department options of the filter panel, for the navbar's countries.
+   * Both endpoints take ONE pays: one flag → that one; none → the user's own (as before);
+   * several → departments unfiltered then narrowed here, demands fetched per country.
+   */
   private loadFilterOptions(): void {
-    const paysId = this.userStore.currentUser()?.paysId;
-    this.refData.getDepartments(paysId).subscribe(items =>
-      this.departments.set((items ?? []).filter(d => d.isActive !== false)));
-    if (paysId) {
-      this.demandSvc.getApprovedOptions(paysId)
-        .pipe(catchError(() => of([] as ApprovedDemandOption[])))
-        .subscribe(opts => this.demandOptions.set(opts ?? []));
-    }
+    const ids = (this.pays() ?? '').split(',').filter(Boolean).map(Number);
+    const own = this.userStore.currentUser()?.paysId;
+    const single = ids.length === 1 ? ids[0] : ids.length === 0 ? own : undefined;
+    this.refData.getDepartments(single).subscribe(items =>
+      this.departments.set((items ?? [])
+        .filter(d => d.isActive !== false)
+        .filter(d => ids.length < 2 || (d.paysId != null && ids.includes(d.paysId)))));
+    const demandPays = single != null ? [single] : ids;
+    if (demandPays.length === 0) { this.demandOptions.set([]); return; }
+    forkJoin(demandPays.map(id => this.demandSvc.getApprovedOptions(id)
+        .pipe(catchError(() => of([] as ApprovedDemandOption[])))))
+      .subscribe(lists => this.demandOptions.set(lists.flat()));
   }
 
   private loadCandidates(): void {

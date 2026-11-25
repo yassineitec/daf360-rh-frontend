@@ -5384,6 +5384,13 @@
       "TITLE_END": "End-of-contract decision",
       "DEADLINE_TRIAL": "Probation ends: {{date}}",
       "DEADLINE_END": "Contract planned end: {{date}}",
+      "DEADLINE_LABEL_TRIAL": "End of trial period",
+      "DEADLINE_LABEL_END": "Contract planned end",
+      "DAYS_LEFT": "{{n}} days left",
+      "TODAY": "Today",
+      "OVERDUE": "{{n}} days overdue",
+      "CHOOSE": "Your decision",
+      "NEEDS_DATE": "A new end date will be required",
       "NONE": "No choice is offered for this contract type. Configure them in Administration › Contract deadlines.",
       "NEW_DATE": "New end date",
       "LOADING": "Loading choices…",
@@ -6132,6 +6139,7 @@
       "entity": "Entity {{pays}}",
       "back": "Back",
       "countryMenu": "Switch country",
+      "paysFromNavbar": "Several countries ticked: settings of {{pays}}. Tick a single country in the bar to set up another one.",
       "tabs": {
         "roles": "Roles & Permissions",
         "users": "Users",
@@ -6826,6 +6834,12 @@
         "COL_ACTION": "Action",
         "FIELD_ACTION": "Action performed",
         "HINT_ACTION": "What this choice does when HR picks it.",
+        "TYPE_EDIT": {
+          "TITLE": "Edit contract type {{label}}",
+          "TAB_INFO": "Details",
+          "TAB_RULES": "« Decide » choices",
+          "ERR_LABELS": "French and English labels are required."
+        },
         "RULES": {
           "COL": "Decisions",
           "ACTION": "« Decide » choices",

@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked, viewChild, WritableSignal } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
@@ -631,8 +632,31 @@ export class RequestListComponent implements OnInit {
     return this.translate.instant('REQUESTS.LIST.CANCEL_REASON_CLOSED');
   }
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /**
+   * Changement de drapeaux : liste rechargée depuis la page 1. La section « Demande de
+   * recrutement » suit les drapeaux d'elle-même. Sans effet sur la vue d'un simple
+   * collaborateur (ses propres demandes), qui ne dépend d'aucun pays.
+   */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      if (this.canViewInbox()) this.reload();
+    });
+  });
+
   ngOnInit() {
     this.restoreState();
+    this.loadedPays = this.pays();
     // `false` : garder la page restaurée — `reload()` repart sinon de la première.
     this.reload(false);
     this.svc.listTypes(this.currentPaysId())
@@ -648,13 +672,17 @@ export class RequestListComponent implements OnInit {
     // every pending request through the inbox, so the same role sees every
     // request here too — everyone else still sees only their own.
     const sort = this.sort() ?? undefined;
+    // Vue RH : les drapeaux de la navbar (absent = tout le périmètre du rôle), au lieu du
+    // pays de l'utilisateur (`?? 1`) — que le serveur, sans statut, ignorait (tous les pays).
     const filter = this.canViewInbox()
-      ? { paysId: this.currentPaysId(), sort, page: this.page(), size: this.pageSize() }
+      ? { paysId: this.pays(), sort, page: this.page(), size: this.pageSize() }
       : { profileId: this.currentProfileId() || undefined, sort, page: this.page(), size: this.pageSize() };
+    const seq = ++this.loadSeq;
     this.svc
       .listRequests(filter)
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
+        if (seq !== this.loadSeq) return;
         // Page restaurée devenue hors limites (demandes traitées entre-temps) : on retombe
         // sur la première plutôt que d'afficher une page vide.
         if (res && res.content.length === 0 && this.page() > 0) {

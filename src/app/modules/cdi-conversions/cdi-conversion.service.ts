@@ -12,8 +12,9 @@ export class CdiConversionService {
   private base = environment.hrApiUrl;
 
   /** `todo` = what waits for me (validator / arbiter / RH to convert); else every visible request. */
-  list(todo: boolean): Observable<CdiConversion[]> {
-    return this.http.get<CdiConversion[]>(`${this.base}/api/hr/cdi-conversions`, { params: { todo } });
+  /** `pays` : drapeaux de la navbar (`179,64`) ; absent = tout le périmètre du rôle. */
+  list(todo: boolean, pays?: string): Observable<CdiConversion[]> {
+    return this.http.get<CdiConversion[]>(`${this.base}/api/hr/cdi-conversions`, { params: pays ? { todo, paysId: pays } : { todo } });
   }
 
   get(id: number): Observable<CdiConversion> {

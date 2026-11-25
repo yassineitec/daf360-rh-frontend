@@ -133,3 +133,16 @@
 .lm-dec-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .lm-dec-text { font-size: var(--text-body-sm); color: var(--color-on-surface-variant); }
 @media (max-width: 480px) { .lm-rules-grid { grid-template-columns: 1fr; } }
+
+// « Type de contrat » › Modifier : une modale, deux onglets (daf-tabs)
+.lm-type-tabs { display: block; margin-bottom: 16px; }
+.lm-type-tabs ~ .lm-rules .lm-rules-title { display: none; }   // l'onglet porte déjà le titre
+.lm-type-info { display: flex; flex-direction: column; gap: 14px; }
+.lm-type-code {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--color-surface-container); border-radius: 10px; padding: 10px 14px;
+}
+.lm-type-code-label { font-size: var(--text-body-sm); font-weight: 600; color: var(--color-on-surface-variant); }
+.lm-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; align-items: end; }
+.lm-type-active { padding-bottom: 8px; }
+@media (max-width: 480px) { .lm-type-grid { grid-template-columns: 1fr; } }

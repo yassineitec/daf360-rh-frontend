@@ -341,7 +341,8 @@ export interface CreateAssetReturnRequest {
 
 export interface OffboardingFilter {
   status?: OffboardingStatus;
-  paysId?: number;
+  /** Un `pays_id`, ou les drapeaux de la navbar (`179,64`). */
+  paysId?: number | string;
 }
 
 

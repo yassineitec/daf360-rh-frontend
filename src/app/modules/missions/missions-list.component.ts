@@ -1,4 +1,5 @@
-import { Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
+import { inHeaderPays, injectHeaderPays } from '../../core/header-pays';
 import { catchError, of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -99,8 +100,33 @@ export class MissionsListComponent implements OnInit {
   private translate = inject(TranslateService);
 
   // ── Data ─────────────────────────────────────────────────────────────────
-  readonly missions = signal<Mission[]>([]);
-  readonly employees = signal<MissionEligibleEmployee[]>([]);
+  /** Tout ce que renvoie le serveur : les missions créées par ce manager, tous pays. */
+  private readonly allMissions = signal<Mission[]>([]);
+  private readonly allEmployees = signal<MissionEligibleEmployee[]>([]);
+
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /**
+   * `179,64` ; undefined = « Tous les pays ». Les missions, leurs indicateurs et les collaborateurs proposés dans « Nouvelle mission » ne gardent que les pays cochés. Filtrage dans le navigateur : la
+   * liste arrive entière, et chaque mission porte le pays de son collaborateur.
+   */
+  readonly pays = injectHeaderPays();
+
+  /** Les missions des pays cochés — tout le reste de la page en dérive. */
+  readonly missions = computed(() => {
+    const pays = this.pays();
+    return this.allMissions().filter(m => inHeaderPays(pays, m.paysId));
+  });
+  /** L'équipe du manager, réduite aux pays cochés. */
+  readonly employees = computed(() => {
+    const pays = this.pays();
+    return this.allEmployees().filter(e => inHeaderPays(pays, e.paysId));
+  });
+
+  /** Changement de drapeaux = retour à la page 1 (les projections suivent d'elles-mêmes). */
+  private readonly followHeaderPays = effect(() => {
+    this.pays();
+    untracked(() => this.currentPage.set(0));
+  });
   /** Whole-page skeleton — first load only (§5). */
   readonly firstLoad = signal(true);
   /** Every refresh after that — skeletons inside the affected section only. */
@@ -133,7 +159,7 @@ export class MissionsListComponent implements OnInit {
     // while they are on the page.
     this.svc.eligibleEmployees()
       .pipe(catchError(() => of([] as MissionEligibleEmployee[])))
-      .subscribe(list => this.employees.set(list));
+      .subscribe(list => this.allEmployees.set(list));
   }
 
   load(): void {
@@ -141,7 +167,7 @@ export class MissionsListComponent implements OnInit {
     this.error.set(null);
     this.svc.listMine().subscribe({
       next: list => {
-        this.missions.set(list);
+        this.allMissions.set(list);
         this.loading.set(false);
         this.firstLoad.set(false);
       },

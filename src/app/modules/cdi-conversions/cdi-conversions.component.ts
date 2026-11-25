@@ -1,4 +1,5 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -71,7 +72,26 @@ export class CdiConversionsComponent implements OnInit {
   readonly submitting = signal(false);
   readonly modalError = signal<string | null>(null);
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémenté à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private loadSeq = 0;
+
+  /** Changement de drapeaux = demandes (et onglet « À traiter ») rechargées. */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      this.load();
+    });
+  });
+
   ngOnInit(): void {
+    this.loadedPays = this.pays();
     this.load();
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (id) {
@@ -85,8 +105,10 @@ export class CdiConversionsComponent implements OnInit {
   load(): void {
     if (!this.firstLoad()) this.loading.set(true);
     this.error.set(null);
-    this.svc.list(false).subscribe({
+    const seq = ++this.loadSeq;
+    this.svc.list(false, this.pays()).subscribe({
       next: list => {
+        if (seq !== this.loadSeq) return;
         this.all.set(list);
         this.todo.set(list.filter(r => r.canDecide || r.canConvert));
         this.loading.set(false);

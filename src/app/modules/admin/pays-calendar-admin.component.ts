@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { inHeaderPays, injectHeaderPays } from '../../core/header-pays';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   BadgeCell, ButtonComponent, DafCellDirective, DataTableComponent,
@@ -183,6 +184,8 @@ const DAYS = [
 })
 export class PaysCalendarAdminComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  /** Drapeaux de la barre : seules les entités cochées sont listées (aucune = toutes). */
+  private readonly pays = injectHeaderPays();
   private readonly notify = inject(NotificationService);
   private readonly translate = inject(TranslateService);
   private readonly base = `${environment.hrApiUrl}/api/hr/ref`;
@@ -230,7 +233,7 @@ export class PaysCalendarAdminComponent implements OnInit {
 
   readonly filteredItems = computed(() => {
     this.translate.currentLang();
-    return searchRows(this.items(), this.searchQuery(), p => [
+    return searchRows(this.items().filter(p => inHeaderPays(this.pays(), p.paysId)), this.searchQuery(), p => [
       p.frenchLabel, p.englishLabel, p.isoCode, p.employees,
       ...(p.usingDefaultWeekend
         ? [this.translate.instant('ADMIN.paysCalendar.assumed'), this.translate.instant('ADMIN.paysCalendar.assumedDays')]

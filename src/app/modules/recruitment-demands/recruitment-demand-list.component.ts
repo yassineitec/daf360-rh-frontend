@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, OnInit, signal, viewChild, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked, viewChild, WritableSignal } from '@angular/core';
+import { injectHeaderPays } from '../../core/header-pays';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PageGuideComponent } from '../../shared/guide/page-guide.component';
@@ -733,20 +734,53 @@ export class RecruitmentDemandListComponent implements OnInit {
     this.router.navigate(['/rh/requests', id], { queryParams: { from: 'history' } });
   }
 
+  // ── Pays : les drapeaux cochés dans la navbar du shell ─────────────────────
+  /** `179,64` ; undefined = « Tous les pays » (tout le périmètre du rôle, côté serveur). */
+  readonly pays = injectHeaderPays();
+  /** Pays des données affichées — ne recharger que sur un VRAI changement de drapeaux. */
+  private loadedPays: string | undefined;
+  /** Incrémentés à chaque chargement : une réponse lente d'une sélection précédente est ignorée. */
+  private otherSeq = 0;
+  private loadSeq = 0;
+  private countsSeq = 0;
+
+  /**
+   * Changement de drapeaux : l'onglet « Demande » repart de la page 1 ; « Recrutement »
+   * aussi, s'il a déjà été ouvert (sinon il se chargera à la bascule, avec les drapeaux).
+   * Sans effet sur la vue « mes demandes » d'un simple collaborateur.
+   */
+  private readonly followHeaderPays = effect(() => {
+    const pays = this.pays();
+    untracked(() => {
+      if (pays === this.loadedPays) return;
+      this.loadedPays = pays;
+      if (this.canViewAllRequests()) {
+        this.otherPage.set(0);
+        this.loadOther();
+      }
+      if (this.recruitmentLoaded && this.canViewAll()) {
+        this.reload();
+        this.loadCounts();
+      }
+    });
+  });
+
   private loadOther(): void {
     this.otherLoading.set(true);
-    const paysId = this.userStore.currentUser()?.paysId;
     // Size 100, same as the Demandes page's own "Demande" tab: large enough that the KPI
     // tiles above can be counted straight from this batch, no separate count-per-status call.
     const typeId = this.otherTypeFilter() ? Number(this.otherTypeFilter()) : undefined;
+    // Vue RH : les drapeaux de la navbar, au lieu du pays de l'utilisateur.
     const filter = this.canViewAllRequests()
-      ? { paysId: paysId ?? undefined, typeId, page: this.otherPage(), size: this.otherPageSize() }
+      ? { paysId: this.pays(), typeId, page: this.otherPage(), size: this.otherPageSize() }
       : { profileId: this.currentProfileId() || undefined, typeId, page: this.otherPage(), size: this.otherPageSize() };
     const sort = this.otherSort() ?? undefined;
+    const seq = ++this.otherSeq;
 
     this.requestsSvc.listRequests({ ...filter, sort })
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
+        if (seq !== this.otherSeq) return;
         // Page restaurée devenue hors limites : on retombe sur la première plutôt que
         // d'afficher une page vide.
         if (res && res.content.length === 0 && this.otherPage() > 0) {
@@ -768,6 +802,7 @@ export class RecruitmentDemandListComponent implements OnInit {
 
   ngOnInit(): void {
     this.restoreState();
+    this.loadedPays = this.pays();
     this.loadOther();
     // Retour sur l'onglet « Recrutement » : il ne se charge sinon qu'à la bascule
     // (`onMainTabChange`). `load()` et non `reload()`, pour garder la page restaurée.
@@ -823,15 +858,18 @@ export class RecruitmentDemandListComponent implements OnInit {
 
   private load(): void {
     this.loading.set(true);
-    const paysId = this.userStore.currentUser()?.paysId;
     const statut = this.filterStatut() as RecruitmentDemandStatus | '';
+    const seq = ++this.loadSeq;
 
-    const obs$ = (paysId && this.canViewAll())
-      ? this.svc.listByPays(paysId, statut, this.page(), this.pageSize(), this.sort())
+    // Vue RH : les drapeaux de la navbar (absent = tout le périmètre du rôle). Le test
+    // `paysId &&` d'avant renvoyait un administrateur sans entité vers « mes demandes ».
+    const obs$ = this.canViewAll()
+      ? this.svc.listByPays(this.pays(), statut, this.page(), this.pageSize(), this.sort())
       : this.svc.listMine(statut, this.page(), this.pageSize(), this.sort());
 
     obs$.pipe(catchError(() => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: this.pageSize() })))
       .subscribe((r) => {
+        if (seq !== this.loadSeq) return;
         // Page restaurée devenue hors limites : on retombe sur la première.
         if (r.content.length === 0 && this.page() > 0) {
           this.page.set(0);
@@ -852,16 +890,18 @@ export class RecruitmentDemandListComponent implements OnInit {
    * demand to count them client-side.
    */
   private loadCounts(): void {
-    const paysId = this.userStore.currentUser()?.paysId;
+    const pays = this.pays();
+    const seq = ++this.countsSeq;
     const countFor = (statut: RecruitmentDemandStatus) =>
-      ((paysId && this.canViewAll())
-        ? this.svc.listByPays(paysId, statut, 0, 1)
+      (this.canViewAll()
+        ? this.svc.listByPays(pays, statut, 0, 1)
         : this.svc.listMine(statut, 0, 1)
       ).pipe(catchError(() => of(null)));
 
     forkJoin(Object.fromEntries(STATUS_KPI_ORDER.map((s) => [s, countFor(s)])) as Record<
       DecidedStatus, ReturnType<typeof countFor>
     >).subscribe((res) => {
+      if (seq !== this.countsSeq) return;
       this.statusCounts.set(
         STATUS_KPI_ORDER.reduce((acc, s) => {
           acc[s] = res[s]?.totalElements ?? 0;

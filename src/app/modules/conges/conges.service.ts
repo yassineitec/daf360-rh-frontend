@@ -153,15 +153,15 @@ export class CongesService {
     return this.http.get<CongeCounts>(`${this.base}/team/counts`);
   }
 
-  globalCounts(paysId?: number | null): Observable<CongeCounts> {
+  globalCounts(paysId?: number | string | null): Observable<CongeCounts> {
     let p = new HttpParams();
     if (paysId != null) p = p.set('paysId', paysId);
     return this.http.get<CongeCounts>(`${this.base}/global/counts`, { params: p });
   }
 
-  settledCounts(mine = true): Observable<CongeCounts> {
+  settledCounts(mine = true, pays?: string): Observable<CongeCounts> {
     return this.http.get<CongeCounts>(`${this.base}/settle/counts`, {
-      params: new HttpParams().set('mine', mine),
+      params: pays ? new HttpParams().set('mine', mine).set('paysId', pays) : new HttpParams().set('mine', mine),
     });
   }
 

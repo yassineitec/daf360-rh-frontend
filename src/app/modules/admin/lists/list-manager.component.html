@@ -220,9 +220,51 @@
   </div>
 </ng-template>
 
-<!-- « Type de contrat » › Décisions: the type's own « Décider » rules, or its nature's. -->
+<!-- « Type de contrat » › Modifier : infos + décisions « Décider » dans une seule modale (daf-tabs). -->
 <ng-template #rulesTpl>
-  <ng-container [ngTemplateOutlet]="rulesFieldsTpl" />
+  <daf-tabs
+    class="lm-type-tabs"
+    variant="underline"
+    [tabs]="typeEditTabs()"
+    [active]="typeEditTab()"
+    (activeChange)="typeEditTab.set($any($event))"
+    [scrollControls]="false"
+    [tabsLabel]="'ADMIN.data.lists.TYPE_EDIT.TITLE' | translate:{ label: '' }" />
+
+  @if (typeEditTab() === 'info') {
+    <div class="lm-type-info">
+      <div class="lm-type-code">
+        <span class="lm-type-code-label">{{ 'ADMIN.data.lists.FIELD_CODE' | translate }}</span>
+        <span class="td-code">{{ rulesEditing()?.valueCode }}</span>
+        @if (rulesEditing()?.isSystem) {
+          <daf-badge [label]="'ADMIN.data.lists.SYSTEM' | translate" [options]="{ variant: 'warning', size: 'sm' }" />
+        }
+      </div>
+      <div class="lm-type-grid">
+        <daf-form-field
+          [options]="{ label: ('ADMIN.data.lists.FIELD_LABEL_FR' | translate), required: true, fullWidth: true }"
+          [value]="editForm.controls['labelFr'].value"
+          (valueChange)="editForm.controls['labelFr'].setValue($any($event))" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.data.lists.FIELD_LABEL_EN' | translate), required: true, fullWidth: true }"
+          [value]="editForm.controls['labelEn'].value"
+          (valueChange)="editForm.controls['labelEn'].setValue($any($event))" />
+        <daf-form-field
+          [options]="{ label: ('ADMIN.data.lists.FIELD_ORDER' | translate), type: 'number', fullWidth: true }"
+          [value]="editForm.controls['sortOrder'].value"
+          (valueChange)="editForm.controls['sortOrder'].setValue($any($event))" />
+        <div class="lm-type-active">
+          <daf-checkbox
+            [options]="{ label: ('ADMIN.data.lists.ACTIVE' | translate) }"
+            [checked]="editForm.controls['isActive'].value"
+            (checkedChange)="editForm.controls['isActive'].setValue($event)" />
+        </div>
+      </div>
+    </div>
+  } @else {
+    <ng-container [ngTemplateOutlet]="rulesFieldsTpl" />
+  }
+
   @if (rulesError()) {
     <p class="lm-rules-error">{{ rulesError() }}</p>
   }

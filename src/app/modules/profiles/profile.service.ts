@@ -198,7 +198,9 @@ export class ProfileService {
   ): Observable<{ content: EmployeeListItem[]; totalElements: number; totalPages: number }> {
     const params: Record<string, string | number> = { page, size };
     if (filter.search) params['search'] = filter.search;
-    if (filter.pays)   params['paysId'] = filter.pays;
+    // `pays`, le nom que lit /profiles/employees — `paysId` y était ignoré. Un ou plusieurs
+    // pays_id : `179,64`.
+    if (filter.pays)   params['pays'] = filter.pays;
     if (filter.status) params['status'] = filter.status;
     return this.http.get<{ content: EmployeeListItem[]; totalElements: number; totalPages: number }>(
       `${this.base}/profiles/employees`,
