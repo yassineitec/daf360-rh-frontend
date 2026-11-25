@@ -223,8 +223,26 @@ export class CandidateFormComponent implements OnInit {
   }
 
   /**
-   * Fills the form from an archived candidature: identity, nationality, experience, salary
-   * claim and notes (the demand fills the position). The CV is copied by the server on save.
+   * Position fields the archived candidature filled because the demand left them empty —
+   * emptied again when the copy is undone, so the demand's own values are never touched.
+   */
+  private copiedPositionKeys: string[] = [];
+
+  /** Position fields the picked demand filled — emptied when another demand is picked. */
+  private demandFilledKeys: string[] = [];
+
+  /** Experience the demand seeded (its required level), restored when a copy is undone. */
+  private demandYears = 0;
+
+  /**
+   * Fills EVERY field of the wizard from an archived candidature:
+   *  - identity, nationality, experience, salary claim and notes — always the archive's values
+   *    (a candidate is the same person whatever the demand);
+   *  - the position (title, contract type, start date, department, grade, discipline, RH budget)
+   *    only where the demand left the field empty — the demand describes the post. A start date
+   *    already past is not taken: the old candidature's date means nothing for this one.
+   * Picking another archived candidate first undoes the previous copy, so nothing of the first
+   * one stays behind. The CV is copied by the server on save.
    */
   private copyFromArchived(a: ArchivedCandidate): void {
     this.relatedLoading.set(true);
@@ -234,6 +252,7 @@ export class CandidateFormComponent implements OnInit {
         this.error.set(this.translate.instant('CANDIDATES.FORM.PICK_ERR_LOAD'));
         return;
       }
+      this.clearCopy();
       this.identityGroup.patchValue({
         firstName:      c.firstName ?? '',
         lastName:       c.lastName ?? '',
@@ -241,15 +260,35 @@ export class CandidateFormComponent implements OnInit {
         phone:          c.phone ?? null,
         dateOfBirth:    c.dateOfBirth ?? null,
         gender:         c.gender ?? null,
-        nationalId:     c.nationalId ?? null,
-        passportNumber: c.passportNumber ?? null,
         location:       c.location ?? null,
       });
       this.positionGroup.patchValue({
         nationalityId:      c.nationalityId ?? null,
         salaireNetCandidat: c.salaireNetCandidat ?? null,
       });
-      if (c.notes) this.form.get('notes')?.setValue(c.notes);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const startDate = c.expectedStartDate && c.expectedStartDate >= today ? c.expectedStartDate : null;
+      const fromArchive: Record<string, unknown> = {
+        appliedPosition:     c.appliedPosition?.trim() || null,
+        employmentTypeId:    c.employmentTypeId,
+        expectedStartDate:   startDate,
+        departmentId:        c.departmentId,
+        appliedGradeId:      c.appliedGradeId,
+        appliedDisciplineId: c.appliedDisciplineId,
+        salaireNetRh:        c.salaireNetRh,
+      };
+      this.copiedPositionKeys = [];
+      for (const [key, value] of Object.entries(fromArchive)) {
+        const ctrl = this.positionGroup.get(key);
+        if (!ctrl || value == null || value === '') continue;
+        if (ctrl.value == null || ctrl.value === '') {
+          ctrl.setValue(value);
+          this.copiedPositionKeys.push(key);
+        }
+      }
+
+      this.form.get('notes')?.setValue(c.notes ?? null);
       if (c.experienceYears != null) this.experienceYears.set(c.experienceYears);
       this.copiedFrom.set({
         id: c.id,
@@ -259,13 +298,15 @@ export class CandidateFormComponent implements OnInit {
     });
   }
 
-  /** Back to a blank candidate: what the copy filled in is emptied. */
+  /** Back to a blank candidate: what the copy filled in is emptied, the demand's values stay. */
   private clearCopy(): void {
     if (!this.copiedFrom()) return;
     this.identityGroup.reset();
     this.positionGroup.patchValue({ nationalityId: null, salaireNetCandidat: null });
+    for (const key of this.copiedPositionKeys) this.positionGroup.get(key)?.setValue(null);
+    this.copiedPositionKeys = [];
     this.form.get('notes')?.setValue(null);
-    this.experienceYears.set(0);
+    this.experienceYears.set(this.demandYears);
     this.copiedFrom.set(null);
   }
 
@@ -340,7 +381,8 @@ export class CandidateFormComponent implements OnInit {
   });
 
   /**
-   * Every field is required except the passport number (step 1) and the notes (step 4).
+   * Every field is required except the notes (step 5). No CIN / passport: both are typed at
+   * onboarding, on the employee profile.
    * Text fields use `blankRequired` so whitespace alone doesn't count as filled in. The
    * CV (step 3) is required too, but it is a file signal, not a control — see
    * `cvSelected`.
@@ -353,8 +395,6 @@ export class CandidateFormComponent implements OnInit {
       phone:         [null as string | null, blankRequired],
       dateOfBirth:   [null as string | null, Validators.required],
       gender:        [null as string | null, Validators.required],
-      nationalId:    [null as string | null, blankRequired],
-      passportNumber: [null as string | null],
       location:      [null as string | null, blankRequired],
     }),
     position: this.fb.group({
@@ -378,10 +418,10 @@ export class CandidateFormComponent implements OnInit {
     const v   = this.formValue() as any;
     const id  = v?.identity ?? {};
     const pos = v?.position ?? {};
-    // The required fields only — passport and notes are optional and don't count.
+    // The required fields only — the notes are optional and don't count.
     const fields = [
       id.firstName, id.lastName, id.emailPersonal, id.phone,
-      id.dateOfBirth, id.gender, id.nationalId, id.location,
+      id.dateOfBirth, id.gender, id.location,
       pos.recruitmentDemandId, pos.appliedPosition, pos.employmentTypeId, pos.expectedStartDate,
       pos.departmentId, pos.appliedGradeId, pos.appliedDisciplineId,
       pos.nationalityId, pos.salaireNetCandidat, pos.salaireNetRh,
@@ -412,7 +452,7 @@ export class CandidateFormComponent implements OnInit {
       { label: t('CANDIDATES.FORM.RF_NAME'),     done: !!(id.firstName && id.lastName) },
       { label: t('CANDIDATES.FORM.RF_EMAIL'),    done: !!id.emailPersonal },
       { label: t('CANDIDATES.FORM.RF_IDENTITY'),
-        done: !!(id.phone && id.dateOfBirth && id.gender && id.nationalId && id.location) },
+        done: !!(id.phone && id.dateOfBirth && id.gender && id.location) },
       { label: t('CANDIDATES.FORM.RF_VACANCY'),  done: pos.recruitmentDemandId != null },
       { label: t('CANDIDATES.FORM.RF_POSITION'), done: !!pos.appliedPosition },
       { label: t('CANDIDATES.FORM.RF_CONTRACT'), done: !!pos.employmentTypeId },
@@ -487,17 +527,27 @@ export class CandidateFormComponent implements OnInit {
     // Another post: the candidate choice starts over (a copy belonged to the previous post).
     this.candidateSource.set('NEW');
     this.clearCopy();
+    // …and what the previous demand filled goes too, so the new one fills every field again
+    // instead of leaving the old post's title / dates / dimensions in place.
+    for (const key of this.demandFilledKeys) this.positionGroup.get(key)?.setValue(null);
+    this.demandFilledKeys = [];
+    if (this.experienceYears() === this.demandYears) this.experienceYears.set(0);
+    this.demandYears = 0;
     this.loadRelated(this.demands().find(d => d.id === id) ?? null);
     if (id == null) return;
 
     this.demandSvc.getById(id).pipe(catchError(() => of(null))).subscribe(d => {
-      if (!d) return;
+      // A slow answer for a demand no longer picked must not fill the form.
+      if (!d || this.positionGroup.get('recruitmentDemandId')?.value !== id) return;
       const pos = this.positionGroup;
       const fillIfEmpty = (key: string, value: unknown) => {
         const ctrl = pos.get(key);
         if (!ctrl) return;
         const cur = ctrl.value;
-        if (value != null && value !== '' && (cur == null || cur === '')) ctrl.setValue(value);
+        if (value != null && value !== '' && (cur == null || cur === '')) {
+          ctrl.setValue(value);
+          this.demandFilledKeys.push(key);
+        }
       };
 
       fillIfEmpty('appliedPosition',     d.jobExactTitle?.trim() || d.jobTitle?.trim());
@@ -510,7 +560,7 @@ export class CandidateFormComponent implements OnInit {
       // null but still carry a name.
       if (d.departmentId == null && d.department && pos.get('departmentId')?.value == null) {
         const match = this.departments().find(x => x.labelFr === d.department);
-        if (match) pos.get('departmentId')?.setValue(match.id);
+        if (match) fillIfEmpty('departmentId', match.id);
       }
 
       /*
@@ -522,8 +572,9 @@ export class CandidateFormComponent implements OnInit {
       const years = d.experienceLevelCode
         ? CandidateFormComponent.EXPERIENCE_YEARS[d.experienceLevelCode.toUpperCase()]
         : undefined;
-      if (years !== undefined && this.experienceYears() === 0) {
-        this.experienceYears.set(years);
+      if (years !== undefined) {
+        this.demandYears = years;
+        if (this.experienceYears() === 0) this.experienceYears.set(years);
       }
 
       pos.markAsTouched();
@@ -728,8 +779,6 @@ export class CandidateFormComponent implements OnInit {
       phone:               identity.phone               || null,
       dateOfBirth:         identity.dateOfBirth         || null,
       gender:              identity.gender              || null,
-      nationalId:          identity.nationalId          || null,
-      passportNumber:      identity.passportNumber      || null,
       appliedPosition:     position.appliedPosition     || null,
       departmentId:        position.departmentId        ?? null,
       employmentTypeId:    position.employmentTypeId    ?? null,

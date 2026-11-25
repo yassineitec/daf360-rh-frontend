@@ -165,28 +165,6 @@ export interface CandidatePill {
               (selectedChange)="patch.emit({ nationalityId: fromSelected($event) })" />
           }
 
-          @if (!editMode()) {
-            <rh-profile-field
-              [label]="'CANDIDATES.DETAIL.NATIONAL_ID' | translate"
-              [value]="candidate().nationalId" />
-          } @else {
-            <daf-form-field
-              [options]="{ label: ('CANDIDATES.DETAIL.NATIONAL_ID' | translate) }"
-              [value]="editForm().nationalId ?? ''"
-              (valueChange)="patch.emit({ nationalId: asText($event) })" />
-          }
-
-          @if (!editMode()) {
-            <rh-profile-field
-              [label]="'CANDIDATES.DETAIL.PASSPORT_NUMBER' | translate"
-              [value]="candidate().passportNumber" />
-          } @else {
-            <daf-form-field
-              [options]="{ label: ('CANDIDATES.DETAIL.PASSPORT_NUMBER' | translate) }"
-              [value]="editForm().passportNumber ?? ''"
-              (valueChange)="patch.emit({ passportNumber: asText($event) })" />
-          }
-
           <!-- Always shown, like every other field typed in the creation wizard. -->
           @if (!editMode()) {
             <rh-profile-field

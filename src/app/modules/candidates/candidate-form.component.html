@@ -198,31 +198,10 @@
               (selectedChange)="setSelectStr('identity.gender', $event)"
             />
 
+            <!-- No CIN / passport on a candidature: both are typed at onboarding. Full
+                 width, so the address doesn't sit alone in half a row. -->
             <daf-form-field
-              [options]="{
-                label: ('CANDIDATES.FORM.NATIONAL_ID' | translate),
-                required: true,
-                placeholder: ('CANDIDATES.FORM.NATIONAL_ID_PH' | translate),
-                prefixIcon: 'badge',
-                error: getFieldError('identity.nationalId'),
-              }"
-              [value]="getTextValue('identity.nationalId')"
-              (valueChange)="setTextValue('identity.nationalId', $event)"
-            />
-
-            <!-- Its own field, not folded into the CIN: onboarding pre-fills each into its
-                 own column of the employee profile. The one optional field of this step. -->
-            <daf-form-field
-              [options]="{
-                label: ('CANDIDATES.FORM.PASSPORT_NUMBER' | translate),
-                placeholder: ('CANDIDATES.FORM.PASSPORT_NUMBER_PH' | translate),
-                prefixIcon: 'travel_explore',
-              }"
-              [value]="getTextValue('identity.passportNumber')"
-              (valueChange)="setTextValue('identity.passportNumber', $event)"
-            />
-
-            <daf-form-field
+              class="sm:col-span-2"
               [options]="{
                 label: ('CANDIDATES.FORM.LOCATION' | translate),
                 required: true,
