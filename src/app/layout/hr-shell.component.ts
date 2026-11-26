@@ -445,7 +445,6 @@ export class HrShellComponent implements OnInit {
     this.translate.currentLang();
     return {
       sectionLabel: this.translate.instant('NAV.SECTION_LABEL'),
-      collapsible: true,
     };
   });
 
