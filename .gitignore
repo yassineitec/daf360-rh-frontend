@@ -47,3 +47,4 @@ Thumbs.db
 # Vidéos de test du centre d aide (lourdes, servies en local uniquement)
 public/assets/videos/
 tsconfig.federation.json
+tsconfig.federation.json
